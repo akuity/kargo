@@ -477,11 +477,17 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 				}
 			}
 		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
-			claims, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-			if err != nil {
+			claims := make(map[string][]string)
+			if err := json.Unmarshal([]byte(annotationValue), &claims); err != nil {
 				continue
 			}
-			refinedClaimValues = append(refinedClaimValues, claims...)
+			for name, values := range claims {
+				for _, v := range values {
+					refinedClaimValues = append(refinedClaimValues,
+						rbacapi.FormatClaim(name, strings.TrimSpace(v)),
+					)
+				}
+			}
 		}
 	}
 

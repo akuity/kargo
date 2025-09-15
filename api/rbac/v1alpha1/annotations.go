@@ -49,25 +49,6 @@ func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
 	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
 }
 
-// OIDCClaimsFromAnnotationValue parses the value of an
-// rbac.kargo.akuity.io/claims annotation and returns the corresponding list of
-// formatted and sorted claims.
-func OIDCClaimsFromAnnotationValue(value string) ([]string, error) {
-	claims := make(map[string][]string)
-	if err := json.Unmarshal([]byte(value), &claims); err != nil {
-		return nil, fmt.Errorf("unmarshaling OIDC claims from annotation value: %w", err)
-	}
-	var result []string
-	for name, values := range claims {
-		for _, v := range values {
-			result = append(result,
-				FormatClaim(name, strings.TrimSpace(v)),
-			)
-		}
-	}
-	return result, nil
-}
-
 // OIDCClaimsFromAnnotationValue parses the values of both the
 // rbac.kargo.akuity.io/claims and rbac.kargo.akuity.io/claim.<name> annotations
 // and consolidates them into a single map where the value of each key is sorted and deduped.

@@ -2,7 +2,7 @@ package rbac
 
 import (
 	"context"
-	"slices"
+	"maps"
 	"testing"
 	"time"
 
@@ -1196,8 +1196,6 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 		sa                  *corev1.ServiceAccount
 		newClaims           map[string][]string
 		expectedAnnotations map[string]string
-		expectedClaims      []string
-		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
 	}{
 		{
 			name: "replace simple",
@@ -1213,18 +1211,7 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 				"sub":   {"foo", "bar", "baz"},
 			},
 			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com", "bar@foo.com"],"sub":["foo","bar","baz"]}`,
-			},
-			expectedClaims: []string{"email/bar@foo.com", "email/foo@bar.com", "sub/bar", "sub/baz", "sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 1)
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
 			},
 		},
 		{
@@ -1243,20 +1230,8 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 				"sub":   {"foo", "bar"},
 			},
 			expectedAnnotations: map[string]string{
-				"ishouldnt":                     "bedeleted",
+				"ishouldnt":                     "bedeletedbecauseimnotaclaim",
 				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com"],"sub":["foo","bar"]}`,
-			},
-			expectedClaims: []string{"email/foo@bar.com", "sub/bar", "sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 2)
-				require.Equal(t, saAnnotations["ishouldnt"], "bedeletedbecauseimnotaclaim")
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
 			},
 		},
 	}
@@ -1264,7 +1239,8 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := replaceClaimAnnotations(tc.sa, tc.newClaims)
 			require.NoError(t, err)
-			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
+			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
+			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
 		})
 	}
 }
@@ -1275,8 +1251,6 @@ func Test_amendClaimAnnotations(t *testing.T) {
 		sa                  *corev1.ServiceAccount
 		claimsToAmend       map[string][]string
 		expectedAnnotations map[string]string
-		expectedClaims      []string
-		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
 	}{
 		{
 			name: "amend simple",
@@ -1292,18 +1266,7 @@ func Test_amendClaimAnnotations(t *testing.T) {
 				"sub":   {"baz"},
 			},
 			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
-			},
-			expectedClaims: []string{"email/bar@foo.com", "email/foo@bar.com", "sub/bar", "sub/baz", "sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 1)
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com","foo@bar.com"],"sub":["bar","baz","foo"]}`,
 			},
 		},
 		{
@@ -1321,18 +1284,7 @@ func Test_amendClaimAnnotations(t *testing.T) {
 				"sub":   {"baz"},
 			},
 			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
-			},
-			expectedClaims: []string{"email/bar@foo.com", "email/foo@bar.com", "sub/bar", "sub/baz", "sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 1)
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com","foo@bar.com"],"sub":["bar","baz","foo"]}`,
 			},
 		},
 	}
@@ -1340,7 +1292,8 @@ func Test_amendClaimAnnotations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := amendClaimAnnotations(tc.sa, tc.claimsToAmend)
 			require.NoError(t, err)
-			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
+			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
+			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
 		})
 	}
 }
@@ -1351,7 +1304,6 @@ func Test_dropClaimAnnotations(t *testing.T) {
 		sa                  *corev1.ServiceAccount
 		claimsToDrop        map[string][]string
 		expectedAnnotations map[string]string
-		expectedClaims      []string
 		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
 	}{
 		{
@@ -1365,21 +1317,10 @@ func Test_dropClaimAnnotations(t *testing.T) {
 			},
 			claimsToDrop: map[string][]string{
 				"email": {"foo@bar.com"},
-				"sub":   {"baz"},
+				"sub":   {"foo"},
 			},
 			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo","baz"]}`,
-			},
-			expectedClaims: []string{"sub/bar", "sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 1)
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["bar"]}`,
 			},
 		},
 		{
@@ -1397,18 +1338,7 @@ func Test_dropClaimAnnotations(t *testing.T) {
 				"sub":   {"bar"},
 			},
 			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo","baz"]}`,
-			},
-			expectedClaims: []string{"sub/foo"},
-			assertions: func(t *testing.T, expectedClaims []string, saAnnotations map[string]string) {
-				require.Len(t, saAnnotations, 1)
-				annotationValue, ok := saAnnotations[rbacapi.AnnotationKeyOIDCClaims]
-				require.True(t, ok)
-				got, err := rbacapi.OIDCClaimsFromAnnotationValue(annotationValue)
-				require.NoError(t, err)
-				slices.Sort(expectedClaims)
-				slices.Sort(got)
-				require.Equal(t, expectedClaims, got)
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo"]}`,
 			},
 		},
 	}
@@ -1416,7 +1346,8 @@ func Test_dropClaimAnnotations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := dropFromClaimAnnotations(tc.sa, tc.claimsToDrop)
 			require.NoError(t, err)
-			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
+			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
+			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
 		})
 	}
 }
