@@ -49,4 +49,6 @@ data:
   {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
   MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
   {{- end }}
+  CUSTOM_IMAGE_REGISTRY_HOSTNAMES: {{ quote (join "," .Values.controller.customRegistries.hostnames) }}
+  CUSTOM_IMAGE_REGISTRY_RATE_LIMIT: {{ .Values.controller.customRegistries.rateLimit }}
 {{- end }}

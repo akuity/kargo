@@ -481,6 +481,13 @@ controller:
       ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
       minReconciliationInterval: "5m0s"
 
+  # @param.controller.customRegistries
+  customRegistries: {}
+    # hostnames:
+    # - my.internal.harbor.com
+    # - my.internal.artifactory.com
+    # rateLimit: 250
+
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
     name: "Kargo"
