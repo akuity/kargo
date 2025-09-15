@@ -780,33 +780,34 @@ func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]stri
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	// hydrate the new map with any existing claims
-	// for the "rbac.kargo.akuity.io/claims" annotation
-	newClaims := make(map[string][]string)
-	if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]; ok {
-		if err := json.Unmarshal([]byte(sa.Annotations[rbacapi.AnnotationKeyOIDCClaims]), &newClaims); err != nil {
-			return fmt.Errorf("error unmarshaling existing claim annotations: %w", err)
-		}
+	existingClaims, error := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if error != nil {
+		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", error)
 	}
 	for name, values := range claims {
-		// delete any existing "rbac.kargo.akuity.io/claim.<claim-name>" annotations
-		// after appending their values to the new map
-		if existing, exists := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
-			values = append(strings.Split(existing, ","), values...)
-			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
+		if _, exists := existingClaims[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
+			existingClaims[name] = append(existingClaims[name], values...)
 		}
-		slices.Sort(values)
-		newClaims[name] = slices.Compact(append(newClaims[name], values...))
+		existingClaims[name] = append(existingClaims[name], values...)
+		slices.Sort(existingClaims[name])
+		existingClaims[name] = slices.Compact(existingClaims[name])
+
 	}
 	if sa.Annotations == nil {
 		sa.Annotations = map[string]string{}
 	}
 	// set everything under the "rbac.kargo.akuity.io/claims" annotation
-	b, err := json.Marshal(newClaims)
+	b, err := json.Marshal(existingClaims)
 	if err != nil {
 		return fmt.Errorf("error marshaling claim annotations: %w", err)
 	}
 	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
+	// delete the old style claim annotations if they exist
+	for name := range claims {
+		if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
+			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
+		}
+	}
 	return nil
 }
 
