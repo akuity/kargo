@@ -21,7 +21,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -30,7 +29,7 @@ const (
 	installationIDKey = "githubAppInstallationID"
 	privateKeyKey     = "githubAppPrivateKey"
 
-	githubHost = "github.com"
+	githubBaseURL = "https://github.com"
 
 	accessTokenUsername = "kargo"
 )
@@ -41,11 +40,10 @@ type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
 	getAccessTokenFn func(
-		clientID string,
+		appOrClientID string,
 		installationID int64,
 		encodedPrivateKey string,
-		baseURL string,
-		repoName string,
+		repoURL string,
 	) (string, error)
 }
 
@@ -64,81 +62,60 @@ func NewAppCredentialProvider() credentials.Provider {
 
 func (p *AppCredentialProvider) Supports(
 	credType credentials.Type,
-	_ string,
+	repoURL string,
 	data map[string][]byte,
+	_ map[string]string,
 ) bool {
 	if credType != credentials.TypeGit || len(data) == 0 {
 		return false
 	}
 
-	return (strings.TrimSpace(string(data[clientIDKey])) != "" || strings.TrimSpace(string(data[appIDKey])) != "") &&
+	return (strings.HasPrefix(repoURL, "http://") || strings.HasPrefix(repoURL, "https://")) &&
+		(strings.TrimSpace(string(data[clientIDKey])) != "" || strings.TrimSpace(string(data[appIDKey])) != "") &&
 		strings.TrimSpace(string(data[installationIDKey])) != "" && strings.TrimSpace(string(data[privateKeyKey])) != ""
 }
 
 // GetCredentials implements the credentials.Provider interface for GitHub Apps.
-// It returns GitHub installation access tokens scoped to a repository, with
-// optional restrictions enforced from the `project-repos` annotation.
+// If the provided data represents a GitHub App installation and any optional
+// constraints specified by the metadata do not prevent it, this method returns
+// an App installation access token that is scoped only to the repository
+// specified by repoURL.
 func (p *AppCredentialProvider) GetCredentials(
-	ctx context.Context,
+	_ context.Context,
 	project string,
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
-	annotations map[string]string,
+	metadata map[string]string,
 ) (*credentials.Credentials, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues()
-	if !p.Supports(credType, repoURL, data) {
+	if !p.Supports(credType, repoURL, data, metadata) {
 		return nil, nil
 	}
 
-	var (
-		allowedRepos     []string
-		restricted       bool
-		projectReposJSON []byte
-	)
-
-	// Check for GitHub token scope annotation
-	if annotations != nil {
-		if val, ok := annotations[kargoapi.AnnotationKeyGitHubTokenScope]; ok && val != "" {
-			projectReposJSON = []byte(val)
-		}
+	repoName := p.extractRepoName(repoURL)
+	if repoName == "" {
+		// Doesn't look like a URL we can do anything with.
+		return nil, nil
 	}
 
-	// Check data field if annotation not found
-	if projectReposJSON == nil {
-		if raw, ok := data[kargoapi.AnnotationKeyGitHubTokenScope]; ok && len(raw) > 0 {
-			projectReposJSON = raw
+	// If there's a scope map in the metadata, take it into consideration...
+	if scopeMapStr := metadata[kargoapi.AnnotationKeyGitHubTokenScope]; scopeMapStr != "" {
+		var scopeMap map[string][]string
+		if err := json.Unmarshal([]byte(scopeMapStr), &scopeMap); err != nil {
+			return nil, fmt.Errorf("error unmarshaling scope map: %w", err)
 		}
-	}
-
-	if len(projectReposJSON) > 0 {
-		var projectRepoMap map[string][]string
-		if err := json.Unmarshal(projectReposJSON, &projectRepoMap); err != nil {
-			// If JSON is invalid, simply return the error
-			// since it doesn't make sense to move to the next provider
-			// when the JSON already is invalid
-			logger.Debug("error unmarshalling project-repos JSON")
-			return nil, fmt.Errorf("error unmarshalling project-repos JSON: %v", err)
-		}
-		// Look up repos for the specific project
-		repos, found := projectRepoMap[project]
-		if !found || len(repos) == 0 {
-			// This project has no allowed repositories configured in the annotation.
-			// Returning (nil, nil) signals "not applicable" instead of a hard error,
-			// so that the caller can continue trying other credential providers.
+		if !slices.Contains(scopeMap[project], repoName) {
+			// repoName is NOT one of the scopes the Project is allowed to use.
 			return nil, nil
 		}
-		// otherwise restrict token scope to these repos
-		allowedRepos = repos
-		restricted = true
 	}
 
 	// Client ID is the newer unique identifier for GitHub Apps. GitHub recommends
 	// using this when possible. If no client ID is found in the data map, we will
 	// fall back on the old/deprecated unique identifier, App ID.
-	clientID := string(data[clientIDKey])
-	if clientID == "" {
-		clientID = string(data[appIDKey])
+	appOrClientID := string(data[clientIDKey])
+	if appOrClientID == "" {
+		appOrClientID = string(data[appIDKey])
 	}
 
 	installID, err := strconv.ParseInt(string(data[installationIDKey]), 10, 64)
@@ -146,48 +123,28 @@ func (p *AppCredentialProvider) GetCredentials(
 		return nil, fmt.Errorf("error parsing installation ID: %w", err)
 	}
 
-	baseURL, err := extractBaseURL(repoURL)
-	if err != nil {
-		return nil, fmt.Errorf("error extracting base URL from : %w", err)
-	}
-
-	repoName := extractRepoName(repoURL)
-	if repoName == "" {
-		return nil, fmt.Errorf("could not extract repository name from repo URL %q", repoURL)
-	}
-
-	if restricted && !slices.Contains(allowedRepos, repoName) {
-		// This project has no allowed repositories configured in the annotation.
-		// Returning (nil, nil) signals "not applicable" instead of a hard error,
-		// so that the caller can continue trying other credential providers.
-		return nil, nil
-	}
-
 	return p.getUsernameAndPassword(
-		clientID,
+		appOrClientID,
 		installID,
 		string(data[privateKeyKey]),
-		baseURL,
-		repoName,
+		repoURL,
 	)
 }
 
-// getUsernameAndPassword gets a username and password for the given client ID
-// and installation ID. The private key is the PEM-encoded private key for the
-// GitHub App. The base URL is the scheme and host of the repository URL, which
-// is used to determine whether the repository is hosted on GitHub Enterprise.
+// getUsernameAndPassword gets a username (kargo) and password (installation
+// access token) for the given app/client ID, installation ID, PEM-encoded
+// GitHub App private key, and repo URL.
 func (p *AppCredentialProvider) getUsernameAndPassword(
-	clientID string,
+	appOrClientID string,
 	installationID int64,
-	encodedPrivateKey, baseURL string,
-	repoName string,
+	encodedPrivateKey string,
+	repoURL string,
 ) (*credentials.Credentials, error) {
-	cacheKey := tokenCacheKey(
-		baseURL,
-		clientID,
+	cacheKey := p.tokenCacheKey(
+		appOrClientID,
 		installationID,
 		encodedPrivateKey,
-		repoName,
+		repoURL,
 	)
 
 	// Check the cache for the token
@@ -200,11 +157,10 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 
 	// Cache miss, get a new token
 	accessToken, err := p.getAccessTokenFn(
-		clientID,
+		appOrClientID,
 		installationID,
 		encodedPrivateKey,
-		baseURL,
-		repoName,
+		repoURL,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("error getting installation access token: %w", err)
@@ -219,46 +175,48 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	}, nil
 }
 
-// getAccessToken gets an installation access token for the given app and
-// installation IDs. The private key is the PEM-encoded private key for the
-// GitHub App. The base URL is the scheme and host of the repository URL, which
-// is used to determine whether the repository is hosted on GitHub Enterprise.
+// getAccessToken gets an installation access token for the given app/client ID,
+// installation ID, PEM-encoded GitHub App private key, and repo URL.
 func (p *AppCredentialProvider) getAccessToken(
-	clientID string,
+	appOrClientID string,
 	installationID int64,
 	encodedPrivateKey string,
-	baseURL string,
-	repoName string,
+	repoURL string,
 ) (string, error) {
-	decodedKey, err := decodeKey(encodedPrivateKey)
+	decodedKey, err := p.decodeKey(encodedPrivateKey)
 	if err != nil {
 		return "", err
 	}
 
-	appTokenSource, err := newApplicationTokenSource(clientID, decodedKey)
+	appTokenSource, err := newApplicationTokenSource(appOrClientID, decodedKey)
 	if err != nil {
 		return "", fmt.Errorf("error creating application token source: %w", err)
 	}
 
 	installationOpts := []githubauth.InstallationTokenSourceOpt{
 		githubauth.WithHTTPClient(cleanhttp.DefaultClient()),
+		// In all cases, the access token is scoped only to the repo specified by
+		// repoURL.
+		githubauth.WithInstallationTokenOptions(
+			&github.InstallationTokenOptions{
+				Repositories: []string{p.extractRepoName(repoURL)},
+			},
+		),
 	}
-	if baseURL != "" {
-		if !strings.HasPrefix(baseURL, "http://") && !strings.HasPrefix(baseURL, "https://") {
-			return "", fmt.Errorf("can only request access tokens for HTTP or HTTPS URLs")
-		}
-		if !strings.HasSuffix(baseURL, "://"+githubHost) {
-			installationOpts = append(installationOpts, githubauth.WithEnterpriseURLs(baseURL, baseURL))
-		}
+	baseURL, err := p.extractBaseURL(repoURL)
+	if err != nil {
+		return "", err
+	}
+	if baseURL != githubBaseURL {
+		// This looks like a GitHub Enterprise URL
+		installationOpts = append(installationOpts, githubauth.WithEnterpriseURLs(baseURL, baseURL))
 	}
 
-	opts := &github.InstallationTokenOptions{
-		Repositories: []string{repoName},
-	}
-
-	installationOpts = append(installationOpts, githubauth.WithInstallationTokenOptions(opts))
-
-	installationTokenSource := githubauth.NewInstallationTokenSource(installationID, appTokenSource, installationOpts...)
+	installationTokenSource := githubauth.NewInstallationTokenSource(
+		installationID,
+		appTokenSource,
+		installationOpts...,
+	)
 
 	token, err := installationTokenSource.Token()
 	if err != nil {
@@ -268,21 +226,21 @@ func (p *AppCredentialProvider) getAccessToken(
 }
 
 // tokenCacheKey returns a cache key for an installation access token. The key
-// is a hash of the hostname, client ID, installation ID, and encoded private
-// key. Using a hash ensures that a decodable key is not stored in the cache.
-func tokenCacheKey(
-	baseURL string,
-	clientID string,
+// is a hash of the app/client ID, installation ID, PEM-encoded GitHub App
+// private key, and repo URL. Using a hash ensures that a private decodable key
+// is not stored in the cache.
+func (p *AppCredentialProvider) tokenCacheKey(
+	appOrClientID string,
 	installationID int64,
 	encodedPrivateKey string,
-	repoName string,
+	repoURL string,
 ) string {
 	return fmt.Sprintf(
 		"%x",
 		sha256.Sum256([]byte(
 			fmt.Sprintf(
-				"%s:%s:%d:%s:%s",
-				baseURL, clientID, installationID, encodedPrivateKey, repoName),
+				"%s:%d:%s:%s",
+				appOrClientID, installationID, encodedPrivateKey, repoURL),
 		),
 		),
 	)
@@ -296,7 +254,7 @@ func tokenCacheKey(
 // errors are surfaced as is. This function is necessary because we initially
 // required the PEM-encoded key to be base64 encoded (for reasons unknown today)
 // and then we later dropped that requirement.
-func decodeKey(key string) ([]byte, error) {
+func (p *AppCredentialProvider) decodeKey(key string) ([]byte, error) {
 	decodedKey, err := base64.StdEncoding.DecodeString(key)
 	if err != nil {
 		if !errors.As(err, new(base64.CorruptInputError)) {
@@ -313,24 +271,24 @@ func decodeKey(key string) ([]byte, error) {
 	return decodedKey, nil
 }
 
+// extractRepoName returns the repository name from a GitHub repository URL.
+// This function assumes the provided repoURL has been normalized by the caller.
+func (p *AppCredentialProvider) extractRepoName(repoURL string) string {
+	parts := strings.Split(repoURL, "/")
+	// A valid GitHub repo URL should have no fewer than five parts when split
+	// on a forward slash. A GitHub Enterprise URL could theoretically have more.
+	if len(parts) < 5 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
+
 // extractBaseURL extracts the base URL from a full repository URL. The base
 // URL is the scheme and host of the repository URL.
-func extractBaseURL(fullURL string) (string, error) {
+func (p *AppCredentialProvider) extractBaseURL(fullURL string) (string, error) {
 	u, err := url.Parse(fullURL)
 	if err != nil {
 		return "", fmt.Errorf("error parsing URL: %w", err)
 	}
 	return u.Scheme + "://" + u.Host, nil
-}
-
-// extractRepoName returns the repository name from a Git repository URL.
-// It trims the optional ".git" suffix and then extracts the last path segment.
-func extractRepoName(repoURL string) string {
-	trimmed := strings.TrimSuffix(repoURL, ".git")
-	trimmed = strings.TrimSuffix(trimmed, "/")
-	parts := strings.Split(trimmed, "/")
-	if len(parts) == 0 {
-		return ""
-	}
-	return parts[len(parts)-1]
 }

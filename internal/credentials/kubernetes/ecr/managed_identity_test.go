@@ -75,7 +75,7 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil)
+			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
 			assert.Equal(t, tt.expected, result)
 		})
 	}

@@ -107,7 +107,7 @@ func TestCredentialProvider_Supports(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := provider.Supports(test.credType, test.repoURL, test.data)
+			result := provider.Supports(test.credType, test.repoURL, test.data, nil)
 			assert.Equal(t, test.expected, result)
 		})
 	}

@@ -70,26 +70,28 @@ const (
 	// is set to true.
 	AnnotationValueTrue = "true"
 
-	// AnnotationKeyGitHubTokenScope is the Kubernetes Secret annotation key
-	// used to specify per-project repository access restrictions for GitHub App credentials.
+	// AnnotationKeyGitHubTokenScope is the key for an annotation that can
+	// optionally be added to any Secret resources that represents a GitHub App
+	// installation in order to limit the scope of the installation access tokens
+	// that are issued as-needed to specific Kargo Projects.
 	//
-	// The value associated with this annotation should be a JSON object mapping
-	// project names (string) to lists of allowed repository names ([]string).
+	// If present, the annotation's value must be a string representation of a
+	// JSON object mapping Project names to lists of allowed scopes (repository
+	// names).
 	//
-	// Example value:
+	// For example to limit tokens issued to Project kargo-demo-1 to scopes repo-a
+	// and repo-b only and limit tokens issued to kargo-demo-2 to scope repo-c
+	// only:
 	//
-	//   {
-	//     "kargo-demo": ["kargo-demo", "kargo-helm"],
-	//     "kargo-simple": ["renovate-gh"]
-	//   }
+	//   `{"kargo-demo-1": ["repo-a", "repo-b"], "kargo-demo-2": ["repo-c"]}`
 	//
-	// If the annotation is present on a Secret, Kargo will enforce that the project
-	// must be explicitly granted access to the target repository for credentials
-	// to be returned. If the project is missing or has no allowed repos, credential
-	// requests for that project and repo will be denied.
+	// ALL OTHER PROJECTS WOULD EFFECTIVELY BE UNABLE TO OBTAIN AN INSTALLATION
+	// TOKEN AT ALL.
 	//
-	// If the annotation is missing or empty, no per-project repository restrictions
-	// will be applied (full access within matching Secret scope).
+	// This annotation has an effect only when present. i.e. If not present, the
+	// scopes available to every Project are unconstrained. If the annotation is
+	// present, with an invalid value (not well-formed JSON), NO Project will be
+	// able to obtain an installation token.
 	//
 	// #nosec G101 -- This is not a credential, just an annotation key name.
 	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"

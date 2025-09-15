@@ -15,7 +15,7 @@ const (
 type CredentialProvider struct{}
 
 func (*CredentialProvider) Supports(
-	_ credentials.Type, _ string, data map[string][]byte,
+	_ credentials.Type, _ string, data map[string][]byte, _ map[string]string,
 ) bool {
 	return len(data) > 0 &&
 		(data[usernameKey] != nil && data[passwordKey] != nil) ||
@@ -28,9 +28,9 @@ func (p *CredentialProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
-	_ map[string]string,
+	metadata map[string]string,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data) {
+	if !p.Supports(credType, repoURL, data, metadata) {
 		return nil, nil
 	}
 

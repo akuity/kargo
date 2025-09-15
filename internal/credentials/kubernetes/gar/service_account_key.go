@@ -36,7 +36,12 @@ func NewServiceAccountKeyProvider() credentials.Provider {
 	return p
 }
 
-func (p *ServiceAccountKeyProvider) Supports(credType credentials.Type, repoURL string, data map[string][]byte) bool {
+func (p *ServiceAccountKeyProvider) Supports(
+	credType credentials.Type,
+	repoURL string,
+	data map[string][]byte,
+	_ map[string]string,
+) bool {
 	if credType != credentials.TypeImage || data == nil || data[serviceAccountKeyKey] == nil {
 		return false
 	}
@@ -54,9 +59,9 @@ func (p *ServiceAccountKeyProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
-	_ map[string]string,
+	metadata map[string]string,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data) {
+	if !p.Supports(credType, repoURL, data, metadata) {
 		return nil, nil
 	}
 
