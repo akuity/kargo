@@ -366,6 +366,13 @@ create or install a GitHub App.
    only for `repo-3` repo. Any other project or repo will result in no credentials
    being returned.
 
+   Even if a project is mapped to multiple repositories, the token returned by Kargo
+   is always scoped to exactly one repository, the one you requested credentials for.
+   For example, if `kargo-demo` is mapped to `repo-1` and `repo-2` but is requesting
+   access to `repo-1`, Kargo will return a token that works only for `repo-1`.
+   It will not work for `repo-2`. This behavior applies even when the
+   `kargo.akuity.io/github-token-scope` annotation is missing or empty.
+
    If the annotation is missing or empty, no per-project restrictions are applied,
    and the secret is valid for any repo that matches `repoURL`. If the JSON is invalid,
    Kargo will log an error and fail credential resolution for this secret without moving
