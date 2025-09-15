@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
@@ -98,6 +100,52 @@ func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, test.expected, got)
+		})
+	}
+}
+
+func TestSetOIDCClaimsAnnotations(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		claims   map[string][]string
+		sa       *corev1.ServiceAccount
+		expected map[string]string
+	}{
+		{
+			name:   "new claims should overwrite existing claims and delete old style claims",
+			claims: map[string][]string{"bar": {"baz"}},
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						AnnotationKeyOIDCClaims:                  `{"foo": ["bar"]}`,
+						AnnotationKeyOIDCClaimNamePrefix + "foo": "bar",
+					},
+				},
+			},
+			expected: map[string]string{
+				AnnotationKeyOIDCClaims: `{"bar":["baz"]}`,
+			},
+		},
+		{
+			name:   "nil annotations should not panic",
+			claims: map[string][]string{"bar": {"baz"}},
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{Annotations: nil},
+			},
+			expected: map[string]string{
+				AnnotationKeyOIDCClaims: `{"bar":["baz"]}`,
+			},
+		},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			sa := &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{},
+				},
+			}
+			err := SetOIDCClaimsAnnotations(sa, test.claims)
+			require.NoError(t, err)
+			require.Equal(t, test.expected, sa.Annotations)
 		})
 	}
 }

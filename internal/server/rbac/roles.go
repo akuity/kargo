@@ -2,7 +2,6 @@ package rbac
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"slices"
 	"strings"
@@ -416,7 +415,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	if err != nil {
 		return nil, err
 	}
-	if err := amendClaimAnnotations(sa, claimListToMap(claims)); err != nil {
+	if err = amendClaimAnnotations(sa, claimListToMap(claims)); err != nil {
 		return nil, fmt.Errorf("error amending claim annotations: %w", err)
 	}
 	if err = r.client.Update(ctx, sa); err != nil {
@@ -574,7 +573,7 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 		return nil, err
 	}
 
-	if err := dropFromClaimAnnotations(sa, claimListToMap(claims)); err != nil {
+	if err = dropFromClaimAnnotations(sa, claimListToMap(claims)); err != nil {
 		return nil, fmt.Errorf("error dropping from claim annotations: %w", err)
 	}
 
@@ -604,7 +603,7 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	if err := replaceClaimAnnotations(sa, claimListToMap(kargoRole.Claims)); err != nil {
+	if err = replaceClaimAnnotations(sa, claimListToMap(kargoRole.Claims)); err != nil {
 		return nil, fmt.Errorf("error replacing claim annotations: %w", err)
 	}
 
@@ -757,32 +756,13 @@ func claimListToMap(claims []rbacapi.Claim) map[string][]string {
 }
 
 func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	// Some service accounts may have been setup the old way.
-	// e.g. using rbac.kargo.akuity.io/claim.<claim-name> style annotations.
-	for k := range sa.Annotations {
-		if strings.HasPrefix(k, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
-			delete(sa.Annotations, k)
-		}
-	}
-	if len(claims) == 0 {
-		delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaims)
-		return nil
-	}
-	if sa.Annotations == nil {
-		sa.Annotations = map[string]string{}
-	}
-	b, err := json.Marshal(claims)
-	if err != nil {
-		return fmt.Errorf("error marshaling claim annotations: %w", err)
-	}
-	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
-	return nil
+	return rbacapi.SetOIDCClaimsAnnotations(sa, claims)
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	existingClaims, error := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
-	if error != nil {
-		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", error)
+	existingClaims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if err != nil {
+		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
 	}
 	for name, values := range claims {
 		if _, exists := existingClaims[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
@@ -793,32 +773,17 @@ func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string
 		existingClaims[name] = slices.Compact(existingClaims[name])
 
 	}
-	if sa.Annotations == nil {
-		sa.Annotations = map[string]string{}
-	}
-	// set everything under the "rbac.kargo.akuity.io/claims" annotation
-	b, err := json.Marshal(existingClaims)
-	if err != nil {
-		return fmt.Errorf("error marshaling claim annotations: %w", err)
-	}
-	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
-	// delete the old style claim annotations if they exist
-	for name := range claims {
-		if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
-			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
-		}
-	}
-	return nil
+	return rbacapi.SetOIDCClaimsAnnotations(sa, existingClaims)
 }
 
 func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	existingClaims, error := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
-	if error != nil {
-		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", error)
+	existingClaims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if err != nil {
+		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
 	}
-	for name, values := range claims {
+	for name := range claims {
 		if existingValues, ok := existingClaims[name]; ok {
-			values = slices.DeleteFunc(existingValues, func(s string) bool {
+			values := slices.DeleteFunc(existingValues, func(s string) bool {
 				return slices.Contains(claims[name], s)
 			})
 			if len(values) == 0 {
@@ -827,25 +792,9 @@ func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]str
 			}
 			slices.Sort(values)
 			existingClaims[name] = slices.Compact(values)
-			continue
 		}
 	}
-	if sa.Annotations == nil {
-		sa.Annotations = map[string]string{}
-	}
-	// set everything under the "rbac.kargo.akuity.io/claims" annotation
-	b, err := json.Marshal(existingClaims)
-	if err != nil {
-		return fmt.Errorf("error marshaling claim annotations: %w", err)
-	}
-	sa.Annotations[rbacapi.AnnotationKeyOIDCClaims] = string(b)
-	// delete the old style claim annotations if they exist
-	for name := range claims {
-		if _, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
-			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
-		}
-	}
-	return nil
+	return rbacapi.SetOIDCClaimsAnnotations(sa, existingClaims)
 }
 
 func buildNewServiceAccount(namespace, name string) *corev1.ServiceAccount {

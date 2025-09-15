@@ -1262,7 +1262,8 @@ func Test_replaceClaimAnnotations(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			replaceClaimAnnotations(tc.sa, tc.newClaims)
+			err := replaceClaimAnnotations(tc.sa, tc.newClaims)
+			require.NoError(t, err)
 			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
 		})
 	}
@@ -1337,7 +1338,8 @@ func Test_amendClaimAnnotations(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			amendClaimAnnotations(tc.sa, tc.claimsToAmend)
+			err := amendClaimAnnotations(tc.sa, tc.claimsToAmend)
+			require.NoError(t, err)
 			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
 		})
 	}
@@ -1412,7 +1414,8 @@ func Test_dropClaimAnnotations(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dropFromClaimAnnotations(tc.sa, tc.claimsToDrop)
+			err := dropFromClaimAnnotations(tc.sa, tc.claimsToDrop)
+			require.NoError(t, err)
 			tc.assertions(t, tc.expectedClaims, tc.sa.Annotations)
 		})
 	}
