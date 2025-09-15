@@ -1132,40 +1132,6 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
-func TestRemoveFromStringSlice(t *testing.T) {
-	t.Run("nil slice", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{},
-			removeFromStringSlice(nil, []string{"foo"}),
-		)
-	})
-
-	t.Run("empty slice", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{},
-			removeFromStringSlice([]string{}, []string{"foo"}),
-		)
-	})
-
-	t.Run("no match", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			removeFromStringSlice([]string{"foo", "bar"}, []string{"baz"}),
-		)
-	})
-
-	t.Run("match", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			removeFromStringSlice([]string{"foo", "bar", "baz"}, []string{"baz"}),
-		)
-	})
-}
-
 func TestManageableResources(t *testing.T) {
 	t.Run("ServiceAccount is not annotated correctly", func(t *testing.T) {
 		_, _, err := manageableResources(

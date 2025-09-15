@@ -539,7 +539,9 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 			filteredRules = append(filteredRules, rule)
 			continue
 		}
-		rule.Verbs = removeFromStringSlice(rule.Verbs, resourceDetails.Verbs)
+		rule.Verbs = slices.DeleteFunc(rule.Verbs, func(s string) bool {
+			return slices.Contains(resourceDetails.Verbs, s)
+		})
 		if len(rule.Verbs) > 0 {
 			filteredRules = append(filteredRules, rule)
 		}
@@ -819,11 +821,15 @@ func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]str
 	}
 	for name, values := range claims {
 		if prefixStyleValues, ok := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; ok {
-			values = removeFromStringSlice(strings.Split(prefixStyleValues, ","), values)
+			values = slices.DeleteFunc(strings.Split(prefixStyleValues, ","), func(s string) bool { 
+				return slices.Contains(values, s)
+			})
 			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
 		} else {
 			delete(sa.Annotations, name)
-			values = removeFromStringSlice(jsonClaims[name], values)
+			values = slices.DeleteFunc(jsonClaims[name], func(s string) bool { 
+				return slices.Contains(values, s)
+			})
 		}
 		slices.Sort(values)
 		jsonClaims[name] = slices.Compact(values)
@@ -889,23 +895,6 @@ func buildNewRoleBinding(namespace, name string) *rbacv1.RoleBinding {
 			Name:     name,
 		},
 	}
-}
-
-func removeFromStringSlice(s, items []string) []string {
-	if len(items) == 0 {
-		return s
-	}
-	seen := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		seen[item] = struct{}{}
-	}
-	filtered := make([]string, 0, len(s))
-	for _, item := range s {
-		if _, ok := seen[item]; !ok {
-			filtered = append(filtered, item)
-		}
-	}
-	return filtered
 }
 
 func isKargoManaged(obj metav1.Object) bool {
