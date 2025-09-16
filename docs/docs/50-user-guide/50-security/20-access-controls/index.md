@@ -94,7 +94,7 @@ metadata:
         "sub": ["alice", "bob" ],
         "email": "carl@example.com",
         "groups": ["devops", "kargo-admin"],
-        "special:key": "value"
+        "special:key": ["value"]
       }
 ```
 
