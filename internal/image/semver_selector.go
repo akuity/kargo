@@ -86,11 +86,12 @@ func (s *semverSelector) MatchesTag(tag string) bool {
 func (s *semverSelector) Select(
 	ctx context.Context,
 ) ([]kargoapi.DiscoveredImageReference, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		s.getLoggerContext(),
 		"selectionStrategy", kargoapi.ImageSelectionStrategySemVer,
 		"semverConstrained", s.constraint != nil,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Trace("discovering images")
