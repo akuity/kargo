@@ -811,11 +811,11 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 		expected []string
 	}{
 		{
-			name: "ServiceAccount has no OIDC email",
+			name: "has no claim mappings",
 			sa:   &corev1.ServiceAccount{},
 		},
 		{
-			name: "ServiceAccount has OIDC email",
+			name: "ServiceAccount has OIDC old style email",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -866,6 +866,29 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				},
 			},
 			expected: nil,
+		},
+		{
+			name: "ServiceAccount has both old style and new style OIDC claim mappings",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "sub": "bar,baz",
+						rbacapi.AnnotationKeyOIDCClaims: `{
+							"email": ["foo@baz.com"],
+							"cognito:groups": ["devops", "admins"]
+						}`,
+					},
+				},
+			},
+			expected: []string{
+				"cognito:groups/admins",
+				"cognito:groups/devops",
+				"email/foo@bar.com",
+				"email/foo@baz.com",
+				"sub/bar",
+				"sub/baz",
+			},
 		},
 	}
 	for _, testCase := range testCases {
