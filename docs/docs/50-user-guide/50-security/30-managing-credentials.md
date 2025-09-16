@@ -409,7 +409,7 @@ projects.
 Beginning with Kargo v1.8.0, a third, experimental (stability not guaranteed)
 approach builds upon the first, by adding an optional annotation to the
 [global credentials](#global-credentials) `Secret` containing a map that
-constrains the scopes (repositories) available to each Project.
+constrains the scopes (repositories) available to each project.
 
 In the following example, the credentials defined by the `github` `Secret` in
 the `shared-credentials` namespace are available to all Kargo projects, however,
