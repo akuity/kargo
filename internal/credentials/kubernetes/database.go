@@ -144,12 +144,14 @@ clientLoop:
 		metadata = secret.Annotations
 	}
 
+	normalizedRepoURL := normalizeRepoURL(credType, repoURL)
+
 	for _, p := range k.credentialProviders {
 		creds, err := p.GetCredentials(
 			ctx,
 			namespace,
 			credType,
-			repoURL,
+			normalizedRepoURL,
 			data,
 			metadata,
 		)
@@ -193,19 +195,7 @@ func (k *database) getCredentialsSecret(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	// Note: We formerly applied these normalizations to any URL, thinking them
-	// generally safe. We no longer do this as it was discovered that an image
-	// repository URL with a port number could be mistaken for an SCP-style URL of
-	// the form host.xz:path/to/repo
-	var normalizedRepoURL string
-	switch credType {
-	case credentials.TypeGit:
-		normalizedRepoURL = git.NormalizeURL(repoURL)
-	case credentials.TypeImage:
-		normalizedRepoURL = image.NormalizeURL(repoURL)
-	case credentials.TypeHelm:
-		normalizedRepoURL = helm.NormalizeChartRepositoryURL(repoURL)
-	}
+	normalizedRepoURL := normalizeRepoURL(credType, repoURL)
 
 	logger := logging.LoggerFromContext(ctx)
 
@@ -241,18 +231,26 @@ func (k *database) getCredentialsSecret(
 		}
 
 		// Not a regex
-		secretURL := string(urlBytes)
-		switch credType {
-		case credentials.TypeGit:
-			secretURL = git.NormalizeURL(secretURL)
-		case credentials.TypeImage:
-			secretURL = image.NormalizeURL(secretURL)
-		case credentials.TypeHelm:
-			secretURL = helm.NormalizeChartRepositoryURL(secretURL)
-		}
-		if secretURL == normalizedRepoURL {
+		if normalizeRepoURL(credType, string(urlBytes)) == normalizedRepoURL {
 			return &secret, nil
 		}
 	}
 	return nil, nil
+}
+
+func normalizeRepoURL(credType credentials.Type, repoURL string) string {
+	// Note: We formerly applied these normalizations to any URL, thinking them
+	// generally safe. We no longer do this as it was discovered that an image
+	// repository URL with a port number could be mistaken for an SCP-style URL of
+	// the form host.xz:path/to/repo
+	switch credType {
+	case credentials.TypeGit:
+		return git.NormalizeURL(repoURL)
+	case credentials.TypeImage:
+		return image.NormalizeURL(repoURL)
+	case credentials.TypeHelm:
+		return helm.NormalizeChartRepositoryURL(repoURL)
+	default:
+		return repoURL
+	}
 }
