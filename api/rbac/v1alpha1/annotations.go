@@ -79,9 +79,12 @@ func OIDCClaimsFromAnnotationValues(annotations map[string]string) (map[string][
 	return claims, nil
 }
 
-// SetOIDCClaimsAnnotation sets the rbac.kargo.akuity.io/claims annotation on
-// the given ServiceAccount to the JSON representation of the given claims map.
-// It also removes any existing rbac.kargo.akuity.io/claim.<name> annotations.
+// SetOIDCClaimsAnnotation marshals the provided map of claims to claim values
+// and writes its string representation as the value of the ServiceAccount's
+// rbac.kargo.akuity.io/claims annotation, which is the newer, preferred method
+// of mapping users to ServiceAccounts. This function also removes
+// any annotations with keys of the form rbac.kargo.akuity.io/claim.<name> (the
+// older method) from the ServiceAccount.
 func SetOIDCClaimsAnnotation(sa *corev1.ServiceAccount, claims map[string][]string) error {
 	claimsJSON, err := json.Marshal(claims)
 	if err != nil {
