@@ -761,13 +761,9 @@ func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string
 		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
 	}
 	for name, values := range claims {
-		if _, exists := existingClaims[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
-			existingClaims[name] = append(existingClaims[name], values...)
-		}
 		existingClaims[name] = append(existingClaims[name], values...)
 		slices.Sort(existingClaims[name])
 		existingClaims[name] = slices.Compact(existingClaims[name])
-
 	}
 	return rbacapi.SetOIDCClaimsAnnotation(sa, existingClaims)
 }
