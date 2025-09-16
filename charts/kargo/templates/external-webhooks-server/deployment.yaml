@@ -88,19 +88,19 @@ spec:
         {{- if .Values.externalWebhooksServer.probes.enabled }}
         livenessProbe:
           httpGet:
-            path: /healthz
-            port: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
             {{- if .Values.externalWebhooksServer.tls.enabled }}
             scheme: HTTPS
             {{- end }}
+            port: 8080
+            path: /healthz
           initialDelaySeconds: 10
         readinessProbe:
           httpGet:
-            path: /healthz
-            port: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
             {{- if .Values.externalWebhooksServer.tls.enabled }}
             scheme: HTTPS
             {{- end }}
+            port: 8080
+            path: /healthz
           initialDelaySeconds: 5
         {{- end }}
         {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
