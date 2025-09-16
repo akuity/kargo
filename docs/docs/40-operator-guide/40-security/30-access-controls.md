@@ -96,7 +96,7 @@ metadata:
         "sub": ["alice", "bob" ],
         "email": "carl@example.com",
         "groups": ["devops", "kargo-admin"],
-        "special:key": "value"
+        "special:key": ["value"]
       }
 ```
 
@@ -126,9 +126,9 @@ api:
   oidc:
     # ... omitted for brevity ...
     admins:
-      claims: '{"groups":"devops"}'
+      claims: '{"groups":["devops"]}'
     viewer:
-      claims: '{"groups":"developers"}'
+      claims: '{"groups":["developers"]}'
 ```
 
 Behind the scenes, the configuration above merely results in the `kargo-admin`
@@ -144,7 +144,7 @@ metadata:
   name: kargo-admin
   namespace: kargo
   annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
+    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
 ```
 
 `kargo-viewer`:
@@ -156,7 +156,7 @@ metadata:
   name: kargo-viewer
   namespace: kargo
   annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":"developers"}'
+    rbac.kargo.akuity.io/claims: '{"groups":["developers"]}'
 ```
 
 `ClusterRoleBinding` resources associating these `ServiceAccount` resources with

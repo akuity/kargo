@@ -296,7 +296,7 @@ metadata:
   namespace: guestbook
   annotations:
     kargo.akuity.io/description: Permissions to promote into pre-prod Stages
-    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
+    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
@@ -373,7 +373,7 @@ metadata:
   name: admin
   namespace: guestbook
   annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":"devops"}'
+    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
