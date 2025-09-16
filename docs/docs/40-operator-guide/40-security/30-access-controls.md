@@ -103,6 +103,15 @@ metadata:
       }
 ```
 
+:::info
+Mappings specified using annotations with keys of the form
+`rbac.kargo.akuity.io/claim.<name>` with comma-delimited values are also
+supported for reasons of backwards compatibility. The effective mapping is
+therefore the union of mappings defined using such annotations with any
+mappings defined using the newer, recommended `rbac.kargo.akuity.io/claims`
+annotation.
+:::
+
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
 permissions are therefore the _union_ of the permissions associated with all
 such `ServiceAccount` resources.
