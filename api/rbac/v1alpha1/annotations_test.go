@@ -104,7 +104,7 @@ func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
 	}
 }
 
-func TestSetOIDCClaimsAnnotations(t *testing.T) {
+func TestSetOIDCClaimsAnnotation(t *testing.T) {
 	for _, test := range []struct {
 		name     string
 		claims   map[string][]string
@@ -143,7 +143,7 @@ func TestSetOIDCClaimsAnnotations(t *testing.T) {
 					Annotations: map[string]string{},
 				},
 			}
-			err := SetOIDCClaimsAnnotations(sa, test.claims)
+			err := SetOIDCClaimsAnnotation(sa, test.claims)
 			require.NoError(t, err)
 			require.Equal(t, test.expected, sa.Annotations)
 		})

@@ -756,7 +756,7 @@ func claimListToMap(claims []rbacapi.Claim) map[string][]string {
 }
 
 func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	return rbacapi.SetOIDCClaimsAnnotations(sa, claims)
+	return rbacapi.SetOIDCClaimsAnnotation(sa, claims)
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
@@ -773,7 +773,7 @@ func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string
 		existingClaims[name] = slices.Compact(existingClaims[name])
 
 	}
-	return rbacapi.SetOIDCClaimsAnnotations(sa, existingClaims)
+	return rbacapi.SetOIDCClaimsAnnotation(sa, existingClaims)
 }
 
 func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
@@ -794,7 +794,7 @@ func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]str
 			existingClaims[name] = slices.Compact(values)
 		}
 	}
-	return rbacapi.SetOIDCClaimsAnnotations(sa, existingClaims)
+	return rbacapi.SetOIDCClaimsAnnotation(sa, existingClaims)
 }
 
 func buildNewServiceAccount(namespace, name string) *corev1.ServiceAccount {
