@@ -43,10 +43,11 @@ func (n *newestTagSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
 	error,
 ) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		n.getLoggerContext(),
 		"selectionStrategy", kargoapi.CommitSelectionStrategyNewestTag,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	repo, err := n.clone(ctx)

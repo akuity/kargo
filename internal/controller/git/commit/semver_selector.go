@@ -93,10 +93,11 @@ func (s *semverSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
 	error,
 ) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		s.getLoggerContext(),
 		"selectionStrategy", kargoapi.CommitSelectionStrategySemVer,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	repo, err := s.clone(ctx)
