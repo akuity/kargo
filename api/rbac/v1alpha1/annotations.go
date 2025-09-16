@@ -94,9 +94,3 @@ func SetOIDCClaimsAnnotation(sa *corev1.ServiceAccount, claims map[string][]stri
 	}
 	return nil
 }
-
-// FormatClaim formats a claims name and values to be used by the
-// IndexServiceAccountsByOIDCClaims index.
-func FormatClaim(claimName, claimValue string) string {
-	return claimName + "/" + claimValue
-}

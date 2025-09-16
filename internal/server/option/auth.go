@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
-	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/logging"
@@ -280,14 +279,14 @@ func (a *authInterceptor) listServiceAccounts(
 	for claimName, claimValue := range c {
 		if claimValuesString, ok := claimValue.(string); ok {
 			queries = append(queries, libClient.MatchingFields{
-				indexer.ServiceAccountsByOIDCClaimsField: rbacapi.FormatClaim(claimName, claimValuesString),
+				indexer.ServiceAccountsByOIDCClaimsField: indexer.FormatClaim(claimName, claimValuesString),
 			})
 		}
 		if claimValueSlice, ok := claimValue.([]any); ok {
 			for _, claimValueSliceItem := range claimValueSlice {
 				if claimValueSliceItemString, ok := claimValueSliceItem.(string); ok {
 					queries = append(queries, libClient.MatchingFields{
-						indexer.ServiceAccountsByOIDCClaimsField: rbacapi.FormatClaim(
+						indexer.ServiceAccountsByOIDCClaimsField: indexer.FormatClaim(
 							claimName, claimValueSliceItemString,
 						),
 					})

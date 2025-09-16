@@ -473,7 +473,7 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			}
 			for e := range strings.SplitSeq(rawClaimValue, ",") {
 				if claimValue := strings.TrimSpace(e); claimValue != "" {
-					refinedClaimValues = append(refinedClaimValues, rbacapi.FormatClaim(rawClaimName, claimValue))
+					refinedClaimValues = append(refinedClaimValues, FormatClaim(rawClaimName, claimValue))
 				}
 			}
 		case annotationKey == rbacapi.AnnotationKeyOIDCClaims:
@@ -484,7 +484,7 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 			for name, values := range claims {
 				for _, v := range values {
 					refinedClaimValues = append(refinedClaimValues,
-						rbacapi.FormatClaim(name, strings.TrimSpace(v)),
+						FormatClaim(name, strings.TrimSpace(v)),
 					)
 				}
 			}
@@ -495,6 +495,12 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 	return refinedClaimValues
+}
+
+// FormatClaim formats a claims name and values to be used by the
+// IndexServiceAccountsByOIDCClaims index.
+func FormatClaim(claimName, claimValue string) string {
+	return claimName + "/" + claimValue
 }
 
 // WarehousesBySubscribedURLs is a client.IndexerFunc that indexes Warehouses by the
