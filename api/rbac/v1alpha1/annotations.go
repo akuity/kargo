@@ -51,9 +51,11 @@ func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
 	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
 }
 
-// OIDCClaimsFromAnnotationValue parses the values of both the
-// rbac.kargo.akuity.io/claims and rbac.kargo.akuity.io/claim.<name> annotations
-// and consolidates them into a single map where the value of each key is sorted and deduped.
+// OIDCClaimsFromAnnotationValue parses the values of the newer, preferred
+// rbac.kargo.akuity.io/claims annotation as well as the values of older
+// annotations with keys of the form rbac.kargo.akuity.io/claim.<name> and
+// consolidates them into a single map of claim names to (deduped) claim values
+// describing the set of users mapped to some ServiceAccount.
 func OIDCClaimsFromAnnotationValues(annotations map[string]string) (map[string][]string, error) {
 	claims := make(map[string][]string)
 	// hydrate with new style claims
