@@ -1190,61 +1190,6 @@ func TestManageableResources(t *testing.T) {
 	})
 }
 
-func Test_replaceClaimAnnotations(t *testing.T) {
-	testCases := []struct {
-		name                string
-		sa                  *corev1.ServiceAccount
-		newClaims           map[string][]string
-		expectedAnnotations map[string]string
-	}{
-		{
-			name: "replace simple",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com"],"sub":["foo","bar"]}`,
-					},
-				},
-			},
-			newClaims: map[string][]string{
-				"email": {"foo@bar.com", "bar@foo.com"},
-				"sub":   {"foo", "bar", "baz"},
-			},
-			expectedAnnotations: map[string]string{
-				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com","bar@foo.com"],"sub":["foo","bar","baz"]}`,
-			},
-		},
-		{
-			name: "replace old sa claim annotations with new rbac.kargo.akuity.io/claims format",
-			sa: &corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						rbacapi.AnnotationKeyOIDCClaim("email"): "foo@bar.com",
-						rbacapi.AnnotationKeyOIDCClaim("sub"):   "foo,bar",
-						"ishouldnt":                             "bedeletedbecauseimnotaclaim",
-					},
-				},
-			},
-			newClaims: map[string][]string{
-				"email": {"foo@bar.com"},
-				"sub":   {"foo", "bar"},
-			},
-			expectedAnnotations: map[string]string{
-				"ishouldnt":                     "bedeletedbecauseimnotaclaim",
-				rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com"],"sub":["foo","bar"]}`,
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			err := replaceClaimAnnotations(tc.sa, tc.newClaims)
-			require.NoError(t, err)
-			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
-			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
-		})
-	}
-}
-
 func Test_amendClaimAnnotations(t *testing.T) {
 	testCases := []struct {
 		name                string

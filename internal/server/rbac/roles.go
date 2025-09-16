@@ -603,7 +603,7 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	if err = replaceClaimAnnotations(sa, claimListToMap(kargoRole.Claims)); err != nil {
+	if err = rbacapi.SetOIDCClaimsAnnotation(sa, claimListToMap(kargoRole.Claims)); err != nil {
 		return nil, fmt.Errorf("error replacing claim annotations: %w", err)
 	}
 
@@ -753,10 +753,6 @@ func claimListToMap(claims []rbacapi.Claim) map[string][]string {
 		claimMap[claim.Name] = slices.Compact(claimMap[claim.Name])
 	}
 	return claimMap
-}
-
-func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
-	return rbacapi.SetOIDCClaimsAnnotation(sa, claims)
 }
 
 func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
