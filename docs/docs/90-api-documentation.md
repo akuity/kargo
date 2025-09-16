@@ -3,7 +3,13 @@
 
 <a name="api_service_v1alpha1_service-proto"></a>
 <p align="right"><a href="#top">Top</a></p>
+
+## service/v1alpha1
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
+
+:::warning
+Stability is not guaranteed.
+:::
 
 | Method Name | Request Type | Response Type |
 | ----------- | ------------ | ------------- |
@@ -88,9 +94,6 @@
 | UpdateClusterSecret | [UpdateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest) | [UpdateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse) |
 | DeleteClusterSecret | [DeleteClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest) | [DeleteClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse) |
 
- <!-- end services -->
-
-## service/v1alpha1
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
 ### AbortPromotionRequest
@@ -1586,9 +1589,7 @@
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the Warehouse resource that changed. |
 | type | [string](#string) |  type indicates the type of change (ADDED, MODIFIED, DELETED). |
 
- <!-- end messages -->
-
-
+<!-- end messages -->
 <a name="akuity-io-kargo-service-v1alpha1-RawFormat"></a>
 
 ### RawFormat
@@ -1600,11 +1601,10 @@ RawFormat specifies the format for raw resource representation.
 | RAW_FORMAT_JSON | 1 | RAW_FORMAT_JSON requests JSON format for raw resources. |
 | RAW_FORMAT_YAML | 2 | RAW_FORMAT_YAML requests YAML format for raw resources. |
 
-
- <!-- end enums --> <!-- end HasExtensions -->
+ <!-- end enums -->
 
 <a name="api_rbac_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p> <!-- end services -->
+<p align="right"><a href="#top">Top</a></p>
 
 ## rbac/v1alpha1
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
@@ -1648,12 +1648,10 @@ RawFormat specifies the format for raw resource representation.
 | roles | k8s.io.api.rbac.v1.Role |   |
 | roleBindings | k8s.io.api.rbac.v1.RoleBinding |   |
 
- <!-- end messages -->
-
- <!-- end enums --> <!-- end HasExtensions -->
+<!-- end messages --> <!-- end enums -->
 
 <a name="api_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p> <!-- end services -->
+<p align="right"><a href="#top">Top</a></p>
 
 ## v1alpha1
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>
@@ -2639,9 +2637,7 @@ RawFormat specifies the format for raw resource representation.
 | path | [string](#string) |  Path is the path to the receiver's webhook endpoint. |
 | url | [string](#string) |  URL includes the full address of the receiver's webhook endpoint. |
 
- <!-- end messages -->
-
- <!-- end enums --> <!-- end HasExtensions -->
+<!-- end messages --> <!-- end enums -->
 
 ## Scalar Value Types
 
