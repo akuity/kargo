@@ -873,7 +873,7 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
 						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "foo@bar.com",
-						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "sub": "bar,baz",
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "sub":   "bar,baz",
 						rbacapi.AnnotationKeyOIDCClaims: `{
 							"email": ["foo@baz.com"],
 							"cognito:groups": ["devops", "admins"]

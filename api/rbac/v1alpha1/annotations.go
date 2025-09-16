@@ -20,6 +20,8 @@ const (
 	// via OIDC and having the claim indicated by the full annotation key with
 	// any of the values indicated by the annotation. The value of the annotation
 	// may be either a scalar string value or a comma-separated list.
+	// A string representation of a JSON object in the AnnotationKeyOIDCClaims
+	// is the preferred method.
 	AnnotationKeyOIDCClaimNamePrefix = "rbac.kargo.akuity.io/claim."
 
 	// AnnotationKeyOIDCClaims is an annotation key that can be set on a
