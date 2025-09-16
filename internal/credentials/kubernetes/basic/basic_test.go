@@ -107,7 +107,7 @@ func TestCredentialProvider_Supports(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			result := provider.Supports(test.credType, test.repoURL, test.data)
+			result := provider.Supports(test.credType, test.repoURL, test.data, nil)
 			assert.Equal(t, test.expected, result)
 		})
 	}
@@ -234,7 +234,7 @@ func TestCredentialProvider_GetCredentials(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			creds, err := provider.GetCredentials(context.Background(), "", test.credType, test.repoURL, test.data)
+			creds, err := provider.GetCredentials(context.Background(), "", test.credType, test.repoURL, test.data, nil)
 			test.assertions(t, creds, err)
 		})
 	}

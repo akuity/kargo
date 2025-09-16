@@ -39,7 +39,12 @@ func NewAccessKeyProvider() credentials.Provider {
 	return p
 }
 
-func (p *AccessKeyProvider) Supports(credType credentials.Type, repoURL string, data map[string][]byte) bool {
+func (p *AccessKeyProvider) Supports(
+	credType credentials.Type,
+	repoURL string,
+	data map[string][]byte,
+	_ map[string]string,
+) bool {
 	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || len(data) == 0 {
 		return false
 	}
@@ -61,8 +66,9 @@ func (p *AccessKeyProvider) GetCredentials(
 	credType credentials.Type,
 	repoURL string,
 	data map[string][]byte,
+	metadata map[string]string,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data) {
+	if !p.Supports(credType, repoURL, data, metadata) {
 		return nil, nil
 	}
 

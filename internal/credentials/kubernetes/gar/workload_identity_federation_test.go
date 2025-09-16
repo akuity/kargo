@@ -84,7 +84,7 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil)
+			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
 			tt.assert(t, result)
 		})
 	}
@@ -252,7 +252,7 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			if tt.setupTokenSourceCache != nil {
 				tt.setupTokenSourceCache(tt.provider.tokenSourceCache)
 			}
-			creds, err := tt.provider.GetCredentials(context.Background(), tt.project, tt.credType, tt.repoURL, nil)
+			creds, err := tt.provider.GetCredentials(context.Background(), tt.project, tt.credType, tt.repoURL, nil, nil)
 			tt.assert(t, tt.provider.tokenCache, tt.provider.tokenSourceCache, creds, err)
 		})
 	}

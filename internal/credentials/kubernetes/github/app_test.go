@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"maps"
 	"testing"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/credentials"
 )
 
@@ -25,6 +27,7 @@ func TestNewAppCredentialProvider(t *testing.T) {
 func TestAppCredentialProvider_Supports(t *testing.T) {
 	p := NewAppCredentialProvider()
 
+	const testRepoURL = "https://github.com/example/repo"
 	// This is a control. Each test case will tweak a clone of this supported map.
 	supportedDataMap := map[string][]byte{
 		clientIDKey:       []byte("client"),
@@ -32,7 +35,10 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		installationIDKey: []byte("456"),
 		privateKeyKey:     []byte("private-key"),
 	}
-	require.True(t, p.Supports(credentials.TypeGit, "", supportedDataMap))
+	require.True(
+		t,
+		p.Supports(credentials.TypeGit, testRepoURL, supportedDataMap, nil),
+	)
 
 	testCases := []struct {
 		name       string
@@ -44,7 +50,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "non-Git credential type",
 			credType: credentials.Type("other"),
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				return supportedDataMap
 			},
@@ -53,7 +59,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "nil data map",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				return nil
 			},
@@ -62,16 +68,25 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "empty data map",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				return map[string][]byte{}
 			},
 			expected: false,
 		},
 		{
+			name:     "not an http/s URL",
+			credType: credentials.TypeGit,
+			repoURL:  "git@github.com:example/repo.git",
+			getDataMap: func() map[string][]byte {
+				return supportedDataMap
+			},
+			expected: false,
+		},
+		{
 			name:     "no client ID or app ID in data map",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				delete(dm, appIDKey)
@@ -83,7 +98,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "client ID and app ID are empty(ish)",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				dm[appIDKey] = []byte(" ")
@@ -95,7 +110,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "no installation ID in data map",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				delete(dm, installationIDKey)
@@ -106,7 +121,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "installation ID is empty(ish)",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				dm[installationIDKey] = []byte(" ")
@@ -117,7 +132,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "no private key in data map",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				delete(dm, privateKeyKey)
@@ -128,7 +143,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "private key is empty(ish)",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				dm[privateKeyKey] = []byte(" ")
@@ -139,7 +154,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "valid with client ID",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				delete(dm, appIDKey)
@@ -150,7 +165,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		{
 			name:     "valid with App ID",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
 				delete(dm, clientIDKey)
@@ -159,10 +174,10 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := p.Supports(tt.credType, tt.repoURL, tt.getDataMap())
-			assert.Equal(t, tt.expected, result)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result := p.Supports(testCase.credType, testCase.repoURL, testCase.getDataMap(), nil)
+			assert.Equal(t, testCase.expected, result)
 		})
 	}
 }
@@ -170,41 +185,116 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 	ctx := context.Background()
 
+	const testProject = "fake-project"
+	const testRepoName = "repo"
+	testRepoURL := fmt.Sprintf("https://github.com/example/%s", testRepoName)
+	testData := map[string][]byte{
+		appIDKey:          []byte("123"),
+		installationIDKey: []byte("456"),
+		privateKeyKey:     []byte("private-key"),
+	}
+
 	testCases := []struct {
 		name             string
 		credType         credentials.Type
 		repoURL          string
 		data             map[string][]byte
+		metadata         map[string]string
 		getAccessTokenFn func(
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
-			baseURL string,
+			repoURL string,
 		) (string, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
-			name:     "unsupported credential type",
+			name:     "provider does not support input",
 			credType: credentials.Type("other"),
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
+			repoURL:  testRepoURL,
+			data:     testData,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name:     "cannot extract repo name from URL",
+			credType: credentials.TypeGit,
+			repoURL:  "https://github.com/example", // Looks like an org; not a repo
+			data:     testData,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name:     "error unmarshaling scope map",
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			data:     testData,
+			metadata: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: "invalid json",
+			},
+			assertions: func(t *testing.T, _ *credentials.Credentials, err error) {
+				assert.ErrorContains(t, err, "error unmarshaling scope map")
+			},
+		},
+		{
+			name:     "project has no entry in scope map",
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			data:     testData,
+			metadata: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: `{}`,
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
 				assert.NoError(t, err)
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name:     "project has nil entry in scope map",
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			data:     testData,
+			metadata: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: fmt.Sprintf(`{%q: null}`, testProject),
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, creds)
+			},
+		},
+		{
+			name:     "project has empty entry in scope map",
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL,
+			data:     testData,
+			metadata: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: fmt.Sprintf(`{%q: []}`, testProject),
+			},
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, creds)
 			},
 		},
 		{
 			name:     "invalid installation ID",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
+			repoURL:  testRepoURL,
 			data: map[string][]byte{
 				appIDKey:          []byte("123"),
 				installationIDKey: []byte("invalid"),
 				privateKeyKey:     []byte("private-key"),
+			},
+			// We'll limit the test project to accessing only the test repo. If we
+			// get as far as the error parsing the installation token, we'll know
+			// the check that the scope is allowed is working.
+			metadata: map[string]string{
+				kargoapi.AnnotationKeyGitHubTokenScope: fmt.Sprintf(
+					`{%q: [%q]}`, testProject, testRepoName,
+				),
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
@@ -212,30 +302,12 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 				assert.ErrorContains(t, err, "error parsing installation ID")
 			},
 		},
-		{
-			name:     "invalid repo URL",
-			credType: credentials.TypeGit,
-			repoURL:  "://invalid",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.Error(t, err)
-				assert.ErrorContains(t, err, "error extracting base URL")
-			},
-		},
+		// From here on out, we won't include any scope map...
 		{
 			name:     "error getting token",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
+			repoURL:  testRepoURL,
+			data:     testData,
 			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
@@ -248,12 +320,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		{
 			name:     "successful token retrieval",
 			credType: credentials.TypeGit,
-			repoURL:  "https://github.com/akuity/kargo",
-			data: map[string][]byte{
-				appIDKey:          []byte("123"),
-				installationIDKey: []byte("456"),
-				privateKeyKey:     []byte("private-key"),
-			},
+			repoURL:  testRepoURL,
+			data:     testData,
 			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "test-token", nil
 			},
@@ -266,22 +334,23 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 
-			if tt.getAccessTokenFn != nil {
-				provider.getAccessTokenFn = tt.getAccessTokenFn
+			if testCase.getAccessTokenFn != nil {
+				provider.getAccessTokenFn = testCase.getAccessTokenFn
 			}
 
 			creds, err := provider.GetCredentials(
 				ctx,
-				"",
-				tt.credType,
-				tt.repoURL,
-				tt.data,
+				testProject,
+				testCase.credType,
+				testCase.repoURL,
+				testCase.data,
+				testCase.metadata,
 			)
-			tt.assertions(t, creds, err)
+			testCase.assertions(t, creds, err)
 		})
 	}
 }
@@ -291,39 +360,35 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		fakeAppOrClientID  = "fake-id"
 		fakeInstallationID = int64(456)
 		fakePrivateKey     = "private-key"
-		fakeBaseURL        = "https://github.com"
+		fakeRepoURL        = "https://github.com/example/repo"
+		fakeRepoName       = "repo"
 		fakeAccessToken    = "test-token"
 	)
 
+	p := &AppCredentialProvider{}
+
+	testTokenCacheKey := p.tokenCacheKey(
+		fakeAppOrClientID,
+		fakeInstallationID,
+		fakePrivateKey,
+		fakeRepoURL,
+	)
+
 	testCases := []struct {
-		name              string
-		appOrClientID     string
-		installationID    int64
-		encodedPrivateKey string
-		baseURL           string
-		setupCache        func(c *cache.Cache)
-		getAccessTokenFn  func(
+		name             string
+		setupCache       func(c *cache.Cache)
+		getAccessTokenFn func(
 			appOrClientID string,
 			installationID int64,
 			encodedPrivateKey string,
-			baseURL string,
+			repoURL string,
 		) (string, error)
 		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
 		{
-			name:              "cache hit",
-			appOrClientID:     fakeAppOrClientID,
-			installationID:    fakeInstallationID,
-			encodedPrivateKey: fakePrivateKey,
-			baseURL:           fakeBaseURL,
+			name: "cache hit",
 			setupCache: func(c *cache.Cache) {
-				cacheKey := tokenCacheKey(
-					fakeBaseURL,
-					fakeAppOrClientID,
-					fakeInstallationID,
-					fakePrivateKey,
-				)
-				c.Set(cacheKey, fakeAccessToken, cache.DefaultExpiration)
+				c.Set(testTokenCacheKey, fakeAccessToken, cache.DefaultExpiration)
 			},
 			assertions: func(
 				t *testing.T,
@@ -338,11 +403,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			},
 		},
 		{
-			name:              "cache miss, successful token fetch",
-			appOrClientID:     fakeAppOrClientID,
-			installationID:    fakeInstallationID,
-			encodedPrivateKey: fakePrivateKey,
-			baseURL:           fakeBaseURL,
+			name: "cache miss, successful token fetch",
 			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return fakeAccessToken, nil
 			},
@@ -358,23 +419,13 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Equal(t, fakeAccessToken, creds.Password)
 
 				// Verify the token was cached
-				cacheKey := tokenCacheKey(
-					fakeBaseURL,
-					fakeAppOrClientID,
-					fakeInstallationID,
-					fakePrivateKey,
-				)
-				cachedToken, found := c.Get(cacheKey)
+				cachedToken, found := c.Get(testTokenCacheKey)
 				assert.True(t, found)
 				assert.Equal(t, fakeAccessToken, cachedToken)
 			},
 		},
 		{
-			name:              "error in getAccessToken",
-			appOrClientID:     fakeAppOrClientID,
-			installationID:    fakeInstallationID,
-			encodedPrivateKey: fakePrivateKey,
-			baseURL:           fakeBaseURL,
+			name: "error in getAccessToken",
 			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
 				return "", errors.New("token error")
 			},
@@ -388,121 +439,153 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Nil(t, creds)
 
 				// Verify the token was not cached
-				cacheKey := tokenCacheKey(
-					fakeBaseURL,
-					fakeAppOrClientID,
-					fakeInstallationID,
-					fakePrivateKey,
-				)
-				_, found := c.Get(cacheKey)
+				_, found := c.Get(testTokenCacheKey)
 				assert.False(t, found)
 			},
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewAppCredentialProvider().(*AppCredentialProvider) // nolint:forcetypeassert
 
-			if tt.setupCache != nil {
-				tt.setupCache(provider.tokenCache)
+			if testCase.setupCache != nil {
+				testCase.setupCache(provider.tokenCache)
 			}
 
-			if tt.getAccessTokenFn != nil {
-				provider.getAccessTokenFn = tt.getAccessTokenFn
+			if testCase.getAccessTokenFn != nil {
+				provider.getAccessTokenFn = testCase.getAccessTokenFn
 			}
 
 			creds, err := provider.getUsernameAndPassword(
-				tt.appOrClientID,
-				tt.installationID,
-				tt.encodedPrivateKey,
-				tt.baseURL,
+				fakeAppOrClientID,
+				fakeInstallationID,
+				fakePrivateKey,
+				fakeRepoURL,
 			)
-			tt.assertions(t, provider.tokenCache, creds, err)
+			testCase.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
 }
 
-func Test_decodeKey(t *testing.T) {
-	const key = "-----BEGIN PRIVATE KEY-----\nfakekey\n-----END PRIVATE KEY-----"
+func TestAppCredentialProvider_decodeKey(t *testing.T) {
+	const testKey = "-----BEGIN PRIVATE KEY-----\nfakekey\n-----END PRIVATE KEY-----"
 	testCases := []struct {
-		name        string
-		key         string
-		expectedKey string
-		expectsErr  bool
+		name       string
+		key        string
+		assertions func(t *testing.T, key []byte, err error)
 	}{
 		{
-			name:        "key is not base64 encoded",
-			key:         key,
-			expectedKey: key,
+			name: "key is not base64 encoded",
+			key:  testKey,
+			assertions: func(t *testing.T, key []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte(testKey), key)
+			},
 		},
 		{
-			name:        "key is base64 encoded",
-			key:         base64.StdEncoding.EncodeToString([]byte(key)),
-			expectedKey: key,
+			name: "key is base64 encoded",
+			key:  base64.StdEncoding.EncodeToString([]byte(testKey)),
+			assertions: func(t *testing.T, key []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte(testKey), key)
+			},
 		},
 		{
-			name:       "key is a corrupted base64 encoding",
-			key:        "corrupted", // These are all base64 digits. :)
-			expectsErr: true,
+			name: "key is a corrupted base64 encoding",
+			key:  "corrupted", // These are all base64 digits. :)
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.ErrorContains(t, err, "probable corrupt base64 encoding")
+			},
 		},
 	}
+	p := &AppCredentialProvider{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			key, err := decodeKey(testCase.key)
-			if testCase.expectsErr {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, []byte(testCase.expectedKey), key)
+			key, err := p.decodeKey(testCase.key)
+			testCase.assertions(t, key, err)
 		})
 	}
 }
 
-func Test_extractBaseURL(t *testing.T) {
+func TestAppCredentialProvider_extractRepoName(t *testing.T) {
 	testCases := []struct {
-		name        string
-		url         string
-		expected    string
-		shouldError bool
+		name     string
+		repoURL  string
+		expected string
 	}{
 		{
-			name:        "valid HTTPS URL",
-			url:         "https://github.com/akuity/kargo",
-			expected:    "https://github.com",
-			shouldError: false,
+			name:     "invalid repo URL",
+			repoURL:  "https://github.com/akuity",
+			expected: "",
 		},
 		{
-			name:        "valid HTTP URL",
-			url:         "http://github.com/akuity/kargo",
-			expected:    "http://github.com",
-			shouldError: false,
+			name:     "GitHub URL",
+			repoURL:  "https://github.com/example/repo",
+			expected: "repo",
 		},
 		{
-			name:        "invalid URL",
-			url:         "://invalid",
-			expected:    "",
-			shouldError: true,
+			name:     "GitHub Enterprise URL",
+			repoURL:  "https://github.example.com/example/repo",
+			expected: "repo",
 		},
 		{
-			name:        "URL with port",
-			url:         "https://github.com:8080/akuity/kargo",
-			expected:    "https://github.com:8080",
-			shouldError: false,
+			name:     "GitHub Enterprise URL with extra path components", // Possible?
+			repoURL:  "https://example.com/github/example/repo",
+			expected: "repo",
 		},
 	}
+	p := &AppCredentialProvider{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, p.extractRepoName(testCase.repoURL))
+		})
+	}
+}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := extractBaseURL(tt.url)
-
-			if tt.shouldError {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
-			}
+func TestAppCredentialProvider_extractBaseURL(t *testing.T) {
+	testCases := []struct {
+		name       string
+		repoURL    string
+		assertions func(t *testing.T, baseURL string, err error)
+	}{
+		{
+			name:    "invalid URL",
+			repoURL: "://invalid",
+			assertions: func(t *testing.T, _ string, err error) {
+				require.ErrorContains(t, err, "error parsing URL")
+			},
+		},
+		{
+			name:    "valid HTTPS URL",
+			repoURL: "https://github.com/example/repo",
+			assertions: func(t *testing.T, baseURL string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "https://github.com", baseURL)
+			},
+		},
+		{
+			name:    "valid HTTP URL",
+			repoURL: "http://github.example.com/example/repo",
+			assertions: func(t *testing.T, baseURL string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "http://github.example.com", baseURL)
+			},
+		},
+		{
+			name:    "URL with port number",
+			repoURL: "https://github.example.com:8443/example/repo",
+			assertions: func(t *testing.T, baseURL string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, "https://github.example.com:8443", baseURL)
+			},
+		},
+	}
+	p := &AppCredentialProvider{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			baseURL, err := p.extractBaseURL(testCase.repoURL)
+			testCase.assertions(t, baseURL, err)
 		})
 	}
 }

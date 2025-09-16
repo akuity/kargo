@@ -84,6 +84,7 @@ func (p *WorkloadIdentityFederationProvider) Supports(
 	credType credentials.Type,
 	repoURL string,
 	_ map[string][]byte,
+	_ map[string]string,
 ) bool {
 	if p.projectID == "" || credType != credentials.TypeImage {
 		return false
@@ -101,9 +102,10 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	project string,
 	credType credentials.Type,
 	repoURL string,
-	_ map[string][]byte,
+	data map[string][]byte,
+	meta map[string]string,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, nil) {
+	if !p.Supports(credType, repoURL, data, meta) {
 		return nil, nil
 	}
 
