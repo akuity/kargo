@@ -400,7 +400,7 @@ the selected repositories.
 
 Alternatively, you might consider registering a _separate_ GitHub App for each
 Kargo project, selecting a narrower set of repositories when installing each
-App, then creating corresponding Secrets in individual projects namespaces.
+App, then creating corresponding Secrets in individual project namespaces.
 While this better adheres to the principle of least permissions, it can be
 onerous to manage. Worse, because GitHub organizations are limited to
 registering 100 GitHub Apps each, the approach does not scale beyond 100
