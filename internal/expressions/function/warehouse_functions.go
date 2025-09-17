@@ -24,17 +24,10 @@ func Warehouse() expr.Option {
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided warehouse within
 // the project context.
-func CommitFromWarehouse(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredCommits []kargoapi.GitDiscoveryResult,
-) expr.Option {
+func CommitFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromWarehouse(ctx, c, project, warehouse, discoveredCommits),
-		new(func(repoURL string, warehouse kargoapi.Warehouse) kargoapi.GitCommit),
+		getCommitFromWarehouse(ctx, c, wh),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
@@ -45,17 +38,10 @@ func CommitFromWarehouse(
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFromWarehouse(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredImages []kargoapi.ImageDiscoveryResult,
-) expr.Option {
+func ImageFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromWarehouse(ctx, c, project, warehouse, discoveredImages),
-		new(func(repoURL string, warehouse kargoapi.Warehouse) kargoapi.Image),
+		getImageFromWarehouse(ctx, c, wh),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
@@ -66,19 +52,10 @@ func ImageFromWarehouse(
 // The chartFrom function finds Helm charts based on repository URL, optional
 // chart name, and optional origin, using the provided freight requests and
 // references within the project context.
-func ChartFromWarehouse(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredCharts []kargoapi.ChartDiscoveryResult,
-) expr.Option {
+func ChartFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChartFromWarehouse(ctx, c, project, warehouse, discoveredCharts),
-		new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
-		new(func(repoURL string, chartName string) kargoapi.Chart),
-		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
+		getChartFromWarehouse(ctx, c, wh),
 		new(func(repoURL string) kargoapi.Chart),
 	)
 }
@@ -88,15 +65,22 @@ func ChartFromWarehouse(
 //
 // The returned function uses warehouse to locate the
 // appropriate commit within the project context.
-func getCommitFromWarehouse(
-	ctx context.Context,
-	cl client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredCommits []kargoapi.GitDiscoveryResult,
-) exprFn {
+func getCommitFromWarehouse(ctx context.Context, cl client.Client, wh *kargoapi.Warehouse) exprFn {
 	return func(a ...any) (any, error) {
-		// TODO: implement
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		// repoURL, ok := a[0].(string)
+		// if !ok {
+		// 	return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		// }
+
+		// for _, dc := range discoveredCommits {
+		// 	if dc.RepositoryURL == repoURL {
+		// 		return dc.Commit, nil
+		// 	}
+		// }
 		return nil, nil
 	}
 }
@@ -106,13 +90,7 @@ func getCommitFromWarehouse(
 //
 // The returned function uses the warehouse and references to locate the
 // appropriate image within the project context.
-func getImageFromWarehouse(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredImages []kargoapi.ImageDiscoveryResult,
-) exprFn {
+func getImageFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) exprFn {
 	return func(a ...any) (any, error) {
 		// TODO: implement
 		return nil, nil
@@ -124,13 +102,7 @@ func getImageFromWarehouse(
 //
 // The returned function uses freight requests and references to locate the
 // appropriate chart within the project context.
-func getChartFromWarehouse(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	warehouse *kargoapi.Warehouse,
-	discoveredCharts []kargoapi.ChartDiscoveryResult,
-) exprFn {
+func getChartFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) exprFn {
 	return func(a ...any) (any, error) {
 		// TODO: implement
 		return nil, nil

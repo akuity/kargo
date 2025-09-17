@@ -265,8 +265,11 @@ func (r *reconciler) syncWarehouse(
 		}
 		logger.Debug("discovered latest artifacts")
 
-		filteredArtifacts, err := r.filterDiscoveredArtifacts(ctx, warehouse, discoveredArtifacts)
-		if err != nil {
+		// Update the status with the filtered artifacts, and mark the
+		// Warehouse as healthy.
+		status.DiscoveredArtifacts = discoveredArtifacts
+
+		if err := r.filterDiscoveredArtifacts(ctx, warehouse); err != nil {
 			conditions.Set(
 				&status,
 				&metav1.Condition{
@@ -286,10 +289,6 @@ func (r *reconciler) syncWarehouse(
 			)
 			return status, fmt.Errorf("error evaluating freight creation filters: %w", err)
 		}
-
-		// Update the status with the filtered artifacts, and mark the
-		// Warehouse as healthy.
-		status.DiscoveredArtifacts = filteredArtifacts
 	}
 
 	// At this point, we have successfully discovered the latest artifacts
@@ -670,40 +669,40 @@ func validateDiscoveredArtifacts(
 	return true
 }
 
-func (r *reconciler) filterDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	discoveredArtifacts *kargoapi.DiscoveredArtifacts,
-) (*kargoapi.DiscoveredArtifacts, error) {
+func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi.Warehouse) error {
 	if wh.Spec.FreightCreationFilters.Expression == "" {
-		return discoveredArtifacts, nil
+		return nil
+	}
+
+	if wh.Status.DiscoveredArtifacts == nil {
+		return nil
 	}
 
 	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression)
 	if err != nil {
-		return nil, fmt.Errorf("error compiling tag filter expression: %w", err)
+		return fmt.Errorf("error compiling tag filter expression: %w", err)
 	}
 
-	filteredArtifacts := &kargoapi.DiscoveredArtifacts{
-		DiscoveredAt: discoveredArtifacts.DiscoveredAt,
-	}
+	// filteredArtifacts := &kargoapi.DiscoveredArtifacts{
+	// 	DiscoveredAt: wh.Status.DiscoveredArtifacts.DiscoveredAt,
+	// }
 
 	// TODO: finish hydrating env
 	env := map[string]any{
-		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Charts),
-		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Images),
-		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, r.client, wh.Namespace, wh, discoveredArtifacts.Git),
+		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh),
+		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, r.client, wh),
+		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, r.client, wh),
 	}
 
 	result, err := expr.Run(program, env)
 	if err != nil {
-		return nil, fmt.Errorf("error evaluating tag filter expression: %w", err)
+		return fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
 
 	fmt.Printf("result: %+v\n", result)
 
 	// TODO: use result to resolve discoveredArtifacts
-	return filteredArtifacts, nil
+	return nil
 }
 
 // shouldDiscoverArtifacts returns true if the Warehouse should attempt to
