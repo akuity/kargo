@@ -125,13 +125,21 @@ As previously mentioned, _most_ access controls are managed at the project level
 by project admins, however, there are two ways in which an operator can also
 map users to `ServiceAccount` resources.
 
-#### `api.oidc.admins` / `api.oidc.viewers`
+#### `api.oidc.admins` / `api.oidc.viewers` / `api.oidc.users` / `api.projectCreators`
 
-The `api.oidc.admins` and `api.oidc.viewers` configuration options of the Kargo
-Helm chart permit an operator to map users with specific claims to
-_system-wide_ admin and viewer roles respectively. If, for example, every user
-in the group `devops` should be an admin, and every user in the group
-`developers` should be a viewer, you would set these accordingly:
+The `api.oidc.admins`, `api.oidc.projectCreators`, `api.oidc.users`, and
+`api.oidc.viewers` configuration options of the Kargo Helm chart permit an 
+operator to map users with specific claims to _system-wide_ admin, 
+project creator, user, and viewer roles respectively. 
+
+If, for example:
+
+- every user in the group `devops` should be an admin
+- every user in the group `sales` should be a project creator
+- every user in the group `developers` should be user
+- and every user in the group `support` should be a viewer
+
+You would use the following configuration:
 
 ```yaml
 api:
@@ -139,13 +147,19 @@ api:
     # ... omitted for brevity ...
     admins:
       claims: '{"groups":["devops"]}'
-    viewer:
+    projectCreators:
+      claims: '{"groups":["sales"]}'
+    users:
       claims: '{"groups":["developers"]}'
+    viewer:
+      claims: '{"groups":["support"]}'
 ```
 
-Behind the scenes, the configuration above merely results in the `kargo-admin`
-and `kargo-viewer` `ServiceAccounts` in the namespace in which Kargo is
-installed being annotated as discussed in the previous section.
+Behind the scenes, the configuration above merely results in `ServiceAccounts` 
+in the namespace in which Kargo is installed being annotated as discussed in 
+the previous section.
+
+For example:
 
 `kargo-admin`:
 
@@ -168,8 +182,10 @@ metadata:
   name: kargo-viewer
   namespace: kargo
   annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":["developers"]}'
+    rbac.kargo.akuity.io/claims: '{"groups":["support"]}'
 ```
+
+and so on and so forth.
 
 `ClusterRoleBinding` resources associating these `ServiceAccount` resources with
 the correct permissions are pre-defined by the chart.
