@@ -639,12 +639,10 @@ func validateDiscoveredArtifacts(
 			newStatus,
 			&metav1.Condition{
 				Type:   kargoapi.ConditionTypeHealthy,
-				Status: metav1.ConditionTrue,
-				Reason: "ArtifactsDiscovered",
+				Status: metav1.ConditionFalse,
+				Reason: "FreightCreationFilterExpressionError",
 				Message: fmt.Sprintf(
-					"Successfully discovered %s from %d subscriptions",
-					message,
-					subscriptions,
+					"failed to evaluate freight creation filter expression: %s", err.Error(),
 				),
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
