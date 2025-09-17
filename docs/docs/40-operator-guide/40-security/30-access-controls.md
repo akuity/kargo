@@ -123,7 +123,7 @@ As previously mentioned, _most_ access controls are managed at the project level
 by project admins, however, there are two ways in which an operator can also
 map users to `ServiceAccount` resources.
 
-#### `api.oidc.admins` / `api.oidc.viewers` / `api.oidc.users` / `api.projectCreators`
+#### Built-in System Roles
 
 The `api.oidc.admins`, `api.oidc.projectCreators`, `api.oidc.users`, and
 `api.oidc.viewers` configuration options of the Kargo Helm chart permit an 
