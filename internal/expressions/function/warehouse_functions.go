@@ -84,7 +84,7 @@ func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn 
 			"warehouse", wh.Name,
 		)
 
-		var latestCommit kargoapi.DiscoveredCommit
+		var latestCommit *kargoapi.DiscoveredCommit
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Git != nil && s.Git.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Git) != 0 {
 				logger.Debug("number of discovered git artifacts",
@@ -96,12 +96,19 @@ func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn 
 						"numCommits", len(dr.Commits),
 					)
 					for _, c := range dr.Commits {
+						if latestCommit == nil {
+							latestCommit = &c
+							continue
+						}
 						if c.CreatorDate.After(latestCommit.CreatorDate.Time) {
-							latestCommit = c
+							latestCommit = &c
 						}
 					}
 				}
 			}
+		}
+		if latestCommit == nil {
+			return nil, fmt.Errorf("no commits found for repoURL %q", repoURL)
 		}
 		return latestCommit, nil
 	}
@@ -128,7 +135,7 @@ func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 			"warehouse", wh.Name,
 		)
 
-		var latestImage kargoapi.DiscoveredImageReference
+		var latestImage *kargoapi.DiscoveredImageReference
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Image != nil && s.Image.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
@@ -140,12 +147,19 @@ func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 						"numImageRefs", len(dr.References),
 					)
 					for _, ref := range dr.References {
+						if latestImage == nil {
+							latestImage = &ref
+							continue
+						}
 						if ref.CreatedAt.After(latestImage.CreatedAt.Time) {
-							latestImage = ref
+							latestImage = &ref
 						}
 					}
 				}
 			}
+		}
+		if latestImage == nil {
+			return nil, fmt.Errorf("no images found for repoURL %q", repoURL)
 		}
 		return latestImage, nil
 	}
