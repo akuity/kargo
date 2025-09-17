@@ -125,39 +125,54 @@ map users to `ServiceAccount` resources.
 
 #### Built-in System Roles
 
-The `api.oidc.admins`, `api.oidc.projectCreators`, `api.oidc.users`, and
-`api.oidc.viewers` configuration options of the Kargo Helm chart permit an 
-operator to map users with specific claims to _system-wide_ admin, 
-project creator, user, and viewer roles respectively. 
+Kargo comes with four specific `ServiceAccount`s pre-defined by its Helm chart,
+along with bindings to applicable permissions. These four `ServiceAccount`s can
+easily be associated with users having specific claimes through chart
+configuration at install-time:
 
-If, for example:
+| Name | Configuration Key | Description |
+|------|-------------------|-------------|
+| `kargo-admin` | `api.oidc.admins` | Complete, cluster-wide access to all Kargo resources. Access to `Secret`s is _not_ cluster-wide, but expands and contracts dynamically as projects and their underlying namespaces are created and deleted. |
+| `kargo-viewer` | `api.oidc.viewers` | Read-only, cluster-wide access to all Kargo resources. This does _not_ include any level of access to `Secret`s. |
+| `kargo-user` | `api.oidc.users` | The minimum level of permissions that can be granted to a user. It permits only listing `Project`s and viewing system-level configuration. This does _not_ include any level of access to `Secret`s. |
+| `kargo-project-creator` | `api.oidc.projectCreators` | The permissions of the user role, plus permission to create new `Project`s. When a project is created by such a user via the CLI or UI (but not through `kubectl`) that user will dynamically receive admin permissions within that project's underlying namespace. This includes access to project `Secret`s. |
 
-- every user in the group `devops` should be an admin
-- every user in the group `sales` should be a project creator
-- every user in the group `developers` should be user
-- and every user in the group `support` should be a viewer
+If, one wished to make the following associations:
 
-You would use the following configuration:
+- Alice and Bob should be admins.
+- Team leads should be able to create new projects.
+- Devops engineers should be able to view everything.
+- Developers should have few permissions, with additional permissions granted on
+  a project-by-project basis.
+
+And assuming users have `email` and `group` claims, and groups `leads`, `devops`, and
+`developers` exist, Kargo could be configured as follows at install-time:
 
 ```yaml
 api:
   oidc:
     # ... omitted for brevity ...
     admins:
-      claims: '{"groups":["devops"]}'
+      claims:
+        email:
+        - alice@example.com
+        - bob@example.com
     projectCreators:
-      claims: '{"groups":["sales"]}'
+      claims:
+      - leads
+    viewers:
+      claims:
+      - devops
     users:
-      claims: '{"groups":["developers"]}'
-    viewer:
-      claims: '{"groups":["support"]}'
+      claims:
+      - developers
 ```
 
-Behind the scenes, the configuration above merely results in `ServiceAccounts` 
-in the namespace in which Kargo is installed being annotated as discussed in 
-the previous section.
+Behind the scenes, the configuration above merely results in applicable
+`ServiceAccounts` in Kargo's own namespace being annotated as discussed in the
+previous section.
 
-For example:
+For example, the `kargo-admin` `ServiceAccount` will be annotated as follows:
 
 `kargo-admin`:
 
@@ -168,34 +183,11 @@ metadata:
   name: kargo-admin
   namespace: kargo
   annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
+    rbac.kargo.akuity.io/claims: '{"email":["alice@example.com", "bob@example.com"]}'
 ```
-
-`kargo-viewer`:
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kargo-viewer
-  namespace: kargo
-  annotations:
-    rbac.kargo.akuity.io/claims: '{"groups":["support"]}'
-```
-
-and so on and so forth.
-
-`ClusterRoleBinding` resources associating these `ServiceAccount` resources with
-the correct permissions are pre-defined by the chart.
-
-:::note
-It is common to map _all_ authenticated users to the `kargo-viewer`
-`ServiceAccount` to effect broad read-only permissions. These permissions _do
-not_ extend to credentials and other project `Secret`s.
-:::
 
 :::info
-For additional information, once again, refer to the
+For additional information, refer to the
 [OpenID Connect](./20-openid-connect/index.md) section of the Operator Guide.
 :::
 
