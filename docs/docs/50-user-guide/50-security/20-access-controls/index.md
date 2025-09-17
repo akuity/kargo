@@ -83,7 +83,6 @@ In the following example, the `ServiceAccount` resource is mapped to all of:
 * A user with the `email` claim `carl@example.com`.
 * All users with a `groups` claim containing _either_ the `devops` or
   `kargo-admin` group.
-* Users with a `special:key` claim.
 
 ```yaml
 apiVersion: v1
@@ -96,8 +95,7 @@ metadata:
       {
         "sub": ["alice", "bob" ],
         "email": "carl@example.com",
-        "groups": ["devops", "kargo-admin"],
-        "special:key": ["value"]
+        "groups": ["devops", "kargo-admin"]
       }
 ```
 
