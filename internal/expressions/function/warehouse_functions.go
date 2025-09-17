@@ -208,7 +208,10 @@ func getChartFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 				}
 			}
 		}
-		return kargoapi.DiscoveredImageReference{Tag: latestChartVersion.String()}, nil
+		if latestChartVersion == nil {
+			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
+		}
+		return &kargoapi.DiscoveredImageReference{Tag: latestChartVersion.String()}, nil
 	}
 }
 

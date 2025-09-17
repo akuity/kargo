@@ -5,6 +5,7 @@ import (
 	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -53,13 +54,13 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 								RepoURL: "https://example.com/repo.git",
 								Commits: []kargoapi.DiscoveredCommit{
 									{
-										Tag:         "abc123",
+										Tag: "abc123",
 										CreatorDate: &metav1.Time{
 											Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
 										},
 									},
 									{
-										Tag:         "def456",
+										Tag: "def456",
 										CreatorDate: &metav1.Time{
 											Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
 										},
@@ -90,7 +91,10 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fn := getCommitFromWarehouse(t.Context(), tc.warehouse)
+			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			fn := getCommitFromWarehouse(ctx, tc.warehouse)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -138,16 +142,16 @@ func Test_getImageFromWarehouse(t *testing.T) {
 					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
 						Images: []kargoapi.ImageDiscoveryResult{
 							{
-								RepoURL:  "docker.io/example/repo",
+								RepoURL: "docker.io/example/repo",
 								References: []kargoapi.DiscoveredImageReference{
 									{
-										Tag:         "abc123",
+										Tag: "abc123",
 										CreatedAt: &metav1.Time{
 											Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
 										},
 									},
 									{
-										Tag:         "def456",
+										Tag: "def456",
 										CreatedAt: &metav1.Time{
 											Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
 										},
@@ -162,9 +166,9 @@ func Test_getImageFromWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				commit, ok := result.(*kargoapi.DiscoveredImageReference)
+				img, ok := result.(*kargoapi.DiscoveredImageReference)
 				require.True(t, ok)
-				require.Equal(t, "def456", commit.Tag)
+				require.Equal(t, "def456", img.Tag)
 			},
 		},
 		{
@@ -178,7 +182,92 @@ func Test_getImageFromWarehouse(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			fn := getImageFromWarehouse(t.Context(), tc.warehouse)
+			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			fn := getImageFromWarehouse(ctx, tc.warehouse)
+			result, err := fn(tc.args...)
+			tc.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getChartromWarehouse(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		warehouse  *kargoapi.Warehouse
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name:      "wrong number of args",
+			warehouse: nil,
+			args:      []any{"one", "two"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "expected 1 argument, got 2")
+			},
+		},
+		{
+			name:      "invalid arg type",
+			warehouse: nil,
+			args:      []any{1},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "first argument must be string, got int")
+			},
+		},
+		{
+			name: "success",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
+							},
+						},
+					},
+				},
+				Status: kargoapi.WarehouseStatus{
+					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+						Charts: []kargoapi.ChartDiscoveryResult{
+							{
+								RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+								Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
+							},
+							{
+								RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+								Versions: []string{"v2.1.0", "v2.2.0", "v2.3.0"},
+							},
+						},
+					},
+				},
+			},
+			args: []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				commit, ok := result.(*kargoapi.DiscoveredImageReference)
+				require.True(t, ok)
+				require.Equal(t, "2.3.0", commit.Tag)
+			},
+		},
+		{
+			name:      "no charts found",
+			warehouse: new(kargoapi.Warehouse),
+			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "no charts found for repoURL")
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			fn := getChartFromWarehouse(ctx, tc.warehouse)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
