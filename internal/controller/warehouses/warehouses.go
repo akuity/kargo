@@ -695,7 +695,7 @@ func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi
 
 	// TODO: finish hydrating env
 	env := map[string]any{
-		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh),
+		"commitFromWarehouse": function.ChartFromWarehouse(ctx, wh),
 		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, wh),
 		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, wh),
 	}
