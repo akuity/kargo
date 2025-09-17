@@ -159,13 +159,16 @@ api:
         - bob@example.com
     projectCreators:
       claims:
-      - leads
+        groups:
+        - leads
     viewers:
       claims:
-      - devops
+        groups:
+        - devops
     users:
       claims:
-      - developers
+        groups:
+        - developers
 ```
 
 Behind the scenes, the configuration above merely results in applicable
