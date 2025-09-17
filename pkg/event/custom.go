@@ -28,6 +28,7 @@ type Custom struct {
 	EventType  kargoapi.EventType `json:"type"`
 	Message    string             `json:"message,omitempty"`
 	Data       map[string]any     `json:"data"`
+	ID         string             `json:"id,omitempty"`
 }
 
 func (c *Custom) Kind() string {
@@ -52,4 +53,8 @@ func (c *Custom) GetMessage() string {
 
 func (c *Custom) SetMessage(msg string) {
 	c.Message = msg
+}
+
+func (c *Custom) GetID() string {
+	return c.ID
 }
