@@ -72,25 +72,55 @@ func splitYAML(
 	return projects, otherResources, nil
 }
 
-// objectOrRaw returns either the object or the raw representation of the object
-// based on the format.
-func objectOrRaw[T client.Object](obj T, format svcv1alpha1.RawFormat) (T, []byte, error) {
+// objectOrRaw takes structured or unstructured objects as input and depending
+// on requested format returns EITHER (but never both) the object serialized in
+// the requested format OR the object converted to the structured object type.
+func objectOrRaw[T client.Object](
+	c client.Client,
+	obj client.Object,
+	format svcv1alpha1.RawFormat,
+	t T,
+) (T, []byte, error) {
+	if _, ok := obj.(*unstructured.Unstructured); !ok {
+		// Structured objects are likely to be missing GVK information, so we add
+		// it in.
+		gvk, err := c.GroupVersionKindFor(t)
+		if err != nil {
+			return *new(T), nil,
+				fmt.Errorf("could not determine GVK for type: %w", err)
+		}
+		obj.GetObjectKind().SetGroupVersionKind(gvk)
+	}
 	switch format {
 	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON:
 		raw, err := json.Marshal(obj)
 		if err != nil {
-			return *new(T), nil, fmt.Errorf("object could not be marshaled to raw JSON: %w", err)
+			return *new(T), nil,
+				fmt.Errorf("object could not be marshaled to raw JSON: %w", err)
 		}
 		return *new(T), raw, nil
 	case svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
 		raw, err := sigyaml.Marshal(obj)
 		if err != nil {
-			return *new(T), nil, fmt.Errorf("object could not be marshaled to raw YAML: %w", err)
+			return *new(T), nil,
+				fmt.Errorf("object could not be marshaled to raw YAML: %w", err)
 		}
 		return *new(T), raw, nil
-	default:
-		return obj, nil, nil
 	}
+	if uObj, ok := obj.(*unstructured.Unstructured); ok {
+		var newObj T
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(uObj.Object, &newObj); err != nil {
+			return *new(T), nil, fmt.Errorf(
+				"error converting unstructured object to typed object: %w", err,
+			)
+		}
+		return newObj, nil, nil
+	}
+	if typed, ok := obj.(T); ok {
+		return typed, nil, nil
+	}
+	return *new(T), nil,
+		fmt.Errorf("type mismatch: cannot input to expected type")
 }
 
 // annotateProjectWithCreator annotates an unstructured object with information
