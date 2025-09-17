@@ -901,7 +901,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := validateDiscoveredArtifacts(tc.warehouse, tc.newStatus)
+			result := validateDiscoveredArtifacts(t.Context(), tc.warehouse, tc.newStatus)
 			tc.assertions(t, result, tc.newStatus)
 		})
 	}

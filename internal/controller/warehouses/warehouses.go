@@ -3,6 +3,7 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -265,30 +266,9 @@ func (r *reconciler) syncWarehouse(
 		}
 		logger.Debug("discovered latest artifacts")
 
-		// Update the status with the filtered artifacts, and mark the
+		// Update the status with the discovered artifacts, and mark the
 		// Warehouse as healthy.
 		status.DiscoveredArtifacts = discoveredArtifacts
-
-		if err := r.filterDiscoveredArtifacts(ctx, warehouse); err != nil {
-			conditions.Set(
-				&status,
-				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeHealthy,
-					Status:             metav1.ConditionFalse,
-					Reason:             "DiscoveryFailed",
-					Message:            fmt.Sprintf("Unable to evaluate freight creation filter: %s", err.Error()),
-					ObservedGeneration: warehouse.GetGeneration(),
-				},
-				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeReady,
-					Status:             metav1.ConditionFalse,
-					Reason:             "DiscoveryFailure",
-					Message:            fmt.Sprintf("Unable to evaluate freight creation filter: %s", err.Error()),
-					ObservedGeneration: warehouse.GetGeneration(),
-				},
-			)
-			return status, fmt.Errorf("error evaluating freight creation filters: %w", err)
-		}
 	}
 
 	// At this point, we have successfully discovered the latest artifacts
@@ -296,7 +276,7 @@ func (r *reconciler) syncWarehouse(
 	status.ObservedGeneration = warehouse.GetGeneration()
 
 	// Validate the discovered artifacts.
-	if !validateDiscoveredArtifacts(warehouse, &status) {
+	if !validateDiscoveredArtifacts(ctx, warehouse, &status) {
 		// Remove the reconciling condition and return early if the validation
 		// failed. We do not return an error here, to prevent a requeue loop
 		// which would cause unnecessary pressure on the upstream sources.
@@ -509,6 +489,7 @@ func (r *reconciler) patchStatus(
 // the Warehouse status with the results. Returns true if the artifacts are
 // valid, false otherwise.
 func validateDiscoveredArtifacts(
+	ctx context.Context,
 	warehouse *kargoapi.Warehouse,
 	newStatus *kargoapi.WarehouseStatus,
 ) bool {
@@ -652,6 +633,38 @@ func validateDiscoveredArtifacts(
 		message = strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
 	}
 
+	ok, err := freightCreationFilterSatisfied(ctx, warehouse)
+	if err != nil {
+		conditions.Set(
+			newStatus,
+			&metav1.Condition{
+				Type:   kargoapi.ConditionTypeHealthy,
+				Status: metav1.ConditionTrue,
+				Reason: "ArtifactsDiscovered",
+				Message: fmt.Sprintf(
+					"Successfully discovered %s from %d subscriptions",
+					message,
+					subscriptions,
+				),
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
+		return false
+	}
+	if !ok {
+		conditions.Set(
+			newStatus,
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeHealthy,
+				Status:             metav1.ConditionTrue,
+				Reason:             "FreightCreationFilteredNotSatisfied",
+				Message:            "freigth creation filter expression not satisfied; skipping freight creation",
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
+		return false
+	}
+
 	conditions.Set(
 		newStatus,
 		&metav1.Condition{
@@ -669,23 +682,19 @@ func validateDiscoveredArtifacts(
 	return true
 }
 
-func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi.Warehouse) error {
+func freightCreationFilterSatisfied(ctx context.Context, wh *kargoapi.Warehouse) (bool, error) {
 	if wh.Spec.FreightCreationFilters.Expression == "" {
-		return nil
+		return true, nil
 	}
 
 	if wh.Status.DiscoveredArtifacts == nil {
-		return nil
+		return true, nil
 	}
 
 	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression)
 	if err != nil {
-		return fmt.Errorf("error compiling tag filter expression: %w", err)
+		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
 	}
-
-	// filteredArtifacts := &kargoapi.DiscoveredArtifacts{
-	// 	DiscoveredAt: wh.Status.DiscoveredArtifacts.DiscoveredAt,
-	// }
 
 	ctx = logging.ContextWithLogger(ctx,
 		logging.LoggerFromContext(ctx).WithValues(
@@ -693,7 +702,6 @@ func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi
 		),
 	)
 
-	// TODO: finish hydrating env
 	env := map[string]any{
 		"commitFromWarehouse": function.ChartFromWarehouse(ctx, wh),
 		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, wh),
@@ -702,13 +710,19 @@ func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi
 
 	result, err := expr.Run(program, env)
 	if err != nil {
-		return fmt.Errorf("error evaluating freight creation filter expression: %w", err)
+		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
 
-	fmt.Printf("result: %+v\n", result)
-
-	// TODO: use result to resolve discoveredArtifacts
-	return nil
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, err
+		}
+		return parsedBool, nil
+	}
 }
 
 // shouldDiscoverArtifacts returns true if the Warehouse should attempt to
