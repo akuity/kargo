@@ -697,7 +697,7 @@ func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi
 	env := map[string]any{
 		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh),
 		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, r.client, wh),
-		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, r.client, wh),
+		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, wh),
 	}
 
 	result, err := expr.Run(program, env)

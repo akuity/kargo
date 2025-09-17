@@ -25,10 +25,10 @@ func Warehouse() expr.Option {
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided warehouse within
 // the project context.
-func CommitFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) expr.Option {
+func CommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromWarehouse(ctx, c, wh),
+		getCommitFromWarehouse(ctx, wh),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
@@ -66,7 +66,7 @@ func ChartFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Wareh
 //
 // The returned function uses warehouse to locate the
 // appropriate commit within the project context.
-func getCommitFromWarehouse(ctx context.Context, cl client.Client, wh *kargoapi.Warehouse) exprFn {
+func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
