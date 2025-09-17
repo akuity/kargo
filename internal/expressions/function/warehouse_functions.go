@@ -39,10 +39,10 @@ func CommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Optio
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) expr.Option {
+func ImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromWarehouse(ctx, c, wh),
+		getImageFromWarehouse(ctx, wh),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
@@ -110,10 +110,42 @@ func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn 
 //
 // The returned function uses the warehouse and references to locate the
 // appropriate image within the project context.
-func getImageFromWarehouse(ctx context.Context, c client.Client, wh *kargoapi.Warehouse) exprFn {
+func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 	return func(a ...any) (any, error) {
-		// TODO: implement
-		return nil, nil
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"repoURL", repoURL,
+			"warehouse", wh.Name,
+		)
+
+		var latestImage kargoapi.DiscoveredImageReference
+		for _, s := range wh.Spec.Subscriptions {
+			if s.Image != nil && s.Image.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Images) != 0 {
+				logger.Debug("number of discovered image artifacts",
+					"count", len(wh.Status.DiscoveredArtifacts.Images),
+				)
+				for i, dr := range wh.Status.DiscoveredArtifacts.Images {
+					logger.Debug("checking discovered image artifact",
+						"index", i,
+						"numCommits", len(dr.References),
+					)
+					for _, ref := range dr.References {
+						if ref.CreatedAt.After(latestImage.CreatedAt.Time) {
+							latestImage = ref
+						}
+					}
+				}
+			}
+		}
+		return latestImage, nil
 	}
 }
 
