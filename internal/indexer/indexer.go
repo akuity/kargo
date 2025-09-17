@@ -454,6 +454,12 @@ func StagesByWarehouse(obj client.Object) []string {
 	return warehouses
 }
 
+// FormatClaim formats a claims name and values to be used by the
+// IndexServiceAccountsByOIDCClaims index.
+func FormatClaim(claimName, claimValue string) string {
+	return claimName + "/" + claimValue
+}
+
 // ServiceAccountsByOIDCClaims is a client.IndexerFunc that indexes
 // ServiceAccounts by their OIDC claims.
 func ServiceAccountsByOIDCClaims(obj client.Object) []string {
@@ -495,12 +501,6 @@ func ServiceAccountsByOIDCClaims(obj client.Object) []string {
 		return nil
 	}
 	return refinedClaimValues
-}
-
-// FormatClaim formats a claims name and values to be used by the
-// IndexServiceAccountsByOIDCClaims index.
-func FormatClaim(claimName, claimValue string) string {
-	return claimName + "/" + claimValue
 }
 
 // WarehousesBySubscribedURLs is a client.IndexerFunc that indexes Warehouses by the
