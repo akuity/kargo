@@ -481,7 +481,7 @@ controller:
       ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
       minReconciliationInterval: "5m0s"
 
-  # @param.controller.customRegistries
+  ## @param controller.customRegistries optionally configures custom rate limiting for specific container image registries.
   customRegistries: {}
     # hostnames:
     # - my.internal.harbor.com

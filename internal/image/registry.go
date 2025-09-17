@@ -5,11 +5,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/patrickmn/go-cache"
 	"go.uber.org/ratelimit"
+
+	"github.com/akuity/kargo/internal/os"
+	"github.com/akuity/kargo/internal/types"
 )
 
 // dockerRegistry is registry configuration for Docker Hub.
