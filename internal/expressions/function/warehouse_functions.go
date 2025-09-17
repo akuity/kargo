@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -71,17 +72,36 @@ func getCommitFromWarehouse(ctx context.Context, cl client.Client, wh *kargoapi.
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
 		}
 
-		// repoURL, ok := a[0].(string)
-		// if !ok {
-		// 	return nil, fmt.Errorf("first argument must be string, got %T", a[0])
-		// }
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
 
-		// for _, dc := range discoveredCommits {
-		// 	if dc.RepositoryURL == repoURL {
-		// 		return dc.Commit, nil
-		// 	}
-		// }
-		return nil, nil
+		logger := logging.LoggerFromContext(ctx).WithValues(
+			"repoURL", repoURL,
+			"warehouse", wh.Name,
+		)
+
+		var latestCommit kargoapi.DiscoveredCommit
+		for _, s := range wh.Spec.Subscriptions {
+			if s.Git != nil && s.Git.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Git) != 0 {
+				logger.Debug("number of discovered git artifacts",
+					"count", len(wh.Status.DiscoveredArtifacts.Git),
+				)
+				for i, dr := range wh.Status.DiscoveredArtifacts.Git {
+					logger.Debug("checking discovered git artifact",
+						"index", i,
+						"numCommits", len(dr.Commits),
+					)
+					for _, c := range dr.Commits {
+						if c.CreatorDate.After(latestCommit.CreatorDate.Time) {
+							latestCommit = c
+						}
+					}
+				}
+			}
+		}
+		return latestCommit, nil
 	}
 }
 

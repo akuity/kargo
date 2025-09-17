@@ -687,6 +687,12 @@ func (r *reconciler) filterDiscoveredArtifacts(ctx context.Context, wh *kargoapi
 	// 	DiscoveredAt: wh.Status.DiscoveredArtifacts.DiscoveredAt,
 	// }
 
+	ctx = logging.ContextWithLogger(ctx,
+		logging.LoggerFromContext(ctx).WithValues(
+			"filterExpression", wh.Spec.FreightCreationFilters.Expression,
+		),
+	)
+
 	// TODO: finish hydrating env
 	env := map[string]any{
 		"commitFromWarehouse": function.ChartFromWarehouse(ctx, r.client, wh),
