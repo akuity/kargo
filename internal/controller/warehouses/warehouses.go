@@ -633,7 +633,7 @@ func validateDiscoveredArtifacts(
 		message = strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
 	}
 
-	ok, err := freightCreationFilterSatisfied(ctx, warehouse)
+	ok, err := freightCreationFilterSatisfied(ctx, warehouse, artifacts)
 	if err != nil {
 		conditions.Set(
 			newStatus,
@@ -680,17 +680,24 @@ func validateDiscoveredArtifacts(
 	return true
 }
 
-func freightCreationFilterSatisfied(ctx context.Context, wh *kargoapi.Warehouse) (bool, error) {
+func freightCreationFilterSatisfied(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) (bool, error) {
 	if wh.Spec.FreightCreationFilters.Expression == "" {
 		return true, nil
 	}
 
-	if wh.Status.DiscoveredArtifacts == nil {
+	if artifacts == nil {
 		return true, nil
 	}
 
-	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression)
+	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression,
+		function.WarehouseOperations(ctx, wh, artifacts)...,
+	)
 	if err != nil {
+		println("ERROR COMPILING EXPRESSION: ", err.Error())
 		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
 	}
 
@@ -701,13 +708,15 @@ func freightCreationFilterSatisfied(ctx context.Context, wh *kargoapi.Warehouse)
 	)
 
 	env := map[string]any{
-		"commitFromWarehouse": function.ChartFromWarehouse(ctx, wh),
-		"imageFromWarehouse":  function.ImageFromWarehouse(ctx, wh),
-		"chartFromWarehouse":  function.CommitFromWarehouse(ctx, wh),
+		"commitFrom": function.ChartFromWarehouse(ctx, wh, artifacts),
+		"imageFrom":  function.ImageFromWarehouse(ctx, wh, artifacts),
+		"chartFrom":  function.CommitFromWarehouse(ctx, wh, artifacts),
 	}
 
+	println("RUNNING EXPRESSION: ", wh.Spec.FreightCreationFilters.Expression)
 	result, err := expr.Run(program, env)
 	if err != nil {
+		println("ERROR RUNNING EXPRESSION: ", err.Error())
 		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
 

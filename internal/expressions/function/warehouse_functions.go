@@ -12,6 +12,26 @@ import (
 	semver "github.com/Masterminds/semver/v3"
 )
 
+// WarehouseOperations returns a slice of expr.Option containing functions for
+// Warehouse operations.
+//
+// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
+// functions that can be used within expressions. The functions operate within
+// the context of a given project with the provided freight requests and
+// references.
+func WarehouseOperations(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) []expr.Option {
+	return []expr.Option{
+		Warehouse(),
+		CommitFromWarehouse(ctx, wh, artifacts),
+		ImageFromWarehouse(ctx, wh, artifacts),
+		ChartFromWarehouse(ctx, wh, artifacts),
+	}
+}
+
 // Warehouse returns an expr.Option that provides a `warehouse()` function
 // for use in expressions.
 //
@@ -27,10 +47,14 @@ func Warehouse() expr.Option {
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided warehouse within
 // the project context.
-func CommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option {
+func CommitFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromWarehouse(ctx, wh),
+		getCommitFromWarehouse(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
@@ -41,10 +65,14 @@ func CommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Optio
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option {
+func ImageFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromWarehouse(ctx, wh),
+		getImageFromWarehouse(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
@@ -55,10 +83,14 @@ func ImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option
 // The chartFrom function finds Helm charts based on repository URL, optional
 // chart name, and optional origin, using the provided freight requests and
 // references within the project context.
-func ChartFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option {
+func ChartFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChartFromWarehouse(ctx, wh),
+		getChartFromWarehouse(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.Chart),
 	)
 }
@@ -68,7 +100,11 @@ func ChartFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) expr.Option
 //
 // The returned function uses warehouse to locate the
 // appropriate commit within the project context.
-func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
+func getCommitFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -86,11 +122,11 @@ func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn 
 
 		var latestCommit *kargoapi.DiscoveredCommit
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Git != nil && s.Git.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Git) != 0 {
+			if s.Git != nil && s.Git.RepoURL == repoURL && len(artifacts.Git) != 0 {
 				logger.Debug("number of discovered git artifacts",
-					"count", len(wh.Status.DiscoveredArtifacts.Git),
+					"count", len(artifacts.Git),
 				)
-				for i, dr := range wh.Status.DiscoveredArtifacts.Git {
+				for i, dr := range artifacts.Git {
 					logger.Debug("checking discovered git artifact",
 						"index", i,
 						"numCommits", len(dr.Commits),
@@ -119,7 +155,11 @@ func getCommitFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn 
 //
 // The returned function uses the warehouse and references to locate the
 // appropriate image within the project context.
-func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
+func getImageFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -137,11 +177,11 @@ func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 
 		var latestImage *kargoapi.DiscoveredImageReference
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Image != nil && s.Image.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Images) != 0 {
+			if s.Image != nil && s.Image.RepoURL == repoURL && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
-					"count", len(wh.Status.DiscoveredArtifacts.Images),
+					"count", len(artifacts.Images),
 				)
-				for i, dr := range wh.Status.DiscoveredArtifacts.Images {
+				for i, dr := range artifacts.Images {
 					logger.Debug("checking discovered image artifact",
 						"index", i,
 						"numImageRefs", len(dr.References),
@@ -170,7 +210,11 @@ func getImageFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 //
 // The returned function uses freight requests and references to locate the
 // appropriate chart within the project context.
-func getChartFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
+func getChartFromWarehouse(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -188,11 +232,11 @@ func getChartFromWarehouse(ctx context.Context, wh *kargoapi.Warehouse) exprFn {
 
 		var latestChartVersion *semver.Version
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Chart != nil && s.Chart.RepoURL == repoURL && len(wh.Status.DiscoveredArtifacts.Charts) != 0 {
+			if s.Chart != nil && s.Chart.RepoURL == repoURL && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
-					"count", len(wh.Status.DiscoveredArtifacts.Charts),
+					"count", len(artifacts.Charts),
 				)
-				for i, dr := range wh.Status.DiscoveredArtifacts.Charts {
+				for i, dr := range artifacts.Charts {
 					logger.Debug("checking discovered chart artifact",
 						"index", i,
 						"numVersions", len(dr.Versions),

@@ -14,6 +14,7 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
+		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
@@ -47,24 +48,22 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 						},
 					},
 				},
-				Status: kargoapi.WarehouseStatus{
-					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
-						Git: []kargoapi.GitDiscoveryResult{
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "https://example.com/repo.git",
+						Commits: []kargoapi.DiscoveredCommit{
 							{
-								RepoURL: "https://example.com/repo.git",
-								Commits: []kargoapi.DiscoveredCommit{
-									{
-										Tag: "abc123",
-										CreatorDate: &metav1.Time{
-											Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
-										},
-									},
-									{
-										Tag: "def456",
-										CreatorDate: &metav1.Time{
-											Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
-										},
-									},
+								Tag: "abc123",
+								CreatorDate: &metav1.Time{
+									Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
+								},
+							},
+							{
+								Tag: "def456",
+								CreatorDate: &metav1.Time{
+									Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
 								},
 							},
 						},
@@ -94,7 +93,7 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getCommitFromWarehouse(ctx, tc.warehouse)
+			fn := getCommitFromWarehouse(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -105,6 +104,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
+		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
@@ -138,24 +138,22 @@ func Test_getImageFromWarehouse(t *testing.T) {
 						},
 					},
 				},
-				Status: kargoapi.WarehouseStatus{
-					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
-						Images: []kargoapi.ImageDiscoveryResult{
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "docker.io/example/repo",
+						References: []kargoapi.DiscoveredImageReference{
 							{
-								RepoURL: "docker.io/example/repo",
-								References: []kargoapi.DiscoveredImageReference{
-									{
-										Tag: "abc123",
-										CreatedAt: &metav1.Time{
-											Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
-										},
-									},
-									{
-										Tag: "def456",
-										CreatedAt: &metav1.Time{
-											Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
-										},
-									},
+								Tag: "abc123",
+								CreatedAt: &metav1.Time{
+									Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
+								},
+							},
+							{
+								Tag: "def456",
+								CreatedAt: &metav1.Time{
+									Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
 								},
 							},
 						},
@@ -185,7 +183,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getImageFromWarehouse(ctx, tc.warehouse)
+			fn := getImageFromWarehouse(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -196,6 +194,7 @@ func Test_getChartromWarehouse(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
+		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
@@ -229,18 +228,16 @@ func Test_getChartromWarehouse(t *testing.T) {
 						},
 					},
 				},
-				Status: kargoapi.WarehouseStatus{
-					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
-						Charts: []kargoapi.ChartDiscoveryResult{
-							{
-								RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
-								Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
-							},
-							{
-								RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
-								Versions: []string{"v2.1.0", "v2.2.0", "v2.3.0"},
-							},
-						},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+						Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
+					},
+					{
+						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+						Versions: []string{"v2.1.0", "v2.2.0", "v2.3.0"},
 					},
 				},
 			},
@@ -267,7 +264,7 @@ func Test_getChartromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getChartFromWarehouse(ctx, tc.warehouse)
+			fn := getChartFromWarehouse(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
