@@ -262,7 +262,10 @@ export const StageNode = (props: { stage: Stage }) => {
     >
       <Card
         styles={{
-          header: headerStyle,
+          header: {
+            ...headerStyle,
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.15)'
+          },
           body: {
             height: '100%',
             position: 'relative'
