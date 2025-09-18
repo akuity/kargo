@@ -66,11 +66,6 @@ func (y *yamlMerger) run(
 	cfg builtin.YAMLMergeConfig,
 ) (promotion.StepResult, error) {
 
-	// sanity check
-	if len(cfg.InFiles) == 0 || cfg.OutFile == "" {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("inFiles and OutFile must not be empty")
-	}
-
 	// Secure join the input paths to prevent path traversal attacks.
 	filePaths := []string{}
 	for _, path := range cfg.InFiles {
@@ -85,7 +80,7 @@ func (y *yamlMerger) run(
 			if cfg.IgnoreMissingFiles {
 				continue
 			}
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("input file not found:  %s", inFile)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("error accessing file %s: %w", inFile, err)
 
 		}
 		filePaths = append(filePaths, inFile)
@@ -104,7 +99,7 @@ func (y *yamlMerger) run(
 	}
 
 	// Merge files
-	err = yaml.MergeYAMLFiles(filePaths, outFile)
+	err = yaml.MergeFiles(filePaths, outFile)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("could not merge YAML files: %w", err)
 	}
