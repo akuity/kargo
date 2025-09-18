@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -51,19 +50,6 @@ func (s *server) GetCredentials(
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
-	gvk, err := s.client.GroupVersionKindFor(&secret)
-	if err != nil {
-		return nil, connect.NewError(
-			connect.CodeInternal,
-			fmt.Errorf("get GVK for secret %s/%s: %w", secret.Namespace, secret.Name, err),
-		)
-	}
-
-	secret.TypeMeta = metav1.TypeMeta{
-		Kind:       gvk.Kind,
-		APIVersion: gvk.GroupVersion().String(),
-	}
-
 	// If this isn't labeled as repository credentials, return not found.
 	if _, isCredentials := secret.Labels[kargoapi.LabelKeyCredentialType]; !isCredentials {
 		return nil, connect.NewError(
@@ -77,7 +63,12 @@ func (s *server) GetCredentials(
 		)
 	}
 
-	obj, raw, err := objectOrRaw(sanitizeCredentialSecret(secret), req.Msg.GetFormat())
+	creds, raw, err := objectOrRaw(
+		s.client,
+		sanitizeCredentialSecret(secret),
+		req.Msg.GetFormat(),
+		&corev1.Secret{},
+	)
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
@@ -90,7 +81,7 @@ func (s *server) GetCredentials(
 	}
 	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
 		Result: &svcv1alpha1.GetCredentialsResponse_Credentials{
-			Credentials: obj,
+			Credentials: creds,
 		},
 	}), nil
 }
