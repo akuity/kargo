@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -810,11 +811,11 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 		expected []string
 	}{
 		{
-			name: "ServiceAccount has no OIDC email",
+			name: "has no claim mappings",
 			sa:   &corev1.ServiceAccount{},
 		},
 		{
-			name: "ServiceAccount has OIDC email",
+			name: "ServiceAccount has OIDC old style email",
 			sa: &corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Annotations: map[string]string{
@@ -824,14 +825,78 @@ func TestServiceAccountsByOIDCClaims(t *testing.T) {
 			},
 			expected: []string{"email/fake-email", "email/fake-email-2"},
 		},
+		{
+			name: "ServiceAccount has OIDC claims JSON",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `
+							{
+								"email": ["kilgore@kilgore.trout", "user@inbox.com"],
+								"cognito:groups": ["devops"]
+							}
+						`,
+					},
+				},
+			},
+			expected: []string{
+				"cognito:groups/devops",
+				"email/kilgore@kilgore.trout",
+				"email/user@inbox.com",
+			},
+		},
+		{
+			name: "ServiceAccount has OIDC claims JSON with empty JSON object",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{}`,
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ServiceAccount has OIDC invalid input",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: "invalid-input",
+					},
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "ServiceAccount has both old style and new style OIDC claim mappings",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "email": "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaimNamePrefix + "sub":   "bar,baz",
+						rbacapi.AnnotationKeyOIDCClaims: `{
+							"email": ["foo@baz.com"],
+							"cognito:groups": ["devops", "admins"]
+						}`,
+					},
+				},
+			},
+			expected: []string{
+				"cognito:groups/admins",
+				"cognito:groups/devops",
+				"email/foo@bar.com",
+				"email/foo@baz.com",
+				"sub/bar",
+				"sub/baz",
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(
-				t,
-				testCase.expected,
-				ServiceAccountsByOIDCClaims(testCase.sa),
-			)
+			serviceAccounts := ServiceAccountsByOIDCClaims(testCase.sa)
+			slices.Sort(serviceAccounts)
+			slices.Sort(testCase.expected)
+			require.Equal(t, testCase.expected, serviceAccounts)
 		})
 	}
 }

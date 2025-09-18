@@ -60,11 +60,12 @@ func (d *digestSelector) MatchesTag(tag string) bool {
 func (d *digestSelector) Select(
 	ctx context.Context,
 ) ([]kargoapi.DiscoveredImageReference, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		d.getLoggerContext(),
 		"selectionStrategy", kargoapi.ImageSelectionStrategyDigest,
 		"tag", d.mutableTag,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Trace("selecting image")

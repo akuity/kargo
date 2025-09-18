@@ -415,7 +415,9 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	if err != nil {
 		return nil, err
 	}
-	amendClaimAnnotations(sa, claimListToMap(claims))
+	if err = amendClaimAnnotations(sa, claimListToMap(claims)); err != nil {
+		return nil, fmt.Errorf("error amending claim annotations: %w", err)
+	}
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -536,7 +538,9 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 			filteredRules = append(filteredRules, rule)
 			continue
 		}
-		rule.Verbs = removeFromStringSlice(rule.Verbs, resourceDetails.Verbs)
+		rule.Verbs = slices.DeleteFunc(rule.Verbs, func(s string) bool {
+			return slices.Contains(resourceDetails.Verbs, s)
+		})
 		if len(rule.Verbs) > 0 {
 			filteredRules = append(filteredRules, rule)
 		}
@@ -568,7 +572,11 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 	if err != nil {
 		return nil, err
 	}
-	dropFromClaimAnnotations(sa, claimListToMap(claims))
+
+	if err = dropFromClaimAnnotations(sa, claimListToMap(claims)); err != nil {
+		return nil, fmt.Errorf("error dropping from claim annotations: %w", err)
+	}
+
 	if err = r.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
@@ -595,7 +603,10 @@ func (r *rolesDatabase) Update(
 		return nil, err
 	}
 
-	replaceClaimAnnotations(sa, claimListToMap(kargoRole.Claims))
+	if err = rbacapi.SetOIDCClaimsAnnotation(sa, claimListToMap(kargoRole.Claims)); err != nil {
+		return nil, fmt.Errorf("error replacing claim annotations: %w", err)
+	}
+
 	if description, ok := kargoRole.Annotations[kargoapi.AnnotationKeyDescription]; ok {
 		if sa.Annotations == nil {
 			sa.Annotations = map[string]string{}
@@ -712,7 +723,9 @@ func RoleToResources(
 	kargoRole *rbacapi.Role,
 ) (*corev1.ServiceAccount, *rbacv1.Role, *rbacv1.RoleBinding, error) {
 	sa := buildNewServiceAccount(kargoRole.Namespace, kargoRole.Name)
-	amendClaimAnnotations(sa, claimListToMap(kargoRole.Claims))
+	if err := amendClaimAnnotations(sa, claimListToMap(kargoRole.Claims)); err != nil {
+		return nil, nil, nil, fmt.Errorf("error amending claim annotations: %w", err)
+	}
 
 	role := buildNewRole(kargoRole.Namespace, kargoRole.Name)
 	var err error
@@ -742,55 +755,38 @@ func claimListToMap(claims []rbacapi.Claim) map[string][]string {
 	return claimMap
 }
 
-func replaceClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
-	// Step through the existing annotations and for each that looks like a claim
-	// annotation, remove it if the corresponding claim is not in the new claims
-	// map.
-	for k := range sa.Annotations {
-		if name, ok := rbacapi.OIDCClaimNameFromAnnotationKey(k); ok {
-			if _, exists := claims[name]; !exists {
-				delete(sa.Annotations, k)
+func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
+	existingClaims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if err != nil {
+		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
+	}
+	for name, values := range claims {
+		existingClaims[name] = append(existingClaims[name], values...)
+		slices.Sort(existingClaims[name])
+		existingClaims[name] = slices.Compact(existingClaims[name])
+	}
+	return rbacapi.SetOIDCClaimsAnnotation(sa, existingClaims)
+}
+
+func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) error {
+	existingClaims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if err != nil {
+		return fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
+	}
+	for name := range claims {
+		if existingValues, ok := existingClaims[name]; ok {
+			values := slices.DeleteFunc(existingValues, func(s string) bool {
+				return slices.Contains(claims[name], s)
+			})
+			if len(values) == 0 {
+				delete(existingClaims, name)
+				continue
 			}
+			slices.Sort(values)
+			existingClaims[name] = slices.Compact(values)
 		}
 	}
-	if sa.Annotations == nil {
-		sa.Annotations = map[string]string{}
-	}
-	// Add or update the annotations for the new claims
-	for name, values := range claims {
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
-	}
-}
-
-func amendClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
-	for name, values := range claims {
-		if existing, exists := sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)]; exists {
-			values = append(strings.Split(existing, ","), values...)
-		}
-		slices.Sort(values)
-		values = slices.Compact(values)
-		if sa.Annotations == nil {
-			sa.Annotations = map[string]string{}
-		}
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
-	}
-}
-
-func dropFromClaimAnnotations(sa *corev1.ServiceAccount, claims map[string][]string) {
-	for name, values := range claims {
-		slices.Sort(values)
-		values = slices.Compact(values)
-		values = removeFromStringSlice(strings.Split(sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)], ","), values)
-		if len(values) == 0 {
-			delete(sa.Annotations, rbacapi.AnnotationKeyOIDCClaim(name))
-			continue
-		}
-		slices.Sort(values)
-		if sa.Annotations == nil {
-			sa.Annotations = map[string]string{}
-		}
-		sa.Annotations[rbacapi.AnnotationKeyOIDCClaim(name)] = strings.Join(values, ",")
-	}
+	return rbacapi.SetOIDCClaimsAnnotation(sa, existingClaims)
 }
 
 func buildNewServiceAccount(namespace, name string) *corev1.ServiceAccount {
@@ -839,23 +835,6 @@ func buildNewRoleBinding(namespace, name string) *rbacv1.RoleBinding {
 			Name:     name,
 		},
 	}
-}
-
-func removeFromStringSlice(s, items []string) []string {
-	if len(items) == 0 {
-		return s
-	}
-	seen := make(map[string]struct{}, len(items))
-	for _, item := range items {
-		seen[item] = struct{}{}
-	}
-	filtered := make([]string, 0, len(s))
-	for _, item := range s {
-		if _, ok := seen[item]; !ok {
-			filtered = append(filtered, item)
-		}
-	}
-	return filtered
 }
 
 func isKargoManaged(obj metav1.Object) bool {

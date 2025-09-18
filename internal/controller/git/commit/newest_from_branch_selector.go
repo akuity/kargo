@@ -89,11 +89,12 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
 	error,
 ) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		n.getLoggerContext(),
 		"selectionStrategy", kargoapi.CommitSelectionStrategyNewestFromBranch,
 		"branch", n.branch,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Debug("cloning repository")

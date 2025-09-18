@@ -1,7 +1,7 @@
 import { faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { ControlButton, Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -33,30 +33,21 @@ export const Graph = (props: GraphProps) => {
 
   const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
 
-  const setStackedNodesParents = useCallback(
-    (nodes: string[]) =>
-      filterContext?.setPreferredFilter({
-        ...filterContext?.preferredFilter,
-        stackedNodesParents: nodes
-      }),
-    [filterContext?.setPreferredFilter, filterContext?.preferredFilter]
-  );
+  const setStackedNodesParents = (nodes: string[]) =>
+    filterContext?.setPreferredFilter({
+      ...filterContext?.preferredFilter,
+      stackedNodesParents: nodes
+    });
 
-  const onStack = useCallback(
-    (parentNode: string) => {
-      if (!stackedNodesParents.includes(parentNode)) {
-        setStackedNodesParents([...stackedNodesParents, parentNode]);
-      }
-    },
-    [stackedNodesParents]
-  );
+  const onStack = (parentNode: string) => {
+    if (!stackedNodesParents.includes(parentNode)) {
+      setStackedNodesParents([...stackedNodesParents, parentNode]);
+    }
+  };
 
-  const onUnstack = useCallback(
-    (parentNode: string) => {
-      setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
-    },
-    [stackedNodesParents]
-  );
+  const onUnstack = (parentNode: string) => {
+    setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
+  };
 
   const [redraw, setRedraw] = useState(false);
 

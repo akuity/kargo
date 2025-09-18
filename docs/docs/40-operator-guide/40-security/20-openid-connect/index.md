@@ -58,18 +58,27 @@ To enable integration with your IDP, you will first need to register Kargo as a
 client. Carefully consult your IDP's documentation for instructions on how to do
 so.
 
-The callback URLs you will need to register are:
+The callback URL(s) you will need to register depend on whether your IDP
+supports both OIDC and PKCE:
 
-- `https://<hostname for api server>/login` (for the UI)
-- `https://localhost/auth/callback` (for the CLI)
+**With a compatible identity provider:**
 
-:::info
-If your IDP does not permit you to register multiple callback URLs, you
-may need to register two clients -- one each for the UI and the CLI.
-:::
+  - `https://<hostname for api server>/login` (for the UI)
+  - `https://localhost/auth/callback` (for the CLI)
 
-__When registration is complete, make note of the issuer URL and client ID
-provided by your IDP.__
+    <br/>
+
+    :::info
+    If your IDP does not permit you to register multiple callback URLs, you
+    may need to register two clients -- one each for the UI and the CLI.
+    :::
+
+**With an incompatible identity provider:**
+
+  - `https://<hostname for api server>/dex/callback` (for both the UI and CLI)
+
+**When registration is complete, make note of the issuer URL and client ID
+provided by your IDP.**
 
 ### Configuring Kargo
 
@@ -80,6 +89,12 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 
 1. Only if your IDP supports _both_ OIDC and PKCE:
 
+    :::caution
+    If your IDP does not support _both_ OIDC and PKCE, the
+    [Adapting Incompatible IDPs](#adapting-incompatible-idps) section provides
+    alternate instructions for this step.
+    :::
+
     1. Set `api.oidc.issuerURL` to the issuer URL provided by your IDP.
 
     1. Set `api.oidc.clientID` to the client ID provided by your IDP.
@@ -87,7 +102,6 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
         If you registered two separate separate clients for the UI and CLI with
         your IDP, additionally specify a value for `api.oidc.cliClientID`. This
         setting can otherwise be left alone.
-
 
     1. Ensure `api.oidc.dex.enabled` remains set to its default value of
        `false`.
@@ -133,12 +147,12 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
         - <another additional scope>
     ```
 
-1. Configure `api.oidc.admins` and `api.oidc.viewers`:
+1. Configure access controls.
 
-   These map claims in ID tokens to _system-wide_ admin and viewer roles
-   respectively. If, for example, every user in the group `devops` should be an
-   admin, and every user in the group `developers` should be a viewer, you would
-   set these accordingly:
+   `api.oidc.admins`, `api.oidc.users`, and other, similar settings map claims
+   in ID tokens to _system-wide_ roles. If, for example, every user in the group
+   `devops` should be an admin, and every user in the group `developers` should
+   have very limited permissions, you would set these accordingly:
 
     ```yaml
     api:
@@ -148,23 +162,22 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
           claims:
             groups:
             - devops
-        viewers:
+        users:
           claims:
             groups:
             - developers
     ```
+
+    For more thorough coverage of the pre-defined, _system-wide_ roles, refer
+    to the
+    [Built-in System Roles](../30-access-controls.md#built-in-system-roles)
+    section of the access controls page.
 
     :::caution
     Most assignments of users to roles is accomplished at the _project level_
     since individual users' permissions are likely to vary from project to
     project. `api.oidc.admins` and `api.oidc.viewers` are strictly for mapping
     users to _system-wide_ roles.
-    :::
-
-    :::note
-    It is common to map _all_ authenticated users to the `kargo-viewer`
-    `ServiceAccount` to effect broad read-only permissions. These permissions
-    _do not_ extend to credentials and other project `Secret`s.
     :::
 
 ### Adapting Incompatible IDPs
@@ -185,7 +198,7 @@ To configure Kargo to use Dex, set:
 1. Configure one or more [connectors](https://dexidp.io/docs/connectors/) under
    `api.oidc.dex.connectors`.
 
-    But default, no connectors are configured, although the Kargo chart's
+    By default, no connectors are configured, although the Kargo chart's
     `values.yaml` file includes a few examples, however, Dex's own documentation
     should be counted as the definitive source of information on how to
     configure each available connector.

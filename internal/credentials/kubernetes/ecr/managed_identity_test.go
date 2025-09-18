@@ -75,7 +75,7 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil)
+			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -216,7 +216,7 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				tt.setupCache(tt.provider.tokenCache)
 			}
 
-			creds, err := tt.provider.GetCredentials(ctx, tt.project, tt.credType, tt.repoURL, nil)
+			creds, err := tt.provider.GetCredentials(ctx, tt.project, tt.credType, tt.repoURL, nil, nil)
 			tt.assertions(t, tt.provider.tokenCache, creds, err)
 		})
 	}

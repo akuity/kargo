@@ -486,6 +486,10 @@ func (c *client) DeleteAllOf(
 	return client.DeleteAllOf(ctx, obj, opts...)
 }
 
+func (c *client) Apply(_ context.Context, _ runtime.ApplyConfiguration, _ ...libClient.ApplyOption) error {
+	return errors.New("apply is not supported by the authorizing client")
+}
+
 func (c *client) Status() libClient.StatusWriter {
 	return c.SubResource("status")
 }

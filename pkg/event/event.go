@@ -34,6 +34,8 @@ type Meta interface {
 	GetProject() string
 	// GetName returns the name of the object associated with the event
 	GetName() string
+	// GetID returns a unique identifier for the event
+	GetID() string
 }
 
 // Message is an interface for setting and getting the message of any built in event
@@ -55,6 +57,7 @@ type Common struct {
 	Project string  `json:"project"`
 	Actor   *string `json:"actor,omitempty"`
 	Message string  `json:"message"`
+	ID      string  `json:"id"`
 }
 
 func (c Common) GetProject() string {
@@ -69,10 +72,16 @@ func (c *Common) SetMessage(message string) {
 	c.Message = message
 }
 
-// UnmarshalCommonAnnotations populates the Common fields from the given kubernetes annotations.
-func UnmarshalCommonAnnotations(annotations map[string]string) (Common, error) {
+func (c Common) GetID() string {
+	return c.ID
+}
+
+// UnmarshalCommonAnnotations populates the Common fields from the given kubernetes annotations and
+// event ID
+func UnmarshalCommonAnnotations(eventID string, annotations map[string]string) (Common, error) {
 	evt := Common{
 		Project: annotations[kargoapi.AnnotationKeyEventProject],
+		ID:      eventID,
 	}
 	if actor, ok := annotations[kargoapi.AnnotationKeyEventActor]; ok {
 		evt.Actor = &actor
@@ -89,7 +98,8 @@ func (c *Common) MarshalAnnotationsTo(annotations map[string]string) {
 	if c.Actor != nil {
 		annotations[kargoapi.AnnotationKeyEventActor] = *c.Actor
 	}
-	// Messages is skipped as it is passed to the k8s event directly
+	// Message is skipped as it is passed to the k8s event directly
+	// ID is skipped as it is not needed in annotations and is pulled from the event UUID
 }
 
 func newCommonFromPromotion(message, actor string, promotion *kargoapi.Promotion) Common {

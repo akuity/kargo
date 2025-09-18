@@ -44,10 +44,11 @@ func newNewestBuildSelector(
 func (n *newestBuildSelector) Select(
 	ctx context.Context,
 ) ([]kargoapi.DiscoveredImageReference, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		n.getLoggerContext(),
 		"selectionStrategy", kargoapi.ImageSelectionStrategyNewestBuild,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Trace("discovering images")

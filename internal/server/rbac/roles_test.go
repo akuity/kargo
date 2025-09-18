@@ -2,6 +2,7 @@ package rbac
 
 import (
 	"context"
+	"maps"
 	"testing"
 	"time"
 
@@ -132,14 +133,13 @@ func TestCreate(t *testing.T) {
 			sa,
 		)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
-				kargoapi.AnnotationKeyDescription:        "fake-description",
+				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims:   expected,
+				kargoapi.AnnotationKeyDescription: "fake-description",
 			},
 			sa.Annotations,
 		)
@@ -605,13 +605,12 @@ func TestGrantRoleToUsers(t *testing.T) {
 			sa,
 		)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: expected,
 			},
 			sa.Annotations,
 		)
@@ -921,8 +920,8 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:          rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"): "foo-sub",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo-sub"]}`,
 			},
 			sa.Annotations,
 		)
@@ -999,13 +998,12 @@ func TestUpdate(t *testing.T) {
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(context.Background(), objKey, sa)
 		require.NoError(t, err)
+		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "bar-sub,foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "bar-email,foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
+				rbacapi.AnnotationKeyManaged:    rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims: expected,
 			},
 			sa.Annotations,
 		)
@@ -1106,11 +1104,9 @@ func TestUpdate(t *testing.T) {
 		require.Equal(
 			t,
 			map[string]string{
-				rbacapi.AnnotationKeyManaged:             rbacapi.AnnotationValueTrue,
-				rbacapi.AnnotationKeyOIDCClaim("sub"):    "foo-sub",
-				rbacapi.AnnotationKeyOIDCClaim("email"):  "foo-email",
-				rbacapi.AnnotationKeyOIDCClaim("groups"): "foo-group",
-				kargoapi.AnnotationKeyDescription:        "foo-description",
+				rbacapi.AnnotationKeyManaged:      rbacapi.AnnotationValueTrue,
+				rbacapi.AnnotationKeyOIDCClaims:   `{"email":["foo-email"],"groups":["foo-group"],"sub":["foo-sub"]}`,
+				kargoapi.AnnotationKeyDescription: "foo-description",
 			},
 			sa.Annotations,
 		)
@@ -1132,40 +1128,6 @@ func TestUpdate(t *testing.T) {
 				},
 			},
 			role.Rules,
-		)
-	})
-}
-
-func TestRemoveFromStringSlice(t *testing.T) {
-	t.Run("nil slice", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{},
-			removeFromStringSlice(nil, []string{"foo"}),
-		)
-	})
-
-	t.Run("empty slice", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{},
-			removeFromStringSlice([]string{}, []string{"foo"}),
-		)
-	})
-
-	t.Run("no match", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			removeFromStringSlice([]string{"foo", "bar"}, []string{"baz"}),
-		)
-	})
-
-	t.Run("match", func(t *testing.T) {
-		require.Equal(
-			t,
-			[]string{"foo", "bar"},
-			removeFromStringSlice([]string{"foo", "bar", "baz"}, []string{"baz"}),
 		)
 	})
 }
@@ -1226,6 +1188,113 @@ func TestManageableResources(t *testing.T) {
 		require.NotNil(t, role)
 		require.NotNil(t, rb)
 	})
+}
+
+func Test_amendClaimAnnotations(t *testing.T) {
+	testCases := []struct {
+		name                string
+		sa                  *corev1.ServiceAccount
+		claimsToAmend       map[string][]string
+		expectedAnnotations map[string]string
+	}{
+		{
+			name: "amend simple",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com"],"sub":["foo","bar"]}`,
+					},
+				},
+			},
+			claimsToAmend: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"baz"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com","foo@bar.com"],"sub":["bar","baz","foo"]}`,
+			},
+		},
+		{
+			name: "amend from old sa claim annotations and amend with new rbac.kargo.akuity.io/claims format",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("email"): "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaim("sub"):   "foo,bar",
+					},
+				},
+			},
+			claimsToAmend: map[string][]string{
+				"email": {"bar@foo.com"},
+				"sub":   {"baz"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"email":["bar@foo.com","foo@bar.com"],"sub":["bar","baz","foo"]}`,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := amendClaimAnnotations(tc.sa, tc.claimsToAmend)
+			require.NoError(t, err)
+			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
+			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
+		})
+	}
+}
+
+func Test_dropClaimAnnotations(t *testing.T) {
+	testCases := []struct {
+		name                string
+		sa                  *corev1.ServiceAccount
+		claimsToDrop        map[string][]string
+		expectedAnnotations map[string]string
+		assertions          func(t *testing.T, expectedClaims []string, saAnnotations map[string]string)
+	}{
+		{
+			name: "drop simple",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"email":["foo@bar.com"],"sub":["foo","bar"]}`,
+					},
+				},
+			},
+			claimsToDrop: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"foo"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["bar"]}`,
+			},
+		},
+		{
+			name: "drop from old sa claim annotations and convert to rbac.kargo.akuity.io/claims format",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("email"): "foo@bar.com",
+						rbacapi.AnnotationKeyOIDCClaim("sub"):   "foo,bar",
+					},
+				},
+			},
+			claimsToDrop: map[string][]string{
+				"email": {"foo@bar.com"},
+				"sub":   {"bar"},
+			},
+			expectedAnnotations: map[string]string{
+				rbacapi.AnnotationKeyOIDCClaims: `{"sub":["foo"]}`,
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := dropFromClaimAnnotations(tc.sa, tc.claimsToDrop)
+			require.NoError(t, err)
+			isEqual := maps.Equal(tc.expectedAnnotations, tc.sa.Annotations)
+			require.True(t, isEqual, "expected:\n%+v\n, got:\n%+v\n", tc.expectedAnnotations, tc.sa.Annotations)
+		})
+	}
 }
 
 func plainServiceAccount(annotations map[string]string) *corev1.ServiceAccount {

@@ -45,10 +45,11 @@ func (l *lexicalSelector) Select(ctx context.Context) (
 	[]kargoapi.DiscoveredCommit,
 	error,
 ) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		l.getLoggerContext(),
 		"selectionStrategy", kargoapi.CommitSelectionStrategyLexical,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	repo, err := l.clone(ctx)

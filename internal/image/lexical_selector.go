@@ -42,10 +42,11 @@ func newLexicalSelector(
 func (l *lexicalSelector) Select(
 	ctx context.Context,
 ) ([]kargoapi.DiscoveredImageReference, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
+	loggerCtx := append(
 		l.getLoggerContext(),
 		"selectionStrategy", kargoapi.ImageSelectionStrategyLexical,
 	)
+	logger := logging.LoggerFromContext(ctx).WithValues(loggerCtx...)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
 	logger.Trace("discovering images")

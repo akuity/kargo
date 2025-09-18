@@ -1,4 +1,5 @@
 import { useMutation } from '@connectrpc/connect-query';
+import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
   faBolt,
@@ -31,8 +32,8 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
+import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
-import './stage-node.less';
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
@@ -46,6 +47,8 @@ import {
   useStageHeaderStyle
 } from './stage-meta-utils';
 import { useGetUpstreamFreight } from './use-get-upstream-freight';
+
+import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
   const navigate = useNavigate();
@@ -242,80 +245,125 @@ export const StageNode = (props: { stage: Stage }) => {
     });
   }
 
+  const { isOver, setNodeRef } = useDroppable({
+    id: props.stage.metadata?.name || 'stage-node',
+    data: {
+      requestedFreightNames: props.stage.spec?.requestedFreight.map((f) => f.origin?.name) || []
+    }
+  });
+
   return (
-    <Card
-      styles={{
-        header: headerStyle,
-        body: {
-          height: '100%'
-        }
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: isOver ? 'scale(0.98)' : undefined,
+        transition: 'transform 0.1s ease, opacity 0.2s ease'
       }}
-      title={
-        <Flex align='center'>
-          {autoPromotionMode && (
-            <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
-          )}
-          <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
-          <Space>
-            <Dropdown
-              trigger={['hover']}
-              overlayClassName='w-fit'
-              menu={{
-                items: dropdownItems
+    >
+      <Card
+        styles={{
+          header: {
+            ...headerStyle,
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.15)'
+          },
+          body: {
+            height: '100%',
+            position: 'relative'
+          }
+        }}
+        title={
+          <Flex align='center'>
+            {autoPromotionMode && (
+              <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
+            )}
+            <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
+            <Space>
+              <Dropdown
+                trigger={['hover']}
+                overlayClassName='w-fit'
+                menu={{
+                  items: dropdownItems
+                }}
+              >
+                <Button
+                  size='small'
+                  icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
+                />
+              </Dropdown>
+              <Button
+                icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
+                size='small'
+                onClick={() =>
+                  navigate(
+                    generatePath(paths.stage, {
+                      name: props.stage?.metadata?.namespace,
+                      stageName: props.stage?.metadata?.name
+                    })
+                  )
+                }
+              />
+            </Space>
+          </Flex>
+        }
+        className={classNames(
+          'stage-node',
+          style['stage-node-size'],
+          {
+            'opacity-40': hideStage
+          },
+          'postiion-relative'
+        )}
+        size='small'
+        variant='borderless'
+      >
+        <DropOverlay isOver={isOver} stage={props.stage} />
+        {controlFlow && (
+          <Typography.Text type='secondary'>
+            <FontAwesomeIcon icon={faTruckArrowRight} className='mr-2' />
+            Control Flow
+          </Typography.Text>
+        )}
+
+        {descriptionItems}
+
+        <div className='my-2'>
+          {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
+            <Button
+              className='success'
+              size='small'
+              loading={manualApproveActionMutation.isPending}
+              onClick={() => {
+                manualApproveActionMutation.mutate({
+                  stage: props.stage?.metadata?.name || '',
+                  project: props.stage?.metadata?.namespace,
+                  name: actionContext?.action?.freight?.metadata?.name
+                });
               }}
             >
-              <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
-            </Dropdown>
-            <Button
-              icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
-              size='small'
-              onClick={() =>
-                navigate(
-                  generatePath(paths.stage, {
-                    name: props.stage?.metadata?.namespace,
-                    stageName: props.stage?.metadata?.name
-                  })
-                )
-              }
-            />
-          </Space>
-        </Flex>
-      }
-      className={classNames('stage-node', style['stage-node-size'], {
-        'opacity-40': hideStage
-      })}
-      size='small'
-      variant='borderless'
-    >
-      {controlFlow && (
-        <Typography.Text type='secondary'>
-          <FontAwesomeIcon icon={faTruckArrowRight} className='mr-2' />
-          Control Flow
-        </Typography.Text>
-      )}
+              Approve
+            </Button>
+          ) : (
+            <StageFreight stage={props.stage} />
+          )}
+        </div>
 
-      {descriptionItems}
-
-      <div className='my-2'>
-        {actionContext?.action?.type === IAction.MANUALLY_APPROVE ? (
-          <Button
-            className='success'
-            size='small'
-            loading={manualApproveActionMutation.isPending}
-            onClick={() => {
-              manualApproveActionMutation.mutate({
-                stage: props.stage?.metadata?.name || '',
-                project: props.stage?.metadata?.namespace,
-                name: actionContext?.action?.freight?.metadata?.name
-              });
-            }}
+        {lastPromotion && (
+          <Link
+            to={generatePath(paths.promotion, {
+              name: props.stage?.metadata?.namespace,
+              promotionId: props.stage?.status?.lastPromotion?.name
+            })}
           >
-            Approve
-          </Button>
-        ) : (
-          <StageFreight stage={props.stage} />
+            <Flex gap={4} align='center' justify='center' className='text-[10px]'>
+              <span>Last Promotion: </span>
+              <span title={date?.toString()}>
+                {formatDistance(date, new Date(), { addSuffix: true })}
+              </span>
+              <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
+            </Flex>
+          </Link>
         )}
-      </div>
+      </Card>
 
       {!graphContext?.stackedNodesParents?.includes(stageNodeIndex) &&
         totalSubscribersToThisStage > 0 && (
@@ -327,23 +375,6 @@ export const StageNode = (props: { stage: Stage }) => {
             onClick={() => graphContext?.onStack(stageNodeIndex)}
           />
         )}
-
-      {lastPromotion && (
-        <Link
-          to={generatePath(paths.promotion, {
-            name: props.stage?.metadata?.namespace,
-            promotionId: props.stage?.status?.lastPromotion?.name
-          })}
-        >
-          <Flex gap={4} align='center' justify='center' className='text-[10px]'>
-            <span>Last Promotion: </span>
-            <span title={date?.toString()}>
-              {formatDistance(date, new Date(), { addSuffix: true })}
-            </span>
-            <FontAwesomeIcon icon={faExternalLink} className='text-[6px]' />
-          </Flex>
-        </Link>
-      )}
-    </Card>
+    </div>
   );
 };

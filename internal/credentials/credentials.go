@@ -44,19 +44,24 @@ type Credentials struct {
 // Provider is an interface for providing credentials for a given type,
 // repository URL and data values.
 type Provider interface {
-	// Supports returns true if the provider can provide credentials for the
-	// given type, repository URL and data values. Otherwise, it should return
-	// false.
-	Supports(credType Type, repoURL string, data map[string][]byte) bool
+	// Supports returns true if the provider can provide credentials for the given
+	// type, repository URL, data and metadata. Otherwise, it should return false.
+	Supports(
+		credType Type,
+		repoURL string,
+		data map[string][]byte,
+		metadata map[string]string,
+	) bool
 
 	// GetCredentials returns the credentials for the given type, repository URL
-	// and data values. If the provider cannot provide credentials for the given
-	// type, repository URL and data, it should return nil.
+	// data, and metadata. If the provider cannot provide credentials for the
+	// given type, repository URL and data, it should return nil.
 	GetCredentials(
 		ctx context.Context,
 		project string,
 		credType Type,
 		repoURL string,
 		data map[string][]byte,
+		metadata map[string]string,
 	) (*Credentials, error)
 }
