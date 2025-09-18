@@ -1962,6 +1962,14 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [FreightReference](#github-com-akuity-kargo-api-v1alpha1-FreightReference) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-FreightCreationFilters"></a>
+
+### FreightCreationFilters
+ FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| expression | [string](#string) |  Expression is an expr-lang expression that must evaluate to true for Freight to be created. |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightList"></a>
 
 ### FreightList
@@ -2588,6 +2596,7 @@ RawFormat specifies the format for raw resource representation.
 | interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".      |
 | freightCreationPolicy | [string](#string) |  FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".  Accepted values:  - "Automatic": New Freight is created automatically when any new artifact   is discovered. - "Manual": New Freight is never created automatically.    |
 | subscriptions | [RepoSubscription](#github-com-akuity-kargo-api-v1alpha1-RepoSubscription) |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
+| freightCreationFilters | [FreightCreationFilters](#github-com-akuity-kargo-api-v1alpha1-FreightCreationFilters) |  FreightCreationFilters defines filters that must be satisfied for Freight to be created.  |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>
 
