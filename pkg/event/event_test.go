@@ -201,36 +201,44 @@ func TestFreight_MarshalAnnotationsTo(t *testing.T) {
 
 func TestUnmarshalCommonAnnotations(t *testing.T) {
 	testCases := map[string]struct {
+		id          string
 		annotations map[string]string
 		expected    Common
 	}{
 		"complete annotations": {
+			id: "event-id",
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventProject: "test-project",
 				kargoapi.AnnotationKeyEventActor:   "test-actor",
 			},
 			expected: Common{
+				ID:      "event-id",
 				Project: "test-project",
 				Actor:   ptr.To("test-actor"),
 			},
 		},
 		"missing actor": {
+			id: "event-id",
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventProject: "test-project",
 			},
 			expected: Common{
+				ID:      "event-id",
 				Project: "test-project",
 			},
 		},
 		"empty annotations": {
+			id:          "event-id",
 			annotations: map[string]string{},
-			expected:    Common{},
+			expected: Common{
+				ID: "event-id",
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result, err := UnmarshalCommonAnnotations(tc.annotations)
+			result, err := UnmarshalCommonAnnotations(tc.id, tc.annotations)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, result)
 		})

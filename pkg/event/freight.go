@@ -427,13 +427,14 @@ func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error)
 // FreightVerificationSucceeded event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationSucceededAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationSucceeded, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -453,13 +454,14 @@ func UnmarshalFreightVerificationSucceededAnnotations(
 // FreightVerificationFailed event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationFailedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationFailed, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -479,13 +481,14 @@ func UnmarshalFreightVerificationFailedAnnotations(
 // FreightVerificationInconclusive event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationInconclusiveAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationInconclusive, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -505,13 +508,14 @@ func UnmarshalFreightVerificationInconclusiveAnnotations(
 // FreightVerificationErrored event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationErroredAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationErrored, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -531,13 +535,14 @@ func UnmarshalFreightVerificationErroredAnnotations(
 // FreightVerificationUnknown event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationUnknownAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationUnknown, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -557,13 +562,14 @@ func UnmarshalFreightVerificationUnknownAnnotations(
 // FreightVerificationAborted event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationAbortedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationAborted, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -583,13 +589,14 @@ func UnmarshalFreightVerificationAbortedAnnotations(
 // FreightApproved event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightApprovedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightApproved, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
