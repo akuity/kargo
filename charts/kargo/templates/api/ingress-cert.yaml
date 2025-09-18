@@ -13,5 +13,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: {{ include "kargo.api.ingressTLSSecretName" . | quote }}
+  secretName: {{ .Values.api.ingress.tls.secretName }}
 {{- end }}

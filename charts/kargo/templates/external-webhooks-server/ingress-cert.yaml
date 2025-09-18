@@ -13,5 +13,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: {{ include "kargo.externalWebhooks.ingressTLSSecretName" . }}
+  secretName: {{ .Values.externalWebhooksServer.ingress.tls.secretName }}
 {{- end }}

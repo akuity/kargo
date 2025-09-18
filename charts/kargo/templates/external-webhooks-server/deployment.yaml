@@ -112,7 +112,7 @@ spec:
             {{- end }}
             {{- if .Values.externalWebhooksServer.tls.enabled }}
             - secret:
-                name: {{ include "kargo.externalWebhooks.serverTLSSecretName" . }}
+                name: {{ .Values.externalWebhooksServer.tls.secretName }}
                 items:
                 - key: tls.crt
                   path: tls.crt
