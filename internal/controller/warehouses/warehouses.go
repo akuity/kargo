@@ -635,7 +635,6 @@ func validateDiscoveredArtifacts(
 
 	ok, err := freightCreationFilterSatisfied(ctx, warehouse, artifacts)
 	if err != nil {
-		println("ERROR: ", err.Error())
 		conditions.Set(
 			newStatus,
 			&metav1.Condition{
