@@ -1559,11 +1559,11 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
-						RepoURL: "site/repo/frontend",
+						RepoURL:  "site/repo/frontend",
 						Versions: []string{"v1.0.0", "v1.1.0"},
 					},
 					{
-						RepoURL: "site/repo/backend",
+						RepoURL:  "site/repo/backend",
 						Versions: []string{"v1.0.0", "v1.1.0"},
 					},
 				},
@@ -1591,11 +1591,11 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
-						RepoURL: "site/repo/frontend",
+						RepoURL:  "site/repo/frontend",
 						Versions: []string{"v1.0.0"},
 					},
 					{
-						RepoURL: "site/repo/backend",
+						RepoURL:  "site/repo/backend",
 						Versions: []string{"v1.1.0"},
 					},
 				},

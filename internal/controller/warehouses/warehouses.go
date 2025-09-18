@@ -706,7 +706,6 @@ func freightCreationFilterSatisfied(
 		function.WarehouseOperations(ctx, wh, artifacts)...,
 	)
 	if err != nil {
-		logger.Error(err, "error evaluating freight creation filter expression")
 		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
 	logger.Debug("evaluated freight creation filter expression", "result", result)

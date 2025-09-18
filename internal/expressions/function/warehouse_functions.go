@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	semver "github.com/Masterminds/semver/v3"
+	"github.com/expr-lang/expr"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libsemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/expr-lang/expr"
-
-	semver "github.com/Masterminds/semver/v3"
 )
 
 // WarehouseOperations returns a slice of expr.Option containing functions for
