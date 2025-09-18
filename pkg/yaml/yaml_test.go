@@ -174,7 +174,7 @@ characters:
 	}
 }
 
-func TestMergeYAMLFiles(t *testing.T) {
+func TestMergeFiles(t *testing.T) {
 	tests := []struct {
 		name       string
 		inputPaths map[string]string
@@ -475,7 +475,7 @@ app:
 			}
 
 			sort.Strings(workInFiles)
-			err := MergeYAMLFiles(workInFiles, workOutFile)
+			err := MergeFiles(workInFiles, workOutFile)
 			tt.assertions(t, workDir, err)
 		})
 	}
