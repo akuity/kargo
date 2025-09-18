@@ -16,9 +16,7 @@ import (
 // Warehouse operations.
 //
 // It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
-// functions that can be used within expressions. The functions operate within
-// the context of a given project with the provided freight requests and
-// references.
+// functions that can be used within expressions.
 func WarehouseOperations(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -44,9 +42,7 @@ func Warehouse() expr.Option {
 // CommitFromWarehouse returns an expr.Option that provides a `commitFrom()` function
 // for use in expressions.
 //
-// The commitFrom function finds Git commits based on repository URL and
-// optional origin, using the provided warehouse within
-// the project context.
+// The commitFrom function finds the latest Git commit based on repository URL.
 func CommitFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -62,9 +58,7 @@ func CommitFromWarehouse(
 // ImageFromWarehouse returns an expr.Option that provides an `imageFrom()` function for
 // use in expressions.
 //
-// The imageFrom function finds container images based on repository URL and
-// optional origin, using the provided freight requests and references within
-// the project context.
+// The imageFrom function finds the latest container image based on repository URL.
 func ImageFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -80,9 +74,7 @@ func ImageFromWarehouse(
 // ChartFromWarehouse returns an expr.Option that provides a `chartFrom()` function for
 // use in expressions.
 //
-// The chartFrom function finds Helm charts based on repository URL, optional
-// chart name, and optional origin, using the provided freight requests and
-// references within the project context.
+// The chartFrom function finds the latest Helm charts based on repository URL.
 func ChartFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -95,11 +87,7 @@ func ChartFromWarehouse(
 	)
 }
 
-// getCommitFromWarehouse returns a function that finds Git commits based on repository URL
-// and optional origin.
-//
-// The returned function uses warehouse to locate the
-// appropriate commit within the project context.
+// getCommitFromWarehouse returns a function that finds Git commits based on repository URL.
 func getCommitFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -162,11 +150,7 @@ func getCommitFromWarehouse(
 	}
 }
 
-// getImageFromWarehouse returns a function that finds container images based on repository
-// URL and optional origin.
-//
-// The returned function uses the warehouse and references to locate the
-// appropriate image within the project context.
+// getImageFromWarehouse returns a function that finds the latest container image based on repository URL.
 func getImageFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
@@ -226,11 +210,7 @@ func getImageFromWarehouse(
 	}
 }
 
-// getChartFromWarehouse returns a function that finds Helm charts based on repository URL,
-// optional chart name, and optional origin.
-//
-// The returned function uses freight requests and references to locate the
-// appropriate chart within the project context.
+// getChartFromWarehouse returns a function that finds the latest Helm chart based on repository URL.
 func getChartFromWarehouse(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,

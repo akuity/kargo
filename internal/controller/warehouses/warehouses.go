@@ -680,6 +680,10 @@ func validateDiscoveredArtifacts(
 	return true
 }
 
+// freightCreationFilterSatisfied evaluates the freight creation filter
+// expression, if defined, and returns true if the expression is satisfied,
+// no expression is defined, or no discovered artifacts are present.
+// A non-nil error is returned if there was an error evaluating the expression.
 func freightCreationFilterSatisfied(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
