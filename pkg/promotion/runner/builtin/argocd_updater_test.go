@@ -1026,12 +1026,16 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 }
 
 func Test_argoCDUpdater_syncApplication(t *testing.T) {
+	stepCtx := &promotion.StepContext{
+		Freight: kargoapi.FreightCollection{ID: "fake-freight-collection-id"},
+	}
+
 	testCases := []struct {
 		name           string
 		runner         *argocdUpdater
 		app            *argocd.Application
 		desiredSources argocd.ApplicationSources
-		assertions     func(*testing.T, error)
+		assertions     func(*testing.T, error, *argocd.Application)
 	}{
 		{
 			name: "error patching Application",
@@ -1053,13 +1057,13 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, err error, patched *argocd.Application) {
 				require.ErrorContains(t, err, "error patching Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name: "success",
+			name: "success (no sources to update)",
 			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
@@ -1068,14 +1072,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				) error {
 					return nil
 				},
-				logAppEventFn: func(
-					context.Context,
-					*argocd.Application,
-					string,
-					string,
-					string,
-				) {
-				},
+				logAppEventFn: func(context.Context, *argocd.Application, string, string, string) {},
 			},
 			app: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
@@ -1086,29 +1083,100 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, err error, patched *argocd.Application) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "updates Sources when present",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{{TargetRevision: "old-rev"}},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, err error, patched *argocd.Application) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				require.Len(t, patched.Spec.Sources, 1)
+				require.Equal(t, "new-rev", patched.Spec.Sources[0].TargetRevision)
+			},
+		},
+		{
+			name: "updates Source when Sources not present",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{TargetRevision: "old-rev"},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, err error, patched *argocd.Application) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				require.NotNil(t, patched.Spec.Source)
+				require.Equal(t, "new-rev", patched.Spec.Source.TargetRevision)
+			},
+		},
+		{
+			name: "updates Sources when both Source and Sources are present",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Source:  &argocd.ApplicationSource{TargetRevision: "old-rev-source"},
+					Sources: argocd.ApplicationSources{{TargetRevision: "old-rev-sources"}},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, err error, patched *argocd.Application) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				// Sources should be updated
+				require.Len(t, patched.Spec.Sources, 1)
+				require.Equal(t, "new-rev", patched.Spec.Sources[0].TargetRevision)
+				// Source should remain untouched
+				require.Equal(t, "old-rev-source", patched.Spec.Source.TargetRevision)
 			},
 		},
 	}
 
-	stepCtx := &promotion.StepContext{
-		Freight: kargoapi.FreightCollection{},
-	}
-	// Tamper with the freight collection ID for testing purposes
-	stepCtx.Freight.ID = "fake-freight-collection-id"
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.runner.syncApplication(
-					context.Background(),
-					stepCtx,
-					testCase.app,
-					testCase.desiredSources,
-				),
+			var captured *argocd.Application
+			// Ensure runner is always non-nil
+			if testCase.runner == nil {
+				testCase.runner = &argocdUpdater{
+					argoCDAppPatchFn: func(
+						_ context.Context,
+						obj kubeclient.ObjectWithKind,
+						_ kubeclient.UnstructuredPatchFn,
+					) error {
+						captured = obj.(*argocd.Application)
+						return nil
+					},
+					logAppEventFn: func(context.Context, *argocd.Application, string, string, string) {},
+				}
+			} else {
+				// Wrap to capture
+				origPatchFn := testCase.runner.argoCDAppPatchFn
+				testCase.runner.argoCDAppPatchFn = func(
+					ctx context.Context,
+					obj kubeclient.ObjectWithKind,
+					patchFn kubeclient.UnstructuredPatchFn,
+				) error {
+					captured = obj.(*argocd.Application)
+					return origPatchFn(ctx, obj, patchFn)
+				}
+			}
+
+			err := testCase.runner.syncApplication(
+				context.Background(),
+				stepCtx,
+				testCase.app,
+				testCase.desiredSources,
 			)
+			testCase.assertions(t, err, captured)
 		})
 	}
 }
@@ -1222,7 +1290,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-					...client.GetOption,
+				...client.GetOption,
 				) error {
 					return errors.New("something went wrong")
 				},

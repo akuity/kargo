@@ -442,10 +442,10 @@ func (a *argocdUpdater) syncApplication(
 	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
-	if app.Spec.Source != nil {
-		app.Spec.Source = desiredSources[0].DeepCopy()
-	} else {
+	if len(app.Spec.Sources) > 0 {
 		app.Spec.Sources = desiredSources.DeepCopy()
+	} else if app.Spec.Source != nil {
+		app.Spec.Source = desiredSources[0].DeepCopy()
 	}
 
 	// Initiate a new operation.
@@ -486,11 +486,14 @@ func (a *argocdUpdater) syncApplication(
 			app.Operation.Sync.SyncOptions = app.Spec.SyncPolicy.SyncOptions
 		}
 	}
-	if app.Spec.Source != nil {
+	// Set target revisions for sync operation.
+	// If sources are specified, Argo CD ignores source.
+	if len(app.Spec.Sources) > 0 {
+		for _, source := range app.Spec.Sources {
+			app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
+		}
+	} else if app.Spec.Source != nil {
 		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
-	}
-	for _, source := range app.Spec.Sources {
-		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 	// TODO(krancour): This is a workaround for the Argo CD Application controller
 	// not handling this correctly itself. It is Argo CD's API server that usually
