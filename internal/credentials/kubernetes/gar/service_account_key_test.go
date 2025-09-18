@@ -88,7 +88,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			provider := NewServiceAccountKeyProvider()
-			result := provider.Supports(tt.credType, tt.repoURL, tt.data)
+			result := provider.Supports(tt.credType, tt.repoURL, tt.data, nil)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -203,7 +203,7 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 				tt.setupCache(provider.tokenCache)
 			}
 
-			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data)
+			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data, nil)
 			tt.assertions(t, provider.tokenCache, creds, err)
 		})
 	}

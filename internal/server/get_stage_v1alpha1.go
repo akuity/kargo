@@ -6,7 +6,6 @@ import (
 
 	"connectrpc.com/connect"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -34,16 +33,15 @@ func (s *server) GetStage(
 	// Get the Stage from the Kubernetes API as an unstructured object.
 	// Using an unstructured object allows us to return the object _as presented
 	// by the API_ if a raw format is requested.
-	u := unstructured.Unstructured{
+	u := &unstructured.Unstructured{
 		Object: map[string]any{
 			"apiVersion": kargoapi.GroupVersion.String(),
 			"kind":       "Stage",
 		},
 	}
-	if err := s.client.Get(ctx, client.ObjectKey{
-		Name:      name,
-		Namespace: project,
-	}, &u); err != nil {
+	if err := s.client.Get(
+		ctx, client.ObjectKey{Name: name, Namespace: project}, u,
+	); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			// nolint:staticcheck
 			err = fmt.Errorf("Stage %q not found in project %q", name, project)
@@ -52,30 +50,18 @@ func (s *server) GetStage(
 		return nil, err
 	}
 
-	switch req.Msg.GetFormat() {
-	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON, svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
-		_, raw, err := objectOrRaw(&u, req.Msg.GetFormat())
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
-		}
+	stage, raw, err := objectOrRaw(
+		s.client, u, req.Msg.GetFormat(), &kargoapi.Stage{},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if raw != nil {
 		return connect.NewResponse(&svcv1alpha1.GetStageResponse{
-			Result: &svcv1alpha1.GetStageResponse_Raw{
-				Raw: raw,
-			},
-		}), nil
-	default:
-		stage := kargoapi.Stage{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &stage); err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
-		}
-		obj, _, err := objectOrRaw(&stage, req.Msg.GetFormat())
-		if err != nil {
-			return nil, connect.NewError(connect.CodeInternal, err)
-		}
-		return connect.NewResponse(&svcv1alpha1.GetStageResponse{
-			Result: &svcv1alpha1.GetStageResponse_Stage{
-				Stage: obj,
-			},
+			Result: &svcv1alpha1.GetStageResponse_Raw{Raw: raw},
 		}), nil
 	}
+	return connect.NewResponse(&svcv1alpha1.GetStageResponse{
+		Result: &svcv1alpha1.GetStageResponse_Stage{Stage: stage},
+	}), nil
 }

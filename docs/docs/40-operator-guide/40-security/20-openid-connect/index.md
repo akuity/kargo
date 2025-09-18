@@ -147,12 +147,12 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
         - <another additional scope>
     ```
 
-1. Configure `api.oidc.admins` and `api.oidc.viewers`:
+1. Configure access controls.
 
-   These map claims in ID tokens to _system-wide_ admin and viewer roles
-   respectively. If, for example, every user in the group `devops` should be an
-   admin, and every user in the group `developers` should be a viewer, you would
-   set these accordingly:
+   `api.oidc.admins`, `api.oidc.users`, and other, similar settings map claims
+   in ID tokens to _system-wide_ roles. If, for example, every user in the group
+   `devops` should be an admin, and every user in the group `developers` should
+   have very limited permissions, you would set these accordingly:
 
     ```yaml
     api:
@@ -162,23 +162,22 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
           claims:
             groups:
             - devops
-        viewers:
+        users:
           claims:
             groups:
             - developers
     ```
+
+    For more thorough coverage of the pre-defined, _system-wide_ roles, refer
+    to the
+    [Built-in System Roles](../30-access-controls.md#built-in-system-roles)
+    section of the access controls page.
 
     :::caution
     Most assignments of users to roles is accomplished at the _project level_
     since individual users' permissions are likely to vary from project to
     project. `api.oidc.admins` and `api.oidc.viewers` are strictly for mapping
     users to _system-wide_ roles.
-    :::
-
-    :::note
-    It is common to map _all_ authenticated users to the `kargo-viewer`
-    `ServiceAccount` to effect broad read-only permissions. These permissions
-    _do not_ extend to credentials and other project `Secret`s.
     :::
 
 ### Adapting Incompatible IDPs

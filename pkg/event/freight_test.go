@@ -391,8 +391,8 @@ func TestUnmarshalFreightVerificationAnnotations(t *testing.T) {
 func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 	testCases := map[string]struct {
 		annotations   map[string]string
-		unmarshalFunc func(map[string]string) (any, error)
-		expectedType  kargoapi.EventType
+		unmarshalFunc func(map[string]string) (Meta, error)
+		expectedType  Meta
 		expectError   bool
 		errorMessage  string
 	}{
@@ -405,10 +405,24 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventVerificationStartTime:  "2024-01-01T10:00:00Z",
 				kargoapi.AnnotationKeyEventVerificationFinishTime: "2024-01-01T11:00:00Z",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalFreightVerificationSucceededAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightVerificationSucceededAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypeFreightVerificationSucceeded,
+			expectedType: &FreightVerificationSucceeded{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Freight: Freight{
+					Name:       "test-freight",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+				FreightVerification: FreightVerification{
+					StartTime:  ptr.To(time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)),
+					FinishTime: ptr.To(time.Date(2024, 1, 1, 11, 0, 0, 0, time.UTC)),
+				},
+			},
 		},
 		"freight approved": {
 			annotations: map[string]string{
@@ -417,18 +431,28 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventFreightCreateTime: "2024-01-01T00:00:00Z",
 				kargoapi.AnnotationKeyEventStageName:         "test-stage",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalFreightApprovedAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightApprovedAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypeFreightApproved,
+			expectedType: &FreightApproved{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Freight: Freight{
+					Name:       "test-freight",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
+				},
+			},
 		},
 		"invalid freight annotations": {
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
 				kargoapi.AnnotationKeyEventFreightCreateTime: "invalid-time",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalFreightApprovedAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalFreightApprovedAnnotations("event-id", annotations)
 			},
 			expectError:  true,
 			errorMessage: "failed to parse freight create time",
@@ -447,10 +471,8 @@ func TestFreightEventUnmarshalAnnotations(t *testing.T) {
 
 			require.NoError(t, err)
 
-			// Verify the result implements Meta and has correct type
-			eventMeta, ok := result.(Meta)
-			require.True(t, ok)
-			require.Equal(t, tc.expectedType, eventMeta.Type())
+			// Deep-compare the full struct via Meta interface
+			require.Equal(t, tc.expectedType, result, "oh noes, types don't match!")
 		})
 	}
 }

@@ -390,33 +390,52 @@ App is that the App's permissions are not tied to a specific GitHub user.
 
 :::caution
 It is easy to violate the principle of least privilege when authenticating using
-this method.
+GitHub Apps.
 
-For convenience sake, it may be tempting to register a single GitHub App and
-select a broad set of repositories when installing that App into your
-organization. It may also be tempting to create a single set of
-[global credentials](#global-credentials) such that all Kargo projects can use
-them to access their repositories, _however_, this will have the undesirable
-effect of granting _all_ Kargo projects access to _all_ of the repositories
-selected when the App was installed.
+For convenience’s sake, it may be tempting to register a single GitHub App,
+select a broad set of repositories when installing that App, then create a
+single set of [global credentials](#global-credentials), _however_, this will
+have the undesirable effect of granting _all_ Kargo projects access to _all_ of
+the selected repositories.
 
-It is, instead, recommended to register a separate GitHub App for
-each Kargo project. When installing each App into your organization, only those
-repositories to which each Kargo project requires access should be selected.
+Alternatively, you might consider registering a _separate_ GitHub App for each
+Kargo project, selecting a narrower set of repositories when installing each
+App, then creating corresponding Secrets in individual project namespaces.
+While this better adheres to the principle of least privilege, it can be
+onerous to manage. Worse, because GitHub organizations are limited to
+registering 100 GitHub Apps each, the approach does not scale beyond 100
+projects.
 
-GitHub organizations are limited to registering 100 GitHub Apps, however, so
-this approach may not be feasible for organizations with many Kargo projects.
-:::
+Beginning with Kargo v1.8.0, a third, experimental (stability not guaranteed)
+approach builds upon the first, by adding an optional annotation to the
+[global credentials](#global-credentials) `Secret` containing a map that
+constrains the scopes (repositories) available to each project.
 
-:::caution
-A second way in which authentication using GitHub Apps may violate the principle
-of least privilege involves the fact that the same permissions are granted to
-the App on _all_ repositories that are selected when it is installed.
+In the following example, the credentials defined by the `github` `Secret` in
+the `shared-credentials` namespace are available to all Kargo projects, however,
+the `kargo-demo-1` project is able to obtain access tokens scoped to either
+`repo-a` or `repo-b` only, while the `kargo-demo-2` project is able to obtain
+access tokens scoped to `repo-c` only. No other project is able to obtain access
+tokens scoped to _any_ repository.
 
-If a Kargo project requires read-only access to one repository and read/write
-access to another, it is not possible to grant the App different permissions on
-the two. This may then lead to granting broader permissions than are strictly
-necessary.
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github
+  namespace: shared-credentials
+  labels:
+    kargo.akuity.io/cred-type: git
+    annotations:
+      kargo.akuity.io/github-token-scopes: |
+        {
+          "kargo-demo-1": ["repo-a", "repo-b"],
+          "kargo-demo-2": ["repo-c"]
+        }
+data:
+  # ...
+```
+
 :::
 
 ### Amazon Elastic Container Registry (ECR)

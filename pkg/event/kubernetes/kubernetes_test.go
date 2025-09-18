@@ -289,7 +289,6 @@ func TestNewEventSender(t *testing.T) {
 }
 
 func TestEventSender_Send(t *testing.T) {
-
 	testCases := map[string]struct {
 		event         event.Meta
 		expectError   bool
@@ -335,6 +334,7 @@ func TestEventSender_Send(t *testing.T) {
 				Name:        "test-resource",
 				Project:     "test-project",
 				ObjectKind:  "CustomResource",
+				ID:          "custom-event-id",
 			},
 			expectedCalls: 1,
 		},
@@ -376,6 +376,7 @@ func TestConvertToAnnotations(t *testing.T) {
 				Name:        "test-resource",
 				Project:     "test-project",
 				ObjectKind:  "CustomResource",
+				ID:          "custom-event-id",
 			},
 			expected: map[string]string{
 				kargoapi.AnnotationKeyEventPrefix + "message":     "Custom event message",
@@ -385,6 +386,7 @@ func TestConvertToAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventPrefix + "name":        "test-resource",
 				kargoapi.AnnotationKeyEventPrefix + "project":     "test-project",
 				kargoapi.AnnotationKeyEventPrefix + "objectKind":  "CustomResource",
+				kargoapi.AnnotationKeyEventPrefix + "id":          "custom-event-id",
 			},
 		},
 	}
@@ -500,6 +502,7 @@ type customEvent struct {
 	Name        string             `json:"name"`
 	Project     string             `json:"project"`
 	ObjectKind  string             `json:"objectKind"`
+	ID          string             `json:"id"`
 }
 
 func (c customEvent) Type() kargoapi.EventType {
@@ -516,4 +519,8 @@ func (c *customEvent) GetName() string {
 
 func (c *customEvent) GetProject() string {
 	return c.Project
+}
+
+func (c *customEvent) GetID() string {
+	return c.ID
 }
