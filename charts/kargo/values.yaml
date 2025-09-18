@@ -98,8 +98,7 @@ webhooks:
 ## the Kargo controller is running.
 ## @descriptionEnd
 ## @skip kubeconfigSecrets
-kubeconfigSecrets:
-  {}
+kubeconfigSecrets: {}
   ## @param kubeconfigSecrets.kargo [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Kargo resources. Used by all Kargo components.
   # kargo: ""
   ## @param kubeconfigSecrets.argocd [nullable] Kubernetes `Secret` name containing kubeconfig for a remote Kubernetes cluster hosting Argo CD resources. Used by Kargo controller(s) only.
@@ -158,15 +157,14 @@ api:
     cliClientID:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
-      - groups
+    - groups
 
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
 
     admins:
       ## @param api.oidc.admins.claims Subjects having any of these claims will automatically be Kargo admins.
-      claims:
-        {}
+      claims: {}
         # sub:
         # - alice
         # - bob
@@ -202,8 +200,7 @@ api:
 
     viewers:
       ## @param api.oidc.viewers.claims Subjects having any of these claims will automatically receive read-only access to all Kargo resources. This does not include any access to `Secret`s.
-      claims:
-        {}
+      claims: {}
         # sub:
         # - alice
         # - bob
@@ -302,8 +299,7 @@ api:
       #   readOnly: true
 
       ## @param api.oidc.dex.resources Resources limits and requests for the Dex server containers.
-      resources:
-        {}
+      resources: {}
         # limits:
         #   cpu: 100m
         #   memory: 128Mi
@@ -387,8 +383,7 @@ api:
   #      name: secret-name
 
   ## @param api.resources Resources limits and requests for the api containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -430,8 +425,7 @@ api:
     ## @param api.ingress.enabled Whether to enable ingress by creating an Ingress resource. By default, this is disabled. Enabling ingress is advanced usage.
     enabled: false
     ## @param api.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
-    annotations:
-      {}
+    annotations: {}
       # kubernetes.io/ingress.class: nginx
     ## @param api.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
     ingressClassName:
@@ -576,8 +570,7 @@ controller:
   volumeMounts: []
 
   ## @param controller.resources Resources limits and requests for the controller containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -653,8 +646,7 @@ garbageCollector:
   #      name: secret-name
 
   ## @param garbageCollector.resources Resources limits and requests for the garbage collector containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -717,8 +709,7 @@ externalWebhooksServer:
   #      name: secret-name
 
   ## @param externalWebhooksServer.resources Resources limits and requests for the external webhook server containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -754,8 +745,7 @@ externalWebhooksServer:
     ## @param externalWebhooksServer.ingress.enabled Whether to enable separate ingress for webhook by creating an Ingress resource. By default, this is disabled and webhook is exposed as part of kargo-api ingress. Enabling ingress is advanced usage.
     enabled: false
     ## @param externalWebhooksServer.ingress.annotations Annotations specified by your ingress controller to customize the behavior of the Ingress resource.
-    annotations:
-      {}
+    annotations: {}
       # kubernetes.io/ingress.class: nginx
     ## @param externalWebhooksServer.ingress.ingressClassName If implemented by your ingress controller, specifies the ingress class. If your ingress controller does not support this, use the `kubernetes.io/ingress.class` annotation instead.
     ingressClassName:
@@ -836,8 +826,7 @@ managementController:
   #      name: secret-name
 
   ## @param managementController.resources Resources limits and requests for the management controller containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
@@ -900,8 +889,7 @@ webhooksServer:
   #      name: secret-name
 
   ## @param webhooksServer.resources Resources limits and requests for the webhooks server containers.
-  resources:
-    {}
+  resources: {}
     # limits:
     #   cpu: 100m
     #   memory: 128Mi
