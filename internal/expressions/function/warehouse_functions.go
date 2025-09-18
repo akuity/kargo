@@ -127,6 +127,9 @@ func getCommitFromWarehouse(
 					"count", len(artifacts.Git),
 				)
 				for i, dr := range artifacts.Git {
+					if dr.RepoURL != repoURL {
+						continue
+					}
 					logger.Debug("checking discovered git artifact",
 						"index", i,
 						"numCommits", len(dr.Commits),
@@ -182,7 +185,10 @@ func getImageFromWarehouse(
 					"count", len(artifacts.Images),
 				)
 				for i, dr := range artifacts.Images {
-					logger.Debug("checking discovered image artifact",
+					if dr.RepoURL != repoURL {
+						continue
+					}
+					logger.Debug("discovered image artifact",
 						"index", i,
 						"numImageRefs", len(dr.References),
 					)
@@ -201,7 +207,10 @@ func getImageFromWarehouse(
 		if latestImage == nil {
 			return nil, fmt.Errorf("no images found for repoURL %q", repoURL)
 		}
-		return latestImage, nil
+		logger.Debug("selected latest image",
+			"latest-image", latestImage,
+		)
+		return &kargoapi.Image{Tag: latestImage.Tag}, nil
 	}
 }
 
@@ -237,6 +246,9 @@ func getChartFromWarehouse(
 					"count", len(artifacts.Charts),
 				)
 				for i, dr := range artifacts.Charts {
+					if dr.RepoURL != repoURL {
+						continue
+					}
 					logger.Debug("checking discovered chart artifact",
 						"index", i,
 						"numVersions", len(dr.Versions),
@@ -255,7 +267,7 @@ func getChartFromWarehouse(
 		if latestChartVersion == nil {
 			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
 		}
-		return &kargoapi.DiscoveredImageReference{Tag: latestChartVersion.String()}, nil
+		return &kargoapi.Chart{Version: latestChartVersion.String()}, nil
 	}
 }
 

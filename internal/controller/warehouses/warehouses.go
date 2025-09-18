@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -24,6 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
+	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -635,6 +635,7 @@ func validateDiscoveredArtifacts(
 
 	ok, err := freightCreationFilterSatisfied(ctx, warehouse, artifacts)
 	if err != nil {
+		println("ERROR: ", err.Error())
 		conditions.Set(
 			newStatus,
 			&metav1.Condition{
@@ -655,8 +656,8 @@ func validateDiscoveredArtifacts(
 			&metav1.Condition{
 				Type:               kargoapi.ConditionTypeHealthy,
 				Status:             metav1.ConditionTrue,
-				Reason:             "FreightCreationFilteredNotSatisfied",
-				Message:            "freigth creation filter expression not satisfied; skipping freight creation",
+				Reason:             "FreightCreationFilterNotSatisfied",
+				Message:            "freight creation filter expression not satisfied; skipping freight creation",
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
 		)
@@ -685,20 +686,18 @@ func freightCreationFilterSatisfied(
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) (bool, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"filterExpression", wh.Spec.FreightCreationFilters.Expression,
+	)
+
 	if wh.Spec.FreightCreationFilters.Expression == "" {
+		logger.Debug("no freight creation filter expression defined")
 		return true, nil
 	}
 
 	if artifacts == nil {
+		logger.Debug("no artifacts discovered")
 		return true, nil
-	}
-
-	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression,
-		function.WarehouseOperations(ctx, wh, artifacts)...,
-	)
-	if err != nil {
-		println("ERROR COMPILING EXPRESSION: ", err.Error())
-		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
 	}
 
 	ctx = logging.ContextWithLogger(ctx,
@@ -707,16 +706,11 @@ func freightCreationFilterSatisfied(
 		),
 	)
 
-	env := map[string]any{
-		"commitFrom": function.ChartFromWarehouse(ctx, wh, artifacts),
-		"imageFrom":  function.ImageFromWarehouse(ctx, wh, artifacts),
-		"chartFrom":  function.CommitFromWarehouse(ctx, wh, artifacts),
-	}
-
-	println("RUNNING EXPRESSION: ", wh.Spec.FreightCreationFilters.Expression)
-	result, err := expr.Run(program, env)
+	result, err := expressions.EvaluateTemplate(wh.Spec.FreightCreationFilters.Expression, 
+		make(map[string]any),
+		function.WarehouseOperations(ctx, wh, artifacts)...,
+	)
 	if err != nil {
-		println("ERROR RUNNING EXPRESSION: ", err.Error())
 		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
 

@@ -877,9 +877,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 			},
 			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
 				require.False(t, result)
-
 				require.Len(t, status.GetConditions(), 1)
-
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
@@ -901,7 +899,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/backend"}},
 					},
 					FreightCreationFilters: kargoapi.FreightCreationFilters{
-						Expression: "imageFrom('docker.io/frontend').Tag == imageFrom('docker.io/backend').Tag",
+						Expression: "${{ imageFrom('docker.io/frontend').Tag == imageFrom('docker.io/backend').Tag }}",
 					},
 				},
 				ObjectMeta: metav1.ObjectMeta{Generation: 1},
@@ -910,36 +908,102 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
 					Images: []kargoapi.ImageDiscoveryResult{
 						{
-							RepoURL:    "docker.io/frontend",
-							References: []kargoapi.DiscoveredImageReference{{Tag: "v1.0.0"}},
+							RepoURL: "docker.io/frontend",
+							References: []kargoapi.DiscoveredImageReference{
+								{
+									Tag: "v1.0.0",
+									CreatedAt: &metav1.Time{
+										Time: time.Now().Add(-24 * time.Hour),
+									},
+								},
+							},
 						},
 						{
 							RepoURL:    "docker.io/backend",
-							References: []kargoapi.DiscoveredImageReference{{Tag: "v2.0.0"}},
+							References: []kargoapi.DiscoveredImageReference{
+								{
+									Tag: "v2.0.0",
+									CreatedAt: &metav1.Time{
+										Time: time.Now().Add(-12 * time.Hour),
+									},
+								},
+							},
 						},
 					},
 				},
 			},
 			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
 				require.False(t, result)
-
 				require.Len(t, status.GetConditions(), 1)
-
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
-				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
 				require.Equal(t, "FreightCreationFilterNotSatisfied", healthyCondition.Reason)
 				require.Equal(
 					t,
-					"freight creation filter expression not satisfied",
+					"freight creation filter expression not satisfied; skipping freight creation",
 					healthyCondition.Message,
 				)
 				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
 			},
 		},
-		// {
-		// 	name: "freight expression filter satisfied",
-		// },
+		{
+			name: "freight creation expression filter satisfied",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/frontend"}},
+						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/backend"}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ imageFrom('docker.io/frontend').Tag == imageFrom('docker.io/backend').Tag }}",
+					},
+				},
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
+			newStatus: &kargoapi.WarehouseStatus{
+				DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{
+					Images: []kargoapi.ImageDiscoveryResult{
+						{
+							RepoURL: "docker.io/frontend",
+							References: []kargoapi.DiscoveredImageReference{
+								{
+									Tag: "v1.0.0",
+									CreatedAt: &metav1.Time{
+										Time: time.Now().Add(-24 * time.Hour),
+									},
+								},
+							},
+						},
+						{
+							RepoURL:    "docker.io/backend",
+							References: []kargoapi.DiscoveredImageReference{
+								{
+									Tag: "v1.0.0",
+									CreatedAt: &metav1.Time{
+										Time: time.Now().Add(-12 * time.Hour),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
+				require.True(t, result)
+				require.Len(t, status.GetConditions(), 1)
+				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ArtifactsDiscovered", healthyCondition.Reason)
+				require.Equal(
+					t,
+					healthyCondition.Message,
+					"Successfully discovered 2 images from 2 subscriptions",
+				)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+			},
+		},
 		{
 			name: "successful discovery with all artifact types",
 			warehouse: &kargoapi.Warehouse{
@@ -986,7 +1050,10 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := validateDiscoveredArtifacts(t.Context(), tc.warehouse, tc.newStatus)
+			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result := validateDiscoveredArtifacts(ctx, tc.warehouse, tc.newStatus)
 			tc.assertions(t, result, tc.newStatus)
 		})
 	}

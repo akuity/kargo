@@ -164,7 +164,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				img, ok := result.(*kargoapi.DiscoveredImageReference)
+				img, ok := result.(*kargoapi.Image)
 				require.True(t, ok)
 				require.Equal(t, "def456", img.Tag)
 			},
@@ -245,9 +245,9 @@ func Test_getChartromWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				commit, ok := result.(*kargoapi.DiscoveredImageReference)
+				commit, ok := result.(*kargoapi.Chart)
 				require.True(t, ok)
-				require.Equal(t, "2.3.0", commit.Tag)
+				require.Equal(t, "2.3.0", commit.Version)
 			},
 		},
 		{
