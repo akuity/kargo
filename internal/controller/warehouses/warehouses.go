@@ -685,33 +685,31 @@ func freightCreationFilterSatisfied(
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) (bool, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues(
-		"filterExpression", wh.Spec.FreightCreationFilters.Expression,
-	)
+	logger := logging.LoggerFromContext(ctx)
 
 	if wh.Spec.FreightCreationFilters.Expression == "" {
 		logger.Debug("no freight creation filter expression defined")
 		return true, nil
 	}
 
-	if artifacts == nil {
+	if artifacts == nil || (len(artifacts.Git) == 0 && len(artifacts.Images) == 0 && len(artifacts.Charts) == 0) {
 		logger.Debug("no artifacts discovered")
 		return true, nil
 	}
 
 	ctx = logging.ContextWithLogger(ctx,
-		logging.LoggerFromContext(ctx).WithValues(
-			"filterExpression", wh.Spec.FreightCreationFilters.Expression,
-		),
+		logger.WithValues("filterExpression", wh.Spec.FreightCreationFilters.Expression),
 	)
 
-	result, err := expressions.EvaluateTemplate(wh.Spec.FreightCreationFilters.Expression, 
+	result, err := expressions.EvaluateTemplate(wh.Spec.FreightCreationFilters.Expression,
 		make(map[string]any),
 		function.WarehouseOperations(ctx, wh, artifacts)...,
 	)
 	if err != nil {
+		logger.Error(err, "error evaluating freight creation filter expression")
 		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
+	logger.Debug("evaluated freight creation filter expression", "result", result)
 
 	switch result := result.(type) {
 	case bool:

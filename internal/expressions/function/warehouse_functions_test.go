@@ -74,7 +74,7 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				commit, ok := result.(*kargoapi.DiscoveredCommit)
+				commit, ok := result.(*kargoapi.GitCommit)
 				require.True(t, ok)
 				require.Equal(t, "def456", commit.Tag)
 			},

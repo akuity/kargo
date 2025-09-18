@@ -149,7 +149,16 @@ func getCommitFromWarehouse(
 		if latestCommit == nil {
 			return nil, fmt.Errorf("no commits found for repoURL %q", repoURL)
 		}
-		return latestCommit, nil
+		logger.Debug("found latest commit", "commit", latestCommit.Tag)
+		return &kargoapi.GitCommit{
+			RepoURL:   repoURL,
+			ID:        latestCommit.ID,
+			Branch:    latestCommit.Branch,
+			Tag:       latestCommit.Tag,
+			Message:   latestCommit.Subject,
+			Author:    latestCommit.Author,
+			Committer: latestCommit.Committer,
+		}, nil
 	}
 }
 
@@ -178,7 +187,7 @@ func getImageFromWarehouse(
 			"warehouse", wh.Name,
 		)
 
-		var latestImage *kargoapi.DiscoveredImageReference
+		var latestImgRef *kargoapi.DiscoveredImageReference
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Image != nil && s.Image.RepoURL == repoURL && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
@@ -193,24 +202,27 @@ func getImageFromWarehouse(
 						"numImageRefs", len(dr.References),
 					)
 					for _, ref := range dr.References {
-						if latestImage == nil {
-							latestImage = &ref
+						if latestImgRef == nil {
+							latestImgRef = &ref
 							continue
 						}
-						if ref.CreatedAt.After(latestImage.CreatedAt.Time) {
-							latestImage = &ref
+						if ref.CreatedAt.After(latestImgRef.CreatedAt.Time) {
+							latestImgRef = &ref
 						}
 					}
 				}
 			}
 		}
-		if latestImage == nil {
+		if latestImgRef == nil {
 			return nil, fmt.Errorf("no images found for repoURL %q", repoURL)
 		}
-		logger.Debug("selected latest image",
-			"latest-image", latestImage,
-		)
-		return &kargoapi.Image{Tag: latestImage.Tag}, nil
+		logger.Debug("found latest image reference", "ref", latestImgRef)
+		return &kargoapi.Image{
+			RepoURL:     repoURL,
+			Tag:         latestImgRef.Tag,
+			Digest:      latestImgRef.Digest,
+			Annotations: latestImgRef.Annotations,
+		}, nil
 	}
 }
 

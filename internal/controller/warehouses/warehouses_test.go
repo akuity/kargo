@@ -919,7 +919,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 							},
 						},
 						{
-							RepoURL:    "docker.io/backend",
+							RepoURL: "docker.io/backend",
 							References: []kargoapi.DiscoveredImageReference{
 								{
 									Tag: "v2.0.0",
@@ -976,7 +976,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 							},
 						},
 						{
-							RepoURL:    "docker.io/backend",
+							RepoURL: "docker.io/backend",
 							References: []kargoapi.DiscoveredImageReference{
 								{
 									Tag: "v1.0.0",
@@ -1306,4 +1306,316 @@ func TestReconcile(t *testing.T) {
 			tt.assertions(t, result, err)
 		})
 	}
+}
+
+func Test_freightCreationFilterSatisfied(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		warehouse   *kargoapi.Warehouse
+		artifacts   *kargoapi.DiscoveredArtifacts
+		expected    bool
+		errExpected bool
+	}{
+		{
+			name:      "no filter expression",
+			warehouse: new(kargoapi.Warehouse),
+			artifacts: &kargoapi.DiscoveredArtifacts{},
+			expected:  true,
+		},
+		{
+			name: "no artifacts discovered",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "doesntmatter",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{},
+			expected:  true,
+		},
+		{
+			name: "invalid filter expression",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ invalid.expression }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "doesntmatter"},
+				},
+			},
+			expected:    false,
+			errExpected: true,
+		},
+		{
+			name: "success - commit tags match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Git: &kargoapi.GitSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - commit tags do not match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Git: &kargoapi.GitSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - image tags match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						References: []kargoapi.DiscoveredImageReference{
+							{
+								Tag:       `abc123`,
+								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:       `def456`,
+								CreatedAt: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						References: []kargoapi.DiscoveredImageReference{
+							{
+								Tag:       `abc123`,
+								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:       `def456`,
+								CreatedAt: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - image tags do not match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Image: &kargoapi.ImageSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						References: []kargoapi.DiscoveredImageReference{
+							{
+								Tag:       `abc123`,
+								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						References: []kargoapi.DiscoveredImageReference{
+							{
+								Tag:       `def456`,
+								CreatedAt: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions do not match",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationFilters: kargoapi.FreightCreationFilters{
+						Expression: "${{ chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version }}",
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Versions: []string{"v1.0.0"},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Versions: []string{"v1.1.0"},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result, err := freightCreationFilterSatisfied(ctx, tc.warehouse, tc.artifacts)
+			require.Equal(t, tc.expected, result)
+			if tc.errExpected {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+
 }
