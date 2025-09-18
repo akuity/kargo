@@ -12,6 +12,9 @@ import (
 	gocache "github.com/patrickmn/go-cache"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -194,25 +197,43 @@ func freightMetadata(
 			return nil, fmt.Errorf("freight ref name must not be empty")
 		}
 
-		freightData := kargoapi.Freight{}
-		if err := c.Get(ctx, client.ObjectKey{
-			Namespace: project,
-			Name:      freightRefName,
-		}, &freightData); err != nil {
+		// Retrieve the Freight object as unstructured because it bypasses the
+		// client's cache. This is essential for cases where Freight metadata is
+		// being accessed very shortly after having been updated.
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   kargoapi.GroupVersion.Group,
+			Version: kargoapi.GroupVersion.Version,
+			Kind:    "Freight",
+		})
+		if err := c.Get(
+			ctx,
+			client.ObjectKey{Namespace: project, Name: freightRefName},
+			u,
+		); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, nil
 			}
 			return nil, fmt.Errorf("failed to get freight %s: %w", freightRefName, err)
 		}
+		freight := &kargoapi.Freight{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
+			u.Object,
+			freight,
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error converting unstructured object to Freight: %w", err,
+			)
+		}
 
 		// If only one argument, return the whole metadata map
 		if len(a) == 1 {
-			if freightData.Status.Metadata == nil {
+			if freight.Status.Metadata == nil {
 				return nil, nil
 			}
 
-			decoded := make(map[string]any, len(freightData.Status.Metadata))
-			for k, v := range freightData.Status.Metadata {
+			decoded := make(map[string]any, len(freight.Status.Metadata))
+			for k, v := range freight.Status.Metadata {
 				var val any
 				if err := json.Unmarshal(v.Raw, &val); err != nil {
 					return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
@@ -232,7 +253,7 @@ func freightMetadata(
 		}
 
 		var data any
-		found, err := freightData.Status.GetMetadata(key, &data)
+		found, err := freight.Status.GetMetadata(key, &data)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get metadata %s from freight %s: %w", key, freightRefName, err)
 		}
@@ -278,21 +299,38 @@ func stageMetadata(
 			return nil, fmt.Errorf("stage name must not be empty")
 		}
 
-		stageData := kargoapi.Stage{}
-		if err := c.Get(ctx, client.ObjectKey{
-			Namespace: project,
-			Name:      stageName,
-		}, &stageData); err != nil {
+		// Retrieve the Stage object as unstructured because it bypasses the
+		// client's cache. This is essential for cases where Stage metadata is being
+		// accessed very shortly after having been updated.
+		u := &unstructured.Unstructured{}
+		u.SetGroupVersionKind(schema.GroupVersionKind{
+			Group:   kargoapi.GroupVersion.Group,
+			Version: kargoapi.GroupVersion.Version,
+			Kind:    "Stage",
+		})
+		if err := c.Get(
+			ctx, client.ObjectKey{Namespace: project, Name: stageName},
+			u,
+		); err != nil {
 			if apierrors.IsNotFound(err) {
 				return nil, nil
 			}
 			return nil, fmt.Errorf("failed to get stage %s: %w", stageName, err)
 		}
-		if stageData.Status.Metadata == nil {
+		stage := &kargoapi.Stage{}
+		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
+			u.Object,
+			stage,
+		); err != nil {
+			return nil, fmt.Errorf(
+				"error converting unstructured object to Stage: %w", err,
+			)
+		}
+		if stage.Status.Metadata == nil {
 			return nil, nil
 		}
-		decoded := make(map[string]any, len(stageData.Status.Metadata))
-		for k, v := range stageData.Status.Metadata {
+		decoded := make(map[string]any, len(stage.Status.Metadata))
+		for k, v := range stage.Status.Metadata {
 			var val any
 			if err := json.Unmarshal(v.Raw, &val); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
