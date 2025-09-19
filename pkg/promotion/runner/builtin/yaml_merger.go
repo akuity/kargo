@@ -80,7 +80,8 @@ func (y *yamlMerger) run(
 	for _, path := range cfg.InFiles {
 		inFile, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
 		if err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("could not secure join input file %q: %w", path, err)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("could not secure join input file %q: %w", path, err)
 		}
 
 		// only add existing files
@@ -89,7 +90,8 @@ func (y *yamlMerger) run(
 			if cfg.IgnoreMissingFiles {
 				continue
 			}
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("error accessing file %s: %w", inFile, err)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error accessing file %s: %w", inFile, err)
 
 		}
 		filePaths = append(filePaths, inFile)
@@ -99,18 +101,21 @@ func (y *yamlMerger) run(
 	// Secure join the output path to prevent path traversal attacks.
 	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
 	}
 
 	// ensure output path fully exist
 	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outFile), err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outFile), err)
 	}
 
 	// Merge files
 	err = yaml.MergeFiles(filePaths, outFile)
 	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf("could not merge YAML files: %w", err)
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("could not merge YAML files: %w", err)
 	}
 
 	// Add a commit message fragment to the step's output.
