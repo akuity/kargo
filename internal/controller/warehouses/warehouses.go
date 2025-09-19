@@ -287,7 +287,7 @@ func (r *reconciler) syncWarehouse(
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
-		filterSatisfied, err := freightCreationCriteriaSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
+		criteriaSatisfied, err := freightCreationCriteriaSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
 		if err != nil {
 			conditions.Set(
 				&status,
@@ -315,7 +315,7 @@ func (r *reconciler) syncWarehouse(
 			)
 			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
 		}
-		if !filterSatisfied {
+		if !criteriaSatisfied {
 			conditions.Set(
 				&status,
 				&metav1.Condition{
@@ -702,13 +702,13 @@ func freightCreationCriteriaSatisfied(
 	logger := logging.LoggerFromContext(ctx)
 
 	if wh.Spec.FreightCreationCriteria == nil {
-		logger.Debug("no freight creation filters")
+		logger.Debug("no freight creation criteria")
 		return true, nil
 	}
 
 	expression := strings.TrimSpace(wh.Spec.FreightCreationCriteria.Expression)
 	if expression == "" {
-		logger.Debug("no freight creation filter expression")
+		logger.Debug("no freight creation criteria expression")
 		return true, nil
 	}
 
@@ -717,17 +717,17 @@ func freightCreationCriteriaSatisfied(
 		return true, nil
 	}
 
-	ctx = logging.ContextWithLogger(ctx, logger.WithValues("filterExpression", expression))
+	ctx = logging.ContextWithLogger(ctx, logger.WithValues("criteriaExpression", expression))
 	program, err := expr.Compile(expression, function.WarehouseOperations(ctx, wh, artifacts)...)
 	if err != nil {
-		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
+		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
 	}
 
 	result, err := expr.Run(program, nil)
 	if err != nil {
-		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
+		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
 	}
-	logger.Debug("evaluated freight creation filter expression", "result", result)
+	logger.Debug("evaluated freight creation criteria expression", "result", result)
 
 	switch result := result.(type) {
 	case bool:

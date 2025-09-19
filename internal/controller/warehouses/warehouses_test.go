@@ -1156,7 +1156,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func Test_freightCreationCriteriaatisfied(t *testing.T) {
+func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		warehouse   *kargoapi.Warehouse
