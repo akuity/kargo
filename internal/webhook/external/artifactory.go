@@ -27,6 +27,7 @@ const (
 	artifactoryAuthHeader      = "X-Jfrog-Event-Auth"
 	artifactorySecretDataKey   = "secret-token"
 	artifactory                = "artifactory"
+	artifactoryRepoURLHeader   = "X-Kargo-Repo-URLs"
 )
 
 func init() {
@@ -149,31 +150,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		originURL, err := url.Parse(payload.Origin)
-		if err != nil {
-			xhttp.WriteErrorJSON(
-				w,
-				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
-			)
-			return
-		}
-
-		pathSections := strings.Split(payload.Data.Path, "/")
-		repoURL := strings.Join(
-			append(
-				[]string{originURL.Host, payload.Data.RepoKey},
-				pathSections[:len(pathSections)-2]...,
-			),
-			"/",
-		)
-
-		var repoURLs []string
-		switch payload.Data.ImageType {
-		case artifactoryDockerDomain:
-			repoURLs = append(repoURLs, image.NormalizeURL(repoURL))
-		case artifactoryChartImageType:
-			repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(repoURL))
-		default:
+		if payload.Data.ImageType != artifactoryDockerDomain && payload.Data.ImageType != artifactoryChartImageType {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
@@ -183,7 +160,41 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			)
 			return
 		}
-		logger = logger.WithValues("repoURL", repoURL)
+
+		var repoURLs []string
+		if repoURLsHeader := r.Header.Get(artifactoryRepoURLHeader); repoURLsHeader != "" {
+			repoURLs = strings.Split(repoURLsHeader, ",")
+		} else {
+			originURL, err := url.Parse(payload.Origin)
+			if err != nil {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+				)
+				return
+			}
+
+			pathSections := strings.Split(payload.Data.Path, "/")
+			repoURL := strings.Join(
+				append(
+					[]string{originURL.Host, payload.Data.RepoKey},
+					pathSections[:len(pathSections)-2]...,
+				),
+				"/",
+			)
+			repoURLs = append(repoURLs, repoURL)
+		}
+
+		for i, repoURL := range repoURLs {
+			switch payload.Data.ImageType {
+			case artifactoryDockerDomain:
+				repoURLs[i] = image.NormalizeURL(repoURL)
+			case artifactoryChartImageType:
+				repoURLs[i] = helm.NormalizeChartRepositoryURL(repoURL)
+				// no default case because this is already checked above
+			}
+		}
+		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, payload.Data.Tag)
 	})
