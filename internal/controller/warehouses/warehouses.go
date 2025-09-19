@@ -735,7 +735,9 @@ func freightCreationCriteriaSatisfied(
 	default:
 		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
 		if err != nil {
-			return false, err
+			return false, fmt.Errorf(
+				"failed to parse freight creation criteria expression result %q as bool: %w", result, err,
+			)
 		}
 		return parsedBool, nil
 	}
