@@ -578,6 +578,8 @@ func getCommitFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
+		repoURL = git.NormalizeURL(repoURL)
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
@@ -590,7 +592,7 @@ func getCommitFromWarehouse(
 					"count", len(artifacts.Git),
 				)
 				for i, dr := range artifacts.Git {
-					if dr.RepoURL != repoURL {
+					if !git.RepoURLsEqual(dr.RepoURL, repoURL) {
 						continue
 					}
 					logger.Debug("checking discovered git artifact",
@@ -686,6 +688,8 @@ func getImageFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
+		repoURL = image.NormalizeURL(repoURL)
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
@@ -708,7 +712,7 @@ func getImageFromWarehouse(
 					for _, ref := range dr.References {
 						if latestImg == nil {
 							latestImg = &kargoapi.Image{
-								RepoURL:     image.NormalizeURL(repoURL),
+								RepoURL:     image.NormalizeURL(dr.RepoURL),
 								Tag:         ref.Tag,
 								Digest:      ref.Digest,
 								Annotations: maps.Clone(ref.Annotations),
@@ -727,7 +731,7 @@ func getImageFromWarehouse(
 						}
 						if sv.GreaterThan(latestSemver) {
 							latestImg = &kargoapi.Image{
-								RepoURL:     image.NormalizeURL(repoURL),
+								RepoURL:     repoURL,
 								Tag:         ref.Tag,
 								Digest:      ref.Digest,
 								Annotations: maps.Clone(ref.Annotations),
@@ -819,6 +823,8 @@ func getChartFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
+		repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
@@ -831,7 +837,7 @@ func getChartFromWarehouse(
 					"count", len(artifacts.Charts),
 				)
 				for _, dr := range artifacts.Charts {
-					if dr.RepoURL != repoURL {
+					if !helm.ChartRepositoryURLsEqual(dr.RepoURL, repoURL) {
 						continue
 					}
 					for _, v := range dr.Versions {
@@ -842,7 +848,7 @@ func getChartFromWarehouse(
 						}
 						if latestChart == nil {
 							latestChart = &kargoapi.Chart{
-								RepoURL: helm.NormalizeChartRepositoryURL(repoURL),
+								RepoURL: repoURL,
 								Name:    dr.Name,
 								Version: sv.String(),
 							}
@@ -855,7 +861,7 @@ func getChartFromWarehouse(
 						}
 						if sv.GreaterThan(latestSemver) {
 							latestChart = &kargoapi.Chart{
-								RepoURL: helm.NormalizeChartRepositoryURL(repoURL),
+								RepoURL: helm.NormalizeChartRepositoryURL(dr.RepoURL),
 								Name:    dr.Name,
 								Version: sv.String(),
 							}
