@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -16,7 +17,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
-	libsemver "github.com/akuity/kargo/internal/controller/semver"
 	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
@@ -694,35 +694,33 @@ func getChartFromWarehouse(
 			"warehouse", wh.Name,
 		)
 
-		var latestChartVersion *semver.Version
+		var chartVersions []*semver.Version
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Chart != nil && helm.ChartRepositoryURLsEqual(s.Chart.RepoURL, repoURL) && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
 					"count", len(artifacts.Charts),
 				)
-				for i, dr := range artifacts.Charts {
+				for _, dr := range artifacts.Charts {
 					if dr.RepoURL != repoURL {
 						continue
 					}
-					logger.Debug("checking discovered chart artifact",
-						"index", i,
-						"numVersions", len(dr.Versions),
-					)
-					v := getLatestVersion(dr)
-					if latestChartVersion == nil {
-						latestChartVersion = v
-						continue
-					}
-					if v.GreaterThan(latestChartVersion) {
-						latestChartVersion = v
+					for _, v := range dr.Versions {
+						sv, err := semver.NewVersion(v)
+						if err != nil {
+							logger.Error(err, "ignoring invalid semver version", "version", v)
+							continue
+						}
+						chartVersions = append(chartVersions, sv)
 					}
 				}
 			}
 		}
-		if latestChartVersion == nil {
+		if len(chartVersions) == 0 {
 			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
 		}
-		return &kargoapi.Chart{Version: latestChartVersion.String()}, nil
+		sort.Sort(semver.Collection(chartVersions))
+		latestVersion := chartVersions[len(chartVersions)-1]
+		return &kargoapi.Chart{Version: latestVersion.String()}, nil
 	}
 }
 
@@ -939,18 +937,4 @@ const (
 // The cache key is a string formatted as "<prefix>/<project>/<name>".
 func getCacheKey(prefix, project, name string) string {
 	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
-}
-
-func getLatestVersion(cdr kargoapi.ChartDiscoveryResult) *semver.Version {
-	var latestVersion *semver.Version
-	for _, v := range cdr.Versions {
-		sv := libsemver.Parse(v, false)
-		if sv == nil {
-			continue
-		}
-		if latestVersion == nil || sv.GreaterThan(latestVersion) {
-			latestVersion = sv
-		}
-	}
-	return latestVersion
 }
