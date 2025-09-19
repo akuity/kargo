@@ -30,3 +30,9 @@ func NormalizeURL(repoURL string) string {
 	}
 	return fmt.Sprintf("%s/%s", reg, repo)
 }
+
+// RepoURLsEqual returns true if the two provided Image repository URLs are
+// equivalent after normalization.
+func RepoURLsEqual(repoURL1, repoURL2 string) bool {
+	return NormalizeURL(repoURL1) == NormalizeURL(repoURL2)
+}

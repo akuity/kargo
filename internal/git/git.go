@@ -76,3 +76,9 @@ func NormalizeURL(repo string) string {
 	}
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
 }
+
+// RepoURLsEqual returns true if the two provided Git repository URLs are
+// equivalent after normalization.
+func RepoURLsEqual(repoURL1, repoURL2 string) bool {
+	return NormalizeURL(repoURL1) == NormalizeURL(repoURL2)
+}

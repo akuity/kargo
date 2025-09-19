@@ -17,6 +17,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
 	libsemver "github.com/akuity/kargo/internal/controller/semver"
+	"github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -466,7 +469,7 @@ func getCommitFromWarehouse(
 
 		var latestCommit *kargoapi.DiscoveredCommit
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Git != nil && s.Git.RepoURL == repoURL && len(artifacts.Git) != 0 {
+			if s.Git != nil && git.RepoURLsEqual(s.Git.RepoURL, repoURL) && len(artifacts.Git) != 0 {
 				logger.Debug("number of discovered git artifacts",
 					"count", len(artifacts.Git),
 				)
@@ -574,7 +577,7 @@ func getImageFromWarehouse(
 
 		var latestImgRef *kargoapi.DiscoveredImageReference
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Image != nil && s.Image.RepoURL == repoURL && len(artifacts.Images) != 0 {
+			if s.Image != nil && image.RepoURLsEqual(s.Image.RepoURL, repoURL) && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
 					"count", len(artifacts.Images),
 				)
@@ -693,7 +696,7 @@ func getChartFromWarehouse(
 
 		var latestChartVersion *semver.Version
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Chart != nil && s.Chart.RepoURL == repoURL && len(artifacts.Charts) != 0 {
+			if s.Chart != nil && helm.ChartRepositoryURLsEqual(s.Chart.RepoURL, repoURL) && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
 					"count", len(artifacts.Charts),
 				)

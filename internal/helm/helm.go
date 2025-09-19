@@ -22,3 +22,9 @@ func NormalizeChartRepositoryURL(repo string) string {
 		),
 	)
 }
+
+// ChartRepositoryURLsEqual returns true if the two provided chart repository
+// URLs are equivalent after normalization.
+func ChartRepositoryURLsEqual(repo1, repo2 string) bool {
+	return NormalizeChartRepositoryURL(repo1) == NormalizeChartRepositoryURL(repo2)
+}
