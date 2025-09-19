@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -477,14 +478,16 @@ func getCommitFromWarehouse(
 						"index", i,
 						"numCommits", len(dr.Commits),
 					)
-					for _, c := range dr.Commits {
-						if latestCommit == nil {
-							latestCommit = &c
-							continue
-						}
-						if c.CreatorDate.After(latestCommit.CreatorDate.Time) {
-							latestCommit = &c
-						}
+					slices.SortFunc(dr.Commits, func(a, b kargoapi.DiscoveredCommit) int {
+						return a.CreatorDate.Compare(b.CreatorDate.Time)
+					})
+					lastCommit := dr.Commits[len(dr.Commits)-1]
+					if latestCommit == nil {
+						latestCommit = &lastCommit
+						continue
+					}
+					if latestCommit.CreatorDate.Before(lastCommit.CreatorDate) {
+						latestCommit = &lastCommit
 					}
 				}
 			}
