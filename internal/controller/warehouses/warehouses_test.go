@@ -1050,7 +1050,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			result := validateDiscoveredArtifacts(ctx, tc.warehouse, tc.newStatus)
@@ -1605,7 +1605,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			result, err := freightCreationFilterSatisfied(ctx, tc.warehouse, tc.artifacts)

@@ -91,7 +91,7 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			fn := getCommitFromWarehouse(ctx, tc.warehouse, tc.artifacts)
@@ -181,7 +181,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			fn := getImageFromWarehouse(ctx, tc.warehouse, tc.artifacts)
@@ -262,7 +262,7 @@ func Test_getChartromWarehouse(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
 			fn := getChartFromWarehouse(ctx, tc.warehouse, tc.artifacts)
