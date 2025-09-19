@@ -30,15 +30,6 @@ func WarehouseOperations(
 	}
 }
 
-// Warehouse returns an expr.Option that provides a `warehouse()` function
-// for use in expressions.
-//
-// The warehouse function creates a v1alpha1.FreightOrigin of kind
-// v1alpha1.Warehouse with the specified name.
-func Warehouse() expr.Option {
-	return expr.Function("warehouse", warehouse, new(func(name string) kargoapi.FreightOrigin))
-}
-
 // CommitFromWarehouse returns an expr.Option that provides a `commitFrom()` function
 // for use in expressions.
 //
