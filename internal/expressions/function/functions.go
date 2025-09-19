@@ -587,22 +587,22 @@ func getCommitFromWarehouse(
 
 		var latestCommit *kargoapi.DiscoveredCommit
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Git != nil && git.RepoURLsEqual(s.Git.RepoURL, repoURL) && len(artifacts.Git) != 0 {
+			if s.Git != nil && git.NormalizeURL(s.Git.RepoURL) == repoURL && len(artifacts.Git) != 0 {
 				logger.Debug("number of discovered git artifacts",
 					"count", len(artifacts.Git),
 				)
-				for i, dr := range artifacts.Git {
-					if !git.RepoURLsEqual(dr.RepoURL, repoURL) {
+				for i, ca := range artifacts.Git {
+					if git.NormalizeURL(ca.RepoURL) != repoURL {
 						continue
 					}
 					logger.Debug("checking discovered git artifact",
 						"index", i,
-						"numCommits", len(dr.Commits),
+						"numCommits", len(ca.Commits),
 					)
-					slices.SortFunc(dr.Commits, func(a, b kargoapi.DiscoveredCommit) int {
+					slices.SortFunc(ca.Commits, func(a, b kargoapi.DiscoveredCommit) int {
 						return a.CreatorDate.Compare(b.CreatorDate.Time)
 					})
-					lastCommit := dr.Commits[len(dr.Commits)-1]
+					lastCommit := ca.Commits[len(ca.Commits)-1]
 					if latestCommit == nil {
 						latestCommit = &lastCommit
 						continue
@@ -697,22 +697,23 @@ func getImageFromWarehouse(
 
 		var latestImg *kargoapi.Image
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Image != nil && image.RepoURLsEqual(s.Image.RepoURL, repoURL) && len(artifacts.Images) != 0 {
+			if s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
 					"count", len(artifacts.Images),
 				)
-				for i, dr := range artifacts.Images {
-					if !image.RepoURLsEqual(dr.RepoURL, repoURL) {
+				for i, ia := range artifacts.Images {
+					iaRepoURL := image.NormalizeURL(ia.RepoURL)
+					if iaRepoURL != repoURL {
 						continue
 					}
 					logger.Debug("discovered image artifact",
 						"index", i,
-						"numImageRefs", len(dr.References),
+						"numImageRefs", len(ia.References),
 					)
-					for _, ref := range dr.References {
+					for _, ref := range ia.References {
 						if latestImg == nil {
 							latestImg = &kargoapi.Image{
-								RepoURL:     image.NormalizeURL(dr.RepoURL),
+								RepoURL:     iaRepoURL,
 								Tag:         ref.Tag,
 								Digest:      ref.Digest,
 								Annotations: maps.Clone(ref.Annotations),
@@ -731,7 +732,7 @@ func getImageFromWarehouse(
 						}
 						if sv.GreaterThan(latestSemver) {
 							latestImg = &kargoapi.Image{
-								RepoURL:     repoURL,
+								RepoURL:     iaRepoURL,
 								Tag:         ref.Tag,
 								Digest:      ref.Digest,
 								Annotations: maps.Clone(ref.Annotations),
@@ -832,15 +833,16 @@ func getChartFromWarehouse(
 
 		var latestChart *kargoapi.Chart
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Chart != nil && helm.ChartRepositoryURLsEqual(s.Chart.RepoURL, repoURL) && len(artifacts.Charts) != 0 {
+			if s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
 					"count", len(artifacts.Charts),
 				)
-				for _, dr := range artifacts.Charts {
-					if !helm.ChartRepositoryURLsEqual(dr.RepoURL, repoURL) {
+				for _, ca := range artifacts.Charts {
+					caRepoURL := helm.NormalizeChartRepositoryURL(ca.RepoURL)
+					if caRepoURL != repoURL {
 						continue
 					}
-					for _, v := range dr.Versions {
+					for _, v := range ca.Versions {
 						sv, err := semver.NewVersion(v)
 						if err != nil {
 							logger.Error(err, "ignoring invalid semver version", "version", v)
@@ -849,7 +851,7 @@ func getChartFromWarehouse(
 						if latestChart == nil {
 							latestChart = &kargoapi.Chart{
 								RepoURL: repoURL,
-								Name:    dr.Name,
+								Name:    caRepoURL,
 								Version: sv.String(),
 							}
 							continue
@@ -861,8 +863,8 @@ func getChartFromWarehouse(
 						}
 						if sv.GreaterThan(latestSemver) {
 							latestChart = &kargoapi.Chart{
-								RepoURL: helm.NormalizeChartRepositoryURL(dr.RepoURL),
-								Name:    dr.Name,
+								RepoURL: caRepoURL,
+								Name:    ca.Name,
 								Version: sv.String(),
 							}
 						}
