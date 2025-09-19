@@ -1,0 +1,25 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "YAMLMergeConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "inFiles": {
+   "type": "array",
+   "description": "InFiles is the list of paths of YAML files to merge",
+   "items": {
+    "type": "string"
+   }
+  },
+  "outFile": {
+   "type": "string",
+   "description": "OutFile is the path to the merged YAML file to created or updated.",
+   "minLength": 1
+  },
+  "ignoreMissingFiles": {
+   "type": "boolean",
+   "description": "allow directive to pass even if an input file does not exist.",
+   "default": false
+  }
+ }
+}

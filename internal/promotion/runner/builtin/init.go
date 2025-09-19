@@ -48,6 +48,7 @@ func Initialize(kargoClient, argocdClient client.Client, credsDB credentials.Dat
 		),
 		newMetadataSetter(kargoClient),
 		newTarExtractor(),
+		newYAMLMerger(),
 		newYAMLParser(),
 		newYAMLUpdater(),
 	}
