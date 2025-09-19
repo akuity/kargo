@@ -521,18 +521,8 @@ func Test_getImageFromWarehouse(t *testing.T) {
 					{
 						RepoURL: "docker.io/example/repo",
 						References: []kargoapi.DiscoveredImageReference{
-							{
-								Tag: "abc123",
-								CreatedAt: &metav1.Time{
-									Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
-								},
-							},
-							{
-								Tag: "def456",
-								CreatedAt: &metav1.Time{
-									Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
-								},
-							},
+							{Tag: "v1.0.0"},
+							{Tag: "v1.1.0"},
 						},
 					},
 				},
@@ -543,7 +533,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 				require.NotNil(t, result)
 				img, ok := result.(*kargoapi.Image)
 				require.True(t, ok)
-				require.Equal(t, "def456", img.Tag)
+				require.Equal(t, "v1.0.0", img.Tag)
 			},
 		},
 		{
@@ -881,6 +871,15 @@ func Test_getChartromWarehouse(t *testing.T) {
 				commit, ok := result.(*kargoapi.Chart)
 				require.True(t, ok)
 				require.Equal(t, "2.3.0", commit.Version)
+			},
+		},
+		{
+			name:      "no charts found",
+			warehouse: new(kargoapi.Warehouse),
+			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "no charts found for repoURL")
 			},
 		},
 	} {

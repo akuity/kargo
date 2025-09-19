@@ -574,14 +574,14 @@ func getImageFromWarehouse(
 			"warehouse", wh.Name,
 		)
 
-		var latestImgRef *kargoapi.DiscoveredImageReference
+		var latestImg *kargoapi.Image
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Image != nil && image.RepoURLsEqual(s.Image.RepoURL, repoURL) && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
 					"count", len(artifacts.Images),
 				)
 				for i, dr := range artifacts.Images {
-					if dr.RepoURL != repoURL {
+					if !image.RepoURLsEqual(dr.RepoURL, repoURL) {
 						continue
 					}
 					logger.Debug("discovered image artifact",
@@ -589,27 +589,41 @@ func getImageFromWarehouse(
 						"numImageRefs", len(dr.References),
 					)
 					for _, ref := range dr.References {
-						if latestImgRef == nil {
-							latestImgRef = &ref
+						if latestImg == nil {
+							latestImg = &kargoapi.Image{
+								RepoURL:     image.NormalizeURL(repoURL),
+								Tag:         ref.Tag,
+								Digest:      ref.Digest,
+								Annotations: maps.Clone(ref.Annotations),
+							}
 							continue
 						}
-						if ref.CreatedAt.After(latestImgRef.CreatedAt.Time) {
-							latestImgRef = &ref
+						sv, err := semver.NewVersion(latestImg.Tag)
+						if err != nil {
+							logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
+							continue
+						}
+						latestSemver, err := semver.NewVersion(latestImg.Tag)
+						if err != nil {
+							logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
+							continue
+						}
+						if sv.GreaterThan(latestSemver) {
+							latestImg = &kargoapi.Image{
+								RepoURL:     image.NormalizeURL(repoURL),
+								Tag:         ref.Tag,
+								Digest:      ref.Digest,
+								Annotations: maps.Clone(ref.Annotations),
+							}
 						}
 					}
 				}
 			}
 		}
-		if latestImgRef == nil {
+		if latestImg == nil {
 			return nil, fmt.Errorf("no images found for repoURL %q", repoURL)
 		}
-		logger.Debug("found latest image reference", "ref", latestImgRef)
-		return &kargoapi.Image{
-			RepoURL:     repoURL,
-			Tag:         latestImgRef.Tag,
-			Digest:      latestImgRef.Digest,
-			Annotations: latestImgRef.Annotations,
-		}, nil
+		return latestImg, nil
 	}
 }
 
@@ -732,6 +746,9 @@ func getChartFromWarehouse(
 					}
 				}
 			}
+		}
+		if latestChart == nil {
+			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
 		}
 		return latestChart, nil
 	}
