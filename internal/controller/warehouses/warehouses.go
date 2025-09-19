@@ -287,6 +287,35 @@ func (r *reconciler) syncWarehouse(
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
+		filterSatisfied, err := freightCreationFilterSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
+		if err != nil {
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeHealthy,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightCreationFilterExpressionError",
+					Message: fmt.Sprintf(
+						"failed to evaluate freight creation filter expression: %s", err.Error(),
+					),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, fmt.Errorf("failed to evaluate freight creation filter expression: %w", err)
+		}
+		if !filterSatisfied {
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionTrue,
+					Reason:             "FreightCreationFilterNotSatisfied",
+					Message:            "freight creation filter expression not satisfied; skipping freight creation",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, nil
+		}
 		// Mark the Warehouse as reconciling while we create the Freight.
 		//
 		// As this should be a quick operation, we do not issue an immediate
