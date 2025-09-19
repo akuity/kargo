@@ -1738,6 +1738,11 @@ message StageStatus {
   // AutoPromotionEnabled indicates whether automatic promotion is enabled
   // for the Stage based on the ProjectConfig.
   optional bool autoPromotionEnabled = 14;
+
+  // Metadata is a map of arbitrary metadata associated with the Stage.
+  // This is useful for storing additional information about the Stage
+  // that can be shared across promotions, verifications, or other processes.
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of
@@ -1894,8 +1899,9 @@ message WarehouseSpec {
   // +kubebuilder:validation:MinItems=1
   repeated RepoSubscription subscriptions = 1;
 
-  // FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.
-  // This field has no effect when the FreightCreationPolicy isn't automatic.
+  // FreightCreationCriteria defines criteria that must be satisfied for Freight
+  // to be created automatically from new artifacts following discovery. This
+  // field has no effect when the FreightCreationPolicy is `Manual`.
   //
   // +kubebuilder:validation:Optional
   optional FreightCreationCriteria freightCreationFilters = 5;

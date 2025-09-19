@@ -2519,6 +2519,16 @@ RawFormat specifies the format for raw resource representation.
 | currentPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  CurrentPromotion is a reference to the currently Running promotion. |
 | lastPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  LastPromotion is a reference to the last completed promotion. |
 | autoPromotionEnabled | [bool](#bool) |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
+| metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry"></a>
+
+### StageStatus.MetadataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-StepExecutionMetadata"></a>
 
@@ -2596,7 +2606,7 @@ RawFormat specifies the format for raw resource representation.
 | interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".      |
 | freightCreationPolicy | [string](#string) |  FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".  Accepted values:  - "Automatic": New Freight is created automatically when any new artifact   is discovered. - "Manual": New Freight is never created automatically.    |
 | subscriptions | [RepoSubscription](#github-com-akuity-kargo-api-v1alpha1-RepoSubscription) |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
-| freightCreationFilters | [FreightCreationCriteria](#github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria) |  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created. This field has no effect when the FreightCreationPolicy isn't automatic.   |
+| freightCreationFilters | [FreightCreationCriteria](#github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria) |  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created automatically from new artifacts following discovery. This field has no effect when the FreightCreationPolicy is `Manual`.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>
 

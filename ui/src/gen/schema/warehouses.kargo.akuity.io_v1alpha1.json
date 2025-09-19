@@ -17,7 +17,7 @@
       "description": "Spec describes sources of artifacts.",
       "properties": {
         "freightCreationFilters": {
-          "description": "FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.\nThis field has no effect when the FreightCreationPolicy isn't automatic.",
+          "description": "FreightCreationCriteria defines criteria that must be satisfied for Freight\nto be created automatically from new artifacts following discovery. This\nfield has no effect when the FreightCreationPolicy is `Manual`.",
           "properties": {
             "expression": {
               "description": "Expression is an expr-lang expression that must evaluate to true for\nFreight to be created automatically from new artifacts following discovery.",

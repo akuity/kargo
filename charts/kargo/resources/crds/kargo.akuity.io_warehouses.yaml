@@ -48,8 +48,9 @@ spec:
             properties:
               freightCreationFilters:
                 description: |-
-                  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.
-                  This field has no effect when the FreightCreationPolicy isn't automatic.
+                  FreightCreationCriteria defines criteria that must be satisfied for Freight
+                  to be created automatically from new artifacts following discovery. This
+                  field has no effect when the FreightCreationPolicy is `Manual`.
                 properties:
                   expression:
                     description: |-

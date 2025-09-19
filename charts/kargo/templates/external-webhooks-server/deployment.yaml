@@ -130,7 +130,7 @@ spec:
             {{- end }}
             {{- if .Values.externalWebhooksServer.tls.enabled }}
             - secret:
-                name: kargo-external-webhooks-server-cert
+                name: {{ .Values.externalWebhooksServer.tls.secretName }}
                 items:
                 - key: tls.crt
                   path: tls.crt

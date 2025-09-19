@@ -1753,6 +1753,13 @@
           ],
           "type": "object"
         },
+        "metadata": {
+          "additionalProperties": {
+            "x-kubernetes-preserve-unknown-fields": true
+          },
+          "description": "Metadata is a map of arbitrary metadata associated with the Stage.\nThis is useful for storing additional information about the Stage\nthat can be shared across promotions, verifications, or other processes.",
+          "type": "object"
+        },
         "observedGeneration": {
           "description": "ObservedGeneration represents the .metadata.generation that this Stage\nstatus was reconciled against.",
           "format": "int64",
