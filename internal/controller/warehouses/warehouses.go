@@ -691,8 +691,14 @@ func freightCreationFilterSatisfied(
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if wh.Spec.FreightCreationFilters == nil || wh.Spec.FreightCreationFilters.Expression == "" {
-		logger.Debug("no freight creation filter expression defined")
+	if wh.Spec.FreightCreationFilters == nil {
+		logger.Debug("no freight creation filters")
+		return true, nil
+	}
+
+	expression := strings.TrimSpace(wh.Spec.FreightCreationFilters.Expression)
+	if expression == "" {
+		logger.Debug("no freight creation filter expression")
 		return true, nil
 	}
 
@@ -701,13 +707,8 @@ func freightCreationFilterSatisfied(
 		return true, nil
 	}
 
-	ctx = logging.ContextWithLogger(ctx,
-		logger.WithValues("filterExpression", wh.Spec.FreightCreationFilters.Expression),
-	)
-
-	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression,
-		function.WarehouseOperations(ctx, wh, artifacts)...,
-	)
+	ctx = logging.ContextWithLogger(ctx, logger.WithValues("filterExpression", expression))
+	program, err := expr.Compile(expression, function.WarehouseOperations(ctx, wh, artifacts)...)
 	if err != nil {
 		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
 	}

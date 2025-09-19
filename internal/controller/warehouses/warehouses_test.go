@@ -1317,8 +1317,20 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 		errExpected bool
 	}{
 		{
-			name:      "no filter expression",
+			name:      "nil freight creation filter",
 			warehouse: new(kargoapi.Warehouse),
+			artifacts: &kargoapi.DiscoveredArtifacts{},
+			expected:  true,
+		},
+		{
+			name: "empty filter expression",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+						Expression: "",
+					},
+				},
+			},
 			artifacts: &kargoapi.DiscoveredArtifacts{},
 			expected:  true,
 		},
