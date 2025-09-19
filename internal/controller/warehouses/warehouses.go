@@ -3,9 +3,11 @@ package warehouses
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -18,6 +20,7 @@ import (
 	"github.com/akuity/kargo/internal/conditions"
 	"github.com/akuity/kargo/internal/controller"
 	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/internal/expressions/function"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
@@ -284,6 +287,47 @@ func (r *reconciler) syncWarehouse(
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
+		criteriaSatisfied, err := freightCreationCriteriaSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
+		if err != nil {
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeHealthy,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightCreationCriteriaError",
+					Message: fmt.Sprintf(
+						"failed to evaluate freight creation criteria: %s", err.Error(),
+					),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeReady,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightCreationCriteriaError",
+					Message: fmt.Sprintf(
+						"failed to evaluate freight creation criteria: %s", err.Error(),
+					),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
+		}
+		if !criteriaSatisfied {
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionTrue,
+					Reason:             "FreightCreationCriteriaNotSatisfied",
+					Message:            "freight creation criteria not satisfied; skipping freight creation",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
+			return status, nil
+		}
 		// Mark the Warehouse as reconciling while we create the Freight.
 		//
 		// As this should be a quick operation, we do not issue an immediate
@@ -644,6 +688,59 @@ func validateDiscoveredArtifacts(
 		},
 	)
 	return true
+}
+
+// freightCreationCriteriaSatisfied evaluates the freight creation criteria
+// expression, if defined, and returns true if the expression is satisfied,
+// no expression is defined, or no discovered artifacts are present.
+// A non-nil error is returned if there was an error evaluating the expression.
+func freightCreationCriteriaSatisfied(
+	ctx context.Context,
+	wh *kargoapi.Warehouse,
+	artifacts *kargoapi.DiscoveredArtifacts,
+) (bool, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	if wh.Spec.FreightCreationCriteria == nil {
+		logger.Debug("no freight creation criteria")
+		return true, nil
+	}
+
+	expression := strings.TrimSpace(wh.Spec.FreightCreationCriteria.Expression)
+	if expression == "" {
+		logger.Debug("no freight creation criteria expression")
+		return true, nil
+	}
+
+	if artifacts == nil || (len(artifacts.Git) == 0 && len(artifacts.Images) == 0 && len(artifacts.Charts) == 0) {
+		logger.Debug("no artifacts discovered")
+		return true, nil
+	}
+
+	ctx = logging.ContextWithLogger(ctx, logger.WithValues("criteriaExpression", expression))
+	program, err := expr.Compile(expression, function.WarehouseOperations(ctx, wh, artifacts)...)
+	if err != nil {
+		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
+	}
+
+	result, err := expr.Run(program, nil)
+	if err != nil {
+		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
+	}
+	logger.Debug("evaluated freight creation criteria expression", "result", result)
+
+	switch result := result.(type) {
+	case bool:
+		return result, nil
+	default:
+		parsedBool, err := strconv.ParseBool(fmt.Sprintf("%v", result))
+		if err != nil {
+			return false, fmt.Errorf(
+				"failed to parse freight creation criteria expression result %q as bool: %w", result, err,
+			)
+		}
+		return parsedBool, nil
+	}
 }
 
 // shouldDiscoverArtifacts returns true if the Warehouse should attempt to
