@@ -486,15 +486,6 @@ func (a *argocdUpdater) syncApplication(
 			app.Operation.Sync.SyncOptions = app.Spec.SyncPolicy.SyncOptions
 		}
 	}
-	// Set target revisions for sync operation.
-	// If sources are specified, Argo CD ignores source.
-	if len(app.Spec.Sources) > 0 {
-		for _, source := range app.Spec.Sources {
-			app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
-		}
-	} else if app.Spec.Source != nil {
-		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
-	}
 	// TODO(krancour): This is a workaround for the Argo CD Application controller
 	// not handling this correctly itself. It is Argo CD's API server that usually
 	// handles this, but we are bypassing the API server here.
@@ -545,12 +536,21 @@ func (a *argocdUpdater) syncApplication(
 	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L1887-L1895
 	// nolint:lll
 	//
-	// TODO(hidde): It is not clear what we should do if we have a list of
-	// sources.
+	// Construct a human-friendly message about what we're syncing to.
+	// - If there's exactly one source, we include its TargetRevision.
+	// - If there are multiple sources, we just report the count to avoid a noisy log.
+	// - If only the single Source field is set, we log its TargetRevision.
+	// Full details are always available on the Application object itself.
 	message := "initiated sync"
-	if app.Spec.Source != nil {
+	switch {
+	case len(app.Spec.Sources) == 1:
+		message += " to " + app.Spec.Sources[0].TargetRevision
+	case len(app.Spec.Sources) > 1:
+		message += fmt.Sprintf(" to %d sources", len(app.Spec.Sources))
+	case app.Spec.Source != nil:
 		message += " to " + app.Spec.Source.TargetRevision
 	}
+
 	a.logAppEventFn(
 		ctx,
 		app,
