@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"maps"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -694,7 +693,7 @@ func getChartFromWarehouse(
 			"warehouse", wh.Name,
 		)
 
-		var chartVersions []*semver.Version
+		var latestChart *kargoapi.Chart
 		for _, s := range wh.Spec.Subscriptions {
 			if s.Chart != nil && helm.ChartRepositoryURLsEqual(s.Chart.RepoURL, repoURL) && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
@@ -710,17 +709,31 @@ func getChartFromWarehouse(
 							logger.Error(err, "ignoring invalid semver version", "version", v)
 							continue
 						}
-						chartVersions = append(chartVersions, sv)
+						if latestChart == nil {
+							latestChart = &kargoapi.Chart{
+								RepoURL: helm.NormalizeChartRepositoryURL(repoURL),
+								Name:    dr.Name,
+								Version: sv.String(),
+							}
+							continue
+						}
+						latestSemver, err := semver.NewVersion(latestChart.Version)
+						if err != nil {
+							logger.Error(err, "ignoring invalid semver version", "version", latestChart.Version)
+							continue
+						}
+						if sv.GreaterThan(latestSemver) {
+							latestChart = &kargoapi.Chart{
+								RepoURL: helm.NormalizeChartRepositoryURL(repoURL),
+								Name:    dr.Name,
+								Version: sv.String(),
+							}
+						}
 					}
 				}
 			}
 		}
-		if len(chartVersions) == 0 {
-			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
-		}
-		sort.Sort(semver.Collection(chartVersions))
-		latestVersion := chartVersions[len(chartVersions)-1]
-		return &kargoapi.Chart{Version: latestVersion.String()}, nil
+		return latestChart, nil
 	}
 }
 

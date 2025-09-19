@@ -883,15 +883,6 @@ func Test_getChartromWarehouse(t *testing.T) {
 				require.Equal(t, "2.3.0", commit.Version)
 			},
 		},
-		{
-			name:      "no charts found",
-			warehouse: new(kargoapi.Warehouse),
-			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
-			assertions: func(t *testing.T, result any, err error) {
-				require.Nil(t, result)
-				require.ErrorContains(t, err, "no charts found for repoURL")
-			},
-		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
