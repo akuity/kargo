@@ -1327,29 +1327,17 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 					{
 						RepoURL: "site/repo/frontend",
 						References: []kargoapi.DiscoveredImageReference{
-							{
-								Tag:       `abc123`,
-								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-							},
+							{Tag: `v1.0.0`},
 							// this is the one that should be picked
-							{
-								Tag:       `def456`,
-								CreatedAt: &metav1.Time{Time: time.Now()},
-							},
+							{Tag: `v1.1.0`},
 						},
 					},
 					{
 						RepoURL: "site/repo/backend",
 						References: []kargoapi.DiscoveredImageReference{
-							{
-								Tag:       `abc123`,
-								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-							},
+							{Tag: `v1.0.0`},
 							// this is the one that should be picked
-							{
-								Tag:       `def456`,
-								CreatedAt: &metav1.Time{Time: time.Now()},
-							},
+							{Tag: `v1.1.0`},
 						},
 					},
 				},
@@ -1379,19 +1367,13 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 					{
 						RepoURL: "site/repo/frontend",
 						References: []kargoapi.DiscoveredImageReference{
-							{
-								Tag:       `abc123`,
-								CreatedAt: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
-							},
+							{Tag: `v1.0.0`},
 						},
 					},
 					{
 						RepoURL: "site/repo/backend",
 						References: []kargoapi.DiscoveredImageReference{
-							{
-								Tag:       `def456`,
-								CreatedAt: &metav1.Time{Time: time.Now()},
-							},
+							{Tag: `v1.1.0`},
 						},
 					},
 				},
