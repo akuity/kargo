@@ -163,9 +163,9 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 
 	// read all other YAML file and apply the patch
 	for i := 1; i < len(inputPaths); i++ {
-		patchNode, err := kyaml.ReadFile(inputPaths[i])
-		if err != nil {
-			return fmt.Errorf("error parsing input file %s: %w", inputPaths[i], err)
+		patchNode, fileErr := kyaml.ReadFile(inputPaths[i])
+		if fileErr != nil {
+			return fmt.Errorf("error parsing input file %s: %w", inputPaths[i], fileErr)
 		}
 
 		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: 1})

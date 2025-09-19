@@ -135,7 +135,7 @@ app:
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.Contains(t, err.Error(), "input file not found: ")
+				assert.Contains(t, err.Error(), "error accessing file ")
 			},
 		},
 		{
@@ -180,7 +180,7 @@ app:
 				assert.Equal(t, promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, result)
-				assert.Contains(t, err.Error(), "inFiles and OutFile must not be empty")
+				assert.Contains(t, err.Error(), "could not merge YAML files: ")
 			},
 		},
 	}
