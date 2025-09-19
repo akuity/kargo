@@ -440,7 +440,7 @@ app:
   version: "2.0.0"
 `,
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
+			assertions: func(t *testing.T, _ string, err error) {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), "error writing the merged file to")
 			},
