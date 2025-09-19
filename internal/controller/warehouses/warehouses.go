@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -23,7 +24,6 @@ import (
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/internal/kubeclient"
 	intpredicate "github.com/akuity/kargo/internal/predicate"
-	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -705,10 +705,14 @@ func freightCreationFilterSatisfied(
 		logger.WithValues("filterExpression", wh.Spec.FreightCreationFilters.Expression),
 	)
 
-	result, err := expressions.EvaluateTemplate(wh.Spec.FreightCreationFilters.Expression,
-		make(map[string]any),
+	program, err := expr.Compile(wh.Spec.FreightCreationFilters.Expression,
 		function.WarehouseOperations(ctx, wh, artifacts)...,
 	)
+	if err != nil {
+		return false, fmt.Errorf("error compiling freight creation filter expression: %w", err)
+	}
+
+	result, err := expr.Run(program, nil)
 	if err != nil {
 		return false, fmt.Errorf("error evaluating freight creation filter expression: %w", err)
 	}
