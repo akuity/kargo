@@ -375,6 +375,30 @@ func Status(
 	)
 }
 
+// warehouse creates a FreightOrigin of kind Warehouse with the specified name.
+//
+// It returns an error if the argument count is incorrect or if the name is not
+// a string.
+func warehouse(a ...any) (any, error) {
+	if len(a) != 1 {
+		return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+	}
+
+	name, ok := a[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("argument must be string, got %T", a[0])
+	}
+
+	if name == "" {
+		return nil, fmt.Errorf("name must not be empty")
+	}
+
+	return kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: name,
+	}, nil
+}
+
 // getCommitFromFreight returns a function that finds Git commits based on repository URL
 // and optional origin.
 //
@@ -694,30 +718,6 @@ func getChartFromWarehouse(
 		}
 		return &kargoapi.Chart{Version: latestChartVersion.String()}, nil
 	}
-}
-
-// warehouse creates a FreightOrigin of kind Warehouse with the specified name.
-//
-// It returns an error if the argument count is incorrect or if the name is not
-// a string.
-func warehouse(a ...any) (any, error) {
-	if len(a) != 1 {
-		return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
-	}
-
-	name, ok := a[0].(string)
-	if !ok {
-		return nil, fmt.Errorf("argument must be string, got %T", a[0])
-	}
-
-	if name == "" {
-		return nil, fmt.Errorf("name must not be empty")
-	}
-
-	return kargoapi.FreightOrigin{
-		Kind: kargoapi.FreightOriginKindWarehouse,
-		Name: name,
-	}, nil
 }
 
 // getConfigMap returns a function that retrieves a ConfigMap by its name
