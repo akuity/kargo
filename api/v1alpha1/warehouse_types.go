@@ -109,8 +109,9 @@ type WarehouseSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 
-	// FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.
-	// This field has no effect when the FreightCreationPolicy isn't automatic.
+	// FreightCreationCriteria defines criteria that must be satisfied for Freight
+	// to be created automatically from new artifacts following discovery. This
+	// field has no effect when the FreightCreationPolicy is `Manual`.
 	//
 	// +kubebuilder:validation:Optional
 	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
