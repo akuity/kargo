@@ -301,6 +301,18 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
+			conditions.Set(
+				&status,
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeReady,
+					Status: metav1.ConditionFalse,
+					Reason: "FreightCreationCriteriaError",
+					Message: fmt.Sprintf(
+						"failed to evaluate freight creation criteria: %s", err.Error(),
+					),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+			)
 			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
 		}
 		if !filterSatisfied {
