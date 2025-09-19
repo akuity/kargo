@@ -276,7 +276,7 @@ func (r *reconciler) syncWarehouse(
 	status.ObservedGeneration = warehouse.GetGeneration()
 
 	// Validate the discovered artifacts.
-	if !validateDiscoveredArtifacts(ctx, warehouse, &status) {
+	if !validateDiscoveredArtifacts(warehouse, &status) {
 		// Remove the reconciling condition and return early if the validation
 		// failed. We do not return an error here, to prevent a requeue loop
 		// which would cause unnecessary pressure on the upstream sources.
@@ -518,7 +518,6 @@ func (r *reconciler) patchStatus(
 // the Warehouse status with the results. Returns true if the artifacts are
 // valid, false otherwise.
 func validateDiscoveredArtifacts(
-	ctx context.Context,
 	warehouse *kargoapi.Warehouse,
 	newStatus *kargoapi.WarehouseStatus,
 ) bool {
@@ -660,36 +659,6 @@ func validateDiscoveredArtifacts(
 		message = parts[0] + " and " + parts[1]
 	} else if len(parts) > 2 {
 		message = strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
-	}
-
-	ok, err := freightCreationFilterSatisfied(ctx, warehouse, artifacts)
-	if err != nil {
-		conditions.Set(
-			newStatus,
-			&metav1.Condition{
-				Type:   kargoapi.ConditionTypeHealthy,
-				Status: metav1.ConditionFalse,
-				Reason: "FreightCreationFilterExpressionError",
-				Message: fmt.Sprintf(
-					"failed to evaluate freight creation filter expression: %s", err.Error(),
-				),
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-		)
-		return false
-	}
-	if !ok {
-		conditions.Set(
-			newStatus,
-			&metav1.Condition{
-				Type:               kargoapi.ConditionTypeHealthy,
-				Status:             metav1.ConditionTrue,
-				Reason:             "FreightCreationFilterNotSatisfied",
-				Message:            "freight creation filter expression not satisfied; skipping freight creation",
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-		)
-		return false
 	}
 
 	conditions.Set(
