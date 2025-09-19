@@ -859,7 +859,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 			name: "failed to evaluate freight creation expression filter",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "invalid.expression",
 					},
 				},
@@ -898,7 +898,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/frontend"}},
 						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/backend"}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "imageFrom('docker.io/frontend').Tag == imageFrom('docker.io/backend').Tag",
 					},
 				},
@@ -955,7 +955,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/frontend"}},
 						{Image: &kargoapi.ImageSubscription{RepoURL: "docker.io/backend"}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "imageFrom('docker.io/frontend').Tag == imageFrom('docker.io/backend').Tag",
 					},
 				},
@@ -1326,7 +1326,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			name: "no artifacts discovered",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "doesntmatter",
 					},
 				},
@@ -1338,7 +1338,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			name: "invalid filter expression",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "invalid.expression",
 					},
 				},
@@ -1363,7 +1363,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1415,7 +1415,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1457,7 +1457,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1509,7 +1509,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1551,7 +1551,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 					},
 				},
@@ -1583,7 +1583,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: kargoapi.FreightCreationFilters{
+					FreightCreationFilters: &kargoapi.FreightCreationFilters{
 						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 					},
 				},

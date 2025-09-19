@@ -691,7 +691,7 @@ func freightCreationFilterSatisfied(
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if wh.Spec.FreightCreationFilters.Expression == "" {
+	if wh.Spec.FreightCreationFilters == nil || wh.Spec.FreightCreationFilters.Expression == "" {
 		logger.Debug("no freight creation filter expression defined")
 		return true, nil
 	}

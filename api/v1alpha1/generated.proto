@@ -1893,6 +1893,8 @@ message WarehouseSpec {
   repeated RepoSubscription subscriptions = 1;
 
   // FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+  // This field has no effect when the FreightCreationPolicy isn't automatic.
+  //
   // +kubebuilder:validation:Optional
   optional FreightCreationFilters freightCreationFilters = 5;
 }

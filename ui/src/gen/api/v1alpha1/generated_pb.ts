@@ -3861,6 +3861,8 @@ export type WarehouseSpec = Message<"github.com.akuity.kargo.api.v1alpha1.Wareho
 
   /**
    * FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+   * This field has no effect when the FreightCreationPolicy isn't automatic.
+   *
    * +kubebuilder:validation:Optional
    *
    * @generated from field: optional github.com.akuity.kargo.api.v1alpha1.FreightCreationFilters freightCreationFilters = 5;
