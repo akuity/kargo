@@ -109,11 +109,11 @@ type WarehouseSpec struct {
 	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 
-	// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+	// FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.
 	// This field has no effect when the FreightCreationPolicy isn't automatic.
 	//
 	// +kubebuilder:validation:Optional
-	FreightCreationFilters *FreightCreationFilters `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
+	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
@@ -127,9 +127,11 @@ const (
 	FreightCreationPolicyManual FreightCreationPolicy = "Manual"
 )
 
-// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
-type FreightCreationFilters struct {
-	// Expression is an expr-lang expression that must evaluate to true for Freight to be created.
+// FreightCreationCriteria defines criteria that must be satisfied for Freight
+// to be created automatically from new artifacts following discovery.
+type FreightCreationCriteria struct {
+	// Expression is an expr-lang expression that must evaluate to true for
+	// Freight to be created automatically from new artifacts following discovery.
 	Expression string `json:"expression,omitempty" protobuf:"bytes,1,opt,name=expression"`
 }
 

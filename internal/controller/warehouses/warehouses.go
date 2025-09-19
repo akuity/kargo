@@ -287,21 +287,21 @@ func (r *reconciler) syncWarehouse(
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
-		filterSatisfied, err := freightCreationFilterSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
+		filterSatisfied, err := freightCreationCriteriaSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
 		if err != nil {
 			conditions.Set(
 				&status,
 				&metav1.Condition{
 					Type:   kargoapi.ConditionTypeHealthy,
 					Status: metav1.ConditionFalse,
-					Reason: "FreightCreationFilterExpressionError",
+					Reason: "FreightCreationCriteriaError",
 					Message: fmt.Sprintf(
-						"failed to evaluate freight creation filter expression: %s", err.Error(),
+						"failed to evaluate freight creation criteria: %s", err.Error(),
 					),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
-			return status, fmt.Errorf("failed to evaluate freight creation filter expression: %w", err)
+			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
 		}
 		if !filterSatisfied {
 			conditions.Set(
@@ -309,8 +309,8 @@ func (r *reconciler) syncWarehouse(
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeHealthy,
 					Status:             metav1.ConditionTrue,
-					Reason:             "FreightCreationFilterNotSatisfied",
-					Message:            "freight creation filter expression not satisfied; skipping freight creation",
+					Reason:             "FreightCreationCriteriaNotSatisfied",
+					Message:            "freight creation criteria not satisfied; skipping freight creation",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
@@ -678,23 +678,23 @@ func validateDiscoveredArtifacts(
 	return true
 }
 
-// freightCreationFilterSatisfied evaluates the freight creation filter
+// freightCreationCriteriaSatisfied evaluates the freight creation criteria
 // expression, if defined, and returns true if the expression is satisfied,
 // no expression is defined, or no discovered artifacts are present.
 // A non-nil error is returned if there was an error evaluating the expression.
-func freightCreationFilterSatisfied(
+func freightCreationCriteriaSatisfied(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if wh.Spec.FreightCreationFilters == nil {
+	if wh.Spec.FreightCreationCriteria == nil {
 		logger.Debug("no freight creation filters")
 		return true, nil
 	}
 
-	expression := strings.TrimSpace(wh.Spec.FreightCreationFilters.Expression)
+	expression := strings.TrimSpace(wh.Spec.FreightCreationCriteria.Expression)
 	if expression == "" {
 		logger.Debug("no freight creation filter expression")
 		return true, nil

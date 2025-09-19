@@ -48,12 +48,13 @@ spec:
             properties:
               freightCreationFilters:
                 description: |-
-                  FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+                  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created.
                   This field has no effect when the FreightCreationPolicy isn't automatic.
                 properties:
                   expression:
-                    description: Expression is an expr-lang expression that must evaluate
-                      to true for Freight to be created.
+                    description: |-
+                      Expression is an expr-lang expression that must evaluate to true for
+                      Freight to be created automatically from new artifacts following discovery.
                     type: string
                 type: object
               freightCreationPolicy:

@@ -1156,7 +1156,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func Test_freightCreationFilterSatisfied(t *testing.T) {
+func Test_freightCreationCriteriaatisfied(t *testing.T) {
 	for _, tc := range []struct {
 		name        string
 		warehouse   *kargoapi.Warehouse
@@ -1174,7 +1174,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			name: "empty filter expression",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "",
 					},
 				},
@@ -1186,7 +1186,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			name: "no artifacts discovered",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "doesntmatter",
 					},
 				},
@@ -1198,7 +1198,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			name: "invalid filter expression",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "invalid.expression",
 					},
 				},
@@ -1223,7 +1223,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1275,7 +1275,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1317,7 +1317,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1369,7 +1369,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 					},
 				},
@@ -1411,7 +1411,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 					},
 				},
@@ -1443,7 +1443,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 							RepoURL: "site/repo/backend",
 						}},
 					},
-					FreightCreationFilters: &kargoapi.FreightCreationFilters{
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
 						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 					},
 				},
@@ -1468,7 +1468,7 @@ func Test_freightCreationFilterSatisfied(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			result, err := freightCreationFilterSatisfied(ctx, tc.warehouse, tc.artifacts)
+			result, err := freightCreationCriteriaSatisfied(ctx, tc.warehouse, tc.artifacts)
 			require.Equal(t, tc.expected, result)
 			if tc.errExpected {
 				require.Error(t, err)
