@@ -110,8 +110,10 @@ type WarehouseSpec struct {
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
 
 	// FreightCreationFilters defines filters that must be satisfied for Freight to be created.
+	// This field has no effect when the FreightCreationPolicy isn't automatic.
+	//
 	// +kubebuilder:validation:Optional
-	FreightCreationFilters FreightCreationFilters `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
+	FreightCreationFilters *FreightCreationFilters `json:"freightCreationFilters" protobuf:"bytes,5,opt,name=freightCreationFilters"`
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
