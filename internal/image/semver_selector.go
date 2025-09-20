@@ -3,7 +3,9 @@ package image
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -119,7 +121,9 @@ func (s *semverSelector) Select(
 	)
 
 	logger.Trace("sorting tags semantically")
+	logger.Info("semver selector before sort", "tags", tags)
 	tags = s.sort(tags)
+	logger.Debug("semver selector after sort", "tags", tags)
 
 	images, err := s.getImagesByTags(ctx, tags)
 	if err != nil {
@@ -164,7 +168,21 @@ func (s *semverSelector) sort(tags []string) []string {
 			semvers = append(semvers, *sv)
 		}
 	}
+	// sort.Sort(semver.Collection(semvers))
 	slices.SortFunc(semvers, func(lhs, rhs semver.Version) int {
+		// If the major, minor, and patch versions match and both semvers are
+		// pre-releases, try to break the tie by comparing any numerals in the
+		// pre-release strings. This ensures that e.g. "1.0.0-dev-12" > "1.0.0-dev-9".
+		// The semver package's built-in sort does not do this properly since the
+		// first digit in the latter is greater than the first digit in the former
+		// so it interprets this as "1" > "9" and thus "1.0.0-dev-9" > "1.0.0-dev-12".
+		if majorMinorPatchMatches(&lhs, &rhs) && bothPreleases(&lhs, &rhs) {
+			lNumerals, rNumerals := extractNumerals(lhs.Prerelease()), extractNumerals(rhs.Prerelease())
+			if len(lNumerals) > 0 && len(rNumerals) > 0 && len(lNumerals) == len(rNumerals) {
+				return slices.Compare(rNumerals, lNumerals)
+			}
+		}
+
 		if comp := rhs.Compare(&lhs); comp != 0 {
 			return comp
 		}
@@ -179,4 +197,28 @@ func (s *semverSelector) sort(tags []string) []string {
 		tags[i] = sv.Original()
 	}
 	return tags
+}
+
+func majorMinorPatchMatches(sv1, sv2 *semver.Version) bool {
+	return sv1.Major() == sv2.Major() &&
+		sv1.Minor() == sv2.Minor() &&
+		sv1.Patch() == sv2.Patch()
+}
+
+func bothPreleases(sv1, sv2 *semver.Version) bool {
+	return sv1.Prerelease() != "" && sv2.Prerelease() != ""
+}
+
+func extractNumerals(s string) []int {
+	stringNums := regexp.MustCompile("[0-9]+").FindAllString(s, -1)
+	nums := make([]int, 0, len(stringNums))
+	for _, sn := range stringNums {
+		var n int
+		n, err := strconv.Atoi(sn)
+		if err != nil {
+			continue
+		}
+		nums = append(nums, n)
+	}
+	return nums
 }
