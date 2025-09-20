@@ -17,17 +17,17 @@ import (
 func validateAndConvert[T any](
 	schemaLoader gojsonschema.JSONLoader,
 	config promotion.Config,
-	stepName string,
+	stepKind string,
 ) (T, error) {
 	var zero T
 
-	if err := validate(schemaLoader, gojsonschema.NewGoLoader(config), stepName); err != nil {
+	if err := validate(schemaLoader, gojsonschema.NewGoLoader(config), stepKind); err != nil {
 		return zero, err
 	}
 
 	cfg, err := promotion.ConfigToStruct[T](config)
 	if err != nil {
-		return zero, fmt.Errorf("could not convert config into %s config: %w", stepName, err)
+		return zero, fmt.Errorf("could not convert config into %s config: %w", stepKind, err)
 	}
 
 	return cfg, nil
@@ -39,18 +39,18 @@ func validateAndConvert[T any](
 func validate(
 	schemaLoader gojsonschema.JSONLoader,
 	docLoader gojsonschema.JSONLoader,
-	stepName string,
+	stepKind string,
 ) error {
 	result, err := gojsonschema.Validate(schemaLoader, docLoader)
 	if err != nil {
-		return fmt.Errorf("could not validate %s config: %w", stepName, err)
+		return fmt.Errorf("could not validate %s config: %w", stepKind, err)
 	}
 	if !result.Valid() {
 		errs := make([]error, len(result.Errors()))
 		for i, err := range result.Errors() {
 			errs[i] = errors.New(err.String())
 		}
-		return fmt.Errorf("invalid %s config: %w", stepName, errors.Join(errs...))
+		return fmt.Errorf("invalid %s config: %w", stepKind, errors.Join(errs...))
 	}
 	return nil
 }

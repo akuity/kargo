@@ -9,9 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -120,7 +120,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		case *gl.PushEvent:
 			var repoURLs []string
 			if e.Repository != nil {
-				repoURLs = []string{git.NormalizeURL(e.Repository.GitHTTPURL)}
+				repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
 			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,
@@ -131,7 +131,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		case *gl.TagEvent:
 			var repoURLs []string
 			if e.Repository != nil {
-				repoURLs = []string{git.NormalizeURL(e.Repository.GitHTTPURL)}
+				repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
 			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,

@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libCreds "github.com/akuity/kargo/internal/credentials"
+	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestApplyCredentialsUpdateToK8sSecret(t *testing.T) {

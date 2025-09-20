@@ -9,7 +9,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"golang.org/x/oauth2/google"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 const (

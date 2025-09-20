@@ -19,16 +19,33 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 	intio "github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
+	stepKindOCIDownload = "oci-download"
+
 	maxOCIArtifactSize = 100 << 20
 )
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindOCIDownload,
+		promotion.StepRunnerRegistration{
+			Metadata: &promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newOCIDownloader,
+		},
+	)
+}
 
 // ociDownloader is an implementation of the promotion.StepRunner interface
 // that downloads OCI artifacts from a registry.
@@ -40,17 +57,11 @@ type ociDownloader struct {
 // newOCIDownloader returns an implementation of the promotion.StepRunner
 // interface that downloads OCI artifacts from a registry. It uses the provided
 // credentials database to authenticate with the registry.
-func newOCIDownloader(credsDB credentials.Database) promotion.StepRunner {
-	r := &ociDownloader{
-		credsDB: credsDB,
+func newOCIDownloader(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &ociDownloader{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindOCIDownload),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (d *ociDownloader) Name() string {
-	return "oci-download"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -70,7 +81,7 @@ func (d *ociDownloader) Run(
 // convert validates the ociDownloader configuration against a JSON schema
 // and converts it into a builtin.OCIDownloadConfig struct.
 func (d *ociDownloader) convert(cfg promotion.Config) (builtin.OCIDownloadConfig, error) {
-	return validateAndConvert[builtin.OCIDownloadConfig](d.schemaLoader, cfg, d.Name())
+	return validateAndConvert[builtin.OCIDownloadConfig](d.schemaLoader, cfg, stepKindOCIDownload)
 }
 
 // run executes the ociDownloader step with the provided configuration.

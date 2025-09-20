@@ -20,14 +20,33 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	intyaml "github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-// preserveSeparator is the separator used to preserve values in the
-// Kustomization image field.
-const preserveSeparator = "*"
+const (
+	stepKindKustomizeSetImage = "kustomize-set-image"
+
+	// preserveSeparator is the separator used to preserve values in the
+	// Kustomization image field.
+	preserveSeparator = "*"
+)
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindKustomizeSetImage,
+		promotion.StepRunnerRegistration{
+			Metadata: &promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessControlPlane,
+				},
+			},
+			Factory: newKustomizeImageSetter,
+		},
+	)
+}
 
 // kustomizeImageSetter is an implementation  of the promotion.StepRunner
 // interface that sets images in a Kustomization file.
@@ -38,16 +57,11 @@ type kustomizeImageSetter struct {
 
 // newKustomizeImageSetter returns an implementation  of the promotion.StepRunner
 // interface that sets images in a Kustomization file.
-func newKustomizeImageSetter(kargoClient client.Client) promotion.StepRunner {
+func newKustomizeImageSetter(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &kustomizeImageSetter{
-		schemaLoader: getConfigSchemaLoader("kustomize-set-image"),
-		kargoClient:  kargoClient,
+		kargoClient:  caps.KargoClient,
+		schemaLoader: getConfigSchemaLoader(stepKindKustomizeSetImage),
 	}
-}
-
-// Name implements the promotion.StepRunner interface.
-func (k *kustomizeImageSetter) Name() string {
-	return "kustomize-set-image"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -67,7 +81,7 @@ func (k *kustomizeImageSetter) Run(
 // convert validates kustomizeImageSetter configuration against a JSON schema
 // and converts it into a builtin.KustomizeSetImageConfig struct.
 func (k *kustomizeImageSetter) convert(cfg promotion.Config) (builtin.KustomizeSetImageConfig, error) {
-	return validateAndConvert[builtin.KustomizeSetImageConfig](k.schemaLoader, cfg, k.Name())
+	return validateAndConvert[builtin.KustomizeSetImageConfig](k.schemaLoader, cfg, stepKindKustomizeSetImage)
 }
 
 func (k *kustomizeImageSetter) run(

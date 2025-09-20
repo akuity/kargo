@@ -11,9 +11,19 @@ import (
 	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindYAMLParse = "yaml-parse"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindYAMLParse,
+		promotion.StepRunnerRegistration{Factory: newYAMLParser},
+	)
+}
 
 // yamlParser is an implementation of the promotion.StepRunner interface that
 // parses a YAML file and extracts specified outputs.
@@ -22,15 +32,8 @@ type yamlParser struct {
 }
 
 // newYAMLParser returns a new instance of yamlParser.
-func newYAMLParser() promotion.StepRunner {
-	r := &yamlParser{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (yp *yamlParser) Name() string {
-	return "yaml-parse"
+func newYAMLParser(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &yamlParser{schemaLoader: getConfigSchemaLoader(stepKindYAMLParse)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -50,7 +53,7 @@ func (yp *yamlParser) Run(
 // convert validates yamlParser configuration against a YAML schema and
 // converts it into a builtin.YAMLParseConfig struct.
 func (yp *yamlParser) convert(cfg promotion.Config) (builtin.YAMLParseConfig, error) {
-	return validateAndConvert[builtin.YAMLParseConfig](yp.schemaLoader, cfg, yp.Name())
+	return validateAndConvert[builtin.YAMLParseConfig](yp.schemaLoader, cfg, stepKindYAMLParse)
 }
 
 func (yp *yamlParser) run(
@@ -65,7 +68,7 @@ func (yp *yamlParser) run(
 	}
 
 	if len(cfg.Outputs) == 0 {
-		return failure, fmt.Errorf("invalid %s config: outputs is required", yp.Name())
+		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindYAMLParse)
 	}
 
 	data, err := yp.readAndParseYAML(stepCtx.WorkDir, cfg.Path)

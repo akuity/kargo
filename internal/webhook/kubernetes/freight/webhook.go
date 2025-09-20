@@ -20,14 +20,13 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/indexer"
 	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
 	"github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 var (
@@ -394,7 +393,7 @@ func validateFreightArtifacts(
 	for _, repo := range warehouse.Spec.Subscriptions {
 		if repo.Git != nil {
 			subscriptions[artifactSubscription{
-				URL:  git.NormalizeURL(repo.Git.RepoURL),
+				URL:  urls.NormalizeGit(repo.Git.RepoURL),
 				Type: artifactTypeGit,
 			}] = false
 		}
@@ -406,7 +405,7 @@ func validateFreightArtifacts(
 		}
 		if repo.Chart != nil {
 			subscriptions[artifactSubscription{
-				URL:  path.Join(helm.NormalizeChartRepositoryURL(repo.Chart.RepoURL), repo.Chart.Name),
+				URL:  path.Join(urls.NormalizeChart(repo.Chart.RepoURL), repo.Chart.Name),
 				Type: artifactTypeChart,
 			}] = false
 		}
@@ -418,7 +417,7 @@ func validateFreightArtifacts(
 	// the number of times each subscription is found.
 	for _, commit := range freight.Commits {
 		sub := artifactSubscription{
-			URL:  git.NormalizeURL(commit.RepoURL),
+			URL:  urls.NormalizeGit(commit.RepoURL),
 			Type: artifactTypeGit,
 		}
 		if _, ok := subscriptions[sub]; ok {
@@ -458,7 +457,7 @@ func validateFreightArtifacts(
 
 	for _, chart := range freight.Charts {
 		sub := artifactSubscription{
-			URL:  path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
+			URL:  path.Join(urls.NormalizeChart(chart.RepoURL), chart.Name),
 			Type: artifactTypeChart,
 		}
 		if _, ok := subscriptions[sub]; ok {

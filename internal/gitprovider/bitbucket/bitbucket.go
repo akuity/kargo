@@ -12,8 +12,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/ktrysmt/go-bitbucket"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -291,7 +291,7 @@ func (p *provider) ListPullRequests(
 
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
-	normalizedURL := git.NormalizeURL(repoURL)
+	normalizedURL := urls.NormalizeGit(repoURL)
 
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
@@ -406,7 +406,7 @@ func toProviderPR(pr *bitbucketPR, raw any) *gitprovider.PullRequest {
 
 // parseRepoURL extracts host, owner and repo slug from a repository URL
 func parseRepoURL(repoURL string) (host, owner, slug string, err error) {
-	u, err := url.Parse(git.NormalizeURL(repoURL))
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf("parse Bitbucket URL %q: %w", repoURL, err)
 	}

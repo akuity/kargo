@@ -13,9 +13,19 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindDelete = "delete"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindDelete,
+		promotion.StepRunnerRegistration{Factory: newFileDeleter},
+	)
+}
 
 // fileDeleter is an implementation of the promotion.StepRunner interface that
 // deletes a file or directory.
@@ -25,15 +35,8 @@ type fileDeleter struct {
 
 // newFileDeleter returns an implementation of the promotion.StepRunner interface
 // that deletes a file or directory.
-func newFileDeleter() promotion.StepRunner {
-	r := &fileDeleter{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface
-func (f *fileDeleter) Name() string {
-	return "delete"
+func newFileDeleter(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &fileDeleter{schemaLoader: getConfigSchemaLoader(stepKindDelete)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -53,7 +56,7 @@ func (f *fileDeleter) Run(
 // convert validates fileDeleter configuration against a JSON schema and
 // converts it into a builtin.DeleteConfig struct.
 func (f *fileDeleter) convert(cfg promotion.Config) (builtin.DeleteConfig, error) {
-	return validateAndConvert[builtin.DeleteConfig](f.schemaLoader, cfg, f.Name())
+	return validateAndConvert[builtin.DeleteConfig](f.schemaLoader, cfg, stepKindDelete)
 }
 
 func (f *fileDeleter) run(

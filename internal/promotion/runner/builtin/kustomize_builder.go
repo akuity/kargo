@@ -18,9 +18,19 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindKustomizeBuild = "kustomize-build"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindKustomizeBuild,
+		promotion.StepRunnerRegistration{Factory: newKustomizeBuilder},
+	)
+}
 
 // kustomizeRenderMutex is a mutex that ensures only one kustomize build is
 // running at a time. Required because of an ancient bug in Kustomize that
@@ -37,15 +47,10 @@ type kustomizeBuilder struct {
 // newKustomizeBuilder returns an implementation of the
 // promotion.StepRunner interface that builds a set of Kubernetes manifests using
 // Kustomize.
-func newKustomizeBuilder() promotion.StepRunner {
+func newKustomizeBuilder(promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &kustomizeBuilder{
-		schemaLoader: getConfigSchemaLoader("kustomize-build"),
+		schemaLoader: getConfigSchemaLoader(stepKindKustomizeBuild),
 	}
-}
-
-// Name implements the promotion.StepRunner interface.
-func (k *kustomizeBuilder) Name() string {
-	return "kustomize-build"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -65,7 +70,7 @@ func (k *kustomizeBuilder) Run(
 // convert validates kustomizeBuilder configuration against a JSON schema and
 // converts it into a builtin.KustomizeBuildConfig struct.
 func (k *kustomizeBuilder) convert(cfg promotion.Config) (builtin.KustomizeBuildConfig, error) {
-	return validateAndConvert[builtin.KustomizeBuildConfig](k.schemaLoader, cfg, k.Name())
+	return validateAndConvert[builtin.KustomizeBuildConfig](k.schemaLoader, cfg, stepKindKustomizeBuild)
 }
 
 func (k *kustomizeBuilder) run(

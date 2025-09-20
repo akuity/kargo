@@ -5,8 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 func TestGetNormalizedImageRepoURLs(t *testing.T) {
@@ -21,7 +20,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			repoURL:   "example/repo",
 			mediaType: dockerManifestListMediaType,
 			assertions: func(t *testing.T, repoURLs []string) {
-				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+				require.Equal(t, []string{urls.NormalizeImage("example/repo")}, repoURLs)
 			},
 		},
 		{
@@ -31,7 +30,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			assertions: func(t *testing.T, repoURLs []string) {
 				require.Equal(
 					t,
-					[]string{image.NormalizeURL("ghcr.io/example/repo")},
+					[]string{urls.NormalizeImage("ghcr.io/example/repo")},
 					repoURLs,
 				)
 			},
@@ -41,7 +40,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			repoURL:   "example/repo",
 			mediaType: dockerManifestMediaType,
 			assertions: func(t *testing.T, repoURLs []string) {
-				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+				require.Equal(t, []string{urls.NormalizeImage("example/repo")}, repoURLs)
 			},
 		},
 		{
@@ -53,10 +52,10 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 				// result for this input, so we expect that getNormalizedImageRepoURLs()
 				// will have compacted the results.
 				require.Len(t, repoURLs, 1)
-				require.Equal(t, image.NormalizeURL("ghcr.io/example/repo"), repoURLs[0])
+				require.Equal(t, urls.NormalizeImage("ghcr.io/example/repo"), repoURLs[0])
 				require.Equal(
 					t,
-					helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+					urls.NormalizeChart("ghcr.io/example/repo"),
 					repoURLs[0],
 				)
 			},
@@ -66,7 +65,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			repoURL:   "example/repo",
 			mediaType: dockerImageConfigBlobMediaType,
 			assertions: func(t *testing.T, repoURLs []string) {
-				require.Equal(t, []string{image.NormalizeURL("example/repo")}, repoURLs)
+				require.Equal(t, []string{urls.NormalizeImage("example/repo")}, repoURLs)
 			},
 		},
 		{
@@ -76,7 +75,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			assertions: func(t *testing.T, repoURLs []string) {
 				require.Equal(
 					t,
-					[]string{image.NormalizeURL("ghcr.io/example/repo")},
+					[]string{urls.NormalizeImage("ghcr.io/example/repo")},
 					repoURLs,
 				)
 			},
@@ -88,7 +87,7 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 			assertions: func(t *testing.T, repoURLs []string) {
 				require.Equal(
 					t,
-					[]string{helm.NormalizeChartRepositoryURL("ghcr.io/example/repo")},
+					[]string{urls.NormalizeChart("ghcr.io/example/repo")},
 					repoURLs,
 				)
 			},
@@ -104,12 +103,12 @@ func TestGetNormalizedImageRepoURLs(t *testing.T) {
 				require.Len(t, repoURLs, 1)
 				require.Equal(
 					t,
-					image.NormalizeURL("ghcr.io/example/repo"),
+					urls.NormalizeImage("ghcr.io/example/repo"),
 					repoURLs[0],
 				)
 				require.Equal(
 					t,
-					helm.NormalizeChartRepositoryURL("ghcr.io/example/repo"),
+					urls.NormalizeChart("ghcr.io/example/repo"),
 					repoURLs[0],
 				)
 			},

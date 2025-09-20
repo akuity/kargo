@@ -18,7 +18,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/patrickmn/go-cache"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
 

@@ -13,7 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -299,7 +299,7 @@ func Test_gitCloner_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitCloner(nil)
+	r := newGitCloner(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
@@ -337,7 +337,9 @@ func Test_gitCloner_run(t *testing.T) {
 
 	// Now we can proceed to test gitCloner...
 
-	r := newGitCloner(&credentials.FakeDB{})
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 

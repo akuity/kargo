@@ -16,10 +16,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/image"
 	libWebhook "github.com/akuity/kargo/internal/webhook/kubernetes"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 var warehouseGroupKind = schema.GroupKind{
@@ -301,7 +300,7 @@ type subscriptionKey struct {
 type uniqueSubSet map[subscriptionKey]*field.Path
 
 func (s uniqueSubSet) addGit(sub kargoapi.GitSubscription, p *field.Path) error {
-	k := subscriptionKey{kind: "git", id: git.NormalizeURL(sub.RepoURL)}
+	k := subscriptionKey{kind: "git", id: urls.NormalizeGit(sub.RepoURL)}
 	if _, exists := s[k]; exists {
 		return fmt.Errorf("subscription for Git repository already exists at %q", s[k])
 	}
@@ -313,7 +312,7 @@ func (s uniqueSubSet) addImage(sub kargoapi.ImageSubscription, p *field.Path) er
 	// The normalization of Helm chart repository URLs can also be used here
 	// to ensure the uniqueness of the image reference as it does the job of
 	// ensuring lower-casing, etc. without introducing unwanted side effects.
-	k := subscriptionKey{kind: "image", id: helm.NormalizeChartRepositoryURL(sub.RepoURL)}
+	k := subscriptionKey{kind: "image", id: urls.NormalizeChart(sub.RepoURL)}
 	if _, exists := s[k]; exists {
 		return fmt.Errorf("subscription for image repository already exists at %q", s[k])
 	}
@@ -322,7 +321,7 @@ func (s uniqueSubSet) addImage(sub kargoapi.ImageSubscription, p *field.Path) er
 }
 
 func (s uniqueSubSet) addChart(sub kargoapi.ChartSubscription, isHTTP bool, p *field.Path) error {
-	k := subscriptionKey{kind: "chart", id: helm.NormalizeChartRepositoryURL(sub.RepoURL)}
+	k := subscriptionKey{kind: "chart", id: urls.NormalizeChart(sub.RepoURL)}
 	if isHTTP {
 		k.id = k.id + ":" + sub.Name
 	}

@@ -73,7 +73,7 @@ func Test_fileDeleter_convert(t *testing.T) {
 		},
 	}
 
-	r := newFileDeleter()
+	r := newFileDeleter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*fileDeleter)
 	require.True(t, ok)
 

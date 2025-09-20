@@ -14,10 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -170,9 +169,9 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		var repoURLs []string
 		switch payload.Data.ImageType {
 		case artifactoryDockerDomain:
-			repoURLs = append(repoURLs, image.NormalizeURL(repoURL))
+			repoURLs = append(repoURLs, urls.NormalizeImage(repoURL))
 		case artifactoryChartImageType:
-			repoURLs = append(repoURLs, helm.NormalizeChartRepositoryURL(repoURL))
+			repoURLs = append(repoURLs, urls.NormalizeChart(repoURL))
 		default:
 			xhttp.WriteErrorJSON(
 				w,

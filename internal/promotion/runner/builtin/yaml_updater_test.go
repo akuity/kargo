@@ -100,7 +100,7 @@ func Test_yamlUpdater_convert(t *testing.T) {
 		},
 	}
 
-	r := newYAMLUpdater()
+	r := newYAMLUpdater(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*yamlUpdater)
 	require.True(t, ok)
 

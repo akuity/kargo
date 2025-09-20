@@ -20,9 +20,10 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 	kerrors "k8s.io/apimachinery/pkg/util/errors"
 
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/io/fs"
 	intyaml "github.com/akuity/kargo/internal/yaml"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 // EphemeralDependencyManager is a Helm dependency manager that uses an
@@ -417,7 +418,7 @@ func (em *EphemeralDependencyManager) setupRepositories(ctx context.Context, dep
 
 			repoFile.Update(entry)
 		case strings.HasPrefix(dep.Repository, "oci://"):
-			repository := NormalizeChartRepositoryURL(dep.Repository)
+			repository := urls.NormalizeChart(dep.Repository)
 			host := hostForRepositoryURL(repository)
 
 			if _, exists := hosts[host]; exists {

@@ -10,8 +10,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const ProviderName = "gitlab"
@@ -200,7 +200,7 @@ func (p *provider) ListPullRequests(
 
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
-	normalizedURL := git.NormalizeURL(repoURL)
+	normalizedURL := urls.NormalizeGit(repoURL)
 
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
@@ -230,7 +230,7 @@ func isMROpen(glMR gitlab.BasicMergeRequest) bool {
 }
 
 func parseRepoURL(repoURL string) (string, string, string, error) {
-	u, err := url.Parse(git.NormalizeURL(repoURL))
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf(
 			"error parsing gitlab repository URL %q: %w", u, err,

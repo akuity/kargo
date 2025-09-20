@@ -10,8 +10,8 @@ import (
 	"code.gitea.io/sdk/gitea"
 	"github.com/hashicorp/go-cleanhttp"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const ProviderName = "gitea"
@@ -259,7 +259,7 @@ func (p *provider) ListPullRequests(
 
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
-	normalizedURL := git.NormalizeURL(repoURL)
+	normalizedURL := urls.NormalizeGit(repoURL)
 
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
@@ -290,7 +290,7 @@ func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 }
 
 func parseRepoURL(repoURL string) (string, string, string, string, error) {
-	u, err := url.Parse(git.NormalizeURL(repoURL))
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", "", fmt.Errorf(
 			"error parsing gitea repository URL %q: %w", u, err,

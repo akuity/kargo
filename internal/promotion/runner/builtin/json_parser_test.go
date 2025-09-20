@@ -120,7 +120,7 @@ func Test_jsonParser_convert(t *testing.T) {
 		},
 	}
 
-	r := newJSONParser()
+	r := newJSONParser(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*jsonParser)
 	require.True(t, ok)
 
@@ -329,7 +329,7 @@ func Test_jsonParser_readAndParseJSON(t *testing.T) {
 		{"Empty JSON file", "", errors.New("could not parse JSON file")},
 	}
 
-	r := newJSONParser()
+	r := newJSONParser(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*jsonParser)
 	require.True(t, ok)
 

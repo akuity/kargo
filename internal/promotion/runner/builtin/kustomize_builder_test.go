@@ -170,7 +170,7 @@ func Test_kustomizeBuilder_convert(t *testing.T) {
 		},
 	}
 
-	r := newKustomizeBuilder()
+	r := newKustomizeBuilder(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*kustomizeBuilder)
 	require.True(t, ok)
 

@@ -9,10 +9,20 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/internal/yaml"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindYAMLUpdate = "yaml-update"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindYAMLUpdate,
+		promotion.StepRunnerRegistration{Factory: newYAMLUpdater},
+	)
+}
 
 // yamlUpdater is an implementation of the promotion.StepRunner interface that
 // updates the values of specified keys in a YAML file.
@@ -22,15 +32,8 @@ type yamlUpdater struct {
 
 // newYAMLUpdater returns an implementation of the promotion.StepRunner interface
 // that updates the values of specified keys in a YAML file.
-func newYAMLUpdater() promotion.StepRunner {
-	r := &yamlUpdater{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (y *yamlUpdater) Name() string {
-	return "yaml-update"
+func newYAMLUpdater(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &yamlUpdater{schemaLoader: getConfigSchemaLoader(stepKindYAMLUpdate)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -50,7 +53,7 @@ func (y *yamlUpdater) Run(
 // convert validates yamlUpdater configuration against a JSON schema and
 // converts it into a builtin.YAMLUpdateConfig struct.
 func (y *yamlUpdater) convert(cfg promotion.Config) (builtin.YAMLUpdateConfig, error) {
-	return validateAndConvert[builtin.YAMLUpdateConfig](y.schemaLoader, cfg, y.Name())
+	return validateAndConvert[builtin.YAMLUpdateConfig](y.schemaLoader, cfg, stepKindYAMLUpdate)
 }
 
 func (y *yamlUpdater) run(

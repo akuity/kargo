@@ -24,20 +24,21 @@ import (
 	"github.com/akuity/kargo/internal/controller/promotions"
 	"github.com/akuity/kargo/internal/controller/stages"
 	"github.com/akuity/kargo/internal/controller/warehouses"
-	"github.com/akuity/kargo/internal/credentials"
-	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
 	"github.com/akuity/kargo/internal/health"
 	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/promotion"
-	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/types"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/credentials"
+	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
 	"github.com/akuity/kargo/pkg/logging"
 	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
+
+	_ "github.com/akuity/kargo/internal/promotion/runner/builtin"
 )
 
 type controllerOptions struct {
@@ -412,7 +413,6 @@ func (o *controllerOptions) setupReconcilers(
 		argoCDClient = argocdMgr.GetClient()
 	}
 
-	promotionStepRunners.Initialize(kargoMgr.GetClient(), argoCDClient, credentialsDB)
 	healthCheckers.Initialize(argoCDClient)
 
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
@@ -421,7 +421,12 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		promotion.NewSimpleEngine(kargoMgr.GetClient(), promotion.DefaultExprDataCacheFn),
+		promotion.NewSimpleEngine(
+			kargoMgr.GetClient(),
+			argocdMgr.GetClient(),
+			credentialsDB,
+			promotion.DefaultExprDataCacheFn,
+		),
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
@@ -514,6 +519,9 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	}
 }
 
-func RegisterPromotionStepRunner(runner pkgPromotion.StepRunner) {
-	promotion.RegisterStepRunner(runner)
+func RegisterPromotionStepRunner(
+	stepKind string,
+	registration pkgPromotion.StepRunnerRegistration,
+) {
+	promotion.RegisterStepRunner(stepKind, registration)
 }

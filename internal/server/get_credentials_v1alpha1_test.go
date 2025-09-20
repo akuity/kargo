@@ -16,10 +16,10 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libCreds "github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/server/config"
 	"github.com/akuity/kargo/internal/server/kubernetes"
 	"github.com/akuity/kargo/internal/server/validation"
+	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestGetCredentials(t *testing.T) {

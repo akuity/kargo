@@ -22,9 +22,12 @@ import (
 )
 
 func Test_newArgocdUpdater(t *testing.T) {
-	runner := newArgocdUpdater(fake.NewFakeClient())
-	require.NotNil(t, runner)
-	require.Equal(t, "argocd-update", runner.Name())
+	r := newArgocdUpdater(promotion.StepRunnerCapabilities{
+		ArgoCDClient: fake.NewFakeClient(),
+	})
+	runner, ok := r.(*argocdUpdater)
+	require.True(t, ok)
+	require.NotNil(t, runner.argocdClient)
 	require.NotNil(t, runner.schemaLoader)
 	require.NotNil(t, runner.getAuthorizedApplicationFn)
 	require.NotNil(t, runner.buildDesiredSourcesFn)
@@ -313,7 +316,9 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 		},
 	}
 
-	runner := newArgocdUpdater(nil)
+	r := newArgocdUpdater(promotion.StepRunnerCapabilities{})
+	runner, ok := r.(*argocdUpdater)
+	require.True(t, ok)
 	runValidationTests(t, runner.convert, tests)
 }
 

@@ -4,8 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -82,17 +81,17 @@ var probableContainerImageMediaTypes = []string{
 // exclusively the caller's responsibility to deal with this possibility.
 func getNormalizedImageRepoURLs(repoURL, mediaType string) []string {
 	if strings.HasPrefix(mediaType, "application/vnd.cncf.helm") {
-		return []string{helm.NormalizeChartRepositoryURL(repoURL)}
+		return []string{urls.NormalizeChart(repoURL)}
 	}
 	if slices.Contains(probableContainerImageMediaTypes, mediaType) {
-		return []string{image.NormalizeURL(repoURL)}
+		return []string{urls.NormalizeImage(repoURL)}
 	}
 	// The normalization process for image and chart URLs may change from time to
 	// time. At times, the URL normalized as if it were an image URL and the URL
 	// normalized as if it were a chart URL may turn out to be identical, in which
 	// case, compacting the slice is a cheap, but worthwhile optimization.
 	return slices.Compact([]string{
-		image.NormalizeURL(repoURL),
-		helm.NormalizeChartRepositoryURL(repoURL),
+		urls.NormalizeImage(repoURL),
+		urls.NormalizeChart(repoURL),
 	})
 }

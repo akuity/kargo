@@ -10,7 +10,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	libCreds "github.com/akuity/kargo/internal/credentials"
+	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
 const redacted = "*** REDACTED ***"

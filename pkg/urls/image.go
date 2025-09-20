@@ -1,4 +1,4 @@
-package image
+package urls
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-// NormalizeURL normalizes image repository URLs. Notably, hostnames docker.io
+// NormalizeImage normalizes image repository URLs. Notably, hostnames docker.io
 // and index.docker.io, if present, are dropped. The optional /library prefix
 // for official images from Docker Hub, if included, is also dropped. Valid,
 // non-Docker Hub repository URLs will be returned unchanged.
@@ -15,7 +15,7 @@ import (
 // This is useful for the purposes of comparison and also in cases where a
 // canonical representation of a repository URL is needed. Any URL that cannot
 // be normalized will be returned as-is.
-func NormalizeURL(repoURL string) string {
+func NormalizeImage(repoURL string) string {
 	parsed, err := name.ParseReference(repoURL, name.WeakValidation)
 	if err != nil {
 		return repoURL
