@@ -146,6 +146,10 @@ func Test_semverSelector_MatchesTag(t *testing.T) {
 
 func Test_semVerSelector_sort(t *testing.T) {
 	unsorted := []string{
+		"0.9.0-dev-9",
+		"0.8.0-dev-12",
+		"0.9.0-dev-12",
+		"0.8.0-dev-9",
 		"5.0.0",
 		"0.0.1",
 		"0.2.1",
@@ -166,6 +170,10 @@ func Test_semVerSelector_sort(t *testing.T) {
 			"1.1.1",
 			"1.0.2",
 			"1.0.0",
+			"0.9.0-dev-12",
+			"0.9.0-dev-9",
+			"0.8.0-dev-12",
+			"0.8.0-dev-9",
 			"0.2.1",
 			"0.1.1",
 			"0.0.1",
