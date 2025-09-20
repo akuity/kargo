@@ -121,9 +121,9 @@ func (s *semverSelector) Select(
 	)
 
 	logger.Trace("sorting tags semantically")
-	logger.Info("semver selector before sort", "tags", tags)
+	logger.Info("semver selector before sort", "tags", tags) // delete me
 	tags = s.sort(tags)
-	logger.Debug("semver selector after sort", "tags", tags)
+	logger.Debug("semver selector after sort", "tags", tags) // delete me
 
 	images, err := s.getImagesByTags(ctx, tags)
 	if err != nil {
