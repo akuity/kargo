@@ -64,14 +64,18 @@ type StepRunnerMetadata struct {
 type StepRunnerCapability string
 
 const (
-	// StepCapabilityAccessControlPlane represents the capability of interacting
-	// with the Kargo control plane via a Kubernetes client.
-	StepCapabilityAccessControlPlane StepRunnerCapability = "access-control-plane"
 	// StepCapabilityAccessArgoCD represents the capability of interacting with
 	// an Argo CD control plane via a Kubernetes client.
 	StepCapabilityAccessArgoCD StepRunnerCapability = "access-argocd"
+	// StepCapabilityAccessControlPlane represents the capability of interacting
+	// with the Kargo control plane via a Kubernetes client.
+	StepCapabilityAccessControlPlane StepRunnerCapability = "access-control-plane"
 	// StepCapabilityAccessCredentials represents the capability to obtain
 	// repository credentials through a lookup by credential type and repository
 	// URL.
 	StepCapabilityAccessCredentials StepRunnerCapability = "access-credentials"
+	// StepCapabilityTaskOutputPropagation represents the capability of a step,
+	// when executed as part of a task, to propagate its output directly to the
+	// Promotion's shared state, in addition to the task's own state.
+	StepCapabilityTaskOutputPropagation StepRunnerCapability = "task-output-propagation"
 )

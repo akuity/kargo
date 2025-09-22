@@ -17,44 +17,6 @@ type StepRunner interface {
 	Run(context.Context, *StepContext) (StepResult, error)
 }
 
-// TaskLevelOutputStepRunner is an interface that defines a method to instruct
-// the engine to propagate the output of a step to the task namespace in the
-// shared state of the promotion result.
-type TaskLevelOutputStepRunner interface {
-	StepRunner
-	// TaskLevelOutput returns true if the StepRunner produces output that
-	// should be propagated to the task namespace in the state of the promotion
-	// result by the engine after the step is executed.
-	TaskLevelOutput() bool
-}
-
-// NewTaskLevelOutputStepRunner returns a wrapper around a StepRunner that
-// implements TaskLevelOutputStepRunner.
-func NewTaskLevelOutputStepRunner(runner StepRunner) TaskLevelOutputStepRunner {
-	return &taskLevelOutputStepRunner{
-		runner: runner,
-	}
-}
-
-// taskLevelOutputStepRunner is a wrapper around a StepRunner that implements
-// TaskLevelOutputStepRunner.
-type taskLevelOutputStepRunner struct {
-	runner StepRunner
-}
-
-// Run implements StepRunner.
-func (r *taskLevelOutputStepRunner) Run(
-	ctx context.Context,
-	stepCtx *StepContext,
-) (StepResult, error) {
-	return r.runner.Run(ctx, stepCtx)
-}
-
-// TaskLevelOutput implements TaskLevelOutputStepRunner.
-func (r *taskLevelOutputStepRunner) TaskLevelOutput() bool {
-	return true
-}
-
 // StepContext is a type that represents the context in which a
 // single promotion step is executed by a StepRunner.
 type StepContext struct {

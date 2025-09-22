@@ -18,11 +18,12 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindComposeOutput,
 		promotion.StepRunnerRegistration{
-			Factory: func(
-				promotion.StepRunnerCapabilities,
-			) promotion.StepRunner {
-				return promotion.NewTaskLevelOutputStepRunner(newOutputComposer())
+			Metadata: &promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityTaskOutputPropagation,
+				},
 			},
+			Factory: newOutputComposer,
 		},
 	)
 }
@@ -54,7 +55,7 @@ type outputComposer struct {
 
 // newOutputComposer returns an implementation of the promotion.StepRunner
 // interface that composes output from previous steps into new output.
-func newOutputComposer() promotion.StepRunner {
+func newOutputComposer(_ promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &outputComposer{
 		schemaLoader: getConfigSchemaLoader(stepKindComposeOutput),
 	}

@@ -497,15 +497,18 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				registry.register(
 					"task-level-output-step",
 					promotion.StepRunnerRegistration{
+						Metadata: &promotion.StepRunnerMetadata{
+							RequiredCapabilities: []promotion.StepRunnerCapability{
+								promotion.StepCapabilityTaskOutputPropagation,
+							},
+						},
 						Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
-							return promotion.NewTaskLevelOutputStepRunner(
-								&promotion.MockStepRunner{
-									RunResult: promotion.StepResult{
-										Status: kargoapi.PromotionStepStatusSucceeded,
-										Output: map[string]any{"test": "value"},
-									},
+							return &promotion.MockStepRunner{
+								RunResult: promotion.StepResult{
+									Status: kargoapi.PromotionStepStatusSucceeded,
+									Output: map[string]any{"test": "value"},
 								},
-							)
+							}
 						},
 					},
 				)
@@ -542,6 +545,11 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				registry.register(
 					"task-level-output-step",
 					promotion.StepRunnerRegistration{
+						Metadata: &promotion.StepRunnerMetadata{
+							RequiredCapabilities: []promotion.StepRunnerCapability{
+								promotion.StepCapabilityTaskOutputPropagation,
+							},
+						},
 						Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
 							return &promotion.MockStepRunner{
 								RunResult: promotion.StepResult{
