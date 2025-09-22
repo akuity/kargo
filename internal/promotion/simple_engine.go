@@ -182,7 +182,7 @@ func (e *simpleEngine) executeSteps(
 		err = e.reconcileResultWithMetadata(stepExecMeta, step, result, err)
 
 		// Determine what to do based on the result.
-		if !e.determineStepCompletion(step, *registration.Metadata, stepExecMeta, err) {
+		if !e.determineStepCompletion(step, registration.Metadata, stepExecMeta, err) {
 			// The step is still running, so we need to wait
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
@@ -283,7 +283,7 @@ func (e *simpleEngine) propagateStepOutput(
 
 	// If the step instructs that the output should be propagated to the
 	// task namespace, do so.
-	if stepReg.Metadata != nil && slices.Contains(
+	if slices.Contains(
 		stepReg.Metadata.RequiredCapabilities,
 		promotion.StepCapabilityTaskOutputPropagation,
 	) {
@@ -379,7 +379,7 @@ func (e *simpleEngine) determineStepCompletion(
 	// threshold. Now we need to check if the timeout has elapsed. A nil timeout
 	// or any non-positive timeout interval are treated as NO timeout, although
 	// a nil timeout really shouldn't happen.
-	timeout := step.Retry.GetTimeout(*runnerMeta.DefaultTimeout)
+	timeout := step.Retry.GetTimeout(runnerMeta.DefaultTimeout)
 	if timeout > 0 && metav1.Now().Sub(execMeta.StartedAt.Time) > timeout {
 		// Timeout has elapsed.
 		execMeta.FinishedAt = ptr.To(metav1.Now())

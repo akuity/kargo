@@ -6,10 +6,9 @@ import "time"
 // metadata and a factory function for instantiating a StepRunner capable of
 // executing that kind of step.
 type StepRunnerRegistration struct {
-	// Metadata is optional metadata about StepRunners for the kind of step
-	// specified by StepKind. If nil, default metadata will be applied during
-	// registration.
-	Metadata *StepRunnerMetadata
+	// Metadata is metadata about StepRunners for the kind of step specified by
+	// StepKind.
+	Metadata StepRunnerMetadata
 	// Factory is a function for instantiating a StepRunner capable of executing
 	// the kind of step specified by StepKind.
 	Factory func(StepRunnerCapabilities) StepRunner
@@ -25,26 +24,20 @@ type StepRunnerMetadata struct {
 	// elapsed occurs AFTER the step has run. This effectively means a step may
 	// run ONCE beyond the close of the interval.
 	//
-	// If this field is set to nil, it will be changed to the system-wide default
-	// of 0 at registration time.
-	//
 	// A value of 0 will cause the step to be retried indefinitely unless the
 	// ErrorThreshold is reached.
 	//
 	// This default can be overridden by step-level configuration.
-	DefaultTimeout *time.Duration
+	DefaultTimeout time.Duration
 	// DefaultErrorThreshold is the number of consecutive times the step must fail
 	// (for any reason) before retries are abandoned and the entire Promotion is
 	// marked as failed.
 	//
-	// If this field is set to 0, it will be changed to the system-wide default of
-	// 1 at registration time.
+	// If this field is set to a non-positive value, it will be changed to the
+	// system-wide default of 1 at registration time.
 	//
 	// A value of 1 will cause the Promotion to be marked as failed after just
 	// a single failure; i.e. no retries will be attempted.
-	//
-	// There is no option to specify an infinite number of retries using a value
-	// such as -1.
 	//
 	// This default can be overridden by step-level configuration.
 	DefaultErrorThreshold uint32

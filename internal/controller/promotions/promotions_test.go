@@ -603,7 +603,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 	promotion.RegisterStepRunner(
 		testStepKindWithTimeout,
 		pkgPromotion.StepRunnerRegistration{
-			Metadata: &pkgPromotion.StepRunnerMetadata{DefaultTimeout: &testTimeout},
+			Metadata: pkgPromotion.StepRunnerMetadata{DefaultTimeout: testTimeout},
 			Factory: func(pkgPromotion.StepRunnerCapabilities) pkgPromotion.StepRunner {
 				return &pkgPromotion.MockStepRunner{}
 			},

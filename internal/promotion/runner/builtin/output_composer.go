@@ -18,7 +18,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindComposeOutput,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityTaskOutputPropagation,
 				},

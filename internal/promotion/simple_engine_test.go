@@ -497,7 +497,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				registry.register(
 					"task-level-output-step",
 					promotion.StepRunnerRegistration{
-						Metadata: &promotion.StepRunnerMetadata{
+						Metadata: promotion.StepRunnerMetadata{
 							RequiredCapabilities: []promotion.StepRunnerCapability{
 								promotion.StepCapabilityTaskOutputPropagation,
 							},
@@ -545,7 +545,7 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 				registry.register(
 					"task-level-output-step",
 					promotion.StepRunnerRegistration{
-						Metadata: &promotion.StepRunnerMetadata{
+						Metadata: promotion.StepRunnerMetadata{
 							RequiredCapabilities: []promotion.StepRunnerCapability{
 								promotion.StepCapabilityTaskOutputPropagation,
 							},

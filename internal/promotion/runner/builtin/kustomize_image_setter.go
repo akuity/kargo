@@ -38,7 +38,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindKustomizeSetImage,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessControlPlane,
 				},

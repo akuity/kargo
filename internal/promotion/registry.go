@@ -1,10 +1,6 @@
 package promotion
 
 import (
-	"time"
-
-	"k8s.io/utils/ptr"
-
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -23,13 +19,7 @@ func (s stepRunnerRegistry) register(
 	if registration.Factory == nil {
 		panic("step registration must specify a factory function")
 	}
-	if registration.Metadata == nil {
-		registration.Metadata = &promotion.StepRunnerMetadata{}
-	}
-	if registration.Metadata.DefaultTimeout == nil {
-		registration.Metadata.DefaultTimeout = ptr.To(time.Duration(0))
-	}
-	if registration.Metadata.DefaultErrorThreshold == 0 {
+	if registration.Metadata.DefaultErrorThreshold <= 0 {
 		registration.Metadata.DefaultErrorThreshold = uint32(1)
 	}
 	s[stepKind] = registration

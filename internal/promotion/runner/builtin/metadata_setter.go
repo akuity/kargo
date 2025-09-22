@@ -21,7 +21,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindSetMetadata,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessControlPlane,
 				},
