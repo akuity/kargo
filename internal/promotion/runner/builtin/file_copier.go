@@ -16,10 +16,20 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindCopy = "copy"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindCopy,
+		promotion.StepRunnerRegistration{Factory: newFileCopier},
+	)
+}
 
 // fileCopier is an implementation of the promotion.StepRunner interface that
 // copies a file or directory.
@@ -33,15 +43,8 @@ type fileCopier struct {
 
 // newFileCopier returns an implementation of the promotion.StepRunner interface
 // that copies a file or directory.
-func newFileCopier() promotion.StepRunner {
-	r := &fileCopier{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (f *fileCopier) Name() string {
-	return "copy"
+func newFileCopier(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &fileCopier{schemaLoader: getConfigSchemaLoader(stepKindCopy)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -61,7 +64,7 @@ func (f *fileCopier) Run(
 // convert validates fileCopier configuration against a JSON schema and
 // converts it into a builtin.CopyConfig struct.
 func (f *fileCopier) convert(cfg promotion.Config) (builtin.CopyConfig, error) {
-	return validateAndConvert[builtin.CopyConfig](f.schemaLoader, cfg, f.Name())
+	return validateAndConvert[builtin.CopyConfig](f.schemaLoader, cfg, stepKindCopy)
 }
 
 func (f *fileCopier) run(

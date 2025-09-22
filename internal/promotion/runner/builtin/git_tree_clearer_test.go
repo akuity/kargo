@@ -37,7 +37,7 @@ func Test_gitTreeOverwriter_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitTreeClearer()
+	r := newGitTreeClearer(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitTreeClearer)
 	require.True(t, ok)
 
@@ -89,7 +89,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Run the directive
-	r := newGitTreeClearer()
+	r := newGitTreeClearer(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitTreeClearer)
 	require.True(t, ok)
 

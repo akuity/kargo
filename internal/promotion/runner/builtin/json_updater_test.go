@@ -96,7 +96,7 @@ func Test_jsonUpdater_convert(t *testing.T) {
 		},
 	}
 
-	r := newJSONUpdater()
+	r := newJSONUpdater(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*jsonUpdater)
 	require.True(t, ok)
 

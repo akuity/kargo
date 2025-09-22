@@ -11,9 +11,19 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindJSONUpdate = "json-update"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindJSONUpdate,
+		promotion.StepRunnerRegistration{Factory: newJSONUpdater},
+	)
+}
 
 // jsonUpdater is an implementation of the promotion.StepRunner interface that
 // updates the values of specified keys in a JSON file.
@@ -23,15 +33,8 @@ type jsonUpdater struct {
 
 // newJSONUpdater returns an implementation of the promotion.StepRunner interface
 // that updates the values of specified keys in a JSON file.
-func newJSONUpdater() promotion.StepRunner {
-	r := &jsonUpdater{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (j *jsonUpdater) Name() string {
-	return "json-update"
+func newJSONUpdater(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &jsonUpdater{schemaLoader: getConfigSchemaLoader(stepKindJSONUpdate)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -50,8 +53,9 @@ func (j *jsonUpdater) Run(
 
 // convert validates jsonUpdater configuration against a JSON schema and
 // converts it into a builtin.JSONUpdateConfig struct.
-func (j *jsonUpdater) convert(cfg promotion.Config) (builtin.JSONUpdateConfig, error) {
-	return validateAndConvert[builtin.JSONUpdateConfig](j.schemaLoader, cfg, j.Name())
+func (j *jsonUpdater) convert(cfg promotion.Config,
+) (builtin.JSONUpdateConfig, error) {
+	return validateAndConvert[builtin.JSONUpdateConfig](j.schemaLoader, cfg, stepKindJSONUpdate)
 }
 
 func (j *jsonUpdater) run(

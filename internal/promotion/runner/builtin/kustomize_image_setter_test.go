@@ -124,7 +124,7 @@ func Test_kustomizeImageSetter_convert(t *testing.T) {
 		},
 	}
 
-	r := newKustomizeImageSetter(nil)
+	r := newKustomizeImageSetter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*kustomizeImageSetter)
 	require.True(t, ok)
 

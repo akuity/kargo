@@ -12,8 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 // GenerateFreightID deterministically calculates a piece of Freight's ID based
@@ -32,12 +31,12 @@ func GenerateFreightID(f *kargoapi.Freight) string {
 			// Freight for the new tag.
 			artifacts = append(
 				artifacts,
-				fmt.Sprintf("%s:%s:%s", git.NormalizeURL(commit.RepoURL), commit.Tag, commit.ID),
+				fmt.Sprintf("%s:%s:%s", urls.NormalizeGit(commit.RepoURL), commit.Tag, commit.ID),
 			)
 		} else {
 			artifacts = append(
 				artifacts,
-				fmt.Sprintf("%s:%s", git.NormalizeURL(commit.RepoURL), commit.ID),
+				fmt.Sprintf("%s:%s", urls.NormalizeGit(commit.RepoURL), commit.ID),
 			)
 		}
 	}
@@ -59,7 +58,7 @@ func GenerateFreightID(f *kargoapi.Freight) string {
 			fmt.Sprintf(
 				"%s:%s",
 				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(helm.NormalizeChartRepositoryURL(chart.RepoURL), chart.Name),
+				path.Join(urls.NormalizeChart(chart.RepoURL), chart.Name),
 				chart.Version,
 			),
 		)

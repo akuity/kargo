@@ -1,4 +1,4 @@
-package git
+package urls
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeURL(t *testing.T) {
+func TestNormalizeGit(t *testing.T) {
 	testCases := map[string]string{
 		// Anything we can't normalize should be returned as-is
 		"https://not a url":                      "https://not a url",
@@ -84,7 +84,7 @@ func TestNormalizeURL(t *testing.T) {
 	}
 	for in, out := range testCases {
 		t.Run(in, func(t *testing.T) {
-			require.Equal(t, out, NormalizeURL(in))
+			require.Equal(t, out, NormalizeGit(in))
 		})
 	}
 }

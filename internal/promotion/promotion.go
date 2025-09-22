@@ -5,11 +5,9 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	gocache "github.com/patrickmn/go-cache"
 	"go.yaml.in/yaml/v3"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -171,31 +169,6 @@ func StepEnvWithTaskOutputs(alias string, outputs promotion.State) StepEnvOption
 			}
 		}
 	}
-}
-
-// GetTimeout returns the maximum interval the provided StepRunner may spend
-// attempting to execute the Step before retries are abandoned and the entire
-// Promotion is marked as failed. If the StepRunner is a RetryableStepRunner,
-// its timeout is used as the default. Otherwise, the default is 0 (no limit).
-func (s *Step) GetTimeout(runner promotion.StepRunner) *time.Duration {
-	fallback := ptr.To(time.Duration(0))
-	if retryCfg, isRetryable := runner.(promotion.RetryableStepRunner); isRetryable {
-		fallback = retryCfg.DefaultTimeout()
-	}
-	return s.Retry.GetTimeout(fallback)
-}
-
-// GetErrorThreshold returns the number of consecutive times the provided
-// StepRunner must fail to execute the Step (for any reason) before retries are
-// abandoned and the entire Promotion is marked as failed. If the StepRunner is
-// a RetryableStepRunner, its threshold is used as the default. Otherwise, the
-// default is 1.
-func (s *Step) GetErrorThreshold(runner promotion.StepRunner) uint32 {
-	fallback := uint32(1)
-	if retryCfg, isRetryable := runner.(promotion.RetryableStepRunner); isRetryable {
-		fallback = retryCfg.DefaultErrorThreshold()
-	}
-	return s.Retry.GetErrorThreshold(fallback)
 }
 
 // BuildEnv returns the environment for the Step. The environment includes the

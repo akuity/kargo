@@ -1,4 +1,4 @@
-package image
+package urls
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNormalizeURL(t *testing.T) {
+func TestNormalizeImage(t *testing.T) {
 	tests := []struct {
 		input    string
 		expected string
@@ -35,7 +35,7 @@ func TestNormalizeURL(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		got := NormalizeURL(tc.input)
+		got := NormalizeImage(tc.input)
 		require.Equal(t, tc.expected, got, "input: %s", tc.input)
 	}
 }

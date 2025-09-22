@@ -16,17 +16,27 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
+	stepKindHTTP = "http"
+
 	contentTypeHeader     = "Content-Type"
 	contentTypeJSON       = "application/json"
 	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 )
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindHTTP,
+		promotion.StepRunnerRegistration{Factory: newHTTPRequester},
+	)
+}
 
 // httpRequester is an implementation of the promotion.StepRunner interface that
 // sends an HTTP request and processes the response.
@@ -36,15 +46,9 @@ type httpRequester struct {
 
 // newHTTPRequester returns an implementation of the promotion.StepRunner
 // interface that sends an HTTP request and processes the response.
-func newHTTPRequester() promotion.StepRunner {
-	r := &httpRequester{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
+func newHTTPRequester(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &httpRequester{schemaLoader: getConfigSchemaLoader(stepKindHTTP)}
 
-// Name implements the promotion.StepRunner interface.
-func (h *httpRequester) Name() string {
-	return "http"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -64,7 +68,7 @@ func (h *httpRequester) Run(
 // convert validates httpRequester configuration against a JSON schema and
 // converts it into a builtin.HTTPConfig struct.
 func (h *httpRequester) convert(cfg promotion.Config) (builtin.HTTPConfig, error) {
-	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, h.Name())
+	return validateAndConvert[builtin.HTTPConfig](h.schemaLoader, cfg, stepKindHTTP)
 }
 
 func (h *httpRequester) run(

@@ -202,7 +202,7 @@ func Test_httpRequester_convert(t *testing.T) {
 		},
 	}
 
-	r := newHTTPRequester()
+	r := newHTTPRequester(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*httpRequester)
 	require.True(t, ok)
 

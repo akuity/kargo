@@ -120,7 +120,7 @@ func Test_yamlParser_convert(t *testing.T) {
 		},
 	}
 
-	r := newYAMLParser()
+	r := newYAMLParser(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*yamlParser)
 	require.True(t, ok)
 
@@ -337,7 +337,7 @@ key: : value
 		{"Empty YAML file", "", errors.New("could not parse empty YAML file")},
 	}
 
-	r := newYAMLParser()
+	r := newYAMLParser(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*yamlParser)
 	require.True(t, ok)
 

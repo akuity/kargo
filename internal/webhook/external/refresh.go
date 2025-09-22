@@ -11,13 +11,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
 	"github.com/akuity/kargo/internal/controller/git/commit"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
 	"github.com/akuity/kargo/internal/helm/chart"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
@@ -141,7 +140,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) 
 	var shouldRefresh bool
 	for _, s := range wh.Spec.Subscriptions {
 		switch {
-		case s.Git != nil && git.NormalizeURL(s.Git.RepoURL) == repoURL:
+		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
 			selector, err := commit.NewSelector(*s.Git, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
@@ -149,7 +148,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) 
 				)
 			}
 			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
-		case s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL:
+		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(*s.Image, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
@@ -157,7 +156,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) 
 				)
 			}
 			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesTag)
-		case s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL:
+		case s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL:
 			selector, err := chart.NewSelector(*s.Chart, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating chart selector for Chart subscription %q: %w",

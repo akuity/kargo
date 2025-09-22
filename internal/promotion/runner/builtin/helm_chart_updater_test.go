@@ -131,7 +131,7 @@ func Test_helmChartUpdater_convert(t *testing.T) {
 		},
 	}
 
-	r := newHelmChartUpdater(nil)
+	r := newHelmChartUpdater(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*helmChartUpdater)
 	require.True(t, ok)
 

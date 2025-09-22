@@ -590,17 +590,24 @@ func Test_parseCreateActorAnnotation(t *testing.T) {
 func Test_calculateRequeueInterval(t *testing.T) {
 	testStepKindWithoutTimeout := "fake-step-without-timeout"
 	promotion.RegisterStepRunner(
-		&pkgPromotion.MockStepRunner{StepName: testStepKindWithoutTimeout},
+		testStepKindWithoutTimeout,
+		pkgPromotion.StepRunnerRegistration{
+			Factory: func(pkgPromotion.StepRunnerCapabilities) pkgPromotion.StepRunner {
+				return &pkgPromotion.MockStepRunner{}
+			},
+		},
 	)
 
 	testStepKindWithTimeout := "fake-step-with-timeout"
 	testTimeout := 10 * time.Minute
 	promotion.RegisterStepRunner(
-		pkgPromotion.NewRetryableStepRunner(
-			&pkgPromotion.MockStepRunner{StepName: testStepKindWithTimeout},
-			&testTimeout,
-			0, // Retries don't matter for this test
-		),
+		testStepKindWithTimeout,
+		pkgPromotion.StepRunnerRegistration{
+			Metadata: &pkgPromotion.StepRunnerMetadata{DefaultTimeout: &testTimeout},
+			Factory: func(pkgPromotion.StepRunnerCapabilities) pkgPromotion.StepRunner {
+				return &pkgPromotion.MockStepRunner{}
+			},
+		},
 	)
 
 	// The test cases are crafted with the assumption that the default requeue

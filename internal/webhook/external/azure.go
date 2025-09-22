@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -183,7 +183,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	repoURLs := []string{git.NormalizeURL(event.Resource.Repository.RemoteURL)}
+	repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
 	logger := logging.LoggerFromContext(ctx)
 	refs := event.getRefs()
 	logger = logger.WithValues(

@@ -18,13 +18,17 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	intfs "github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-// Size limits to prevent decompression bombs
 const (
+	stepKindUntar = "untar"
+
+	// Size limits to prevent decompression bombs
+
 	// maxDecompressedTarSize is the maximum size of all files extracted from a
 	// tar archive.
 	maxDecompressedTarSize int64 = 100 * 1024 * 1024
@@ -40,10 +44,14 @@ const (
 	// defaultDirPermissions is the default permissions for directories created
 	// by the tar extractor.
 	defaultDirPermissions = 0o750
-
-	// stepNameUntar is the name of the "untar" step.
-	stepNameUntar = "untar"
 )
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindUntar,
+		promotion.StepRunnerRegistration{Factory: newTarExtractor},
+	)
+}
 
 // tarExtractor is an implementation of the promotion.StepRunner interface that
 // extracts a tar file to a specified directory.
@@ -53,15 +61,8 @@ type tarExtractor struct {
 
 // newTarExtractor returns an implementation of the promotion.StepRunner
 // interface that extracts a tar file.
-func newTarExtractor() promotion.StepRunner {
-	r := &tarExtractor{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (t *tarExtractor) Name() string {
-	return stepNameUntar
+func newTarExtractor(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &tarExtractor{schemaLoader: getConfigSchemaLoader(stepKindUntar)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -81,7 +82,7 @@ func (t *tarExtractor) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.UntarConfig struct.
 func (t *tarExtractor) convert(cfg promotion.Config) (builtin.UntarConfig, error) {
-	return validateAndConvert[builtin.UntarConfig](t.schemaLoader, cfg, t.Name())
+	return validateAndConvert[builtin.UntarConfig](t.schemaLoader, cfg, stepKindUntar)
 }
 
 func (t *tarExtractor) run(
@@ -104,7 +105,7 @@ func (t *tarExtractor) run(
 	}
 
 	// Create a temporary directory to atomically extract the tar file
-	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "."+t.Name()+"-*")
+	tempDir, err := os.MkdirTemp(stepCtx.WorkDir, "."+stepKindUntar+"-*")
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("failed to create temporary directory for extraction: %w", err)

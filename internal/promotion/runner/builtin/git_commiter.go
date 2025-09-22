@@ -9,12 +9,24 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-// stateKeyCommit is the key used to store the commit ID in the shared State.
-const stateKeyCommit = "commit"
+const (
+	stepKindGitCommit = "git-commit"
+
+	// stateKeyCommit is the key used to store the commit ID in the shared State.
+	stateKeyCommit = "commit"
+)
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitCommit,
+		promotion.StepRunnerRegistration{Factory: newGitCommitter},
+	)
+}
 
 // gitCommitter is an implementation of the promotion.StepRunner interface that
 // makes a commit to a local Git repository.
@@ -24,15 +36,8 @@ type gitCommitter struct {
 
 // newGitCommitter returns an implementation of the promotion.StepRunner
 // interface that makes a commit to a local Git repository.
-func newGitCommitter() promotion.StepRunner {
-	r := &gitCommitter{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitCommitter) Name() string {
-	return "git-commit"
+func newGitCommitter(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitCommitter{schemaLoader: getConfigSchemaLoader(stepKindGitCommit)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -52,7 +57,7 @@ func (g *gitCommitter) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.GitCommitConfig struct.
 func (g *gitCommitter) convert(cfg promotion.Config) (builtin.GitCommitConfig, error) {
-	return validateAndConvert[builtin.GitCommitConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitCommitConfig](g.schemaLoader, cfg, stepKindGitCommit)
 }
 
 func (g *gitCommitter) run(

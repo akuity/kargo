@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/promotion"
 )
@@ -44,18 +45,27 @@ func DefaultExprDataCacheFn() *gocache.Cache {
 // simpleEngine is a simple implementation of the Engine interface that uses
 // built-in StepRunners.
 type simpleEngine struct {
-	registry    stepRunnerRegistry
-	kargoClient client.Client
-	cacheFunc   ExprDataCacheFn
+	registry     stepRunnerRegistry
+	kargoClient  client.Client
+	argocdClient client.Client
+	credsDB      credentials.Database
+	cacheFunc    ExprDataCacheFn
 }
 
 // NewSimpleEngine returns a simple implementation of the Engine interface that
 // uses built-in StepRunners.
-func NewSimpleEngine(kargoClient client.Client, cacheFunc ExprDataCacheFn) Engine {
+func NewSimpleEngine(
+	kargoClient client.Client,
+	argocdClient client.Client,
+	credsDB credentials.Database,
+	cacheFunc ExprDataCacheFn,
+) Engine {
 	return &simpleEngine{
-		registry:    stepRunnerReg,
-		kargoClient: kargoClient,
-		cacheFunc:   cacheFunc,
+		registry:     stepRunnerReg,
+		kargoClient:  kargoClient,
+		argocdClient: argocdClient,
+		credsDB:      credsDB,
+		cacheFunc:    cacheFunc,
 	}
 }
 
@@ -122,9 +132,9 @@ func (e *simpleEngine) executeSteps(
 			continue
 		}
 
-		// Get the StepRunner for the step.
-		runner := e.registry.getStepRunner(step.Kind)
-		if runner == nil {
+		// Get a StepRunner for the step.
+		registration := e.registry.getStepRunnerRegistration(step.Kind)
+		if registration == nil {
 			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
 			stepExecMeta.Message = fmt.Sprintf("no promotion step runner found for kind %q", step.Kind)
 			// Continue, because despite this failure, some steps' "if" conditions may
@@ -135,6 +145,18 @@ func (e *simpleEngine) executeSteps(
 			// if our validation webhook was aware of registered steps.
 			continue
 		}
+		capabilities := promotion.StepRunnerCapabilities{}
+		for _, capability := range registration.Metadata.RequiredCapabilities {
+			switch capability {
+			case promotion.StepCapabilityAccessControlPlane:
+				capabilities.KargoClient = e.kargoClient
+			case promotion.StepCapabilityAccessArgoCD:
+				capabilities.ArgoCDClient = e.argocdClient
+			case promotion.StepCapabilityAccessCredentials:
+				capabilities.CredsDB = e.credsDB
+			}
+		}
+		runner := registration.Factory(capabilities)
 
 		// Mark the step as started.
 		if stepExecMeta.StartedAt == nil {
@@ -159,7 +181,7 @@ func (e *simpleEngine) executeSteps(
 		err = e.reconcileResultWithMetadata(stepExecMeta, step, result, err)
 
 		// Determine what to do based on the result.
-		if !e.determineStepCompletion(step, runner, stepExecMeta, err) {
+		if !e.determineStepCompletion(step, *registration.Metadata, stepExecMeta, err) {
 			// The step is still running, so we need to wait
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
@@ -310,37 +332,37 @@ func (e *simpleEngine) reconcileResultWithMetadata(
 
 func (e *simpleEngine) determineStepCompletion(
 	step Step,
-	runner promotion.StepRunner,
-	meta *kargoapi.StepExecutionMetadata,
+	runnerMeta promotion.StepRunnerMetadata,
+	execMeta *kargoapi.StepExecutionMetadata,
 	err error,
 ) bool {
 	switch {
-	case meta.Status == kargoapi.PromotionStepStatusSucceeded ||
-		meta.Status == kargoapi.PromotionStepStatusSkipped:
+	case execMeta.Status == kargoapi.PromotionStepStatusSucceeded ||
+		execMeta.Status == kargoapi.PromotionStepStatusSkipped:
 		// Note: A step that ran briefly and self-determined it should be
 		// "skipped" is treated similarly to success.
-		meta.FinishedAt = ptr.To(metav1.Now())
+		execMeta.FinishedAt = ptr.To(metav1.Now())
 		return true
 	case promotion.IsTerminal(err):
 		// This is an unrecoverable error.
-		meta.FinishedAt = ptr.To(metav1.Now())
-		meta.Status = kargoapi.PromotionStepStatusErrored
-		meta.Message = fmt.Sprintf("an unrecoverable error occurred: %s", err)
+		execMeta.FinishedAt = ptr.To(metav1.Now())
+		execMeta.Status = kargoapi.PromotionStepStatusErrored
+		execMeta.Message = fmt.Sprintf("an unrecoverable error occurred: %s", err)
 		// Continue, because despite this failure, some steps' "if" conditions may
 		// still allow them to run.
 		return true
 	case err != nil:
 		// If we get to here, the error is POTENTIALLY recoverable.
-		meta.ErrorCount++
+		execMeta.ErrorCount++
 		// Check if the error threshold has been met.
-		errorThreshold := step.GetErrorThreshold(runner)
-		if meta.ErrorCount >= errorThreshold {
+		errorThreshold := step.Retry.GetErrorThreshold(runnerMeta.DefaultErrorThreshold)
+		if execMeta.ErrorCount >= errorThreshold {
 			// The error threshold has been met.
-			meta.FinishedAt = ptr.To(metav1.Now())
-			meta.Status = kargoapi.PromotionStepStatusErrored
-			meta.Message = fmt.Sprintf(
+			execMeta.FinishedAt = ptr.To(metav1.Now())
+			execMeta.Status = kargoapi.PromotionStepStatusErrored
+			execMeta.Message = fmt.Sprintf(
 				"step %q met error threshold of %d: %s", step.Alias,
-				errorThreshold, meta.Message,
+				errorThreshold, execMeta.Message,
 			)
 			// Continue, because despite this failure, some steps' "if" conditions
 			// may still allow them to run.
@@ -353,12 +375,12 @@ func (e *simpleEngine) determineStepCompletion(
 	// threshold. Now we need to check if the timeout has elapsed. A nil timeout
 	// or any non-positive timeout interval are treated as NO timeout, although
 	// a nil timeout really shouldn't happen.
-	timeout := step.GetTimeout(runner)
-	if timeout != nil && *timeout > 0 && metav1.Now().Sub(meta.StartedAt.Time) > *timeout {
+	timeout := step.Retry.GetTimeout(*runnerMeta.DefaultTimeout)
+	if timeout > 0 && metav1.Now().Sub(execMeta.StartedAt.Time) > timeout {
 		// Timeout has elapsed.
-		meta.FinishedAt = ptr.To(metav1.Now())
-		meta.Status = kargoapi.PromotionStepStatusErrored
-		meta.Message = fmt.Sprintf("step %q timed out after %s", step.Alias, timeout.String())
+		execMeta.FinishedAt = ptr.To(metav1.Now())
+		execMeta.Status = kargoapi.PromotionStepStatusErrored
+		execMeta.Message = fmt.Sprintf("step %q timed out after %s", step.Alias, timeout.String())
 		// Continue, because despite this failure, some steps' "if" conditions may
 		// still allow them to run.
 		return true
@@ -368,13 +390,13 @@ func (e *simpleEngine) determineStepCompletion(
 		// Treat Errored/Failed as if the step is still running so that the
 		// Promotion will be requeued. The step will be retried on the next
 		// reconciliation.
-		meta.Message += "; step will be retried"
+		execMeta.Message += "; step will be retried"
 		return false
 	}
 
 	// If we get to here, the step is still Running (waiting for some external
 	// condition to be met).
-	meta.ErrorCount = 0 // Reset the error count
+	execMeta.ErrorCount = 0 // Reset the error count
 	return false
 }
 

@@ -11,9 +11,19 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindJSONParse = "json-parse"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindJSONParse,
+		promotion.StepRunnerRegistration{Factory: newJSONParser},
+	)
+}
 
 // jsonParser is an implementation of the promotion.StepRunner interface that
 // parses a JSON file and extracts specified outputs.
@@ -22,15 +32,8 @@ type jsonParser struct {
 }
 
 // newJSONParser returns a new instance of jsonParser.
-func newJSONParser() promotion.StepRunner {
-	r := &jsonParser{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (jp *jsonParser) Name() string {
-	return "json-parse"
+func newJSONParser(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &jsonParser{schemaLoader: getConfigSchemaLoader(stepKindJSONParse)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -50,7 +53,7 @@ func (jp *jsonParser) Run(
 // convert validates jsonParser configuration against a JSON schema and
 // converts it into a builtin.JSONParseConfig struct.
 func (jp *jsonParser) convert(cfg promotion.Config) (builtin.JSONParseConfig, error) {
-	return validateAndConvert[builtin.JSONParseConfig](jp.schemaLoader, cfg, jp.Name())
+	return validateAndConvert[builtin.JSONParseConfig](jp.schemaLoader, cfg, stepKindJSONParse)
 }
 
 func (jp *jsonParser) run(
@@ -65,7 +68,7 @@ func (jp *jsonParser) run(
 	}
 
 	if len(cfg.Outputs) == 0 {
-		return failure, fmt.Errorf("invalid %s config: outputs is required", jp.Name())
+		return failure, fmt.Errorf("invalid %s config: outputs is required", stepKindJSONParse)
 	}
 
 	data, err := jp.readAndParseJSON(stepCtx.WorkDir, cfg.Path)

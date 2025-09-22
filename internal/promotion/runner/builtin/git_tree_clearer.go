@@ -9,9 +9,19 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindGitClear = "git-clear"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitClear,
+		promotion.StepRunnerRegistration{Factory: newGitTreeClearer},
+	)
+}
 
 // gitTreeClearer is an implementation of the promotion.StepRunner interface
 // that removes the content of a Git working tree.
@@ -21,15 +31,8 @@ type gitTreeClearer struct {
 
 // newGitTreeClearer returns an implementation of the promotion.StepRunner
 // interface that removes the content of a Git working tree.
-func newGitTreeClearer() promotion.StepRunner {
-	r := &gitTreeClearer{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitTreeClearer) Name() string {
-	return "git-clear"
+func newGitTreeClearer(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitTreeClearer{schemaLoader: getConfigSchemaLoader(stepKindGitClear)}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -49,7 +52,7 @@ func (g *gitTreeClearer) Run(
 // convert validates gitTreeClearer configuration against a JSON schema and
 // converts it into a builtin.GitClearConfig struct.
 func (g *gitTreeClearer) convert(cfg promotion.Config) (builtin.GitClearConfig, error) {
-	return validateAndConvert[builtin.GitClearConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitClearConfig](g.schemaLoader, cfg, stepKindGitClear)
 }
 
 func (g *gitTreeClearer) run(

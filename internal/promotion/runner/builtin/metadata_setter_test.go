@@ -130,7 +130,7 @@ func Test_metadataSetter_convert(t *testing.T) {
 		},
 	}
 
-	r := newMetadataSetter(nil)
+	r := newMetadataSetter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*metadataSetter)
 	require.True(t, ok)
 

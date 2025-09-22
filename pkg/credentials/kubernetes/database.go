@@ -12,15 +12,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/credentials/kubernetes/basic"
-	"github.com/akuity/kargo/internal/credentials/kubernetes/ecr"
-	"github.com/akuity/kargo/internal/credentials/kubernetes/gar"
-	"github.com/akuity/kargo/internal/credentials/kubernetes/github"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/credentials/kubernetes/basic"
+	"github.com/akuity/kargo/pkg/credentials/kubernetes/ecr"
+	"github.com/akuity/kargo/pkg/credentials/kubernetes/gar"
+	"github.com/akuity/kargo/pkg/credentials/kubernetes/github"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 // database is an implementation of the credentials.Database interface that
@@ -245,11 +243,11 @@ func normalizeRepoURL(credType credentials.Type, repoURL string) string {
 	// the form host.xz:path/to/repo
 	switch credType {
 	case credentials.TypeGit:
-		return git.NormalizeURL(repoURL)
+		return urls.NormalizeGit(repoURL)
 	case credentials.TypeImage:
-		return image.NormalizeURL(repoURL)
+		return urls.NormalizeImage(repoURL)
 	case credentials.TypeHelm:
-		return helm.NormalizeChartRepositoryURL(repoURL)
+		return urls.NormalizeChart(repoURL)
 	default:
 		return repoURL
 	}
