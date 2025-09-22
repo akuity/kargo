@@ -76,17 +76,6 @@ func (s *server) GetAnalysisRunLogs(
 		)
 	}
 
-	// Don't stream logs for an AnalysisRun that is not complete.
-	if !analysisRun.Status.Phase.Completed() {
-		return connect.NewError(
-			connect.CodeFailedPrecondition,
-			fmt.Errorf(
-				"AnalysisRun %q in namespace %q is not complete; cannot retrieve logs",
-				name, namespace,
-			),
-		)
-	}
-
 	jobMetricName, jobMetric, err := s.getJobMetric(analysisRun, req.Msg.MetricName)
 	if err != nil {
 		return err
