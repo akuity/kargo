@@ -11,8 +11,8 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
 )
 
 func argoCDExists(
