@@ -87,10 +87,7 @@ export const AnalysisRunLogs = (props: {
   const stage = props.analysisRun?.metadata?.labels['kargo.akuity.io/stage'];
 
   useEffect(() => {
-    if (
-      !verificationPhaseIsTerminal(props.analysisRun?.status?.phase || '') ||
-      !filterableItems?.jobNames?.length
-    ) {
+    if (!filterableItems?.jobNames?.length) {
       return;
     }
 
@@ -223,9 +220,9 @@ export const AnalysisRunLogs = (props: {
           }}
         />
       )}
-      {!logsLoading && !logs && !logsError && (
+      {!logs && !logsError && (
         <Empty
-          description={`No logs found.${!verificationPhaseIsTerminal(props.analysisRun?.status?.phase || '') ? ' They are available only when verification is in terminal state' : ''}`}
+          description={`No logs found.`}
           className='p-10'
         />
       )}
