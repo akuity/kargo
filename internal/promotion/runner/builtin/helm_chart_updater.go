@@ -8,11 +8,28 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindHelmUpdateChart = "helm-update-chart"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindHelmUpdateChart,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newHelmChartUpdater,
+		},
+	)
+}
 
 // helmChartUpdater is an implementation of the promotion.StepRunner interface
 // that updates the dependencies of a Helm chart.
@@ -23,17 +40,11 @@ type helmChartUpdater struct {
 
 // newHelmChartUpdater returns an implementation of the promotion.StepRunner
 // interface that updates the dependencies of a Helm chart.
-func newHelmChartUpdater(credsDB credentials.Database) promotion.StepRunner {
-	r := &helmChartUpdater{
-		credsDB: credsDB,
+func newHelmChartUpdater(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &helmChartUpdater{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindHelmUpdateChart),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (h *helmChartUpdater) Name() string {
-	return "helm-update-chart"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -53,7 +64,7 @@ func (h *helmChartUpdater) Run(
 // convert validates helmChartUpdater configuration against a JSON schema and
 // converts it into a builtin.HelmUpdateChartConfig struct.
 func (h *helmChartUpdater) convert(cfg promotion.Config) (builtin.HelmUpdateChartConfig, error) {
-	return validateAndConvert[builtin.HelmUpdateChartConfig](h.schemaLoader, cfg, h.Name())
+	return validateAndConvert[builtin.HelmUpdateChartConfig](h.schemaLoader, cfg, stepKindHelmUpdateChart)
 }
 
 func (h *helmChartUpdater) run(

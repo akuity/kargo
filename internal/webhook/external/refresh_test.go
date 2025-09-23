@@ -15,13 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/indexer"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 func TestRefreshWarehouses(t *testing.T) {
 	// Callers are responsible for normalizing the repository URL.
-	testRepoURL := git.NormalizeURL("https://github.com/example/repo.git")
+	testRepoURL := urls.NormalizeGit("https://github.com/example/repo.git")
 	testRepoURLs := []string{testRepoURL}
 
 	const testProject = "fake-project"

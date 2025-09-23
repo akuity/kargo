@@ -14,7 +14,7 @@ import (
 	"google.golang.org/api/googleapi"
 	"google.golang.org/api/iamcredentials/v1"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
 

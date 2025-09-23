@@ -13,8 +13,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -136,7 +136,7 @@ func Test_gitPROpener_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitPROpener(nil)
+	r := newGitPROpener(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 
@@ -209,7 +209,9 @@ func Test_gitPROpener_run(t *testing.T) {
 
 	// Now we can proceed to test gitPROpener...
 
-	r := newGitPROpener(&credentials.FakeDB{})
+	r := newGitPROpener(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
 	runner, ok := r.(*gitPROpener)
 	require.True(t, ok)
 

@@ -9,10 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -99,8 +98,8 @@ func (q *quayWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		// Note: The refresh logic will dedupe the URLs, so this does not create
 		// the possibility of a double refresh.
 		repoURLs := []string{
-			image.NormalizeURL(payload.DockerURL),
-			helm.NormalizeChartRepositoryURL(payload.DockerURL),
+			urls.NormalizeImage(payload.DockerURL),
+			urls.NormalizeChart(payload.DockerURL),
 		}
 
 		logger = logger.WithValues(

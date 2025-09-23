@@ -20,11 +20,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/freight"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/kargo"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 type exprFn func(params ...any) (any, error)
@@ -578,7 +576,7 @@ func getCommitFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = git.NormalizeURL(repoURL)
+		repoURL = urls.NormalizeGit(repoURL)
 
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
@@ -587,12 +585,12 @@ func getCommitFromWarehouse(
 
 		var latestCommit *kargoapi.DiscoveredCommit
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Git != nil && git.NormalizeURL(s.Git.RepoURL) == repoURL && len(artifacts.Git) != 0 {
+			if s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL && len(artifacts.Git) != 0 {
 				logger.Debug("number of discovered git artifacts",
 					"count", len(artifacts.Git),
 				)
 				for i, ca := range artifacts.Git {
-					if git.NormalizeURL(ca.RepoURL) != repoURL {
+					if urls.NormalizeGit(ca.RepoURL) != repoURL {
 						continue
 					}
 					logger.Debug("checking discovered git artifact",
@@ -688,7 +686,7 @@ func getImageFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = image.NormalizeURL(repoURL)
+		repoURL = urls.NormalizeImage(repoURL)
 
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
@@ -697,12 +695,12 @@ func getImageFromWarehouse(
 
 		var latestImg *kargoapi.Image
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Image != nil && image.NormalizeURL(s.Image.RepoURL) == repoURL && len(artifacts.Images) != 0 {
+			if s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL && len(artifacts.Images) != 0 {
 				logger.Debug("number of discovered image artifacts",
 					"count", len(artifacts.Images),
 				)
 				for i, ia := range artifacts.Images {
-					iaRepoURL := image.NormalizeURL(ia.RepoURL)
+					iaRepoURL := urls.NormalizeImage(ia.RepoURL)
 					if iaRepoURL != repoURL {
 						continue
 					}
@@ -824,7 +822,7 @@ func getChartFromWarehouse(
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = helm.NormalizeChartRepositoryURL(repoURL)
+		repoURL = urls.NormalizeChart(repoURL)
 
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
@@ -833,12 +831,12 @@ func getChartFromWarehouse(
 
 		var latestChart *kargoapi.Chart
 		for _, s := range wh.Spec.Subscriptions {
-			if s.Chart != nil && helm.NormalizeChartRepositoryURL(s.Chart.RepoURL) == repoURL && len(artifacts.Charts) != 0 {
+			if s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL && len(artifacts.Charts) != 0 {
 				logger.Debug("number of discovered chart artifacts",
 					"count", len(artifacts.Charts),
 				)
 				for _, ca := range artifacts.Charts {
-					caRepoURL := helm.NormalizeChartRepositoryURL(ca.RepoURL)
+					caRepoURL := urls.NormalizeChart(ca.RepoURL)
 					if caRepoURL != repoURL {
 						continue
 					}

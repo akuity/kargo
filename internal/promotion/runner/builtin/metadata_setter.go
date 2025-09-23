@@ -10,9 +10,26 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/kubeclient"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindSetMetadata = "set-metadata"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindSetMetadata,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessControlPlane,
+				},
+			},
+			Factory: newMetadataSetter,
+		},
+	)
+}
 
 // metadataSetter is an implementation of the promotion.StepRunner interface
 // that updates metadata on Stage or Freight resources.
@@ -23,17 +40,11 @@ type metadataSetter struct {
 
 // newMetadataSetter returns an implementation of the promotion.StepRunner
 // interface that updates metadata on Stage or Freight resources.
-func newMetadataSetter(kargoClient client.Client) promotion.StepRunner {
-	r := &metadataSetter{
-		kargoClient: kargoClient,
+func newMetadataSetter(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &metadataSetter{
+		kargoClient:  caps.KargoClient,
+		schemaLoader: getConfigSchemaLoader(stepKindSetMetadata),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (s *metadataSetter) Name() string {
-	return "set-metadata"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -53,7 +64,7 @@ func (s *metadataSetter) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.SetMetadataConfig struct.
 func (s *metadataSetter) convert(cfg promotion.Config) (builtin.SetMetadataConfig, error) {
-	return validateAndConvert[builtin.SetMetadataConfig](s.schemaLoader, cfg, s.Name())
+	return validateAndConvert[builtin.SetMetadataConfig](s.schemaLoader, cfg, stepKindSetMetadata)
 }
 
 func (s *metadataSetter) run(

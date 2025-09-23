@@ -16,20 +16,38 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	libargocd "github.com/akuity/kargo/internal/argocd"
 	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	checkers "github.com/akuity/kargo/internal/health/checker/builtin"
 	"github.com/akuity/kargo/internal/kubeclient"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	pkgargocd "github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/health"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
+	stepKindArgoCDUpdate = "argocd-update"
+
 	applicationOperationInitiator = "kargo-controller"
 	promotionInfoKey              = "kargo.akuity.io/promotion"
 )
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindArgoCDUpdate,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				DefaultTimeout: 5 * time.Minute,
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessArgoCD,
+				},
+			},
+			Factory: newArgocdUpdater,
+		},
+	)
+}
 
 // argocdUpdater is an implementation of the promotion.StepRunner interface that
 // updates one or more Argo CD Application resources.
@@ -88,11 +106,9 @@ type argocdUpdater struct {
 
 // newArgocdUpdater returns a implementation of the promotion.StepRunner
 // interfaces that updates Argo CD Application resources.
-func newArgocdUpdater(argocdClient client.Client) *argocdUpdater {
-	r := &argocdUpdater{
-		argocdClient: argocdClient,
-	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
+func newArgocdUpdater(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	r := &argocdUpdater{argocdClient: caps.ArgoCDClient}
+	r.schemaLoader = getConfigSchemaLoader(stepKindArgoCDUpdate)
 	r.getAuthorizedApplicationFn = r.getAuthorizedApplication
 	r.buildDesiredSourcesFn = r.buildDesiredSources
 	r.mustPerformUpdateFn = r.mustPerformUpdate
@@ -101,11 +117,6 @@ func newArgocdUpdater(argocdClient client.Client) *argocdUpdater {
 	r.argoCDAppPatchFn = r.argoCDAppPatch
 	r.logAppEventFn = r.logAppEvent
 	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (a *argocdUpdater) Name() string {
-	return "argocd-update"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -125,7 +136,7 @@ func (a *argocdUpdater) Run(
 // convert validates argocdUpdater configuration against a JSON schema and
 // converts it into a builtin.ArgoCDUpdateConfig struct.
 func (a *argocdUpdater) convert(cfg promotion.Config) (builtin.ArgoCDUpdateConfig, error) {
-	return validateAndConvert[builtin.ArgoCDUpdateConfig](a.schemaLoader, cfg, a.Name())
+	return validateAndConvert[builtin.ArgoCDUpdateConfig](a.schemaLoader, cfg, stepKindArgoCDUpdate)
 }
 
 func (a *argocdUpdater) run(
@@ -258,7 +269,7 @@ func (a *argocdUpdater) run(
 	return promotion.StepResult{
 		Status: aggregatedStatus,
 		HealthCheck: &health.Criteria{
-			Kind: a.Name(),
+			Kind: stepKindArgoCDUpdate,
 			Input: health.Input{
 				"apps": appHealthChecks,
 			},
@@ -714,8 +725,8 @@ func (a *argocdUpdater) applyArgoCDSourceUpdate(
 	} else {
 		// We're dealing with a git repo, so we should normalize the repo URLs
 		// before comparing them.
-		sourceRepoURL := git.NormalizeURL(source.RepoURL)
-		if sourceRepoURL != git.NormalizeURL(update.RepoURL) {
+		sourceRepoURL := urls.NormalizeGit(source.RepoURL)
+		if sourceRepoURL != urls.NormalizeGit(update.RepoURL) {
 			// The update is not applicable to this source.
 			return source, false
 		}

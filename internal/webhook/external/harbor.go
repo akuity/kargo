@@ -9,10 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/helm"
 	xhttp "github.com/akuity/kargo/internal/http"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -155,8 +154,8 @@ func (h *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// logic. Note: The refresh logic will dedupe the URLs, so this does not
 			// create the possibility of a double refresh.
 			repoURLs = []string{
-				image.NormalizeURL(payload.EventData.Resources[0].ResourceURL),
-				helm.NormalizeChartRepositoryURL(payload.EventData.Resources[0].ResourceURL),
+				urls.NormalizeImage(payload.EventData.Resources[0].ResourceURL),
+				urls.NormalizeChart(payload.EventData.Resources[0].ResourceURL),
 			}
 			tags = make([]string, len(payload.EventData.Resources))
 			for i, res := range payload.EventData.Resources {

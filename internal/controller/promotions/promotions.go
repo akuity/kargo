@@ -724,15 +724,12 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	}
 
 	step := p.Spec.Steps[p.Status.CurrentStep]
-	runner := promotion.GetStepRunner(step.Uses)
+	registration := promotion.GetStepRunnerRegistration(step.Uses)
+	timeout := step.Retry.GetTimeout(registration.Metadata.DefaultTimeout)
 
-	timeout := (&promotion.Step{
-		Retry: step.Retry,
-	}).GetTimeout(runner)
-
-	// If there is no timeout, or the timeout is 0, we should requeue at the
-	// default interval.
-	if timeout == nil || *timeout == 0 {
+	// If the timeout is 0 (no timeout), we should requeue at the default
+	// interval.
+	if timeout == 0 {
 		return defaultRequeueInterval
 	}
 
@@ -742,7 +739,7 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	}
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
-	targetTimeout := md.StartedAt.Add(*timeout)
+	targetTimeout := md.StartedAt.Add(timeout)
 	if targetTimeout.Before(time.Now().Add(defaultRequeueInterval)) {
 		return time.Until(targetTimeout)
 	}

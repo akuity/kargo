@@ -3,7 +3,7 @@ package option
 import (
 	"github.com/spf13/pflag"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 const (

@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -66,7 +66,7 @@ func Test_ociDownloader_validate(t *testing.T) {
 		},
 	}
 
-	r := newOCIDownloader(nil)
+	r := newOCIDownloader(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*ociDownloader)
 	require.True(t, ok)
 

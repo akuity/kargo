@@ -8,8 +8,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
@@ -20,6 +21,22 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab"    // GitLab provider registration
 )
 
+const stepKindGitWaitForPR = "git-wait-for-pr"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitWaitForPR,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newGitPRWaiter,
+		},
+	)
+}
+
 // gitPRWaiter is an implementation of the promotion.StepRunner interface that
 // waits for a pull request to be merged or closed unmerged.
 type gitPRWaiter struct {
@@ -29,17 +46,11 @@ type gitPRWaiter struct {
 
 // newGitPRWaiter returns an implementation of the promotion.StepRunner interface
 // that waits for a pull request to be merged or closed unmerged.
-func newGitPRWaiter(credsDB credentials.Database) promotion.StepRunner {
-	r := &gitPRWaiter{
-		credsDB: credsDB,
+func newGitPRWaiter(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitPRWaiter{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindGitWaitForPR),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitPRWaiter) Name() string {
-	return "git-wait-for-pr"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -59,7 +70,7 @@ func (g *gitPRWaiter) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.GitWaitForPRConfig struct.
 func (g *gitPRWaiter) convert(cfg promotion.Config) (builtin.GitWaitForPRConfig, error) {
-	return validateAndConvert[builtin.GitWaitForPRConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitWaitForPRConfig](g.schemaLoader, cfg, stepKindGitWaitForPR)
 }
 
 func (g *gitPRWaiter) run(

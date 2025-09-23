@@ -17,16 +17,26 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io/fs"
+	intpromo "github.com/akuity/kargo/internal/promotion"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
+	stepKindHTTPDownload = "http-download"
+
 	downloadTimeoutDefault = 5 * time.Minute
 	downloadBufferSize     = 64 * 1024
 	maxDownloadSize        = 100 << 20
 )
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindHTTPDownload,
+		promotion.StepRunnerRegistration{Factory: newHTTPDownloader},
+	)
+}
 
 // downloadBufferPool is a sync.Pool that provides byte slices for downloading
 // files. It is used to reduce memory allocations during file downloads.
@@ -45,15 +55,10 @@ type httpDownloader struct {
 
 // newHTTPDownloader returns an implementation of the promotion.StepRunner
 // interface that downloads files from HTTP/HTTPS URLs.
-func newHTTPDownloader() promotion.StepRunner {
-	d := &httpDownloader{}
-	d.schemaLoader = getConfigSchemaLoader(d.Name())
-	return d
-}
-
-// Name implements the promotion.StepRunner interface.
-func (d *httpDownloader) Name() string {
-	return "http-download"
+func newHTTPDownloader(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &httpDownloader{
+		schemaLoader: getConfigSchemaLoader(stepKindHTTPDownload),
+	}
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -73,7 +78,7 @@ func (d *httpDownloader) Run(
 // convert validates httpDownloader configuration against a JSON schema and
 // converts it into a builtin.HTTPDownloadConfig struct.
 func (d *httpDownloader) convert(cfg promotion.Config) (builtin.HTTPDownloadConfig, error) {
-	return validateAndConvert[builtin.HTTPDownloadConfig](d.schemaLoader, cfg, d.Name())
+	return validateAndConvert[builtin.HTTPDownloadConfig](d.schemaLoader, cfg, stepKindHTTPDownload)
 }
 
 // run executes the httpDownloader step with the provided configuration.

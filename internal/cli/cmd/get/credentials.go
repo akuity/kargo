@@ -23,7 +23,7 @@ import (
 	"github.com/akuity/kargo/internal/cli/kubernetes"
 	"github.com/akuity/kargo/internal/cli/option"
 	"github.com/akuity/kargo/internal/cli/templates"
-	libCreds "github.com/akuity/kargo/internal/credentials"
+	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
 type getCredentialsOptions struct {

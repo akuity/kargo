@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {

@@ -2,7 +2,6 @@ package promotion
 
 import (
 	"context"
-	"time"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/health"
@@ -11,113 +10,11 @@ import (
 // StepRunner is an interface for components that implement the logic for
 // execution of an individual Step in a user-defined promotion process.
 type StepRunner interface {
-	// Name returns the name of the StepRunner.
-	Name() string
 	// Run executes an individual Step from a user-defined promotion process using
 	// the provided StepContext. Implementations may indirectly modify that
 	// context through the returned StepResult to allow StepRunners for subsequent
 	// Steps to access the results of this execution.
 	Run(context.Context, *StepContext) (StepResult, error)
-}
-
-// RetryableStepRunner is an additional interface for StepRunner implementations
-// that can be retried in the event of a failure.
-type RetryableStepRunner interface {
-	StepRunner
-	// DefaultTimeout returns the default timeout for the step.
-	DefaultTimeout() *time.Duration
-	// DefaultErrorThreshold returns the number of consecutive times the step must
-	// fail (for any reason) before retries are abandoned and the entire Promotion
-	// is marked as failed.
-	DefaultErrorThreshold() uint32
-}
-
-// retryableStepRunner is a wrapper around a StepRunner that implements
-// RetryableStepRunner.
-type retryableStepRunner struct {
-	runner                StepRunner
-	defaultTimeout        *time.Duration
-	defaultErrorThreshold uint32
-}
-
-// NewRetryableStepRunner returns a wrapper around a StepRunner that implements
-// RetryableStepRunner.
-func NewRetryableStepRunner(
-	runner StepRunner,
-	timeout *time.Duration,
-	errorThreshold uint32,
-) RetryableStepRunner {
-	return &retryableStepRunner{
-		runner:                runner,
-		defaultTimeout:        timeout,
-		defaultErrorThreshold: errorThreshold,
-	}
-}
-
-// Name implements RetryableStepRunner.
-func (r *retryableStepRunner) Name() string {
-	return r.runner.Name()
-}
-
-// Run implements RetryableStepRunner.
-func (r *retryableStepRunner) Run(
-	ctx context.Context,
-	stepCtx *StepContext,
-) (StepResult, error) {
-	return r.runner.Run(ctx, stepCtx)
-}
-
-// DefaultTimeout implements RetryableStepRunner.
-func (r *retryableStepRunner) DefaultTimeout() *time.Duration {
-	return r.defaultTimeout
-}
-
-// DefaultErrorThreshold implements RetryableStepRunner.
-func (r *retryableStepRunner) DefaultErrorThreshold() uint32 {
-	return r.defaultErrorThreshold
-}
-
-// TaskLevelOutputStepRunner is an interface that defines a method to instruct
-// the engine to propagate the output of a step to the task namespace in the
-// shared state of the promotion result.
-type TaskLevelOutputStepRunner interface {
-	StepRunner
-	// TaskLevelOutput returns true if the StepRunner produces output that
-	// should be propagated to the task namespace in the state of the promotion
-	// result by the engine after the step is executed.
-	TaskLevelOutput() bool
-}
-
-// NewTaskLevelOutputStepRunner returns a wrapper around a StepRunner that
-// implements TaskLevelOutputStepRunner.
-func NewTaskLevelOutputStepRunner(runner StepRunner) TaskLevelOutputStepRunner {
-	return &taskLevelOutputStepRunner{
-		runner: runner,
-	}
-}
-
-// taskLevelOutputStepRunner is a wrapper around a StepRunner that implements
-// TaskLevelOutputStepRunner.
-type taskLevelOutputStepRunner struct {
-	runner StepRunner
-}
-
-// Name implements StepRunner.
-func (r *taskLevelOutputStepRunner) Name() string {
-	return r.runner.Name()
-}
-
-// Run implements StepRunner.
-func (r *taskLevelOutputStepRunner) Run(
-	ctx context.Context,
-	stepCtx *StepContext,
-) (StepResult, error) {
-	return r.runner.Run(ctx, stepCtx)
-}
-
-// TaskLevelOutput implements TaskLevelOutputStepRunner.
-func (r *taskLevelOutputStepRunner) TaskLevelOutput() bool {
-	return true
 }
 
 // StepContext is a type that represents the context in which a

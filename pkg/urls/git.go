@@ -1,4 +1,4 @@
-package git
+package urls
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
 
-// NormalizeURL normalizes Git URLs of the following forms:
+// NormalizeGit normalizes Git URLs of the following forms:
 //
 //   - http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 //   - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
@@ -18,7 +18,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // This is useful for the purposes of comparison and also in cases where a
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
-func NormalizeURL(repo string) string {
+func NormalizeGit(repo string) string {
 	origRepo := repo
 	repo = strings.ToLower(repo)
 

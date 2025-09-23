@@ -11,8 +11,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
@@ -23,6 +24,22 @@ import (
 	_ "github.com/akuity/kargo/internal/gitprovider/gitlab"    // GitLab provider registration
 )
 
+const stepKindGitOpenPR = "git-open-pr"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitOpenPR,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newGitPROpener,
+		},
+	)
+}
+
 // gitPROpener is an implementation of the promotion.StepRunner interface that
 // opens a pull request.
 type gitPROpener struct {
@@ -32,17 +49,11 @@ type gitPROpener struct {
 
 // newGitPROpener returns an implementation of the promotion.StepRunner interface
 // that opens a pull request.
-func newGitPROpener(credsDB credentials.Database) promotion.StepRunner {
-	r := &gitPROpener{
-		credsDB: credsDB,
+func newGitPROpener(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitPROpener{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindGitOpenPR),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitPROpener) Name() string {
-	return "git-open-pr"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -62,7 +73,7 @@ func (g *gitPROpener) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.GitOpenPRConfig struct.
 func (g *gitPROpener) convert(cfg promotion.Config) (builtin.GitOpenPRConfig, error) {
-	return validateAndConvert[builtin.GitOpenPRConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitOpenPRConfig](g.schemaLoader, cfg, stepKindGitOpenPR)
 }
 
 func (g *gitPROpener) run(

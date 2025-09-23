@@ -10,9 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -140,7 +140,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 		}
 
 		// Normalize the repo name
-		repoURLs := []string{git.NormalizeURL(payload.Repo.URL)}
+		repoURLs := []string{urls.NormalizeGit(payload.Repo.URL)}
 
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,

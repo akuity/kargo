@@ -1,4 +1,4 @@
-package helm
+package urls
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestNormalizeChartRepositoryURL(t *testing.T) {
+func TestNormalizeChart(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    string
@@ -82,7 +82,7 @@ func TestNormalizeChartRepositoryURL(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := NormalizeChartRepositoryURL(tc.input)
+			actual := NormalizeChart(tc.input)
 			assert.Equal(t, tc.expected, actual)
 		})
 	}

@@ -10,8 +10,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -78,7 +78,7 @@ func Test_gitPRWaiter_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter(nil)
+	r := newGitPRWaiter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 
@@ -163,7 +163,9 @@ func Test_gitPRWaiter_run(t *testing.T) {
 		},
 	}
 
-	r := newGitPRWaiter(&credentials.FakeDB{})
+	r := newGitPRWaiter(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
 	runner, ok := r.(*gitPRWaiter)
 	require.True(t, ok)
 

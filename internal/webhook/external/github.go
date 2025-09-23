@@ -10,9 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -214,7 +214,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			// https://. By refreshing Warehouses using a normalized representation of
 			// that URL, we will miss any Warehouses that are subscribed to the same
 			// repository using a different URL format.
-			repoURLs = []string{git.NormalizeURL(e.GetRepo().GetCloneURL())}
+			repoURLs = []string{urls.NormalizeGit(e.GetRepo().GetCloneURL())}
 			ref := e.GetRef()
 			qualifiers = []string{ref}
 			logger = logger.WithValues("ref", ref)

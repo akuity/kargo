@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/image"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 )
 

@@ -13,20 +13,39 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-// stateKeyBranch is the key used to store the branch that was pushed to in the
-// shared State.
-const stateKeyBranch = "branch"
+const (
+	stepKindGitPush = "git-push"
 
-// stateKeyCommitURL is the key used to store the URL of the commit that was
-// pushed to in the shared State.
-const stateKeyCommitURL = "commitURL"
+	// stateKeyBranch is the key used to store the branch that was pushed to in
+	// the shared State.
+	stateKeyBranch = "branch"
+
+	// stateKeyCommitURL is the key used to store the URL of the commit that was
+	// pushed to in the shared State.
+	stateKeyCommitURL = "commitURL"
+)
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitPush,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newGitPusher,
+		},
+	)
+}
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
 // pushes commits from a local Git repository to a remote Git repository.
@@ -39,18 +58,12 @@ type gitPushPusher struct {
 
 // newGitPusher returns an implementation of the promotion.StepRunner interface
 // that pushes commits from a local Git repository to a remote Git repository.
-func newGitPusher(credsDB credentials.Database) promotion.StepRunner {
-	r := &gitPushPusher{
-		credsDB:   credsDB,
-		branchMus: map[string]*sync.Mutex{},
+func newGitPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitPushPusher{
+		credsDB:      caps.CredsDB,
+		branchMus:    map[string]*sync.Mutex{},
+		schemaLoader: getConfigSchemaLoader(stepKindGitPush),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitPushPusher) Name() string {
-	return "git-push"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -69,7 +82,7 @@ func (g *gitPushPusher) Run(
 
 // validate validates gitPusher configuration against a JSON schema.
 func (g *gitPushPusher) convert(cfg promotion.Config) (builtin.GitPushConfig, error) {
-	return validateAndConvert[builtin.GitPushConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitPushConfig](g.schemaLoader, cfg, stepKindGitPush)
 }
 
 func (g *gitPushPusher) run(

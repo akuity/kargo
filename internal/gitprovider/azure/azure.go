@@ -11,8 +11,8 @@ import (
 	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"k8s.io/utils/ptr"
 
-	"github.com/akuity/kargo/internal/git"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const ProviderName = "azure"
@@ -183,7 +183,7 @@ func (p *provider) ListPullRequests(
 
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
-	normalizedURL := git.NormalizeURL(repoURL)
+	normalizedURL := urls.NormalizeGit(repoURL)
 
 	parsedURL, err := url.Parse(normalizedURL)
 	if err != nil {
@@ -226,7 +226,7 @@ func convertADOPullRequest(pr *adogit.GitPullRequest) (*gitprovider.PullRequest,
 }
 
 func parseRepoURL(repoURL string) (string, string, string, error) {
-	u, err := url.Parse(git.NormalizeURL(repoURL))
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
 		return "", "", "", fmt.Errorf("error parsing Azure DevOps repository URL %q: %w", repoURL, err)
 	}

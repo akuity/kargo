@@ -4,31 +4,55 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
-// stepRunnerRegistry is a registry of StepRunners.
-type stepRunnerRegistry map[string]promotion.StepRunner
+// stepRunnerRegistry is a map of promotion.StepRunnerRegistrations indexed by
+// promotion step kind.
+type stepRunnerRegistry map[string]promotion.StepRunnerRegistration
 
-// register adds a StepRunner to the stepRunnerRegistry.
-func (s stepRunnerRegistry) register(runner promotion.StepRunner) {
-	s[runner.Name()] = runner
+// register adds a promotion.StepRunnerRegistration to the stepRunnerRegistry.
+func (s stepRunnerRegistry) register(
+	stepKind string,
+	registration promotion.StepRunnerRegistration,
+) {
+	if stepKind == "" {
+		panic("step kind must be specified")
+	}
+	if registration.Factory == nil {
+		panic("step registration must specify a factory function")
+	}
+	if registration.Metadata.DefaultErrorThreshold <= 0 {
+		registration.Metadata.DefaultErrorThreshold = uint32(1)
+	}
+	s[stepKind] = registration
 }
 
-// getStepRunner returns the StepRunner for the promotion step with the given
-// name. If no StepRunner is registered with the given name, nil is returned
-// instead.
-func (s stepRunnerRegistry) getStepRunner(name string) promotion.StepRunner {
-	return s[name]
+// getStepRunner returns the promotion.StepRunnerRegistration for the specified
+// promotion step kind. If no such registration exists, nil is returned instead.
+func (s stepRunnerRegistry) getStepRunnerRegistration(
+	stepKind string,
+) *promotion.StepRunnerRegistration {
+	if registration, exists := s[stepKind]; exists {
+		return &registration
+	}
+	return nil
 }
 
-// stepRunnerReg is a registry of StepRunners.
+// stepRunnerReg is this package's internal stepRunnerRegistry.
 var stepRunnerReg = stepRunnerRegistry{}
 
-// RegisterStepRunner adds a StepRunner to the package's internal registry.
-func RegisterStepRunner(runner promotion.StepRunner) {
-	stepRunnerReg.register(runner)
+// RegisterStepRunner adds a StepRunnerRegistration to the package's internal
+// registry.
+func RegisterStepRunner(
+	stepKind string,
+	registration promotion.StepRunnerRegistration,
+) {
+	stepRunnerReg.register(stepKind, registration)
 }
 
-// GetStepRunner returns a StepRunner from the package's internal registry. If
-// no StepRunner is registered with the given name, nil is returned instead.
-func GetStepRunner(name string) promotion.StepRunner {
-	return stepRunnerReg.getStepRunner(name)
+// GetStepRunnerRegistration returns the StepRunnerRegistration for the
+// specified promotion step kind from the package's internal registry. If no
+// such registration exists, nil is returned instead.
+func GetStepRunnerRegistration(
+	stepKind string,
+) *promotion.StepRunnerRegistration {
+	return stepRunnerReg.getStepRunnerRegistration(stepKind)
 }

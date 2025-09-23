@@ -21,8 +21,8 @@ import (
 	"helm.sh/helm/v3/pkg/repo"
 	"sigs.k8s.io/yaml"
 
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/io/fs"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestNewEphemeralDependencyManager(t *testing.T) {

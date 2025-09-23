@@ -13,13 +13,11 @@ import (
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
-	"github.com/akuity/kargo/internal/helm"
-	"github.com/akuity/kargo/internal/image"
 	"github.com/akuity/kargo/internal/promotion"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	"github.com/akuity/kargo/pkg/expressions"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -514,16 +512,16 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 	var repoURLs []string
 	for _, sub := range warehouse.Spec.Subscriptions {
 		if sub.Git != nil && sub.Git.RepoURL != "" {
-			repoURLs = append(repoURLs, git.NormalizeURL(sub.Git.RepoURL))
+			repoURLs = append(repoURLs, urls.NormalizeGit(sub.Git.RepoURL))
 		}
 		if sub.Chart != nil && sub.Chart.RepoURL != "" {
 			repoURLs = append(
 				repoURLs,
-				helm.NormalizeChartRepositoryURL(sub.Chart.RepoURL),
+				urls.NormalizeChart(sub.Chart.RepoURL),
 			)
 		}
 		if sub.Image != nil && sub.Image.RepoURL != "" {
-			repoURLs = append(repoURLs, image.NormalizeURL(sub.Image.RepoURL))
+			repoURLs = append(repoURLs, urls.NormalizeImage(sub.Image.RepoURL))
 		}
 	}
 	return repoURLs

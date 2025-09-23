@@ -11,10 +11,27 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindGitClone = "git-clone"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindGitClone,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newGitCloner,
+		},
+	)
+}
 
 // gitCloner is an implementation of the promotion.StepRunner interface that
 // clones one or more refs from a remote Git repository to one or more working
@@ -45,18 +62,12 @@ func gitUserFromEnv() git.User {
 // newGitCloner returns an implementation of the promotion.StepRunner interface
 // that clones one or more refs from a remote Git repository to one or more
 // working directories.
-func newGitCloner(credsDB credentials.Database) promotion.StepRunner {
-	r := &gitCloner{
-		credsDB: credsDB,
-		gitUser: gitUserFromEnv(),
+func newGitCloner(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitCloner{
+		credsDB:      caps.CredsDB,
+		gitUser:      gitUserFromEnv(),
+		schemaLoader: getConfigSchemaLoader(stepKindGitClone),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitCloner) Name() string {
-	return "git-clone"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -74,7 +85,7 @@ func (g *gitCloner) Run(
 }
 
 func (g *gitCloner) convert(cfg promotion.Config) (builtin.GitCloneConfig, error) {
-	typedCfg, err := validateAndConvert[builtin.GitCloneConfig](g.schemaLoader, cfg, g.Name())
+	typedCfg, err := validateAndConvert[builtin.GitCloneConfig](g.schemaLoader, cfg, stepKindGitClone)
 	if err != nil {
 		return builtin.GitCloneConfig{}, err
 	}

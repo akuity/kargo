@@ -3,7 +3,7 @@ package basic
 import (
 	"context"
 
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 const (

@@ -161,7 +161,7 @@ vendor/`,
 		},
 	}
 
-	r := newTarExtractor()
+	r := newTarExtractor(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*tarExtractor)
 	require.True(t, ok)
 

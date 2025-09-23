@@ -156,7 +156,7 @@ func Test_gitCommitter_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitCommitter()
+	r := newGitCommitter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 
@@ -213,7 +213,7 @@ func Test_gitCommitter_run(t *testing.T) {
 
 	// Now we can proceed to test gitCommitter...
 
-	r := newGitCommitter()
+	r := newGitCommitter(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitCommitter)
 	require.True(t, ok)
 

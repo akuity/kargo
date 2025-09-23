@@ -10,9 +10,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/git"
 	xhttp "github.com/akuity/kargo/internal/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -244,7 +244,7 @@ type bitbucketRefsChangedEventBody struct {
 func (b bitbucketRefsChangedEventBody) getRepoURLs() []string {
 	repoURLs := []string{}
 	for _, link := range b.Repository.Links.Clone {
-		repoURLs = append(repoURLs, git.NormalizeURL(link.Href))
+		repoURLs = append(repoURLs, urls.NormalizeGit(link.Href))
 	}
 	return repoURLs
 }

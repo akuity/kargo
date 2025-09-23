@@ -7,9 +7,26 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindComposeOutput = "compose-output"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindComposeOutput,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityTaskOutputPropagation,
+				},
+			},
+			Factory: newOutputComposer,
+		},
+	)
+}
 
 // outputComposer is an implementation of the promotion.StepRunner interface
 // that allows composing outputs from previous steps into new outputs.
@@ -38,39 +55,34 @@ type outputComposer struct {
 
 // newOutputComposer returns an implementation of the promotion.StepRunner
 // interface that composes output from previous steps into new output.
-func newOutputComposer() pkgPromotion.StepRunner {
-	r := &outputComposer{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (c *outputComposer) Name() string {
-	return "compose-output"
+func newOutputComposer(_ promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &outputComposer{
+		schemaLoader: getConfigSchemaLoader(stepKindComposeOutput),
+	}
 }
 
 // Run implements the promotion.StepRunner interface.
 func (c *outputComposer) Run(
 	_ context.Context,
-	stepCtx *pkgPromotion.StepContext,
-) (pkgPromotion.StepResult, error) {
+	stepCtx *promotion.StepContext,
+) (promotion.StepResult, error) {
 	cfg, err := c.convert(stepCtx.Config)
 	if err != nil {
-		return pkgPromotion.StepResult{
+		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusFailed,
-		}, &pkgPromotion.TerminalError{Err: err}
+		}, &promotion.TerminalError{Err: err}
 	}
 	return c.run(cfg)
 }
 
-func (c *outputComposer) convert(cfg pkgPromotion.Config) (builtin.ComposeOutput, error) {
-	return validateAndConvert[builtin.ComposeOutput](c.schemaLoader, cfg, c.Name())
+func (c *outputComposer) convert(cfg promotion.Config) (builtin.ComposeOutput, error) {
+	return validateAndConvert[builtin.ComposeOutput](c.schemaLoader, cfg, stepKindComposeOutput)
 }
 
 func (c *outputComposer) run(
 	cfg builtin.ComposeOutput,
-) (pkgPromotion.StepResult, error) {
-	return pkgPromotion.StepResult{
+) (promotion.StepResult, error) {
+	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: maps.Clone(cfg),
 	}, nil

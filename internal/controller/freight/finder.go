@@ -9,7 +9,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/api"
-	libGit "github.com/akuity/kargo/internal/git"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 type NotFoundError struct {
@@ -29,7 +29,7 @@ func FindCommit(
 	freight []kargoapi.FreightReference,
 	repoURL string,
 ) (*kargoapi.GitCommit, error) {
-	repoURL = libGit.NormalizeURL(repoURL)
+	repoURL = urls.NormalizeGit(repoURL)
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the commit we're looking
 	// for, great. If there's more than one, there's ambiguity and we need to
@@ -59,7 +59,7 @@ func FindCommit(
 				)
 			}
 			for _, sub := range warehouse.Spec.Subscriptions {
-				if sub.Git != nil && libGit.NormalizeURL(sub.Git.RepoURL) == repoURL {
+				if sub.Git != nil && urls.NormalizeGit(sub.Git.RepoURL) == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
 							"multiple requested Freight could potentially provide a "+
@@ -82,7 +82,7 @@ func FindCommit(
 		if f.Origin.Equals(desiredOrigin) {
 			for j := range f.Commits {
 				c := &f.Commits[j]
-				if libGit.NormalizeURL(c.RepoURL) == repoURL {
+				if urls.NormalizeGit(c.RepoURL) == repoURL {
 					return c, nil
 				}
 			}

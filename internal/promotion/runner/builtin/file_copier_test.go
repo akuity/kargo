@@ -112,7 +112,7 @@ dist/
 		},
 	}
 
-	r := newFileCopier()
+	r := newFileCopier(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*fileCopier)
 	require.True(t, ok)
 

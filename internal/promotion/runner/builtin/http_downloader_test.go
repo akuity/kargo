@@ -184,7 +184,7 @@ func Test_httpDownloader_validate(t *testing.T) {
 		},
 	}
 
-	r := newHTTPDownloader()
+	r := newHTTPDownloader(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*httpDownloader)
 	require.True(t, ok)
 

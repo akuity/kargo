@@ -25,11 +25,28 @@ import (
 	libyaml "sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/helm"
+	intpromo "github.com/akuity/kargo/internal/promotion"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+const stepKindHelmTemplate = "helm-template"
+
+func init() {
+	intpromo.RegisterStepRunner(
+		stepKindHelmTemplate,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newHelmTemplateRunner,
+		},
+	)
+}
 
 // outLayoutIsFlat returns true if the output layout is "flat".
 func outLayoutIsFlat(cfg builtin.HelmTemplateConfig) bool {
@@ -63,17 +80,11 @@ type helmTemplateRunner struct {
 
 // newHelmTemplateRunner returns an implementation of the promotion.StepRunner
 // interface that renders a Helm chart.
-func newHelmTemplateRunner(credsDB credentials.Database) promotion.StepRunner {
-	r := &helmTemplateRunner{
-		credsDB: credsDB,
+func newHelmTemplateRunner(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &helmTemplateRunner{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindHelmTemplate),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (h *helmTemplateRunner) Name() string {
-	return "helm-template"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -91,7 +102,7 @@ func (h *helmTemplateRunner) Run(
 }
 
 func (h *helmTemplateRunner) convert(cfg promotion.Config) (builtin.HelmTemplateConfig, error) {
-	return validateAndConvert[builtin.HelmTemplateConfig](h.schemaLoader, cfg, h.Name())
+	return validateAndConvert[builtin.HelmTemplateConfig](h.schemaLoader, cfg, stepKindHelmTemplate)
 }
 
 func (h *helmTemplateRunner) run(

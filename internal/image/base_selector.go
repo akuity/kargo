@@ -6,6 +6,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 // baseSelector is a base implementation of Selector that provides common
@@ -30,7 +31,7 @@ func newBaseSelector(
 			)
 		}
 	}
-	repoURL := NormalizeURL(sub.RepoURL)
+	repoURL := urls.NormalizeImage(sub.RepoURL)
 	if s.repoClient, err = newRepositoryClient(
 		repoURL,
 		sub.InsecureSkipTLSVerify,

@@ -15,8 +15,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
 	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -128,7 +128,7 @@ func Test_gitPusher_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitPusher(nil)
+	r := newGitPusher(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 
@@ -216,7 +216,9 @@ func Test_gitPusher_run(t *testing.T) {
 
 	// Now we can proceed to test gitPusher...
 
-	r := newGitPusher(&credentials.FakeDB{})
+	r := newGitPusher(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 	require.NotNil(t, runner.branchMus)

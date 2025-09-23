@@ -15,7 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -272,7 +272,7 @@ func Test_helmTemplateRunner_convert(t *testing.T) {
 		},
 	}
 
-	r := newHelmTemplateRunner(nil)
+	r := newHelmTemplateRunner(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*helmTemplateRunner)
 	require.True(t, ok)
 
@@ -672,7 +672,9 @@ metadata:
 		},
 	}
 
-	r := newHelmTemplateRunner(&credentials.FakeDB{})
+	r := newHelmTemplateRunner(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
 	runner, ok := r.(*helmTemplateRunner)
 
 	require.True(t, ok)
