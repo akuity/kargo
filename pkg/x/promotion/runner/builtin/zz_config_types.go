@@ -114,6 +114,8 @@ type GitCloneConfig struct {
 	Checkout []Checkout `json:"checkout"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// Indicates whether to recursively clone submodules. Default is false.
+	RecurseSubmodules bool `json:"recurseSubmodules,omitempty"`
 	// The URL of a remote Git repository to clone. Required.
 	RepoURL string `json:"repoURL"`
 }
