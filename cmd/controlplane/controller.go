@@ -422,7 +422,7 @@ func (o *controllerOptions) setupReconcilers(
 		argocdMgr,
 		promotion.NewSimpleEngine(
 			kargoMgr.GetClient(),
-			argocdMgr.GetClient(),
+			argoCDClient,
 			credentialsDB,
 			promotion.DefaultExprDataCacheFn,
 		),
