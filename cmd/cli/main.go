@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/akuity/kargo/internal/cli/config"
+	"github.com/akuity/kargo/pkg/cli/config"
 )
 
 func main() {

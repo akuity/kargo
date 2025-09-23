@@ -12,12 +12,12 @@ import (
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
-	"github.com/akuity/kargo/internal/webhook/external"
+	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
+	"github.com/akuity/kargo/pkg/webhook/external"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
