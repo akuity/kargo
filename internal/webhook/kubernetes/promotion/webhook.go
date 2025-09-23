@@ -191,14 +191,6 @@ func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 			promo.Namespace,
 		)
 	}
-	if len(promo.Spec.Steps) == 0 {
-		// nolint:staticcheck
-		return fmt.Errorf(
-			"Stage %q in namespace %q defines no promotion steps",
-			promo.Spec.Stage,
-			promo.Namespace,
-		)
-	}
 
 	// Make sure the Promotion has the same shard as the Stage
 	if stage.Spec.Shard != "" {
@@ -254,6 +246,20 @@ func (w *webhook) ValidateCreate(
 	})
 	if err != nil {
 		return nil, apierrors.NewInternalError(fmt.Errorf("get stage: %w", err))
+	}
+
+	if pt := stage.Spec.PromotionTemplate; pt == nil || len(pt.Spec.Steps) == 0 {
+		return nil, apierrors.NewInvalid(
+			promotionGroupKind,
+			promo.Name,
+			field.ErrorList{
+				field.Invalid(
+					field.NewPath("spec", "stage"),
+					promo.Spec.Stage,
+					"Stage has no promotion steps defined",
+				),
+			},
+		)
 	}
 
 	freight, err := w.getFreightFn(ctx, w.client, types.NamespacedName{

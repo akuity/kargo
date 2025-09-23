@@ -107,31 +107,6 @@ func Test_webhook_Default(t *testing.T) {
 			},
 		},
 		{
-			name: "stage without promotion steps",
-			webhook: &webhook{
-				admissionRequestFromContextFn: admission.RequestFromContext,
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
-				},
-				isRequestFromKargoControlplaneFn: func(admission.Request) bool {
-					return false
-				},
-			},
-			req: admission.Request{
-				AdmissionRequest: admissionv1.AdmissionRequest{
-					Operation: admissionv1.Create,
-				},
-			},
-			promotion: &kargoapi.Promotion{},
-			assertions: func(t *testing.T, _ *kargoapi.Promotion, err error) {
-				require.ErrorContains(t, err, "defines no promotion steps")
-			},
-		},
-		{
 			name: "success with PromotionTemplate",
 			webhook: &webhook{
 				admissionRequestFromContextFn: admission.RequestFromContext,
@@ -725,6 +700,41 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			},
 		},
 		{
+			name: "stage with no promotion steps defined",
+			webhook: &webhook{
+				validateProjectFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				authorizeFn: func(context.Context, *kargoapi.Promotion, string) error {
+					return nil
+				},
+				admissionRequestFromContextFn: admission.RequestFromContext,
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{},
+					}, nil
+				},
+			},
+			assertions: func(t *testing.T, _ *fakeevent.EventRecorder, err error) {
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+				require.Equal(
+					t,
+					metav1.StatusReasonInvalid,
+					statusErr.ErrStatus.Reason,
+				)
+				require.Contains(t, statusErr.ErrStatus.Message, "Stage has no promotion steps defined")
+			},
+		},
+		{
 			name: "error getting Freight",
 			webhook: &webhook{
 				validateProjectFn: func(
@@ -743,7 +753,15 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-action"}},
+								},
+							},
+						},
+					}, nil
 				},
 				getFreightFn: func(
 					context.Context,
@@ -783,7 +801,15 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					client.Client,
 					types.NamespacedName,
 				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{}, nil
+					return &kargoapi.Stage{
+						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-action"}},
+								},
+							},
+						},
+					}, nil
 				},
 				getFreightFn: func(
 					context.Context,
@@ -825,6 +851,11 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-action"}},
+								},
+							},
 							RequestedFreight: []kargoapi.FreightRequest{{
 								Origin: kargoapi.FreightOrigin{
 									Kind: kargoapi.FreightOriginKindWarehouse,
@@ -881,6 +912,11 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				) (*kargoapi.Stage, error) {
 					return &kargoapi.Stage{
 						Spec: kargoapi.StageSpec{
+							PromotionTemplate: &kargoapi.PromotionTemplate{
+								Spec: kargoapi.PromotionTemplateSpec{
+									Steps: []kargoapi.PromotionStep{{Uses: "fake-action"}},
+								},
+							},
 							RequestedFreight: []kargoapi.FreightRequest{{
 								Origin: kargoapi.FreightOrigin{
 									Kind: kargoapi.FreightOriginKindWarehouse,
