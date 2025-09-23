@@ -458,7 +458,13 @@ func (r *RegularStageReconciler) reconcile(
 					//     the Stage's conditions to reflect that we're still trying to
 					//     reconcile, with subsequent attempts observing a progressive
 					//     backoff. This can be accomplished by returning an error.
-					if lastPromo := status.LastPromotion; lastPromo == nil ||
+					lastPromo := status.LastPromotion
+					if lastPromo != nil && lastPromo.Status != nil && len(lastPromo.Status.HealthChecks) == 0 {
+						// if there are no health checks, then we cannot assess health.
+						return status, nil
+					}
+
+					if lastPromo == nil ||
 						lastPromo.Status == nil ||
 						!lastPromo.Status.Phase.IsTerminal() ||
 						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
