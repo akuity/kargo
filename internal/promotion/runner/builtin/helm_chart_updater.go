@@ -21,7 +21,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindHelmUpdateChart,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},

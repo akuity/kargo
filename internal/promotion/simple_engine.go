@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 
 	gocache "github.com/patrickmn/go-cache"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -167,7 +168,7 @@ func (e *simpleEngine) executeSteps(
 		result, err := e.executeStep(ctx, exprDataCache, promoCtx, step, runner, workDir)
 
 		// Propagate the output of the step to the state.
-		e.propagateStepOutput(promoCtx, step, runner, result)
+		e.propagateStepOutput(promoCtx, step, *registration, result)
 
 		// Confirm that the step has a valid status.
 		if !isValidStepStatus(result.Status) {
@@ -181,7 +182,7 @@ func (e *simpleEngine) executeSteps(
 		err = e.reconcileResultWithMetadata(stepExecMeta, step, result, err)
 
 		// Determine what to do based on the result.
-		if !e.determineStepCompletion(step, *registration.Metadata, stepExecMeta, err) {
+		if !e.determineStepCompletion(step, registration.Metadata, stepExecMeta, err) {
 			// The step is still running, so we need to wait
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
@@ -274,7 +275,7 @@ func (e *simpleEngine) shouldSkipStep(
 func (e *simpleEngine) propagateStepOutput(
 	promoCtx Context,
 	step Step,
-	runner promotion.StepRunner,
+	stepReg promotion.StepRunnerRegistration,
 	result promotion.StepResult,
 ) {
 	// Update the state with the output of the step.
@@ -282,7 +283,10 @@ func (e *simpleEngine) propagateStepOutput(
 
 	// If the step instructs that the output should be propagated to the
 	// task namespace, do so.
-	if p, ok := runner.(promotion.TaskLevelOutputStepRunner); ok && p.TaskLevelOutput() {
+	if slices.Contains(
+		stepReg.Metadata.RequiredCapabilities,
+		promotion.StepCapabilityTaskOutputPropagation,
+	) {
 		if aliasNamespace := getAliasNamespace(step.Alias); aliasNamespace != "" {
 			if promoCtx.State[aliasNamespace] == nil {
 				promoCtx.State[aliasNamespace] = make(map[string]any)
@@ -375,7 +379,7 @@ func (e *simpleEngine) determineStepCompletion(
 	// threshold. Now we need to check if the timeout has elapsed. A nil timeout
 	// or any non-positive timeout interval are treated as NO timeout, although
 	// a nil timeout really shouldn't happen.
-	timeout := step.Retry.GetTimeout(*runnerMeta.DefaultTimeout)
+	timeout := step.Retry.GetTimeout(runnerMeta.DefaultTimeout)
 	if timeout > 0 && metav1.Now().Sub(execMeta.StartedAt.Time) > timeout {
 		// Timeout has elapsed.
 		execMeta.FinishedAt = ptr.To(metav1.Now())

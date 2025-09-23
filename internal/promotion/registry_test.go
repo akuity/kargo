@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/pkg/promotion"
 )
@@ -13,8 +12,8 @@ import (
 func TestStepRunnerRegistry_Register(t *testing.T) {
 	const testStepKind = "fake-step"
 	testRegistration := promotion.StepRunnerRegistration{
-		Metadata: &promotion.StepRunnerMetadata{
-			DefaultTimeout:        ptr.To(time.Duration(0)),
+		Metadata: promotion.StepRunnerMetadata{
+			DefaultTimeout:        time.Duration(0),
 			DefaultErrorThreshold: uint32(1),
 		},
 		Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner { return nil },
@@ -47,7 +46,8 @@ func TestStepRunnerRegistry_Register(t *testing.T) {
 			name:     "defaults are applied",
 			stepKind: testStepKind,
 			registration: promotion.StepRunnerRegistration{
-				Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner { return nil },
+				Metadata: promotion.StepRunnerMetadata{},
+				Factory:  func(promotion.StepRunnerCapabilities) promotion.StepRunner { return nil },
 			},
 			expectedRegistration: testRegistration,
 		},
@@ -74,8 +74,8 @@ func TestStepRunnerRegistry_Register(t *testing.T) {
 func TestStepRunnerRegistry_GetStepRunnerRegistration(t *testing.T) {
 	const testStepKind = "fake-step"
 	testRegistration := promotion.StepRunnerRegistration{
-		Metadata: &promotion.StepRunnerMetadata{
-			DefaultTimeout:        ptr.To(5 * time.Minute),
+		Metadata: promotion.StepRunnerMetadata{
+			DefaultTimeout:        5 * time.Minute,
 			DefaultErrorThreshold: uint32(3),
 			RequiredCapabilities: []promotion.StepRunnerCapability{
 				promotion.StepCapabilityAccessCredentials,

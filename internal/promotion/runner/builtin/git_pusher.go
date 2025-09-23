@@ -37,7 +37,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindGitPush,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},

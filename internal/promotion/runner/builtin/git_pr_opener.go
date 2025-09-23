@@ -30,7 +30,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindGitOpenPR,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},

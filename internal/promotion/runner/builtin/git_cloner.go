@@ -23,7 +23,7 @@ func init() {
 	intpromo.RegisterStepRunner(
 		stepKindGitClone,
 		promotion.StepRunnerRegistration{
-			Metadata: &promotion.StepRunnerMetadata{
+			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
