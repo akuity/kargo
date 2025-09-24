@@ -1039,6 +1039,7 @@ Stability is not guaranteed.
 | page_size | [int32](#int32) |  page_size specifies the maximum number of projects to return per page. |
 | page | [int32](#int32) |  page specifies which page of results to return. |
 | filter | [string](#string) |  filter specifies an optional filter expression for projects. |
+| uid | [string](#string) |  ui store starred projects uids, so it needs to filter it when looking at starred projects |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsResponse"></a>
 

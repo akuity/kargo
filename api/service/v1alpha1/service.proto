@@ -685,6 +685,8 @@ message ListProjectsRequest {
   optional int32 page = 2;
   // filter specifies an optional filter expression for projects.
   optional string filter = 3;
+  // ui store starred projects uids, so it needs to filter it when looking at starred projects
+  repeated string uid = 4;
 }
 
 // ListProjectsResponse contains the list of projects and pagination information.

@@ -27,10 +27,13 @@ export const ProjectsList = () => {
     false
   );
 
+  const [starred, toggleStar] = useStarProjects();
+
   const { data, isLoading } = useQuery(listProjects, {
     pageSize: pageSize,
     page: page - 1,
-    filter
+    filter,
+    uid: starredProjectsView ? starred : []
   });
 
   useEffect(() => {
@@ -48,8 +51,6 @@ export const ProjectsList = () => {
     setFilter(newFilter);
     setPage(1);
   };
-
-  const [starred, toggleStar] = useStarProjects();
 
   if (isLoading) return <LoadingState />;
 
