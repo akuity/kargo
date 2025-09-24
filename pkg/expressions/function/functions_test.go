@@ -876,12 +876,12 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
-						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+						RepoURL:  "oci://ghcr.io/other/chart-repo",
 						Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
 					},
 					{
 						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
-						Versions: []string{"v2.1.0", "v2.2.0", "v2.3.0"},
+						Versions: []string{"v2.3.0", "v2.2.0", "v2.1.0"},
 					},
 				},
 			},
@@ -891,7 +891,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 				require.NotNil(t, result)
 				commit, ok := result.(*kargoapi.Chart)
 				require.True(t, ok)
-				require.Equal(t, "2.3.0", commit.Version)
+				require.Equal(t, "v2.3.0", commit.Version)
 			},
 		},
 		{

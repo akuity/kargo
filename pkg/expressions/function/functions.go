@@ -711,34 +711,13 @@ func getImageFromDiscoveredArtifacts(
 				"index", i,
 				"numImageRefs", len(ia.References),
 			)
-			for _, ref := range ia.References {
-				if latestImg == nil {
-					latestImg = &kargoapi.Image{
-						RepoURL:     iaRepoURL,
-						Tag:         ref.Tag,
-						Digest:      ref.Digest,
-						Annotations: maps.Clone(ref.Annotations),
-					}
-					continue
-				}
-				sv, err := semver.NewVersion(latestImg.Tag)
-				if err != nil {
-					logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
-					continue
-				}
-				latestSemver, err := semver.NewVersion(latestImg.Tag)
-				if err != nil {
-					logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
-					continue
-				}
-				if sv.GreaterThan(latestSemver) {
-					latestImg = &kargoapi.Image{
-						RepoURL:     iaRepoURL,
-						Tag:         ref.Tag,
-						Digest:      ref.Digest,
-						Annotations: maps.Clone(ref.Annotations),
-					}
-				}
+			// these will already be sorted upstream by discovery.
+			ref := ia.References[0]
+			latestImg = &kargoapi.Image{
+				RepoURL:     iaRepoURL,
+				Tag:         ref.Tag,
+				Digest:      ref.Digest,
+				Annotations: maps.Clone(ref.Annotations),
 			}
 		}
 		if latestImg == nil {
@@ -829,43 +808,17 @@ func getChartFromDiscoveredArtifacts(
 			return nil, errors.New("nil artifacts")
 		}
 
-		logger := logging.LoggerFromContext(ctx).WithValues(
-			"repoURL", repoURL,
-			"warehouse", wh.Name,
-		)
-
 		var latestChart *kargoapi.Chart
 		for _, ca := range artifacts.Charts {
 			caRepoURL := urls.NormalizeChart(ca.RepoURL)
 			if caRepoURL != repoURL {
 				continue
 			}
-			for _, v := range ca.Versions {
-				sv, err := semver.NewVersion(v)
-				if err != nil {
-					logger.Error(err, "ignoring invalid semver version", "version", v)
-					continue
-				}
-				if latestChart == nil {
-					latestChart = &kargoapi.Chart{
-						RepoURL: repoURL,
-						Name:    caRepoURL,
-						Version: sv.String(),
-					}
-					continue
-				}
-				latestSemver, err := semver.NewVersion(latestChart.Version)
-				if err != nil {
-					logger.Error(err, "ignoring invalid semver version", "version", latestChart.Version)
-					continue
-				}
-				if sv.GreaterThan(latestSemver) {
-					latestChart = &kargoapi.Chart{
-						RepoURL: caRepoURL,
-						Name:    ca.Name,
-						Version: sv.String(),
-					}
-				}
+			v := ca.Versions[0]
+			latestChart = &kargoapi.Chart{
+				RepoURL: repoURL,
+				Name:    ca.Name,
+				Version: v,
 			}
 		}
 		if latestChart == nil {
