@@ -139,8 +139,10 @@ func CommitFromFreight(
 	)
 }
 
-// CommitFromDiscoveredArtifacts returns an expr.Option that provides a `commitFrom()` function
-// for use in expressions.
+// CommitFromDiscoveredArtifacts returns an expr.Option that provides a
+// `commitFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
 //
 // The commitFrom function finds the latest Git commit based on repository URL.
 func CommitFromDiscoveredArtifacts(
