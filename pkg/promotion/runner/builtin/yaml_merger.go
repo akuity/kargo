@@ -16,11 +16,11 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-const stepKindYAMLMerger = "yaml-merge"
+const stepKindYAMLMerge = "yaml-merge"
 
 func init() {
 	promotion.RegisterStepRunner(
-		stepKindYAMLMerger,
+		stepKindYAMLMerge,
 		promotion.StepRunnerRegistration{Factory: newYAMLMerger},
 	)
 }
@@ -33,10 +33,8 @@ type yamlMerger struct {
 
 // newYAMLMerger returns an implementation of the promotion.StepRunner interface
 // that merges multiple YAML files.
-func newYAMLMerger() promotion.StepRunner {
-	r := &yamlMerger{}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
+func newYAMLMerger(promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &yamlMerger{schemaLoader: getConfigSchemaLoader(stepKindYAMLMerge)}
 }
 
 // Name implements the promotion.StepRunner interface.
