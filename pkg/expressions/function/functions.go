@@ -219,8 +219,10 @@ func ChartFromFreight(
 	)
 }
 
-// ChartFromDiscoveredArtifacts returns an expr.Option that provides a `chartFrom()` function for
-// use in expressions.
+// ChartFromDiscoveredArtifacts returns an expr.Option that provides a
+// `chartFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
 //
 // The chartFrom function finds the latest Helm charts based on repository URL.
 func ChartFromDiscoveredArtifacts(
