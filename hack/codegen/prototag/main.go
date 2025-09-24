@@ -16,7 +16,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/akuity/kargo/internal/proto/codegen"
+	"github.com/akuity/kargo/pkg/proto/codegen"
 )
 
 func extractTags(pkgDir string) codegen.TagMap {

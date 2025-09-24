@@ -11,7 +11,7 @@ quicktype \
   --src-lang schema --alphabetize-properties \
   --lang go --just-types-and-package --package builtin --omit-empty \
   -o ${out_file} \
-  internal/promotion/runner/builtin/schemas/*.json
+  pkg/promotion/runner/builtin/schemas/*.json
 
 printf "${generated_code_warning}$(cat ${out_file})" > ${out_file}
 

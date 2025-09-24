@@ -14,12 +14,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/garbage"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
+	"github.com/akuity/kargo/pkg/garbage"
+	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
