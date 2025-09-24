@@ -437,44 +437,23 @@ func (r *RegularStageReconciler) reconcile(
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status := r.assessHealth(ctx, stage)
 				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
-					// If Stage health has evaluated to Unknown, there are two specific
-					// scenarios between which we must distinguish and handle differently
-					// from one another:
-					//
-					//  1. If Stage health is unknown specifically because the last
-					//     Promotion did not succeed, we know we cannot obtain a more
-					//     definitive assessment of Stage health until a new Promotion has
-					//     restored the Stage to a consistent state by executing to
-					//     completion. In such a case, we're DONE reconciling the Stage,
-					//     for now. We would like the Stage's conditions to reflect that
-					//     and for the next reconciliation attempt to occur after the
-					//     usual interval. This can be accomplished by returning a nil
-					//     error.
-					//
-					//  2. If Stage health is unknown for any other reason, we MAY
-					//     possibly obtain a more definitive assessment simply by
-					//     re-attempting reconciliation. In such a case, we would like
-					//     the Stage's conditions to reflect that we're still trying to
-					//     reconcile, with subsequent attempts observing a progressive
-					//     backoff. This can be accomplished by returning an error.
-					lastPromo := status.LastPromotion
-					if lastPromo == nil || lastPromo.Status == nil || len(lastPromo.Status.HealthChecks) == 0 {
-						// if there are no health checks, then we cannot assess health.
+					lp := status.LastPromotion
+					if lp == nil || lp.Status == nil || len(lp.Status.HealthChecks) == 0 {
+						// If there was no last promotion or there was but it had no health
+						// checks, then health is not knowable and therefore we do not treat
+						// it as an error.
 						return status, nil
 					}
 
-					if lastPromo == nil ||
-						lastPromo.Status == nil ||
-						!lastPromo.Status.Phase.IsTerminal() ||
-						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-						// Scenario 2: There was no last Promotion or there was and it was
-						// successful. Whatever the reason the Stage health evaluated to
-						// Unknown, an unsuccessful Promotion wasn't it.
+					if !lp.Status.Phase.IsTerminal() || lp.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+						// If there was a last promotion and it had health checks, then health is knowable.
+						// We can only conclude that health is unknown due to a transient error and therefore
+						// we treat it as an error to trigger a requeue with backoff.
 						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
 					}
 				}
-				// Health assessment was definitive OR scenario 1: Stage health is
-				// unknown specifically because the last Promotion did not succeed.
+				// Health assessment was definitive OR stage health is unknown specifically because the last
+				// Promotion did not succeed.
 				return status, nil
 			},
 		},
