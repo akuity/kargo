@@ -29,24 +29,23 @@ import (
 
 	rolloutsapi "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/conditions"
-	"github.com/akuity/kargo/internal/controller"
-	argocdapi "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	exprfn "github.com/akuity/kargo/internal/expressions/function"
-	"github.com/akuity/kargo/internal/health"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/kargo"
-	"github.com/akuity/kargo/internal/kubeclient"
-	"github.com/akuity/kargo/internal/kubernetes"
-	libEvent "github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/pattern"
-	intpredicate "github.com/akuity/kargo/internal/predicate"
-	"github.com/akuity/kargo/internal/rollouts"
+	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/controller"
+	argocdapi "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	kargoEvent "github.com/akuity/kargo/pkg/event"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
-	healthPkg "github.com/akuity/kargo/pkg/health"
+	exprfn "github.com/akuity/kargo/pkg/expressions/function"
+	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/kargo"
+	"github.com/akuity/kargo/pkg/kubeclient"
+	"github.com/akuity/kargo/pkg/kubernetes"
+	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/pattern"
+	intpredicate "github.com/akuity/kargo/pkg/predicate"
+	"github.com/akuity/kargo/pkg/rollouts"
 )
 
 // ReconcilerConfig represents configuration for the stage reconciler.
@@ -819,9 +818,9 @@ func (r *RegularStageReconciler) assessHealth(
 		return newStatus, nil
 	}
 
-	var criteria []healthPkg.Criteria
+	var criteria []health.Criteria
 	for _, check := range healthChecks {
-		criteria = append(criteria, healthPkg.Criteria{
+		criteria = append(criteria, health.Criteria{
 			Kind:  check.Uses,
 			Input: check.GetConfig(),
 		})
