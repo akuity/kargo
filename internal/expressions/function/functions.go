@@ -61,9 +61,9 @@ func DiscoveredArtifactsOperations(
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) []expr.Option {
 	return []expr.Option{
-		CommitFromWarehouse(ctx, wh, artifacts),
-		ImageFromWarehouse(ctx, wh, artifacts),
-		ChartFromWarehouse(ctx, wh, artifacts),
+		CommitFromDiscoveredArtifacts(ctx, wh, artifacts),
+		ImageFromDiscoveredArtifacts(ctx, wh, artifacts),
+		ChartFromDiscoveredArtifacts(ctx, wh, artifacts),
 	}
 }
 
@@ -135,18 +135,18 @@ func CommitFromFreight(
 	)
 }
 
-// CommitFromWarehouse returns an expr.Option that provides a `commitFrom()` function
+// CommitFromDiscoveredArtifacts returns an expr.Option that provides a `commitFrom()` function
 // for use in expressions.
 //
 // The commitFrom function finds the latest Git commit based on repository URL.
-func CommitFromWarehouse(
+func CommitFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromWarehouse(ctx, wh, artifacts),
+		getCommitFromDiscoveredArtifacts(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
@@ -172,18 +172,18 @@ func ImageFromFreight(
 	)
 }
 
-// ImageFromWarehouse returns an expr.Option that provides an `imageFrom()` function for
+// ImageFromDiscoveredArtifacts returns an expr.Option that provides an `imageFrom()` function for
 // use in expressions.
 //
 // The imageFrom function finds the latest container image based on repository URL.
-func ImageFromWarehouse(
+func ImageFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromWarehouse(ctx, wh, artifacts),
+		getImageFromDiscoveredArtifacts(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
@@ -211,18 +211,18 @@ func ChartFromFreight(
 	)
 }
 
-// ChartFromWarehouse returns an expr.Option that provides a `chartFrom()` function for
+// ChartFromDiscoveredArtifacts returns an expr.Option that provides a `chartFrom()` function for
 // use in expressions.
 //
 // The chartFrom function finds the latest Helm charts based on repository URL.
-func ChartFromWarehouse(
+func ChartFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChartFromWarehouse(ctx, wh, artifacts),
+		getChartFromDiscoveredArtifacts(ctx, wh, artifacts),
 		new(func(repoURL string) kargoapi.Chart),
 	)
 }
@@ -559,8 +559,8 @@ func getCommitFromFreight(
 	}
 }
 
-// getCommitFromWarehouse returns a function that finds Git commits based on repository URL.
-func getCommitFromWarehouse(
+// getCommitFromDiscoveredArtifacts returns a function that finds Git commits based on repository URL.
+func getCommitFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
@@ -669,8 +669,8 @@ func getImageFromFreight(
 	}
 }
 
-// getImageFromWarehouse returns a function that finds the latest container image based on repository URL.
-func getImageFromWarehouse(
+// getImageFromDiscoveredArtifacts returns a function that finds the latest container image based on repository URL.
+func getImageFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
@@ -805,8 +805,8 @@ func getChartFromFreight(
 	}
 }
 
-// getChartFromWarehouse returns a function that finds the latest Helm chart based on repository URL.
-func getChartFromWarehouse(
+// getChartFromDiscoveredArtifacts returns a function that finds the latest Helm chart based on repository URL.
+func getChartFromDiscoveredArtifacts(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,

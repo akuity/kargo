@@ -235,7 +235,7 @@ func Test_getCommitFromFreight(t *testing.T) {
 	}
 }
 
-func Test_getCommitFromWarehouse(t *testing.T) {
+func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
@@ -318,7 +318,7 @@ func Test_getCommitFromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getCommitFromWarehouse(ctx, tc.warehouse, tc.artifacts)
+			fn := getCommitFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -478,7 +478,7 @@ func Test_getImageFromFreight(t *testing.T) {
 	}
 }
 
-func Test_getImageFromWarehouse(t *testing.T) {
+func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
@@ -551,7 +551,7 @@ func Test_getImageFromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getImageFromWarehouse(ctx, tc.warehouse, tc.artifacts)
+			fn := getImageFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -814,7 +814,7 @@ func Test_getChartFromFreight(t *testing.T) {
 	}
 }
 
-func Test_getChartromWarehouse(t *testing.T) {
+func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		warehouse  *kargoapi.Warehouse
@@ -888,7 +888,7 @@ func Test_getChartromWarehouse(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getChartFromWarehouse(ctx, tc.warehouse, tc.artifacts)
+			fn := getChartFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
