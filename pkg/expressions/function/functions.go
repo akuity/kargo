@@ -178,8 +178,10 @@ func ImageFromFreight(
 	)
 }
 
-// ImageFromDiscoveredArtifacts returns an expr.Option that provides an `imageFrom()` function for
-// use in expressions.
+// ImageFromDiscoveredArtifacts returns an expr.Option that provides an
+// `imageFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
 //
 // The imageFrom function finds the latest container image based on repository URL.
 func ImageFromDiscoveredArtifacts(
