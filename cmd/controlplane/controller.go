@@ -19,26 +19,25 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
-	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotions"
-	"github.com/akuity/kargo/internal/controller/stages"
-	"github.com/akuity/kargo/internal/controller/warehouses"
-	"github.com/akuity/kargo/internal/health"
-	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/promotion"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/controller"
+	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/promotions"
+	"github.com/akuity/kargo/pkg/controller/stages"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/credentials"
 	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/health"
+	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
+	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
-	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
-	_ "github.com/akuity/kargo/internal/promotion/runner/builtin"
+	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
 type controllerOptions struct {
@@ -423,7 +422,7 @@ func (o *controllerOptions) setupReconcilers(
 		argocdMgr,
 		promotion.NewSimpleEngine(
 			kargoMgr.GetClient(),
-			argocdMgr.GetClient(),
+			argoCDClient,
 			credentialsDB,
 			promotion.DefaultExprDataCacheFn,
 		),
@@ -517,11 +516,4 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	case <-doneCh:
 		return nil
 	}
-}
-
-func RegisterPromotionStepRunner(
-	stepKind string,
-	registration pkgPromotion.StepRunnerRegistration,
-) {
-	promotion.RegisterStepRunner(stepKind, registration)
 }

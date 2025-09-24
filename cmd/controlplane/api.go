@@ -8,15 +8,15 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/server"
-	"github.com/akuity/kargo/internal/server/config"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/server/rbac"
-	"github.com/akuity/kargo/internal/types"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
