@@ -21,7 +21,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/freight"
 	"github.com/akuity/kargo/pkg/kargo"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -59,15 +58,11 @@ func FreightOperations(
 // identically to functions of the same names used within the context of a
 // Promotion process, however, they are implemented differently since they
 // resolve artifacts from different data.
-func DiscoveredArtifactsOperations(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) []expr.Option {
+func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []expr.Option {
 	return []expr.Option{
-		CommitFromDiscoveredArtifacts(ctx, wh, artifacts),
-		ImageFromDiscoveredArtifacts(ctx, wh, artifacts),
-		ChartFromDiscoveredArtifacts(ctx, wh, artifacts),
+		CommitFromDiscoveredArtifacts(artifacts),
+		ImageFromDiscoveredArtifacts(artifacts),
+		ChartFromDiscoveredArtifacts(artifacts),
 	}
 }
 
@@ -145,14 +140,10 @@ func CommitFromFreight(
 // discovery.
 //
 // The commitFrom function finds the latest Git commit based on repository URL.
-func CommitFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) expr.Option {
+func CommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommitFromDiscoveredArtifacts(ctx, wh, artifacts),
+		getCommitFromDiscoveredArtifacts(artifacts),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
@@ -184,14 +175,10 @@ func ImageFromFreight(
 // discovery.
 //
 // The imageFrom function finds the latest container image based on repository URL.
-func ImageFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) expr.Option {
+func ImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImageFromDiscoveredArtifacts(ctx, wh, artifacts),
+		getImageFromDiscoveredArtifacts(artifacts),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
@@ -225,14 +212,10 @@ func ChartFromFreight(
 // discovery.
 //
 // The chartFrom function finds the latest Helm charts based on repository URL.
-func ChartFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) expr.Option {
+func ChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChartFromDiscoveredArtifacts(ctx, wh, artifacts),
+		getChartFromDiscoveredArtifacts(artifacts),
 		new(func(repoURL string) kargoapi.Chart),
 	)
 }
@@ -570,11 +553,7 @@ func getCommitFromFreight(
 }
 
 // getCommitFromDiscoveredArtifacts returns a function that finds Git commits based on repository URL.
-func getCommitFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) exprFn {
+func getCommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -591,20 +570,11 @@ func getCommitFromDiscoveredArtifacts(
 			return nil, errors.New("nil artifacts")
 		}
 
-		logger := logging.LoggerFromContext(ctx).WithValues(
-			"repoURL", repoURL,
-			"warehouse", wh.Name,
-		)
-
 		var latestCommit *kargoapi.DiscoveredCommit
-		for i, ca := range artifacts.Git {
+		for _, ca := range artifacts.Git {
 			if urls.NormalizeGit(ca.RepoURL) != repoURL {
 				continue
 			}
-			logger.Debug("checking discovered git artifact",
-				"index", i,
-				"numCommits", len(ca.Commits),
-			)
 			// these will already be sorted upstream by discovery.
 			lastCommit := ca.Commits[0]
 			if latestCommit == nil {
@@ -618,7 +588,6 @@ func getCommitFromDiscoveredArtifacts(
 		if latestCommit == nil {
 			return nil, fmt.Errorf("no commits found for repoURL %q", repoURL)
 		}
-		logger.Debug("found latest commit", "commit", latestCommit.Tag)
 		return &kargoapi.GitCommit{
 			RepoURL:   repoURL,
 			ID:        latestCommit.ID,
@@ -675,11 +644,7 @@ func getImageFromFreight(
 }
 
 // getImageFromDiscoveredArtifacts returns a function that finds the latest container image based on repository URL.
-func getImageFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) exprFn {
+func getImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -696,21 +661,12 @@ func getImageFromDiscoveredArtifacts(
 			return nil, errors.New("nil artifacts")
 		}
 
-		logger := logging.LoggerFromContext(ctx).WithValues(
-			"repoURL", repoURL,
-			"warehouse", wh.Name,
-		)
-
 		var latestImg *kargoapi.Image
-		for i, ia := range artifacts.Images {
+		for _, ia := range artifacts.Images {
 			iaRepoURL := urls.NormalizeImage(ia.RepoURL)
 			if iaRepoURL != repoURL {
 				continue
 			}
-			logger.Debug("discovered image artifact",
-				"index", i,
-				"numImageRefs", len(ia.References),
-			)
 			// these will already be sorted upstream by discovery.
 			ref := ia.References[0]
 			latestImg = &kargoapi.Image{
@@ -787,11 +743,7 @@ func getChartFromFreight(
 }
 
 // getChartFromDiscoveredArtifacts returns a function that finds the latest Helm chart based on repository URL.
-func getChartFromDiscoveredArtifacts(
-	ctx context.Context,
-	wh *kargoapi.Warehouse,
-	artifacts *kargoapi.DiscoveredArtifacts,
-) exprFn {
+func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))

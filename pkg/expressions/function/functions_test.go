@@ -16,7 +16,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 func Test_warehouse(t *testing.T) {
@@ -325,10 +324,7 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
-			require.NoError(t, err)
-			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getCommitFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
+			fn := getCommitFromDiscoveredArtifacts(tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -568,10 +564,7 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
-			require.NoError(t, err)
-			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getImageFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
+			fn := getImageFromDiscoveredArtifacts(tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
@@ -915,10 +908,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
-			require.NoError(t, err)
-			ctx := logging.ContextWithLogger(t.Context(), logger)
-			fn := getChartFromDiscoveredArtifacts(ctx, tc.warehouse, tc.artifacts)
+			fn := getChartFromDiscoveredArtifacts(tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
 		})
