@@ -766,6 +766,7 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 			if caRepoURL != repoURL {
 				continue
 			}
+			// these will already be sorted upstream by discovery.
 			v := ca.Versions[0]
 			latestChart = &kargoapi.Chart{
 				RepoURL: repoURL,
