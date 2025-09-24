@@ -198,6 +198,11 @@ strategies are:
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
 
+  The build time is evaluated using the labels 
+  `org.opencontainers.image.created` or `org.label-schema.build-date`. If 
+  neither label is set, Kargo will fall back to using the `config.Created` time 
+  of the image.
+
     :::warning
     `NewestBuild` requires retrieving metadata for every eligible tag, which can
     be slow and is likely to exceed the registry's rate limits. __This can

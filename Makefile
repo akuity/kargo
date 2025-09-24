@@ -204,8 +204,8 @@ build-nightly-cli:
 
 .PHONY: build-ui
 build-ui:
-	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../internal/server/ui pnpm run build --emptyOutDir
-	touch internal/server/ui/.keep
+	cd ui && NODE_ENV=production BUILD_TARGET_PATH=../pkg/server/ui pnpm run build --emptyOutDir
+	touch pkg/server/ui/.keep
 
 .PHONY: build-cli-with-ui
 build-cli-with-ui: build-ui build-cli
