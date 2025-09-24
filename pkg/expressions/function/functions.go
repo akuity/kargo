@@ -53,8 +53,12 @@ func FreightOperations(
 // DiscoveredArtifactsOperations returns a slice of expr.Option containing
 // functions for retrieving artifacts from a Warehouse's discovered artifacts.
 //
-// It provides `commitFrom()`, `imageFrom()`, and `chartFrom()`
-// functions that can be used within expressions.
+// It provides `commitFrom()`, `imageFrom()`, and `chartFrom()` functions for
+// use in the context of expressions defining criteria that permit or block
+// automatic Freight creation after artifact discovery. These functions behave
+// identically to functions of the same names used within the context of a
+// Promotion process, however, they are implemented differently since they
+// resolve artifacts from different data.
 func DiscoveredArtifactsOperations(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
