@@ -181,6 +181,68 @@ func (p *provider) ListPullRequests(
 	return pts, nil
 }
 
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+	opts *gitprovider.MergePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	gitClient, err := adogit.NewClient(ctx, p.connection)
+	if err != nil {
+		return nil, fmt.Errorf("error creating Azure DevOps client: %w", err)
+	}
+
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	// Get the current PR to get the last merge source commit
+	currentPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
+		Project:       &p.project,
+		RepositoryId:  &p.repo,
+		PullRequestId: ptr.To(int(id)),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+
+	// Prepare commit message combining title and message
+	var commitMessage string
+	if opts.CommitTitle != "" {
+		commitMessage = opts.CommitTitle
+		if opts.CommitMessage != "" {
+			commitMessage += "\n\n" + opts.CommitMessage
+		}
+	} else if opts.CommitMessage != "" {
+		commitMessage = opts.CommitMessage
+	}
+
+	mergeCommit := &adogit.GitPullRequestCompletionOptions{
+		MergeCommitMessage: &commitMessage,
+	}
+
+	// Update the PR to complete (merge) it
+	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
+		Project:       &p.project,
+		RepositoryId:  &p.repo,
+		PullRequestId: ptr.To(int(id)),
+		GitPullRequestToUpdate: &adogit.GitPullRequest{
+			Status:                ptr.To(adogit.PullRequestStatusValues.Completed),
+			LastMergeSourceCommit: currentPR.LastMergeSourceCommit,
+			CompletionOptions:     mergeCommit,
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+
+	pr, err := convertADOPullRequest(updatedPR)
+	if err != nil {
+		return nil, fmt.Errorf("error converting merged pull request %d: %w", id, err)
+	}
+	return pr, nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)

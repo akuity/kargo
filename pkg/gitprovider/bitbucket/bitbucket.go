@@ -62,6 +62,7 @@ type pullRequestClient interface {
 	ListPullRequests(opt *bitbucket.PullRequestsOptions) (any, error)
 	GetPullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
 	GetCommit(opt *bitbucket.CommitsOptions) (any, error)
+	MergePullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
 }
 
 // provider is a Bitbucket-based implementation of gitprovider.Interface.
@@ -128,6 +129,12 @@ func (w *clientWrapper) GetCommit(
 	opt *bitbucket.CommitsOptions,
 ) (any, error) {
 	return w.client.Repositories.Commits.GetCommit(opt)
+}
+
+func (w *clientWrapper) MergePullRequest(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return w.client.Repositories.PullRequests.Merge(opt)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -287,6 +294,86 @@ func (p *provider) ListPullRequests(
 		}
 	}
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	_ context.Context,
+	id int64,
+	opts *gitprovider.MergePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	// Get the current PR to check its state
+	prOpts := &bitbucket.PullRequestsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		ID:       strconv.FormatInt(id, 10),
+	}
+
+	currentPRResp, err := p.client.GetPullRequest(prOpts)
+	if err != nil {
+		return nil, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+
+	currentPR, err := toBitbucketPR(currentPRResp)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing pull request response: %w", err)
+	}
+
+	// Check if PR is already merged
+	if currentPR.State == prStateMerged {
+		return toProviderPR(currentPR, currentPRResp), nil
+	}
+
+	// Check if PR is closed/declined
+	if currentPR.State == prStateDeclined || currentPR.State == prStateSuperseded {
+		return nil, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, currentPR.State)
+	}
+
+	// Check if PR is not in open state
+	if currentPR.State != prStateOpen {
+		return nil, fmt.Errorf("pull request %d is not in a mergeable state (state: %s)", id, currentPR.State)
+	}
+
+	// Attempt to merge the PR
+	mergeOpts := &bitbucket.PullRequestsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		ID:       strconv.FormatInt(id, 10),
+	}
+
+	// Set merge commit message
+	mergeMessage := ""
+	if opts.CommitTitle != "" {
+		mergeMessage = opts.CommitTitle
+	}
+	if opts.CommitMessage != "" {
+		if mergeMessage != "" {
+			mergeMessage += "\n\n" + opts.CommitMessage
+		} else {
+			mergeMessage = opts.CommitMessage
+		}
+	}
+	if mergeMessage != "" {
+		mergeOpts.Message = mergeMessage
+	}
+
+	// Perform the merge
+	mergeResp, err := p.client.MergePullRequest(mergeOpts)
+	if err != nil {
+		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+
+	// Parse the merged PR response
+	mergedPR, err := toBitbucketPR(mergeResp)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing merged pull request response: %w", err)
+	}
+
+	return toProviderPR(mergedPR, mergeResp), nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

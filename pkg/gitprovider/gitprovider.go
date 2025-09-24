@@ -52,6 +52,9 @@ type Interface interface {
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
+	// MergePullRequest merges an existing pull request
+	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, error)
+
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
 	// and commit ID.
 	GetCommitURL(repoURL string, commitID string) (string, error)
@@ -70,6 +73,15 @@ type CreatePullRequestOpts struct {
 	Base string
 	// Labels is an array of strings that should be added as labels to the pull request.
 	Labels []string
+}
+
+// MergePullRequestOpts encapsulates the options used when merging a pull
+// request.
+type MergePullRequestOpts struct {
+	// CommitTitle is the title for the merge commit.
+	CommitTitle string
+	// CommitMessage is the description for the merge commit.
+	CommitMessage string
 }
 
 // ListPullRequestOptions encapsulates the options used when listing pull
@@ -130,6 +142,8 @@ type Fake struct {
 		context.Context,
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
+	// MergePullRequestFn defines the functionality of the MergePullRequest method.
+	MergePullRequestFn func(context.Context, int64, *MergePullRequestOpts) (*PullRequest, error)
 	// GetCommitURLFn defines the functionality of the GetCommitURL method.
 	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
@@ -156,6 +170,15 @@ func (f *Fake) ListPullRequests(
 	opts *ListPullRequestOptions,
 ) ([]PullRequest, error) {
 	return f.ListPullRequestsFn(ctx, opts)
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (f *Fake) MergePullRequest(
+	ctx context.Context,
+	number int64,
+	opts *MergePullRequestOpts,
+) (*PullRequest, error) {
+	return f.MergePullRequestFn(ctx, number, opts)
 }
 
 // GetCommitURL implements gitprovider.Interface.

@@ -59,6 +59,13 @@ type mergeRequestClient interface {
 		opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
+
+	AcceptMergeRequest(
+		pid any,
+		mergeRequest int,
+		opt *gitlab.AcceptMergeRequestOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
 // provider is a GitLab-based implementation of gitprovider.Interface.
@@ -196,6 +203,36 @@ func (p *provider) ListPullRequests(
 		listOpts.Page = res.NextPage
 	}
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	_ context.Context,
+	id int64,
+	opts *gitprovider.MergePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	acceptOpts := &gitlab.AcceptMergeRequestOptions{}
+
+	// Set merge commit message
+	if opts.CommitMessage != "" {
+		acceptOpts.MergeCommitMessage = &opts.CommitMessage
+	}
+
+	glMR, _, err := p.client.AcceptMergeRequest(p.projectName, int(id), acceptOpts)
+	if err != nil {
+		return nil, err
+	}
+
+	if glMR == nil {
+		return nil, fmt.Errorf("unexpected nil merge request after merge")
+	}
+
+	pr := convertGitlabMR(glMR.BasicMergeRequest)
+	return &pr, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

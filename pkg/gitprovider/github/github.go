@@ -63,6 +63,15 @@ type githubClient interface {
 		number int,
 	) (*github.PullRequest, *github.Response, error)
 
+	MergePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		commitMessage string,
+		options *github.PullRequestOptions,
+	) (*github.PullRequestMergeResult, *github.Response, error)
+
 	AddLabelsToIssue(
 		ctx context.Context,
 		owner string,
@@ -152,6 +161,17 @@ func (g githubClientWrapper) GetPullRequests(
 	number int,
 ) (*github.PullRequest, *github.Response, error) {
 	return g.client.PullRequests.Get(ctx, owner, repo, number)
+}
+
+func (g githubClientWrapper) MergePullRequest(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	commitMessage string,
+	options *github.PullRequestOptions,
+) (*github.PullRequestMergeResult, *github.Response, error) {
+	return g.client.PullRequests.Merge(ctx, owner, repo, number, commitMessage, options)
 }
 
 func (g githubClientWrapper) AddLabelsToIssue(
@@ -266,6 +286,58 @@ func (p *provider) ListPullRequests(
 	}
 
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+	opts *gitprovider.MergePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	mergeOptions := &github.PullRequestOptions{}
+
+	// Use title and message from opts, defaulting to empty string
+	commitMessage := opts.CommitMessage
+	if opts.CommitTitle != "" {
+		if commitMessage != "" {
+			commitMessage = opts.CommitTitle + "\n\n" + commitMessage
+		} else {
+			commitMessage = opts.CommitTitle
+		}
+	}
+
+	mergeResult, _, err := p.client.MergePullRequest(
+		ctx,
+		p.owner,
+		p.repo,
+		int(id),
+		commitMessage,
+		mergeOptions,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if mergeResult == nil {
+		return nil, fmt.Errorf("unexpected nil merge result")
+	}
+
+	// After merging, get the updated PR to return current state
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, err
+	}
+
+	if ghPR == nil {
+		return nil, fmt.Errorf("unexpected nil pull request after merge")
+	}
+
+	pr := convertGithubPR(*ghPR)
+	return &pr, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

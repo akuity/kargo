@@ -60,6 +60,14 @@ type giteaClient interface {
 		number int,
 	) (*gitea.PullRequest, *gitea.Response, error)
 
+	MergePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		opts *gitea.MergePullRequestOption,
+	) (*gitea.Response, error)
+
 	AddLabelsToIssue(
 		ctx context.Context,
 		owner string,
@@ -147,6 +155,17 @@ func (g giteaClientWrapper) GetPullRequests(
 	number int,
 ) (*gitea.PullRequest, *gitea.Response, error) {
 	return g.client.GetPullRequest(owner, repo, int64(number))
+}
+
+func (g giteaClientWrapper) MergePullRequest(
+	_ context.Context,
+	owner string,
+	repo string,
+	number int,
+	opts *gitea.MergePullRequestOption,
+) (*gitea.Response, error) {
+	_, resp, err := g.client.MergePullRequest(owner, repo, int64(number), *opts)
+	return resp, err
 }
 
 func (g giteaClientWrapper) AddLabelsToIssue(
@@ -255,6 +274,42 @@ func (p *provider) ListPullRequests(
 	}
 
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+	opts *gitprovider.MergePullRequestOpts,
+) (*gitprovider.PullRequest, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
+	mergeOpts := &gitea.MergePullRequestOption{}
+
+	// Set merge commit title based on available fields
+	if opts.CommitTitle != "" {
+		mergeOpts.MergeCommitID = opts.CommitTitle
+	}
+
+	_, err := p.client.MergePullRequest(ctx, p.owner, p.repo, int(id), mergeOpts)
+	if err != nil {
+		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+
+	// After merging, get the updated PR to return current state
+	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
+	}
+
+	if giteaPR == nil {
+		return nil, fmt.Errorf("unexpected nil pull request after merge")
+	}
+
+	pr := convertGiteaPR(*giteaPR)
+	return &pr, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

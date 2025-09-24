@@ -2,7 +2,9 @@ package github
 
 import (
 	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/google/go-github/v71/github"
 	"github.com/stretchr/testify/mock"
@@ -137,6 +139,26 @@ func (m *mockGithubClient) GetPullRequests(
 	return pr, resp, args.Error(2)
 }
 
+func (m *mockGithubClient) MergePullRequest(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	commitMessage string,
+	options *github.PullRequestOptions,
+) (*github.PullRequestMergeResult, *github.Response, error) {
+	args := m.Called(ctx, owner, repo, number, commitMessage, options)
+	result, ok := args.Get(0).(*github.PullRequestMergeResult)
+	if !ok {
+		return nil, nil, args.Error(2)
+	}
+	resp, ok := args.Get(1).(*github.Response)
+	if !ok {
+		return result, nil, args.Error(2)
+	}
+	return result, resp, args.Error(2)
+}
+
 func (m *mockGithubClient) AddLabelsToIssue(
 	ctx context.Context,
 	owner string,
@@ -156,6 +178,7 @@ func (m *mockGithubClient) AddLabelsToIssue(
 	}
 	return labelsResp, resp, args.Error(2)
 }
+
 func (m *mockGithubClient) CreatePullRequest(
 	ctx context.Context,
 	owner string,
@@ -364,6 +387,124 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, prs[0].MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, prs[0].URL)
 	require.True(t, prs[0].Open)
+}
+
+func TestMergePullRequest(t *testing.T) {
+	mockClient := &mockGithubClient{
+		pr: &github.PullRequest{
+			Number:  github.Ptr(123),
+			State:   github.Ptr("closed"),
+			Merged:  github.Ptr(true),
+			HTMLURL: github.Ptr("https://github.com/akuity/kargo/pull/123"),
+		},
+	}
+	p := provider{
+		owner:  testRepoOwner,
+		repo:   testRepoName,
+		client: mockClient,
+	}
+
+	t.Run("successful merge", func(t *testing.T) {
+		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
+			testRepoName, 123, "Merge PR",
+			mock.AnythingOfType("*github.PullRequestOptions")).
+			Return(&github.PullRequestMergeResult{
+				SHA:     github.Ptr("sha123"),
+				Merged:  github.Ptr(true),
+				Message: github.Ptr("Pull Request successfully merged"),
+			}, &github.Response{}, nil)
+		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner,
+			testRepoName, 123).
+			Return(&github.PullRequest{
+				Number:  github.Ptr(123),
+				State:   github.Ptr("closed"),
+				HTMLURL: github.Ptr("https://github.com/akuity/kargo/pull/123"),
+				Head: &github.PullRequestBranch{
+					SHA: github.Ptr("head_sha"),
+				},
+				MergeCommitSHA: github.Ptr("merge_sha"),
+				MergedAt:       &github.Timestamp{Time: time.Now()},
+			}, &github.Response{}, nil)
+
+		opts := &gitprovider.MergePullRequestOpts{
+			CommitMessage: "Merge PR",
+		}
+		pr, err := p.MergePullRequest(context.Background(), 123, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		require.Equal(t, int64(123), pr.Number)
+		require.True(t, pr.Merged)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("successful merge with nil options", func(t *testing.T) {
+		mockClient.ExpectedCalls = nil
+		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
+			testRepoName, 456, "",
+			mock.AnythingOfType("*github.PullRequestOptions")).
+			Return(&github.PullRequestMergeResult{
+				SHA:     github.Ptr("sha456"),
+				Merged:  github.Ptr(true),
+				Message: github.Ptr("Pull Request successfully merged"),
+			}, &github.Response{}, nil)
+		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner,
+			testRepoName, 456).
+			Return(&github.PullRequest{
+				Number: github.Ptr(456),
+				State:  github.Ptr("closed"),
+				Head: &github.PullRequestBranch{
+					SHA: github.Ptr("head_sha"),
+				},
+				MergeCommitSHA: github.Ptr("merge_sha"),
+				MergedAt:       &github.Timestamp{Time: time.Now()},
+			}, &github.Response{}, nil)
+
+		pr, err := p.MergePullRequest(context.Background(), 456, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		require.Equal(t, int64(456), pr.Number)
+		require.True(t, pr.Merged)
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("merge fails", func(t *testing.T) {
+		mockClient.ExpectedCalls = nil
+		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
+			testRepoName, 999, "",
+			mock.AnythingOfType("*github.PullRequestOptions")).
+			Return(nil, nil, errors.New("merge failed"))
+
+		pr, err := p.MergePullRequest(context.Background(), 999, nil)
+
+		require.Error(t, err)
+		require.Nil(t, pr)
+		require.Contains(t, err.Error(), "merge failed")
+		mockClient.AssertExpectations(t)
+	})
+
+	t.Run("get PR after merge fails", func(t *testing.T) {
+		mockClient.ExpectedCalls = nil
+		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
+			testRepoName, 888, "",
+			mock.AnythingOfType("*github.PullRequestOptions")).
+			Return(&github.PullRequestMergeResult{
+				SHA:     github.Ptr("sha888"),
+				Merged:  github.Ptr(true),
+				Message: github.Ptr("Pull Request successfully merged"),
+			}, &github.Response{}, nil)
+		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner,
+			testRepoName, 888).
+			Return(nil, nil, errors.New("get PR failed"))
+
+		pr, err := p.MergePullRequest(context.Background(), 888, nil)
+
+		require.Error(t, err)
+		require.Nil(t, pr)
+		require.Contains(t, err.Error(), "get PR failed")
+		mockClient.AssertExpectations(t)
+	})
 }
 
 func TestGetCommitURL(t *testing.T) {

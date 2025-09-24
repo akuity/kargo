@@ -49,6 +49,16 @@ func (m *mockGitLabClient) GetMergeRequest(
 	return m.mr, nil, nil
 }
 
+func (m *mockGitLabClient) AcceptMergeRequest(
+	pid any,
+	_ int,
+	_ *gitlab.AcceptMergeRequestOptions,
+	_ ...gitlab.RequestOptionFunc,
+) (*gitlab.MergeRequest, *gitlab.Response, error) {
+	m.pid = pid
+	return m.mr, nil, nil
+}
+
 func TestCreatePullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
@@ -144,6 +154,44 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, mockClient.mr.MergeCommitSHA, prs[0].MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, prs[0].URL)
 	require.False(t, prs[0].Open)
+}
+
+func TestMergePullRequest(t *testing.T) {
+	mockClient := &mockGitLabClient{
+		mr: &gitlab.MergeRequest{
+			BasicMergeRequest: gitlab.BasicMergeRequest{
+				IID:            123,
+				MergeCommitSHA: "sha123",
+				State:          "merged",
+				WebURL:         "https://gitlab.com/group/project/-/merge_requests/123",
+			},
+		},
+	}
+	g := provider{
+		projectName: testProjectName,
+		client:      mockClient,
+	}
+
+	t.Run("successful merge", func(t *testing.T) {
+		opts := &gitprovider.MergePullRequestOpts{
+			CommitMessage: "Merge PR",
+		}
+		pr, err := g.MergePullRequest(context.Background(), 123, opts)
+
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		require.Equal(t, int64(123), pr.Number)
+		require.True(t, pr.Merged)
+		require.Equal(t, testProjectName, mockClient.pid)
+	})
+
+	t.Run("successful merge with nil options", func(t *testing.T) {
+		pr, err := g.MergePullRequest(context.Background(), 456, nil)
+
+		require.NoError(t, err)
+		require.NotNil(t, pr)
+		require.Equal(t, testProjectName, mockClient.pid)
+	})
 }
 
 func TestParseGitLabURL(t *testing.T) {
