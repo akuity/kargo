@@ -12,12 +12,12 @@ import (
 	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
-	"github.com/akuity/kargo/internal/webhook/external"
+	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
+	"github.com/akuity/kargo/pkg/webhook/external"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -33,10 +33,11 @@ type externalWebhooksServerOptions struct {
 }
 
 func newExternalWebhooksServerCommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &externalWebhooksServerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -45,6 +46,14 @@ func newExternalWebhooksServerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			cmdOpts.Logger.Info(
+				"Starting Kargo External Webhooks Server",
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", runtime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+			)
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -61,18 +70,13 @@ func (o *externalWebhooksServerOptions) complete() {
 
 	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-	o.Logger.Info(
-		"Starting Kargo External Webhooks Server",
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", runtime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-	)
-
 	serverCfg := external.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)

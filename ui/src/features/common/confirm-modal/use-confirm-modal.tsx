@@ -1,3 +1,4 @@
+import { ModalFuncProps } from 'antd';
 import React from 'react';
 
 import { useModal } from '../modal/use-modal';
@@ -8,7 +9,7 @@ export const useConfirmModal = () => {
   const { show } = useModal();
 
   return React.useCallback(
-    (propsConfirmModal: ConfirmProps) => {
+    (propsConfirmModal: ConfirmProps & ModalFuncProps) => {
       show((p) => <ConfirmModal {...propsConfirmModal} {...p} />);
     },
     [show]

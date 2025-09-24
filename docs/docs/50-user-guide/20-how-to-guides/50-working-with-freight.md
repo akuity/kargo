@@ -78,13 +78,6 @@ NAME                                       ALIAS              AGE
 f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
-Sample output:
-
-```shell
-NAME                                       ALIAS              AGE
-f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
-```
-
 :::info
 The Kargo UI, to make efficient use of screen real estate, displays aliases
 only, but a `Freight` resource's `name` can always be discovered by hovering

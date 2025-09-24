@@ -1,12 +1,12 @@
 import { faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Radio, Table } from 'antd';
-import { useState } from 'react';
 
 import { DiscoveredImageReference } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { TruncatedCopyable } from './truncated-copyable';
+import { useDetectPage } from './use-detect-page';
 
 export const ImageTable = ({
   references,
@@ -19,7 +19,7 @@ export const ImageTable = ({
   select: (reference?: DiscoveredImageReference) => void;
   show?: boolean;
 }) => {
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useDetectPage(references, selected, !show);
 
   if (!show) {
     return null;
@@ -34,7 +34,7 @@ export const ImageTable = ({
           render: (record: DiscoveredImageReference) => (
             <Radio
               checked={selected?.tag === record?.tag}
-              onClick={() => select(selected === record ? undefined : record)}
+              onClick={() => select(selected?.tag === record?.tag ? undefined : record)}
             />
           )
         },

@@ -1,5 +1,7 @@
-import { Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { faMap } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { ControlButton, Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -31,30 +33,21 @@ export const Graph = (props: GraphProps) => {
 
   const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
 
-  const setStackedNodesParents = useCallback(
-    (nodes: string[]) =>
-      filterContext?.setPreferredFilter({
-        ...filterContext?.preferredFilter,
-        stackedNodesParents: nodes
-      }),
-    [filterContext?.setPreferredFilter, filterContext?.preferredFilter]
-  );
+  const setStackedNodesParents = (nodes: string[]) =>
+    filterContext?.setPreferredFilter({
+      ...filterContext?.preferredFilter,
+      stackedNodesParents: nodes
+    });
 
-  const onStack = useCallback(
-    (parentNode: string) => {
-      if (!stackedNodesParents.includes(parentNode)) {
-        setStackedNodesParents([...stackedNodesParents, parentNode]);
-      }
-    },
-    [stackedNodesParents]
-  );
+  const onStack = (parentNode: string) => {
+    if (!stackedNodesParents.includes(parentNode)) {
+      setStackedNodesParents([...stackedNodesParents, parentNode]);
+    }
+  };
 
-  const onUnstack = useCallback(
-    (parentNode: string) => {
-      setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
-    },
-    [stackedNodesParents]
-  );
+  const onUnstack = (parentNode: string) => {
+    setStackedNodesParents(stackedNodesParents.filter((node) => node !== parentNode));
+  };
 
   const [redraw, setRedraw] = useState(false);
 
@@ -160,16 +153,30 @@ export const Graph = (props: GraphProps) => {
             />
           </div>
         )}
-        <MiniMap
-          style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
-          pannable
-        />
+        {filterContext?.preferredFilter?.showMinimap && (
+          <MiniMap
+            style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
+            pannable
+          />
+        )}
         <Controls
           showInteractive={false}
           onFitView={() => {
             setRedraw(!redraw);
           }}
-        />
+        >
+          <ControlButton
+            title={filterContext?.preferredFilter?.showMinimap ? 'Hide Minimap' : 'Show Minimap'}
+            onClick={() =>
+              filterContext?.setPreferredFilter({
+                ...filterContext?.preferredFilter,
+                showMinimap: !filterContext?.preferredFilter?.showMinimap
+              })
+            }
+          >
+            <FontAwesomeIcon icon={faMap} />
+          </ControlButton>
+        </Controls>
       </ReactFlow>
     </GraphContext.Provider>
   );

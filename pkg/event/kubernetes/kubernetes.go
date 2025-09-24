@@ -15,34 +15,36 @@ func FromKubernetesEvent(evt corev1.Event) (event.Meta, error) {
 	var parsedEvent event.Meta
 	var err error
 
+	id := string(evt.UID)
 	switch kargoapi.EventType(evt.Reason) {
 	case kargoapi.EventTypePromotionCreated:
-		parsedEvent, err = event.UnmarshalPromotionCreatedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalPromotionCreatedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypePromotionSucceeded:
-		parsedEvent, err = event.UnmarshalPromotionSucceededAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalPromotionSucceededAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypePromotionFailed:
-		parsedEvent, err = event.UnmarshalPromotionFailedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalPromotionFailedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypePromotionErrored:
-		parsedEvent, err = event.UnmarshalPromotionErroredAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalPromotionErroredAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypePromotionAborted:
-		parsedEvent, err = event.UnmarshalPromotionAbortedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalPromotionAbortedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightApproved:
-		parsedEvent, err = event.UnmarshalFreightApprovedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightApprovedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationSucceeded:
-		parsedEvent, err = event.UnmarshalFreightVerificationSucceededAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationSucceededAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationFailed:
-		parsedEvent, err = event.UnmarshalFreightVerificationFailedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationFailedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationErrored:
-		parsedEvent, err = event.UnmarshalFreightVerificationErroredAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationErroredAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationAborted:
-		parsedEvent, err = event.UnmarshalFreightVerificationAbortedAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationAbortedAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationInconclusive:
-		parsedEvent, err = event.UnmarshalFreightVerificationInconclusiveAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationInconclusiveAnnotations(id, evt.Annotations)
 	case kargoapi.EventTypeFreightVerificationUnknown:
-		parsedEvent, err = event.UnmarshalFreightVerificationUnknownAnnotations(evt.Annotations)
+		parsedEvent, err = event.UnmarshalFreightVerificationUnknownAnnotations(id, evt.Annotations)
 	default:
 		customEvt := &event.Custom{
 			EventType: kargoapi.EventType(evt.Reason),
+			ID:        id,
 		}
 		// For custom event types, we try to parse everything back out to a generic
 		// map[string]interface{} so it can be parsed into a concrete type by a consumer

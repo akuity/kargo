@@ -54,8 +54,8 @@ The admin account is Kargo's _only_ built-in account. When disabling it, as we
 recommend, this effectively _requires_ that you configure SSO via OpenID
 Connect.
 
-Refer to [SSO with OpenID Connect](20-openid-connect.md) for in-depth coverage
-of this topic.
+Refer to [SSO with OpenID Connect](./20-openid-connect/index.md) for in-depth
+coverage of this topic.
 :::
 
 ### Securing the Admin Account

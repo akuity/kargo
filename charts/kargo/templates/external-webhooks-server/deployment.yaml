@@ -85,6 +85,24 @@ spec:
         - containerPort: 8080
           name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
           protocol: TCP
+        {{- if .Values.externalWebhooksServer.probes.enabled }}
+        livenessProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          initialDelaySeconds: 5
+        {{- end }}
         {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
         volumeMounts:
         - mountPath: /etc/kargo
@@ -112,7 +130,7 @@ spec:
             {{- end }}
             {{- if .Values.externalWebhooksServer.tls.enabled }}
             - secret:
-                name: kargo-external-webhooks-server-cert
+                name: {{ .Values.externalWebhooksServer.tls.secretName }}
                 items:
                 - key: tls.crt
                   path: tls.crt

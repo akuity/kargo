@@ -19,25 +19,25 @@ import (
 
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller"
-	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotions"
-	"github.com/akuity/kargo/internal/controller/stages"
-	"github.com/akuity/kargo/internal/controller/warehouses"
-	"github.com/akuity/kargo/internal/credentials"
-	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
-	"github.com/akuity/kargo/internal/health"
-	healthCheckers "github.com/akuity/kargo/internal/health/checker/builtin"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/promotion"
-	promotionStepRunners "github.com/akuity/kargo/internal/promotion/runner/builtin"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
 	libargocd "github.com/akuity/kargo/pkg/argocd"
-	pkgPromotion "github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/controller"
+	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/promotions"
+	"github.com/akuity/kargo/pkg/controller/stages"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
+	"github.com/akuity/kargo/pkg/credentials"
+	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/health"
+	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
+	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
+
+	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
 type controllerOptions struct {
@@ -59,10 +59,11 @@ type controllerOptions struct {
 }
 
 func newControllerCommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &controllerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -71,6 +72,18 @@ func newControllerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			startupLogger := cmdOpts.Logger.WithValues(
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+				"defaultController", cmdOpts.IsDefaultController,
+			)
+			if cmdOpts.ShardName != "" {
+				startupLogger = startupLogger.WithValues("shard", cmdOpts.ShardName)
+			}
+			startupLogger.Info("Starting Kargo Controller")
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -94,23 +107,13 @@ func (o *controllerOptions) complete() {
 
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *controllerOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-
-	startupLogger := o.Logger.WithValues(
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-		"defaultController", o.IsDefaultController,
-	)
-	if o.ShardName != "" {
-		startupLogger = startupLogger.WithValues("shard", o.ShardName)
-	}
-	startupLogger.Info("Starting Kargo Controller")
-
 	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
@@ -271,8 +274,7 @@ func (o *controllerOptions) setupKargoManager(
 	}
 
 	// Build a separate client for the local cluster...
-	if restCfg, err =
-		kubernetes.GetRestConfig(ctx, ""); err != nil {
+	if restCfg, err = kubernetes.GetRestConfig(ctx, ""); err != nil {
 		return nil, nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for local cluster client: %w", err)
 	}
@@ -410,7 +412,6 @@ func (o *controllerOptions) setupReconcilers(
 		argoCDClient = argocdMgr.GetClient()
 	}
 
-	promotionStepRunners.Initialize(kargoMgr.GetClient(), argoCDClient, credentialsDB)
 	healthCheckers.Initialize(argoCDClient)
 
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
@@ -419,7 +420,12 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		promotion.NewSimpleEngine(kargoMgr.GetClient(), promotion.DefaultExprDataCacheFn),
+		promotion.NewSimpleEngine(
+			kargoMgr.GetClient(),
+			argoCDClient,
+			credentialsDB,
+			promotion.DefaultExprDataCacheFn,
+		),
 		promotions.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
@@ -510,8 +516,4 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	case <-doneCh:
 		return nil
 	}
-}
-
-func RegisterPromotionStepRunner(runner pkgPromotion.StepRunner) {
-	promotion.RegisterStepRunner(runner)
 }

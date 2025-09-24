@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/ptr"
 )
 
 func TestPromotionStepStatus_Compare(t *testing.T) {
@@ -125,20 +124,20 @@ func TestPromotionRetry_GetTimeout(t *testing.T) {
 	tests := []struct {
 		name     string
 		retry    *PromotionStepRetry
-		fallback *time.Duration
-		want     *time.Duration
+		fallback time.Duration
+		want     time.Duration
 	}{
 		{
 			name:     "retry is nil",
 			retry:    nil,
-			fallback: ptr.To(time.Hour),
-			want:     ptr.To(time.Hour),
+			fallback: time.Hour,
+			want:     time.Hour,
 		},
 		{
 			name:     "timeout is not set",
 			retry:    &PromotionStepRetry{},
-			fallback: ptr.To(time.Hour),
-			want:     ptr.To(time.Hour),
+			fallback: time.Hour,
+			want:     time.Hour,
 		},
 		{
 			name: "timeout is set",
@@ -147,7 +146,7 @@ func TestPromotionRetry_GetTimeout(t *testing.T) {
 					Duration: 3 * time.Hour,
 				},
 			},
-			want: ptr.To(3 * time.Hour),
+			want: 3 * time.Hour,
 		},
 	}
 	for _, tt := range tests {

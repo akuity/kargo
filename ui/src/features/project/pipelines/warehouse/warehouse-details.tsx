@@ -10,14 +10,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Drawer, Flex, Skeleton, Tabs, Typography } from 'antd';
 import Alert from 'antd/es/alert/Alert';
 import { useMemo } from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { generatePath, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
-import { getWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import {
+  getFreight,
+  getWarehouse
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { RepoSubscriptions } from './repo-subscriptions';
@@ -32,6 +35,10 @@ export const WarehouseDetails = ({
   refetchFreight: () => void;
 }) => {
   const { name: projectName, warehouseName, tab } = useParams();
+  const [search] = useSearchParams();
+
+  const cloneFreight = search.get('clone-freight');
+
   const navigate = useNavigate();
 
   const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
@@ -47,6 +54,17 @@ export const WarehouseDetails = ({
   const rawWarehouseYaml = useMemo(
     () => decodeRawData(rawWarehouseYamlQuery.data),
     [rawWarehouseYamlQuery.data]
+  );
+
+  const freightQuery = useQuery(
+    getFreight,
+    {
+      project: projectName,
+      alias: cloneFreight || ''
+    },
+    {
+      enabled: !!cloneFreight && tab === 'create-freight'
+    }
   );
 
   return (
@@ -104,13 +122,18 @@ export const WarehouseDetails = ({
               tab='Freight Assembly'
               icon={<FontAwesomeIcon icon={faTools} />}
             >
-              <AssembleFreight
-                warehouse={warehouse}
-                onSuccess={() => {
-                  onClose();
-                  refetchFreight();
-                }}
-              />
+              {freightQuery.isFetching ? (
+                <Skeleton />
+              ) : (
+                <AssembleFreight
+                  warehouse={warehouse}
+                  cloneFreight={freightQuery.data?.result.value as Freight}
+                  onSuccess={() => {
+                    onClose();
+                    refetchFreight();
+                  }}
+                />
+              )}
             </Tabs.TabPane>
             <Tabs.TabPane
               key='live-manifest'

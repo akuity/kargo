@@ -49,6 +49,6 @@ spec:
   tls:
   - hosts:
     - {{ quote .Values.api.host }}
-    secretName: kargo-api-ingress-cert
+    secretName: {{ .Values.api.ingress.tls.secretName }}
   {{- end }}
 {{- end }}

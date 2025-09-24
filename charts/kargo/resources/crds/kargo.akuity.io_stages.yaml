@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.18.0
+    controller-gen.kubebuilder.io/version: v0.19.0
   name: stages.kargo.akuity.io
 spec:
   group: kargo.akuity.io
@@ -1923,6 +1923,14 @@ spec:
                     type: object
                 required:
                 - name
+                type: object
+              metadata:
+                additionalProperties:
+                  x-kubernetes-preserve-unknown-fields: true
+                description: |-
+                  Metadata is a map of arbitrary metadata associated with the Stage.
+                  This is useful for storing additional information about the Stage
+                  that can be shared across promotions, verifications, or other processes.
                 type: object
               observedGeneration:
                 description: |-

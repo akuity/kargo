@@ -21,10 +21,10 @@ import (
 
 // Promotion is a struct that contains common fields for promotion-related events.
 type Promotion struct {
-	*Freight
-	Name         string                 `json:"promotionName"`
+	Freight      *Freight               `json:"freight,omitempty"`
+	Name         string                 `json:"name"`
 	StageName    string                 `json:"stageName"`
-	CreateTime   time.Time              `json:"promotionCreateTime"`
+	CreateTime   time.Time              `json:"createTime"`
 	Applications []types.NamespacedName `json:"applications,omitempty"`
 }
 
@@ -186,8 +186,7 @@ func (p *PromotionSucceeded) MarshalAnnotations() map[string]string {
 	// Note that we skip message here, as it is not used in the annotations.
 	annotations := map[string]string{}
 	if p.VerificationPending != nil {
-		annotations[kargoapi.AnnotationKeyEventVerificationPending] =
-			strconv.FormatBool(*p.VerificationPending)
+		annotations[kargoapi.AnnotationKeyEventVerificationPending] = strconv.FormatBool(*p.VerificationPending)
 	}
 	p.Common.MarshalAnnotationsTo(annotations)
 	p.Promotion.MarshalAnnotationsTo(annotations)
@@ -260,8 +259,10 @@ func UnmarshalPromotionAnnotations(annotations map[string]string) (Promotion, er
 
 // UnmarshalPromotionSucceededAnnotations converts the given annotations into a PromotionSucceeded. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionSucceededAnnotations(annotations map[string]string) (*PromotionSucceeded, error) {
-	common, err := UnmarshalCommonAnnotations(annotations)
+func UnmarshalPromotionSucceededAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionSucceeded, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -283,8 +284,10 @@ func UnmarshalPromotionSucceededAnnotations(annotations map[string]string) (*Pro
 
 // UnmarshalPromotionFailedAnnotations converts the given annotations into a PromotionFailed. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionFailedAnnotations(annotations map[string]string) (*PromotionFailed, error) {
-	common, err := UnmarshalCommonAnnotations(annotations)
+func UnmarshalPromotionFailedAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionFailed, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -301,8 +304,10 @@ func UnmarshalPromotionFailedAnnotations(annotations map[string]string) (*Promot
 
 // UnmarshalPromotionErroredAnnotations converts the given annotations into a PromotionErrored. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionErroredAnnotations(annotations map[string]string) (*PromotionErrored, error) {
-	common, err := UnmarshalCommonAnnotations(annotations)
+func UnmarshalPromotionErroredAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionErrored, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -319,8 +324,10 @@ func UnmarshalPromotionErroredAnnotations(annotations map[string]string) (*Promo
 
 // UnmarshalPromotionAbortedAnnotations converts the given annotations into a PromotionAborted. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionAbortedAnnotations(annotations map[string]string) (*PromotionAborted, error) {
-	common, err := UnmarshalCommonAnnotations(annotations)
+func UnmarshalPromotionAbortedAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionAborted, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, err
 	}
@@ -337,8 +344,10 @@ func UnmarshalPromotionAbortedAnnotations(annotations map[string]string) (*Promo
 
 // UnmarshalPromotionCreatedAnnotations converts the given annotations into a PromotionCreated. This is used by the
 // main event handler to convert the data into a normal structured event, but is exposed for convenience.
-func UnmarshalPromotionCreatedAnnotations(annotations map[string]string) (*PromotionCreated, error) {
-	common, err := UnmarshalCommonAnnotations(annotations)
+func UnmarshalPromotionCreatedAnnotations(
+	eventID string, annotations map[string]string,
+) (*PromotionCreated, error) {
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, err
 	}
