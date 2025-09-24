@@ -8,17 +8,17 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/git"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
-	_ "github.com/akuity/kargo/internal/gitprovider/azure"     // Azure provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/bitbucket" // Bitbucket provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/gitea"     // Gitea provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/github"    // GitHub provider registration
-	_ "github.com/akuity/kargo/internal/gitprovider/gitlab"    // GitLab provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/azure"     // Azure provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/bitbucket" // Bitbucket provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitea"     // Gitea provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/github"    // GitHub provider registration
+	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"    // GitLab provider registration
 )
 
 // gitPRMerger is an implementation of the promotion.StepRunner interface that

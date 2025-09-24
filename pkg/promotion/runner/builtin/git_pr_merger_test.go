@@ -10,8 +10,8 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/credentials"
-	"github.com/akuity/kargo/internal/gitprovider"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
