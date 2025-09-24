@@ -1871,8 +1871,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.NotNil(t, err)
-				assert.ErrorContains(t, err, "cannot assess health because last Promotion did not succeed")
+				assert.Nil(t, err)
 				assert.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
 

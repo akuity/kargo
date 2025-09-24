@@ -797,7 +797,7 @@ func (r *RegularStageReconciler) assessHealth(
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{"Cannot assess health because last Promotion did not succeed"},
 		}
-		return newStatus, errors.New("cannot assess health because last Promotion did not succeed")
+		return newStatus, nil
 	}
 
 	// Compose the health check criteria.
