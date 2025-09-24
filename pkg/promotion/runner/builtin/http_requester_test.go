@@ -230,6 +230,10 @@ func Test_httpRequester_run(t *testing.T) {
 						Name:           "theMeaningOfLife",
 						FromExpression: "response.body.theMeaningOfLife",
 					},
+					{
+						Name:           "bodyText",
+						FromExpression: "response.bodyText",
+					},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -240,6 +244,7 @@ func Test_httpRequester_run(t *testing.T) {
 					map[string]any{
 						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": nil,
+						"bodyText":         "",
 					},
 					res.Output,
 				)
@@ -263,6 +268,10 @@ func Test_httpRequester_run(t *testing.T) {
 						Name:           "theMeaningOfLife",
 						FromExpression: "response.body.theMeaningOfLife",
 					},
+					{
+						Name:           "bodyText",
+						FromExpression: "response.bodyText",
+					},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -273,6 +282,7 @@ func Test_httpRequester_run(t *testing.T) {
 					map[string]any{
 						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": nil,
+						"bodyText":         "this is just a regular string",
 					},
 					res.Output,
 				)
@@ -296,6 +306,10 @@ func Test_httpRequester_run(t *testing.T) {
 						Name:           "theMeaningOfLife",
 						FromExpression: "response.body.theMeaningOfLife",
 					},
+					{
+						Name:           "bodyText",
+						FromExpression: "response.bodyText",
+					},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -306,6 +320,7 @@ func Test_httpRequester_run(t *testing.T) {
 					map[string]any{
 						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": float64(42),
+						"bodyText":         `{"theMeaningOfLife": 42}`,
 					},
 					res.Output,
 				)
@@ -329,6 +344,10 @@ func Test_httpRequester_run(t *testing.T) {
 						Name:           "theMeaningOfLife",
 						FromExpression: "response.body[0].theMeaningOfLife",
 					},
+					{
+						Name:           "bodyText",
+						FromExpression: "response.bodyText",
+					},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -339,6 +358,7 @@ func Test_httpRequester_run(t *testing.T) {
 					map[string]any{
 						"status":           int64(http.StatusOK),
 						"theMeaningOfLife": float64(42),
+						"bodyText":         `[{"theMeaningOfLife": 42}]`,
 					},
 					res.Output,
 				)
@@ -543,6 +563,11 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				body, ok := bodyAny.(map[string]any)
 				require.True(t, ok)
 				require.Empty(t, body)
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "", bodyText)
 			},
 		},
 		{
@@ -554,11 +579,18 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 			assertions: func(t *testing.T, env map[string]any, err error) {
 				require.NoError(t, err)
+
 				bodyAny, ok := env["response"].(map[string]any)["body"]
 				require.True(t, ok)
 				body, ok := bodyAny.(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo": "bar"}, body)
+
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, `{"foo": "bar"}`, bodyText)
 			},
 		},
 		{
@@ -570,10 +602,10 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 			assertions: func(t *testing.T, env map[string]any, err error) {
 				require.NoError(t, err)
-				bodyAny, ok := env["response"].(map[string]any)["body"]
-				require.True(t, ok)
 
 				// Check if interface is of type []any
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
 				body, ok := bodyAny.([]any)
 				require.True(t, ok)
 				require.Len(t, body, 2)
@@ -581,6 +613,13 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				firstItem, ok := body[0].(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo1": "bar1"}, firstItem)
+
+				// Check bodyText contains the raw JSON array string
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, `[{"foo1": "bar1"}, {"foo2": "bar2"}]`, bodyText)
 			},
 		},
 		{
@@ -590,9 +629,21 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`{"foo":`)),
 			},
-			assertions: func(t *testing.T, _ map[string]any, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "failed to parse response")
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, env)
+
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, `{"foo":`, bodyText)
+
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(map[string]any)
+				require.True(t, ok)
+				require.Empty(t, body)
 			},
 		},
 		{
@@ -602,9 +653,21 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`"foo"`)),
 			},
-			assertions: func(t *testing.T, _ map[string]any, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "unexpected type when unmarshaling")
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, env)
+
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(map[string]any)
+				require.True(t, ok)
+				require.Empty(t, body)
+
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, `"foo"`, bodyText)
 			},
 		},
 		{
@@ -616,12 +679,18 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 			assertions: func(t *testing.T, env map[string]any, err error) {
 				require.NoError(t, err)
+
 				bodyAny, ok := env["response"].(map[string]any)["body"]
 				require.True(t, ok)
-
 				body, ok := bodyAny.(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo": "bar"}, body)
+
+				bodyTextAny, ok := env["response"].(map[string]any)["bodyText"]
+				require.True(t, ok)
+				bodyText, ok := bodyTextAny.(string)
+				require.True(t, ok)
+				require.Equal(t, `{"foo": "bar"}`, bodyText)
 			},
 		},
 	}

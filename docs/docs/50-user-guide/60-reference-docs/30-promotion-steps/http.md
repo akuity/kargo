@@ -109,6 +109,7 @@ is structured as follows:
 | `headers` | `http.Header` | The headers of the response. See applicable [Go documentation](https://pkg.go.dev/net/http#Header). |
 | `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
 | `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
+| `bodyText` | `string` | The raw body of the response as a string. This is useful for non-JSON responses like plain text, tokens, or other string formats. |
 
 ## Outputs
 

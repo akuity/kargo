@@ -289,25 +289,33 @@ func (h *httpRequester) buildExprEnv(
 			// TODO(krancour): Casting as an int64 is a short-term fix here because
 			// deep copy of the output map will panic if any value is an int. This is
 			// a near-term fix and a better solution will be PR'ed soon.
-			"status":  int64(resp.StatusCode),
-			"header":  resp.Header.Get,
-			"headers": resp.Header,
-			"body":    map[string]any{},
+			"status":   int64(resp.StatusCode),
+			"header":   resp.Header.Get,
+			"headers":  resp.Header,
+			"body":     map[string]any{},
+			"bodyText": string(bodyBytes),
 		},
 	}
 	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
 	if len(bodyBytes) > 0 && (contentType == contentTypeJSON || json.Valid(bodyBytes)) {
 		var parsedBody any
 		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
-			return nil, fmt.Errorf("failed to parse response: %w", err)
-		}
-
-		// Unmarshal into map[string]any or []any
-		switch parsedBody.(type) {
-		case map[string]any, []any:
-			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
-		default:
-			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
+			// Log the JSON parsing error but continue to provide bodyText
+			logging.LoggerFromContext(ctx).Debug(
+				"Failed to parse JSON response, continuing with bodyText only",
+				"error", err,
+			)
+		} else {
+			// Unmarshal into map[string]any or []any
+			switch parsedBody.(type) {
+			case map[string]any, []any:
+				env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
+			default:
+				logging.LoggerFromContext(ctx).Debug(
+					"Unexpected JSON type, continuing with bodyText only",
+					"type", fmt.Sprintf("%T", parsedBody),
+				)
+			}
 		}
 	}
 
