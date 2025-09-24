@@ -718,7 +718,7 @@ func freightCreationCriteriaSatisfied(
 	}
 
 	ctx = logging.ContextWithLogger(ctx, logger.WithValues("criteriaExpression", expression))
-	program, err := expr.Compile(expression, function.WarehouseOperations(ctx, wh, artifacts)...)
+	program, err := expr.Compile(expression, function.DiscoveredArtifactsOperations(ctx, wh, artifacts)...)
 	if err != nil {
 		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
 	}

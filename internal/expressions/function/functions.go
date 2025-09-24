@@ -50,18 +50,17 @@ func FreightOperations(
 	}
 }
 
-// WarehouseOperations returns a slice of expr.Option containing functions for
+// DiscoveredArtifactsOperations returns a slice of expr.Option containing functions for
 // Warehouse operations.
 //
-// It provides `warehouse()`, `commitFrom()`, `imageFrom()`, and `chartFrom()`
+// It provides `commitFrom()`, `imageFrom()`, and `chartFrom()`
 // functions that can be used within expressions.
-func WarehouseOperations(
+func DiscoveredArtifactsOperations(
 	ctx context.Context,
 	wh *kargoapi.Warehouse,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) []expr.Option {
 	return []expr.Option{
-		Warehouse(),
 		CommitFromWarehouse(ctx, wh, artifacts),
 		ImageFromWarehouse(ctx, wh, artifacts),
 		ChartFromWarehouse(ctx, wh, artifacts),
