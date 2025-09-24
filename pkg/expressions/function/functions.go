@@ -50,8 +50,8 @@ func FreightOperations(
 	}
 }
 
-// DiscoveredArtifactsOperations returns a slice of expr.Option containing functions for
-// Warehouse operations.
+// DiscoveredArtifactsOperations returns a slice of expr.Option containing
+// functions for retrieving artifacts from a Warehouse's discovered artifacts.
 //
 // It provides `commitFrom()`, `imageFrom()`, and `chartFrom()`
 // functions that can be used within expressions.
