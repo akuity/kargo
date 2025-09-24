@@ -3,6 +3,7 @@ package function
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -587,37 +588,34 @@ func getCommitFromDiscoveredArtifacts(
 
 		repoURL = urls.NormalizeGit(repoURL)
 
+		if artifacts == nil {
+			return nil, errors.New("nil artifacts")
+		}
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
 		)
 
 		var latestCommit *kargoapi.DiscoveredCommit
-		for _, s := range wh.Spec.Subscriptions {
-			if s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL && len(artifacts.Git) != 0 {
-				logger.Debug("number of discovered git artifacts",
-					"count", len(artifacts.Git),
-				)
-				for i, ca := range artifacts.Git {
-					if urls.NormalizeGit(ca.RepoURL) != repoURL {
-						continue
-					}
-					logger.Debug("checking discovered git artifact",
-						"index", i,
-						"numCommits", len(ca.Commits),
-					)
-					slices.SortFunc(ca.Commits, func(a, b kargoapi.DiscoveredCommit) int {
-						return a.CreatorDate.Compare(b.CreatorDate.Time)
-					})
-					lastCommit := ca.Commits[len(ca.Commits)-1]
-					if latestCommit == nil {
-						latestCommit = &lastCommit
-						continue
-					}
-					if latestCommit.CreatorDate.Before(lastCommit.CreatorDate) {
-						latestCommit = &lastCommit
-					}
-				}
+		for i, ca := range artifacts.Git {
+			if urls.NormalizeGit(ca.RepoURL) != repoURL {
+				continue
+			}
+			logger.Debug("checking discovered git artifact",
+				"index", i,
+				"numCommits", len(ca.Commits),
+			)
+			slices.SortFunc(ca.Commits, func(a, b kargoapi.DiscoveredCommit) int {
+				return a.CreatorDate.Compare(b.CreatorDate.Time)
+			})
+			lastCommit := ca.Commits[len(ca.Commits)-1]
+			if latestCommit == nil {
+				latestCommit = &lastCommit
+				continue
+			}
+			if latestCommit.CreatorDate.Before(lastCommit.CreatorDate) {
+				latestCommit = &lastCommit
 			}
 		}
 		if latestCommit == nil {
@@ -697,54 +695,51 @@ func getImageFromDiscoveredArtifacts(
 
 		repoURL = urls.NormalizeImage(repoURL)
 
+		if artifacts == nil {
+			return nil, errors.New("nil artifacts")
+		}
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
 		)
 
 		var latestImg *kargoapi.Image
-		for _, s := range wh.Spec.Subscriptions {
-			if s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL && len(artifacts.Images) != 0 {
-				logger.Debug("number of discovered image artifacts",
-					"count", len(artifacts.Images),
-				)
-				for i, ia := range artifacts.Images {
-					iaRepoURL := urls.NormalizeImage(ia.RepoURL)
-					if iaRepoURL != repoURL {
-						continue
+		for i, ia := range artifacts.Images {
+			iaRepoURL := urls.NormalizeImage(ia.RepoURL)
+			if iaRepoURL != repoURL {
+				continue
+			}
+			logger.Debug("discovered image artifact",
+				"index", i,
+				"numImageRefs", len(ia.References),
+			)
+			for _, ref := range ia.References {
+				if latestImg == nil {
+					latestImg = &kargoapi.Image{
+						RepoURL:     iaRepoURL,
+						Tag:         ref.Tag,
+						Digest:      ref.Digest,
+						Annotations: maps.Clone(ref.Annotations),
 					}
-					logger.Debug("discovered image artifact",
-						"index", i,
-						"numImageRefs", len(ia.References),
-					)
-					for _, ref := range ia.References {
-						if latestImg == nil {
-							latestImg = &kargoapi.Image{
-								RepoURL:     iaRepoURL,
-								Tag:         ref.Tag,
-								Digest:      ref.Digest,
-								Annotations: maps.Clone(ref.Annotations),
-							}
-							continue
-						}
-						sv, err := semver.NewVersion(latestImg.Tag)
-						if err != nil {
-							logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
-							continue
-						}
-						latestSemver, err := semver.NewVersion(latestImg.Tag)
-						if err != nil {
-							logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
-							continue
-						}
-						if sv.GreaterThan(latestSemver) {
-							latestImg = &kargoapi.Image{
-								RepoURL:     iaRepoURL,
-								Tag:         ref.Tag,
-								Digest:      ref.Digest,
-								Annotations: maps.Clone(ref.Annotations),
-							}
-						}
+					continue
+				}
+				sv, err := semver.NewVersion(latestImg.Tag)
+				if err != nil {
+					logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
+					continue
+				}
+				latestSemver, err := semver.NewVersion(latestImg.Tag)
+				if err != nil {
+					logger.Error(err, "ignoring invalid semver version", "version", latestImg.Tag)
+					continue
+				}
+				if sv.GreaterThan(latestSemver) {
+					latestImg = &kargoapi.Image{
+						RepoURL:     iaRepoURL,
+						Tag:         ref.Tag,
+						Digest:      ref.Digest,
+						Annotations: maps.Clone(ref.Annotations),
 					}
 				}
 			}
@@ -833,48 +828,45 @@ func getChartFromDiscoveredArtifacts(
 
 		repoURL = urls.NormalizeChart(repoURL)
 
+		if artifacts == nil {
+			return nil, errors.New("nil artifacts")
+		}
+
 		logger := logging.LoggerFromContext(ctx).WithValues(
 			"repoURL", repoURL,
 			"warehouse", wh.Name,
 		)
 
 		var latestChart *kargoapi.Chart
-		for _, s := range wh.Spec.Subscriptions {
-			if s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL && len(artifacts.Charts) != 0 {
-				logger.Debug("number of discovered chart artifacts",
-					"count", len(artifacts.Charts),
-				)
-				for _, ca := range artifacts.Charts {
-					caRepoURL := urls.NormalizeChart(ca.RepoURL)
-					if caRepoURL != repoURL {
-						continue
+		for _, ca := range artifacts.Charts {
+			caRepoURL := urls.NormalizeChart(ca.RepoURL)
+			if caRepoURL != repoURL {
+				continue
+			}
+			for _, v := range ca.Versions {
+				sv, err := semver.NewVersion(v)
+				if err != nil {
+					logger.Error(err, "ignoring invalid semver version", "version", v)
+					continue
+				}
+				if latestChart == nil {
+					latestChart = &kargoapi.Chart{
+						RepoURL: repoURL,
+						Name:    caRepoURL,
+						Version: sv.String(),
 					}
-					for _, v := range ca.Versions {
-						sv, err := semver.NewVersion(v)
-						if err != nil {
-							logger.Error(err, "ignoring invalid semver version", "version", v)
-							continue
-						}
-						if latestChart == nil {
-							latestChart = &kargoapi.Chart{
-								RepoURL: repoURL,
-								Name:    caRepoURL,
-								Version: sv.String(),
-							}
-							continue
-						}
-						latestSemver, err := semver.NewVersion(latestChart.Version)
-						if err != nil {
-							logger.Error(err, "ignoring invalid semver version", "version", latestChart.Version)
-							continue
-						}
-						if sv.GreaterThan(latestSemver) {
-							latestChart = &kargoapi.Chart{
-								RepoURL: caRepoURL,
-								Name:    ca.Name,
-								Version: sv.String(),
-							}
-						}
+					continue
+				}
+				latestSemver, err := semver.NewVersion(latestChart.Version)
+				if err != nil {
+					logger.Error(err, "ignoring invalid semver version", "version", latestChart.Version)
+					continue
+				}
+				if sv.GreaterThan(latestSemver) {
+					latestChart = &kargoapi.Chart{
+						RepoURL: caRepoURL,
+						Name:    ca.Name,
+						Version: sv.String(),
 					}
 				}
 			}

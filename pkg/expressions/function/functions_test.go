@@ -305,8 +305,18 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
+			name:      "nil artifacts",
+			warehouse: new(kargoapi.Warehouse),
+			args:      []any{"https://example.com/repo.git"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "nil artifacts")
+			},
+		},
+		{
 			name:      "no commits found",
 			warehouse: new(kargoapi.Warehouse),
+			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"https://example.com/repo.git"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
@@ -538,8 +548,18 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
+			name:      "nil artifacts",
+			warehouse: new(kargoapi.Warehouse),
+			args:      []any{"docker.io/example/repo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "nil artifacts")
+			},
+		},
+		{
 			name:      "no images found",
 			warehouse: new(kargoapi.Warehouse),
+			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"docker.io/example/repo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
@@ -875,8 +895,18 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
+			name:      "nil artifacts",
+			warehouse: new(kargoapi.Warehouse),
+			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "nil artifacts")
+			},
+		},
+		{
 			name:      "no charts found",
 			warehouse: new(kargoapi.Warehouse),
+			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
