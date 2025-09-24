@@ -446,9 +446,9 @@ func (r *RegularStageReconciler) reconcile(
 					}
 
 					if !lp.Status.Phase.IsTerminal() || lp.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-						// If there was a last promotion and it had health checks, then health is knowable.
-						// We can only conclude that health is unknown due to a transient error and therefore
-						// we treat it as an error to trigger a requeue with backoff.
+						// If there was a last promotion with health checks, then health is knowable but unknown
+						// due to an unexpected transient error. Therefore we treat it as an error to trigger a requeue
+						// with backoff.
 						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
 					}
 				}
