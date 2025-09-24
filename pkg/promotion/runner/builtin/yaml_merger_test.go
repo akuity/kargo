@@ -68,7 +68,7 @@ func Test_yamlMerger_validate(t *testing.T) {
 		},
 	}
 
-	r := newYAMLMerger()
+	r := newYAMLMerger(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*yamlMerger)
 	require.True(t, ok)
 
