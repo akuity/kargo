@@ -436,7 +436,41 @@ func (r *RegularStageReconciler) reconcile(
 		{
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
-				return r.assessHealth(ctx, stage)
+				status := r.assessHealth(ctx, stage)
+				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
+					// If Stage health has evaluated to Unknown, there are two specific
+					// scenarios between which we must distinguish and handle differently
+					// from one another:
+					//
+					//  1. If Stage health is unknown specifically because the last
+					//     Promotion did not succeed, we know we cannot obtain a more
+					//     definitive assessment of Stage health until a new Promotion has
+					//     restored the Stage to a consistent state by executing to
+					//     completion. In such a case, we're DONE reconciling the Stage,
+					//     for now. We would like the Stage's conditions to reflect that
+					//     and for the next reconciliation attempt to occur after the
+					//     usual interval. This can be accomplished by returning a nil
+					//     error.
+					//
+					//  2. If Stage health is unknown for any other reason, we MAY
+					//     possibly obtain a more definitive assessment simply by
+					//     re-attempting reconciliation. In such a case, we would like
+					//     the Stage's conditions to reflect that we're still trying to
+					//     reconcile, with subsequent attempts observing a progressive
+					//     backoff. This can be accomplished by returning an error.
+					if lastPromo := status.LastPromotion; lastPromo == nil ||
+						lastPromo.Status == nil ||
+						!lastPromo.Status.Phase.IsTerminal() ||
+						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
+						// Scenario 2: There was no last Promotion or there was and it was
+						// successful. Whatever the reason the Stage health evaluated to
+						// Unknown, an unsuccessful Promotion wasn't it.
+						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
+					}
+				}
+				// Health assessment was definitive OR scenario 1: Stage health is
+				// unknown specifically because the last Promotion did not succeed.
+				return status, nil
 			},
 		},
 		{
@@ -738,10 +772,7 @@ func (r *RegularStageReconciler) syncPromotions(
 
 // assessHealth assesses the health of a Stage based on the health checks from
 // the last Promotion.
-func (r *RegularStageReconciler) assessHealth(
-	ctx context.Context,
-	stage *kargoapi.Stage,
-) (kargoapi.StageStatus, error) {
+func (r *RegularStageReconciler) assessHealth(ctx context.Context, stage *kargoapi.Stage) kargoapi.StageStatus {
 	logger := logging.LoggerFromContext(ctx)
 	newStatus := *stage.Status.DeepCopy()
 
@@ -760,7 +791,7 @@ func (r *RegularStageReconciler) assessHealth(
 				"Cannot assess health because a Promotion is currently in progress",
 			},
 		}
-		return newStatus, nil
+		return newStatus
 	}
 
 	lastPromo := stage.Status.LastPromotion
@@ -774,7 +805,7 @@ func (r *RegularStageReconciler) assessHealth(
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = nil
-		return newStatus, nil
+		return newStatus
 	}
 
 	// If the last Promotion did not succeed, then we cannot perform any health
@@ -798,27 +829,11 @@ func (r *RegularStageReconciler) assessHealth(
 			Status: kargoapi.HealthStateUnknown,
 			Issues: []string{"Cannot assess health because last Promotion did not succeed"},
 		}
-		return newStatus, errors.New("cannot assess health because last Promotion did not succeed")
+		return newStatus
 	}
 
 	// Compose the health check criteria.
 	healthChecks := lastPromo.Status.HealthChecks
-	if len(healthChecks) == 0 {
-		logger.Debug("Last promotion has no health checks: no health checks to perform")
-		conditions.Set(&newStatus, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionUnknown,
-			Reason:             "NoHealthChecksDefined",
-			Message:            "No health checks defined for last Promotion",
-			ObservedGeneration: stage.Generation,
-		})
-		newStatus.Health = &kargoapi.Health{
-			Status: kargoapi.HealthStateUnknown,
-			Issues: []string{"Cannot assess health because there are no health checks defined"},
-		}
-		return newStatus, nil
-	}
-
 	var criteria []healthPkg.Criteria
 	for _, check := range healthChecks {
 		criteria = append(criteria, healthPkg.Criteria{
@@ -841,32 +856,27 @@ func (r *RegularStageReconciler) assessHealth(
 			Message:            fmt.Sprintf("Stage is healthy (performed %d health checks)", len(healthChecks)),
 			ObservedGeneration: stage.Generation,
 		})
-		return newStatus, nil
 	case kargoapi.HealthStateUnhealthy:
-		msg := fmt.Sprintf(
-			"Stage is unhealthy (%d issues in %d health checks)",
-			len(hlth.Issues), len(healthChecks),
-		)
 		conditions.Set(&newStatus, &metav1.Condition{
-			Type:               kargoapi.ConditionTypeHealthy,
-			Status:             metav1.ConditionFalse,
-			Reason:             string(hlth.Status),
-			Message:            msg,
+			Type:   kargoapi.ConditionTypeHealthy,
+			Status: metav1.ConditionFalse,
+			Reason: string(hlth.Status),
+			Message: fmt.Sprintf(
+				"Stage is unhealthy (%d issues in %d health checks)",
+				len(hlth.Issues), len(healthChecks),
+			),
 			ObservedGeneration: stage.Generation,
 		})
-		return newStatus, errors.New(msg)
 	default:
-		// health is knowable but unknown due to unexpected, possibly transient
-		// condition. Treating this scenario as an error will requeue the stage
-		// with progressive backoff for repeated failures, as with any other error.
 		conditions.Set(&newStatus, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			Reason:             string(hlth.Status),
 			ObservedGeneration: stage.Generation,
 		})
-		return newStatus, fmt.Errorf("stage health is unknown after performing %d health check(s)", len(healthChecks))
 	}
+
+	return newStatus
 }
 
 // syncFreight ensures that all Freight statuses accurately reflect whether they

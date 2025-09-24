@@ -1831,7 +1831,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 		name          string
 		stage         *kargoapi.Stage
 		checkHealthFn func(ctx context.Context, project, stage string, criteria []healthPkg.Criteria) kargoapi.Health
-		assertions    func(*testing.T, kargoapi.StageStatus, error)
+		assertions    func(*testing.T, kargoapi.StageStatus)
 	}{
 		{
 			name: "no last promotion",
@@ -1844,8 +1844,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					LastPromotion: nil,
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.Nil(t, err)
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				assert.Nil(t, status.Health)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -1871,9 +1870,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.NotNil(t, err)
-				assert.ErrorContains(t, err, "cannot assess health because last Promotion did not succeed")
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				assert.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
 
@@ -1900,16 +1897,15 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.Nil(t, err)
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				assert.NotNil(t, status.Health)
-				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
+				assert.Equal(t, kargoapi.HealthStateHealthy, status.Health.Status)
 
 				healthyCond := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCond)
-				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
-				assert.Equal(t, "NoHealthChecksDefined", healthyCond.Reason)
-				assert.Contains(t, healthyCond.Message, "No health checks defined for last Promotion")
+				assert.Equal(t, metav1.ConditionTrue, healthyCond.Status)
+				assert.Equal(t, kargoapi.ConditionTypeHealthy, healthyCond.Reason)
+				assert.Contains(t, healthyCond.Message, "Stage is healthy")
 			},
 		},
 		{
@@ -1935,8 +1931,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateHealthy}
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.Nil(t, err)
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				require.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateHealthy, status.Health.Status)
 
@@ -1975,8 +1970,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 					},
 				}
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.NotNil(t, err)
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				require.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateUnhealthy, status.Health.Status)
 
@@ -2012,8 +2006,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateNotApplicable}
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.NotNil(t, err)
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				require.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateNotApplicable, status.Health.Status)
 
@@ -2045,9 +2038,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 			checkHealthFn: func(context.Context, string, string, []healthPkg.Criteria) kargoapi.Health {
 				return kargoapi.Health{Status: kargoapi.HealthStateUnknown}
 			},
-			assertions: func(t *testing.T, status kargoapi.StageStatus, err error) {
-				assert.NotNil(t, err)
-				assert.ErrorContains(t, err, "stage health is unknown after performing 1 health check(s)")
+			assertions: func(t *testing.T, status kargoapi.StageStatus) {
 				require.NotNil(t, status.Health)
 				assert.Equal(t, kargoapi.HealthStateUnknown, status.Health.Status)
 
@@ -2072,8 +2063,8 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				},
 			}
 
-			status, err := r.assessHealth(context.Background(), tt.stage)
-			tt.assertions(t, status, err)
+			status := r.assessHealth(context.Background(), tt.stage)
+			tt.assertions(t, status)
 		})
 	}
 }
