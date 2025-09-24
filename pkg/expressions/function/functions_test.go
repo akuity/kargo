@@ -280,15 +280,15 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 						RepoURL: "https://example.com/repo.git",
 						Commits: []kargoapi.DiscoveredCommit{
 							{
-								Tag: "abc123",
-								CreatorDate: &metav1.Time{
-									Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
-								},
-							},
-							{
 								Tag: "def456",
 								CreatorDate: &metav1.Time{
 									Time: time.Date(2023, 9, 17, 2, 0, 0, 0, time.UTC),
+								},
+							},
+							{
+								Tag: "abc123",
+								CreatorDate: &metav1.Time{
+									Time: time.Date(2023, 9, 17, 1, 0, 0, 0, time.UTC),
 								},
 							},
 						},

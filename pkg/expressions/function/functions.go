@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"slices"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -606,10 +605,8 @@ func getCommitFromDiscoveredArtifacts(
 				"index", i,
 				"numCommits", len(ca.Commits),
 			)
-			slices.SortFunc(ca.Commits, func(a, b kargoapi.DiscoveredCommit) int {
-				return a.CreatorDate.Compare(b.CreatorDate.Time)
-			})
-			lastCommit := ca.Commits[len(ca.Commits)-1]
+			// these will already be sorted upstream by discovery.
+			lastCommit := ca.Commits[0]
 			if latestCommit == nil {
 				latestCommit = &lastCommit
 				continue
