@@ -458,7 +458,7 @@ func (r *RegularStageReconciler) reconcile(
 					//     reconcile, with subsequent attempts observing a progressive
 					//     backoff. This can be accomplished by returning an error.
 					lastPromo := status.LastPromotion
-					if lastPromo != nil && lastPromo.Status != nil && len(lastPromo.Status.HealthChecks) == 0 {
+					if lastPromo == nil || lastPromo.Status == nil || len(lastPromo.Status.HealthChecks) == 0 {
 						// if there are no health checks, then we cannot assess health.
 						return status, nil
 					}
