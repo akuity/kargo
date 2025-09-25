@@ -702,18 +702,18 @@ func freightCreationCriteriaSatisfied(
 	logger := logging.LoggerFromContext(ctx)
 
 	if wh.Spec.FreightCreationCriteria == nil {
-		logger.Debug("no freight creation criteria")
+		logger.Trace("no freight creation criteria")
 		return true, nil
 	}
 
 	expression := strings.TrimSpace(wh.Spec.FreightCreationCriteria.Expression)
 	if expression == "" {
-		logger.Debug("no freight creation criteria expression")
+		logger.Trace("no freight creation criteria expression")
 		return true, nil
 	}
 
 	if artifacts == nil || (len(artifacts.Git) == 0 && len(artifacts.Images) == 0 && len(artifacts.Charts) == 0) {
-		logger.Debug("no artifacts discovered")
+		logger.Trace("no artifacts discovered")
 		return true, nil
 	}
 
@@ -729,7 +729,9 @@ func freightCreationCriteriaSatisfied(
 		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
 	}
 
-	logger.Debug("evaluated freight creation criteria expression", "result", result)
+	logger.WithValues("criteriaExpression", expression).Trace("evaluated freight creation criteria expression",
+		"result", result,
+	)
 
 	switch result := result.(type) {
 	case bool:
