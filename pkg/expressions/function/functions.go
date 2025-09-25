@@ -215,8 +215,8 @@ func ChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.
 	return expr.Function(
 		"chartFrom",
 		getChartFromDiscoveredArtifacts(artifacts),
-		new(func(repoURL string) kargoapi.Chart),
 		new(func(repoURL string, chartName string) kargoapi.Chart),
+		new(func(repoURL string) kargoapi.Chart),
 	)
 }
 
