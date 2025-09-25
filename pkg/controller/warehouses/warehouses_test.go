@@ -1382,7 +1382,7 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 			errExpected: false,
 		},
 		{
-			name: "success - chart versions match",
+			name: "success - chart versions match with repo URL only",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
@@ -1414,7 +1414,44 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 			errExpected: false,
 		},
 		{
-			name: "success - chart versions do not match",
+			name: "success - chart versions match with repo URL and optional name",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							Name:    "some-name",
+							RepoURL: "site/repo/frontend",
+						}},
+						{Chart: &kargoapi.ChartSubscription{
+							Name:    `some-other-name`,
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
+						Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
+						chartFrom('site/repo/backend', 'some-other-name').Version`,
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						Name:     "some-name",
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+					{
+						Name:     "some-other-name",
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions do not match with repo URL only",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
@@ -1437,6 +1474,41 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 						Versions: []string{"v1.0.0"},
 					},
 					{
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.1.0"},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions do not match with repo URL and optional name",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/frontend",
+						}},
+						{Chart: &kargoapi.ChartSubscription{
+							RepoURL: "site/repo/backend",
+						}},
+					},
+					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
+						Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
+						chartFrom('site/repo/backend', 'some-other-name').Version`,
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						Name:     "some-name",
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0"},
+					},
+					{
+						Name:     "some-other-name",
 						RepoURL:  "site/repo/backend",
 						Versions: []string{"v1.1.0"},
 					},
