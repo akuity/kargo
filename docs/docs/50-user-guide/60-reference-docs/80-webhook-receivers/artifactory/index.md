@@ -31,21 +31,19 @@ it is required that you set a <Hlt>Custom Base URL</Hlt> for your instance.
 When this setting hasn't been configured, critical information will be missing 
 from the webhook payloads.
 
-1. Click on the <Hlt>Administration</Hlt> tab at the top.
-
-    ![Admin Tab](./img/admin_tab.png "Admin Tab")
-
-1. Hover over <Hlt>General Management</Hlt> in the left-hand sidebar.
-
-1. Click <Hlt>Settings</Hlt>.
-
-    ![General Mgmt](./img/general_management.png "General Mgmt")
+1. Navigate to 
+`https://<jfrog-instance>.jfrog.io/ui/admin/configuration/general`, where `<jfrog-instance>` has been replaced with an Artifactory instance for which you are an administrator.
 
 1.  Set the <Hlt>Custom Base URL</Hlt> field to your instance's URL.
 
     ![Custom Base URL](./img/custom_base_url.png "Custom Base URL")
 
 1. At the bottom of the form, click <Hlt>Save</Hlt>.
+
+:::info
+For additional information on configuring your <Hlt>Custom Base URL</Hlt>
+refer directly to the [Artifactory Docs](https://jfrog.com/help/r/jfrog-platform-administration-documentation/general-settings).
+:::
 
 ## Configuring the Receiver
 
