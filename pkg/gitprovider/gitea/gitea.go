@@ -280,36 +280,44 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
-	opts *gitprovider.MergePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.MergePullRequestOpts{}
-	}
-
-	mergeOpts := &gitea.MergePullRequestOption{}
-
-	// Set merge commit title based on available fields
-	if opts.CommitTitle != "" {
-		mergeOpts.MergeCommitID = opts.CommitTitle
-	}
-
-	_, err := p.client.MergePullRequest(ctx, p.owner, p.repo, int(id), mergeOpts)
+) (*gitprovider.PullRequest, bool, error) {
+	// Get current PR
+	currentPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if currentPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
+	}
+
+	// Check if PR is already merged
+	if currentPR.HasMerged {
+		pr := convertGiteaPR(*currentPR)
+		return &pr, true, nil
+	}
+
+	// Check if PR is not in open state
+	if currentPR.State != gitea.StateOpen {
+		// Not ready to merge
+		return nil, false, nil
+	}
+
+	_, err = p.client.MergePullRequest(ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{})
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
 	// After merging, get the updated PR to return current state
-	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
+		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
+	}
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil PR after merge")
 	}
 
-	if giteaPR == nil {
-		return nil, fmt.Errorf("unexpected nil pull request after merge")
-	}
-
-	pr := convertGiteaPR(*giteaPR)
-	return &pr, nil
+	pr := convertGiteaPR(*updatedPR)
+	return &pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

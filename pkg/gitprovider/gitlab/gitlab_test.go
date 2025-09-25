@@ -172,23 +172,40 @@ func TestMergePullRequest(t *testing.T) {
 		client:      mockClient,
 	}
 
-	t.Run("successful merge", func(t *testing.T) {
-		opts := &gitprovider.MergePullRequestOpts{
-			CommitMessage: "Merge PR",
-		}
-		pr, err := g.MergePullRequest(context.Background(), 123, opts)
+	t.Run("MR is already merged", func(t *testing.T) {
+		// Set up mock to return merged MR on first call
+		mockClient.mr.State = "merged"
+
+		pr, merged, err := g.MergePullRequest(context.Background(), 123)
 
 		require.NoError(t, err)
+		require.True(t, merged)
 		require.NotNil(t, pr)
 		require.Equal(t, int64(123), pr.Number)
 		require.True(t, pr.Merged)
 		require.Equal(t, testProjectName, mockClient.pid)
 	})
 
-	t.Run("successful merge with nil options", func(t *testing.T) {
-		pr, err := g.MergePullRequest(context.Background(), 456, nil)
+	t.Run("MR is not open", func(t *testing.T) {
+		// Set up mock to return closed MR
+		mockClient.mr.State = "closed"
+
+		pr, merged, err := g.MergePullRequest(context.Background(), 456)
 
 		require.NoError(t, err)
+		require.False(t, merged)
+		require.Nil(t, pr)
+		require.Equal(t, testProjectName, mockClient.pid)
+	})
+
+	t.Run("successful merge", func(t *testing.T) {
+		// Set up mock to return open MR on GetMergeRequest, then merged MR on AcceptMergeRequest
+		mockClient.mr.State = "opened"
+
+		pr, merged, err := g.MergePullRequest(context.Background(), 789)
+
+		require.NoError(t, err)
+		require.True(t, merged)
 		require.NotNil(t, pr)
 		require.Equal(t, testProjectName, mockClient.pid)
 	})

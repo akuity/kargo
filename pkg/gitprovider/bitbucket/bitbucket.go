@@ -300,12 +300,7 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
-	opts *gitprovider.MergePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.MergePullRequestOpts{}
-	}
-
+) (*gitprovider.PullRequest, bool, error) {
 	// Get the current PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
@@ -315,27 +310,28 @@ func (p *provider) MergePullRequest(
 
 	currentPRResp, err := p.client.GetPullRequest(prOpts)
 	if err != nil {
-		return nil, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 
 	currentPR, err := toBitbucketPR(currentPRResp)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing pull request response: %w", err)
+		return nil, false, fmt.Errorf("error parsing pull request response: %w", err)
 	}
 
 	// Check if PR is already merged
 	if currentPR.State == prStateMerged {
-		return toProviderPR(currentPR, currentPRResp), nil
+		return toProviderPR(currentPR, currentPRResp), true, nil
 	}
 
 	// Check if PR is closed/declined
 	if currentPR.State == prStateDeclined || currentPR.State == prStateSuperseded {
-		return nil, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, currentPR.State)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, currentPR.State)
 	}
 
 	// Check if PR is not in open state
 	if currentPR.State != prStateOpen {
-		return nil, fmt.Errorf("pull request %d is not in a mergeable state (state: %s)", id, currentPR.State)
+		// PR is not ready to merge yet (pending checks, conflicts, etc.)
+		return nil, false, nil
 	}
 
 	// Attempt to merge the PR
@@ -345,35 +341,19 @@ func (p *provider) MergePullRequest(
 		ID:       strconv.FormatInt(id, 10),
 	}
 
-	// Set merge commit message
-	mergeMessage := ""
-	if opts.CommitTitle != "" {
-		mergeMessage = opts.CommitTitle
-	}
-	if opts.CommitMessage != "" {
-		if mergeMessage != "" {
-			mergeMessage += "\n\n" + opts.CommitMessage
-		} else {
-			mergeMessage = opts.CommitMessage
-		}
-	}
-	if mergeMessage != "" {
-		mergeOpts.Message = mergeMessage
-	}
-
 	// Perform the merge
 	mergeResp, err := p.client.MergePullRequest(mergeOpts)
 	if err != nil {
-		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
 	// Parse the merged PR response
 	mergedPR, err := toBitbucketPR(mergeResp)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing merged pull request response: %w", err)
+		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
 	}
 
-	return toProviderPR(mergedPR, mergeResp), nil
+	return toProviderPR(mergedPR, mergeResp), true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

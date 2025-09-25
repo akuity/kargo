@@ -185,43 +185,51 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
-	opts *gitprovider.MergePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
+) (*gitprovider.PullRequest, bool, error) {
 	gitClient, err := adogit.NewClient(ctx, p.connection)
 	if err != nil {
-		return nil, fmt.Errorf("error creating Azure DevOps client: %w", err)
+		return nil, false, fmt.Errorf("error creating Azure DevOps client: %w", err)
 	}
 
-	if opts == nil {
-		opts = &gitprovider.MergePullRequestOpts{}
-	}
-
-	// Get the current PR to get the last merge source commit
+	// Get the current PR to check its status and get the last merge source commit
 	currentPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
 		PullRequestId: ptr.To(int(id)),
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if currentPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
-	// Prepare commit message combining title and message
-	var commitMessage string
-	if opts.CommitTitle != "" {
-		commitMessage = opts.CommitTitle
-		if opts.CommitMessage != "" {
-			commitMessage += "\n\n" + opts.CommitMessage
+	status := ptr.Deref(currentPR.Status, adogit.PullRequestStatusValues.NotSet)
+	mergeStatus := ptr.Deref(currentPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
+
+	switch status {
+	case adogit.PullRequestStatusValues.Completed:
+		pr, convertErr := convertADOPullRequest(currentPR)
+		if convertErr != nil {
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, convertErr)
 		}
-	} else if opts.CommitMessage != "" {
-		commitMessage = opts.CommitMessage
+		return pr, true, nil
+	case adogit.PullRequestStatusValues.Abandoned:
+		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
+	case adogit.PullRequestStatusValues.Active:
+		// If merge status shows conflicts or policies not met → retry later
+		if mergeStatus == adogit.PullRequestAsyncStatusValues.Conflicts ||
+			mergeStatus == adogit.PullRequestAsyncStatusValues.Queued ||
+			mergeStatus == adogit.PullRequestAsyncStatusValues.RejectedByPolicy ||
+			mergeStatus == adogit.PullRequestAsyncStatusValues.Failure {
+			return nil, false, nil
+		}
+	default:
+		// Draft or not mergeable yet → retry later
+		return nil, false, nil
 	}
 
-	mergeCommit := &adogit.GitPullRequestCompletionOptions{
-		MergeCommitMessage: &commitMessage,
-	}
-
-	// Update the PR to complete (merge) it
+	// Try to merge
 	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
@@ -229,18 +237,21 @@ func (p *provider) MergePullRequest(
 		GitPullRequestToUpdate: &adogit.GitPullRequest{
 			Status:                ptr.To(adogit.PullRequestStatusValues.Completed),
 			LastMergeSourceCommit: currentPR.LastMergeSourceCommit,
-			CompletionOptions:     mergeCommit,
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error merging pull request %d: %w", id, err)
+		// Network/auth errors → terminal
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
 	}
 
 	pr, err := convertADOPullRequest(updatedPR)
 	if err != nil {
-		return nil, fmt.Errorf("error converting merged pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
 	}
-	return pr, nil
+	return pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

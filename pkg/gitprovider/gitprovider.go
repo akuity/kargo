@@ -52,8 +52,12 @@ type Interface interface {
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
-	// MergePullRequest merges an existing pull request
-	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, error)
+	// MergePullRequest attempts to merge a pull request.
+	// Returns:
+	// - *PullRequest: the merged PR if successful
+	// - bool: true if merge was performed, false if PR is not ready to merge
+	// - error: only for actual errors (auth, network, invalid PR, etc.)
+	MergePullRequest(context.Context, int64) (*PullRequest, bool, error)
 
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
 	// and commit ID.
@@ -73,15 +77,6 @@ type CreatePullRequestOpts struct {
 	Base string
 	// Labels is an array of strings that should be added as labels to the pull request.
 	Labels []string
-}
-
-// MergePullRequestOpts encapsulates the options used when merging a pull
-// request.
-type MergePullRequestOpts struct {
-	// CommitTitle is the title for the merge commit.
-	CommitTitle string
-	// CommitMessage is the description for the merge commit.
-	CommitMessage string
 }
 
 // ListPullRequestOptions encapsulates the options used when listing pull
@@ -143,7 +138,7 @@ type Fake struct {
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
 	// MergePullRequestFn defines the functionality of the MergePullRequest method.
-	MergePullRequestFn func(context.Context, int64, *MergePullRequestOpts) (*PullRequest, error)
+	MergePullRequestFn func(context.Context, int64) (*PullRequest, bool, error)
 	// GetCommitURLFn defines the functionality of the GetCommitURL method.
 	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
@@ -176,9 +171,8 @@ func (f *Fake) ListPullRequests(
 func (f *Fake) MergePullRequest(
 	ctx context.Context,
 	number int64,
-	opts *MergePullRequestOpts,
-) (*PullRequest, error) {
-	return f.MergePullRequestFn(ctx, number, opts)
+) (*PullRequest, bool, error) {
+	return f.MergePullRequestFn(ctx, number)
 }
 
 // GetCommitURL implements gitprovider.Interface.

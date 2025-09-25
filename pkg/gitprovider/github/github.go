@@ -17,6 +17,13 @@ import (
 
 const ProviderName = "github"
 
+// GitHub pull request states
+const (
+	prStateAll    = "all"
+	prStateClosed = "closed"
+	prStateOpen   = "open"
+)
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -260,11 +267,11 @@ func (p *provider) ListPullRequests(
 	}
 	switch opts.State {
 	case gitprovider.PullRequestStateAny:
-		listOpts.State = "all"
+		listOpts.State = prStateAll
 	case gitprovider.PullRequestStateClosed:
-		listOpts.State = "closed"
+		listOpts.State = prStateClosed
 	case gitprovider.PullRequestStateOpen:
-		listOpts.State = "open"
+		listOpts.State = prStateOpen
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
@@ -292,22 +299,26 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
-	opts *gitprovider.MergePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.MergePullRequestOpts{}
+) (*gitprovider.PullRequest, bool, error) {
+	// Get the current PR to check its status
+	currentPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 
-	mergeOptions := &github.PullRequestOptions{}
+	if currentPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
+	}
 
-	// Use title and message from opts, defaulting to empty string
-	commitMessage := opts.CommitMessage
-	if opts.CommitTitle != "" {
-		if commitMessage != "" {
-			commitMessage = opts.CommitTitle + "\n\n" + commitMessage
-		} else {
-			commitMessage = opts.CommitTitle
-		}
+	// Check if PR is already merged
+	if currentPR.MergedAt != nil {
+		pr := convertGithubPR(*currentPR)
+		return &pr, true, nil
+	}
+
+	// Check if PR is closed but not merged - this is a terminal error
+	if ptr.Deref(currentPR.State, prStateClosed) != prStateOpen {
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 	}
 
 	mergeResult, _, err := p.client.MergePullRequest(
@@ -315,29 +326,29 @@ func (p *provider) MergePullRequest(
 		p.owner,
 		p.repo,
 		int(id),
-		commitMessage,
-		mergeOptions,
+		"", // Empty string - let GitHub use its default Commit Message
+		&github.PullRequestOptions{},
 	)
 	if err != nil {
-		return nil, err
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
 	if mergeResult == nil {
-		return nil, fmt.Errorf("unexpected nil merge result")
+		return nil, false, fmt.Errorf("unexpected nil merge result")
 	}
 
 	// After merging, get the updated PR to return current state
-	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, err
+		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
 	}
 
-	if ghPR == nil {
-		return nil, fmt.Errorf("unexpected nil pull request after merge")
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil pull request after merge")
 	}
 
-	pr := convertGithubPR(*ghPR)
-	return &pr, nil
+	pr := convertGithubPR(*updatedPR)
+	return &pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
@@ -361,7 +372,7 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(ghPR.Number, 0)),
 		URL:            ptr.Deref(ghPR.HTMLURL, ""),
-		Open:           ptr.Deref(ghPR.State, "closed") == "open",
+		Open:           ptr.Deref(ghPR.State, prStateClosed) == prStateOpen,
 		Merged:         ghPR.MergedAt != nil,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,

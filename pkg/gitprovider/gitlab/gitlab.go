@@ -209,30 +209,39 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
-	opts *gitprovider.MergePullRequestOpts,
-) (*gitprovider.PullRequest, error) {
-	if opts == nil {
-		opts = &gitprovider.MergePullRequestOpts{}
-	}
-
-	acceptOpts := &gitlab.AcceptMergeRequestOptions{}
-
-	// Set merge commit message
-	if opts.CommitMessage != "" {
-		acceptOpts.MergeCommitMessage = &opts.CommitMessage
-	}
-
-	glMR, _, err := p.client.AcceptMergeRequest(p.projectName, int(id), acceptOpts)
+) (*gitprovider.PullRequest, bool, error) {
+	// Get the current MR to check its status
+	currentMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
 	if err != nil {
-		return nil, err
+		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
+	}
+	if currentMR == nil {
+		return nil, false, fmt.Errorf("merge request %d not found", id)
 	}
 
-	if glMR == nil {
-		return nil, fmt.Errorf("unexpected nil merge request after merge")
+	// Check if MR is already merged
+	if currentMR.State == "merged" {
+		pr := convertGitlabMR(currentMR.BasicMergeRequest)
+		return &pr, true, nil
 	}
 
-	pr := convertGitlabMR(glMR.BasicMergeRequest)
-	return &pr, nil
+	// Check if MR is open
+	if currentMR.State != "opened" {
+		// MR is closed or locked; cannot merge
+		return nil, false, nil
+	}
+
+	// Merge the MR
+	updatedMR, _, err := p.client.AcceptMergeRequest(p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{})
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
+	}
+	if updatedMR == nil {
+		return nil, false, fmt.Errorf("unexpected nil merge request after merge")
+	}
+
+	pr := convertGitlabMR(updatedMR.BasicMergeRequest)
+	return &pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
