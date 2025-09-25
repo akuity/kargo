@@ -738,7 +738,7 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 
 		repoURL = urls.NormalizeChart(repoURL)
 		for _, ca := range artifacts.Charts {
-			if urls.NormalizeChart(ca.RepoURL) != repoURL || ca.Name != chartName {
+			if urls.NormalizeChart(ca.RepoURL) != repoURL || (ca.Name != chartName && chartName != "") {
 				continue
 			}
 			if len(ca.Versions) > 0 {
