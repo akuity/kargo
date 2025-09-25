@@ -811,11 +811,19 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid arg type",
+			name: "1st arg type invalid",
 			args: []any{1},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "first argument must be string, got int")
+			},
+		},
+		{
+			name: "2nd arg type invalid",
+			args: []any{"oci://ghcr.io/akuity/kargo-charts/kargo", 2},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "second argument must be string, got int")
 			},
 		},
 		{
@@ -852,12 +860,12 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 					},
 					{
 						Name:     "kargo",
-						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+						RepoURL:  "https://charts.example.com",
 						Versions: []string{"v2.3.0", "v2.2.0", "v2.1.0"},
 					},
 				},
 			},
-			args: []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			args: []any{"https://charts.example.com", "kargo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
