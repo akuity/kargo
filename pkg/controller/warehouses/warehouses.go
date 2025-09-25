@@ -729,7 +729,7 @@ func freightCreationCriteriaSatisfied(
 		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
 	}
 
-	logger.Debug("evaluated freight creation criteria expression", "result", fmt.Sprintf("'%v'", result))
+	logger.Debug("evaluated freight creation criteria expression", "result", result)
 
 	switch result := result.(type) {
 	case bool:
