@@ -838,10 +838,10 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 		{
 			name:      "wrong number of args",
 			warehouse: nil,
-			args:      []any{"one", "two"},
+			args:      []any{},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "expected 1 argument, got 2")
+				require.ErrorContains(t, err, "expected 1-2 arguments, got 0")
 			},
 		},
 		{
@@ -854,7 +854,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success with repo URL only",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
 					Subscriptions: []kargoapi.RepoSubscription{
@@ -873,6 +873,43 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 						Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
 					},
 					{
+						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
+						Versions: []string{"v2.3.0", "v2.2.0", "v2.1.0"},
+					},
+				},
+			},
+			args: []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				commit, ok := result.(kargoapi.Chart)
+				require.True(t, ok)
+				require.Equal(t, "v2.3.0", commit.Version)
+			},
+		},
+		{
+			name: "success with repo URL and name",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					Subscriptions: []kargoapi.RepoSubscription{
+						{
+							Chart: &kargoapi.ChartSubscription{
+								Name:    "kargo",
+								RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
+							},
+						},
+					},
+				},
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						Name:     "other-chart",
+						RepoURL:  "oci://ghcr.io/other/chart-repo",
+						Versions: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
+					},
+					{
+						Name:     "kargo",
 						RepoURL:  "oci://ghcr.io/akuity/kargo-charts/kargo",
 						Versions: []string{"v2.3.0", "v2.2.0", "v2.1.0"},
 					},

@@ -216,6 +216,7 @@ func ChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.
 		"chartFrom",
 		getChartFromDiscoveredArtifacts(artifacts),
 		new(func(repoURL string) kargoapi.Chart),
+		new(func(repoURL string, chartName string) kargoapi.Chart),
 	)
 }
 
@@ -714,13 +715,21 @@ func getChartFromFreight(
 // getChartFromDiscoveredArtifacts returns a function that finds the latest Helm chart based on repository URL.
 func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) != 1 {
-			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		if len(a) == 0 || len(a) > 2 {
+			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
 		}
 
 		repoURL, ok := a[0].(string)
 		if !ok {
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		var chartName string
+		if len(a) == 2 {
+			chartName, ok = a[1].(string)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+			}
 		}
 
 		if artifacts == nil {
@@ -730,6 +739,9 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 		repoURL = urls.NormalizeChart(repoURL)
 		for _, ca := range artifacts.Charts {
 			if urls.NormalizeChart(ca.RepoURL) != repoURL {
+				continue
+			}
+			if chartName != "" && ca.Name != chartName {
 				continue
 			}
 			if len(ca.Versions) > 0 {
