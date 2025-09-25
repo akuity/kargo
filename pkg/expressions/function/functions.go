@@ -3,7 +3,6 @@ package function
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"strings"
@@ -144,7 +143,7 @@ func CommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr
 	return expr.Function(
 		"commitFrom",
 		getCommitFromDiscoveredArtifacts(artifacts),
-		new(func(repoURL string) kargoapi.GitCommit),
+		new(func(repoURL string) kargoapi.DiscoveredCommit),
 	)
 }
 
@@ -567,18 +566,16 @@ func getCommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) e
 		if artifacts == nil {
 			return nil, nil
 		}
-	
+
 		repoURL = urls.NormalizeGit(repoURL)
-	
 		for _, ca := range artifacts.Git {
 			if urls.NormalizeGit(ca.RepoURL) != repoURL {
 				continue
 			}
 			if len(ca.Commits) > 0 {
-				return commits[0]
+				return ca.Commits[0], nil
 			}
 		}
-	
 		return nil, nil
 	}
 }
@@ -638,31 +635,26 @@ func getImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = urls.NormalizeImage(repoURL)
-
 		if artifacts == nil {
-			return nil, errors.New("nil artifacts")
+			return nil, nil
 		}
 
-		var latestImg *kargoapi.Image
+		repoURL = urls.NormalizeImage(repoURL)
 		for _, ia := range artifacts.Images {
-			iaRepoURL := urls.NormalizeImage(ia.RepoURL)
-			if iaRepoURL != repoURL {
+			if urls.NormalizeImage(ia.RepoURL) != repoURL {
 				continue
 			}
-			// these will already be sorted upstream by discovery.
-			ref := ia.References[0]
-			latestImg = &kargoapi.Image{
-				RepoURL:     iaRepoURL,
-				Tag:         ref.Tag,
-				Digest:      ref.Digest,
-				Annotations: maps.Clone(ref.Annotations),
+			if len(ia.References) > 0 {
+				ref := ia.References[0]
+				return kargoapi.Image{
+					RepoURL:     repoURL,
+					Tag:         ref.Tag,
+					Digest:      ref.Digest,
+					Annotations: ref.Annotations,
+				}, nil
 			}
 		}
-		if latestImg == nil {
-			return nil, fmt.Errorf("no images found for repoURL %q", repoURL)
-		}
-		return latestImg, nil
+		return nil, nil
 	}
 }
 
@@ -737,30 +729,24 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = urls.NormalizeChart(repoURL)
-
 		if artifacts == nil {
-			return nil, errors.New("nil artifacts")
+			return nil, nil
 		}
 
-		var latestChart *kargoapi.Chart
+		repoURL = urls.NormalizeChart(repoURL)
 		for _, ca := range artifacts.Charts {
-			caRepoURL := urls.NormalizeChart(ca.RepoURL)
-			if caRepoURL != repoURL {
+			if urls.NormalizeChart(ca.RepoURL) != repoURL {
 				continue
 			}
-			// these will already be sorted upstream by discovery.
-			v := ca.Versions[0]
-			latestChart = &kargoapi.Chart{
-				RepoURL: repoURL,
-				Name:    ca.Name,
-				Version: v,
+			if len(ca.Versions) > 0 {
+				return kargoapi.Chart{
+					RepoURL: repoURL,
+					Name:    ca.Name,
+					Version: ca.Versions[0],
+				}, nil
 			}
 		}
-		if latestChart == nil {
-			return nil, fmt.Errorf("no charts found for repoURL %q", repoURL)
-		}
-		return latestChart, nil
+		return nil, nil
 	}
 }
 

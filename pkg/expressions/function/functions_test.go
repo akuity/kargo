@@ -298,7 +298,7 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				commit, ok := result.(*kargoapi.GitCommit)
+				commit, ok := result.(kargoapi.DiscoveredCommit)
 				require.True(t, ok)
 				require.Equal(t, "def456", commit.Tag)
 			},
@@ -309,7 +309,7 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"https://example.com/repo.git"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "nil artifacts")
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -319,7 +319,7 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"https://example.com/repo.git"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "no commits found for repoURL")
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -538,7 +538,7 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				img, ok := result.(*kargoapi.Image)
+				img, ok := result.(kargoapi.Image)
 				require.True(t, ok)
 				require.Equal(t, "v1.0.0", img.Tag)
 			},
@@ -549,7 +549,7 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"docker.io/example/repo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "nil artifacts")
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -559,7 +559,7 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"docker.io/example/repo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "no images found for repoURL")
+				require.NoError(t, err)
 			},
 		},
 	} {
@@ -882,7 +882,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				commit, ok := result.(*kargoapi.Chart)
+				commit, ok := result.(kargoapi.Chart)
 				require.True(t, ok)
 				require.Equal(t, "v2.3.0", commit.Version)
 			},
@@ -893,7 +893,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "nil artifacts")
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -903,7 +903,7 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
-				require.ErrorContains(t, err, "no charts found for repoURL")
+				require.NoError(t, err)
 			},
 		},
 	} {
