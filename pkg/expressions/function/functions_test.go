@@ -237,24 +237,21 @@ func Test_getCommitFromFreight(t *testing.T) {
 func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
-		warehouse  *kargoapi.Warehouse
 		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
 		{
-			name:      "wrong number of args",
-			warehouse: nil,
-			args:      []any{"one", "two"},
+			name: "wrong number of args",
+			args: []any{"one", "two"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "expected 1 argument, got 2")
 			},
 		},
 		{
-			name:      "invalid arg type",
-			warehouse: nil,
-			args:      []any{1},
+			name: "invalid arg type",
+			args: []any{1},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "first argument must be string, got int")
@@ -262,17 +259,6 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name: "success",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Git: &kargoapi.GitSubscription{
-								RepoURL: "https://example.com/repo.git",
-							},
-						},
-					},
-				},
-			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Git: []kargoapi.GitDiscoveryResult{
 					{
@@ -304,9 +290,8 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name:      "nil artifacts",
-			warehouse: new(kargoapi.Warehouse),
-			args:      []any{"https://example.com/repo.git"},
+			name: "nil artifacts",
+			args: []any{"https://example.com/repo.git"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.NoError(t, err)
@@ -314,7 +299,6 @@ func Test_getCommitFromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name:      "no commits found",
-			warehouse: new(kargoapi.Warehouse),
 			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"https://example.com/repo.git"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -487,24 +471,21 @@ func Test_getImageFromFreight(t *testing.T) {
 func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
-		warehouse  *kargoapi.Warehouse
 		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
 		{
-			name:      "wrong number of args",
-			warehouse: nil,
-			args:      []any{"one", "two"},
+			name: "wrong number of args",
+			args: []any{"one", "two"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "expected 1 argument, got 2")
 			},
 		},
 		{
-			name:      "invalid arg type",
-			warehouse: nil,
-			args:      []any{1},
+			name: "invalid arg type",
+			args: []any{1},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "first argument must be string, got int")
@@ -512,17 +493,6 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name: "success",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Image: &kargoapi.ImageSubscription{
-								RepoURL: "docker.io/example/repo",
-							},
-						},
-					},
-				},
-			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Images: []kargoapi.ImageDiscoveryResult{
 					{
@@ -544,9 +514,8 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name:      "nil artifacts",
-			warehouse: new(kargoapi.Warehouse),
-			args:      []any{"docker.io/example/repo"},
+			name: "nil artifacts",
+			args: []any{"docker.io/example/repo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.NoError(t, err)
@@ -554,7 +523,6 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name:      "no images found",
-			warehouse: new(kargoapi.Warehouse),
 			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"docker.io/example/repo"},
 			assertions: func(t *testing.T, result any, err error) {
@@ -830,24 +798,21 @@ func Test_getChartFromFreight(t *testing.T) {
 func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
-		warehouse  *kargoapi.Warehouse
 		artifacts  *kargoapi.DiscoveredArtifacts
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
 		{
-			name:      "wrong number of args",
-			warehouse: nil,
-			args:      []any{},
+			name: "wrong number of args",
+			args: []any{},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "expected 1-2 arguments, got 0")
 			},
 		},
 		{
-			name:      "invalid arg type",
-			warehouse: nil,
-			args:      []any{1},
+			name: "invalid arg type",
+			args: []any{1},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.ErrorContains(t, err, "first argument must be string, got int")
@@ -855,17 +820,6 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name: "success with repo URL only",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Chart: &kargoapi.ChartSubscription{
-								RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
-							},
-						},
-					},
-				},
-			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
@@ -889,18 +843,6 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name: "success with repo URL and name",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{
-							Chart: &kargoapi.ChartSubscription{
-								Name:    "kargo",
-								RepoURL: "oci://ghcr.io/akuity/kargo-charts/kargo",
-							},
-						},
-					},
-				},
-			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
 					{
@@ -925,9 +867,8 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name:      "nil artifacts",
-			warehouse: new(kargoapi.Warehouse),
-			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
+			name: "nil artifacts",
+			args: []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.Nil(t, result)
 				require.NoError(t, err)
@@ -935,7 +876,6 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 		},
 		{
 			name:      "no charts found",
-			warehouse: new(kargoapi.Warehouse),
 			artifacts: &kargoapi.DiscoveredArtifacts{},
 			args:      []any{"oci://ghcr.io/akuity/kargo-charts/kargo"},
 			assertions: func(t *testing.T, result any, err error) {
