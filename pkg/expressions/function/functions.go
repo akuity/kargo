@@ -564,39 +564,22 @@ func getCommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) e
 			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
 		}
 
-		repoURL = urls.NormalizeGit(repoURL)
-
 		if artifacts == nil {
-			return nil, errors.New("nil artifacts")
+			return nil, nil
 		}
-
-		var latestCommit *kargoapi.DiscoveredCommit
+	
+		repoURL = urls.NormalizeGit(repoURL)
+	
 		for _, ca := range artifacts.Git {
 			if urls.NormalizeGit(ca.RepoURL) != repoURL {
 				continue
 			}
-			// these will already be sorted upstream by discovery.
-			lastCommit := ca.Commits[0]
-			if latestCommit == nil {
-				latestCommit = &lastCommit
-				continue
-			}
-			if latestCommit.CreatorDate.Before(lastCommit.CreatorDate) {
-				latestCommit = &lastCommit
+			if len(ca.Commits) > 0 {
+				return commits[0]
 			}
 		}
-		if latestCommit == nil {
-			return nil, fmt.Errorf("no commits found for repoURL %q", repoURL)
-		}
-		return &kargoapi.GitCommit{
-			RepoURL:   repoURL,
-			ID:        latestCommit.ID,
-			Branch:    latestCommit.Branch,
-			Tag:       latestCommit.Tag,
-			Message:   latestCommit.Subject,
-			Author:    latestCommit.Author,
-			Committer: latestCommit.Committer,
-		}, nil
+	
+		return nil, nil
 	}
 }
 
