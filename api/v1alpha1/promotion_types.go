@@ -49,6 +49,22 @@ func (p *PromotionPhase) IsTerminal() bool {
 
 type PromotionStepStatus string
 
+// Valid returns true if the PromotionStepStatus is valid. It checks against
+// the known PromotionStepStatus constants.
+func (s PromotionStepStatus) Valid() bool {
+	switch s {
+	case PromotionStepStatusSucceeded,
+		PromotionStepStatusSkipped,
+		PromotionStepStatusAborted,
+		PromotionStepStatusFailed,
+		PromotionStepStatusErrored,
+		PromotionStepStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
 const (
 	// PromotionStepStatusRunning denotes a PromotionStep that is currently
 	// "running." This does not necessarily indicate that the step is ACTIVELY

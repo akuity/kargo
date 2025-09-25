@@ -809,7 +809,8 @@ func (r *reconciler) ensureDefaultUserRoles(
 	const adminRoleName = "kargo-admin"
 	const viewerRoleName = "kargo-viewer"
 	const promoterRoleName = "kargo-promoter"
-	allRoles := []string{adminRoleName, viewerRoleName, promoterRoleName}
+	const promotionOrchestratorRoleName = "kargo-promotion-orchestrator"
+	allRoles := []string{adminRoleName, viewerRoleName, promoterRoleName, promotionOrchestratorRoleName}
 	saAnnotations := map[string]string{
 		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
 	}
@@ -979,6 +980,42 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"analysisruns", "analysistemplates"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
+			},
+		},
+		// TODO(hidde): The creation of this should likely be conditional based
+		// on a configuration flag.
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      promotionOrchestratorRoleName,
+				Namespace: project.Name,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{ // Read access to Promotions
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotions"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{ // Write access to update the status of Promotions
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"promotions/status"},
+					Verbs:     []string{"update", "patch"},
+				},
+				{
+					// Read access to Freight, Stages and Warehouses
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"freights", "stages", "warehouses"},
+					Verbs:     []string{"get", "list", "watch"},
+				},
+				{
+					// Read access to Secrets
+					APIGroups: []string{""},
+					Resources: []string{"secrets"},
+					Verbs:     []string{"get", "list"},
+				},
+				// TODO(hidde): Access to Argo CD Applications for Promotion step
 			},
 		},
 	}

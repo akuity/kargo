@@ -50,4 +50,5 @@ data:
   {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
   MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
   {{- end }}
+  LOCAL_PROMOTION_RECONCILER_ENABLED: {{ .Values.controller.reconcilers.promotions.enabled | quote }}
 {{- end }}

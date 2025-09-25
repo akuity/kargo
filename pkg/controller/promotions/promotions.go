@@ -41,6 +41,7 @@ type ReconcilerConfig struct {
 	ShardName               string `envconfig:"SHARD_NAME"`
 	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
 	MaxConcurrentReconciles int    `envconfig:"MAX_CONCURRENT_PROMOTION_RECONCILES" default:"4"`
+	LocalReconcilerEnabled  bool   `envconfig:"LOCAL_PROMOTION_RECONCILER_ENABLED" default:"true"`
 }
 
 func (c ReconcilerConfig) Name() string {
@@ -457,7 +458,7 @@ func (r *reconciler) Reconcile(
 	// If the promotion is still running, we'll need to periodically check on
 	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
-		return ctrl.Result{RequeueAfter: calculateRequeueInterval(promo)}, nil
+		return ctrl.Result{RequeueAfter: CalculateRequeueInterval(promo)}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -716,7 +717,7 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 
 var defaultRequeueInterval = 5 * time.Minute
 
-func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
+func CalculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 	// Ensure we have a step for the current step index.
 	if int(p.Status.CurrentStep) >= len(p.Spec.Steps) {
 		return defaultRequeueInterval

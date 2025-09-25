@@ -586,7 +586,7 @@ func Test_parseCreateActorAnnotation(t *testing.T) {
 	}
 }
 
-func Test_calculateRequeueInterval(t *testing.T) {
+func TestCalculateRequeueInterval(t *testing.T) {
 	testStepKindWithoutTimeout := "fake-step-without-timeout"
 	promotion.RegisterStepRunner(
 		testStepKindWithoutTimeout,
@@ -753,7 +753,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(t, calculateRequeueInterval(testCase.promo))
+			testCase.assertions(t, CalculateRequeueInterval(testCase.promo))
 		})
 	}
 }
