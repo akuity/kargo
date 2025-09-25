@@ -719,8 +719,6 @@ func freightCreationCriteriaSatisfied(
 
 	logger.WithValues("criteriaExpression", expression)
 
-	logger.Debug("compiling freight creation criteria expression")
-
 	program, err := expr.Compile(expression, function.DiscoveredArtifactsOperations(artifacts)...)
 	if err != nil {
 		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
@@ -730,6 +728,7 @@ func freightCreationCriteriaSatisfied(
 	if err != nil {
 		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
 	}
+
 	logger.Debug("evaluated freight creation criteria expression", "result", fmt.Sprintf("'%v'", result))
 
 	switch result := result.(type) {
