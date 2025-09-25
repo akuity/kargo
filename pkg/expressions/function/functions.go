@@ -178,7 +178,7 @@ func ImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.
 	return expr.Function(
 		"imageFrom",
 		getImageFromDiscoveredArtifacts(artifacts),
-		new(func(repoURL string) kargoapi.Image),
+		new(func(repoURL string) kargoapi.DiscoveredImageReference),
 	)
 }
 
@@ -645,13 +645,7 @@ func getImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 				continue
 			}
 			if len(ia.References) > 0 {
-				ref := ia.References[0]
-				return kargoapi.Image{
-					RepoURL:     repoURL,
-					Tag:         ref.Tag,
-					Digest:      ref.Digest,
-					Annotations: ref.Annotations,
-				}, nil
+				return ia.References[0], nil
 			}
 		}
 		return nil, nil

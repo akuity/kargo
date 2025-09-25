@@ -538,7 +538,7 @@ func Test_getImageFromDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				img, ok := result.(kargoapi.Image)
+				img, ok := result.(kargoapi.DiscoveredImageReference)
 				require.True(t, ok)
 				require.Equal(t, "v1.0.0", img.Tag)
 			},
