@@ -19,7 +19,7 @@ reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
 :::
 
-## Special note for self-hosted Artifactory users
+## Self-Hosted Artifactory
 
 :::info
 If you are not using a self-hosted Artifactory instance, skip to
@@ -27,7 +27,9 @@ If you are not using a self-hosted Artifactory instance, skip to
 :::
 
 In order for a webhook initiated `Warehouse` refresh to successfully occur,
-it is required that you set a <Hlt>Custom Base URL</Hlt> for your instance.
+it is required that you set a <Hlt>Custom Base URL</Hlt> for your instance. 
+When this setting hasn't been configured, critical information will be missing 
+from the webhook payloads.
 
 1. Click on the <Hlt>Administration</Hlt> tab at the top.
 
@@ -43,9 +45,7 @@ it is required that you set a <Hlt>Custom Base URL</Hlt> for your instance.
 
     ![Custom Base URL](./img/custom_base_url.png "Custom Base URL")
 
-1. Scroll all the way down to the bottom and click <Hlt>Save</Hlt>.
-
-
+1. At the bottom of the form, click <Hlt>Save</Hlt>.
 
 ## Configuring the Receiver
 
