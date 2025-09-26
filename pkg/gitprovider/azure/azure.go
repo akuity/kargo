@@ -238,11 +238,13 @@ func (p *provider) MergePullRequest(
 		PullRequestId: ptr.To(int(id)),
 		GitPullRequestToUpdate: &adogit.GitPullRequest{
 			Status:                ptr.To(adogit.PullRequestStatusValues.Completed),
+			// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
+			// If the PR was amended between our validation and merge attempt, Azure DevOps
+			// will reject the merge operation, preventing race conditions.
 			LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
 		},
 	})
 	if err != nil {
-		// Network/auth errors → terminal
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if updatedPR == nil {
