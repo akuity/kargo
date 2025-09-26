@@ -529,16 +529,17 @@ config:
   commitID: ${{ commitFrom("https://github.com/example/repo.git", warehouse("my-warehouse")).ID }}
 ```
 
-### `imageFrom(repoURL, [freightOrigin])`
+### `imageFrom`
 
-The `imageFrom()` function returns a corresponding `Image` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and
-one optional argument:
+The `imageFrom` function signature varies based on where it's being used.
 
-- `repoURL` (Required): The URL of a container image repository.
-- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
-  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
-  the image information.
+In the case of `DiscoveredArtifacts`, the function signature is:
+
+`imageFrom(repoURL)`
+
+It has one required argument.
+
+- `repoURL` (Required): The URL of an image repository.
 
 The returned `Image` object has the following fields:
 
@@ -549,9 +550,38 @@ The returned `Image` object has the following fields:
 | `Digest` | The digest of the image. |
 | `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
 
-The optional `freightOrigin` argument should be used when a `Stage` requests
-`Freight` from multiple origins (`Warehouse`s) and more than one can provide a
-`Image` object from the specified repository.
+:::info
+The returned `Image` object is the same for all contexts. Regardless of whether its used for
+`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
+:::
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/frontend
+  - image:
+      repoURL: ghcr.io/example/backend
+  freightCreationCriteria:
+  - expression: |
+  commitFrom('ghcr.io/example/frontend').tag == 
+  comitFrom('ghcr.io/example/backend').tag
+```
+
+In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`, the
+function signature is:
+
+`imageFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a container image repository.
+- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
+  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
+  the image information.
 
 If an image is not found from the `FreightCollection`, returns `nil`.
 
