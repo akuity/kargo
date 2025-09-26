@@ -447,7 +447,7 @@ features.
 
 The `commitFrom` function signature varies based on where it's being used.
 
-In the case of `DiscoveredArtifacts`, the function signature is:
+In the context of `DiscoveredArtifacts`, the function signature is:
 
 `commitFrom(repoURL)`
 
@@ -460,12 +460,8 @@ The returned `DiscoveredCommit` object has the following fields:
 | Field | Description |
 |-------|-------------|
 | `ID`      | The ID of the Git commit. |
-| `Branch`  | Branch is the branch in which the commit was found. This field is
-	optional, and populated based on the CommitSelectionStrategy of the
-	GitSubscription. |
-| `Tag`     | Tag is the tag that resolved to this commit. This field is 
-optional, and populated based on the CommitSelectionStrategy of the 
-GitSubscription. |
+| `Branch`  | Branch is the branch in which the commit was found. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
+| `Tag`     | Tag is the tag that resolved to this commit. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
 | `Subject` | The first line of the commit message. |
 | `Author` | Author is the author of the commit. |
 | `Committer` | Committer is the person who committed the commit. |
@@ -533,7 +529,7 @@ config:
 
 The `imageFrom` function signature varies based on where it's being used.
 
-In the case of `DiscoveredArtifacts`, the function signature is:
+In the context of `DiscoveredArtifacts`, the function signature is:
 
 `imageFrom(repoURL)`
 
@@ -550,11 +546,6 @@ The returned `Image` object has the following fields:
 | `Digest` | The digest of the image. |
 | `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
 
-:::info
-The returned `Image` object is the same for all contexts. Regardless of whether its used for
-`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
-:::
-
 Example:
 
 ```yaml
@@ -570,6 +561,11 @@ spec:
   commitFrom('ghcr.io/example/frontend').tag == 
   comitFrom('ghcr.io/example/backend').tag
 ```
+
+:::info
+The returned `Image` object is the same for all contexts. Regardless of whether its used for
+`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
+:::
 
 In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`, the
 function signature is:
@@ -597,11 +593,54 @@ config:
   imageTag: ${{ imageFrom("public.ecr.aws/nginx/nginx", warehouse("my-warehouse")).Tag }}
 ```
 
-### `chartFrom(repoURL, [chartName], [freightOrigin])`
+### `chartFrom`
 
-The `chartFrom()` function returns a corresponding `Chart` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and two
+The `chartFrom` function signature varies based on where it's being used.
+
+In the context of `DiscoveredArtifacts`, the function signature is:
+
+`chartFrom(repoURL, [chartName])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a Helm chart repository.
+- `chartName` (Optional): The name of the chart (required for HTTP/S
+  repositories, not needed for OCI registries).
+
+The `chartFrom()` function returns a corresponding `Chart` object.
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
+| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
+| `Version` | The version of the Helm chart. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - chart:
+      repoURL: oci://example.com/my-chart
+  - chart:
+      repoURL: oci://example.com/my-other-chart
+  freightCreationCriteria:
+  - expression: |
+  chartFrom('oci://example.com/my-chart').version == 
+  chartFrom('oci://example.com/my-other-chart').version
+```
+
+:::info
+The returned `Chart` object is the same for all contexts. Regardless of whether its used for
+`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
+:::
+
+In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`, 
+it has one required and two
 optional arguments:
+
+`chartFrom(repoURL, [chartName], [freightOrigin])`
 
 - `repoURL` (Required): The URL of a Helm chart repository.
 - `chartName` (Optional): The name of the chart (required for HTTP/S
@@ -609,14 +648,6 @@ optional arguments:
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
   [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
   the chart information.
-
-The returned `Chart` object has the following fields:
-
-| Field | Description |
-|-------|-------------|
-| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
-| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
-| `Version` | The version of the Helm chart. |
 
 For Helm charts stored in OCI registries, the URL should be the full path to
 the repository within that registry.
