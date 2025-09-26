@@ -32,7 +32,7 @@ When this setting hasn't been configured, critical information will be missing
 from the webhook payloads.
 
 1. Navigate to 
-`https://<jfrog-instance>.jfrog.io/ui/admin/configuration/general`, where `<jfrog-instance>` has been replaced with an Artifactory instance for which you are an administrator.
+`https://<base-url>/ui/admin/configuration/general`, where `<base-url>` has been replaced with the base URL of your self-hosted Artifactory instance.
 
 1.  Set the <Hlt>Custom Base URL</Hlt> field to your instance's URL.
 
