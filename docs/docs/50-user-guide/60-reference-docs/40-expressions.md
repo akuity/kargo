@@ -482,8 +482,7 @@ spec:
       repoURL: https://github.com/example/backend.git
   freightCreationCriteria:
   - expression: |
-  commitFrom('https://github.com/example/frontend.git').tag == 
-  comitFrom('https://github.com/example/backend.git').tag
+      commitFrom('https://github.com/example/frontend.git').tag == comitFrom('https://github.com/example/backend.git').tag
 ```
 
 In all other contexts, such as promotion and verification processes, the
