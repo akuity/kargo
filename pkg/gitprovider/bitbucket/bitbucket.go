@@ -438,7 +438,7 @@ type bitbucketPR struct {
 	MergeCommit struct {
 		Hash string `json:"hash"`
 	} `json:"merge_commit"`
-	Draft    bool   `json:"draft"`
+	Draft     bool   `json:"draft"`
 	CreatedOn string `json:"created_on"`
 }
 

@@ -271,7 +271,7 @@ func TestMergePullRequest(t *testing.T) {
 						BasicMergeRequest: gitlab.BasicMergeRequest{
 							IID:                 888,
 							State:               "opened",
-							DetailedMergeStatus: "can_be_merged",
+							DetailedMergeStatus: "mergeable",
 							WebURL:              "https://gitlab.com/group/project/-/merge_requests/888",
 						},
 					}, &gitlab.Response{}, nil
@@ -298,7 +298,7 @@ func TestMergePullRequest(t *testing.T) {
 						BasicMergeRequest: gitlab.BasicMergeRequest{
 							IID:                 777,
 							State:               "opened",
-							DetailedMergeStatus: "can_be_merged",
+							DetailedMergeStatus: "mergeable",
 							WebURL:              "https://gitlab.com/group/project/-/merge_requests/777",
 						},
 					}, &gitlab.Response{}, nil
@@ -325,7 +325,7 @@ func TestMergePullRequest(t *testing.T) {
 						BasicMergeRequest: gitlab.BasicMergeRequest{
 							IID:                 789,
 							State:               "opened",
-							DetailedMergeStatus: "can_be_merged",
+							DetailedMergeStatus: "mergeable",
 							WebURL:              "https://gitlab.com/group/project/-/merge_requests/789",
 						},
 					}, &gitlab.Response{}, nil

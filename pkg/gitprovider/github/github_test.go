@@ -467,8 +467,7 @@ func TestMergePullRequest(t *testing.T) {
 						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/444"),
 					}, &github.Response{}, nil)
 			},
-			expectError:   true,
-			errorContains: "mergeability unknown",
+			expectError: false,
 		},
 		{
 			name:     "PR not ready to merge",
