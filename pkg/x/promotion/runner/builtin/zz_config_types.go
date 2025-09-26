@@ -186,6 +186,7 @@ type GitMergePRConfig struct {
 	RepoURL string `json:"repoURL"`
 	// If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable.
 	// The merge will be retried on the next reconciliation until it succeeds or times out.
+	// Default is false.
 	Wait bool `json:"wait,omitempty"`
 }
 
