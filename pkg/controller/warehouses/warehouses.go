@@ -322,8 +322,8 @@ func (r *reconciler) syncWarehouse(
 			conditions.Set(
 				&status,
 				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeHealthy,
-					Status:             metav1.ConditionTrue,
+					Type:               kargoapi.ConditionTypeCriteriaSatisfied,
+					Status:             metav1.ConditionFalse,
 					Reason:             "FreightCreationCriteriaNotSatisfied",
 					Message:            "freight creation criteria not satisfied; skipping freight creation",
 					ObservedGeneration: warehouse.GetGeneration(),
@@ -331,6 +331,16 @@ func (r *reconciler) syncWarehouse(
 			)
 			return status, nil
 		}
+		conditions.Set(
+			&status,
+			&metav1.Condition{
+				Type:               kargoapi.ConditionTypeCriteriaSatisfied,
+				Status:             metav1.ConditionTrue,
+				Reason:             "FreightCreationCriteriaSatisfied",
+				Message:            "freight creation criteria satisfied; creating freight",
+				ObservedGeneration: warehouse.GetGeneration(),
+			},
+		)
 		// Mark the Warehouse as reconciling while we create the Freight.
 		//
 		// As this should be a quick operation, we do not issue an immediate
