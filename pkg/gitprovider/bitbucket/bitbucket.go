@@ -326,8 +326,22 @@ func (p *provider) MergePullRequest(
 	// Check if PR is closed (any non-open state except merged)
 	if bbPR.State != prStateOpen {
 		// If it's not open and not merged, then it's closed
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, bbPR.State)
+		return nil, false, fmt.Errorf(
+			"pull request %d is closed but not merged (state: %s)", id, bbPR.State,
+		)
 	}
+
+	// Check if PR is draft - cannot merge draft PRs
+	if bbPR.Draft {
+		return nil, false, fmt.Errorf("cannot merge pull request %d: pull request is in draft state", id)
+	}
+
+	// TODO: The Bitbucket API lacks comprehensive merge eligibility checks. We
+	// cannot reliably determine if a PR is mergeable due to conflicts, failing
+	// checks, or other blocking conditions before attempting the merge. This means
+	// we have no choice but to attempt the merge and hope for the best.
+	// See: https://bitbucket.org/site/master/issues/5814/
+	// This limitation makes the "wait" option unreliable for Bitbucket repositories.
 
 	// Attempt to merge the PR
 	mergeOpts := &bitbucket.PullRequestsOptions{
@@ -424,6 +438,7 @@ type bitbucketPR struct {
 	MergeCommit struct {
 		Hash string `json:"hash"`
 	} `json:"merge_commit"`
+	Draft    bool   `json:"draft"`
 	CreatedOn string `json:"created_on"`
 }
 
