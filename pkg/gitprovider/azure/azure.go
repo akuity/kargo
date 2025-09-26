@@ -219,15 +219,15 @@ func (p *provider) MergePullRequest(
 	case adogit.PullRequestStatusValues.Abandoned:
 		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
 	case adogit.PullRequestStatusValues.Active:
-		// If merge status shows conflicts or policies not met → retry later
-		if mergeStatus == adogit.PullRequestAsyncStatusValues.Conflicts ||
-			mergeStatus == adogit.PullRequestAsyncStatusValues.Queued ||
-			mergeStatus == adogit.PullRequestAsyncStatusValues.RejectedByPolicy ||
-			mergeStatus == adogit.PullRequestAsyncStatusValues.Failure {
+		if ptr.Deref(adoPR.IsDraft, false) {
+			// Draft PRs should not be merged
+			return nil, false, nil
+		}
+		if mergeStatus != adogit.PullRequestAsyncStatusValues.Succeeded {
+			// Not ready to merge yet
 			return nil, false, nil
 		}
 	default:
-		// Draft or not mergeable yet → retry later
 		return nil, false, nil
 	}
 
