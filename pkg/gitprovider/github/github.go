@@ -301,23 +301,23 @@ func (p *provider) MergePullRequest(
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
 	// Get the current PR to check its status
-	currentPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 
-	if currentPR == nil {
+	if ghPR == nil {
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
 	// Check if PR is already merged
-	if currentPR.MergedAt != nil {
-		pr := convertGithubPR(*currentPR)
+	if ghPR.MergedAt != nil {
+		pr := convertGithubPR(*ghPR)
 		return &pr, true, nil
 	}
 
 	// Check if PR is closed but not merged - this is a terminal error
-	if ptr.Deref(currentPR.State, prStateClosed) != prStateOpen {
+	if ptr.Deref(ghPR.State, prStateClosed) != prStateOpen {
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 	}
 

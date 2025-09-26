@@ -301,35 +301,35 @@ func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	// Get the current PR to check its state
+	// Get the PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
 		ID:       strconv.FormatInt(id, 10),
 	}
 
-	currentPRResp, err := p.client.GetPullRequest(prOpts)
+	prResp, err := p.client.GetPullRequest(prOpts)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 
-	currentPR, err := toBitbucketPR(currentPRResp)
+	bbPR, err := toBitbucketPR(prResp)
 	if err != nil {
 		return nil, false, fmt.Errorf("error parsing pull request response: %w", err)
 	}
 
 	// Check if PR is already merged
-	if currentPR.State == prStateMerged {
-		return toProviderPR(currentPR, currentPRResp), true, nil
+	if bbPR.State == prStateMerged {
+		return toProviderPR(bbPR, prResp), true, nil
 	}
 
 	// Check if PR is closed/declined
-	if currentPR.State == prStateDeclined || currentPR.State == prStateSuperseded {
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, currentPR.State)
+	if bbPR.State == prStateDeclined || bbPR.State == prStateSuperseded {
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, bbPR.State)
 	}
 
 	// Check if PR is not in open state
-	if currentPR.State != prStateOpen {
+	if bbPR.State != prStateOpen {
 		// PR is not ready to merge yet (pending checks, conflicts, etc.)
 		return nil, false, nil
 	}
@@ -348,12 +348,12 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Parse the merged PR response
-	mergedPR, err := toBitbucketPR(mergeResp)
+	mergedBBPR, err := toBitbucketPR(mergeResp)
 	if err != nil {
 		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
 	}
 
-	return toProviderPR(mergedPR, mergeResp), true, nil
+	return toProviderPR(mergedBBPR, mergeResp), true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

@@ -192,7 +192,7 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Get the current PR to check its status and get the last merge source commit
-	currentPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
+	adoPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
 		PullRequestId: ptr.To(int(id)),
@@ -200,16 +200,16 @@ func (p *provider) MergePullRequest(
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
-	if currentPR == nil {
+	if adoPR == nil {
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
-	status := ptr.Deref(currentPR.Status, adogit.PullRequestStatusValues.NotSet)
-	mergeStatus := ptr.Deref(currentPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
+	status := ptr.Deref(adoPR.Status, adogit.PullRequestStatusValues.NotSet)
+	mergeStatus := ptr.Deref(adoPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
 
 	switch status {
 	case adogit.PullRequestStatusValues.Completed:
-		pr, convertErr := convertADOPullRequest(currentPR)
+		pr, convertErr := convertADOPullRequest(adoPR)
 		if convertErr != nil {
 			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, convertErr)
 		}
@@ -236,7 +236,7 @@ func (p *provider) MergePullRequest(
 		PullRequestId: ptr.To(int(id)),
 		GitPullRequestToUpdate: &adogit.GitPullRequest{
 			Status:                ptr.To(adogit.PullRequestStatusValues.Completed),
-			LastMergeSourceCommit: currentPR.LastMergeSourceCommit,
+			LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
 		},
 	})
 	if err != nil {

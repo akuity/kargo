@@ -281,23 +281,23 @@ func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	// Get current PR
-	currentPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	// Get PR
+	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
-	if currentPR == nil {
+	if giteaPR == nil {
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
 	// Check if PR is already merged
-	if currentPR.HasMerged {
-		pr := convertGiteaPR(*currentPR)
+	if giteaPR.HasMerged {
+		pr := convertGiteaPR(*giteaPR)
 		return &pr, true, nil
 	}
 
 	// Check if PR is not in open state
-	if currentPR.State != gitea.StateOpen {
+	if giteaPR.State != gitea.StateOpen {
 		// Not ready to merge
 		return nil, false, nil
 	}

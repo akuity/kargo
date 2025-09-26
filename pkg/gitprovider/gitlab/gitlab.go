@@ -211,22 +211,22 @@ func (p *provider) MergePullRequest(
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
 	// Get the current MR to check its status
-	currentMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
-	if currentMR == nil {
+	if glMR == nil {
 		return nil, false, fmt.Errorf("merge request %d not found", id)
 	}
 
 	// Check if MR is already merged
-	if currentMR.State == "merged" {
-		pr := convertGitlabMR(currentMR.BasicMergeRequest)
+	if glMR.State == "merged" {
+		pr := convertGitlabMR(glMR.BasicMergeRequest)
 		return &pr, true, nil
 	}
 
 	// Check if MR is open
-	if currentMR.State != "opened" {
+	if glMR.State != "opened" {
 		// MR is closed or locked; cannot merge
 		return nil, false, nil
 	}
