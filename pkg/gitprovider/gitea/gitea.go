@@ -301,6 +301,10 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
+	// TODO(fykaa): We should also check if the PR is in draft status before merging.
+	// The Gitea API includes a draft field, but the go-sdk doesn't expose it yet.
+	// See: https://gitea.com/gitea/go-sdk/pulls/731
+
 	// Merge the PR
 	if _, err = p.client.MergePullRequest(
 		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},

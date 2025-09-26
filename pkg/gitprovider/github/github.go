@@ -316,10 +316,7 @@ func (p *provider) MergePullRequest(
 	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case ghPR.Mergeable == nil:
-		return nil, false, fmt.Errorf("mergeability unknown for pull request %d, please retry", id)
-
-	case !*ghPR.Mergeable:
+	case ghPR.Mergeable == nil || !*ghPR.Mergeable || (ghPR.Draft != nil && *ghPR.Draft):
 		return nil, false, nil
 	}
 
