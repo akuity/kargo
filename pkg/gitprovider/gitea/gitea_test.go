@@ -401,189 +401,192 @@ func TestListPullRequests(t *testing.T) {
 }
 
 func TestMergePullRequest(t *testing.T) {
-	mockClient := &mockGiteaClient{}
-	p := provider{
-		owner:  testRepoOwner,
-		repo:   testRepoName,
-		client: mockClient,
+	tests := []struct {
+		name           string
+		prNumber       int64
+		setupMock      func(*mockGiteaClient)
+		expectedMerged bool
+		expectError    bool
+		errorContains  string
+	}{
+		{
+			name:     "error getting initial PR state",
+			prNumber: 999,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(999)).
+					Return(nil, nil, errors.New("get PR failed"))
+			},
+			expectError:   true,
+			errorContains: "error getting pull request",
+		},
+		{
+			name:     "nil PR returned from initial get",
+			prNumber: 404,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(404)).
+					Return(nil, &gitea.Response{}, nil)
+			},
+			expectError:   true,
+			errorContains: "pull request 404 not found",
+		},
+		{
+			name:     "PR already merged",
+			prNumber: 123,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(123)).
+					Return(&gitea.PullRequest{
+						Index:     123,
+						State:     gitea.StateClosed,
+						HasMerged: true,
+						Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
+						URL:       "https://gitea.com/akuity/kargo/pulls/123",
+					}, &gitea.Response{}, nil)
+			},
+			expectedMerged: true,
+		},
+		{
+			name:     "PR not in open state",
+			prNumber: 456,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(456)).
+					Return(&gitea.PullRequest{
+						Index:     456,
+						State:     gitea.StateClosed,
+						HasMerged: false,
+					}, &gitea.Response{}, nil)
+			},
+		},
+		{
+			name:     "PR not mergeable",
+			prNumber: 333,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(333)).
+					Return(&gitea.PullRequest{
+						Index:     333,
+						State:     gitea.StateOpen,
+						Mergeable: false,
+					}, &gitea.Response{}, nil)
+			},
+		},
+		{
+			name:     "merge operation fails",
+			prNumber: 888,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(888)).
+					Return(&gitea.PullRequest{
+						Index:     888,
+						State:     gitea.StateOpen,
+						Mergeable: true,
+					}, &gitea.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 888,
+					mock.AnythingOfType("*gitea.MergePullRequestOption")).
+					Return(nil, errors.New("merge failed"))
+			},
+			expectError:   true,
+			errorContains: "error merging pull request",
+		},
+		{
+			name:     "get PR after merge fails",
+			prNumber: 777,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(777)).
+					Return(&gitea.PullRequest{
+						Index:     777,
+						State:     gitea.StateOpen,
+						Mergeable: true,
+					}, &gitea.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 777,
+					mock.AnythingOfType("*gitea.MergePullRequestOption")).
+					Return(&gitea.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(777)).
+					Return(nil, nil, errors.New("get PR failed")).Once()
+			},
+			expectError:   true,
+			errorContains: "error fetching PR",
+		},
+		{
+			name:     "nil PR returned after merge",
+			prNumber: 666,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(666)).
+					Return(&gitea.PullRequest{
+						Index:     666,
+						State:     gitea.StateOpen,
+						Mergeable: true,
+					}, &gitea.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 666,
+					mock.AnythingOfType("*gitea.MergePullRequestOption")).
+					Return(&gitea.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(666)).
+					Return(nil, &gitea.Response{}, nil).Once()
+			},
+			expectError:   true,
+			errorContains: "unexpected nil PR after merge",
+		},
+		{
+			name:     "successful merge",
+			prNumber: 1234,
+			setupMock: func(m *mockGiteaClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(1234)).
+					Return(&gitea.PullRequest{
+						Index:     1234,
+						State:     gitea.StateOpen,
+						Mergeable: true,
+						Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
+						URL:       "https://gitea.com/akuity/kargo/pulls/1234",
+					}, &gitea.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName,
+					1234, mock.AnythingOfType("*gitea.MergePullRequestOption")).
+					Return(&gitea.Response{}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(1234)).
+					Return(&gitea.PullRequest{
+						Index:     1234,
+						State:     gitea.StateClosed,
+						HasMerged: true,
+						Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
+						URL:       "https://gitea.com/akuity/kargo/pulls/1234",
+					}, &gitea.Response{}, nil).Once()
+			},
+			expectedMerged: true,
+		},
 	}
 
-	t.Run("error getting initial PR state", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 999).
-			Return(nil, nil, errors.New("get PR failed"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := &mockGiteaClient{}
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
 
-		pr, merged, err := p.MergePullRequest(context.Background(), 999)
+			tt.setupMock(mockClient)
 
-		require.Error(t, err)
-		require.False(t, merged)
-		require.Nil(t, pr)
-		require.Contains(t, err.Error(), "error getting pull request")
-		mockClient.AssertExpectations(t)
-	})
+			pr, merged, err := p.MergePullRequest(context.Background(), tt.prNumber)
 
-	t.Run("PR is already merged", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 123).
-			Return(&gitea.PullRequest{
-				Index: 123,
-				State: gitea.StateClosed,
-				Head: &gitea.PRBranchInfo{
-					Sha: "head_sha",
-				},
-				HTMLURL:   "https://gitea.com/akuity/kargo/pulls/123",
-				HasMerged: true,
-				Created:   &time.Time{},
-			}, &gitea.Response{}, nil)
+			if tt.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errorContains)
+				require.False(t, merged)
+				require.Nil(t, pr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedMerged, merged)
+				if pr != nil {
+					require.Equal(t, tt.prNumber, pr.Number)
+				}
+			}
 
-		pr, merged, err := p.MergePullRequest(context.Background(), 123)
-
-		require.NoError(t, err)
-		require.True(t, merged)
-		require.NotNil(t, pr)
-		require.Equal(t, int64(123), pr.Number)
-		require.True(t, pr.Merged)
-		mockClient.AssertExpectations(t)
-	})
-
-	t.Run("PR is not in open state", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 456).
-			Return(&gitea.PullRequest{
-				Index: 456,
-				State: gitea.StateClosed,
-				Head: &gitea.PRBranchInfo{
-					Sha: "head_sha",
-				},
-				HTMLURL:   "https://gitea.com/akuity/kargo/pulls/456",
-				HasMerged: false,
-				Created:   &time.Time{},
-			}, &gitea.Response{}, nil)
-
-		pr, merged, err := p.MergePullRequest(context.Background(), 456)
-
-		require.NoError(t, err)
-		require.False(t, merged)
-		require.Nil(t, pr)
-		mockClient.AssertExpectations(t)
-	})
-
-	t.Run("merge operation fails", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		// First call succeeds
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 888).
-			Return(&gitea.PullRequest{
-				Index:     888,
-				State:     gitea.StateOpen,
-				HasMerged: false,
-			}, &gitea.Response{}, nil).Once()
-
-		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
-			testRepoName, 888, mock.AnythingOfType("*gitea.MergePullRequestOption")).
-			Return(nil, errors.New("merge failed"))
-
-		pr, merged, err := p.MergePullRequest(context.Background(), 888)
-
-		require.Error(t, err)
-		require.False(t, merged)
-		require.Nil(t, pr)
-		require.Contains(t, err.Error(), "error merging pull request")
-		mockClient.AssertExpectations(t)
-	})
-
-	t.Run("get PR after merge fails", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		// First call succeeds
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 777).
-			Return(&gitea.PullRequest{
-				Index:     777,
-				State:     gitea.StateOpen,
-				HasMerged: false,
-			}, &gitea.Response{}, nil).Once()
-
-		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
-			testRepoName, 777, mock.AnythingOfType("*gitea.MergePullRequestOption")).
-			Return(&gitea.Response{}, nil)
-
-		// Second call fails
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 777).
-			Return(nil, nil, errors.New("get PR failed")).Once()
-
-		pr, merged, err := p.MergePullRequest(context.Background(), 777)
-
-		require.Error(t, err)
-		require.False(t, merged)
-		require.Nil(t, pr)
-		require.Contains(t, err.Error(), "error fetching PR")
-		mockClient.AssertExpectations(t)
-	})
-
-	t.Run("PR not ready to merge", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		// First call succeeds - PR is open
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 555).
-			Return(&gitea.PullRequest{
-				Index:     555,
-				State:     gitea.StateOpen,
-				HasMerged: false,
-			}, &gitea.Response{}, nil).Once()
-
-		// Merge attempt fails with conflict/checks pending
-		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
-			testRepoName, 555, mock.AnythingOfType("*gitea.MergePullRequestOption")).
-			Return(nil, errors.New("merge conflict detected"))
-
-		pr, merged, err := p.MergePullRequest(context.Background(), 555)
-
-		require.Error(t, err)
-		require.False(t, merged)
-		require.Nil(t, pr)
-		require.Contains(t, err.Error(), "error merging pull request")
-		mockClient.AssertExpectations(t)
-	})
-
-	t.Run("successful merge", func(t *testing.T) {
-		mockClient.ExpectedCalls = nil
-		// First call to get current PR state
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 123).
-			Return(&gitea.PullRequest{
-				Index: 123,
-				State: gitea.StateOpen,
-				Head: &gitea.PRBranchInfo{
-					Sha: "head_sha",
-				},
-				HTMLURL:   "https://gitea.com/akuity/kargo/pulls/123",
-				HasMerged: false,
-				Created:   &time.Time{},
-			}, &gitea.Response{}, nil).Once()
-
-		mockClient.On("MergePullRequest", mock.Anything, testRepoOwner,
-			testRepoName, 123, mock.AnythingOfType("*gitea.MergePullRequestOption")).
-			Return(&gitea.Response{}, nil)
-
-		// Second call after merge to get updated PR
-		mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, 123).
-			Return(&gitea.PullRequest{
-				Index: 123,
-				State: gitea.StateClosed,
-				Head: &gitea.PRBranchInfo{
-					Sha: "head_sha",
-				},
-				HTMLURL:   "https://gitea.com/akuity/kargo/pulls/123",
-				HasMerged: true,
-				Created:   &time.Time{},
-			}, &gitea.Response{}, nil).Once()
-
-		pr, merged, err := p.MergePullRequest(context.Background(), 123)
-
-		require.NoError(t, err)
-		require.True(t, merged)
-		require.NotNil(t, pr)
-		require.Equal(t, int64(123), pr.Number)
-		require.True(t, pr.Merged)
-		mockClient.AssertExpectations(t)
-	})
-
+			mockClient.AssertExpectations(t)
+		})
+	}
 }
 
 func TestGetCommitURL(t *testing.T) {

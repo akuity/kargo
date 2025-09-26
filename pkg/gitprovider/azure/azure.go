@@ -219,8 +219,9 @@ func (p *provider) MergePullRequest(
 	case adogit.PullRequestStatusValues.Abandoned:
 		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
 	case adogit.PullRequestStatusValues.Active:
+		// Draft PRs can have a merge status of `succeeded`, but aren't actually
+		// mergable, so we explicitly check for draft status.
 		if ptr.Deref(adoPR.IsDraft, false) {
-			// Draft PRs should not be merged
 			return nil, false, nil
 		}
 		if mergeStatus != adogit.PullRequestAsyncStatusValues.Succeeded {
