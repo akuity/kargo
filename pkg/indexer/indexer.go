@@ -219,9 +219,11 @@ func RunningPromotionsByArgoCDApplications(
 				Config: step.Config.Raw,
 			}
 
+			evaluator := promotion.NewStepEvaluator(cl, nil)
+
 			// As step-level variables are allowed to reference to output, we
 			// need to provide the state.
-			vars, err := dirStep.GetVars(ctx, cl, nil, promoCtx)
+			vars, err := evaluator.Vars(ctx, promoCtx, dirStep)
 			if err != nil {
 				logger.Error(
 					err,
@@ -265,11 +267,11 @@ func RunningPromotionsByArgoCDApplications(
 					for _, app := range appsList {
 						if app, ok := app.(map[string]any); ok {
 							if nameTemplate, ok := app["name"].(string); ok {
-								env := dirStep.BuildEnv(
+								env := evaluator.BuildExprEnv(
 									promoCtx,
-									promotion.StepEnvWithOutputs(promoCtx.State),
-									promotion.StepEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
-									promotion.StepEnvWithVars(vars),
+									promotion.ExprEnvWithOutputs(promoCtx.State),
+									promotion.ExprEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+									promotion.ExprEnvWithVars(vars),
 								)
 
 								var namespace any = libargocd.Namespace()
