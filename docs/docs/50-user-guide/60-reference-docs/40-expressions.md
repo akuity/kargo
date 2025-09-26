@@ -443,11 +443,56 @@ You can handle `nil` values gracefully in Expr using its
 features.
 :::
 
-### `commitFrom(repoURL, [freightOrigin])`
+### `commitFrom`
 
-The `commitFrom()` function returns a corresponding `GitCommit` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and one
-optional argument:
+The `commitFrom` function signature varies based on where it's being used.
+
+In the case of `DiscoveredArtifacts`, the function signature is:
+
+`commitFrom(repoURL)`
+
+It has one required argument.
+
+- `repoURL` (Required): The URL of a Git repository.
+
+The returned `DiscoveredCommit` object has the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `ID`      | The ID of the Git commit. |
+| `Branch`  | Branch is the branch in which the commit was found. This field is
+	optional, and populated based on the CommitSelectionStrategy of the
+	GitSubscription. |
+| `Tag`     | Tag is the tag that resolved to this commit. This field is 
+optional, and populated based on the CommitSelectionStrategy of the 
+GitSubscription. |
+| `Subject` | The first line of the commit message. |
+| `Author` | Author is the author of the commit. |
+| `Committer` | Committer is the person who committed the commit. |
+| `CreatorDate` | The creation date of the commit as specified by the commit. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/frontend.git
+  - git:
+      repoURL: https://github.com/example/backend.git
+  freightCreationCriteria:
+  - expression: |
+  commitFrom('https://github.com/example/frontend.git').tag == 
+  comitFrom('https://github.com/example/backend.git').tag
+```
+
+In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`,
+the function signature is:
+
+`commitFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
 
 - `repoURL` (Required): The URL of a Git repository.
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
