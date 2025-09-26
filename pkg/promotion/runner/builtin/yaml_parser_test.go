@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/expr-lang/expr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -437,6 +438,93 @@ func Test_yamlParser_extractValues(t *testing.T) {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.expected, result)
 			}
+		})
+	}
+}
+
+// Test_yamlParser_readAndParseYAML_RootTypes validates behavior when the root
+// of the YAML document is a map, list (sequence), or scalar.
+func Test_yamlParser_readAndParseYAML_RootTypes(t *testing.T) {
+	cases := []struct {
+		name         string
+		fileName     string
+		content      string
+		wantRootWrap bool
+		assertFn     func(t *testing.T, data map[string]any)
+	}{
+		{
+			name:         "map root",
+			fileName:     "map.yaml",
+			content:      "a: 1\nb: two\n",
+			wantRootWrap: false,
+			assertFn: func(t *testing.T, data map[string]any) {
+				// numeric normalization
+				switch num := data["a"].(type) {
+				case int:
+					assert.Equal(t, 1, num)
+				case int64:
+					assert.Equal(t, int64(1), num)
+				case float64:
+					assert.Equal(t, float64(1), num)
+				default:
+					t.Fatalf("unexpected numeric type for a: %T", data["a"])
+				}
+				assert.Equal(t, "two", data["b"])
+			},
+		},
+		{
+			name:         "list root",
+			fileName:     "list.yaml",
+			content:      "- name: first\n  value: 1\n- name: second\n  value: 2\n",
+			wantRootWrap: true,
+			assertFn: func(t *testing.T, data map[string]any) {
+				rootVal, ok := data["root"]
+				if !ok {
+					t.Fatalf("expected root key")
+				}
+				list, ok := rootVal.([]any)
+				if !ok {
+					t.Fatalf("expected []any got %T", rootVal)
+				}
+				assert.Len(t, list, 2)
+				first, _ := list[0].(map[string]any)
+				assert.Equal(t, "first", first["name"])
+				prog, err := expr.Compile("root[0].name", expr.Env(data))
+				require.NoError(t, err)
+				val, err := expr.Run(prog, data)
+				require.NoError(t, err)
+				assert.Equal(t, "first", val)
+			},
+		},
+		{
+			name:         "scalar root",
+			fileName:     "scalar.yaml",
+			content:      "hello world\n",
+			wantRootWrap: true,
+			assertFn: func(t *testing.T, data map[string]any) {
+				assert.Equal(t, "hello world", data["root"])
+			},
+		},
+	}
+
+	for _, cs := range cases {
+		cs := cs
+		t.Run(cs.name, func(t *testing.T) {
+			workDir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(workDir, cs.fileName), []byte(cs.content), 0o600); err != nil {
+				t.Fatalf("write file: %v", err)
+			}
+			r := &yamlParser{}
+			data, err := r.readAndParseYAML(workDir, cs.fileName)
+			require.NoError(t, err)
+			_, hasRoot := data["root"]
+			if cs.wantRootWrap && !hasRoot {
+				t.Fatalf("expected root wrapper")
+			}
+			if !cs.wantRootWrap && hasRoot {
+				t.Fatalf("did not expect root wrapper")
+			}
+			cs.assertFn(t, data)
 		})
 	}
 }
