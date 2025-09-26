@@ -443,15 +443,18 @@ You can handle `nil` values gracefully in Expr using its
 features.
 :::
 
-### `commitFrom`
+### `commitFrom()`
 
-The `commitFrom` function signature varies based on where it's being used.
+The signature and return value of the `commitFrom()` function vary slightly
+with the context in which it's used.
 
-In the context of `DiscoveredArtifacts`, the function signature is:
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
 
 `commitFrom(repoURL)`
 
-It has one required argument.
+It has one required argument:
 
 - `repoURL` (Required): The URL of a Git repository.
 
@@ -483,8 +486,8 @@ spec:
   comitFrom('https://github.com/example/backend.git').tag
 ```
 
-In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`,
-the function signature is:
+In all other contexts, such as promotion and verification processes, the
+function signature is:
 
 `commitFrom(repoURL, [freightOrigin])`
 
@@ -525,15 +528,18 @@ config:
   commitID: ${{ commitFrom("https://github.com/example/repo.git", warehouse("my-warehouse")).ID }}
 ```
 
-### `imageFrom`
+### `imageFrom()`
 
-The `imageFrom` function signature varies based on where it's being used.
+The signature of the `imageFrom()` function varies slightly with the context in
+which it's used.
 
-In the context of `DiscoveredArtifacts`, the function signature is:
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
 
 `imageFrom(repoURL)`
 
-It has one required argument.
+It has one required argument:
 
 - `repoURL` (Required): The URL of an image repository.
 
@@ -563,11 +569,10 @@ spec:
 ```
 
 :::info
-The returned `Image` object is the same for all contexts. Regardless of whether its used for
-`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
+The returned `Image` object is the same in all contexts.
 :::
 
-In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`, the
+In all other contexts, such as promotion and verification processes, the
 function signature is:
 
 `imageFrom(repoURL, [freightOrigin])`
@@ -593,11 +598,14 @@ config:
   imageTag: ${{ imageFrom("public.ecr.aws/nginx/nginx", warehouse("my-warehouse")).Tag }}
 ```
 
-### `chartFrom`
+### `chartFrom()`
 
-The `chartFrom` function signature varies based on where it's being used.
+The signature of the `chartFrom()` function varies slightly with the context in
+which it's used.
 
-In the context of `DiscoveredArtifacts`, the function signature is:
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
 
 `chartFrom(repoURL, [chartName])`
 
@@ -632,15 +640,15 @@ spec:
 ```
 
 :::info
-The returned `Chart` object is the same for all contexts. Regardless of whether its used for
-`DiscoveredArtifacts`, `Promotion`, `Stage`, or `FreightCollection` resources.
+The returned `Chart` object is the same in all contexts.
 :::
 
-In all other contexts such as `Promotion`, `Stage`, or `FreightCollection`, 
-it has one required and two
-optional arguments:
+In all other contexts, such as promotion and verification processes, the
+function signature is:
 
 `chartFrom(repoURL, [chartName], [freightOrigin])`
+
+It has one required and two optional arguments:
 
 - `repoURL` (Required): The URL of a Helm chart repository.
 - `chartName` (Optional): The name of the chart (required for HTTP/S
