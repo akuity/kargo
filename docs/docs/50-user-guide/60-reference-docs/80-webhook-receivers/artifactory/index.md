@@ -34,7 +34,8 @@ from the webhook payloads.
 1. Navigate to 
 `https://<base-url>/ui/admin/configuration/general`, where `<base-url>` has been replaced with the base URL of your self-hosted Artifactory instance.
 
-1.  Set the <Hlt>Custom Base URL</Hlt> field to your instance's URL.
+1.  Set the <Hlt>Custom Base URL</Hlt> field to the base URL of your self-hosted
+    Artifactory instance.
 
     ![Custom Base URL](./img/custom_base_url.png "Custom Base URL")
 
