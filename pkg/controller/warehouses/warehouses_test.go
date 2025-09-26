@@ -1158,50 +1158,36 @@ func TestReconcile(t *testing.T) {
 
 func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 	for _, tc := range []struct {
-		name        string
-		warehouse   *kargoapi.Warehouse
-		artifacts   *kargoapi.DiscoveredArtifacts
-		expected    bool
-		errExpected bool
+		name                    string
+		freightCreationCriteria *kargoapi.FreightCreationCriteria
+		artifacts               *kargoapi.DiscoveredArtifacts
+		expected                bool
+		errExpected             bool
 	}{
 		{
-			name:      "nil freight creation filter",
-			warehouse: new(kargoapi.Warehouse),
-			artifacts: &kargoapi.DiscoveredArtifacts{},
-			expected:  true,
+			name:                    "nil freight creation criteria",
+			freightCreationCriteria: nil,
+			artifacts:               &kargoapi.DiscoveredArtifacts{},
+			expected:                true,
 		},
 		{
-			name: "empty filter expression",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "",
-					},
-				},
-			},
-			artifacts: &kargoapi.DiscoveredArtifacts{},
-			expected:  true,
+			name:                    "empty criteria expression",
+			freightCreationCriteria: new(kargoapi.FreightCreationCriteria),
+			artifacts:               &kargoapi.DiscoveredArtifacts{},
+			expected:                true,
 		},
 		{
 			name: "no artifacts discovered",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "doesntmatter",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "doesntmatter",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{},
 			expected:  true,
 		},
 		{
-			name: "invalid filter expression",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "invalid.expression",
-					},
-				},
+			name: "invalid criteria expression",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "invalid.expression",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Git: []kargoapi.GitDiscoveryResult{
@@ -1213,20 +1199,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - commit tags match",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Git: &kargoapi.GitSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Git: &kargoapi.GitSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Git: []kargoapi.GitDiscoveryResult{
@@ -1265,20 +1239,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - commit tags do not match",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Git: &kargoapi.GitSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Git: &kargoapi.GitSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Git: []kargoapi.GitDiscoveryResult{
@@ -1307,20 +1269,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - image tags match",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Image: &kargoapi.ImageSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Images: []kargoapi.ImageDiscoveryResult{
@@ -1347,20 +1297,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - image tags do not match",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Image: &kargoapi.ImageSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Image: &kargoapi.ImageSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Images: []kargoapi.ImageDiscoveryResult{
@@ -1383,20 +1321,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - chart versions match with repo URL only",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
@@ -1415,23 +1341,9 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - chart versions match with repo URL and optional name",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
-							Name:    "some-name",
-							RepoURL: "site/repo/frontend",
-						}},
-						{Chart: &kargoapi.ChartSubscription{
-							Name:    `some-other-name`,
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
-						chartFrom('site/repo/backend', 'some-other-name').Version`,
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
+				chartFrom('site/repo/backend', 'some-other-name').Version`,
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
@@ -1452,20 +1364,8 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - chart versions do not match with repo URL only",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
-					},
-				},
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
@@ -1484,21 +1384,9 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		},
 		{
 			name: "success - chart versions do not match with repo URL and optional name",
-			warehouse: &kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/frontend",
-						}},
-						{Chart: &kargoapi.ChartSubscription{
-							RepoURL: "site/repo/backend",
-						}},
-					},
-					FreightCreationCriteria: &kargoapi.FreightCreationCriteria{
-						Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
 						chartFrom('site/repo/backend', 'some-other-name').Version`,
-					},
-				},
 			},
 			artifacts: &kargoapi.DiscoveredArtifacts{
 				Charts: []kargoapi.ChartDiscoveryResult{
@@ -1522,7 +1410,7 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
 			require.NoError(t, err)
 			ctx := logging.ContextWithLogger(t.Context(), logger)
-			result, err := freightCreationCriteriaSatisfied(ctx, tc.warehouse, tc.artifacts)
+			result, err := freightCreationCriteriaSatisfied(ctx, tc.freightCreationCriteria, tc.artifacts)
 			require.Equal(t, tc.expected, result)
 			if tc.errExpected {
 				require.Error(t, err)

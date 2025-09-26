@@ -287,7 +287,10 @@ func (r *reconciler) syncWarehouse(
 	// Automatically create a Freight from the latest discovered artifacts
 	// if the Warehouse is configured to do so.
 	if pol := warehouse.Spec.FreightCreationPolicy; pol == kargoapi.FreightCreationPolicyAutomatic || pol == "" {
-		criteriaSatisfied, err := freightCreationCriteriaSatisfied(ctx, warehouse, status.DiscoveredArtifacts)
+		criteriaSatisfied, err := freightCreationCriteriaSatisfied(ctx,
+			warehouse.Spec.FreightCreationCriteria,
+			status.DiscoveredArtifacts,
+		)
 		if err != nil {
 			conditions.Set(
 				&status,
@@ -696,17 +699,17 @@ func validateDiscoveredArtifacts(
 // A non-nil error is returned if there was an error evaluating the expression.
 func freightCreationCriteriaSatisfied(
 	ctx context.Context,
-	wh *kargoapi.Warehouse,
+	fcc *kargoapi.FreightCreationCriteria,
 	artifacts *kargoapi.DiscoveredArtifacts,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 
-	if wh.Spec.FreightCreationCriteria == nil {
+	if fcc == nil {
 		logger.Trace("no freight creation criteria")
 		return true, nil
 	}
 
-	expression := strings.TrimSpace(wh.Spec.FreightCreationCriteria.Expression)
+	expression := strings.TrimSpace(fcc.Expression)
 	if expression == "" {
 		logger.Trace("no freight creation criteria expression")
 		return true, nil
