@@ -186,6 +186,8 @@ func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
+	var pr *gitprovider.PullRequest
+
 	gitClient, err := adogit.NewClient(ctx, p.connection)
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating Azure DevOps client: %w", err)
@@ -209,9 +211,9 @@ func (p *provider) MergePullRequest(
 
 	switch status {
 	case adogit.PullRequestStatusValues.Completed:
-		pr, convertErr := convertADOPullRequest(adoPR)
-		if convertErr != nil {
-			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, convertErr)
+		pr, err = convertADOPullRequest(adoPR)
+		if err != nil {
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, err)
 		}
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
@@ -247,7 +249,7 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
 	}
 
-	pr, err := convertADOPullRequest(updatedPR)
+	pr, err = convertADOPullRequest(updatedPR)
 	if err != nil {
 		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
 	}
