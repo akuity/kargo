@@ -323,15 +323,10 @@ func (p *provider) MergePullRequest(
 		return toProviderPR(bbPR, prResp), true, nil
 	}
 
-	// Check if PR is closed/declined
-	if bbPR.State == prStateDeclined || bbPR.State == prStateSuperseded {
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, bbPR.State)
-	}
-
-	// Check if PR is not in open state
+	// Check if PR is closed (any non-open state except merged)
 	if bbPR.State != prStateOpen {
-		// PR is not ready to merge yet (pending checks, conflicts, etc.)
-		return nil, false, nil
+		// If it's not open and not merged, then it's closed
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged (state: %s)", id, bbPR.State)
 	}
 
 	// Attempt to merge the PR

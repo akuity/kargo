@@ -326,7 +326,7 @@ func (p *provider) MergePullRequest(
 		p.owner,
 		p.repo,
 		int(id),
-		"", // Empty string - let GitHub use its default Commit Message
+		"", // Let GitHub use its default Commit Message
 		&github.PullRequestOptions{},
 	)
 	if err != nil {
