@@ -237,7 +237,7 @@ func (p *provider) MergePullRequest(
 		RepositoryId:  &p.repo,
 		PullRequestId: ptr.To(int(id)),
 		GitPullRequestToUpdate: &adogit.GitPullRequest{
-			Status:                ptr.To(adogit.PullRequestStatusValues.Completed),
+			Status: ptr.To(adogit.PullRequestStatusValues.Completed),
 			// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
 			// If the PR was amended between our validation and merge attempt, Azure DevOps
 			// will reject the merge operation, preventing race conditions.
