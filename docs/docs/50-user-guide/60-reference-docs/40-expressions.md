@@ -563,8 +563,7 @@ spec:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
   - expression: |
-  commitFrom('ghcr.io/example/frontend').tag == 
-  comitFrom('ghcr.io/example/backend').tag
+      imageFrom('ghcr.io/example/frontend.git').tag == imageFrom('ghcr.io/example/backend.git').tag
 ```
 
 :::info
@@ -634,8 +633,7 @@ spec:
       repoURL: oci://example.com/my-other-chart
   freightCreationCriteria:
   - expression: |
-  chartFrom('oci://example.com/my-chart').version == 
-  chartFrom('oci://example.com/my-other-chart').version
+      chartFrom('oci://example.com/my-chart').version == chartFrom('oci://example.com/my-other-chart').tag
 ```
 
 :::info
