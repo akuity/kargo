@@ -2511,6 +2511,16 @@ RawFormat specifies the format for raw resource representation.
 | currentPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  CurrentPromotion is a reference to the currently Running promotion. |
 | lastPromotion | [PromotionReference](#github-com-akuity-kargo-api-v1alpha1-PromotionReference) |  LastPromotion is a reference to the last completed promotion. |
 | autoPromotionEnabled | [bool](#bool) |  AutoPromotionEnabled indicates whether automatic promotion is enabled for the Stage based on the ProjectConfig. |
+| metadata | [StageStatus.MetadataEntry](#github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry) |  Metadata is a map of arbitrary metadata associated with the Stage. This is useful for storing additional information about the Stage that can be shared across promotions, verifications, or other processes. |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-StageStatus-MetadataEntry"></a>
+
+### StageStatus.MetadataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-StepExecutionMetadata"></a>
 

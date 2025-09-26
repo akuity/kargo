@@ -10,5 +10,5 @@ spec:
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
-  secretName: kargo-webhooks-server-cert
+  secretName: {{ .Values.webhooksServer.tls.secretName }}
 {{- end }}
