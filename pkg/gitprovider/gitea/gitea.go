@@ -281,7 +281,6 @@ func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	// Get PR
 	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
@@ -290,24 +289,25 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
-	// Check if PR is already merged
-	if giteaPR.HasMerged {
+	switch {
+	case giteaPR.HasMerged:
 		pr := convertGiteaPR(*giteaPR)
 		return &pr, true, nil
-	}
 
-	// Check if PR is not in open state
-	if giteaPR.State != gitea.StateOpen {
-		// Not ready to merge
+	case giteaPR.State != gitea.StateOpen:
+		return nil, false, nil
+
+	case !giteaPR.Mergeable:
 		return nil, false, nil
 	}
 
-	_, err = p.client.MergePullRequest(ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{})
-	if err != nil {
+	// Merge the PR
+	if _, err = p.client.MergePullRequest(
+		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},
+	); err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
-	// After merging, get the updated PR to return current state
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)

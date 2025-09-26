@@ -300,49 +300,49 @@ func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	// Get the current PR to check its status
 	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
-
 	if ghPR == nil {
 		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
-	// Check if PR is already merged
-	if ghPR.MergedAt != nil {
+	switch {
+	case ghPR.MergedAt != nil:
 		pr := convertGithubPR(*ghPR)
 		return &pr, true, nil
-	}
 
-	// Check if PR is closed but not merged - this is a terminal error
-	if ptr.Deref(ghPR.State, prStateClosed) != prStateOpen {
+	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+
+	case ghPR.Mergeable == nil:
+		return nil, false, fmt.Errorf("mergeability unknown for pull request %d, please retry", id)
+
+	case !*ghPR.Mergeable:
+		return nil, false, nil
 	}
 
+	// Merge the PR
 	mergeResult, _, err := p.client.MergePullRequest(
 		ctx,
 		p.owner,
 		p.repo,
 		int(id),
-		"", // Let GitHub use its default Commit Message
+		"", // Use default commit message
 		&github.PullRequestOptions{},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
-
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
 	}
 
-	// After merging, get the updated PR to return current state
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
 	}
-
 	if updatedPR == nil {
 		return nil, false, fmt.Errorf("unexpected nil pull request after merge")
 	}

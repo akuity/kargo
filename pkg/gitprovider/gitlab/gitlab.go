@@ -210,7 +210,6 @@ func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	// Get the current MR to check its status
 	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
@@ -219,20 +218,22 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("merge request %d not found", id)
 	}
 
-	// Check if MR is already merged
-	if glMR.State == "merged" {
+	switch {
+	case glMR.State == "merged":
 		pr := convertGitlabMR(glMR.BasicMergeRequest)
 		return &pr, true, nil
-	}
 
-	// Check if MR is open
-	if glMR.State != "opened" {
-		// MR is closed or locked; cannot merge
+	case glMR.State != "opened":
+		return nil, false, nil
+
+	case glMR.DetailedMergeStatus != "can_be_merged":
 		return nil, false, nil
 	}
 
 	// Merge the MR
-	updatedMR, _, err := p.client.AcceptMergeRequest(p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{})
+	updatedMR, _, err := p.client.AcceptMergeRequest(
+		p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{},
+	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
 	}
