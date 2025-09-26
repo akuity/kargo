@@ -683,6 +683,16 @@ appropriate credentials must be made available in some form. The many available
 authentication options are covered in detail on the
 [Managing Credentials](../50-security/30-managing-credentials.md) page.
 
+## Automatic Freight Creation Criteria
+
+For more granular control over the creation of your `Freight`, you can use 
+`Freight Creation Criteria` which allows you to define a condition (in the form
+of an expression) that must evaluate to `true` in order to proceed with minting
+new `Freight`. This can be useful if you need to compare information from 
+different artifacts among your `Warehouse` subscriptions. Check out the 
+[Expression Language Reference](../60-reference-docs/40-expressions.md) for more 
+details.
+
 ## Performance Considerations
 
 `Warehouse` resources periodically poll the repositories to which they subscribe
