@@ -52,6 +52,13 @@ type Interface interface {
 	// the caller to sort the results as needed.
 	ListPullRequests(context.Context, *ListPullRequestOptions) ([]PullRequest, error)
 
+	// MergePullRequest attempts to merge a pull request.
+	// Returns:
+	// - *PullRequest: the merged PR if successful
+	// - bool: true if merge was performed, false if PR is not ready to merge
+	// - error: only for actual errors (auth, network, invalid PR, etc.)
+	MergePullRequest(context.Context, int64) (*PullRequest, bool, error)
+
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
 	// and commit ID.
 	GetCommitURL(repoURL string, commitID string) (string, error)
@@ -130,6 +137,8 @@ type Fake struct {
 		context.Context,
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
+	// MergePullRequestFn defines the functionality of the MergePullRequest method.
+	MergePullRequestFn func(context.Context, int64) (*PullRequest, bool, error)
 	// GetCommitURLFn defines the functionality of the GetCommitURL method.
 	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
@@ -156,6 +165,14 @@ func (f *Fake) ListPullRequests(
 	opts *ListPullRequestOptions,
 ) ([]PullRequest, error) {
 	return f.ListPullRequestsFn(ctx, opts)
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (f *Fake) MergePullRequest(
+	ctx context.Context,
+	number int64,
+) (*PullRequest, bool, error) {
+	return f.MergePullRequestFn(ctx, number)
 }
 
 // GetCommitURL implements gitprovider.Interface.

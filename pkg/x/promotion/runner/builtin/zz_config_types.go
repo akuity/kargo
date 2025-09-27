@@ -173,6 +173,23 @@ type GitCommitConfigAuthor struct {
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
+type GitMergePRConfig struct {
+	// Skip TLS verification when interacting with the Git provider. Default is false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The number of the pull request to merge.
+	PRNumber int64 `json:"prNumber"`
+	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
+	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
+	// specified.
+	Provider *Provider `json:"provider,omitempty"`
+	// The URL of the remote Git repository containing the pull request.
+	RepoURL string `json:"repoURL"`
+	// If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable.
+	// The merge will be retried on the next reconciliation until it succeeds or times out.
+	// Default is false.
+	Wait bool `json:"wait,omitempty"`
+}
+
 type GitOpenPRConfig struct {
 	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
 	// if the target branch does not already exist there. Default is false.
