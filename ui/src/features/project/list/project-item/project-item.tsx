@@ -1,6 +1,6 @@
-import { faHeart } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faStar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Divider, Flex, Typography } from 'antd';
+import { Button, Divider, Flex, Typography } from 'antd';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -9,7 +9,15 @@ import { Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import * as styles from './project-item.module.less';
 
-export const ProjectItem = ({ project }: { project?: Project }) => {
+export const ProjectItem = ({
+  project,
+  starred,
+  onToggleStar
+}: {
+  project?: Project;
+  starred: boolean;
+  onToggleStar: (id: string) => void;
+}) => {
   const stagesStats = project?.status?.stats?.stages;
   const warehousesStats = project?.status?.stats?.warehouses;
 
@@ -18,12 +26,27 @@ export const ProjectItem = ({ project }: { project?: Project }) => {
       className={styles.tile}
       to={generatePath(paths.project, { name: project?.metadata?.name })}
     >
-      <Typography.Title level={4} className='!mb-1'>
-        {project?.metadata?.name}
-      </Typography.Title>
-      <Typography.Paragraph type='secondary' className='!mb-0'>
-        {project?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY]}
-      </Typography.Paragraph>
+      <Flex align='center'>
+        <div>
+          <Typography.Title level={4} className='!mb-1'>
+            {project?.metadata?.name}
+          </Typography.Title>
+          <Typography.Paragraph type='secondary' className='!mb-0'>
+            {project?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY]}
+          </Typography.Paragraph>
+        </div>
+
+        <Button
+          className='ml-auto'
+          type={starred ? 'primary' : 'default'}
+          icon={<FontAwesomeIcon icon={faStar} />}
+          onClick={(e) => {
+            e.preventDefault();
+            onToggleStar(project?.metadata?.uid || '');
+          }}
+          title={starred ? 'Unstar project' : 'Star project'}
+        />
+      </Flex>
       <Divider className='my-3' />
       <Flex vertical gap={4}>
         <div>

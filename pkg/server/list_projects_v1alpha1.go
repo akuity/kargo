@@ -36,8 +36,24 @@ func (s *server) ListProjects(
 		list.Items = filtered
 	}
 
+	if len(req.Msg.GetUid()) > 0 {
+		for i := 0; i < len(list.Items); i++ {
+			if slices.Contains(req.Msg.GetUid(), string(list.Items[i].UID)) {
+				filtered = append(filtered, list.Items[i])
+			}
+		}
+		list.Items = filtered
+	}
+
 	total := len(list.Items)
 	pageSize := len(list.Items)
+
+	// only the starred projects
+	if len(req.Msg.GetUid()) > 0 {
+		total = len(filtered)
+		pageSize = len(filtered)
+	}
+
 	if req.Msg.GetPageSize() > 0 {
 		pageSize = int(req.Msg.GetPageSize())
 	}
