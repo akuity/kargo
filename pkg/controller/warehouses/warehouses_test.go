@@ -164,7 +164,12 @@ func TestSyncWarehouse(t *testing.T) {
 
 				require.NotNil(t, status.DiscoveredArtifacts)
 
-				require.Len(t, status.GetConditions(), 3)
+				require.Len(t, status.GetConditions(), 4)
+
+				// Ensure that the FreightCreationCriteriaSatisfied condition is set to True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -276,7 +281,12 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.Empty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 3)
+				require.Len(t, status.GetConditions(), 4)
+
+				// Ensure that the FreightCreationCriteriaSatisfied condition is set to True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -334,7 +344,12 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.NotEmpty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 2)
+				require.Len(t, status.GetConditions(), 3)
+
+				// Ensure that the FreightCreationCriteriaSatisfied condition is set to True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -1154,4 +1169,270 @@ func TestReconcile(t *testing.T) {
 			tt.assertions(t, result, err)
 		})
 	}
+}
+
+func Test_freightCreationCriteriaSatisfied(t *testing.T) {
+	for _, tc := range []struct {
+		name                    string
+		freightCreationCriteria *kargoapi.FreightCreationCriteria
+		artifacts               *kargoapi.DiscoveredArtifacts
+		expected                bool
+		errExpected             bool
+	}{
+		{
+			name:                    "nil freight creation criteria",
+			freightCreationCriteria: nil,
+			artifacts:               &kargoapi.DiscoveredArtifacts{},
+			expected:                true,
+		},
+		{
+			name:                    "empty criteria expression",
+			freightCreationCriteria: new(kargoapi.FreightCreationCriteria),
+			artifacts:               &kargoapi.DiscoveredArtifacts{},
+			expected:                true,
+		},
+		{
+			name: "no artifacts discovered",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "doesntmatter",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{},
+			expected:  true,
+		},
+		{
+			name: "invalid criteria expression",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "invalid.expression",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{RepoURL: "doesntmatter"},
+				},
+			},
+			expected:    false,
+			errExpected: true,
+		},
+		{
+			name: "success - commit tags match",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+							// this is the one that should be picked
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - commit tags do not match",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "commitFrom('site/repo/frontend').Tag == commitFrom('site/repo/backend').Tag",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Git: []kargoapi.GitDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `abc123`,
+								CreatorDate: &metav1.Time{Time: time.Now().Add(-1 * time.Hour)},
+							},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						Commits: []kargoapi.DiscoveredCommit{
+							{
+								Tag:         `def456`,
+								CreatorDate: &metav1.Time{Time: time.Now()},
+							},
+						},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - image tags match",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: `v1.0.0`},
+							// this is the one that should be picked
+							{Tag: `v1.1.0`},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: `v1.0.0`},
+							// this is the one that should be picked
+							{Tag: `v1.1.0`},
+						},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - image tags do not match",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "imageFrom('site/repo/frontend').Tag == imageFrom('site/repo/backend').Tag",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Images: []kargoapi.ImageDiscoveryResult{
+					{
+						RepoURL: "site/repo/frontend",
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: `v1.0.0`},
+						},
+					},
+					{
+						RepoURL: "site/repo/backend",
+						References: []kargoapi.DiscoveredImageReference{
+							{Tag: `v1.1.0`},
+						},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions match with repo URL only",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+					{
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions match with repo URL and optional name",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version == 
+				chartFrom('site/repo/backend', 'some-other-name').Version`,
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						Name:     "some-name",
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+					{
+						Name:     "some-other-name",
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.0.0", "v1.1.0"},
+					},
+				},
+			},
+			expected:    true,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions do not match with repo URL only",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: "chartFrom('site/repo/frontend').Version == chartFrom('site/repo/backend').Version",
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0"},
+					},
+					{
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.1.0"},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+		{
+			name: "success - chart versions do not match with repo URL and optional name",
+			freightCreationCriteria: &kargoapi.FreightCreationCriteria{
+				Expression: `chartFrom('site/repo/frontend', 'some-name').Version ==
+						chartFrom('site/repo/backend', 'some-other-name').Version`,
+			},
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Charts: []kargoapi.ChartDiscoveryResult{
+					{
+						Name:     "some-name",
+						RepoURL:  "site/repo/frontend",
+						Versions: []string{"v1.0.0"},
+					},
+					{
+						Name:     "some-other-name",
+						RepoURL:  "site/repo/backend",
+						Versions: []string{"v1.1.0"},
+					},
+				},
+			},
+			expected:    false,
+			errExpected: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			logger, err := logging.NewLogger(logging.ErrorLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), logger)
+			result, err := freightCreationCriteriaSatisfied(ctx, tc.freightCreationCriteria, tc.artifacts)
+			require.Equal(t, tc.expected, result)
+			if tc.errExpected {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+
 }

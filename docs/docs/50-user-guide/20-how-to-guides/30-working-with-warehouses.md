@@ -683,6 +683,30 @@ appropriate credentials must be made available in some form. The many available
 authentication options are covered in detail on the
 [Managing Credentials](../50-security/30-managing-credentials.md) page.
 
+## Automatic Freight Creation Criteria
+
+For more granular control over the creation of your `Freight`, you can define 
+`Freight Creation Criteria` in the form of an expression. One potential use case
+could be backend and frontend versions needing to match.
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/frontend
+  - image:
+      repoURL: ghcr.io/example/backend
+  freightCreationCriteria:
+  - expression: |
+      imageFrom('ghcr.io/example/frontend.git').tag == imageFrom('ghcr.io/example/backend.git').tag
+```
+
+For more information on `Freight Creation Criteria` refer to the
+[Expression Language Reference](../60-reference-docs/40-expressions.md).
+
 ## Performance Considerations
 
 `Warehouse` resources periodically poll the repositories to which they subscribe
