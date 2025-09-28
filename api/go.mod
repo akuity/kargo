@@ -3,7 +3,7 @@ module github.com/akuity/kargo/api
 go 1.25.0
 
 require (
-	connectrpc.com/connect v1.18.1
+	connectrpc.com/connect v1.19.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.11.1
 	google.golang.org/protobuf v1.36.9
