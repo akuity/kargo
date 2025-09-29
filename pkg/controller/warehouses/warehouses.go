@@ -292,6 +292,7 @@ func (r *reconciler) syncWarehouse(
 			status.DiscoveredArtifacts,
 		)
 		if err != nil {
+			logger.Error(err, "error evaluating freight creation criteria")
 			conditions.Set(
 				&status,
 				&metav1.Condition{
@@ -319,6 +320,7 @@ func (r *reconciler) syncWarehouse(
 			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
 		}
 		if !criteriaSatisfied {
+			logger.Info("freight creation criteria not satisfied; skipping freight creation")
 			conditions.Set(
 				&status,
 				&metav1.Condition{
@@ -328,9 +330,24 @@ func (r *reconciler) syncWarehouse(
 					Message:            "freight creation criteria not satisfied; skipping freight creation",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReconciling,
+					Status:             metav1.ConditionFalse,
+					Reason:             "FreightCreationCriteriaNotSatisfied",
+					Message:            "freight creation criteria not satisfied; skipping freight creation",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionTrue,
+					Reason:             "FreightCreationCriteriaNotSatisfied",
+					Message:            "freight creation criteria not satisfied; skipping freight creation",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
 			)
 			return status, nil
 		}
+		logger.Info("freight creation criteria satisfied; creating freight")
 		conditions.Set(
 			&status,
 			&metav1.Condition{
@@ -360,6 +377,12 @@ func (r *reconciler) syncWarehouse(
 				Status:  metav1.ConditionFalse,
 				Reason:  "AwaitingFreightCreation",
 				Message: "Freight creation from latest artifacts is in progress",
+			},
+			&metav1.Condition{
+				Type:    kargoapi.ConditionTypeReady,
+				Status:  metav1.ConditionTrue,
+				Reason:  "ArtifactsDiscovered",
+				Message: conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 			},
 		)
 

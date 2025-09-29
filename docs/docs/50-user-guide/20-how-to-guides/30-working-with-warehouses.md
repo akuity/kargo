@@ -713,7 +713,7 @@ spec:
   - image:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
-  - expression: |
+    expression: |
       imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
 ```
 
