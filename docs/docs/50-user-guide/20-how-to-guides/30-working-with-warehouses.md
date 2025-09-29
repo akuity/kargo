@@ -701,7 +701,7 @@ spec:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
   - expression: |
-      imageFrom('ghcr.io/example/frontend.git').tag == imageFrom('ghcr.io/example/backend.git').tag
+      imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
 ```
 
 For more information on `Freight Creation Criteria` refer to the

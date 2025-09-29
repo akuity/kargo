@@ -482,7 +482,7 @@ spec:
       repoURL: https://github.com/example/backend.git
   freightCreationCriteria:
   - expression: |
-      commitFrom('https://github.com/example/frontend.git').tag == comitFrom('https://github.com/example/backend.git').tag
+      commitFrom('https://github.com/example/frontend.git').Tag == comitFrom('https://github.com/example/backend.git').Tag
 ```
 
 In all other contexts, such as promotion and verification processes, the
@@ -563,7 +563,7 @@ spec:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
   - expression: |
-      imageFrom('ghcr.io/example/frontend.git').tag == imageFrom('ghcr.io/example/backend.git').tag
+      imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
 ```
 
 :::info
