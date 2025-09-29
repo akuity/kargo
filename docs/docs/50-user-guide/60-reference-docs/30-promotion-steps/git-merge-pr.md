@@ -3,10 +3,11 @@ sidebar_label: git-merge-pr
 description: Merges an open pull request.
 ---
 
+<span class="tag beta"></span>
 # `git-merge-pr`
 
 `git-merge-pr` merges an open pull request. This step commonly follows a
-[`git-open-pr` step](git-open-pr.md).
+[`git-open-pr`](git-open-pr.md) step.
 
 ## Configuration
 
@@ -16,13 +17,17 @@ description: Merges an open pull request.
 | `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to merge. |
-| `wait` | `boolean` | N | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. Note: The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations. |
+| `wait` | `boolean` | N | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
+
+:::warning
+The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
+:::
 
 ## Output
 
 | Name | Type | Description |
 |------|------|-------------|
-| `commit` | `string` | The ID (SHA) of the merge commit created after successfully merging the pull request. Typically, a subsequent [`argocd-update` step](argocd-update.md) will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
+| `commit` | `string` | The ID (SHA) of the merge commit created after successfully merging the pull request. Typically, a subsequent [`argocd-update`](argocd-update.md) step will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
 
 ## Examples
 
@@ -57,9 +62,10 @@ steps:
 
 ### Explicit Git Provider
 
-In some cases, `git-merge-pr` cannot determine the Git provider from the `repoURL` alone,
-such as with self-hosted GitLab instances. In these cases, you can explicitly specify
-the provider:
+The following example demonstrates how to specify a Git provider for
+`git-merge-pr`. This is useful when the provider cannot be inferred from the
+`repoURL`. For example, if the repository is hosted on a self-hosted GitLab
+instance, the provider must be specified as `gitlab`.
 
 ```yaml
 steps:
