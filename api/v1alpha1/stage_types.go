@@ -316,7 +316,7 @@ type FreightSources struct {
 	// AutoPromotionOptions specifies options pertaining to auto-promotion. These
 	// settings have no effect if auto-promotion is not enabled for this Stage at
 	// the ProjectConfig level.
-	AutoPromotionOptions *AutoPromotionOptions `json:"autoPromotionOptions,omitempty"`
+	AutoPromotionOptions *AutoPromotionOptions `json:"autoPromotionOptions,omitempty" protobuf:"bytes,5,opt,name=autoPromotionOptions"`
 }
 
 // AutoPromotionSelectionPolicy specifies the rules for identifying new Freight
@@ -352,7 +352,7 @@ type AutoPromotionOptions struct {
 	// - "MatchUpstream": Only the Freight currently used immediately upstream
 	//   from this Stage is eligible for auto-promotion. This policy may only
 	//   be applied when the Stage has exactly one upstream Stage.
-	SelectionPolicy AutoPromotionSelectionPolicy `json:"selectionPolicy,omitempty"`
+	SelectionPolicy AutoPromotionSelectionPolicy `json:"selectionPolicy,omitempty" protobuf:"bytes,1,opt,name=selectionPolicy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to

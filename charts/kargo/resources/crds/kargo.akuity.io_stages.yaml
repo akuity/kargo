@@ -291,6 +291,32 @@ spec:
                         Sources describes where the requested Freight may be obtained from. This is
                         a required field.
                       properties:
+                        autoPromotionOptions:
+                          description: |-
+                            AutoPromotionOptions specifies options pertaining to auto-promotion. These
+                            settings have no effect if auto-promotion is not enabled for this Stage at
+                            the ProjectConfig level.
+                          properties:
+                            selectionPolicy:
+                              description: |-
+                                SelectionPolicy specifies the rules for identifying new Freight that is
+                                eligible for auto-promotion to this Stage. This field is optional. When
+                                left unspecified, the field is implicitly treated as if its value were
+                                "NewestFreight".
+
+                                Accepted Values:
+
+                                - "NewestFreight": The newest Freight that is available to the Stage is
+                                  eligible for auto-promotion.
+
+                                - "MatchUpstream": Only the Freight currently used immediately upstream
+                                  from this Stage is eligible for auto-promotion. This policy may only
+                                  be applied when the Stage has exactly one upstream Stage.
+                              enum:
+                              - NewestFreight
+                              - MatchUpstream
+                              type: string
+                          type: object
                         availabilityStrategy:
                           description: |-
                             AvailabilityStrategy specifies the semantics for how requested Freight is
