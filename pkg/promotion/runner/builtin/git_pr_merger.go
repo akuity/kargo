@@ -101,32 +101,10 @@ func (g *gitPRMerger) run(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	pr, err := gitProv.GetPullRequest(ctx, cfg.PRNumber)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error getting pull request %d: %w", cfg.PRNumber, err)
-	}
-
-	// If PR is already merged, return success
-	if pr.Merged {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusSucceeded,
-			Output: map[string]any{stateKeyCommit: pr.MergeCommitSHA},
-		}, nil
-	}
-
-	// If PR is closed but not merged, it's a terminal error
-	if !pr.Open {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("pull request %d is closed but not merged", cfg.PRNumber),
-			}
-	}
-
 	// Try to merge the PR
 	mergedPR, merged, err := gitProv.MergePullRequest(ctx, cfg.PRNumber)
 	if err != nil {
-		// Only actual errors (auth, network, invalid PR, etc.) reach here
+		// Only actual errors (auth, network, invalid PR, closed but not merged, etc.) reach here
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{
 				Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
