@@ -1904,7 +1904,7 @@ message WarehouseSpec {
   // field has no effect when the FreightCreationPolicy is `Manual`.
   //
   // +kubebuilder:validation:Optional
-  optional FreightCreationCriteria freightCreationFilters = 5;
+  optional FreightCreationCriteria freightCreationCriteria = 5;
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

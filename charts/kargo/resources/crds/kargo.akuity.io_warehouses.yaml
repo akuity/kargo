@@ -46,7 +46,7 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
-              freightCreationFilters:
+              freightCreationCriteria:
                 description: |-
                   FreightCreationCriteria defines criteria that must be satisfied for Freight
                   to be created automatically from new artifacts following discovery. This
