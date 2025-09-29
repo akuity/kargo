@@ -1373,7 +1373,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-				...client.GetOption,
+					...client.GetOption,
 				) error {
 					return errors.New("something went wrong")
 				},
