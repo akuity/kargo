@@ -338,10 +338,13 @@ func (p *provider) MergePullRequest(
 
 	// TODO: The Bitbucket API lacks comprehensive merge eligibility checks. We
 	// cannot reliably determine if a PR is mergeable due to conflicts, failing
-	// checks, or other blocking conditions before attempting the merge. This means
-	// we have no choice but to attempt the merge and hope for the best.
-	// See: https://bitbucket.org/site/master/issues/5814/
-	// This limitation makes the "wait" option unreliable for Bitbucket repositories.
+	// checks, or other blocking conditions before attempting the merge. This
+	// means we have no choice but to attempt the merge and hope for the best.
+	//
+	// See: https://jira.atlassian.com/browse/BCLOUD-22014
+	//
+	// This limitation makes the "wait" option unreliable for Bitbucket
+	// repositories.
 
 	// Attempt to merge the PR
 	mergeOpts := &bitbucket.PullRequestsOptions{

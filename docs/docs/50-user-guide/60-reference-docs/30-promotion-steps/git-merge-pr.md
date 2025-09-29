@@ -1,13 +1,12 @@
 ---
 sidebar_label: git-merge-pr
-description: Merges a specified open pull request.
+description: Merges an open pull request.
 ---
 
 # `git-merge-pr`
 
-`git-merge-pr` merges a specified open pull request. This step commonly follows a
-[`git-open-pr` step](git-open-pr.md) or can be used independently to merge existing
-pull requests.
+`git-merge-pr` merges an open pull request. This step commonly follows a
+[`git-open-pr` step](git-open-pr.md).
 
 ## Configuration
 
@@ -17,7 +16,7 @@ pull requests.
 | `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to merge. |
-| `wait` | `boolean` | N | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. Note: The `wait` option is unreliable for repositories hosted on Bitbucket due to API limitations. |
+| `wait` | `boolean` | N | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. Note: The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations. |
 
 ## Output
 
@@ -35,10 +34,10 @@ will fail.
 
 ```yaml
 steps:
-  - uses: git-merge-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      prNumber: 42
+- uses: git-merge-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: 42
 ```
 
 ### Merge with Wait
@@ -49,25 +48,25 @@ Kargo will retry it later.
 
 ```yaml
 steps:
-  - uses: git-merge-pr
-    config:
-      repoURL: https://github.com/example/repo.git
-      prNumber: 42
-      wait: true
+- uses: git-merge-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: 42
+    wait: true
 ```
 
-### Custom Git Provider
+### Explicit Git Provider
 
-This example demonstrates specifying a custom Git provider for `git-merge-pr`. This
-is useful when the provider cannot be inferred from the `repoURL`, such as with
-self-hosted GitLab instances.
+In some cases, `git-merge-pr` cannot determine the Git provider from the `repoURL` alone,
+such as with self-hosted GitLab instances. In these cases, you can explicitly specify
+the provider:
 
 ```yaml
 steps:
-  - uses: git-merge-pr
-    config:
-      repoURL: https://gitlab.example.com/example/repo.git
-      provider: gitlab
-      prNumber: 123
-      wait: true
+- uses: git-merge-pr
+  config:
+    repoURL: https://gitlab.example.com/example/repo.git
+    provider: gitlab
+    prNumber: 123
+    wait: true
 ```
