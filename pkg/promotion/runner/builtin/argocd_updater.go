@@ -535,7 +535,7 @@ func (a *argocdUpdater) syncApplication(
 	// information we have at hand.
 	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L1887-L1895
 	// nolint:lll
-	message := formatMessage(app)
+	message := constructMessage(app)
 	a.logAppEventFn(
 		ctx,
 		app,
@@ -546,12 +546,12 @@ func (a *argocdUpdater) syncApplication(
 	return nil
 }
 
-// formatMessage construct a human-friendly message about what we're syncing to.
-//	- If there's exactly one source, we include its TargetRevision.
-//	- If there are multiple sources, we just report the count to avoid a noisy log.
-//	- If only the single Source field is set, we log its TargetRevision.
-//	Full details are always available on the Application object itself.
-func formatMessage(app *argocd.Application) string {
+// constructMessage construct a human-friendly message about what we're syncing to.
+//   - If there's exactly one source, we include its TargetRevision.
+//   - If there are multiple sources, we just report the count to avoid a noisy log.
+//   - If only the single Source field is set, we log its TargetRevision.
+//     Full details are always available on the Application object itself.
+func constructMessage(app *argocd.Application) string {
 	message := "initiated sync"
 	switch {
 	case len(app.Spec.Sources) == 1:

@@ -1258,7 +1258,7 @@ func TestSyncMessage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			message := formatMessage(tc.app)
+			message := constructMessage(tc.app)
 			require.Equal(t, tc.expected, message)
 		})
 	}
@@ -1373,7 +1373,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-					...client.GetOption,
+				...client.GetOption,
 				) error {
 					return errors.New("something went wrong")
 				},
