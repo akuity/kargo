@@ -1258,16 +1258,7 @@ func TestSyncMessage(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			message := "initiated sync"
-			switch {
-			case len(tc.app.Spec.Sources) == 1:
-				message += " to " + tc.app.Spec.Sources[0].TargetRevision
-			case len(tc.app.Spec.Sources) > 1:
-				message += fmt.Sprintf(" to %d sources", len(tc.app.Spec.Sources))
-			case tc.app.Spec.Source != nil:
-				message += " to " + tc.app.Spec.Source.TargetRevision
-			}
-
+			message := formatMessage(tc.app)
 			require.Equal(t, tc.expected, message)
 		})
 	}
