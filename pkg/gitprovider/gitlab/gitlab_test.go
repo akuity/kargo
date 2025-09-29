@@ -240,8 +240,10 @@ func TestMergePullRequest(t *testing.T) {
 				},
 			},
 			id:           456,
+			expectErr:    true,
 			expectMerged: false,
 			expectPR:     false,
+			errContains:  "closed but not merged",
 		},
 		{
 			name: "MR not ready to merge",

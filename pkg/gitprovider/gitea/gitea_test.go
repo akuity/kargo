@@ -455,6 +455,8 @@ func TestMergePullRequest(t *testing.T) {
 						HasMerged: false,
 					}, &gitea.Response{}, nil)
 			},
+			expectError:   true,
+			errorContains: "closed but not merged",
 		},
 		{
 			name:     "PR not mergeable",
