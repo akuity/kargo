@@ -7,7 +7,7 @@ replace github.com/akuity/kargo/api => ./api
 require (
 	cloud.google.com/go/compute/metadata v0.8.0
 	code.gitea.io/sdk/gitea v0.22.0
-	connectrpc.com/connect v1.18.1
+	connectrpc.com/connect v1.19.0
 	connectrpc.com/grpchealth v1.4.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Masterminds/semver/v3 v3.4.0
