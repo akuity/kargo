@@ -481,7 +481,7 @@ spec:
   - git:
       repoURL: https://github.com/example/backend.git
   freightCreationCriteria:
-  - expression: |
+    expression: |
       commitFrom('https://github.com/example/frontend.git').Tag == comitFrom('https://github.com/example/backend.git').Tag
 ```
 
@@ -562,7 +562,7 @@ spec:
   - image:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
-  - expression: |
+    expression: |
       imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
 ```
 
@@ -632,8 +632,8 @@ spec:
   - chart:
       repoURL: oci://example.com/my-other-chart
   freightCreationCriteria:
-  - expression: |
-      chartFrom('oci://example.com/my-chart').version == chartFrom('oci://example.com/my-other-chart').tag
+    expression: |
+      chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Tag
 ```
 
 :::info
