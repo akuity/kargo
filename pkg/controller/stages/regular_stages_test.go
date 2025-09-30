@@ -3012,7 +3012,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 			},
 		},
 		{
-			name: "skips verification when last verification is not successful",
+			name: "removes verified status when verification fails",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -3037,8 +3037,30 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, _ client.Client, _ kargoapi.StageStatus, err error) {
+			objects: []client.Object{
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-freight",
+					},
+					Status: kargoapi.FreightStatus{
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							"test-stage": {},
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, c client.Client, _ kargoapi.StageStatus, err error) {
 				require.NoError(t, err)
+
+				// Verify that the verified status was removed from the Freight
+				freight := &kargoapi.Freight{}
+				err = c.Get(context.Background(), types.NamespacedName{
+					Namespace: "fake-project",
+					Name:      "test-freight",
+				}, freight)
+				require.NoError(t, err)
+				require.NotContains(t, freight.Status.VerifiedIn, "test-stage")
 			},
 		},
 		{

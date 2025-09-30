@@ -1187,8 +1187,50 @@ func (r *RegularStageReconciler) markFreightVerifiedForStage(
 	curFreight := stage.Status.FreightHistory.Current()
 	if curFreight == nil ||
 		len(curFreight.VerificationHistory) == 0 ||
-		curFreight.HasNonTerminalVerification() ||
-		curFreight.VerificationHistory.Current().Phase != kargoapi.VerificationPhaseSuccessful {
+		curFreight.HasNonTerminalVerification() {
+		return newStatus, nil
+	}
+
+	currentVerification := curFreight.VerificationHistory.Current()
+
+	// If verification failed, remove the verified status to block downstream
+	// promotions.
+	if currentVerification.Phase.IsTerminal() && currentVerification.Phase != kargoapi.VerificationPhaseSuccessful {
+
+		for _, ref := range curFreight.Freight {
+			freight := &kargoapi.Freight{}
+			if err := r.client.Get(ctx, types.NamespacedName{
+				Namespace: stage.Namespace,
+				Name:      ref.Name,
+			}, freight); err != nil {
+				return newStatus, fmt.Errorf(
+					"error getting Freight %q in namespace %q: %w",
+					ref.Name, stage.Namespace, err,
+				)
+			}
+
+			// If the Freight is not verified in this Stage, nothing to remove.
+			if !freight.IsVerifiedIn(stage.Name) {
+				continue
+			}
+
+			// Remove the verified status.
+			if err := kubeclient.PatchStatus(ctx, r.client, freight, func(status *kargoapi.FreightStatus) {
+				if status.VerifiedIn != nil {
+					delete(status.VerifiedIn, stage.Name)
+				}
+			}); err != nil {
+				return newStatus, fmt.Errorf(
+					"error removing verified status from Freight %q in Stage: %w",
+					freight.Name, err,
+				)
+			}
+		}
+		return newStatus, nil
+	}
+
+	// Only proceed if verification was successful.
+	if currentVerification.Phase != kargoapi.VerificationPhaseSuccessful {
 		return newStatus, nil
 	}
 
