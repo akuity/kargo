@@ -331,13 +331,6 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeReconciling,
-					Status:             metav1.ConditionFalse,
-					Reason:             "FreightCreationCriteriaNotSatisfied",
-					Message:            "freight creation criteria not satisfied; skipping freight creation",
-					ObservedGeneration: warehouse.GetGeneration(),
-				},
-				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeReady,
 					Status:             metav1.ConditionTrue,
 					Reason:             "FreightCreationCriteriaNotSatisfied",
@@ -345,19 +338,11 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
+			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 			return status, nil
 		}
 		logger.Info("freight creation criteria satisfied; creating freight")
-		conditions.Set(
-			&status,
-			&metav1.Condition{
-				Type:               kargoapi.ConditionTypeCriteriaSatisfied,
-				Status:             metav1.ConditionTrue,
-				Reason:             "FreightCreationCriteriaSatisfied",
-				Message:            "freight creation criteria satisfied; creating freight",
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-		)
+		conditions.Delete(&status, kargoapi.ConditionTypeCriteriaSatisfied)
 		// Mark the Warehouse as reconciling while we create the Freight.
 		//
 		// As this should be a quick operation, we do not issue an immediate
@@ -377,12 +362,6 @@ func (r *reconciler) syncWarehouse(
 				Status:  metav1.ConditionFalse,
 				Reason:  "AwaitingFreightCreation",
 				Message: "Freight creation from latest artifacts is in progress",
-			},
-			&metav1.Condition{
-				Type:    kargoapi.ConditionTypeReady,
-				Status:  metav1.ConditionTrue,
-				Reason:  "ArtifactsDiscovered",
-				Message: conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 			},
 		)
 
