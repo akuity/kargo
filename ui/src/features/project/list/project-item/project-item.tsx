@@ -1,7 +1,6 @@
 import { faHeart, faStar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Divider, Flex, Typography } from 'antd';
-import classNames from 'classnames';
+import { Button, Divider, Flex, theme, Typography } from 'antd';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -21,13 +20,15 @@ export const ProjectItem = ({
 }) => {
   const stagesStats = project?.status?.stats?.stages;
   const warehousesStats = project?.status?.stats?.warehouses;
+  const { token } = theme.useToken();
+  const primaryColor = token.colorPrimary;
 
   return (
     <Link
       className={styles.tile}
       to={generatePath(paths.project, { name: project?.metadata?.name })}
     >
-      <Flex align='center'>
+      <Flex align='start' justify='space-between' gap={2}>
         <div>
           <Typography.Title level={4} className='!mb-1'>
             {project?.metadata?.name}
@@ -37,16 +38,19 @@ export const ProjectItem = ({
           </Typography.Paragraph>
         </div>
 
-        <FontAwesomeIcon
-          icon={faStar}
+        <Button
+          type='text'
+          size='small'
+          icon={
+            <FontAwesomeIcon
+              icon={faStar}
+              style={{ color: starred ? primaryColor : '', opacity: starred ? 1 : 0.3 }}
+            />
+          }
           onClick={(e) => {
             e.preventDefault();
             onToggleStar(project?.metadata?.uid || '');
           }}
-          className={classNames('ml-auto', {
-            'text-gray-400': !starred,
-            'text-[#30476c]': starred
-          })}
         />
       </Flex>
       <Divider className='my-3' />
