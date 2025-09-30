@@ -59,20 +59,3 @@ steps:
     prNumber: 42
     wait: true
 ```
-
-### Explicit Git Provider
-
-The following example demonstrates how to specify a Git provider for
-`git-merge-pr`. This is useful when the provider cannot be inferred from the
-`repoURL`. For example, if the repository is hosted on a self-hosted GitLab
-instance, the provider must be specified as `gitlab`.
-
-```yaml
-steps:
-- uses: git-merge-pr
-  config:
-    repoURL: https://gitlab.example.com/example/repo.git
-    provider: gitlab
-    prNumber: 123
-    wait: true
-```

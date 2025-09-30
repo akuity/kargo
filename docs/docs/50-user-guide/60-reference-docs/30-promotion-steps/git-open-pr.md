@@ -97,20 +97,3 @@ steps:
     labels: ["infra", "needs-review"]
 # Wait for the PR to be merged or closed...
 ```
-
-### Custom Git Provider
-
-The following example demonstrates how to specify a custom Git provider for
-`git-open-pr`. This is useful when the provider cannot be inferred from the
-`repoURL`. For example, if the repository is hosted on a self-hosted GitLab
-instance, the provider must be specified as `gitlab`.
-
-```yaml
-steps:
-# Clone, push, prepare the contents of ./out, commit, etc...
-- uses: git-open-pr
-  config:
-    repoURL: https://gitlab.example.com/example/repo.git
-    provider: gitlab
-    # Additional configuration...
-```
