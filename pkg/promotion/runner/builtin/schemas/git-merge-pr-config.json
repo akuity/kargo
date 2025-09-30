@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "GitMergePRConfig",
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["repoURL", "prNumber"],
+    "properties": {
+      "repoURL": {
+        "type": "string",
+        "description": "The URL of the remote Git repository containing the pull request.",
+        "minLength": 1,
+        "format": "uri"
+      },
+      "prNumber": {
+        "type": "integer",
+        "description": "The number of the pull request to merge.",
+        "minimum": 1
+      },
+      "provider": {
+        "type": "string",
+        "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+        "enum": ["azure", "bitbucket", "gitea", "github", "gitlab"]
+      },
+      "insecureSkipTLSVerify": {
+        "type": "boolean",
+        "description": "Skip TLS verification when interacting with the Git provider. Default is false."
+      },
+      "wait": {
+        "type": "boolean",
+        "description": "If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is false."
+      }
+    }
+}

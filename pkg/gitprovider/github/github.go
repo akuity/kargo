@@ -17,6 +17,13 @@ import (
 
 const ProviderName = "github"
 
+// GitHub pull request states
+const (
+	prStateAll    = "all"
+	prStateClosed = "closed"
+	prStateOpen   = "open"
+)
+
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
 		u, err := url.Parse(repoURL)
@@ -62,6 +69,15 @@ type githubClient interface {
 		repo string,
 		number int,
 	) (*github.PullRequest, *github.Response, error)
+
+	MergePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		commitMessage string,
+		options *github.PullRequestOptions,
+	) (*github.PullRequestMergeResult, *github.Response, error)
 
 	AddLabelsToIssue(
 		ctx context.Context,
@@ -154,6 +170,17 @@ func (g githubClientWrapper) GetPullRequests(
 	return g.client.PullRequests.Get(ctx, owner, repo, number)
 }
 
+func (g githubClientWrapper) MergePullRequest(
+	ctx context.Context,
+	owner string,
+	repo string,
+	number int,
+	commitMessage string,
+	options *github.PullRequestOptions,
+) (*github.PullRequestMergeResult, *github.Response, error) {
+	return g.client.PullRequests.Merge(ctx, owner, repo, number, commitMessage, options)
+}
+
 func (g githubClientWrapper) AddLabelsToIssue(
 	ctx context.Context,
 	owner string,
@@ -240,11 +267,11 @@ func (p *provider) ListPullRequests(
 	}
 	switch opts.State {
 	case gitprovider.PullRequestStateAny:
-		listOpts.State = "all"
+		listOpts.State = prStateAll
 	case gitprovider.PullRequestStateClosed:
-		listOpts.State = "closed"
+		listOpts.State = prStateClosed
 	case gitprovider.PullRequestStateOpen:
-		listOpts.State = "open"
+		listOpts.State = prStateOpen
 	default:
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
@@ -268,6 +295,59 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+) (*gitprovider.PullRequest, bool, error) {
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if ghPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
+	}
+
+	switch {
+	case ghPR.MergedAt != nil:
+		pr := convertGithubPR(*ghPR)
+		return &pr, true, nil
+
+	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+
+	case ghPR.Mergeable == nil || !*ghPR.Mergeable || (ghPR.Draft != nil && *ghPR.Draft):
+		return nil, false, nil
+	}
+
+	// Merge the PR
+	mergeResult, _, err := p.client.MergePullRequest(
+		ctx,
+		p.owner,
+		p.repo,
+		int(id),
+		"", // Use default commit message
+		&github.PullRequestOptions{},
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+	if mergeResult == nil {
+		return nil, false, fmt.Errorf("unexpected nil merge result")
+	}
+
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
+	}
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil pull request after merge")
+	}
+
+	pr := convertGithubPR(*updatedPR)
+	return &pr, true, nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(
 	repoURL string,
@@ -289,7 +369,7 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 	pr := gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(ghPR.Number, 0)),
 		URL:            ptr.Deref(ghPR.HTMLURL, ""),
-		Open:           ptr.Deref(ghPR.State, "closed") == "open",
+		Open:           ptr.Deref(ghPR.State, prStateClosed) == prStateOpen,
 		Merged:         ghPR.MergedAt != nil,
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,

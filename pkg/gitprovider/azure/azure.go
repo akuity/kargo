@@ -181,6 +181,84 @@ func (p *provider) ListPullRequests(
 	return pts, nil
 }
 
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+) (*gitprovider.PullRequest, bool, error) {
+	var pr *gitprovider.PullRequest
+
+	gitClient, err := adogit.NewClient(ctx, p.connection)
+	if err != nil {
+		return nil, false, fmt.Errorf("error creating Azure DevOps client: %w", err)
+	}
+
+	// Get the current PR to check its status and get the last merge source commit
+	adoPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
+		Project:       &p.project,
+		RepositoryId:  &p.repo,
+		PullRequestId: ptr.To(int(id)),
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if adoPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
+	}
+
+	status := ptr.Deref(adoPR.Status, adogit.PullRequestStatusValues.NotSet)
+	mergeStatus := ptr.Deref(adoPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
+
+	switch status {
+	case adogit.PullRequestStatusValues.Completed:
+		pr, err = convertADOPullRequest(adoPR)
+		if err != nil {
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, err)
+		}
+		return pr, true, nil
+	case adogit.PullRequestStatusValues.Abandoned:
+		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
+	case adogit.PullRequestStatusValues.Active:
+		// Draft PRs can have a merge status of `succeeded`, but aren't actually
+		// mergable, so we explicitly check for draft status.
+		if ptr.Deref(adoPR.IsDraft, false) {
+			return nil, false, nil
+		}
+		if mergeStatus != adogit.PullRequestAsyncStatusValues.Succeeded {
+			// Not ready to merge yet
+			return nil, false, nil
+		}
+	default:
+		return nil, false, nil
+	}
+
+	// Try to merge
+	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
+		Project:       &p.project,
+		RepositoryId:  &p.repo,
+		PullRequestId: ptr.To(int(id)),
+		GitPullRequestToUpdate: &adogit.GitPullRequest{
+			Status: ptr.To(adogit.PullRequestStatusValues.Completed),
+			// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
+			// If the PR was amended between our validation and merge attempt, Azure DevOps
+			// will reject the merge operation, preventing race conditions.
+			LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
+		},
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
+	}
+
+	pr, err = convertADOPullRequest(updatedPR)
+	if err != nil {
+		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
+	}
+	return pr, true, nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)

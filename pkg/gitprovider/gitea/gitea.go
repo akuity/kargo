@@ -60,6 +60,14 @@ type giteaClient interface {
 		number int,
 	) (*gitea.PullRequest, *gitea.Response, error)
 
+	MergePullRequest(
+		ctx context.Context,
+		owner string,
+		repo string,
+		number int,
+		opts *gitea.MergePullRequestOption,
+	) (*gitea.Response, error)
+
 	AddLabelsToIssue(
 		ctx context.Context,
 		owner string,
@@ -147,6 +155,17 @@ func (g giteaClientWrapper) GetPullRequests(
 	number int,
 ) (*gitea.PullRequest, *gitea.Response, error) {
 	return g.client.GetPullRequest(owner, repo, int64(number))
+}
+
+func (g giteaClientWrapper) MergePullRequest(
+	_ context.Context,
+	owner string,
+	repo string,
+	number int,
+	opts *gitea.MergePullRequestOption,
+) (*gitea.Response, error) {
+	_, resp, err := g.client.MergePullRequest(owner, repo, int64(number), *opts)
+	return resp, err
 }
 
 func (g giteaClientWrapper) AddLabelsToIssue(
@@ -255,6 +274,56 @@ func (p *provider) ListPullRequests(
 	}
 
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	ctx context.Context,
+	id int64,
+) (*gitprovider.PullRequest, bool, error) {
+	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+	if giteaPR == nil {
+		return nil, false, fmt.Errorf("pull request %d not found", id)
+	}
+
+	switch {
+	case giteaPR.HasMerged:
+		pr := convertGiteaPR(*giteaPR)
+		return &pr, true, nil
+
+	case giteaPR.State != gitea.StateOpen:
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+
+	case !giteaPR.Mergeable:
+		return nil, false, nil
+	}
+
+	// TODO(fykaa): We should also check if the PR is in draft status before
+	// merging. The Gitea API includes a draft field, but the go-sdk doesn't
+	// expose it yet.
+	//
+	// See: https://gitea.com/gitea/go-sdk/pulls/731
+
+	// Merge the PR
+	if _, err = p.client.MergePullRequest(
+		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},
+	); err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	if err != nil {
+		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
+	}
+	if updatedPR == nil {
+		return nil, false, fmt.Errorf("unexpected nil PR after merge")
+	}
+
+	pr := convertGiteaPR(*updatedPR)
+	return &pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

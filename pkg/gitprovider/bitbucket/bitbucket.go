@@ -62,6 +62,7 @@ type pullRequestClient interface {
 	ListPullRequests(opt *bitbucket.PullRequestsOptions) (any, error)
 	GetPullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
 	GetCommit(opt *bitbucket.CommitsOptions) (any, error)
+	MergePullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
 }
 
 // provider is a Bitbucket-based implementation of gitprovider.Interface.
@@ -128,6 +129,12 @@ func (w *clientWrapper) GetCommit(
 	opt *bitbucket.CommitsOptions,
 ) (any, error) {
 	return w.client.Repositories.Commits.GetCommit(opt)
+}
+
+func (w *clientWrapper) MergePullRequest(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return w.client.Repositories.PullRequests.Merge(opt)
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -289,6 +296,78 @@ func (p *provider) ListPullRequests(
 	return prs, nil
 }
 
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	_ context.Context,
+	id int64,
+) (*gitprovider.PullRequest, bool, error) {
+	// Get the PR to check its state
+	prOpts := &bitbucket.PullRequestsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		ID:       strconv.FormatInt(id, 10),
+	}
+
+	prResp, err := p.client.GetPullRequest(prOpts)
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+	}
+
+	bbPR, err := toBitbucketPR(prResp)
+	if err != nil {
+		return nil, false, fmt.Errorf("error parsing pull request response: %w", err)
+	}
+
+	// Check if PR is already merged
+	if bbPR.State == prStateMerged {
+		return toProviderPR(bbPR, prResp), true, nil
+	}
+
+	// Check if PR is closed (any non-open state except merged)
+	if bbPR.State != prStateOpen {
+		// If it's not open and not merged, then it's closed
+		return nil, false, fmt.Errorf(
+			"pull request %d is closed but not merged (state: %s)", id, bbPR.State,
+		)
+	}
+
+	// Check if PR is draft - cannot merge draft PRs
+	if bbPR.Draft {
+		return nil, false, fmt.Errorf("cannot merge pull request %d: pull request is in draft state", id)
+	}
+
+	// TODO: The Bitbucket API lacks comprehensive merge eligibility checks. We
+	// cannot reliably determine if a PR is mergeable due to conflicts, failing
+	// checks, or other blocking conditions before attempting the merge. This
+	// means we have no choice but to attempt the merge and hope for the best.
+	//
+	// See: https://jira.atlassian.com/browse/BCLOUD-22014
+	//
+	// This limitation makes the "wait" option unreliable for Bitbucket
+	// repositories.
+
+	// Attempt to merge the PR
+	mergeOpts := &bitbucket.PullRequestsOptions{
+		Owner:    p.owner,
+		RepoSlug: p.repoSlug,
+		ID:       strconv.FormatInt(id, 10),
+	}
+
+	// Perform the merge
+	mergeResp, err := p.client.MergePullRequest(mergeOpts)
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+	}
+
+	// Parse the merged PR response
+	mergedBBPR, err := toBitbucketPR(mergeResp)
+	if err != nil {
+		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
+	}
+
+	return toProviderPR(mergedBBPR, mergeResp), true, nil
+}
+
 // GetCommitURL implements gitprovider.Interface.
 func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 	normalizedURL := urls.NormalizeGit(repoURL)
@@ -362,6 +441,7 @@ type bitbucketPR struct {
 	MergeCommit struct {
 		Hash string `json:"hash"`
 	} `json:"merge_commit"`
+	Draft     bool   `json:"draft"`
 	CreatedOn string `json:"created_on"`
 }
 

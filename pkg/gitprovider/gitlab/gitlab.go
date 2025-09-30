@@ -59,6 +59,13 @@ type mergeRequestClient interface {
 		opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
+
+	AcceptMergeRequest(
+		pid any,
+		mergeRequest int,
+		opt *gitlab.AcceptMergeRequestOptions,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
 // provider is a GitLab-based implementation of gitprovider.Interface.
@@ -196,6 +203,46 @@ func (p *provider) ListPullRequests(
 		listOpts.Page = res.NextPage
 	}
 	return prs, nil
+}
+
+// MergePullRequest implements gitprovider.Interface.
+func (p *provider) MergePullRequest(
+	_ context.Context,
+	id int64,
+) (*gitprovider.PullRequest, bool, error) {
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
+	if err != nil {
+		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
+	}
+	if glMR == nil {
+		return nil, false, fmt.Errorf("merge request %d not found", id)
+	}
+
+	switch {
+	case glMR.State == "merged":
+		pr := convertGitlabMR(glMR.BasicMergeRequest)
+		return &pr, true, nil
+
+	case glMR.State != "opened":
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+
+	case glMR.DetailedMergeStatus != "mergeable":
+		return nil, false, nil
+	}
+
+	// Merge the MR
+	updatedMR, _, err := p.client.AcceptMergeRequest(
+		p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{},
+	)
+	if err != nil {
+		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
+	}
+	if updatedMR == nil {
+		return nil, false, fmt.Errorf("unexpected nil merge request after merge")
+	}
+
+	pr := convertGitlabMR(updatedMR.BasicMergeRequest)
+	return &pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
