@@ -10,7 +10,6 @@ import (
 	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -87,7 +86,7 @@ func Test_gitPRMerger_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitPRMerger(nil)
+	r := newGitPRMerger(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitPRMerger)
 	require.True(t, ok)
 
@@ -227,7 +226,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 		},
 	}
 
-	r := newGitPRMerger(&credentials.FakeDB{})
+	r := newGitPRMerger(promotion.StepRunnerCapabilities{})
 	runner, ok := r.(*gitPRMerger)
 	require.True(t, ok)
 

@@ -20,6 +20,22 @@ import (
 	_ "github.com/akuity/kargo/pkg/gitprovider/gitlab"    // GitLab provider registration
 )
 
+const stepKindGitMergePR = "git-merge-pr"
+
+func init() {
+	promotion.RegisterStepRunner(
+		stepKindGitMergePR,
+		promotion.StepRunnerRegistration{
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			Factory: newGitPRMerger,
+		},
+	)
+}
+
 // gitPRMerger is an implementation of the promotion.StepRunner interface that
 // merges a pull request.
 type gitPRMerger struct {
@@ -27,19 +43,13 @@ type gitPRMerger struct {
 	credsDB      credentials.Database
 }
 
-// newGitPRMerger returns an implementation of the promotion.StepRunner interface
-// that merges a pull request.
-func newGitPRMerger(credsDB credentials.Database) promotion.StepRunner {
-	r := &gitPRMerger{
-		credsDB: credsDB,
+// newGitPRMerger returns an implementation of the promotion.StepRunner
+// interface that merges a pull request.
+func newGitPRMerger(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+	return &gitPRMerger{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindGitMergePR),
 	}
-	r.schemaLoader = getConfigSchemaLoader(r.Name())
-	return r
-}
-
-// Name implements the promotion.StepRunner interface.
-func (g *gitPRMerger) Name() string {
-	return "git-merge-pr"
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -59,7 +69,7 @@ func (g *gitPRMerger) Run(
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.GitMergePRConfig struct.
 func (g *gitPRMerger) convert(cfg promotion.Config) (builtin.GitMergePRConfig, error) {
-	return validateAndConvert[builtin.GitMergePRConfig](g.schemaLoader, cfg, g.Name())
+	return validateAndConvert[builtin.GitMergePRConfig](g.schemaLoader, cfg, stepKindGitMergePR)
 }
 
 func (g *gitPRMerger) run(
