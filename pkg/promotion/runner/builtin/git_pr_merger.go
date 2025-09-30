@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 
@@ -111,14 +112,31 @@ func (g *gitPRMerger) run(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	// Try to merge the PR
-	mergedPR, merged, err := gitProv.MergePullRequest(ctx, cfg.PRNumber)
-	if err != nil {
-		// Only actual errors (auth, network, invalid PR, closed but not merged, etc.) reach here
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
-			}
+	// Try to merge the PR using a primitive retry loop. PRs are often ready to
+	// merge moments after being opened, but not quite immediately. Accounting
+	// for this internally avoids the scenario where a Promotion needs to wait
+	// for its next regularly scheduled reconciliation to merge a PR that could
+	// have been merged already if we were patient for just a few seconds.
+	var mergedPR *gitprovider.PullRequest
+	var merged bool
+	const maxMergeAttempts = 3
+	for i := range maxMergeAttempts {
+		if mergedPR, merged, err = gitProv.MergePullRequest(
+			ctx, cfg.PRNumber,
+		); err != nil {
+			// Only actual errors (auth, network, invalid PR, closed but not merged,
+			// etc.) reach here
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{
+					Err: fmt.Errorf("error merging pull request %d: %w", cfg.PRNumber, err),
+				}
+		}
+		if merged {
+			break
+		}
+		if i < maxMergeAttempts {
+			time.Sleep(time.Second * 5)
+		}
 	}
 
 	if !merged {
