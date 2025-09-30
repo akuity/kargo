@@ -291,8 +291,8 @@ func TestPromotionEventMarshalAnnotations(t *testing.T) {
 func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 	testCases := map[string]struct {
 		annotations   map[string]string
-		unmarshalFunc func(map[string]string) (any, error)
-		expectedType  kargoapi.EventType
+		unmarshalFunc func(map[string]string) (Meta, error)
+		expectedType  Meta
 		expectError   bool
 		errorMessage  string
 	}{
@@ -304,10 +304,21 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
 				kargoapi.AnnotationKeyEventVerificationPending: "true",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionSucceededAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionSucceededAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypePromotionSucceeded,
+			expectedType: &PromotionSucceeded{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+				VerificationPending: ptr.To(true),
+			},
 		},
 		"promotion failed": {
 			annotations: map[string]string{
@@ -316,10 +327,20 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventStageName:           "test-stage",
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionFailedAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionFailedAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypePromotionFailed,
+			expectedType: &PromotionFailed{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
 		},
 		"promotion errored": {
 			annotations: map[string]string{
@@ -328,10 +349,20 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventStageName:           "test-stage",
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionErroredAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionErroredAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypePromotionErrored,
+			expectedType: &PromotionErrored{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
 		},
 		"promotion aborted": {
 			annotations: map[string]string{
@@ -340,10 +371,20 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventStageName:           "test-stage",
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionAbortedAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionAbortedAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypePromotionAborted,
+			expectedType: &PromotionAborted{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
 		},
 		"promotion created": {
 			annotations: map[string]string{
@@ -352,17 +393,27 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventStageName:           "test-stage",
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "2024-01-01T12:00:00Z",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionCreatedAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionCreatedAnnotations("event-id", annotations)
 			},
-			expectedType: kargoapi.EventTypePromotionCreated,
+			expectedType: &PromotionCreated{
+				Common: Common{
+					Project: "test-project",
+					ID:      "event-id",
+				},
+				Promotion: Promotion{
+					Name:       "test-promotion",
+					StageName:  "test-stage",
+					CreateTime: time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC),
+				},
+			},
 		},
 		"invalid promotion annotations": {
 			annotations: map[string]string{
 				kargoapi.AnnotationKeyEventPromotionCreateTime: "invalid-time",
 			},
-			unmarshalFunc: func(annotations map[string]string) (any, error) {
-				return UnmarshalPromotionSucceededAnnotations(annotations)
+			unmarshalFunc: func(annotations map[string]string) (Meta, error) {
+				return UnmarshalPromotionSucceededAnnotations("event-id", annotations)
 			},
 			expectError:  true,
 			errorMessage: "failed to parse promotion create time",
@@ -381,10 +432,7 @@ func TestPromotionEventUnmarshalAnnotations(t *testing.T) {
 
 			require.NoError(t, err)
 
-			// Verify the result implements EventMeta and has correct type
-			eventMeta, ok := result.(Meta)
-			require.True(t, ok)
-			require.Equal(t, tc.expectedType, eventMeta.Type())
+			require.Equal(t, tc.expectedType, result, "oh noes, types don't match!")
 		})
 	}
 }
@@ -427,7 +475,7 @@ func TestPromotionSucceeded_UnmarshalVerificationPending(t *testing.T) {
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			result, err := UnmarshalPromotionSucceededAnnotations(tc.annotations)
+			result, err := UnmarshalPromotionSucceededAnnotations("event-id", tc.annotations)
 			require.NoError(t, err)
 			require.Equal(t, tc.expected, result.VerificationPending)
 		})

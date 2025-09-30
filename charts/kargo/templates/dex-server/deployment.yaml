@@ -100,7 +100,7 @@ spec:
         projected:
           sources:
           - secret:
-              name: kargo-dex-server-cert
+              name: {{ .Values.api.oidc.dex.tls.secretName }}
               items:
               - key: tls.crt
                 path: tls.crt

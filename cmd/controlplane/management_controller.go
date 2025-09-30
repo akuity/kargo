@@ -16,15 +16,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/management/clusterconfigs"
-	"github.com/akuity/kargo/internal/controller/management/namespaces"
-	"github.com/akuity/kargo/internal/controller/management/projectconfigs"
-	"github.com/akuity/kargo/internal/controller/management/projects"
-	"github.com/akuity/kargo/internal/controller/management/serviceaccounts"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/server/kubernetes"
-	"github.com/akuity/kargo/internal/types"
+	"github.com/akuity/kargo/pkg/controller/management/clusterconfigs"
+	"github.com/akuity/kargo/pkg/controller/management/namespaces"
+	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
+	"github.com/akuity/kargo/pkg/controller/management/projects"
+	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -46,7 +46,7 @@ func newManagementControllerCommand() *cobra.Command {
 	cmdOpts := &managementControllerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, logging.DefaultFormat),
 	}
 
 	cmd := &cobra.Command{

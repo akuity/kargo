@@ -36,6 +36,6 @@ spec:
   tls:
   - hosts:
     - {{ quote .Values.externalWebhooksServer.host }}
-    secretName: kargo-external-webhooks-server-ingress-cert
+    secretName: {{ .Values.externalWebhooksServer.ingress.tls.secretName }}
   {{- end }}
 {{- end }}

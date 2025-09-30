@@ -1,9 +1,4 @@
-import {
-  faChevronLeft,
-  faChevronRight,
-  faCodeCommit,
-  faExternalLink
-} from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight, faCodeCommit } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex, Tag, Typography } from 'antd';
 import Link from 'antd/es/typography/Link';
@@ -201,13 +196,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
     let TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue'>
         <Flex justify='center' align='center'>
-          <div>
-            {props.artifact.id.slice(0, 7)}
-
-            {!!url && (
-              <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 text-[8px] ml-1' />
-            )}
-          </div>
+          <div>{props.artifact.id.slice(0, 7)}</div>
 
           {source}
         </Flex>
@@ -267,13 +256,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
       color='geekblue'
     >
       <Flex justify='center'>
-        <div className='text-center'>
-          {shortVersion(props.artifact?.tag)}
-
-          {!!imageSourceFromOci && (
-            <FontAwesomeIcon icon={faExternalLink} className='text-blue-600 ml-1 text-[8px]' />
-          )}
-        </div>
+        <div className='text-center'>{shortVersion(props.artifact?.tag)}</div>
         {source}
       </Flex>
     </Tag>

@@ -69,4 +69,30 @@ const (
 	// AnnotationValueTrue is the value used to indicate that an annotation
 	// is set to true.
 	AnnotationValueTrue = "true"
+
+	// AnnotationKeyGitHubTokenScope is the key for an annotation that can
+	// optionally be added to any Secret resources that represents a GitHub App
+	// installation in order to limit the scope of the installation access tokens
+	// that are issued as-needed to specific Kargo Projects.
+	//
+	// If present, the annotation's value must be a string representation of a
+	// JSON object mapping Project names to lists of allowed scopes (repository
+	// names).
+	//
+	// For example to limit tokens issued to Project kargo-demo-1 to scopes repo-a
+	// and repo-b only and limit tokens issued to kargo-demo-2 to scope repo-c
+	// only:
+	//
+	//   `{"kargo-demo-1": ["repo-a", "repo-b"], "kargo-demo-2": ["repo-c"]}`
+	//
+	// ALL OTHER PROJECTS WOULD EFFECTIVELY BE UNABLE TO OBTAIN AN INSTALLATION
+	// TOKEN AT ALL.
+	//
+	// This annotation has an effect only when present. i.e. If not present, the
+	// scopes available to every Project are unconstrained. If the annotation is
+	// present, with an invalid value (not well-formed JSON), NO Project will be
+	// able to obtain an installation token.
+	//
+	// #nosec G101 -- This is not a credential, just an annotation key name.
+	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"
 )

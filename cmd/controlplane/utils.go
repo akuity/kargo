@@ -2,12 +2,17 @@ package main
 
 import (
 	"context"
+	"fmt"
+	stdos "os"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
 )
 
 func argoCDExists(
@@ -44,4 +49,32 @@ func argoRolloutsExists(ctx context.Context, restCfg *rest.Config) (bool, error)
 		}
 	}
 	return false, client.IgnoreNotFound(err)
+}
+
+func getLogVars() (logging.Level, logging.Format) {
+	logLevelStr := os.GetEnv(logging.LogLevelEnvVar, "info")
+	logLevel, err := logging.ParseLevel(logLevelStr)
+	if err != nil {
+		fmt.Fprintf(
+			stdos.Stderr,
+			"invalid LOG_LEVEL %q, defaulting to info: %v\n",
+			logLevelStr,
+			err,
+		)
+		logLevel = logging.InfoLevel
+	}
+
+	logFormatStr := os.GetEnv(logging.LogFormatEnvVar, string(logging.DefaultFormat))
+	logFormat, err := logging.ParseFormat(logFormatStr)
+	if err != nil {
+		fmt.Fprintf(
+			stdos.Stderr,
+			"invalid LOG_FORMAT %q, defaulting to %q: %v\n",
+			logFormatStr,
+			logging.DefaultFormat,
+			err,
+		)
+		logFormat = logging.DefaultFormat
+	}
+	return logLevel, logFormat
 }

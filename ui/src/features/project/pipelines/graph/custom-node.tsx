@@ -15,6 +15,7 @@ export const CustomNode = (props: {
     value: Warehouse | RepoSubscription | Stage;
     subscriptionParent?: Warehouse;
   };
+  id?: string;
 }) => {
   if (!props.data.value) {
     return null;
@@ -22,7 +23,7 @@ export const CustomNode = (props: {
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Warehouse') {
     return (
-      <CustomNode.Container warehouse={props.data.value}>
+      <CustomNode.Container id={props.id} warehouse={props.data.value}>
         <WarehouseNode warehouse={props.data.value} />
       </CustomNode.Container>
     );
@@ -31,6 +32,7 @@ export const CustomNode = (props: {
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.RepoSubscription') {
     return (
       <CustomNode.Container
+        id={props.id}
         // @ts-expect-error parent is there when value is RepoSubscription, check use-pipeline-graph.ts
         repoSubscription={{ data: props.data.value, parent: props.data.subscriptionParent }}
       >
@@ -41,7 +43,7 @@ export const CustomNode = (props: {
 
   if (props.data.value.$typeName === 'github.com.akuity.kargo.api.v1alpha1.Stage') {
     return (
-      <CustomNode.Container stage={props.data.value}>
+      <CustomNode.Container id={props.id} stage={props.data.value}>
         <StageNode stage={props.data.value} />
       </CustomNode.Container>
     );
@@ -55,12 +57,15 @@ CustomNode.Container = (
     stage?: Stage;
     warehouse?: Warehouse;
     repoSubscription?: { data: RepoSubscription; parent: Warehouse };
+    id?: string;
   }>
 ) => {
   let id = '';
 
   const Children = (
-    <div className='max-w-[356px] min-w-[250px] nodrag cursor-default'>{props.children}</div>
+    <div id={props.id} className='w-fit nodrag cursor-default'>
+      {props.children}
+    </div>
   );
 
   if (props.stage) {

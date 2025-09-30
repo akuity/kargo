@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.6.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.9.0 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.24.6-bookworm AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.25.1-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -31,14 +31,12 @@ ARG CGO_ENABLED=0
 
 WORKDIR /kargo
 COPY ["api/go.mod", "api/go.sum", "api/"]
-COPY ["pkg/go.mod", "pkg/go.sum", "pkg/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN go mod download
 COPY api/ api/
 COPY pkg/ pkg/
 COPY cmd/ cmd/
-COPY internal/ internal/
-COPY --from=ui-builder /ui/build internal/server/ui/
+COPY --from=ui-builder /ui/build pkg/server/ui/
 
 ARG VERSION
 ARG GIT_COMMIT
@@ -64,7 +62,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.15.0 AS tools
+FROM curlimages/curl:8.16.0 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -102,7 +100,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.6.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.9.0 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}

@@ -6,6 +6,7 @@ import {
 } from '@ui/features/common/promotion-status/utils';
 import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 export const canAbortPromotion = (promotion: Promotion) =>
   !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
@@ -42,4 +43,24 @@ export const promotionCompareFn = (
 
   // doesn't matter that much... this is to keep UI in the same state on refresh because dates are in second precision and the promotion that happened in same seconds needs ordering
   return (promotion1?.metadata?.name || 0) < (promotion2?.metadata?.name || 0) ? -1 : 1;
+};
+
+export const getPromotionOutputsByStepAlias = (promotion: Promotion) => {
+  if (promotion?.status?.state?.raw) {
+    try {
+      const raw = decodeRawData({
+        result: {
+          case: 'raw',
+          value: promotion.status?.state?.raw
+        }
+      });
+
+      return JSON.parse(raw);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
+  }
+
+  return {};
 };

@@ -231,11 +231,11 @@ type PromotionStepRetry struct {
 }
 
 // GetTimeout returns the Timeout field with the given fallback value.
-func (r *PromotionStepRetry) GetTimeout(fallback *time.Duration) *time.Duration {
+func (r *PromotionStepRetry) GetTimeout(fallback time.Duration) time.Duration {
 	if r == nil || r.Timeout == nil {
 		return fallback
 	}
-	return &r.Timeout.Duration
+	return r.Timeout.Duration
 }
 
 // GetErrorThreshold returns the ErrorThreshold field with the given fallback

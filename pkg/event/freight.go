@@ -12,13 +12,13 @@ import (
 
 // Freight is a struct that contains common fields for freight-related events.
 type Freight struct {
-	Name       string               `json:"freightName"`
+	Name       string               `json:"name"`
 	StageName  string               `json:"stageName"`
-	CreateTime time.Time            `json:"freightCreateTime,omitempty"`
-	Alias      *string              `json:"freightAlias,omitempty"`
-	Commits    []kargoapi.GitCommit `json:"freightCommits,omitempty"`
-	Images     []kargoapi.Image     `json:"freightImages,omitempty"`
-	Charts     []kargoapi.Chart     `json:"freightCharts,omitempty"`
+	CreateTime time.Time            `json:"createTime"`
+	Alias      *string              `json:"alias,omitempty"`
+	Commits    []kargoapi.GitCommit `json:"commits,omitempty"`
+	Images     []kargoapi.Image     `json:"images,omitempty"`
+	Charts     []kargoapi.Chart     `json:"charts,omitempty"`
 }
 
 func (f Freight) GetName() string {
@@ -221,8 +221,7 @@ func newFreightVerificationParts(actor, stageName string, freight *kargoapi.Frei
 func NewFreightVerificationSucceeded(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationSucceeded {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationSucceeded{
 		Common:              common,
 		Freight:             freightEvent,
@@ -234,8 +233,7 @@ func NewFreightVerificationSucceeded(actor, stageName string, freight *kargoapi.
 func NewFreightVerificationFailed(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationFailed {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationFailed{
 		Common:              common,
 		Freight:             freightEvent,
@@ -247,8 +245,7 @@ func NewFreightVerificationFailed(actor, stageName string, freight *kargoapi.Fre
 func NewFreightVerificationAborted(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationAborted {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationAborted{
 		Common:              common,
 		Freight:             freightEvent,
@@ -260,8 +257,7 @@ func NewFreightVerificationAborted(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationUnknown(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationUnknown {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationUnknown{
 		Common:              common,
 		Freight:             freightEvent,
@@ -273,8 +269,7 @@ func NewFreightVerificationUnknown(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationErrored(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationErrored {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationErrored{
 		Common:              common,
 		Freight:             freightEvent,
@@ -286,8 +281,7 @@ func NewFreightVerificationErrored(actor, stageName string, freight *kargoapi.Fr
 func NewFreightVerificationInconclusive(actor, stageName string, freight *kargoapi.Freight,
 	verification *kargoapi.VerificationInfo,
 ) *FreightVerificationInconclusive {
-	common, freightEvent, freightVerification :=
-		newFreightVerificationParts(actor, stageName, freight, verification)
+	common, freightEvent, freightVerification := newFreightVerificationParts(actor, stageName, freight, verification)
 	return &FreightVerificationInconclusive{
 		Common:              common,
 		Freight:             freightEvent,
@@ -433,13 +427,14 @@ func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error)
 // FreightVerificationSucceeded event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationSucceededAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationSucceeded, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -459,13 +454,14 @@ func UnmarshalFreightVerificationSucceededAnnotations(
 // FreightVerificationFailed event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationFailedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationFailed, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -485,13 +481,14 @@ func UnmarshalFreightVerificationFailedAnnotations(
 // FreightVerificationInconclusive event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationInconclusiveAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationInconclusive, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -511,13 +508,14 @@ func UnmarshalFreightVerificationInconclusiveAnnotations(
 // FreightVerificationErrored event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationErroredAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationErrored, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -537,13 +535,14 @@ func UnmarshalFreightVerificationErroredAnnotations(
 // FreightVerificationUnknown event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationUnknownAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationUnknown, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -563,13 +562,14 @@ func UnmarshalFreightVerificationUnknownAnnotations(
 // FreightVerificationAborted event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightVerificationAbortedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightVerificationAborted, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}
@@ -589,13 +589,14 @@ func UnmarshalFreightVerificationAbortedAnnotations(
 // FreightApproved event. This is used by the main event handler to convert the data
 // into a normal structured event, but is exposed for convenience.
 func UnmarshalFreightApprovedAnnotations(
+	eventID string,
 	annotations map[string]string,
 ) (*FreightApproved, error) {
 	freight, err := UnmarshalFreightAnnotations(annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal freight annotations: %w", err)
 	}
-	common, err := UnmarshalCommonAnnotations(annotations)
+	common, err := UnmarshalCommonAnnotations(eventID, annotations)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unmarshal common annotations: %w", err)
 	}

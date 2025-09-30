@@ -18,6 +18,7 @@ import CreateWarehouse from '@ui/features/stage/create-warehouse/create-warehous
 import StageDetails from '@ui/features/stage/stage-details';
 import { getColors } from '@ui/features/stage/utils';
 import {
+  getConfig,
   getProject,
   listImages,
   listStages,
@@ -25,7 +26,7 @@ import {
   queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { FreightList } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Project } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Project, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ActionContext } from './context/action-context';
 import { DictionaryContext } from './context/dictionary-context';
@@ -35,6 +36,7 @@ import { Graph } from './graph/graph';
 import { GraphFilters } from './graph-filters';
 import { Images } from './image-history/images';
 import { PipelineListView } from './list/list-view';
+import { DndPromotionContext } from './promotion/drag-and-drop/dnd-promotion-context';
 import { Promote } from './promotion/promote';
 import { Promotion } from './promotion/promotion';
 import { useFreightTimelineControllerStore } from './url-params/use-freight-timeline-controller-store';
@@ -54,6 +56,10 @@ import '@xyflow/react/dist/style.css';
 
 export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: boolean }) => {
   const { name, stageName, promotionId, freight, stage, warehouseName, freightName } = useParams();
+
+  const getConfigQuery = useQuery(getConfig);
+
+  const argocdShards = getConfigQuery?.data?.argocdShards;
 
   const projectQuery = useQuery(getProject, { name });
 
@@ -75,7 +81,8 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
     projectQuery.isLoading ||
     getFreightQuery.isLoading ||
     listWarehousesQuery.isLoading ||
-    listStagesQuery.isLoading;
+    listStagesQuery.isLoading ||
+    getConfigQuery.isLoading;
 
   const promote = freight && stage ? { freight, stage } : undefined;
 
@@ -84,7 +91,7 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
   const action = useAction();
 
   const stageDetails =
-    stageName && listStagesQuery.data?.stages.find((s) => s?.metadata?.name === stageName);
+    stageName && listStagesQuery.data?.stages?.find((s: Stage) => s?.metadata?.name === stageName);
 
   const warehouseColorMap = useMemo(
     () =>
@@ -174,167 +181,177 @@ export const Pipelines = (props: { creatingStage?: boolean; creatingWarehouse?: 
             freightById,
             stageAutoPromotionMap,
             subscribersByStage,
-            stageByName
+            stageByName,
+            argocdShards,
+            hasAnalysisRunLogsUrlTemplate: getConfigQuery?.data?.hasAnalysisRunLogsUrlTemplate
           }}
         >
           <ColorContext.Provider value={{ stageColorMap, warehouseColorMap }}>
-            <FreightTimeline freights={freights} project={projectName || ''} />
+            <DndPromotionContext projectName={projectName || ''}>
+              <div className='overflow-hidden h-full flex flex-col'>
+                <FreightTimeline freights={freights} project={projectName || ''} />
 
-            <div className='w-full h-full relative'>
-              <Flex
-                gap={12}
-                className={classNames(
-                  'top-2 right-2 left-2',
-                  pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
-                )}
-                align='flex-start'
-              >
-                <GraphFilters
-                  warehouses={listWarehousesQuery.data?.warehouses || []}
-                  stages={listStagesQuery.data?.stages || []}
-                  pipelineView={pipelineView}
-                  setPipelineView={setPipelineView}
-                  className='z-10'
-                />
-                <Dropdown
-                  className='ml-auto z-10'
-                  trigger={['click']}
-                  menu={{
-                    items: [
-                      {
-                        key: '0',
-                        label: (
-                          <Link
-                            to={generatePath(paths.createStage, {
-                              name: project.metadata?.name
-                            })}
-                          >
-                            Stage
-                          </Link>
-                        )
-                      },
-                      {
-                        key: '1',
-                        label: (
-                          <Link
-                            to={generatePath(paths.createWarehouse, {
-                              name: project.metadata?.name
-                            })}
-                          >
-                            Warehouse
-                          </Link>
-                        )
-                      },
-                      {
-                        key: '2',
-                        label: 'Freight',
-                        children: listWarehousesQuery.data?.warehouses?.map((warehouse) => ({
-                          key: warehouse?.metadata?.name || '',
-                          label: warehouse?.metadata?.name || '',
-                          onClick: () => {
-                            navigate(
-                              generatePath(paths.warehouse, {
-                                name: project.metadata?.name,
-                                warehouseName: warehouse?.metadata?.name || '',
-                                tab: 'create-freight'
+                <div className='w-full flex-1 relative overflow-auto'>
+                  <Flex
+                    gap={12}
+                    className={classNames(
+                      'top-2 right-2 left-2',
+                      pipelineView === 'graph' ? 'absolute' : 'pt-2 px-2'
+                    )}
+                    align='flex-start'
+                  >
+                    <GraphFilters
+                      warehouses={listWarehousesQuery.data?.warehouses || []}
+                      stages={listStagesQuery.data?.stages || []}
+                      pipelineView={pipelineView}
+                      setPipelineView={setPipelineView}
+                      className='z-10'
+                    />
+                    <Dropdown
+                      className='ml-auto z-10'
+                      trigger={['click']}
+                      menu={{
+                        items: [
+                          {
+                            key: '0',
+                            label: (
+                              <Link
+                                to={generatePath(paths.createStage, {
+                                  name: project.metadata?.name
+                                })}
+                              >
+                                Stage
+                              </Link>
+                            )
+                          },
+                          {
+                            key: '1',
+                            label: (
+                              <Link
+                                to={generatePath(paths.createWarehouse, {
+                                  name: project.metadata?.name
+                                })}
+                              >
+                                Warehouse
+                              </Link>
+                            )
+                          },
+                          {
+                            key: '2',
+                            label: 'Freight',
+                            children: listWarehousesQuery.data?.warehouses?.map(
+                              (warehouse: Warehouse) => ({
+                                key: warehouse?.metadata?.name || '',
+                                label: warehouse?.metadata?.name || '',
+                                onClick: () => {
+                                  navigate(
+                                    generatePath(paths.warehouse, {
+                                      name: project.metadata?.name,
+                                      warehouseName: warehouse?.metadata?.name || '',
+                                      tab: 'create-freight'
+                                    })
+                                  );
+                                }
                               })
-                            );
+                            )
                           }
-                        }))
+                        ]
+                      }}
+                    >
+                      <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
+                    </Dropdown>
+                    <Button
+                      className='z-10'
+                      icon={<FontAwesomeIcon icon={faDocker} />}
+                      onClick={() =>
+                        setPreferredFilter({
+                          ...preferredFilter,
+                          images: !preferredFilter?.images
+                        })
                       }
-                    ]
-                  }}
-                >
-                  <Button icon={<FontAwesomeIcon icon={faPlus} />}>Create</Button>
-                </Dropdown>
-                <Button
-                  className='z-10'
-                  icon={<FontAwesomeIcon icon={faDocker} />}
-                  onClick={() =>
-                    setPreferredFilter({
-                      ...preferredFilter,
-                      images: !preferredFilter?.images
-                    })
-                  }
-                />
-              </Flex>
-              {preferredFilter?.images && (
-                <div className='w-[450px] absolute right-2 top-20 z-10'>
-                  <Images
-                    hide={() =>
-                      setPreferredFilter({
-                        ...preferredFilter,
-                        images: !preferredFilter?.images
-                      })
-                    }
-                    images={listImagesQuery.data?.images || {}}
-                    project={projectName || ''}
-                    stages={listStagesQuery.data?.stages || []}
-                    warehouses={listWarehousesQuery.data?.warehouses || []}
-                  />
+                    />
+                  </Flex>
+                  {preferredFilter?.images && (
+                    <div className='w-[450px] absolute right-2 top-20 z-10'>
+                      <Images
+                        hide={() =>
+                          setPreferredFilter({
+                            ...preferredFilter,
+                            images: !preferredFilter?.images
+                          })
+                        }
+                        images={listImagesQuery.data?.images || {}}
+                        project={projectName || ''}
+                        stages={listStagesQuery.data?.stages || []}
+                        warehouses={listWarehousesQuery.data?.warehouses || []}
+                      />
+                    </div>
+                  )}
+                  {pipelineView === 'graph' && (
+                    <Graph
+                      project={project.metadata?.name || ''}
+                      warehouses={listWarehousesQuery.data?.warehouses || []}
+                      stages={listStagesQuery.data?.stages || []}
+                    />
+                  )}
+                  {pipelineView === 'list' && (
+                    <PipelineListView
+                      stages={listStagesQuery.data?.stages || []}
+                      warehouses={listWarehousesQuery.data?.warehouses || []}
+                      project={projectName || ''}
+                      freights={freights}
+                      className='mt-2'
+                    />
+                  )}
                 </div>
+              </div>
+
+              {!!freightDrawer && (
+                <FreightDetails freight={freightDrawer} refetchFreight={getFreightQuery.refetch} />
               )}
-              {pipelineView === 'graph' && (
-                <Graph
-                  project={project.metadata?.name || ''}
-                  warehouses={listWarehousesQuery.data?.warehouses || []}
-                  stages={listStagesQuery.data?.stages || []}
+
+              {!!warehouseDrawer && (
+                <WarehouseDetails
+                  warehouse={warehouseDrawer}
+                  refetchFreight={getFreightQuery.refetch}
                 />
               )}
-              {pipelineView === 'list' && (
-                <PipelineListView
-                  stages={listStagesQuery.data?.stages || []}
-                  warehouses={listWarehousesQuery.data?.warehouses || []}
+
+              {!!stageDetails && <StageDetails stage={stageDetails} />}
+
+              {!!promotionId && (
+                <Promotion
+                  visible
+                  hide={() => navigate(generatePath(paths.project, { name: projectName }))}
+                  promotionId={promotionId}
                   project={projectName || ''}
-                  freights={freights}
-                  className='mt-2'
                 />
               )}
-            </div>
 
-            {!!freightDrawer && (
-              <FreightDetails freight={freightDrawer} refetchFreight={getFreightQuery.refetch} />
-            )}
+              {!!promote && (
+                <Promote
+                  visible
+                  hide={() => navigate(generatePath(paths.project, { name: projectName }))}
+                  freight={freightById?.[promote.freight]}
+                  stage={stageByName?.[promote.stage]}
+                />
+              )}
 
-            {!!warehouseDrawer && (
-              <WarehouseDetails
-                warehouse={warehouseDrawer}
-                refetchFreight={getFreightQuery.refetch}
+              {props.creatingStage && (
+                <CreateStage
+                  project={project?.metadata?.name}
+                  warehouses={mapToNames(listWarehousesQuery.data?.warehouses || [])}
+                  stages={listStagesQuery.data?.stages || []}
+                />
+              )}
+
+              <CreateWarehouse
+                visible={Boolean(props.creatingWarehouse)}
+                hide={() =>
+                  navigate(generatePath(paths.project, { name: project?.metadata?.name }))
+                }
               />
-            )}
-
-            {!!stageDetails && <StageDetails stage={stageDetails} />}
-
-            {!!promotionId && (
-              <Promotion
-                visible
-                hide={() => navigate(generatePath(paths.project, { name: projectName }))}
-                promotionId={promotionId}
-                project={projectName || ''}
-              />
-            )}
-
-            {!!promote && (
-              <Promote
-                visible
-                hide={() => navigate(generatePath(paths.project, { name: projectName }))}
-                freight={freightById?.[promote.freight]}
-                stage={stageByName?.[promote.stage]}
-              />
-            )}
-
-            {props.creatingStage && (
-              <CreateStage
-                project={project?.metadata?.name}
-                warehouses={mapToNames(listWarehousesQuery.data?.warehouses || [])}
-                stages={listStagesQuery.data?.stages || []}
-              />
-            )}
-
-            <CreateWarehouse
-              visible={Boolean(props.creatingWarehouse)}
-              hide={() => navigate(generatePath(paths.project, { name: project?.metadata?.name }))}
-            />
+            </DndPromotionContext>
           </ColorContext.Provider>
         </DictionaryContext.Provider>
       </FreightTimelineControllerContext.Provider>

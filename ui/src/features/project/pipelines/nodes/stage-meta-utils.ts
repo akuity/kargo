@@ -3,6 +3,7 @@ import { CSSProperties, useContext, useMemo } from 'react';
 import { ColorContext } from '@ui/context/colors';
 import { ColorMapHex, parseColorAnnotation } from '@ui/features/stage/utils';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+import { getContrastTextColor } from '@ui/utils/get-contrast-text-color';
 
 import { IAction, useActionContext } from '../context/action-context';
 import { useDictionaryContext } from '../context/dictionary-context';
@@ -20,6 +21,8 @@ export const useIsColorsUsed = () => {
 };
 
 export const getLastPromotionDate = (stage: Stage) => stage?.status?.lastPromotion?.finishedAt;
+
+export const getCurrentPromotion = (stage: Stage) => stage?.status?.currentPromotion?.name;
 
 export const useHideStageIfInPromotionMode = (stage: Stage) => {
   const actionContext = useActionContext();
@@ -75,11 +78,10 @@ export const useStageHeaderStyle = (stage: Stage): CSSProperties => {
 
   if (stageColor && ColorMapHex[stageColor]) {
     stageColor = ColorMapHex[stageColor];
-    stageFontColor = 'white';
   }
 
   if (stageColor) {
-    stageFontColor = 'white';
+    stageFontColor = getContrastTextColor(ColorMapHex[stageColor] || stageColor);
   }
 
   return {
