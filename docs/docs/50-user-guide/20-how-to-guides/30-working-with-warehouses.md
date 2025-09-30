@@ -683,7 +683,7 @@ appropriate credentials must be made available in some form. The many available
 authentication options are covered in detail on the
 [Managing Credentials](../50-security/30-managing-credentials.md) page.
 
-## Freight Creation Policy
+## Automatic Freight Creation
 
 By default, `Warehouse`s create new `Freight` following a discovery cycle if 
 new artifacts are found. This can be disabled by setting `freightCreationPolicy`
@@ -695,8 +695,6 @@ Example:
 spec:
   freightCreationPolicy: Manual
 ```
-
-## Automatic Freight Creation Criteria
 
 For more granular control over the creation of your `Freight`, you can define 
 `Freight Creation Criteria` in the form of an expression. One potential use case
