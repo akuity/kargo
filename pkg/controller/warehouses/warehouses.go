@@ -317,7 +317,10 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
-			return status, fmt.Errorf("failed to evaluate freight creation criteria: %w", err)
+			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+			// return a nil error to avoid a requeue loop since subsequent
+			// retries are not going to make the expression any more valid.
+			return status, nil
 		}
 		if !criteriaSatisfied {
 			logger.Info("freight creation criteria not satisfied; skipping freight creation")
