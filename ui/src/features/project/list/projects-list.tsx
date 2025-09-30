@@ -61,6 +61,13 @@ export const ProjectsList = () => {
       <>
         <div className='flex items-center mb-20'>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
+          <Button
+            className='ml-auto'
+            icon={<FontAwesomeIcon icon={faStar} />}
+            onClick={() => setStarredProjectsView(!starredProjectsView)}
+          >
+            Show {starredProjectsView ? 'all' : 'only starred'} projects
+          </Button>
         </div>
         <Empty />
       </>
@@ -80,16 +87,14 @@ export const ProjectsList = () => {
         </Button>
       </div>
       <div className={styles.list}>
-        {data.projects
-          ?.filter((p) => (starredProjectsView ? starred.includes(p?.metadata?.uid || '') : true))
-          .map((proj) => (
-            <ProjectItem
-              key={proj?.metadata?.name}
-              project={proj}
-              starred={starred.includes(proj?.metadata?.uid || '')}
-              onToggleStar={(id) => toggleStar(id)}
-            />
-          ))}
+        {data.projects.map((proj) => (
+          <ProjectItem
+            key={proj?.metadata?.name}
+            project={proj}
+            starred={starred.includes(proj?.metadata?.uid || '')}
+            onToggleStar={(id) => toggleStar(id)}
+          />
+        ))}
       </div>
       <Flex justify='flex-end' className='mt-8'>
         <Pagination

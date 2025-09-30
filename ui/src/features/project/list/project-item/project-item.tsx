@@ -1,6 +1,7 @@
 import { faHeart, faStar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Divider, Flex, Typography } from 'antd';
+import { Divider, Flex, Typography } from 'antd';
+import classNames from 'classnames';
 import { Link, generatePath } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
@@ -36,15 +37,16 @@ export const ProjectItem = ({
           </Typography.Paragraph>
         </div>
 
-        <Button
-          className='ml-auto'
-          type={starred ? 'primary' : 'default'}
-          icon={<FontAwesomeIcon icon={faStar} />}
+        <FontAwesomeIcon
+          icon={faStar}
           onClick={(e) => {
             e.preventDefault();
             onToggleStar(project?.metadata?.uid || '');
           }}
-          title={starred ? 'Unstar project' : 'Star project'}
+          className={classNames('ml-auto', {
+            'text-gray-400': !starred,
+            'text-[#30476c]': starred
+          })}
         />
       </Flex>
       <Divider className='my-3' />
