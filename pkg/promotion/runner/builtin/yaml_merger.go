@@ -37,11 +37,6 @@ func newYAMLMerger(promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &yamlMerger{schemaLoader: getConfigSchemaLoader(stepKindYAMLMerge)}
 }
 
-// Name implements the promotion.StepRunner interface.
-func (y *yamlMerger) Name() string {
-	return "yaml-merge"
-}
-
 // Run implements the promotion.StepRunner interface.
 func (y *yamlMerger) Run(
 	ctx context.Context,
@@ -59,12 +54,12 @@ func (y *yamlMerger) Run(
 // convert validates yamlMerger configuration against a JSON schema and
 // converts it into a builtin.YAMLMergeConfig struct.
 func (y *yamlMerger) convert(cfg promotion.Config) (builtin.YAMLMergeConfig, error) {
-	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, y.Name())
+	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, stepKindYAMLMerge)
 }
 
 // validate validates yamlMerger configuration against a JSON schema.
 func (y *yamlMerger) validate(cfg promotion.Config) error {
-	return validate(y.schemaLoader, gojsonschema.NewGoLoader(cfg), y.Name())
+	return validate(y.schemaLoader, gojsonschema.NewGoLoader(cfg), stepKindYAMLMerge)
 }
 
 func (y *yamlMerger) run(
