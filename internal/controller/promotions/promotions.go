@@ -608,7 +608,8 @@ func (r *reconciler) buildTargetFreightCollection(
 	// longer requested by the Stage.
 	if len(stage.Spec.RequestedFreight) > 1 {
 		lastPromo := stage.Status.LastPromotion
-		if lastPromo.Status != nil && lastPromo.Status.FreightCollection != nil {
+		if lastPromo != nil && lastPromo.Status != nil && lastPromo.Status.FreightCollection != nil &&
+			lastPromo.Status.FreightCollection.Freight != nil {
 			for _, req := range stage.Spec.RequestedFreight {
 				if freight, ok := lastPromo.Status.FreightCollection.Freight[req.Origin.String()]; ok {
 					freightCol.UpdateOrPush(freight)
