@@ -1,7 +1,8 @@
 {
     "beta": [
         "jira",
-        "jfrog-evidence"
+        "jfrog-evidence",
+        "git-merge-pr"
     ],
     "pro": [
         "jira",
