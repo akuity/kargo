@@ -1256,9 +1256,11 @@ func TestSyncMessage(t *testing.T) {
 		},
 	}
 
+	runner := &argocdUpdater{}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			message := constructMessage(tc.app)
+			message := runner.formatSyncMessage(tc.app)
 			require.Equal(t, tc.expected, message)
 		})
 	}
