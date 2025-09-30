@@ -787,18 +787,72 @@ func Test_buildTargetFreightCollection(t *testing.T) {
 		expectedFreightCollection *kargoapi.FreightCollection
 	}{
 		{
-			name:               "target frieght but no requested freight",
-			targetFreight:      kargoapi.FreightReference{Name: "target-freight"},
-			stage:              new(kargoapi.Stage),
-			expectedNumFreight: 1,
-		},
-		{
-			name:          "requested freight greater than 1, but no last promotion should not panic",
+			name:          "requested freight not greater than 1",
 			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
 			stage: &kargoapi.Stage{
 				Spec: kargoapi.StageSpec{
-					RequestedFreight: []kargoapi.FreightRequest{{}, {}}},
-				Status: kargoapi.StageStatus{},
+					RequestedFreight: []kargoapi.FreightRequest{{}},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no last promotion should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{LastPromotion: nil},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no last promotion status should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{Status: nil},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no freight collection in last promotion status should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							FreightCollection: nil,
+						},
+					},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "nil freight map in last promo collection should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							FreightCollection: &kargoapi.FreightCollection{
+								Freight: nil,
+							},
+						},
+					},
+				},
 			},
 			expectedNumFreight: 1,
 		},
