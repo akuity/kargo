@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -30,6 +31,7 @@ const (
 
 	PromotionsByStageAndFreightField = "stageAndFreight"
 	PromotionsByStageField           = "stage"
+	PromotionsByTerminalField        = "terminal"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
 
@@ -105,6 +107,16 @@ func PromotionsByStage(obj client.Object) []string {
 		return nil
 	}
 	return []string{promo.Spec.Stage}
+}
+
+// PromotionsByTerminal returns a client.IndexerFunc that indexes Promotions by
+// whether or not that are in a terminal phase.
+func PromotionsByTerminal(obj client.Object) []string {
+	promo, ok := obj.(*kargoapi.Promotion)
+	if !ok {
+		return nil
+	}
+	return []string{strconv.FormatBool(promo.Status.Phase.IsTerminal())}
 }
 
 // RunningPromotionsByArgoCDApplications returns a client.IndexerFunc that

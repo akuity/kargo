@@ -275,6 +275,64 @@ func TestPromotionsByStage(t *testing.T) {
 	}
 }
 
+func TestPromotionsByTerminalPhase(t *testing.T) {
+	testCases := []struct {
+		promo    *kargoapi.Promotion
+		expected []string
+	}{
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhasePending,
+			}},
+			expected: []string{"false"},
+		},
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhaseRunning,
+			}},
+			expected: []string{"false"},
+		},
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhaseSucceeded,
+			}},
+			expected: []string{"true"},
+		},
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhaseFailed,
+			}},
+			expected: []string{"true"},
+		},
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhaseErrored,
+			}},
+			expected: []string{"true"},
+		},
+		{
+			promo: &kargoapi.Promotion{Status: kargoapi.PromotionStatus{
+				Phase: kargoapi.PromotionPhaseAborted,
+			}},
+			expected: []string{"true"},
+		},
+		{
+			promo:    &kargoapi.Promotion{Status: kargoapi.PromotionStatus{}},
+			expected: []string{"false"},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(string(testCase.promo.Status.Phase), func(t *testing.T) {
+			t.Parallel()
+			require.ElementsMatch(
+				t,
+				testCase.expected,
+				PromotionsByTerminal(testCase.promo),
+			)
+		})
+	}
+}
+
 func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	const testShardName = "test-shard"
 
