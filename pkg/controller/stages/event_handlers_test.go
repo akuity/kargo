@@ -38,16 +38,17 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 		expectedRequests []reconcile.Request
 	}{
 		{
-			name: "no newly verified stages",
+			// No Stages to which Freight has recently been promoted nor any in which
+			// Freight was recently verified.
+			name: "no affected stages stages",
 			oldFreight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 					Name:      "freight-1",
 				},
 				Status: kargoapi.FreightStatus{
-					VerifiedIn: map[string]kargoapi.VerifiedStage{
-						"stage-1": {},
-					},
+					VerifiedIn:  map[string]kargoapi.VerifiedStage{"stage-1": {}},
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"stage-1": {}},
 				},
 			},
 			newFreight: &kargoapi.Freight{
@@ -56,9 +57,8 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 					Name:      "freight-1",
 				},
 				Status: kargoapi.FreightStatus{
-					VerifiedIn: map[string]kargoapi.VerifiedStage{
-						"stage-1": {},
-					},
+					VerifiedIn:  map[string]kargoapi.VerifiedStage{"stage-1": {}},
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"stage-1": {}},
 				},
 			},
 			expectedRequests: nil,
@@ -70,6 +70,9 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 					Namespace: "default",
 					Name:      "freight-1",
 				},
+				Status: kargoapi.FreightStatus{
+					VerifiedIn: map[string]kargoapi.VerifiedStage{"stage-1": {}},
+				},
 			},
 			newFreight: &kargoapi.Freight{
 				ObjectMeta: metav1.ObjectMeta{
@@ -79,14 +82,38 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 				Status: kargoapi.FreightStatus{
 					VerifiedIn: map[string]kargoapi.VerifiedStage{
 						"stage-1": {},
+						// Newly verified in:
+						"stage-2": {},
 					},
+					// Newly promoted to:
+					CurrentlyIn: map[string]kargoapi.CurrentStage{"stage-1": {}},
 				},
 			},
 			objects: []client.Object{
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "default",
-						Name:      "downstream-1",
+						Name:      "downstream-1a",
+					},
+					Spec: kargoapi.StageSpec{
+						PromotionTemplate: &kargoapi.PromotionTemplate{
+							Spec: kargoapi.PromotionTemplateSpec{
+								Steps: []kargoapi.PromotionStep{{}},
+							},
+						},
+						RequestedFreight: []kargoapi.FreightRequest{
+							{
+								Sources: kargoapi.FreightSources{
+									Stages: []string{"stage-1"},
+								},
+							},
+						},
+					},
+				},
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "downstream-1b",
 					},
 					Spec: kargoapi.StageSpec{
 						PromotionTemplate: &kargoapi.PromotionTemplate{
@@ -117,7 +144,7 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 						RequestedFreight: []kargoapi.FreightRequest{
 							{
 								Sources: kargoapi.FreightSources{
-									Stages: []string{"stage-1"},
+									Stages: []string{"stage-2"},
 								},
 							},
 						},
@@ -128,13 +155,19 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 				{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      "downstream-2",
+						Name:      "downstream-1a",
 					},
 				},
 				{
 					NamespacedName: types.NamespacedName{
 						Namespace: "default",
-						Name:      "downstream-1",
+						Name:      "downstream-1b",
+					},
+				},
+				{
+					NamespacedName: types.NamespacedName{
+						Namespace: "default",
+						Name:      "downstream-2",
 					},
 				},
 			},

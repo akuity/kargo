@@ -1084,6 +1084,8 @@ func Test_webhook_validateRequestedFreight(t *testing.T) {
 		{
 			name: "Freight origin found multiple times",
 			reqs: []kargoapi.FreightRequest{
+				// Should only be warned once
+				testFreightRequest,
 				testFreightRequest,
 				testFreightRequest,
 			},
@@ -1103,7 +1105,40 @@ func Test_webhook_validateRequestedFreight(t *testing.T) {
 				)
 			},
 		},
-
+		{
+			name: "issues validating Freight sources are surfaced",
+			reqs: []kargoapi.FreightRequest{{
+				Origin: testFreightRequest.Origin,
+				Sources: kargoapi.FreightSources{
+					Direct: true,
+					AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+						SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+					},
+				},
+			}},
+			assertions: func(t *testing.T, _ []kargoapi.FreightRequest, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "requestedFreight[0].sources.autoPromotionOptions.selectionPolicy",
+							BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							Detail: "selection policy 'MatchUpstream' cannot be used when " +
+								"accepting Freight directly from its origin",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "requestedFreight[0].sources.autoPromotionOptions.selectionPolicy",
+							BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							Detail: "selection policy 'MatchUpstream' requires exactly one " +
+								"upstream Stage to be specified",
+						},
+					},
+					errs,
+				)
+			},
+		},
 		{
 			name: "success",
 			reqs: []kargoapi.FreightRequest{
@@ -1124,6 +1159,144 @@ func Test_webhook_validateRequestedFreight(t *testing.T) {
 					field.NewPath("requestedFreight"),
 					testCase.reqs,
 				),
+			)
+		})
+	}
+}
+
+func Test_webhook_validateFreightSources(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sources    kargoapi.FreightSources
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "MatchUpstream auto-promotion selection policy used with direct source",
+			sources: kargoapi.FreightSources{
+				Direct: true,
+				Stages: []string{"stage-1"},
+				AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+					SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{{
+						Type:     field.ErrorTypeInvalid,
+						Field:    "sources.autoPromotionOptions.selectionPolicy",
+						BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+						Detail: "selection policy 'MatchUpstream' cannot be used when " +
+							"accepting Freight directly from its origin",
+					}},
+					errs,
+				)
+			},
+		},
+		{
+			name: "MatchUpstream auto-promotion selection policy used with no upstream sources",
+			sources: kargoapi.FreightSources{
+				AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+					SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{{
+						Type:     field.ErrorTypeInvalid,
+						Field:    "sources.autoPromotionOptions.selectionPolicy",
+						BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+						Detail: "selection policy 'MatchUpstream' requires exactly one upstream " +
+							"Stage to be specified",
+					}},
+					errs,
+				)
+			},
+		},
+		{
+			name: "MatchUpstream auto-promotion selection policy used with multiple upstream sources",
+			sources: kargoapi.FreightSources{
+				Stages: []string{"stage-1", "stage-2"},
+				AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+					SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{{
+						Type:     field.ErrorTypeInvalid,
+						Field:    "sources.autoPromotionOptions.selectionPolicy",
+						BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+						Detail: "selection policy 'MatchUpstream' requires exactly one upstream " +
+							"Stage to be specified",
+					}},
+					errs,
+				)
+			},
+		},
+		{
+			name: "MatchUpstream auto-promotion selection policy used with multiple problems",
+			sources: kargoapi.FreightSources{
+				Direct: true,
+				Stages: []string{"stage-1", "stage-2"},
+				AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+					SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sources.autoPromotionOptions.selectionPolicy",
+							BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							Detail: "selection policy 'MatchUpstream' cannot be used when " +
+								"accepting Freight directly from its origin",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
+							Field:    "sources.autoPromotionOptions.selectionPolicy",
+							BadValue: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+							Detail: "selection policy 'MatchUpstream' requires exactly one upstream " +
+								"Stage to be specified",
+						},
+					},
+					errs,
+				)
+			},
+		},
+		{
+			name: "valid Freight sources with default auto-promotion selection policy",
+			sources: kargoapi.FreightSources{
+				Direct: true,
+				Stages: []string{"stage-1", "stage-2"},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+		{
+			name: "valid Freight sources with MatchUpstream auto-promotion selection policy",
+			sources: kargoapi.FreightSources{
+				Stages: []string{"stage-1"},
+				AutoPromotionOptions: &kargoapi.AutoPromotionOptions{
+					SelectionPolicy: kargoapi.AutoPromotionSelectionPolicyMatchUpstream,
+				},
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateFreightSources(field.NewPath("sources"), testCase.sources),
 			)
 		})
 	}

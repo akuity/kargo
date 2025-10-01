@@ -193,6 +193,20 @@
               "sources": {
                 "description": "Sources describes where the requested Freight may be obtained from. This is\na required field.",
                 "properties": {
+                  "autoPromotionOptions": {
+                    "description": "AutoPromotionOptions specifies options pertaining to auto-promotion. These\nsettings have no effect if auto-promotion is not enabled for this Stage at\nthe ProjectConfig level.",
+                    "properties": {
+                      "selectionPolicy": {
+                        "description": "SelectionPolicy specifies the rules for identifying new Freight that is\neligible for auto-promotion to this Stage. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"NewestFreight\".\n\nAccepted Values:\n\n- \"NewestFreight\": The newest Freight that is available to the Stage is\n  eligible for auto-promotion.\n\n- \"MatchUpstream\": Only the Freight currently used immediately upstream\n  from this Stage is eligible for auto-promotion. This policy may only\n  be applied when the Stage has exactly one upstream Stage.",
+                        "enum": [
+                          "NewestFreight",
+                          "MatchUpstream"
+                        ],
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
                   "availabilityStrategy": {
                     "description": "AvailabilityStrategy specifies the semantics for how requested Freight is\nmade available to the Stage. This field is optional. When left unspecified,\nthe field is implicitly treated as if its value were \"OneOf\".\n\nAccepted Values:\n\n- \"All\": Freight must be verified and, if applicable, soaked in all\n  upstream Stages to be considered available for promotion.\n- \"OneOf\": Freight must be verified and, if applicable, soaked in at least\n   one upstream Stage to be considered available for promotion.\n- \"\": Treated the same as \"OneOf\".",
                     "enum": [

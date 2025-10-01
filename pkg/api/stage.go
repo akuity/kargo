@@ -84,6 +84,12 @@ func ListFreightAvailableToStage(
 				AvailabilityStrategy: req.Sources.AvailabilityStrategy,
 				RequiredSoakTime:     req.Sources.RequiredSoakTime,
 			}
+			if req.Sources.AutoPromotionOptions != nil &&
+				req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
+				// Validation should have ensured there is exactly one upstream Stage
+				// if this selection policy is set.
+				listOpts.CurrentlyIn = req.Sources.Stages[0]
+			}
 		}
 		freightFromWarehouse, err := ListFreightFromWarehouse(
 			ctx, c, warehouse, listOpts,

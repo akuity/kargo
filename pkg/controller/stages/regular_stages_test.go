@@ -6077,6 +6077,11 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					indexer.PromotionsByStageAndFreight,
 				).
 				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByTerminalField,
+					indexer.PromotionsByTerminal,
+				).
+				WithIndex(
 					&kargoapi.Freight{},
 					indexer.FreightByWarehouseField,
 					indexer.FreightByWarehouse,

@@ -143,6 +143,18 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("error setting up index for Promotions by Stage and Freight: %w", err)
 	}
 
+	// This index is used to find Promotions that are non-terminal.
+	if err := sharedIndexer.IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.PromotionsByTerminalField,
+		indexer.PromotionsByTerminal,
+	); err != nil {
+		return fmt.Errorf(
+			"error setting up index for Promotions by terminal phase: %w", err,
+		)
+	}
+
 	// This index is used to find Freight that are directly available from a
 	// Warehouse and can be automatically promoted to a Stage.
 	if err := sharedIndexer.IndexField(
@@ -224,8 +236,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
-	// Watch for Freight that has been marked as verified in a Stage and enqueue
-	// downstream Stages for reconciliation.
+	// Watch for Freight that have been newly promoted to a Stage or newly marked
+	// as verified in a Stage and enqueue downstream Stages for reconciliation.
 	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
@@ -1742,17 +1754,23 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		}
 
-		// If a Promotion already exists for this Stage and Freight, then we
-		// should not create a new one.
+		// If a non-terminal Promotion already exists for this Stage and Freight,
+		// then we should not create a new one.
 		promotions := &kargoapi.PromotionList{}
 		if err = r.client.List(
 			ctx,
 			promotions,
 			client.InNamespace(stage.Namespace),
 			client.MatchingFieldsSelector{
-				Selector: fields.OneTermEqualSelector(
-					indexer.PromotionsByStageAndFreightField,
-					indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+				Selector: fields.AndSelectors(
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByStageAndFreightField,
+						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+					),
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByTerminalField,
+						"false",
+					),
 				),
 			},
 			client.Limit(1),
