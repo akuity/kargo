@@ -21,10 +21,10 @@ func TestNewServiceAccountKeyProvider(t *testing.T) {
 
 func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 	const (
-		fakeGCRImageRepoURL        = "gcr.io/my-project/my-repo"
-		fakeGARImageRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
-		fakeGCRChartRepoURL     = "oci://gcr.io/my-project/my-repo"
-		fakeGARChartRepoURL     = "oci://us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeGCRImageRepoURL   = "gcr.io/my-project/my-repo"
+		fakeGARImageRepoURL   = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeGCRChartRepoURL   = "oci://gcr.io/my-project/my-repo"
+		fakeGARChartRepoURL   = "oci://us-central1-docker.pkg.dev/my-project/my-repo"
 		fakeServiceAccountKey = "base64-encoded-service-account-key"
 	)
 
@@ -38,7 +38,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "valid GAR repo with service account key",
 			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGCRImageRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -47,7 +47,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "valid GCR repo with service account key",
 			credType: credentials.TypeImage,
-			repoURL:  fakeGCRRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -56,7 +56,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "unsupported credential type",
 			credType: credentials.TypeGit,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -65,14 +65,14 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "missing service account key",
 			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			data:     map[string][]byte{},
 			expected: false,
 		},
 		{
 			name:     "nil data",
 			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			data:     nil,
 			expected: false,
 		},
@@ -89,7 +89,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "valid GAR OCI Helm repo with service account key",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGAROCIRepoURL,
+			repoURL:  fakeGARChartRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -98,7 +98,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "valid GCR OCI Helm repo with service account key",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGCROCIRepoURL,
+			repoURL:  fakeGCRChartRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -107,7 +107,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "Helm repo without oci:// prefix",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARChartRepoURL,
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
@@ -125,7 +125,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "Helm repo missing service account key",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGAROCIRepoURL,
+			repoURL:  fakeGARChartRepoURL,
 			data:     map[string][]byte{},
 			expected: false,
 		},
