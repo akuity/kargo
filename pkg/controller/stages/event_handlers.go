@@ -3,6 +3,7 @@ package stages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -82,9 +83,18 @@ func (v *downstreamStageEnqueuer[T]) Update(
 		return
 	}
 
+	// Stages to which the Freight has recently been promoted (provided the
+	// Freight is also verified in those Stages):
+	newlyInStages := getNewlyInStages(oldFreight, newFreight)
+	// Stages in which the Freight have recently been verified:
 	newlyVerifiedStages := getNewlyVerifiedStages(oldFreight, newFreight)
+
+	affectedStages := append(newlyInStages, newlyVerifiedStages...)
+	slices.Sort(affectedStages)
+	affectedStages = slices.Compact(affectedStages)
+
 	downstreamStages := map[string]struct{}{}
-	for _, newlyVerifiedStage := range newlyVerifiedStages {
+	for _, affectedStage := range affectedStages {
 		stages := kargoapi.StageList{}
 		if err := v.kargoClient.List(
 			ctx,
@@ -93,13 +103,13 @@ func (v *downstreamStageEnqueuer[T]) Update(
 				Namespace: newFreight.Namespace,
 				FieldSelector: fields.OneTermEqualSelector(
 					indexer.StagesByUpstreamStagesField,
-					newlyVerifiedStage,
+					affectedStage,
 				),
 			},
 		); err != nil {
 			logger.Error(
 				err, "Failed to list downstream Stages",
-				"stage", newlyVerifiedStage,
+				"stage", affectedStage,
 				"namespace", newFreight.Namespace,
 			)
 			return
@@ -134,6 +144,16 @@ func getNewlyVerifiedStages(existing, updated *kargoapi.Freight) []string {
 	var stages []string
 	for stage := range updated.Status.VerifiedIn {
 		if !existing.IsVerifiedIn(stage) {
+			stages = append(stages, stage)
+		}
+	}
+	return stages
+}
+
+func getNewlyInStages(existing, updated *kargoapi.Freight) []string {
+	var stages []string
+	for stage := range updated.Status.CurrentlyIn {
+		if !existing.IsCurrentlyIn(stage) && updated.IsVerifiedIn(stage) {
 			stages = append(stages, stage)
 		}
 	}

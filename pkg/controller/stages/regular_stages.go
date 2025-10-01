@@ -236,8 +236,8 @@ func (r *RegularStageReconciler) SetupWithManager(
 		return fmt.Errorf("unable to watch Promotions: %w", err)
 	}
 
-	// Watch for Freight that has been marked as verified in a Stage and enqueue
-	// downstream Stages for reconciliation.
+	// Watch for Freight that have been newly promoted to a Stage or newly marked
+	// as verified in a Stage and enqueue downstream Stages for reconciliation.
 	if err = c.Watch(
 		source.Kind(
 			kargoMgr.GetCache(),
