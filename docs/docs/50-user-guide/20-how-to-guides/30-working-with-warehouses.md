@@ -678,7 +678,6 @@ appropriate credentials must be made available in some form. The many available
 authentication options are covered in detail on the
 [Managing Credentials](../50-security/30-managing-credentials.md) page.
 
-
 ## Performance Considerations
 
 `Warehouse` resources periodically poll the repositories to which they subscribe
