@@ -178,11 +178,15 @@
                   },
                   "discoveryLimit": {
                     "default": 20,
-                    "description": "DiscoveryLimit is an optional limit on the number of image references\nthat can be discovered for this subscription. The limit is applied after\nfiltering images based on the AllowTags and IgnoreTags fields.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
+                    "description": "DiscoveryLimit is an optional limit on the number of image references\nthat can be discovered for this subscription. The limit is applied after\nfiltering images based on the AllowTags and IgnoreTags, IgnoreRegex fields.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
                     "format": "int32",
                     "maximum": 100,
                     "minimum": 1,
                     "type": "integer"
+                  },
+                  "ignoreRegex": {
+                    "description": "IgnoreRegex is a regular expression that can optionally be used to limit\nthe tags that are considered in determining the newest version of an image.\nThe value in this field only has any effect when the ImageSelectionStrategy is\nLexical, NewestBuild, or SemVer. This field is optional.",
+                    "type": "string"
                   },
                   "ignoreTags": {
                     "description": "IgnoreTags is a list of tags that must be ignored when determining the\nnewest version of an image. No regular expressions or glob patterns are\nsupported yet. This field is optional.",
@@ -193,7 +197,7 @@
                   },
                   "imageSelectionStrategy": {
                     "default": "SemVer",
-                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  (unintuitively) by the SemverConstraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. Useful when tags embed a leading date or timestamp. The AllowTags\n  and IgnoreTags fields can optionally be used to narrow the set of tags\n  eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTags and IgnoreTags fields can optionally be used\n  to narrow the set of tags eligible for selection. This is the least\n  efficient and is likely to cause rate limiting affecting this Warehouse\n  and possibly others. This strategy should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  AllowTags and IgnoreTags fields can optionally be used to narrow the set\n  of tags eligible for selection.",
+                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  (unintuitively) by the SemverConstraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. Useful when tags embed a leading date or timestamp. The AllowTags\n  and IgnoreTags, IgnoreRegex fields can optionally be used to narrow the set of tags\n  eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTags and IgnoreTags, IgnoreRegex fields can optionally be used\n  to narrow the set of tags eligible for selection. This is the least\n  efficient and is likely to cause rate limiting affecting this Warehouse\n  and possibly others. This strategy should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  AllowTags and IgnoreTags, IgnoreRegex fields can optionally be used to narrow the set\n  of tags eligible for selection.",
                     "enum": [
                       "Digest",
                       "Lexical",

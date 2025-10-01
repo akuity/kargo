@@ -344,17 +344,17 @@ type ImageSubscription struct {
 	//
 	// - "Lexical": Selects the image referenced by the lexicographically greatest
 	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
-	//   and IgnoreTags fields can optionally be used to narrow the set of tags
+	//   and IgnoreTags, IgnoreRegex fields can optionally be used to narrow the set of tags
 	//   eligible for selection.
 	//
 	// - "NewestBuild": Selects the image that was most recently pushed to the
-	//   repository. The AllowTags and IgnoreTags fields can optionally be used
+	//   repository. The AllowTags and IgnoreTags, IgnoreRegex fields can optionally be used
 	//   to narrow the set of tags eligible for selection. This is the least
 	//   efficient and is likely to cause rate limiting affecting this Warehouse
 	//   and possibly others. This strategy should be avoided.
 	//
 	// - "SemVer": Selects the image with the semantically greatest tag. The
-	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
+	//   AllowTags and IgnoreTags, IgnoreRegex fields can optionally be used to narrow the set
 	//   of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
@@ -405,6 +405,13 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
+	// IgnoreRegex is a regular expression that can optionally be used to limit
+	// the tags that are considered in determining the newest version of an image.
+	// The value in this field only has any effect when the ImageSelectionStrategy is
+	// Lexical, NewestBuild, or SemVer. This field is optional.
+	//
+	// +kubebuilder:validation:Optional
+	IgnoreRegex string `json:"ignoreRegex,omitempty" protobuf:"bytes,13,opt,name=ignoreRegex"`
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
 	// optional. When left unspecified, it is implicitly equivalent to the
@@ -422,7 +429,7 @@ type ImageSubscription struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
 	// DiscoveryLimit is an optional limit on the number of image references
 	// that can be discovered for this subscription. The limit is applied after
-	// filtering images based on the AllowTags and IgnoreTags fields.
+	// filtering images based on the AllowTags and IgnoreTags, IgnoreRegex fields.
 	// When left unspecified, the field is implicitly treated as if its value
 	// were "20". The upper limit for this field is 100.
 	//
