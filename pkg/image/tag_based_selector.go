@@ -18,6 +18,7 @@ type tagBasedSelector struct {
 	*baseSelector
 	allows         *regexp.Regexp
 	ignores        []string
+	ignoreRegex    *regexp.Regexp
 	discoveryLimit int
 }
 
@@ -42,13 +43,22 @@ func newTagBasedSelector(
 			)
 		}
 	}
+	if sub.IgnoreRegex != "" {
+		if s.ignoreRegex, err = regexp.Compile(sub.IgnoreRegex); err != nil {
+			return nil, fmt.Errorf(
+				"error compiling regular expression %q: %w",
+				sub.IgnoreRegex, err,
+			)
+		}
+	}
 	return s, nil
 }
 
 // MatchesTag implements Selector.
 func (t *tagBasedSelector) MatchesTag(tag string) bool {
 	return (t.allows == nil || t.allows.MatchString(tag)) &&
-		!slices.Contains(t.ignores, tag)
+		!slices.Contains(t.ignores, tag) &&
+		(t.ignoreRegex == nil || !t.ignoreRegex.MatchString(tag))
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector
