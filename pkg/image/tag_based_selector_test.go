@@ -33,11 +33,22 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "error parsing ignore regex",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:     "example/image",
+				IgnoreRegex: "[", // Invalid regex
+			},
+			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
 			name: "success",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:        "example/image",
 				AllowTags:      `^v1\.`,
 				IgnoreTags:     []string{"v1.0.0"},
+				IgnoreRegex:    `^v1\.0\..*`,
 				DiscoveryLimit: 5,
 			},
 			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
@@ -45,6 +56,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.NotNil(t, s.baseSelector)
 				require.NotNil(t, s.allows)
 				require.Equal(t, []string{"v1.0.0"}, s.ignores)
+				require.NotNil(t, s.ignoreRegex)
 				require.Equal(t, 5, s.discoveryLimit)
 			},
 		},
@@ -103,6 +115,44 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 			tag:         "abc",
 			shouldMatch: false,
 		},
+		{
+			name: "regex matches, but ignored by ignoreRegex",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile("[a-z]+"),
+				ignoreRegex: regexp.MustCompile("^abc$"),
+			},
+			tag:         "abc",
+			shouldMatch: false,
+		},
+		{
+			name: "regex matches, not ignored by ignoreRegex",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile("[a-z]+"),
+				ignoreRegex: regexp.MustCompile("^def$"),
+			},
+			tag:         "abc",
+			shouldMatch: true,
+		},
+		{
+			name: "regex matches, but ignored by both ignoreTags and ignoreRegex",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile("[a-z]+"),
+				ignores:     []string{"abc"},
+				ignoreRegex: regexp.MustCompile("^abc$"),
+			},
+			tag:         "abc",
+			shouldMatch: false,
+		},
+		{
+			name: "regex matches, ignored by ignoreRegex but not ignoreTags",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile("[a-z]+"),
+				ignores:     []string{"def"},
+				ignoreRegex: regexp.MustCompile("^abc$"),
+			},
+			tag:         "abc",
+			shouldMatch: false,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -116,13 +166,71 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 }
 
 func Test_tagBasedSelector_filterTags(t *testing.T) {
-	filtered := (&tagBasedSelector{
-		allows:  regexp.MustCompile(`v1\.`),
-		ignores: []string{"v1.0.0"},
-	}).filterTags([]string{
-		"v1.0.0", // Allowed, but ignored
-		"v1.1.0", // Allowed
-		"v2.0.0", // Not allowed
-	})
-	require.Equal(t, []string{"v1.1.0"}, filtered)
+	testCases := []struct {
+		name     string
+		selector *tagBasedSelector
+		input    []string
+		expected []string
+	}{
+		{
+			name: "basic filtering with allows and ignores",
+			selector: &tagBasedSelector{
+				allows:  regexp.MustCompile(`v1\.`),
+				ignores: []string{"v1.0.0"},
+			},
+			input: []string{
+				"v1.0.0", // Allowed, but ignored
+				"v1.1.0", // Allowed
+				"v2.0.0", // Not allowed
+			},
+			expected: []string{"v1.1.0"},
+		},
+		{
+			name: "filtering with ignoreRegex",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile(`v1\.`),
+				ignoreRegex: regexp.MustCompile(`v1\.0\..*`),
+			},
+			input: []string{
+				"v1.0.0", // Allowed, but ignored by regex
+				"v1.0.1", // Allowed, but ignored by regex
+				"v1.1.0", // Allowed, not ignored
+				"v2.0.0", // Not allowed
+			},
+			expected: []string{"v1.1.0"},
+		},
+		{
+			name: "filtering with both ignoreTags and ignoreRegex",
+			selector: &tagBasedSelector{
+				allows:      regexp.MustCompile(`v1\.`),
+				ignores:     []string{"v1.0.0"},
+				ignoreRegex: regexp.MustCompile(`v1\.1\..*`),
+			},
+			input: []string{
+				"v1.0.0", // Allowed, but ignored by ignoreTags
+				"v1.0.1", // Allowed, not ignored
+				"v1.1.0", // Allowed, but ignored by ignoreRegex
+				"v1.1.1", // Allowed, but ignored by ignoreRegex
+				"v2.0.0", // Not allowed
+			},
+			expected: []string{"v1.0.1"},
+		},
+		{
+			name:     "no constraints",
+			selector: &tagBasedSelector{},
+			input: []string{
+				"v1.0.0",
+				"v1.1.0",
+				"v2.0.0",
+			},
+			expected: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			filtered := testCase.selector.filterTags(testCase.input)
+			require.Equal(t, testCase.expected, filtered)
+		})
+	}
 }
