@@ -21,10 +21,10 @@ func TestNewServiceAccountKeyProvider(t *testing.T) {
 
 func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 	const (
-		fakeGCRRepoURL        = "gcr.io/my-project/my-repo"
-		fakeGARRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
-		fakeGCROCIRepoURL     = "oci://gcr.io/my-project/my-repo"
-		fakeGAROCIRepoURL     = "oci://us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeGCRImageRepoURL        = "gcr.io/my-project/my-repo"
+		fakeGARImageRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeGCRChartRepoURL     = "oci://gcr.io/my-project/my-repo"
+		fakeGARChartRepoURL     = "oci://us-central1-docker.pkg.dev/my-project/my-repo"
 		fakeServiceAccountKey = "base64-encoded-service-account-key"
 	)
 
