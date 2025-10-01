@@ -25,7 +25,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
     .check(
       z.refine(
         (data) => {
-          if (data.type === 'git') {
+          if (data.type === 'git' && !data.repoUrlIsRegex) {
             try {
               new URL(data.repoUrl);
             } catch {
@@ -39,7 +39,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
       ),
       z.refine(
         (data) => {
-          if (data.type === 'helm') {
+          if (data.type === 'helm' && !data.repoUrlIsRegex) {
             return helmChartRegex.test(data.repoUrl);
           }
           return true;
@@ -51,7 +51,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
       ),
       z.refine(
         (data) => {
-          if (data.type === 'image') {
+          if (data.type === 'image' && !data.repoUrlIsRegex) {
             return imageNameRegex.test(data.repoUrl);
           }
           return true;
