@@ -82,6 +82,25 @@ func (g *gitPROpener) run(
 ) (promotion.StepResult, error) {
 	sourceBranch := cfg.SourceBranch
 
+	// Short-circuit if shared state has output from a previous execution of this
+	// step that contains a PR ID.
+	prID, err := g.getPRID(stepCtx, stepCtx.SharedState)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error getting PR number from shared state: %w", err)
+	}
+	if prID != -1 {
+		// We don't need to check for the existence of prior output from this
+		// step because we'd not have gotten to here if it didn't exist.
+		output, _ := stepCtx.SharedState.Get(stepCtx.Alias)
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusSucceeded,
+			// Don't need to validate the type assertion on the output here because
+			// we'd not have gotten to here if it wasn't a map[string]any.
+			Output: output.(map[string]any), //nolint: forcetypeassert
+		}, nil
+	}
+
 	var repoCreds *git.RepoCredentials
 	creds, err := g.credsDB.Get(
 		ctx,
@@ -237,6 +256,50 @@ func (g *gitPROpener) run(
 			},
 		},
 	}, nil
+}
+
+// getPRID checks shared state for output from a previous execution of this
+// step. If any is found and it contains a PR ID, that ID is returned.
+// -1 is returned if no PR ID is found in the shared state. An error is
+// returned if the PR ID is found but is neither an int64 nor a float64.
+func (g *gitPROpener) getPRID(
+	stepCtx *promotion.StepContext,
+	sharedState promotion.State,
+) (int64, error) {
+	stepOutput, exists := sharedState.Get(stepCtx.Alias)
+	if !exists {
+		return -1, nil
+	}
+	stepOutputMap, ok := stepOutput.(map[string]any)
+	if !ok {
+		return -1, fmt.Errorf(
+			"output from step with alias %q is not a map[string]any",
+			stepCtx.Alias,
+		)
+	}
+
+	// Check for `pr.id`
+	prMap, exists := stepOutputMap["pr"].(map[string]any)
+	if !exists {
+		return -1, nil
+	}
+
+	prIDAny, exists := prMap["id"]
+	if !exists {
+		return -1, nil
+	}
+
+	switch prID := prIDAny.(type) {
+	case int64:
+		return prID, nil
+	case float64:
+		return int64(prID), nil
+	default:
+		return -1, fmt.Errorf(
+			"PR ID in output from step with alias %q is not an int64",
+			stepCtx.Alias,
+		)
+	}
 }
 
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the
