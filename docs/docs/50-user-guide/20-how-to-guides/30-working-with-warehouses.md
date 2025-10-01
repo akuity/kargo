@@ -39,11 +39,11 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-  - image:
-      repoURL: public.ecr.aws/nginx/nginx
-      constraint: ^1.26.0
-  - git:
-      repoURL: https://github.com/example/kargo-demo.git
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        constraint: ^1.26.0
+    - git:
+        repoURL: https://github.com/example/kargo-demo.git
 ```
 
 The remainder of this section focuses on the configuration of the individual
@@ -68,34 +68,39 @@ fields:
 
 - `ignoreTags`: An optional list of tags that should explicitly be ignored.
 
+<a name="ignore-regex"></a>
+
+- `ignoreRegex`: An optional regular expression that limits the eligibility for
+  selection to tags that don't match the pattern.
+
 <a name="platform-constraint"></a>
 
 - `platform`: An optional identifier that constrains image selection to those
   images supporting the specified operating system and system architecture.
   e.g., `linux/amd64`.
 
-    :::note
-    It is seldom necessary to specify this field.
-    :::
+  :::note
+  It is seldom necessary to specify this field.
+  :::
 
 - `discoveryLimit`: Many selection strategies (see next section) do not actually
   select a _single_ image; rather they select the n best fits for the specified
   constraints. The _best_ fit is the zero element in the list of selected
   images. `discoveryLimit` specifies how many images to discover.
-  
-    The default is `20`.
 
-    :::note
-    For poorly performing `Warehouse`s -- for instance ones frequently
-    encountering rate limits -- decreasing this limit may improve performance.
-    :::
+  The default is `20`.
+
+  :::note
+  For poorly performing `Warehouse`s -- for instance ones frequently
+  encountering rate limits -- decreasing this limit may improve performance.
+  :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
 
-    :::warning
-    This is a security risk and should only be used in development environments.
-    :::
+  :::warning
+  This is a security risk and should only be used in development environments.
+  :::
 
 #### Image Selection Strategies
 
@@ -109,119 +114,119 @@ strategies are:
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
 
-    :::note
-    If the `constraint` field is empty, any constraints defined by the
-    deprecated `semverConstraint` field will be applied instead. The
-    `semverConstraint` field will be removed in v1.9.0.
-    :::
+  :::note
+  If the `constraint` field is empty, any constraints defined by the
+  deprecated `semverConstraint` field will be applied instead. The
+  `semverConstraint` field will be removed in v1.9.0.
+  :::
 
-   The `strictSemvers` field defaults to `true`, meaning only tags containing
-   all three parts of a semantic version (major, minor, and patch) are
-   considered. Disabling this should be approached with caution because any
-   image tagged only with decimal characters will be considered a valid semantic
-   version (containing only the major element).
+  The `strictSemvers` field defaults to `true`, meaning only tags containing
+  all three parts of a semantic version (major, minor, and patch) are
+  considered. Disabling this should be approached with caution because any
+  image tagged only with decimal characters will be considered a valid semantic
+  version (containing only the major element).
 
-    __`SemVer` is the default strategy if one is not specified.__
+  **`SemVer` is the default strategy if one is not specified.**
 
-    :::info
-    Kargo uses the [semver](https://github.com/masterminds/semver) package for
-    parsing and comparing semantic versions and semantic version constraints.
-    Refer to
-    [these docs](https://github.com/masterminds/semver#checking-version-constraints)
-    for detailed information on version constraint syntax.
-    :::
+  :::info
+  Kargo uses the [semver](https://github.com/masterminds/semver) package for
+  parsing and comparing semantic versions and semantic version constraints.
+  Refer to
+  [these docs](https://github.com/masterminds/semver#checking-version-constraints)
+  for detailed information on version constraint syntax.
+  :::
 
-    Example:
+  Example:
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           constraint: ^1.26.0
-    ```
+  ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
-   tag.
+  tag.
 
-   This is useful in scenarios wherein tags incorporate date/time stamps in
-   formats such as `yyyymmdd` and you wish to select the tag with the latest
-   stamp. When using this strategy, it is recommended to use the `allowTags`
-   field to limit eligibility to tags that match the expected format.
+  This is useful in scenarios wherein tags incorporate date/time stamps in
+  formats such as `yyyymmdd` and you wish to select the tag with the latest
+  stamp. When using this strategy, it is recommended to use the `allowTags`
+  field to limit eligibility to tags that match the expected format.
 
-    Example:
+  Example:
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: Lexical
           allowTags: ^nightly-\d{8}$
-    ```
+  ```
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag"
-   (such as `latest`) specified by the `constraint` field.
+  (such as `latest`) specified by the `constraint` field.
 
-    :::note
-    If the `constraint` field is empty, the name of the mutable tag will
-    (unintuitively) be determined by the value of the deprecated
-    `semverConstraint` field. The `semverConstraint` field will be removed in
-    v1.9.0.
-    :::
+  :::note
+  If the `constraint` field is empty, the name of the mutable tag will
+  (unintuitively) be determined by the value of the deprecated
+  `semverConstraint` field. The `semverConstraint` field will be removed in
+  v1.9.0.
+  :::
 
-    :::warning
-    "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
-    updated to point to a different, presumably newer image.
+  :::warning
+  "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
+  updated to point to a different, presumably newer image.
 
-    "Immutable tags": Tags that have version or date information embedded within
-    them, along with an expectation of never being updated to reference a
-    different image.
+  "Immutable tags": Tags that have version or date information embedded within
+  them, along with an expectation of never being updated to reference a
+  different image.
 
-    Using mutable tags like `latest` _is a widely discouraged practice._
-    Whenever possible, it is recommended to use immutable tags.
-    :::
+  Using mutable tags like `latest` _is a widely discouraged practice._
+  Whenever possible, it is recommended to use immutable tags.
+  :::
 
-    Example:
+  Example:
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: Digest
           constraint: latest
-    ```
+  ```
 
 <a name="newest-build"></a>
 
 - `NewestBuild`: This strategy selects the image with the most recent build
   time.
 
-  The build time is evaluated using the labels 
-  `org.opencontainers.image.created` or `org.label-schema.build-date`. If 
-  neither label is set, Kargo will fall back to using the `config.Created` time 
+  The build time is evaluated using the labels
+  `org.opencontainers.image.created` or `org.label-schema.build-date`. If
+  neither label is set, Kargo will fall back to using the `config.Created` time
   of the image.
 
-    :::warning
-    `NewestBuild` requires retrieving metadata for every eligible tag, which can
-    be slow and is likely to exceed the registry's rate limits. __This can
-    result in system-wide performance degradation.__
+  :::warning
+  `NewestBuild` requires retrieving metadata for every eligible tag, which can
+  be slow and is likely to exceed the registry's rate limits. **This can
+  result in system-wide performance degradation.**
 
-    If using this strategy is unavoidable, it is recommended to use the
-    `allowTags` field to limit the number of tags for which metadata is
-    retrieved to reduce the risk of encountering rate limits. `allowTags` may
-    require periodic adjustment as a repository grows.
-    :::
+  If using this strategy is unavoidable, it is recommended to use the
+  `allowTags` field to limit the number of tags for which metadata is
+  retrieved to reduce the risk of encountering rate limits. `allowTags` may
+  require periodic adjustment as a repository grows.
+  :::
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - image:
           repoURL: public.ecr.aws/nginx/nginx
           imageSelectionStrategy: NewestBuild
           allowTags: ^nightly
-    ```
+  ```
 
 ### Git Repository Subscriptions
 
@@ -253,21 +258,21 @@ Git repository subscriptions can be defined using the following fields:
   select a _single_ commit; rather they select the n best fits for the specified
   constraints. The _best_ fit is the zero element in the list of selected
   commits. `discoveryLimit` specifies how many commits to discover.
-  
-    The default is `20`.
 
-   :::note
-   Lowering this limit for a Git repository subscription does not improve
-   performance by the margins that it does for a container image repository
-   subscription.
-   :::
+  The default is `20`.
+
+  :::note
+  Lowering this limit for a Git repository subscription does not improve
+  performance by the margins that it does for a container image repository
+  subscription.
+  :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
 
-    :::warning
-    This is a security risk and should only be used in development environments.
-    :::
+  :::warning
+  This is a security risk and should only be used in development environments.
+  :::
 
 #### Commit Selection Strategies
 
@@ -278,93 +283,93 @@ strategies are:
 - `NewestFromBranch`: Selects the most recent commit from a branch specified
   by the `branch` field. If a branch is not specified, the strategy selects
   commits from the repository's default branch (typically `main` or `master`).
-  
-    This is useful for the average case, wherein you wish for the `Warehouse` to
-    continuously discover the latest changes to a branch that receives regular
-    updates.
 
-    __`NewestFromBranch` is the default selection strategy if one is not
-    specified.__
+  This is useful for the average case, wherein you wish for the `Warehouse` to
+  continuously discover the latest changes to a branch that receives regular
+  updates.
 
-    Example:
+  **`NewestFromBranch` is the default selection strategy if one is not
+  specified.**
 
-    ```yaml
-    spec:
-      subscriptions:
+  Example:
+
+  ```yaml
+  spec:
+    subscriptions:
       - git:
           repoURL: https://github.com/example/repo.git
           branch: main
-    ```
+  ```
 
 - `SemVer`: Selects the commit referenced by the tag that best matches a
   semantic versioning constraint. All tags that are not valid semantic versions
   are ignored. With no constraint specified, the strategy simply selects the
   commit referenced by the semantically greatest tag.
 
-    This is useful in scenarios wherein you do not wish for the `Warehouse` to
-    continuously discover _every new commit_ and would like limit selection to
-    commits tagged with a semantic version, and possibly within a certain range.
+  This is useful in scenarios wherein you do not wish for the `Warehouse` to
+  continuously discover _every new commit_ and would like limit selection to
+  commits tagged with a semantic version, and possibly within a certain range.
 
-    The `strictSemvers` field defaults to `true`, meaning only tags containing
-    all three parts of a semantic version (major, minor, and patch) are
-    considered. Disabling this should be approached with caution because any
-    image tagged only with decimal characters will be considered a valid
-    semantic version (containing only the major element).
+  The `strictSemvers` field defaults to `true`, meaning only tags containing
+  all three parts of a semantic version (major, minor, and patch) are
+  considered. Disabling this should be approached with caution because any
+  image tagged only with decimal characters will be considered a valid
+  semantic version (containing only the major element).
 
-    :::info
-    Kargo uses the [semver](https://github.com/masterminds/semver) package for
-    parsing and comparing semantic versions and semantic version constraints.
-    Refer to
-    [these docs](https://github.com/masterminds/semver#checking-version-constraints)
-    for detailed information on version constraint syntax.
-    :::
+  :::info
+  Kargo uses the [semver](https://github.com/masterminds/semver) package for
+  parsing and comparing semantic versions and semantic version constraints.
+  Refer to
+  [these docs](https://github.com/masterminds/semver#checking-version-constraints)
+  for detailed information on version constraint syntax.
+  :::
 
-    Example:
+  Example:
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - git:
           repoURL: https://github.com/example/repo.git
           commitSelectionStrategy: SemVer
           semverConstraint: ^1.0.0
-    ```
+  ```
 
 - `Lexical`: Selects the commit referenced by the lexicographically greatest
   tag.
 
-    This is useful in scenarios wherein you do not wish for the `Warehouse` to
-    discover _every new commit_ and tags incorporate date/time stamps in formats
-    such as `yyyymmdd` and you wish to select the tag with the latest stamp.
-    When using this strategy, it is recommended to use the `allowTags` field to
-    limit eligibility to tags that match the expected format.
+  This is useful in scenarios wherein you do not wish for the `Warehouse` to
+  discover _every new commit_ and tags incorporate date/time stamps in formats
+  such as `yyyymmdd` and you wish to select the tag with the latest stamp.
+  When using this strategy, it is recommended to use the `allowTags` field to
+  limit eligibility to tags that match the expected format.
 
-    Example:
+  Example:
 
-    ```yaml
-    spec:
-      subscriptions:
+  ```yaml
+  spec:
+    subscriptions:
       - git:
           repoURL: https://github.com/example/repo.git
           commitSelectionStrategy: Lexical
           allowTags: ^nightly-\d{8}$
-    ```
+  ```
 
 - `NewestTag`: Selects the commit referenced by the most recently created tag.
-  
-    When using this strategy, it is recommended to use the `allowTags` field to
-    limit eligibility to tags that match the expected format.
 
-    Example:
+  When using this strategy, it is recommended to use the `allowTags` field to
+  limit eligibility to tags that match the expected format.
 
-    ```yaml
-    spec:
-      subscriptions:
+  Example:
+
+  ```yaml
+  spec:
+    subscriptions:
       - git:
           repoURL: https://github.com/example/repo.git
           commitSelectionStrategy: NewestTag
           allowTags: ^nightly
-    ```
+  ```
 
 #### Expression Filtering
 
@@ -396,22 +401,22 @@ The `expressionFilter` field provides a unified way to filter commits or tags
 based on the selected commit selection strategy. The behavior and available
 variables depend on your `commitSelectionStrategy`:
 
-__For commit-based filtering__ (`NewestFromBranch` strategy):
+**For commit-based filtering** (`NewestFromBranch` strategy):
 
 - Filters commits based on commit metadata
 - Applied when selecting the newest commit from a branch
 
-__For tag-based filtering__ (`SemVer`, `Lexical`, and `NewestTag` strategies):
+**For tag-based filtering** (`SemVer`, `Lexical`, and `NewestTag` strategies):
 
 - Filters tags based on tag and associated commit metadata
-- Applied after `allowTags`, `ignoreTags`, and `semverConstraint` fields
+- Applied after `allowTags`, `ignoreTags` and `semverConstraint` fields
 
 ##### Available Expression Filtering Variables
 
 The variables available in your expression depend on the commit selection
 strategy:
 
-__For `NewestFromBranch` (commit filtering):__
+**For `NewestFromBranch` (commit filtering):**
 
 - `id`: The ID (SHA) of the commit
 - `commitDate`: The date of the commit
@@ -419,7 +424,7 @@ __For `NewestFromBranch` (commit filtering):__
 - `committer`: The committer of the commit, in format `Name <email>`
 - `subject`: The first line of the commit message
 
-__For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):__
+**For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):**
 
 - `tag`: The name of the tag
 - `id`: The commit ID that the tag references
@@ -437,92 +442,92 @@ __For `SemVer`, `Lexical`, and `NewestTag` (tag filtering):__
 
 ##### Expression Filtering Examples
 
-__Filtering commits by excluding bot authors:__
+**Filtering commits by excluding bot authors:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      expressionFilter: !(author contains '<bot@example.com>')
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestFromBranch
+        expressionFilter: !(author contains '<bot@example.com>')
 ```
 
-__Filtering commits with specific message patterns:__
+**Filtering commits with specific message patterns:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      expressionFilter: subject contains 'feat:' || subject contains 'fix:'
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestFromBranch
+        expressionFilter: subject contains 'feat:' || subject contains 'fix:'
 ```
 
-__Filtering commits with multiple criteria:__
+**Filtering commits with multiple criteria:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestFromBranch
+        expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
 ```
 
-__Filtering commits to exclude those with ignore markers:__
+**Filtering commits to exclude those with ignore markers:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestFromBranch
-      expressionFilter: !(subject contains '[kargo-ignore]')
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestFromBranch
+        expressionFilter: !(subject contains '[kargo-ignore]')
 ```
 
-__Filtering tags by author name:__
+**Filtering tags by author name:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: SemVer
-      expressionFilter: author == 'John Doe <john@example.com>'
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: SemVer
+        expressionFilter: author == 'John Doe <john@example.com>'
 ```
 
-__Filtering tags created after a specific date:__
+**Filtering tags created after a specific date:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: NewestTag
-      expressionFilter: creatorDate.Year() >= 2024
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestTag
+        expressionFilter: creatorDate.Year() >= 2024
 ```
 
-__Filtering tags to exclude those committed by bots:__
+**Filtering tags to exclude those committed by bots:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: Lexical
-      expressionFilter: !(committer contains '<bot@example.com>')
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: Lexical
+        expressionFilter: !(committer contains '<bot@example.com>')
 ```
 
-__Filtering tags with complex conditions:__
+**Filtering tags with complex conditions:**
 
 ```yaml
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/repo.git
-      commitSelectionStrategy: SemVer
-      expressionFilter: creatorDate.After(date('2024-01-01')) && !(tag contains 'alpha')
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: SemVer
+        expressionFilter: creatorDate.After(date('2024-01-01')) && !(tag contains 'alpha')
 ```
 
 #### Git Subscription Path Filtering
@@ -551,10 +556,10 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/kargo-demo.git
-      includePaths:
-      - apps/guestbook
+    - git:
+        repoURL: https://github.com/example/kargo-demo.git
+        includePaths:
+          - apps/guestbook
 ```
 
 The next example demonstrates the opposite: a `Warehouse` with a Git repository
@@ -570,10 +575,10 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/kargo-demo.git
-      excludePaths:
-      - docs
+    - git:
+        repoURL: https://github.com/example/kargo-demo.git
+        excludePaths:
+          - docs
 ```
 
 `includePaths` and `excludePaths` may be combined to include a broad set of
@@ -591,12 +596,12 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-  - git:
-      repoURL: https://github.com/example/kargo-demo.git
-      includePaths:
-      - apps/guestbook
-      excludePaths:
-      - apps/guestbook/README.md
+    - git:
+        repoURL: https://github.com/example/kargo-demo.git
+        includePaths:
+          - apps/guestbook
+        excludePaths:
+          - apps/guestbook/README.md
 ```
 
 :::note
@@ -606,11 +611,11 @@ _even a single change_ that is:
 
 1. Implicitly included via undefined `includePaths`.
 
-    OR
+   OR
 
-    Explicitly included via `includePaths`.
+   Explicitly included via `includePaths`.
 
-    AND
+   AND
 
 1. Not explicitly excluded via `excludePaths`.
 
@@ -633,12 +638,12 @@ Helm chart repository subscriptions can be defined using the following fields:
 - `repoURL`: The URL of the Helm chart repository. This field is required.
 
   Chart repositories using http/s may contain versions of many _different_
-  charts. Subscriptions to all chart repositories using http/s __must__
+  charts. Subscriptions to all chart repositories using http/s **must**
   additionally specify the chart's name in the `name` field.
 
   For chart repositories in OCI registries, the repository URL points only to
   revisions of a _single_ chart. Subscriptions to chart repositories in OCI
-  registries __must__ leave the `name` field empty.
+  registries **must** leave the `name` field empty.
 
 - `name`: See above.
 
@@ -670,10 +675,10 @@ Helm chart repository subscriptions can be defined using the following fields:
   ```yaml
   spec:
     subscriptions:
-    - chart:
-        repoURL: https://charts.example.com
-        name: my-chart
-        semverConstraint: ^1.0.0
+      - chart:
+          repoURL: https://charts.example.com
+          name: my-chart
+          semverConstraint: ^1.0.0
   ```
 
 ## Working with Private Repositories
@@ -734,7 +739,7 @@ Both the [`NewestBuild` selection strategy](#newest-build) and any
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
 [`allowTags`](#allow-tags-constraint) or
-[`ignoreTags`](#ignore-tags-constraint). Registry architecture, unfortunately,
+[`ignoreTags`](#ignore-tags-constraint) or [`ignoreRegex`](#ignore-regex). Registry architecture, unfortunately,
 requires such metadata be retrieved image-by-image with a separate API call for
 each. Even with aggressive caching, and especially when the number of image
 revisions to consider is large, this process can take quite some time. The time
@@ -747,10 +752,10 @@ your credentials. (i.e. Rate limits are not enforced on a
 `Warehouse`-by-`Warehouse` basis. Registries know nothing about your
 `Warehouse`s.)
 
-__Due to the above, even a well-tuned `Warehouse` that avoids inefficient image
+**Due to the above, even a well-tuned `Warehouse` that avoids inefficient image
 selection criteria may experience large intervals between executions of its
 discovery process (or slow discovery) if _other_ `Warehouse`s are configured
-inefficiently.__
+inefficiently.**
 :::
 
 With the goal of less frequent polling to reduce load on registries, avoid
@@ -792,7 +797,7 @@ The remainder of this section focuses on configuring webhook receivers at the
 Project level.
 
 :::info
-__Not what you were looking for?__
+**Not what you were looking for?**
 
 If you're an operator looking to understand how you can configure Kargo to
 listen for inbound webhook requests to trigger the discovery processes of all
@@ -844,23 +849,23 @@ each kind of webhook receiver vary, and are documented on
    deterministically constructing a complex, hard-to-guess URL where the
    receiver will listen for inbound requests.
 
-    Some webhook senders (Docker Hub, for instance), do not natively implement
-    any sort of authentication mechanism. No secret value(s) need to be shared
-    with such a sender and requests from the sender contain no bearer token, nor
-    are they signed. For cases such as these, a hard-to-guess URL is, itself,
-    a _de facto_ shared secret and authentication mechanism.
+   Some webhook senders (Docker Hub, for instance), do not natively implement
+   any sort of authentication mechanism. No secret value(s) need to be shared
+   with such a sender and requests from the sender contain no bearer token, nor
+   are they signed. For cases such as these, a hard-to-guess URL is, itself,
+   a _de facto_ shared secret and authentication mechanism.
 
-    __Note that if a `Secret`'s value(s) are rotated, the URL where the receiver
-    listens for inbound requests will also change. This is by design.__
+   **Note that if a `Secret`'s value(s) are rotated, the URL where the receiver
+   listens for inbound requests will also change. This is by design.**
 
-    Kargo does not watch `Secret`s for changes because it lacks the permissions
-    to do so, so it can be some time _after_ its `Secret`'s value(s) are rotated
-    that a webhook receiver's URL will be updated. To expedite that update, your
-    `ProjectConfig` resource can be manually "refreshed" using the `kargo` CLI:
+   Kargo does not watch `Secret`s for changes because it lacks the permissions
+   to do so, so it can be some time _after_ its `Secret`'s value(s) are rotated
+   that a webhook receiver's URL will be updated. To expedite that update, your
+   `ProjectConfig` resource can be manually "refreshed" using the `kargo` CLI:
 
-      ```shell
-      kargo refresh projectconfig --project <project name>
-      ```
+   ```shell
+   kargo refresh projectconfig --project <project name>
+   ```
 
 :::
 
@@ -874,14 +879,14 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers:
-  - name: my-first-receiver
-    github:
-      secretRef:
-        name: my-first-secret
-  - name: my-second-receiver
-    gitlab:  
-      secretRef:
-        name: my-second-secret
+    - name: my-first-receiver
+      github:
+        secretRef:
+          name: my-first-secret
+    - name: my-second-receiver
+      gitlab:
+        secretRef:
+          name: my-second-secret
 ---
 apiVersion: v1
 kind: Secret
@@ -928,19 +933,19 @@ spec:
   # ... omitted for brevity ...
 status:
   conditions:
-  - lastTransitionTime: "2025-06-11T22:53:21Z"
-    message: ProjectConfig is synced and ready for use
-    observedGeneration: 1
-    reason: Synced
-    status: "True"
-    type: Ready
+    - lastTransitionTime: "2025-06-11T22:53:21Z"
+      message: ProjectConfig is synced and ready for use
+      observedGeneration: 1
+      reason: Synced
+      status: "True"
+      type: Ready
   webhookReceivers:
-  - name: my-first-receiver
-    path: /webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
-    url: https://kargo.example.com/webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
-  - name: my-second-receiver
-    path: /webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
-    url: https://kargo.example.com/webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+    - name: my-first-receiver
+      path: /webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+      url: https://kargo.example.com/webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+    - name: my-second-receiver
+      path: /webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+      url: https://kargo.example.com/webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
 ```
 
 Above, you can see the URLs that can be registered with GitHub and GitLab as
