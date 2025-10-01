@@ -671,16 +671,6 @@ Helm chart repository subscriptions can be defined using the following fields:
         semverConstraint: ^1.0.0
   ```
 
-  For OCI Helm chart repositories (like Google Artifact Registry), use the `oci://` prefix and omit the `name` field:
-
-  ```yaml
-  spec:
-    subscriptions:
-    - chart:
-        repoURL: oci://us-central1-docker.pkg.dev/my-project/my-helm-charts/my-chart
-        semverConstraint: ^1.0.0
-  ```
-
 ## Working with Private Repositories
 
 Frequently, `Warehouse`s require access to private repositories, in which case
