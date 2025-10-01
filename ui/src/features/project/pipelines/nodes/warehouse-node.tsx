@@ -111,8 +111,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
       <center>
         <Button
           size='small'
-          icon={<FontAwesomeIcon icon={faRefresh} />}
-          loading={warehouseState.refreshing}
+          icon={<FontAwesomeIcon icon={faRefresh} spin={warehouseState.refreshing} />}
           onClick={(e) => {
             e.stopPropagation();
             refreshWarehouseMutation.mutate({
@@ -120,6 +119,11 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
               name: props.warehouse?.metadata?.name
             });
           }}
+          disabled={
+            warehouseState.refreshing &&
+            props.warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
+              props.warehouse?.status?.lastHandledRefresh
+          }
         >
           Refresh{warehouseState.refreshing && 'ing'}
         </Button>
