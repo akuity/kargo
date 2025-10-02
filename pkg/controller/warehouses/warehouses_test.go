@@ -164,7 +164,12 @@ func TestSyncWarehouse(t *testing.T) {
 
 				require.NotNil(t, status.DiscoveredArtifacts)
 
-				require.Len(t, status.GetConditions(), 3)
+				require.Len(t, status.GetConditions(), 4)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -276,7 +281,12 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.Empty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 3)
+				require.Len(t, status.GetConditions(), 4)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -334,7 +344,12 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.NotEmpty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 2)
+				require.Len(t, status.GetConditions(), 3)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -373,7 +388,12 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.Empty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 2)
+				require.Len(t, status.GetConditions(), 3)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
@@ -480,7 +500,12 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
-				require.Len(t, status.GetConditions(), 2)
+				require.Len(t, status.GetConditions(), 3)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
