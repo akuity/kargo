@@ -808,7 +808,7 @@ func (r *RegularStageReconciler) assessHealth(
 			Type:               kargoapi.ConditionTypeHealthy,
 			Status:             metav1.ConditionUnknown,
 			Reason:             "NoHealthChecksDefined",
-			Message:            "No health checks defined for last Promotion",
+			Message:            "No health checks defined",
 			ObservedGeneration: stage.Generation,
 		})
 		newStatus.Health = &kargoapi.Health{
