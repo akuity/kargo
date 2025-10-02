@@ -330,7 +330,8 @@ func (r *reconciler) syncWarehouse(
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeHealthy,
 					Status:             metav1.ConditionTrue,
-					Reason:             "ReconciliationSucceeded",
+					Reason:             "ArtifactsDiscovered",
+					Message:            conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
@@ -344,10 +345,9 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeReady,
-					Status: metav1.ConditionTrue,
-					Reason: "ArtifactsDiscovered",
-					// this message will be hydrated by validateDiscoveredArtifacts above
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionTrue,
+					Reason:             "ArtifactsDiscovered",
 					Message:            conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
