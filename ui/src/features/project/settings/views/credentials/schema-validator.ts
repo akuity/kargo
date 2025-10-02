@@ -35,7 +35,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
 
           return true;
         },
-        { error: 'repoUrl must be a valid HTTPS URL.', path: ['repoUrl'] }
+        { error: 'Repo URL must be a valid HTTPS URL.', path: ['repoUrl'] }
       ),
       z.refine(
         (data) => {
@@ -45,7 +45,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
           return true;
         },
         {
-          error: 'repoUrl must be a valid Helm chart reference.',
+          error: 'Repo URL must be a valid Helm chart reference.',
           path: ['repoUrl']
         }
       ),
@@ -57,7 +57,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
           return true;
         },
         {
-          error: 'repoUrl must be a valid image name.',
+          error: 'Repo URL must be a valid image name.',
           path: ['repoUrl']
         }
       )
