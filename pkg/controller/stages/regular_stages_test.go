@@ -1907,7 +1907,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				require.NotNil(t, healthyCond)
 				assert.Equal(t, metav1.ConditionUnknown, healthyCond.Status)
 				assert.Equal(t, "NoHealthChecksDefined", healthyCond.Reason)
-				assert.Contains(t, healthyCond.Message, "No health checks defined for last Promotion")
+				assert.Contains(t, healthyCond.Message, "No health checks defined")
 			},
 		},
 		{
