@@ -324,6 +324,7 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
+			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 			// return a nil error to avoid a requeue loop since subsequent
 			// retries are not going to make the expression any more valid.
 			return status, nil
