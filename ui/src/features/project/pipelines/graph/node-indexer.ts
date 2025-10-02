@@ -17,7 +17,8 @@ export const repoSubscriptionIndexer = {
       subscription?.image?.repoURL || subscription?.git?.repoURL || subscription?.chart?.repoURL;
 
     return `subscription/${warehouseIndex}/${subscriptionRepoURL}`;
-  }
+  },
+  is: (id: string) => id.startsWith('subscription/')
 };
 
 export const stageIndexer = {

@@ -12,7 +12,7 @@ import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
 import { DummyNodeRenderrer } from './dummy-node-renderrer';
-import { stageIndexer, warehouseIndexer } from './node-indexer';
+import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
 import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
@@ -132,6 +132,16 @@ export const Graph = (props: GraphProps) => {
     return warehouseByName;
   }, [props.warehouses]);
 
+  const nodesExcludingSubscriptionNodes = useMemo(() => {
+    const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
+
+    if (subscriptionNodes?.length > 5) {
+      return nodes.filter((n) => !repoSubscriptionIndexer.is(n.id));
+    }
+
+    return nodes;
+  }, [nodes]);
+
   return (
     <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
       <ReactFlow
@@ -139,6 +149,9 @@ export const Graph = (props: GraphProps) => {
         edges={graph.edges}
         nodeTypes={nodeTypes}
         fitView
+        fitViewOptions={{
+          nodes: nodesExcludingSubscriptionNodes
+        }}
         proOptions={{ hideAttribution: true }}
         minZoom={0}
         onNodesChange={onNodesChange}
