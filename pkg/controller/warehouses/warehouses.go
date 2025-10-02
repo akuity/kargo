@@ -334,13 +334,9 @@ func (r *reconciler) syncWarehouse(
 			conditions.Set(
 				&status,
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeHealthy,
-					Status: metav1.ConditionTrue,
-					Reason: "ReconciliationSucceeded",
-					Message: fmt.Sprintf(
-						"None of the discovered artifacts could match Freight creation criteria %q",
-						warehouse.Spec.FreightCreationCriteria.Expression,
-					),
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionTrue,
+					Reason:             "ReconciliationSucceeded",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
@@ -357,10 +353,8 @@ func (r *reconciler) syncWarehouse(
 					Type:   kargoapi.ConditionTypeReady,
 					Status: metav1.ConditionTrue,
 					Reason: "ArtifactsDiscovered",
-					Message: fmt.Sprintf(
-						"None of the discovered artifacts could match the Freight creation criteria %q",
-						warehouse.Spec.FreightCreationCriteria.Expression,
-					),
+					// this message will be hydrated by validateDiscoveredArtifacts above
+					Message:            conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
