@@ -123,6 +123,24 @@ message ArtifactoryWebhookReceiverConfig {
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 }
 
+// AutoPromotionOptions specifies options pertaining to auto-promotion.
+message AutoPromotionOptions {
+  // SelectionPolicy specifies the rules for identifying new Freight that is
+  // eligible for auto-promotion to this Stage. This field is optional. When
+  // left unspecified, the field is implicitly treated as if its value were
+  // "NewestFreight".
+  //
+  // Accepted Values:
+  //
+  // - "NewestFreight": The newest Freight that is available to the Stage is
+  //   eligible for auto-promotion.
+  //
+  // - "MatchUpstream": Only the Freight currently used immediately upstream
+  //   from this Stage is eligible for auto-promotion. This policy may only
+  //   be applied when the Stage has exactly one upstream Stage.
+  optional string selectionPolicy = 1;
+}
+
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Azure Container Registry (ACR) and Azure DevOps payloads.
 message AzureWebhookReceiverConfig {
@@ -614,6 +632,11 @@ message FreightSources {
   //
   // +kubebuilder:validation:Optional
   optional string availabilityStrategy = 4;
+
+  // AutoPromotionOptions specifies options pertaining to auto-promotion. These
+  // settings have no effect if auto-promotion is not enabled for this Stage at
+  // the ProjectConfig level.
+  optional AutoPromotionOptions autoPromotionOptions = 5;
 }
 
 // FreightStatus describes a piece of Freight's most recently observed state.

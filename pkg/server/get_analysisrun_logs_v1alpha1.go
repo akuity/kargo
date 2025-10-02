@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	libEncoding "github.com/akuity/kargo/pkg/encoding"
 	"github.com/akuity/kargo/pkg/expressions"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
 
@@ -172,8 +173,9 @@ func (s *server) GetAnalysisRunLogs(
 				return fmt.Errorf("error sending log chunk: %w", err)
 			}
 		case <-ctx.Done():
-			// Context canceled or timed out
-			return ctx.Err()
+			logger := logging.LoggerFromContext(ctx)
+			logger.Debug(ctx.Err().Error())
+			return nil
 		}
 	}
 }

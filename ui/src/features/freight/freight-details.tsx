@@ -37,6 +37,7 @@ export const FreightDetails = ({
   const navigate = useNavigate();
   const { name: projectName } = useParams();
   const [alias, setAlias] = useState<string | undefined>();
+  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     if (freight) {
@@ -104,7 +105,10 @@ export const FreightDetails = ({
                         <div className='font-semibold mt-4 mb-2 text-xs'>ARTIFACTS</div>
                         <Table
                           pagination={{
-                            pageSize: 5
+                            pageSize: pageSize,
+                            showSizeChanger: true,
+                            onChange: (_, size) => setPageSize(size || 5),
+                            pageSizeOptions: ['5', '10', '20', '50', '100']
                           }}
                           dataSource={flattenFreightOrigin(freight)}
                           columns={[

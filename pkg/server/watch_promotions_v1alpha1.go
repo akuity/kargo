@@ -12,6 +12,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) WatchPromotions(
@@ -47,7 +48,9 @@ func (s *server) WatchPromotions(
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			logger := logging.LoggerFromContext(ctx)
+			logger.Debug(ctx.Err().Error())
+			return nil
 		case e, ok := <-w.ResultChan():
 			if !ok {
 				return nil

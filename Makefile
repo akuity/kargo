@@ -168,13 +168,13 @@ clean:
 build-base-image:
 	mkdir -p build
 	cp kargo-base.apko.yaml build
-	docker run \
+	$(CONTAINER_RUNTIME) run \
 		--rm \
 		-v $(dir $(realpath $(firstword $(MAKEFILE_LIST))))build:/build \
 		-w /build \
 		cgr.dev/chainguard/apko \
 		build kargo-base.apko.yaml $(BASE_IMAGE) kargo-base.tar.gz
-	docker image load -i build/kargo-base.tar.gz
+	$(CONTAINER_RUNTIME) image load -i build/kargo-base.tar.gz
 
 .PHONY: build-cli
 build-cli:
@@ -286,7 +286,7 @@ endif
 .PHONY: hack-build-dev-tools
 hack-build-dev-tools:
 	$(CONTAINER_RUNTIME) build $(DEV_TOOLS_BUILD_OPTS) \
- 		-f Dockerfile.dev -t kargo:dev-tools .
+		-f Dockerfile.dev -t kargo:dev-tools .
 
 .PHONY: hack-lint
 hack-lint: hack-build-dev-tools
@@ -335,8 +335,8 @@ hack-build: build-base-image
 	{ \
 		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:2; \
 		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
-		docker push $(BASE_IMAGE):latest-amd64; \
-		docker push $(BASE_IMAGE):latest-arm64; \
+		$(CONTAINER_RUNTIME) push $(BASE_IMAGE):latest-amd64; \
+		$(CONTAINER_RUNTIME) push $(BASE_IMAGE):latest-arm64; \
 		$(CONTAINER_RUNTIME) buildx build \
 			$(DOCKER_BUILD_OPTS) \
 			--network host \
@@ -438,7 +438,7 @@ start-api-local:
 start-controller-local:
 	KUBECONFIG=~/.kube/config \
 	ARGOCD_KUBECONFIG=~/.kube/config \
-    	go run ./cmd/controlplane controller
+	go run ./cmd/controlplane controller
 
 ################################################################################
 # Docs                                                                         #

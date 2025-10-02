@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const useLocalStorage = (key: string, initialValue?: any) => {
+export const useLocalStorage = <T>(key: string, initialValue?: T) => {
   const [storedValue, _setStoredValue] = useState(() => {
     try {
       const item = window.localStorage.getItem(key);
@@ -21,5 +20,5 @@ export const useLocalStorage = (key: string, initialValue?: any) => {
     window.localStorage.setItem(key, JSON.stringify(storedValue));
   };
 
-  return [storedValue, setStoredValue];
+  return [storedValue as T, setStoredValue as React.Dispatch<T>] as const;
 };

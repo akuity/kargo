@@ -17,6 +17,7 @@ type mockPullRequestClient struct {
 	listPullRequestsFunc  func(opt *bitbucket.PullRequestsOptions) (any, error)
 	getPullRequestFunc    func(opt *bitbucket.PullRequestsOptions) (any, error)
 	getCommitFunc         func(opt *bitbucket.CommitsOptions) (any, error)
+	mergePullRequestFunc  func(opt *bitbucket.PullRequestsOptions) (any, error)
 }
 
 func (m *mockPullRequestClient) CreatePullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
@@ -33,6 +34,10 @@ func (m *mockPullRequestClient) GetPullRequest(opt *bitbucket.PullRequestsOption
 
 func (m *mockPullRequestClient) GetCommit(opt *bitbucket.CommitsOptions) (any, error) {
 	return m.getCommitFunc(opt)
+}
+
+func (m *mockPullRequestClient) MergePullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
+	return m.mergePullRequestFunc(opt)
 }
 
 func TestNewProvider(t *testing.T) {

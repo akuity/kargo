@@ -48,6 +48,17 @@ func verifiedInIndexer(obj client.Object) []string {
 	return verifiedIn
 }
 
+const currentlyInField = "currentlyIn"
+
+func currentlyInIndexer(obj client.Object) []string {
+	freight := obj.(*kargoapi.Freight) // nolint: forcetypeassert
+	var currentlyIn []string
+	for stage := range freight.Status.CurrentlyIn {
+		currentlyIn = append(currentlyIn, stage)
+	}
+	return currentlyIn
+}
+
 func TestGetWarehouse(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
@@ -374,6 +385,74 @@ func TestListFreightFromWarehouse(t *testing.T) {
 			},
 		},
 		{
+			name: "success listing Freight currently in upstream Stage",
+			opts: &ListWarehouseFreightOptions{
+				AvailabilityStrategy: kargoapi.FreightAvailabilityStrategyAll,
+				ApprovedFor:          testStage,
+				VerifiedIn:           []string{testUpstreamStage},
+				RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+				CurrentlyIn:          testUpstreamStage,
+			},
+			objects: []client.Object{
+				// This would ordinarily be returned because it is approved for the
+				// Stage, verified in the upstream Stage, and the soak time has elapsed,
+				// BUT this test case asks only for Freight that's currently in the
+				// upstream Stage.
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-1",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						// This is approved for the Stage.
+						ApprovedFor: map[string]kargoapi.ApprovedStage{testStage: {}},
+						// This is verified in the upstream Stage and the soak time has
+						// elapsed.
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+					},
+				},
+				// This should be returned because: Its verified upstream, soak time has
+				// elapsed, and it's currently in use by the upstream Stage.
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "fake-freight-2",
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse,
+					},
+					Status: kargoapi.FreightStatus{
+						// This is approved for the Stage.
+						ApprovedFor: map[string]kargoapi.ApprovedStage{testStage: {}},
+						// This is verified in the upstream Stage and the soak time has
+						// elapsed.
+						VerifiedIn: map[string]kargoapi.VerifiedStage{
+							testUpstreamStage: {
+								LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+							},
+						},
+						// This Freight is currently in the upstream Stage.
+						CurrentlyIn: map[string]kargoapi.CurrentStage{testUpstreamStage: {}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, freight []kargoapi.Freight, err error) {
+				require.NoError(t, err)
+				require.Len(t, freight, 1)
+				require.Equal(t, testProject, freight[0].Namespace)
+				require.Equal(t, "fake-freight-2", freight[0].Name)
+			},
+		},
+		{
 			name: "failure with invalid AvailabilityStrategy",
 			opts: &ListWarehouseFreightOptions{
 				AvailabilityStrategy: "Invalid",
@@ -397,6 +476,7 @@ func TestListFreightFromWarehouse(t *testing.T) {
 			WithIndex(&kargoapi.Freight{}, warehouseField, warehouseIndexer).
 			WithIndex(&kargoapi.Freight{}, approvedField, approvedForIndexer).
 			WithIndex(&kargoapi.Freight{}, verifiedInField, verifiedInIndexer).
+			WithIndex(&kargoapi.Freight{}, currentlyInField, currentlyInIndexer).
 			WithObjects(testCase.objects...).
 			WithInterceptorFuncs(testCase.interceptor).
 			Build()

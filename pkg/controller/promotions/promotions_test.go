@@ -777,3 +777,137 @@ func newPromo(namespace, name, stage string,
 		},
 	}
 }
+
+func Test_buildTargetFreightCollection(t *testing.T) {
+	testCases := []struct {
+		name                      string
+		targetFreight             kargoapi.FreightReference
+		stage                     *kargoapi.Stage
+		expectedNumFreight        int
+		expectedFreightCollection *kargoapi.FreightCollection
+	}{
+		{
+			name:          "requested freight not greater than 1",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no last promotion should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{LastPromotion: nil},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no last promotion status should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{Status: nil},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "no freight collection in last promotion status should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							FreightCollection: nil,
+						},
+					},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "nil freight map in last promo collection should not panic",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{}, {}},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Status: &kargoapi.PromotionStatus{
+							FreightCollection: &kargoapi.FreightCollection{
+								Freight: nil,
+							},
+						},
+					},
+				},
+			},
+			expectedNumFreight: 1,
+		},
+		{
+			name:          "requested freight greater than 1 and last promotion also has freight",
+			targetFreight: kargoapi.FreightReference{Name: "target-freight"},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "name-1",
+							},
+						},
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "name-2",
+							},
+						},
+					},
+				},
+				Status: kargoapi.StageStatus{
+					LastPromotion: &kargoapi.PromotionReference{
+						Name: "last-promo",
+						Status: &kargoapi.PromotionStatus{
+							FreightCollection: &kargoapi.FreightCollection{
+								Freight: map[string]kargoapi.FreightReference{
+									"Warehouse/name-1": {Origin: kargoapi.FreightOrigin{
+										Kind: kargoapi.FreightOriginKindWarehouse,
+										Name: "name-1",
+									}},
+									"Warehouse/name-2": {Origin: kargoapi.FreightOrigin{
+										Kind: kargoapi.FreightOriginKindWarehouse,
+										Name: "name-2",
+									}},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedNumFreight: 3,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := new(reconciler)
+			result := r.buildTargetFreightCollection(
+				t.Context(),
+				tc.targetFreight,
+				tc.stage,
+			)
+			require.Len(t, result.Freight, tc.expectedNumFreight)
+		})
+	}
+}

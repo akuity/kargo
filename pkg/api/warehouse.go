@@ -94,6 +94,10 @@ type ListWarehouseFreightOptions struct {
 	// IMPORTANT: This is also applied to Freight matched using the VerifiedBefore
 	// condition.
 	AvailabilityStrategy kargoapi.FreightAvailabilityStrategy
+
+	// CurrentlyIn optionally specifies a Stage in which the Freight must
+	// currently be used in order to be included in the list results.
+	CurrentlyIn string
 }
 
 // ListFreightFromWarehouse returns a list of all Freight resources that
@@ -108,23 +112,38 @@ func ListFreightFromWarehouse(
 		opts = &ListWarehouseFreightOptions{}
 	}
 
-	// Build a list of list options to make multiple queries whose results we will
-	// merge and de-dupe.
-	fieldSelectors := make([]fields.Selector, 0)
+	// Common selectors we'll use a few times in the code that follows:
+
+	// Selects Freight from a specific Warehouse
 	warehouseSelector := fields.OneTermEqualSelector("warehouse", w.Name)
+
+	// Selects Freight currently used by a specific Stage
+	var currentlyInSelector fields.Selector
+	if opts.CurrentlyIn != "" {
+		currentlyInSelector = fields.OneTermEqualSelector("currentlyIn", opts.CurrentlyIn)
+	}
+
+	// Build a list of fields.Selectors we'll use to make multiple queries whose
+	// results we will merge and de-dupe.
+	fieldSelectors := make([]fields.Selector, 0)
 	if opts.ApprovedFor == "" && len(opts.VerifiedIn) == 0 {
 		// Just list all Freight resources that originated from the Warehouse
-		fieldSelectors = append(fieldSelectors, warehouseSelector)
+		sels := make([]fields.Selector, 1, 2)
+		sels[0] = warehouseSelector
+		if currentlyInSelector != nil {
+			sels = append(sels, currentlyInSelector)
+		}
+		fieldSelectors = append(fieldSelectors, fields.AndSelectors(sels...))
 	}
 	if opts.ApprovedFor != "" {
 		// List all Freight resources that are approved for the specified Stage
-		fieldSelectors = append(
-			fieldSelectors,
-			fields.AndSelectors(
-				warehouseSelector,
-				fields.OneTermEqualSelector("approvedFor", opts.ApprovedFor),
-			),
-		)
+		sels := make([]fields.Selector, 2, 3)
+		sels[0] = warehouseSelector
+		sels[1] = fields.OneTermEqualSelector("approvedFor", opts.ApprovedFor)
+		if currentlyInSelector != nil {
+			sels = append(sels, currentlyInSelector)
+		}
+		fieldSelectors = append(fieldSelectors, fields.AndSelectors(sels...))
 	}
 
 	// Construct selectors for listing Freight using the configured AvailabilityStrategy
@@ -132,32 +151,28 @@ func ListFreightFromWarehouse(
 	switch opts.AvailabilityStrategy {
 	case kargoapi.FreightAvailabilityStrategyAll:
 		// Query for Freight that is verified in ALL the VerifiedIn stages.
-		stageSelectors := make([]fields.Selector, 0, len(opts.VerifiedIn))
+		sels := make([]fields.Selector, 1, len(opts.VerifiedIn)+2)
+		sels[0] = warehouseSelector
 		for _, stage := range opts.VerifiedIn {
-			stageSelectors = append(
-				stageSelectors,
+			sels = append(
+				sels,
 				fields.OneTermEqualSelector("verifiedIn", stage),
 			)
 		}
-
-		if len(stageSelectors) > 0 {
-			fieldSelectors = append(
-				fieldSelectors,
-				fields.AndSelectors(
-					append(stageSelectors, warehouseSelector)...,
-				),
-			)
+		if currentlyInSelector != nil {
+			sels = append(sels, currentlyInSelector)
 		}
+		fieldSelectors = append(fieldSelectors, fields.AndSelectors(sels...))
 	case kargoapi.FreightAvailabilityStrategyOneOf, "":
 		// Query for Freight that is verified in ANY of the VerifiedIn stages.
 		for _, stage := range opts.VerifiedIn {
-			fieldSelectors = append(
-				fieldSelectors,
-				fields.AndSelectors(
-					warehouseSelector,
-					fields.OneTermEqualSelector("verifiedIn", stage),
-				),
-			)
+			sels := make([]fields.Selector, 2, 3)
+			sels[0] = warehouseSelector
+			sels[1] = fields.OneTermEqualSelector("verifiedIn", stage)
+			if currentlyInSelector != nil {
+				sels = append(sels, currentlyInSelector)
+			}
+			fieldSelectors = append(fieldSelectors, fields.AndSelectors(sels...))
 		}
 	default:
 		return nil, fmt.Errorf(

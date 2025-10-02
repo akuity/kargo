@@ -313,6 +313,46 @@ type FreightSources struct {
 	//
 	// +kubebuilder:validation:Optional
 	AvailabilityStrategy FreightAvailabilityStrategy `json:"availabilityStrategy,omitempty" protobuf:"bytes,4,opt,name=availabilityStrategy"`
+	// AutoPromotionOptions specifies options pertaining to auto-promotion. These
+	// settings have no effect if auto-promotion is not enabled for this Stage at
+	// the ProjectConfig level.
+	AutoPromotionOptions *AutoPromotionOptions `json:"autoPromotionOptions,omitempty" protobuf:"bytes,5,opt,name=autoPromotionOptions"`
+}
+
+// AutoPromotionSelectionPolicy specifies the rules for identifying new Freight
+// that is eligible for auto-promotion to this Stage.
+//
+// +kubebuilder:validation:Enum={NewestFreight,MatchUpstream}
+type AutoPromotionSelectionPolicy string
+
+const (
+	// AutoPromotionSelectionPolicyNewestFreight represents an auto-promotion
+	// selection policy in which the newest Freight that is available to the Stage
+	// is eligible for auto-promotion.
+	AutoPromotionSelectionPolicyNewestFreight AutoPromotionSelectionPolicy = "NewestFreight"
+	// AutoPromotionSelectionPolicyMatchUpstream represents an auto-promotion
+	// selection policy in which only the Freight currently used immediately
+	// upstream from this Stage is eligible for auto-promotion. This policy may
+	// only be applied when the Stage has exactly one upstream Stage.
+	AutoPromotionSelectionPolicyMatchUpstream AutoPromotionSelectionPolicy = "MatchUpstream"
+)
+
+// AutoPromotionOptions specifies options pertaining to auto-promotion.
+type AutoPromotionOptions struct {
+	// SelectionPolicy specifies the rules for identifying new Freight that is
+	// eligible for auto-promotion to this Stage. This field is optional. When
+	// left unspecified, the field is implicitly treated as if its value were
+	// "NewestFreight".
+	//
+	// Accepted Values:
+	//
+	// - "NewestFreight": The newest Freight that is available to the Stage is
+	//   eligible for auto-promotion.
+	//
+	// - "MatchUpstream": Only the Freight currently used immediately upstream
+	//   from this Stage is eligible for auto-promotion. This policy may only
+	//   be applied when the Stage has exactly one upstream Stage.
+	SelectionPolicy AutoPromotionSelectionPolicy `json:"selectionPolicy,omitempty" protobuf:"bytes,1,opt,name=selectionPolicy"`
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to

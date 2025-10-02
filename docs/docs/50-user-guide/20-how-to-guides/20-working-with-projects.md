@@ -66,6 +66,16 @@ is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
 those `Stage`s.
 
+:::info
+__Not what you were looking for?__
+
+This section focuses only on _enabling or disabling_ auto-promotion for specific
+`Stage`s through Project-level configuration. For `Stage`-level controls over
+_which_ `Freight` are eligible for auto-promotion when enabled, refer to the
+[Auto-Promotion](./40-working-with-stages.md#auto-promotion) section of our
+Working with Stages guide.
+:::
+
 #### Basic Promotion Policy
 
 In the example below, the `test` and `uat` `Stage`s are eligible for automatic

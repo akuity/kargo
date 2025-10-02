@@ -1039,6 +1039,7 @@ Stability is not guaranteed.
 | page_size | [int32](#int32) |  page_size specifies the maximum number of projects to return per page. |
 | page | [int32](#int32) |  page specifies which page of results to return. |
 | filter | [string](#string) |  filter specifies an optional filter expression for projects. |
+| uid | [string](#string) |  ui store starred projects uids, so it needs to filter it when looking at starred projects |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsResponse"></a>
 
@@ -1755,6 +1756,14 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions"></a>
+
+### AutoPromotionOptions
+ AutoPromotionOptions specifies options pertaining to auto-promotion.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| selectionPolicy | [string](#string) |  SelectionPolicy specifies the rules for identifying new Freight that is eligible for auto-promotion to this Stage. This field is optional. When left unspecified, the field is implicitly treated as if its value were "NewestFreight".  Accepted Values:  - "NewestFreight": The newest Freight that is available to the Stage is   eligible for auto-promotion.  - "MatchUpstream": Only the Freight currently used immediately upstream   from this Stage is eligible for auto-promotion. This policy may only   be applied when the Stage has exactly one upstream Stage. |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig"></a>
 
 ### AzureWebhookReceiverConfig
@@ -2019,6 +2028,7 @@ RawFormat specifies the format for raw resource representation.
 | stages | [string](#string) |  Stages identifies other "upstream" Stages as potential sources of the requested Freight. If this field's value is empty, then the value of the Direct field must be true. i.e. Between the two fields, at least on source must be specified. |
 | requiredSoakTime | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  RequiredSoakTime specifies a minimum duration for which the requested Freight must have continuously occupied ("soaked in") in an upstream Stage before becoming available for promotion to this Stage. This is an optional field. If nil or zero, no soak time is required. Any soak time requirement is in ADDITION to the requirement that Freight be verified in an upstream Stage to become available for promotion to this Stage, although a manual approval for promotion to this Stage will supersede any soak time requirement.     |
 | availabilityStrategy | [string](#string) |  AvailabilityStrategy specifies the semantics for how requested Freight is made available to the Stage. This field is optional. When left unspecified, the field is implicitly treated as if its value were "OneOf".  Accepted Values:  - "All": Freight must be verified and, if applicable, soaked in all   upstream Stages to be considered available for promotion. - "OneOf": Freight must be verified and, if applicable, soaked in at least    one upstream Stage to be considered available for promotion. - "": Treated the same as "OneOf".   |
+| autoPromotionOptions | [AutoPromotionOptions](#github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions) |  AutoPromotionOptions specifies options pertaining to auto-promotion. These settings have no effect if auto-promotion is not enabled for this Stage at the ProjectConfig level. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightStatus"></a>
 

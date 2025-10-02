@@ -231,12 +231,14 @@ func (w *webhook) validateRequestedFreight(
 	f *field.Path,
 	reqs []kargoapi.FreightRequest,
 ) field.ErrorList {
+	errs := field.ErrorList{}
 	// Make sure the same origin is not requested multiple times
-	seenOrigins := make(map[string]struct{}, len(reqs))
-	for _, req := range reqs {
+	seenOrigins := map[string]struct{}{}
+	erroredOrigins := map[string]struct{}{}
+	for i, req := range reqs {
 		if _, seen := seenOrigins[req.Origin.String()]; seen {
-			return field.ErrorList{
-				field.Invalid(
+			if _, alreadyErrored := erroredOrigins[req.Origin.String()]; !alreadyErrored {
+				errs = append(errs, field.Invalid(
 					f,
 					reqs,
 					fmt.Sprintf(
@@ -244,10 +246,48 @@ func (w *webhook) validateRequestedFreight(
 						req.Origin.String(),
 						f.String(),
 					),
-				),
+				))
+				erroredOrigins[req.Origin.String()] = struct{}{}
 			}
 		}
+		errs = append(
+			errs,
+			w.validateFreightSources(f.Index(i).Child("sources"), req.Sources)...,
+		)
 		seenOrigins[req.Origin.String()] = struct{}{}
+	}
+	if len(errs) > 0 {
+		return errs
+	}
+	return nil
+}
+
+func (w *webhook) validateFreightSources(
+	f *field.Path,
+	sources kargoapi.FreightSources,
+) field.ErrorList {
+	errs := field.ErrorList{}
+	if sources.AutoPromotionOptions != nil &&
+		sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
+		if sources.Direct {
+			errs = append(errs, field.Invalid(
+				f.Child("autoPromotionOptions").Child("selectionPolicy"),
+				sources.AutoPromotionOptions.SelectionPolicy,
+				"selection policy 'MatchUpstream' cannot be used when accepting "+
+					"Freight directly from its origin",
+			))
+		}
+		if len(sources.Stages) != 1 {
+			errs = append(errs, field.Invalid(
+				f.Child("autoPromotionOptions").Child("selectionPolicy"),
+				sources.AutoPromotionOptions.SelectionPolicy,
+				"selection policy 'MatchUpstream' requires exactly one upstream "+
+					"Stage to be specified",
+			))
+		}
+	}
+	if len(errs) > 0 {
+		return errs
 	}
 	return nil
 }
