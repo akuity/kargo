@@ -297,30 +297,24 @@ func (r *reconciler) syncWarehouse(
 			conditions.Set(
 				&status,
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeHealthy,
-					Status: metav1.ConditionFalse,
-					Reason: "CriteriaEvaluationFailed",
-					Message: fmt.Sprintf(
-						"failed to evaluate freight creation criteria: %s", err.Error(),
-					),
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionFalse,
+					Reason:             "CriteriaEvaluationFailed",
+					Message:            err.Error(),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeReady,
-					Status: metav1.ConditionFalse,
-					Reason: "CriteriaEvaluationFailed",
-					Message: fmt.Sprintf(
-						"failed to evaluate freight creation criteria: %s", err.Error(),
-					),
+					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "CriteriaEvaluationFailed",
+					Message:            err.Error(),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeCriteriaSatisfied,
-					Status: metav1.ConditionUnknown,
-					Reason: "FreightCreationCriteriaError",
-					Message: fmt.Sprintf(
-						"failed to evaluate freight creation criteria: %s", err.Error(),
-					),
+					Type:               kargoapi.ConditionTypeCriteriaSatisfied,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "FreightCreationCriteriaError",
+					Message:            err.Error(),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
