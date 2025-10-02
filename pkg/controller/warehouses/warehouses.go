@@ -300,21 +300,21 @@ func (r *reconciler) syncWarehouse(
 					Type:               kargoapi.ConditionTypeHealthy,
 					Status:             metav1.ConditionFalse,
 					Reason:             "CriteriaEvaluationFailed",
-					Message:            err.Error(),
+					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeReady,
 					Status:             metav1.ConditionFalse,
 					Reason:             "CriteriaEvaluationFailed",
-					Message:            err.Error(),
+					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeCriteriaSatisfied,
 					Status:             metav1.ConditionUnknown,
 					Reason:             "FreightCreationCriteriaError",
-					Message:            err.Error(),
+					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
@@ -760,12 +760,12 @@ func freightCreationCriteriaSatisfied(
 
 	program, err := expr.Compile(expression, function.DiscoveredArtifactsOperations(artifacts)...)
 	if err != nil {
-		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
+		return false, fmt.Errorf("error compiling expression: %w", err)
 	}
 
 	result, err := expr.Run(program, nil)
 	if err != nil {
-		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
+		return false, fmt.Errorf("error running expression: %w", err)
 	}
 
 	logger.WithValues(
