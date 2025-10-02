@@ -1776,13 +1776,57 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			client.Limit(1),
 		); err != nil {
 			return newStatus, fmt.Errorf(
-				"error listing existing Promotions for Freight %q in namespace %q: %w",
+				"error listing existing non-terminal Promotions for Freight %q in namespace %q: %w",
 				latestFreight.Name, stage.Namespace, err,
 			)
 		}
 		if len(promotions.Items) > 0 {
-			freightLogger.Debug("Promotion already exists for Freight")
+			freightLogger.Debug("at least one non-terminal Promotion already exists for Stage and Freight")
 			continue
+		}
+
+		// If the most recent terminal Promotion for this Stage and Freight wasn't
+		// successful, then we should not create a new one -- otherwise we're likely
+		// to end up in an infinite loop of failed auto-promotions.
+		promotions = &kargoapi.PromotionList{}
+		if err = r.client.List(
+			ctx,
+			promotions,
+			client.InNamespace(stage.Namespace),
+			client.MatchingFieldsSelector{
+				Selector: fields.AndSelectors(
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByStageAndFreightField,
+						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+					),
+					fields.OneTermEqualSelector(
+						indexer.PromotionsByTerminalField,
+						"true",
+					),
+				),
+			},
+			client.Limit(1),
+		); err != nil {
+			return newStatus, fmt.Errorf(
+				"error listing existing terminal Promotions for Freight %q in namespace %q: %w",
+				latestFreight.Name, stage.Namespace, err,
+			)
+		}
+		if len(promotions.Items) > 0 {
+			// Sort the terminal Promotions by creation time in descending order
+			slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
+				return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+			})
+			newestPromotion := promotions.Items[0]
+			if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+				freightLogger.Debug(
+					"most recent terminal Promotion for Stage and Freight was not "+
+						"successful; skipping auto-promotion to avoid an infinite loop",
+					"lastPromotion", newestPromotion.Name,
+					"lastPromotionPhase", newestPromotion.Status.Phase,
+				)
+				continue
+			}
 		}
 
 		// Auto promote the latest available Freight and record an event.

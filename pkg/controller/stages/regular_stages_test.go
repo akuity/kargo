@@ -5263,7 +5263,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 			},
 		},
 		{
-			name: "skips promotion if one already exists",
+			name: "skips promotion if a non-terminal one already exists",
 			stage: &kargoapi.Stage{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "fake-project",
@@ -5326,6 +5326,94 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 					Spec: kargoapi.PromotionSpec{
 						Stage:   "test-stage",
 						Freight: "test-freight-1",
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				c client.Client,
+				status kargoapi.StageStatus,
+				err error,
+			) {
+				require.NoError(t, err)
+
+				assert.True(t, status.AutoPromotionEnabled)
+
+				// Verify no new promotions were created
+				promoList := &kargoapi.PromotionList{}
+				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				assert.Len(t, promoList.Items, 1)
+				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
+			},
+		},
+		{
+			name: "skips promotion if the last terminal one was not successful",
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "fake-project",
+					Name:      "test-stage",
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						{
+							Origin: kargoapi.FreightOrigin{
+								Kind: kargoapi.FreightOriginKindWarehouse,
+								Name: "test-warehouse",
+							},
+							Sources: kargoapi.FreightSources{
+								Direct: true,
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{
+				&kargoapi.ProjectConfig{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-project",
+						Namespace: "fake-project",
+					},
+					Spec: kargoapi.ProjectConfigSpec{
+						PromotionPolicies: []kargoapi.PromotionPolicy{
+							{
+								Stage:                "test-stage",
+								AutoPromotionEnabled: true,
+							},
+						},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "test-warehouse",
+					},
+				},
+				&kargoapi.Freight{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace:         "fake-project",
+						Name:              "test-freight-1",
+						CreationTimestamp: metav1.Time{Time: now},
+					},
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: "test-warehouse",
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "fake-project",
+						Name:      "existing-promotion",
+						Labels: map[string]string{
+							kargoapi.LabelKeyStage: "test-stage",
+						},
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage:   "test-stage",
+						Freight: "test-freight-1",
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase: kargoapi.PromotionPhaseErrored,
 					},
 				},
 			},
