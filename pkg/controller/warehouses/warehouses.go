@@ -330,7 +330,7 @@ func (r *reconciler) syncWarehouse(
 			return status, nil
 		}
 		if !criteriaSatisfied {
-			logger.Info("freight creation criteria not satisfied; skipping freight creation")
+			logger.Debug("freight creation criteria not satisfied; skipping freight creation")
 			conditions.Set(
 				&status,
 				&metav1.Condition{
