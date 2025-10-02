@@ -116,7 +116,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
       <center>
         <Button
           size='small'
-          icon={<FontAwesomeIcon icon={faRefresh} spin={warehouseState.refreshing} />}
+          icon={<FontAwesomeIcon icon={faRefresh} />}
           onClick={(e) => {
             e.stopPropagation();
             refreshWarehouseMutation.mutate({
@@ -124,7 +124,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
               name: props.warehouse?.metadata?.name
             });
           }}
-          disabled={warehouseState.refreshing}
+          loading={warehouseState.refreshing}
         >
           Refresh{warehouseState.refreshing && 'ing'}
         </Button>
