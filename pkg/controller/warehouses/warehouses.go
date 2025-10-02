@@ -391,7 +391,7 @@ func (r *reconciler) syncWarehouse(
 			},
 		)
 
-		// Build a Freight from the latest discovered artifacts.
+		// Build Freight from the latest discovered artifacts.
 		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, status.DiscoveredArtifacts)
 		if err != nil {
 			// Make the error visible in the status and mark the Warehouse as

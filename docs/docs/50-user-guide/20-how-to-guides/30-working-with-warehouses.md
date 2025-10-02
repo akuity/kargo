@@ -697,8 +697,8 @@ spec:
 ```
 
 For more granular control over the creation of your `Freight`, you can define 
-`Freight Creation Criteria` in the form of an expression. One potential use case
-could be backend and frontend versions needing to match.
+`Freight` creation criteria in the form of an expression. One potential use case
+could be back end and front end versions needing to match.
 
 Example:
 
