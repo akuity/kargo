@@ -355,7 +355,7 @@ func (r *reconciler) syncWarehouse(
 			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 			return status, nil
 		}
-		logger.Info("freight creation criteria satisfied")
+		logger.Debug("freight creation criteria satisfied")
 		// Mark the Warehouse as reconciling while we create the Freight.
 		//
 		// As this should be a quick operation, we do not issue an immediate
@@ -380,7 +380,7 @@ func (r *reconciler) syncWarehouse(
 				Type:               kargoapi.ConditionTypeCriteriaSatisfied,
 				Status:             metav1.ConditionTrue,
 				Reason:             "CriteriaMet",
-				Message:            "freight creation criteria satisfied",
+				Message:            "Freight creation criteria satisfied",
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
 		)
