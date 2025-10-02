@@ -760,8 +760,6 @@ func freightCreationCriteriaSatisfied(
 		return true, nil
 	}
 
-	logger.WithValues("criteriaExpression", expression)
-
 	program, err := expr.Compile(expression, function.DiscoveredArtifactsOperations(artifacts)...)
 	if err != nil {
 		return false, fmt.Errorf("error compiling freight creation criteria expression: %w", err)
