@@ -770,9 +770,10 @@ func freightCreationCriteriaSatisfied(
 		return false, fmt.Errorf("error evaluating freight creation criteria expression: %w", err)
 	}
 
-	logger.WithValues("criteriaExpression", expression).Trace("evaluated freight creation criteria expression",
+	logger.WithValues(
+		"criteriaExpression", expression,
 		"result", result,
-	)
+	).Trace("evaluated freight creation criteria expression")
 
 	switch result := result.(type) {
 	case bool:
