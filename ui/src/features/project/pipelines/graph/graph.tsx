@@ -132,10 +132,15 @@ export const Graph = (props: GraphProps) => {
     return warehouseByName;
   }, [props.warehouses]);
 
-  const nodesExcludingSubscriptionNodes = useMemo(
-    () => nodes.filter((n) => !repoSubscriptionIndexer.is(n.id)),
-    [nodes]
-  );
+  const nodesExcludingSubscriptionNodes = useMemo(() => {
+    const subscriptionNodes = nodes.filter((n) => repoSubscriptionIndexer.is(n.id));
+
+    if (subscriptionNodes?.length > 5) {
+      return nodes.filter((n) => !repoSubscriptionIndexer.is(n.id));
+    }
+
+    return nodes;
+  }, [nodes]);
 
   return (
     <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
