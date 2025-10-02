@@ -353,7 +353,16 @@ func (r *reconciler) syncWarehouse(
 					),
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
-				// we don't set a ready condition here because it will already be set by validateDiscoveredArtifacts
+				&metav1.Condition{
+					Type:   kargoapi.ConditionTypeReady,
+					Status: metav1.ConditionTrue,
+					Reason: "ArtifactsDiscovered",
+					Message: fmt.Sprintf(
+						"None of the discovered artifacts could match the Freight creation criteria %q",
+						warehouse.Spec.FreightCreationCriteria.Expression,
+					),
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
 			)
 			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 			return status, nil
