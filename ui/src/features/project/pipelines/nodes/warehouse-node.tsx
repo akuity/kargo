@@ -1,6 +1,7 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
   faArrowUpRightFromSquare,
+  faCircleNotch,
   faMinus,
   faPlus,
   faRefresh,
@@ -55,7 +56,11 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
             gap={16}
             className={classNames(warehouseState.hasError && 'text-red-500')}
           >
-            <FontAwesomeIcon icon={faWarehouse} />
+            {!warehouseState.reconciling && <FontAwesomeIcon icon={faWarehouse} />}
+
+            {warehouseState.reconciling && (
+              <FontAwesomeIcon icon={faCircleNotch} title='Reconciling' spin />
+            )}
 
             {isWarehouseNameLong ? (
               <Tooltip title={props.warehouse?.metadata?.name}>{WarehouseNameHeader}</Tooltip>
@@ -119,11 +124,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
               name: props.warehouse?.metadata?.name
             });
           }}
-          disabled={
-            warehouseState.refreshing &&
-            props.warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
-              props.warehouse?.status?.lastHandledRefresh
-          }
+          disabled={warehouseState.refreshing}
         >
           Refresh{warehouseState.refreshing && 'ing'}
         </Button>
@@ -134,11 +135,11 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
 
 const useWarehouseState = (warehouse: Warehouse) =>
   useMemo(() => {
-    let refreshing = false;
+    let reconciling = false;
 
     for (const condition of warehouse?.status?.conditions || []) {
       if (condition.type === 'Reconciling' && condition.status === 'True') {
-        refreshing = true;
+        reconciling = true;
       }
     }
 
@@ -164,8 +165,15 @@ const useWarehouseState = (warehouse: Warehouse) =>
       hasError = true;
     }
 
+    const refreshAnnotation = warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'];
+    const refreshing =
+      typeof refreshAnnotation === 'string' &&
+      warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
+        warehouse?.status?.lastHandledRefresh;
+
     return {
       refreshing,
+      reconciling,
       hasError
     };
   }, [warehouse]);
