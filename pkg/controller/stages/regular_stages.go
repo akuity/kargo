@@ -1738,6 +1738,18 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			continue
 		}
 
+		// Quick sanity check...
+		if req.Sources.AutoPromotionOptions != nil &&
+			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream &&
+			len(freight) > 1 {
+			return newStatus, fmt.Errorf(
+				"unexpectedly found %d available Freight running immediately "+
+					"upstream from Stage %q in namespace %q; this should not be "+
+					"possible",
+				len(freight), stage.Name, stage.Namespace,
+			)
+		}
+
 		// Find the latest Freight by sorting the available Freight by creation time
 		// in descending order.
 		slices.SortFunc(freight, func(lhs, rhs kargoapi.Freight) int {
@@ -1760,7 +1772,7 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		if req.Sources.AutoPromotionOptions != nil &&
 			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
 			// With the MatchUpstream policy, we want to allow for the possibility of
-			// a Stage needing to return to a state it's previously been in. The only
+			// a Stage needing to RETURN to a state it's previously been in. The only
 			// conditions under which we WON'T proceed with auto-promotion are if
 			// there's already a Promotion like the one we'd create that is not
 			// terminal (e.g. Pending or Running) OR the last terminal Promotion like
@@ -1790,12 +1802,14 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				client.Limit(1),
 			); err != nil {
 				return newStatus, fmt.Errorf(
-					"error listing existing non-terminal Promotions for Freight %q in namespace %q: %w",
+					"error listing existing non-terminal Promotions for Freight %q "+
+						"in namespace %q: %w",
 					latestFreight.Name, stage.Namespace, err,
 				)
 			}
 			if len(promotions.Items) > 0 {
-				freightLogger.Debug("at least one non-terminal Promotion already exists for Stage and Freight")
+				freightLogger.Debug("at least one non-terminal Promotion already " +
+					"exists for Stage and Freight")
 				continue
 			}
 			// If the most recent terminal Promotion for this Stage and Freight wasn't
@@ -1821,7 +1835,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 				client.Limit(1),
 			); err != nil {
 				return newStatus, fmt.Errorf(
-					"error listing existing terminal Promotions for Freight %q in namespace %q: %w",
+					"error listing existing terminal Promotions for Freight %q in "+
+						"namespace %q: %w",
 					latestFreight.Name, stage.Namespace, err,
 				)
 			}
@@ -1843,14 +1858,22 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		} else {
 			// If we get to here, auto-promotion is based on promoting the newest
-			// Freight. We want to avoid the scenario where we RE-promote the newest
-			// Freight AFTER a user has manually re-promoted the Stage to some older
-			// state. The check we'll perform is more basic than in the case of the
-			// MatchUpstream policy. If ANY Promotion already exists referencing the
-			// same Stage and Freight as the one we'd create, it means this Stage
+			// Freight. We want to avoid the scenario where we RE-auto-promote the
+			// newest Freight AFTER a user has manually re-promoted the Stage to some
+			// older state. The check we'll perform is more basic than in the case of
+			// the MatchUpstream policy. If ANY Promotion already exists referencing
+			// the same Stage and Freight as the one we'd create, it means this Stage
 			// has seen this Freight before and it shouldn't be RE-auto-promoted to
 			// it. (Freight that's actually NEW and never before promoted to this
 			// Stage will still make it through.)
+			//
+			// TODO(krancour): After #3016 is addressed, we can probably rely on
+			// "pinning" older Freight to a Stage to prevent a user's will from being
+			// preempted by auto-promotion of the newest Freight, and then the less
+			// stringent check used above for the MatchUpstream selection policy
+			// will probably suffice for this case as well.
+			//
+			// See: https://github.com/akuity/kargo/issues/3016
 			promotions := &kargoapi.PromotionList{}
 			if err = r.client.List(
 				ctx,
@@ -1876,7 +1899,8 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 		}
 
 		// Auto promote the latest available Freight and record an event.
-		promotion, err := kargo.NewPromotionBuilder(r.client).Build(ctx, *stage, latestFreight.Name)
+		promotion, err := kargo.NewPromotionBuilder(r.client).
+			Build(ctx, *stage, latestFreight.Name)
 		if err != nil {
 			return newStatus, fmt.Errorf(
 				"error building Promotion for Freight %q in namespace %q: %w",
