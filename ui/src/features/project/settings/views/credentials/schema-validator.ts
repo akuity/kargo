@@ -3,10 +3,8 @@ import { z } from 'zod';
 import { dnsRegex } from '@ui/features/common/utils';
 import { zodValidators } from '@ui/utils/validators';
 
-const helmChartRegex =
-  /^(oci:\/\/)?([a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/i;
-
-const imageNameRegex = /^([a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*$/i;
+const imageNameRegex =
+  /^(?:(?:[a-zA-Z0-9.-]+(?::[0-9]+)?\/)?(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*)$/;
 
 export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
   let schema = z
@@ -35,17 +33,28 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
 
           return true;
         },
-        { error: 'Repo URL must be a valid HTTPS URL.', path: ['repoUrl'] }
+        { error: 'Repo URL must be a valid git URL.', path: ['repoUrl'] }
       ),
       z.refine(
         (data) => {
           if (data.type === 'helm' && !data.repoUrlIsRegex) {
-            return helmChartRegex.test(data.repoUrl);
+            try {
+              const url = new URL(data.repoUrl);
+              if (
+                url.protocol !== 'http:' &&
+                url.protocol !== 'https:' &&
+                url.protocol !== 'oci:'
+              ) {
+                return false;
+              }
+            } catch {
+              return false;
+            }
           }
           return true;
         },
         {
-          error: 'Repo URL must be a valid Helm chart reference.',
+          error: 'Repo URL must be a valid Helm chart repository.',
           path: ['repoUrl']
         }
       ),
@@ -57,7 +66,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
           return true;
         },
         {
-          error: 'Repo URL must be a valid image name.',
+          error: 'Repo URL must be a valid container registry.',
           path: ['repoUrl']
         }
       )
