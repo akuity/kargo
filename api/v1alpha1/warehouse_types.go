@@ -114,7 +114,7 @@ type WarehouseSpec struct {
 	// field has no effect when the FreightCreationPolicy is `Manual`.
 	//
 	// +kubebuilder:validation:Optional
-	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
+	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
