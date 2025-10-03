@@ -523,6 +523,14 @@ message FreightCollection {
   repeated VerificationInfo verificationHistory = 2;
 }
 
+// FreightCreationCriteria defines criteria that must be satisfied for Freight
+// to be created automatically from new artifacts following discovery.
+message FreightCreationCriteria {
+  // Expression is an expr-lang expression that must evaluate to true for
+  // Freight to be created automatically from new artifacts following discovery.
+  optional string expression = 1;
+}
+
 // FreightList is a list of Freight resources.
 message FreightList {
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
@@ -1913,6 +1921,13 @@ message WarehouseSpec {
   //
   // +kubebuilder:validation:MinItems=1
   repeated RepoSubscription subscriptions = 1;
+
+  // FreightCreationCriteria defines criteria that must be satisfied for Freight
+  // to be created automatically from new artifacts following discovery. This
+  // field has no effect when the FreightCreationPolicy is `Manual`.
+  //
+  // +kubebuilder:validation:Optional
+  optional FreightCreationCriteria freightCreationCriteria = 5;
 }
 
 // WarehouseStats contains a summary of the collective state of a Project's

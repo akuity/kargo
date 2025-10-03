@@ -108,6 +108,13 @@ type WarehouseSpec struct {
 	//
 	// +kubebuilder:validation:MinItems=1
 	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
+
+	// FreightCreationCriteria defines criteria that must be satisfied for Freight
+	// to be created automatically from new artifacts following discovery. This
+	// field has no effect when the FreightCreationPolicy is `Manual`.
+	//
+	// +kubebuilder:validation:Optional
+	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
@@ -120,6 +127,14 @@ const (
 	// FreightCreationPolicyManual indicates that Freight is created manually.
 	FreightCreationPolicyManual FreightCreationPolicy = "Manual"
 )
+
+// FreightCreationCriteria defines criteria that must be satisfied for Freight
+// to be created automatically from new artifacts following discovery.
+type FreightCreationCriteria struct {
+	// Expression is an expr-lang expression that must evaluate to true for
+	// Freight to be created automatically from new artifacts following discovery.
+	Expression string `json:"expression,omitempty" protobuf:"bytes,1,opt,name=expression"`
+}
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
 // container image repository, or a Helm chart repository.

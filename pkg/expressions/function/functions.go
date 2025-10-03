@@ -20,6 +20,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/freight"
 	"github.com/akuity/kargo/pkg/kargo"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 type exprFn func(params ...any) (any, error)
@@ -40,9 +41,27 @@ func FreightOperations(
 ) []expr.Option {
 	return []expr.Option{
 		Warehouse(),
-		CommitFrom(ctx, c, project, freightRequests, freightRefs),
-		ImageFrom(ctx, c, project, freightRequests, freightRefs),
-		ChartFrom(ctx, c, project, freightRequests, freightRefs),
+		CommitFromFreight(ctx, c, project, freightRequests, freightRefs),
+		ImageFromFreight(ctx, c, project, freightRequests, freightRefs),
+		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
+		FreightMetadata(ctx, c, project),
+	}
+}
+
+// DiscoveredArtifactsOperations returns a slice of expr.Option containing
+// functions for retrieving artifacts from a Warehouse's discovered artifacts.
+//
+// It provides `commitFrom()`, `imageFrom()`, and `chartFrom()` functions for
+// use in the context of expressions defining criteria that permit or block
+// automatic Freight creation after artifact discovery. These functions behave
+// identically to functions of the same names used within the context of a
+// Promotion process, however, they are implemented differently since they
+// resolve artifacts from different data.
+func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []expr.Option {
+	return []expr.Option{
+		CommitFromDiscoveredArtifacts(artifacts),
+		ImageFromDiscoveredArtifacts(artifacts),
+		ChartFromDiscoveredArtifacts(artifacts),
 	}
 }
 
@@ -93,13 +112,13 @@ func Warehouse() expr.Option {
 	return expr.Function("warehouse", warehouse, new(func(name string) kargoapi.FreightOrigin))
 }
 
-// CommitFrom returns an expr.Option that provides a `commitFrom()` function
+// CommitFromFreight returns an expr.Option that provides a `commitFrom()` function
 // for use in expressions.
 //
 // The commitFrom function finds Git commits based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func CommitFrom(
+func CommitFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -108,19 +127,33 @@ func CommitFrom(
 ) expr.Option {
 	return expr.Function(
 		"commitFrom",
-		getCommit(ctx, c, project, freightReqs, freightRefs),
+		getCommitFromFreight(ctx, c, project, freightReqs, freightRefs),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.GitCommit),
 		new(func(repoURL string) kargoapi.GitCommit),
 	)
 }
 
-// ImageFrom returns an expr.Option that provides an `imageFrom()` function for
+// CommitFromDiscoveredArtifacts returns an expr.Option that provides a
+// `commitFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
+//
+// The commitFrom function finds the latest Git commit based on repository URL.
+func CommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
+	return expr.Function(
+		"commitFrom",
+		getCommitFromDiscoveredArtifacts(artifacts),
+		new(func(repoURL string) kargoapi.DiscoveredCommit),
+	)
+}
+
+// ImageFromFreight returns an expr.Option that provides an `imageFrom()` function for
 // use in expressions.
 //
 // The imageFrom function finds container images based on repository URL and
 // optional origin, using the provided freight requests and references within
 // the project context.
-func ImageFrom(
+func ImageFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -129,19 +162,33 @@ func ImageFrom(
 ) expr.Option {
 	return expr.Function(
 		"imageFrom",
-		getImage(ctx, c, project, freightReqs, freightRefs),
+		getImageFromFreight(ctx, c, project, freightReqs, freightRefs),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Image),
 		new(func(repoURL string) kargoapi.Image),
 	)
 }
 
-// ChartFrom returns an expr.Option that provides a `chartFrom()` function for
+// ImageFromDiscoveredArtifacts returns an expr.Option that provides an
+// `imageFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
+//
+// The imageFrom function finds the latest container image based on repository URL.
+func ImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
+	return expr.Function(
+		"imageFrom",
+		getImageFromDiscoveredArtifacts(artifacts),
+		new(func(repoURL string) kargoapi.DiscoveredImageReference),
+	)
+}
+
+// ChartFromFreight returns an expr.Option that provides a `chartFrom()` function for
 // use in expressions.
 //
 // The chartFrom function finds Helm charts based on repository URL, optional
 // chart name, and optional origin, using the provided freight requests and
 // references within the project context.
-func ChartFrom(
+func ChartFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -150,7 +197,7 @@ func ChartFrom(
 ) expr.Option {
 	return expr.Function(
 		"chartFrom",
-		getChart(ctx, c, project, freightReqs, freightRefs),
+		getChartFromFreight(ctx, c, project, freightReqs, freightRefs),
 		new(func(repoURL string, chartName string, origin kargoapi.FreightOrigin) kargoapi.Chart),
 		new(func(repoURL string, chartName string) kargoapi.Chart),
 		new(func(repoURL string, origin kargoapi.FreightOrigin) kargoapi.Chart),
@@ -158,14 +205,21 @@ func ChartFrom(
 	)
 }
 
-// FreightMetadata returns an expr.Option that provides a `freightMetadata()` function for use in expressions.
+// ChartFromDiscoveredArtifacts returns an expr.Option that provides a
+// `chartFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
 //
-// Usage:
-//   - `freightMetadata(freightRefName)` returns the entire metadata map for the Freight.
-//   - `freightMetadata(freightRefName, key)` returns the value for the given key
-//     (DEPRECATED; will be removed in v1.10).
-//
-// The second argument is deprecated as of v1.8. Prefer using the single-argument form.
+// The chartFrom function finds the latest Helm charts based on repository URL.
+func ChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.Option {
+	return expr.Function(
+		"chartFrom",
+		getChartFromDiscoveredArtifacts(artifacts),
+		new(func(repoURL string, chartName string) kargoapi.Chart),
+		new(func(repoURL string) kargoapi.Chart),
+	)
+}
+
 func FreightMetadata(
 	ctx context.Context,
 	c client.Client,
@@ -455,12 +509,12 @@ func warehouse(a ...any) (any, error) {
 	}, nil
 }
 
-// getCommit returns a function that finds Git commits based on repository URL
+// getCommitFromFreight returns a function that finds Git commits based on repository URL
 // and optional origin.
 //
 // The returned function uses freight requests and references to locate the
 // appropriate commit within the project context.
-func getCommit(
+func getCommitFromFreight(
 	ctx context.Context,
 	cl client.Client,
 	project string,
@@ -498,12 +552,41 @@ func getCommit(
 	}
 }
 
-// getImage returns a function that finds container images based on repository
+// getCommitFromDiscoveredArtifacts returns a function that finds Git commits based on repository URL.
+func getCommitFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		if artifacts == nil {
+			return nil, nil
+		}
+
+		repoURL = urls.NormalizeGit(repoURL)
+		for _, ca := range artifacts.Git {
+			if urls.NormalizeGit(ca.RepoURL) != repoURL {
+				continue
+			}
+			if len(ca.Commits) > 0 {
+				return ca.Commits[0], nil
+			}
+		}
+		return nil, nil
+	}
+}
+
+// getImageFromFreight returns a function that finds container images based on repository
 // URL and optional origin.
 //
 // The returned function uses freight requests and references to locate the
 // appropriate image within the project context.
-func getImage(
+func getImageFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -541,12 +624,41 @@ func getImage(
 	}
 }
 
-// getChart returns a function that finds Helm charts based on repository URL,
+// getImageFromDiscoveredArtifacts returns a function that finds the latest container image based on repository URL.
+func getImageFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		if artifacts == nil {
+			return nil, nil
+		}
+
+		repoURL = urls.NormalizeImage(repoURL)
+		for _, ia := range artifacts.Images {
+			if urls.NormalizeImage(ia.RepoURL) != repoURL {
+				continue
+			}
+			if len(ia.References) > 0 {
+				return ia.References[0], nil
+			}
+		}
+		return nil, nil
+	}
+}
+
+// getChartFromFreight returns a function that finds Helm charts based on repository URL,
 // optional chart name, and optional origin.
 //
 // The returned function uses freight requests and references to locate the
 // appropriate chart within the project context.
-func getChart(
+func getChartFromFreight(
 	ctx context.Context,
 	c client.Client,
 	project string,
@@ -597,6 +709,47 @@ func getChart(
 			repoURL,
 			chartName,
 		)
+	}
+}
+
+// getChartFromDiscoveredArtifacts returns a function that finds the latest Helm chart based on repository URL.
+func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) == 0 || len(a) > 2 {
+			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
+		}
+
+		repoURL, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		var chartName string
+		if len(a) == 2 {
+			chartName, ok = a[1].(string)
+			if !ok {
+				return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+			}
+		}
+
+		if artifacts == nil {
+			return nil, nil
+		}
+
+		repoURL = urls.NormalizeChart(repoURL)
+		for _, ca := range artifacts.Charts {
+			if urls.NormalizeChart(ca.RepoURL) != repoURL || (ca.Name != chartName && chartName != "") {
+				continue
+			}
+			if len(ca.Versions) > 0 {
+				return kargoapi.Chart{
+					RepoURL: repoURL,
+					Name:    ca.Name,
+					Version: ca.Versions[0],
+				}, nil
+			}
+		}
+		return nil, nil
 	}
 }
 

@@ -443,11 +443,54 @@ You can handle `nil` values gracefully in Expr using its
 features.
 :::
 
-### `commitFrom(repoURL, [freightOrigin])`
+### `commitFrom()`
 
-The `commitFrom()` function returns a corresponding `GitCommit` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and one
-optional argument:
+The signature and return value of the `commitFrom()` function vary slightly
+with the context in which it's used.
+
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`commitFrom(repoURL)`
+
+It has one required argument:
+
+- `repoURL` (Required): The URL of a Git repository.
+
+The returned `DiscoveredCommit` object has the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `ID`      | The ID of the Git commit. |
+| `Branch`  | Branch is the branch in which the commit was found. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
+| `Tag`     | Tag is the tag that resolved to this commit. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
+| `Subject` | The first line of the commit message. |
+| `Author` | Author is the author of the commit. |
+| `Committer` | Committer is the person who committed the commit. |
+| `CreatorDate` | The creation date of the commit as specified by the commit. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/frontend.git
+  - git:
+      repoURL: https://github.com/example/backend.git
+  freightCreationCriteria:
+    expression: |
+      commitFrom('https://github.com/example/frontend.git').Tag == comitFrom('https://github.com/example/backend.git').Tag
+```
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`commitFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
 
 - `repoURL` (Required): The URL of a Git repository.
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
@@ -484,16 +527,20 @@ config:
   commitID: ${{ commitFrom("https://github.com/example/repo.git", warehouse("my-warehouse")).ID }}
 ```
 
-### `imageFrom(repoURL, [freightOrigin])`
+### `imageFrom()`
 
-The `imageFrom()` function returns a corresponding `Image` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and
-one optional argument:
+The signature of the `imageFrom()` function varies slightly with the context in
+which it's used.
 
-- `repoURL` (Required): The URL of a container image repository.
-- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
-  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
-  the image information.
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`imageFrom(repoURL)`
+
+It has one required argument:
+
+- `repoURL` (Required): The URL of an image repository.
 
 The returned `Image` object has the following fields:
 
@@ -504,9 +551,36 @@ The returned `Image` object has the following fields:
 | `Digest` | The digest of the image. |
 | `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
 
-The optional `freightOrigin` argument should be used when a `Stage` requests
-`Freight` from multiple origins (`Warehouse`s) and more than one can provide a
-`Image` object from the specified repository.
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/frontend
+  - image:
+      repoURL: ghcr.io/example/backend
+  freightCreationCriteria:
+    expression: |
+      imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
+```
+
+:::info
+The returned `Image` object is the same in all contexts.
+:::
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`imageFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a container image repository.
+- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
+  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
+  the image information.
 
 If an image is not found from the `FreightCollection`, returns `nil`.
 
@@ -522,11 +596,56 @@ config:
   imageTag: ${{ imageFrom("public.ecr.aws/nginx/nginx", warehouse("my-warehouse")).Tag }}
 ```
 
-### `chartFrom(repoURL, [chartName], [freightOrigin])`
+### `chartFrom()`
 
-The `chartFrom()` function returns a corresponding `Chart` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and two
-optional arguments:
+The signature of the `chartFrom()` function varies slightly with the context in
+which it's used.
+
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`chartFrom(repoURL, [chartName])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a Helm chart repository.
+- `chartName` (Optional): The name of the chart (required for HTTP/S
+  repositories, not needed for OCI registries).
+
+The `chartFrom()` function returns a corresponding `Chart` object.
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
+| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
+| `Version` | The version of the Helm chart. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - chart:
+      repoURL: oci://example.com/my-chart
+  - chart:
+      repoURL: oci://example.com/my-other-chart
+  freightCreationCriteria:
+    expression: |
+      chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Tag
+```
+
+:::info
+The returned `Chart` object is the same in all contexts.
+:::
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`chartFrom(repoURL, [chartName], [freightOrigin])`
+
+It has one required and two optional arguments:
 
 - `repoURL` (Required): The URL of a Helm chart repository.
 - `chartName` (Optional): The name of the chart (required for HTTP/S
@@ -534,14 +653,6 @@ optional arguments:
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
   [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
   the chart information.
-
-The returned `Chart` object has the following fields:
-
-| Field | Description |
-|-------|-------------|
-| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
-| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
-| `Version` | The version of the Helm chart. |
 
 For Helm charts stored in OCI registries, the URL should be the full path to
 the repository within that registry.

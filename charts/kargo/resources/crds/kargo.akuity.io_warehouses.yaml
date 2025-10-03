@@ -46,6 +46,18 @@ spec:
           spec:
             description: Spec describes sources of artifacts.
             properties:
+              freightCreationCriteria:
+                description: |-
+                  FreightCreationCriteria defines criteria that must be satisfied for Freight
+                  to be created automatically from new artifacts following discovery. This
+                  field has no effect when the FreightCreationPolicy is `Manual`.
+                properties:
+                  expression:
+                    description: |-
+                      Expression is an expr-lang expression that must evaluate to true for
+                      Freight to be created automatically from new artifacts following discovery.
+                    type: string
+                type: object
               freightCreationPolicy:
                 default: Automatic
                 description: |-

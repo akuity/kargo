@@ -1971,6 +1971,14 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [FreightReference](#github-com-akuity-kargo-api-v1alpha1-FreightReference) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria"></a>
+
+### FreightCreationCriteria
+ FreightCreationCriteria defines criteria that must be satisfied for Freight to be created automatically from new artifacts following discovery.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| expression | [string](#string) |  Expression is an expr-lang expression that must evaluate to true for Freight to be created automatically from new artifacts following discovery. |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightList"></a>
 
 ### FreightList
@@ -2608,6 +2616,7 @@ RawFormat specifies the format for raw resource representation.
 | interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".      |
 | freightCreationPolicy | [string](#string) |  FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".  Accepted values:  - "Automatic": New Freight is created automatically when any new artifact   is discovered. - "Manual": New Freight is never created automatically.    |
 | subscriptions | [RepoSubscription](#github-com-akuity-kargo-api-v1alpha1-RepoSubscription) |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
+| freightCreationCriteria | [FreightCreationCriteria](#github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria) |  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created automatically from new artifacts following discovery. This field has no effect when the FreightCreationPolicy is `Manual`.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>
 
