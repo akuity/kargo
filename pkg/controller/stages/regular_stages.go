@@ -1730,8 +1730,10 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 	currentFreight := newStatus.FreightHistory.Current()
 
 	// Check if there is any new Freight which can be auto-promoted.
-	for origin, freight := range promotableFreight {
-		if len(freight) == 0 {
+	for _, req := range stage.Spec.RequestedFreight {
+		origin := req.Origin.String()
+		freight, exists := promotableFreight[origin]
+		if !exists || len(freight) == 0 {
 			logger.Debug("no Freight from origin available for auto-promotion", "origin", origin)
 			continue
 		}
@@ -1754,77 +1756,121 @@ func (r *RegularStageReconciler) autoPromoteFreight(
 			}
 		}
 
-		// If a non-terminal Promotion already exists for this Stage and Freight,
-		// then we should not create a new one.
-		promotions := &kargoapi.PromotionList{}
-		if err = r.client.List(
-			ctx,
-			promotions,
-			client.InNamespace(stage.Namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.AndSelectors(
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByStageAndFreightField,
-						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+		// How we proceed depends on the auto-promotion Freight selection policy...
+		if req.Sources.AutoPromotionOptions != nil &&
+			req.Sources.AutoPromotionOptions.SelectionPolicy == kargoapi.AutoPromotionSelectionPolicyMatchUpstream {
+			// With the MatchUpstream policy, we want to allow for the possibility of
+			// a Stage needing to return to a state it's previously been in. The only
+			// conditions under which we WON'T proceed with auto-promotion are if
+			// there's already a Promotion like the one we'd create that is not
+			// terminal (e.g. Pending or Running) OR the last terminal Promotion like
+			// the one we'd create wasn't successful. Not creating a new Promotion
+			// under these conditions avoids the formation of an infinite loop of new
+			// Promotions.
+			//
+			// If a non-terminal Promotion already exists for this Stage and Freight,
+			// then we should not create a new one.
+			promotions := &kargoapi.PromotionList{}
+			if err = r.client.List(
+				ctx,
+				promotions,
+				client.InNamespace(stage.Namespace),
+				client.MatchingFieldsSelector{
+					Selector: fields.AndSelectors(
+						fields.OneTermEqualSelector(
+							indexer.PromotionsByStageAndFreightField,
+							indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+						),
+						fields.OneTermEqualSelector(
+							indexer.PromotionsByTerminalField,
+							"false",
+						),
 					),
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByTerminalField,
-						"false",
-					),
-				),
-			},
-			client.Limit(1),
-		); err != nil {
-			return newStatus, fmt.Errorf(
-				"error listing existing non-terminal Promotions for Freight %q in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
-			)
-		}
-		if len(promotions.Items) > 0 {
-			freightLogger.Debug("at least one non-terminal Promotion already exists for Stage and Freight")
-			continue
-		}
-
-		// If the most recent terminal Promotion for this Stage and Freight wasn't
-		// successful, then we should not create a new one -- otherwise we're likely
-		// to end up in an infinite loop of failed auto-promotions.
-		promotions = &kargoapi.PromotionList{}
-		if err = r.client.List(
-			ctx,
-			promotions,
-			client.InNamespace(stage.Namespace),
-			client.MatchingFieldsSelector{
-				Selector: fields.AndSelectors(
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByStageAndFreightField,
-						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
-					),
-					fields.OneTermEqualSelector(
-						indexer.PromotionsByTerminalField,
-						"true",
-					),
-				),
-			},
-			client.Limit(1),
-		); err != nil {
-			return newStatus, fmt.Errorf(
-				"error listing existing terminal Promotions for Freight %q in namespace %q: %w",
-				latestFreight.Name, stage.Namespace, err,
-			)
-		}
-		if len(promotions.Items) > 0 {
-			// Sort the terminal Promotions by creation time in descending order
-			slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
-				return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
-			})
-			newestPromotion := promotions.Items[0]
-			if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
-				freightLogger.Debug(
-					"most recent terminal Promotion for Stage and Freight was not "+
-						"successful; skipping auto-promotion to avoid an infinite loop",
-					"lastPromotion", newestPromotion.Name,
-					"lastPromotionPhase", newestPromotion.Status.Phase,
+				},
+				client.Limit(1),
+			); err != nil {
+				return newStatus, fmt.Errorf(
+					"error listing existing non-terminal Promotions for Freight %q in namespace %q: %w",
+					latestFreight.Name, stage.Namespace, err,
 				)
+			}
+			if len(promotions.Items) > 0 {
+				freightLogger.Debug("at least one non-terminal Promotion already exists for Stage and Freight")
+				continue
+			}
+			// If the most recent terminal Promotion for this Stage and Freight wasn't
+			// successful, then we should not create a new one -- otherwise we're
+			// likely to end up in an infinite loop of failed auto-promotions.
+			promotions = &kargoapi.PromotionList{}
+			if err = r.client.List(
+				ctx,
+				promotions,
+				client.InNamespace(stage.Namespace),
+				client.MatchingFieldsSelector{
+					Selector: fields.AndSelectors(
+						fields.OneTermEqualSelector(
+							indexer.PromotionsByStageAndFreightField,
+							indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+						),
+						fields.OneTermEqualSelector(
+							indexer.PromotionsByTerminalField,
+							"true",
+						),
+					),
+				},
+				client.Limit(1),
+			); err != nil {
+				return newStatus, fmt.Errorf(
+					"error listing existing terminal Promotions for Freight %q in namespace %q: %w",
+					latestFreight.Name, stage.Namespace, err,
+				)
+			}
+			if len(promotions.Items) > 0 {
+				// Sort the terminal Promotions by creation time in descending order
+				slices.SortFunc(promotions.Items, func(lhs, rhs kargoapi.Promotion) int {
+					return rhs.CreationTimestamp.Compare(lhs.CreationTimestamp.Time)
+				})
+				newestPromotion := promotions.Items[0]
+				if newestPromotion.Status.Phase != kargoapi.PromotionPhaseSucceeded {
+					freightLogger.Debug(
+						"most recent terminal Promotion for Stage and Freight was not "+
+							"successful; skipping auto-promotion to avoid an infinite loop",
+						"lastPromotion", newestPromotion.Name,
+						"lastPromotionPhase", newestPromotion.Status.Phase,
+					)
+					continue
+				}
+			}
+		} else {
+			// If we get to here, auto-promotion is based on promoting the newest
+			// Freight. We want to avoid the scenario where we RE-promote the newest
+			// Freight AFTER a user has manually re-promoted the Stage to some older
+			// state. The check we'll perform is more basic than in the case of the
+			// MatchUpstream policy. If ANY Promotion already exists referencing the
+			// same Stage and Freight as the one we'd create, it means this Stage
+			// has seen this Freight before and it shouldn't be RE-auto-promoted to
+			// it. (Freight that's actually NEW and never before promoted to this
+			// Stage will still make it through.)
+			promotions := &kargoapi.PromotionList{}
+			if err = r.client.List(
+				ctx,
+				promotions,
+				client.InNamespace(stage.Namespace),
+				client.MatchingFieldsSelector{
+					Selector: fields.OneTermEqualSelector(
+						indexer.PromotionsByStageAndFreightField,
+						indexer.StageAndFreightKey(stage.Name, latestFreight.Name),
+					),
+				},
+				client.Limit(1),
+			); err != nil {
+				return newStatus, fmt.Errorf(
+					"error listing existing Promotions for Freight %q in namespace %q: %w",
+					latestFreight.Name, stage.Namespace, err,
+				)
+			}
+			if len(promotions.Items) > 0 {
+				freightLogger.Debug("Promotion already exists for Freight")
 				continue
 			}
 		}
