@@ -4,12 +4,10 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal, Segmented } from 'antd';
 import { Controller, useForm } from 'react-hook-form';
-import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
-import { dnsRegex } from '@ui/features/common/utils';
 import {
   createCredentials,
   createProjectSecret,
@@ -17,43 +15,11 @@ import {
   updateProjectSecret
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
-import { zodValidators } from '@ui/utils/validators';
 
+import { createFormSchema } from './schema-validator';
 import { SecretEditor } from './secret-editor';
 import { CredentialsType } from './types';
 import { constructDefaults, labelForKey, typeLabel } from './utils';
-
-const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
-  let schema = z.object({
-    name: zodValidators.requiredString.regex(
-      dnsRegex,
-      'Credentials name must be a valid DNS subdomain.'
-    ),
-    description: z.string().optional(),
-    type: zodValidators.requiredString,
-    repoUrl: zodValidators.requiredString,
-    repoUrlIsRegex: z.boolean().optional(),
-    username: zodValidators.requiredString,
-    password: editing ? z.string().optional() : zodValidators.requiredString
-  });
-
-  if (genericCreds) {
-    // @ts-expect-error err
-    schema = z.object({
-      name: zodValidators.requiredString.regex(
-        dnsRegex,
-        'Credentials name must be a valid DNS subdomain.'
-      ),
-      description: z.string().optional(),
-      type: zodValidators.requiredString,
-      data: z.array(z.array(z.string()))
-    });
-  }
-
-  return schema.refine((data) => ['git', 'helm', 'image', 'generic'].includes(data.type), {
-    error: "Type must be one of 'git', 'helm', 'image' or 'generic'."
-  });
-};
 
 const placeholders = {
   name: 'My Credentials',
@@ -61,6 +27,19 @@ const placeholders = {
   repoUrl: 'https://github.com/myusername/myrepo.git',
   username: 'admin',
   password: '********'
+};
+
+const repoUrlPlaceholder = (credType: CredentialsType) => {
+  switch (credType) {
+    case 'git':
+      return placeholders.repoUrl;
+    case 'helm':
+      return 'ghcr.io/nginxinc/charts/nginx-ingress';
+    case 'image':
+      return 'public.ecr.aws/nginx/nginx';
+  }
+
+  return '';
 };
 
 const genericCredentialPlaceholders = {
@@ -234,7 +213,9 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
                   placeholder={
                     key === 'repoUrl' && repoUrlIsRegex
                       ? repoUrlPatternPlaceholder
-                      : placeholders[key as keyof typeof placeholders]
+                      : key === 'repoUrl'
+                        ? repoUrlPlaceholder(credentialType)
+                        : placeholders[key as keyof typeof placeholders]
                   }
                   disabled={editing && key === 'name'}
                 />
