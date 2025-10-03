@@ -9,6 +9,7 @@ import (
 
 	"github.com/expr-lang/expr"
 	"github.com/kelseyhightower/envconfig"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -234,6 +235,8 @@ func (r *reconciler) syncWarehouse(
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
 		)
+		conditions.Delete(&status, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied)
+		conditions.Delete(&status, kargoapi.ConditionTypeFreightCreated)
 		if err := r.patchStatusFn(ctx, warehouse, func(s *kargoapi.WarehouseStatus) {
 			s.SetConditions(status.GetConditions())
 		}); err != nil {
@@ -262,7 +265,6 @@ func (r *reconciler) syncWarehouse(
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
-			conditions.Delete(&status, kargoapi.ConditionTypeCriteriaSatisfied)
 			return status, fmt.Errorf("error discovering artifacts: %w", err)
 		}
 		logger.Debug("discovered latest artifacts")
@@ -278,6 +280,9 @@ func (r *reconciler) syncWarehouse(
 
 	// Validate the discovered artifacts.
 	if !validateDiscoveredArtifacts(warehouse, &status) {
+		// If validation returned false, the Healthy and Ready conditions will
+		// already have been updated appropriately.
+
 		// Remove the reconciling condition and return early if the validation
 		// failed. We do not return an error here, to prevent a requeue loop
 		// which would cause unnecessary pressure on the upstream sources.
@@ -294,27 +299,23 @@ func (r *reconciler) syncWarehouse(
 		)
 		if err != nil {
 			logger.Error(err, "error evaluating freight creation criteria")
+			msg := fmt.Sprintf(
+				"Evaluation of Freight creation criteria failed: %s", err.Error(),
+			)
 			conditions.Set(
 				&status,
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeHealthy,
 					Status:             metav1.ConditionFalse,
 					Reason:             "CriteriaEvaluationFailed",
-					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
+					Message:            msg,
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeReady,
 					Status:             metav1.ConditionFalse,
 					Reason:             "CriteriaEvaluationFailed",
-					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
-					ObservedGeneration: warehouse.GetGeneration(),
-				},
-				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeCriteriaSatisfied,
-					Status:             metav1.ConditionUnknown,
-					Reason:             "FreightCreationCriteriaError",
-					Message:            fmt.Sprintf("Criteria evaluation failed: %s", err.Error()),
+					Message:            msg,
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
@@ -328,141 +329,179 @@ func (r *reconciler) syncWarehouse(
 			conditions.Set(
 				&status,
 				&metav1.Condition{
-					Type:               kargoapi.ConditionTypeHealthy,
-					Status:             metav1.ConditionTrue,
-					Reason:             "ArtifactsDiscovered",
-					Message:            conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
+					Type:               kargoapi.ConditionTypeFreightCreationCriteriaSatisfied,
+					Status:             metav1.ConditionFalse,
+					Reason:             "CriteriaNotSatisfied",
+					Message:            "Freight creation criteria were not satisfied",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
+			)
+		} else {
+			logger.Debug("freight creation criteria satisfied")
+			// Mark the Warehouse as reconciling while we create the Freight.
+			//
+			// As this should be a quick operation, we do not issue an immediate
+			// patch to the Warehouse status. However, we do update the conditions
+			// to reflect current state to ensure they're correct if we run into
+			// an error, after which the status will be patched.
+			conditions.Set(
+				&status,
 				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeCriteriaSatisfied,
-					Status: metav1.ConditionFalse,
-					Reason: "InsufficientChanges",
-					Message: fmt.Sprintf(
-						"None of the discovered artifacts could match the Freight creation criteria %q",
-						warehouse.Spec.FreightCreationCriteria.Expression,
-					),
+					Type:               kargoapi.ConditionTypeReconciling,
+					Status:             metav1.ConditionTrue,
+					Reason:             "FreightCreationInProgress",
+					Message:            "Creating Freight from latest artifacts",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 				&metav1.Condition{
 					Type:               kargoapi.ConditionTypeReady,
+					Status:             metav1.ConditionFalse,
+					Reason:             "AwaitingFreightCreation",
+					Message:            "Freight creation from latest artifacts is in progress",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeHealthy,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "Pending",
+					Message:            "Health status cannot be determined until Freight creation is finished",
+					ObservedGeneration: warehouse.GetGeneration(),
+				},
+				&metav1.Condition{
+					Type:               kargoapi.ConditionTypeFreightCreationCriteriaSatisfied,
 					Status:             metav1.ConditionTrue,
-					Reason:             "ArtifactsDiscovered",
-					Message:            conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
+					Reason:             "CriteriaSatisfied",
+					Message:            "Freight creation criteria satisfied",
 					ObservedGeneration: warehouse.GetGeneration(),
 				},
 			)
-			conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
-			return status, nil
-		}
-		logger.Debug("freight creation criteria satisfied")
-		// Mark the Warehouse as reconciling while we create the Freight.
-		//
-		// As this should be a quick operation, we do not issue an immediate
-		// patch to the Warehouse status. However, we do update the status
-		// to reflect that we are currently reconciling to ensure it
-		// becomes visible when we run into an error.
-		conditions.Set(
-			&status,
-			&metav1.Condition{
-				Type:    kargoapi.ConditionTypeReconciling,
-				Status:  metav1.ConditionTrue,
-				Reason:  "FreightCreationInProgress",
-				Message: "Creating Freight from latest artifacts",
-			},
-			&metav1.Condition{
-				Type:    kargoapi.ConditionTypeReady,
-				Status:  metav1.ConditionFalse,
-				Reason:  "AwaitingFreightCreation",
-				Message: "Freight creation from latest artifacts is in progress",
-			},
-			&metav1.Condition{
-				Type:               kargoapi.ConditionTypeCriteriaSatisfied,
-				Status:             metav1.ConditionTrue,
-				Reason:             "CriteriaMet",
-				Message:            "Freight creation criteria satisfied",
-				ObservedGeneration: warehouse.GetGeneration(),
-			},
-		)
 
-		// Build Freight from the latest discovered artifacts.
-		freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, status.DiscoveredArtifacts)
-		if err != nil {
-			// Make the error visible in the status and mark the Warehouse as
-			// not ready.
-			conditions.Set(
-				&status,
-				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeReady,
-					Status: metav1.ConditionFalse,
-					Reason: "FreightBuildFailure",
-					Message: fmt.Sprintf(
-						"Error building Freight from latest artifacts: %s",
-						err.Error(),
-					),
-				},
-			)
+			// Build Freight from the latest discovered artifacts.
+			freight, err := r.buildFreightFromLatestArtifactsFn(warehouse.Namespace, status.DiscoveredArtifacts)
+			if err != nil {
+				// Make the error visible in the status and mark the Warehouse as
+				// not ready.
+				msg := fmt.Sprintf(
+					"Error building Freight from latest artifacts: %s",
+					err.Error(),
+				)
+				conditions.Set(
+					&status,
+					&metav1.Condition{
+						Type:               kargoapi.ConditionTypeHealthy,
+						Status:             metav1.ConditionFalse,
+						Reason:             "FreightBuildFailure",
+						Message:            msg,
+						ObservedGeneration: warehouse.GetGeneration(),
+					},
+					&metav1.Condition{
+						Type:               kargoapi.ConditionTypeReady,
+						Status:             metav1.ConditionFalse,
+						Reason:             "FreightBuildFailure",
+						Message:            msg,
+						ObservedGeneration: warehouse.GetGeneration(),
+					},
+				)
+				return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
+			}
 
-			return status, fmt.Errorf("failed to build Freight from latest artifacts: %w", err)
-		}
-		freight.Origin = kargoapi.FreightOrigin{
-			Kind: kargoapi.FreightOriginKindWarehouse,
-			Name: warehouse.Name,
-		}
+			freight.Origin = kargoapi.FreightOrigin{
+				Kind: kargoapi.FreightOriginKindWarehouse,
+				Name: warehouse.Name,
+			}
 
-		// Attempt to create the Freight.
-		if err = r.createFreightFn(ctx, freight); client.IgnoreAlreadyExists(err) != nil {
-			// Make the error visible in the status and mark the Warehouse as
-			// not ready.
-			conditions.Set(
-				&status,
-				&metav1.Condition{
-					Type:   kargoapi.ConditionTypeReady,
-					Status: metav1.ConditionFalse,
-					Reason: "FreightCreationFailure",
-					Message: fmt.Sprintf(
+			// Attempt to create the Freight.
+			if err = r.createFreightFn(ctx, freight); err != nil {
+				if !apierrors.IsAlreadyExists(err) {
+					// Make the error visible in the status and mark the Warehouse as
+					// not ready.
+					msg := fmt.Sprintf(
 						"Error creating Freight %q in namespace %q: %s",
 						freight.Name,
 						freight.Namespace,
 						err.Error(),
-					),
-				},
-			)
+					)
+					conditions.Set(
+						&status,
+						&metav1.Condition{
+							Type:               kargoapi.ConditionTypeHealthy,
+							Status:             metav1.ConditionFalse,
+							Reason:             "FreightBuildFailure",
+							Message:            msg,
+							ObservedGeneration: warehouse.GetGeneration(),
+						},
+						&metav1.Condition{
+							Type:               kargoapi.ConditionTypeReady,
+							Status:             metav1.ConditionFalse,
+							Reason:             "FreightCreationFailure",
+							Message:            msg,
+							ObservedGeneration: warehouse.GetGeneration(),
+						},
+					)
+					return status, fmt.Errorf(
+						"error creating Freight %q in namespace %q: %w",
+						freight.Name,
+						freight.Namespace,
+						err,
+					)
+				}
+				conditions.Set(
+					&status,
+					&metav1.Condition{
+						Type:               kargoapi.ConditionTypeFreightCreated,
+						Status:             metav1.ConditionFalse,
+						Reason:             "AlreadyExists",
+						Message:            "Freight composed of the newest artifacts already exists",
+						ObservedGeneration: warehouse.GetGeneration(),
+					},
+				)
+			} else {
+				logger.Debug(
+					"created Freight",
+					"freight", freight.Name,
+					"namespace", freight.Namespace,
+				)
+				conditions.Set(
+					&status,
+					&metav1.Condition{
+						Type:               kargoapi.ConditionTypeFreightCreated,
+						Status:             metav1.ConditionTrue,
+						Reason:             "NewFreight",
+						Message:            "No Freight composed of the newest artifacts already existed",
+						ObservedGeneration: warehouse.GetGeneration(),
+					},
+				)
+			}
 
-			return status, fmt.Errorf(
-				"error creating Freight %q in namespace %q: %w",
-				freight.Name,
-				freight.Namespace,
-				err,
-			)
-		} else if err == nil {
-			logger.Debug(
-				"created Freight",
-				"freight", freight.Name,
-				"namespace", freight.Namespace,
-			)
+			status.LastFreightID = freight.Name
 		}
-
-		status.LastFreightID = freight.Name
 	}
 
-	// Remove the reconciling condition and mark the Warehouse as ready.
-	conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
+	// Make all conditions reflect success
+	msg := fmt.Sprintf(
+		"Successfully discovered artifacts from %d subscriptions",
+		len(warehouse.Spec.Subscriptions),
+	)
 	conditions.Set(
 		&status,
 		&metav1.Condition{
-			Type:    kargoapi.ConditionTypeReady,
-			Status:  metav1.ConditionTrue,
-			Reason:  "ArtifactsDiscovered",
-			Message: conditions.Get(&status, kargoapi.ConditionTypeHealthy).Message,
-		},
-		&metav1.Condition{
-			Type:    kargoapi.ConditionTypeCriteriaSatisfied,
-			Status:  metav1.ConditionTrue,
-			Reason:  "FreightCreated",
-			Message: "Created Freight from discovered artifacts",
+			Type:               kargoapi.ConditionTypeHealthy,
+			Status:             metav1.ConditionTrue,
+			Reason:             "ReconciliationSucceeded",
+			ObservedGeneration: warehouse.GetGeneration(),
 		},
 	)
+	conditions.Set(
+		&status,
+		&metav1.Condition{
+			Type:               kargoapi.ConditionTypeReady,
+			Status:             metav1.ConditionTrue,
+			Reason:             "ArtifactsDiscovered",
+			Message:            msg,
+			ObservedGeneration: warehouse.GetGeneration(),
+		},
+	)
+	conditions.Delete(&status, kargoapi.ConditionTypeReconciling)
 
 	return status, nil
 }
@@ -694,40 +733,6 @@ func validateDiscoveredArtifacts(
 		charts += count
 	}
 
-	var parts []string
-	if commits > 0 {
-		parts = append(parts, fmt.Sprintf("%d commits", commits))
-	}
-	if images > 0 {
-		parts = append(parts, fmt.Sprintf("%d images", images))
-	}
-	if charts > 0 {
-		parts = append(parts, fmt.Sprintf("%d charts", charts))
-	}
-
-	var message string
-	if len(parts) == 1 {
-		message = parts[0]
-	} else if len(parts) == 2 {
-		message = parts[0] + " and " + parts[1]
-	} else if len(parts) > 2 {
-		message = strings.Join(parts[:len(parts)-1], ", ") + ", and " + parts[len(parts)-1]
-	}
-
-	conditions.Set(
-		newStatus,
-		&metav1.Condition{
-			Type:   kargoapi.ConditionTypeHealthy,
-			Status: metav1.ConditionTrue,
-			Reason: "ArtifactsDiscovered",
-			Message: fmt.Sprintf(
-				"Successfully discovered %s from %d subscriptions",
-				message,
-				subscriptions,
-			),
-			ObservedGeneration: warehouse.GetGeneration(),
-		},
-	)
 	return true
 }
 

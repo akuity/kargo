@@ -64,6 +64,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Status: kargoapi.WarehouseStatus{
 					DiscoveredArtifacts: &kargoapi.DiscoveredArtifacts{},
 				},
@@ -83,11 +84,7 @@ func TestSyncWarehouse(t *testing.T) {
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
 				require.Equal(t, "DiscoveryFailure", readyCondition.Reason)
 				require.Contains(t, readyCondition.Message, "something went wrong")
-
-				// Ensure that the Reconciling condition is still set to True.
-				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
-				require.NotNil(t, reconcilingCondition)
-				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
 				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -95,6 +92,16 @@ func TestSyncWarehouse(t *testing.T) {
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
 				require.Equal(t, "DiscoveryFailed", healthyCondition.Reason)
 				require.Contains(t, healthyCondition.Message, "something went wrong")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+
+				// Ensure that the Reconciling condition is still set to True.
+				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
+				require.NotNil(t, reconcilingCondition)
+				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "ScheduledDiscovery", reconcilingCondition.Reason)
+				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
+				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
 			},
 		},
 
@@ -112,7 +119,9 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			warehouse: &kargoapi.Warehouse{},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
 
@@ -124,6 +133,7 @@ func TestSyncWarehouse(t *testing.T) {
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
 				require.Equal(t, "MissingCommits", readyCondition.Reason)
 				require.Contains(t, readyCondition.Message, "No commits discovered")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
 				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
@@ -131,6 +141,7 @@ func TestSyncWarehouse(t *testing.T) {
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
 				require.Equal(t, "NoCommitsDiscovered", healthyCondition.Reason)
 				require.Contains(t, healthyCondition.Message, "No commits discovered")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
 			},
 		},
 
@@ -157,7 +168,9 @@ func TestSyncWarehouse(t *testing.T) {
 					return nil
 				},
 			},
-			warehouse: &kargoapi.Warehouse{},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.ErrorContains(t, err, "something went wrong")
 				require.ErrorContains(t, err, "failed to build Freight from latest artifacts")
@@ -166,22 +179,35 @@ func TestSyncWarehouse(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 4)
 
-				// Ensure that the criteria satisfied condition is true.
-				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
-				require.NotNil(t, criteriaCondition)
-				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
-
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
 				require.Equal(t, "FreightBuildFailure", readyCondition.Reason)
 				require.Contains(t, readyCondition.Message, "something went wrong")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				// Ensure that the Healthy condition is set to False.
+				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "FreightBuildFailure", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "something went wrong")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+
+				// Ensure that the criteria satisfied condition is True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Equal(t, "CriteriaSatisfied", criteriaCondition.Reason)
+				require.Equal(t, int64(1), criteriaCondition.ObservedGeneration)
 
 				// Ensure that the Reconciling condition is still set to True.
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "FreightCreationInProgress", reconcilingCondition.Reason)
+				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
 			},
 		},
 
@@ -227,6 +253,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
@@ -237,6 +264,36 @@ func TestSyncWarehouse(t *testing.T) {
 				// Ensure that even if the Freight already exists, the status
 				// is still updated with the latest Freight.
 				require.NotEmpty(t, status.LastFreightID)
+
+				require.Len(t, status.GetConditions(), 4)
+
+				// Ensure that the Ready condition is set to True.
+				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
+				require.NotNil(t, readyCondition)
+				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "ArtifactsDiscovered", readyCondition.Reason)
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				// Ensure that the Healthy condition is set to True.
+				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ReconciliationSucceeded", healthyCondition.Reason)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+
+				// Ensure that the criteria satisfied condition is True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Equal(t, "CriteriaSatisfied", criteriaCondition.Reason)
+				require.Equal(t, int64(1), criteriaCondition.ObservedGeneration)
+
+				// Ensure that the FreightCreated condition is set to False.
+				freightCreatedCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
+				require.NotNil(t, freightCreatedCondition)
+				require.Equal(t, metav1.ConditionFalse, freightCreatedCondition.Status)
+				require.Equal(t, "AlreadyExists", freightCreatedCondition.Reason)
+				require.Equal(t, int64(1), freightCreatedCondition.ObservedGeneration)
 			},
 		},
 
@@ -271,6 +328,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
@@ -283,22 +341,35 @@ func TestSyncWarehouse(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 4)
 
-				// Ensure that the criteria satisfied condition is true.
-				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
-				require.NotNil(t, criteriaCondition)
-				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
-
 				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
 				require.Equal(t, "FreightCreationFailure", readyCondition.Reason)
 				require.Contains(t, readyCondition.Message, "something went wrong")
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
+
+				// Ensure that the Healthy condition is set to False.
+				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
+				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
+				require.Equal(t, "FreightBuildFailure", healthyCondition.Reason)
+				require.Contains(t, healthyCondition.Message, "something went wrong")
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+
+				// Ensure that the criteria satisfied condition is True.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Equal(t, "CriteriaSatisfied", criteriaCondition.Reason)
+				require.Equal(t, int64(1), criteriaCondition.ObservedGeneration)
 
 				// Ensure that the Reconciling condition is still set to True.
 				reconcilingCondition := conditions.Get(&status, kargoapi.ConditionTypeReconciling)
 				require.NotNil(t, reconcilingCondition)
 				require.Equal(t, metav1.ConditionTrue, reconcilingCondition.Status)
+				require.Equal(t, "FreightCreationInProgress", reconcilingCondition.Reason)
+				require.Equal(t, int64(1), reconcilingCondition.ObservedGeneration)
 			},
 		},
 
@@ -335,6 +406,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyAutomatic,
 				},
@@ -344,23 +416,35 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.NotEmpty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 3)
-
-				// Ensure that the criteria satisfied condition is true.
-				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
-				require.NotNil(t, criteriaCondition)
-				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Len(t, status.GetConditions(), 4)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
 				require.Equal(t, "ArtifactsDiscovered", readyCondition.Reason)
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
 				// Ensure that the Healthy condition is set to True.
 				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ReconciliationSucceeded", healthyCondition.Reason)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+
+				// Ensure that the criteria satisfied condition is true.
+				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreationCriteriaSatisfied)
+				require.NotNil(t, criteriaCondition)
+				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Equal(t, "CriteriaSatisfied", criteriaCondition.Reason)
+				require.Equal(t, int64(1), criteriaCondition.ObservedGeneration)
+
+				// Ensure that the FreightCreated condition is true.
+				freightCreatedCondition := conditions.Get(&status, kargoapi.ConditionTypeFreightCreated)
+				require.NotNil(t, freightCreatedCondition)
+				require.Equal(t, metav1.ConditionTrue, freightCreatedCondition.Status)
+				require.Equal(t, "NewFreight", freightCreatedCondition.Reason)
+				require.Equal(t, int64(1), freightCreatedCondition.ObservedGeneration)
 			},
 		},
 
@@ -379,6 +463,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
@@ -388,22 +473,21 @@ func TestSyncWarehouse(t *testing.T) {
 				require.NotNil(t, status.DiscoveredArtifacts)
 				require.Empty(t, status.LastFreightID)
 
-				require.Len(t, status.GetConditions(), 3)
-
-				// Ensure that the criteria satisfied condition is true.
-				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
-				require.NotNil(t, criteriaCondition)
-				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Len(t, status.GetConditions(), 2)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "ArtifactsDiscovered", readyCondition.Reason)
+				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
 				// Ensure that the Healthy condition is set to True.
 				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ReconciliationSucceeded", healthyCondition.Reason)
+				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
 			},
 		},
 
@@ -422,6 +506,7 @@ func TestSyncWarehouse(t *testing.T) {
 					Annotations: map[string]string{
 						kargoapi.AnnotationKeyRefresh: "new",
 					},
+					Generation: 1,
 				},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
@@ -478,6 +563,7 @@ func TestSyncWarehouse(t *testing.T) {
 				},
 			},
 			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
 				Spec: kargoapi.WarehouseSpec{
 					FreightCreationPolicy: kargoapi.FreightCreationPolicyManual,
 				},
@@ -500,21 +586,19 @@ func TestSyncWarehouse(t *testing.T) {
 			},
 			assertions: func(t *testing.T, status kargoapi.WarehouseStatus, err error) {
 				require.NoError(t, err)
-				require.Len(t, status.GetConditions(), 3)
-
-				// Ensure that the criteria satisfied condition is true.
-				criteriaCondition := conditions.Get(&status, kargoapi.ConditionTypeCriteriaSatisfied)
-				require.NotNil(t, criteriaCondition)
-				require.Equal(t, metav1.ConditionTrue, criteriaCondition.Status)
+				require.Len(t, status.GetConditions(), 2)
 
 				// Ensure that the Ready condition is set to True.
 				readyCondition := conditions.Get(&status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionTrue, readyCondition.Status)
+				require.Equal(t, "ArtifactsDiscovered", readyCondition.Reason)
 
 				// Ensure that the Healthy condition is set to True.
 				healthyCondition := conditions.Get(&status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
+				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
+				require.Equal(t, "ReconciliationSucceeded", healthyCondition.Reason)
 			},
 		},
 	}
@@ -769,6 +853,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 2)
 
+				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
@@ -776,6 +861,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 				require.Equal(t, "No artifacts discovered", readyCondition.Message)
 				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
+				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
@@ -801,6 +887,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 2)
 
+				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
@@ -808,6 +895,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 				require.Contains(t, readyCondition.Message, "No commits discovered for Git repository")
 				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
+				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
@@ -833,6 +921,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 2)
 
+				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
@@ -840,6 +929,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 				require.Contains(t, readyCondition.Message, "No references discovered for image repository")
 				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
+				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
@@ -865,6 +955,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 
 				require.Len(t, status.GetConditions(), 2)
 
+				// Ensure that the Ready condition is set to False.
 				readyCondition := conditions.Get(status, kargoapi.ConditionTypeReady)
 				require.NotNil(t, readyCondition)
 				require.Equal(t, metav1.ConditionFalse, readyCondition.Status)
@@ -872,6 +963,7 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 				require.Contains(t, readyCondition.Message, "No versions discovered for chart")
 				require.Equal(t, int64(1), readyCondition.ObservedGeneration)
 
+				// Ensure that the Healthy condition is set to False.
 				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
 				require.NotNil(t, healthyCondition)
 				require.Equal(t, metav1.ConditionFalse, healthyCondition.Status)
@@ -908,18 +1000,9 @@ func TestValidateDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result bool, status *kargoapi.WarehouseStatus) {
 				require.True(t, result)
 
-				require.Len(t, status.GetConditions(), 1)
-
-				healthyCondition := conditions.Get(status, kargoapi.ConditionTypeHealthy)
-				require.NotNil(t, healthyCondition)
-				require.Equal(t, metav1.ConditionTrue, healthyCondition.Status)
-				require.Equal(t, "ArtifactsDiscovered", healthyCondition.Reason)
-				require.Contains(
-					t,
-					healthyCondition.Message,
-					"Successfully discovered 3 commits, 2 images, and 2 charts from 4 subscriptions",
-				)
-				require.Equal(t, int64(1), healthyCondition.ObservedGeneration)
+				// Ensure that when no validation errors occur, no conditions are set.
+				// Conditions reflecting success are managed by the caller.
+				require.Empty(t, status.GetConditions())
 			},
 		},
 	}
