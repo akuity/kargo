@@ -52,16 +52,16 @@ func TestStepRunnerRegistry_Register(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			registry := stepRunnerRegistry{}
+			registry := StepRunnerRegistry{}
 			if testCase.expectedPanic != "" {
 				require.PanicsWithValue(
 					t,
 					testCase.expectedPanic,
-					func() { registry.register(testCase.stepKind, testCase.registration) },
+					func() { registry.Register(testCase.stepKind, testCase.registration) },
 				)
 				return
 			}
-			registry.register(testCase.stepKind, testCase.registration)
+			registry.Register(testCase.stepKind, testCase.registration)
 			registration := registry[testCase.stepKind]
 			require.Equal(t, testCase.expectedRegistration.Metadata, registration.Metadata)
 			require.NotNil(t, registration.Factory)
@@ -83,18 +83,18 @@ func TestStepRunnerRegistry_GetStepRunnerRegistration(t *testing.T) {
 	}
 	testCases := []struct {
 		name                 string
-		setupRegistry        func() stepRunnerRegistry
+		setupRegistry        func() StepRunnerRegistry
 		expectedRegistration *StepRunnerRegistration
 	}{
 		{
 			name:                 "registration not found",
-			setupRegistry:        func() stepRunnerRegistry { return stepRunnerRegistry{} },
+			setupRegistry:        func() StepRunnerRegistry { return StepRunnerRegistry{} },
 			expectedRegistration: nil,
 		},
 		{
 			name: "registration found",
-			setupRegistry: func() stepRunnerRegistry {
-				registry := stepRunnerRegistry{}
+			setupRegistry: func() StepRunnerRegistry {
+				registry := StepRunnerRegistry{}
 				registry[testStepKind] = testRegistration
 				return registry
 			},
@@ -104,7 +104,7 @@ func TestStepRunnerRegistry_GetStepRunnerRegistration(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			registry := testCase.setupRegistry()
-			registration := registry.getStepRunnerRegistration(testStepKind)
+			registration := registry.GetStepRunnerRegistration(testStepKind)
 			if testCase.expectedRegistration == nil {
 				require.Nil(t, registration)
 				return
