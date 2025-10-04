@@ -442,10 +442,10 @@ func (a *argocdUpdater) syncApplication(
 	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
 
 	// Update the desired source(s) in the Argo CD Application.
-	if app.Spec.Source != nil {
-		app.Spec.Source = desiredSources[0].DeepCopy()
-	} else {
+	if len(app.Spec.Sources) > 0 {
 		app.Spec.Sources = desiredSources.DeepCopy()
+	} else if app.Spec.Source != nil {
+		app.Spec.Source = desiredSources[0].DeepCopy()
 	}
 
 	// Initiate a new operation.
@@ -485,12 +485,6 @@ func (a *argocdUpdater) syncApplication(
 		if app.Spec.SyncPolicy.SyncOptions != nil {
 			app.Operation.Sync.SyncOptions = app.Spec.SyncPolicy.SyncOptions
 		}
-	}
-	if app.Spec.Source != nil {
-		app.Operation.Sync.Revisions = []string{app.Spec.Source.TargetRevision}
-	}
-	for _, source := range app.Spec.Sources {
-		app.Operation.Sync.Revisions = append(app.Operation.Sync.Revisions, source.TargetRevision)
 	}
 	// TODO(krancour): This is a workaround for the Argo CD Application controller
 	// not handling this correctly itself. It is Argo CD's API server that usually
@@ -541,13 +535,7 @@ func (a *argocdUpdater) syncApplication(
 	// information we have at hand.
 	// xref: https://github.com/argoproj/argo-cd/blob/44894e9e438bca5adccf58d2f904adc63365805c/server/application/application.go#L1887-L1895
 	// nolint:lll
-	//
-	// TODO(hidde): It is not clear what we should do if we have a list of
-	// sources.
-	message := "initiated sync"
-	if app.Spec.Source != nil {
-		message += " to " + app.Spec.Source.TargetRevision
-	}
+	message := a.formatSyncMessage(app)
 	a.logAppEventFn(
 		ctx,
 		app,
@@ -556,6 +544,33 @@ func (a *argocdUpdater) syncApplication(
 		message,
 	)
 	return nil
+}
+
+// formatSyncMessage generates a concise, human-friendly message describing
+// the sync target of the given Application. This message is intended only
+// for logging and event recording within argocdUpdater.
+//
+// Behavior:
+//   - If the Application has exactly one entry in .spec.sources, the message
+//     includes its TargetRevision.
+//   - If there are multiple sources, the message reports only the count to
+//     avoid overly noisy logs.
+//   - If only the legacy .spec.source field is set, the message includes its
+//     TargetRevision.
+//
+// Full sync details remain available directly on the Application object.
+func (a *argocdUpdater) formatSyncMessage(app *argocd.Application) string {
+	message := "initiated sync"
+	switch {
+	case len(app.Spec.Sources) == 1:
+		message += " to " + app.Spec.Sources[0].TargetRevision
+	case len(app.Spec.Sources) > 1:
+		message += fmt.Sprintf(" to %d sources", len(app.Spec.Sources))
+	case app.Spec.Source != nil:
+		message += " to " + app.Spec.Source.TargetRevision
+	}
+
+	return message
 }
 
 func (a *argocdUpdater) argoCDAppPatch(
