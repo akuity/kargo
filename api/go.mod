@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.19.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/stretchr/testify v1.11.1
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 	k8s.io/api v0.34.1
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/apimachinery v0.34.1
