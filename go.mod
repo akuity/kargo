@@ -66,7 +66,7 @@ require (
 	golang.org/x/text v0.29.0
 	google.golang.org/api v0.250.0
 	google.golang.org/grpc v1.75.1
-	google.golang.org/protobuf v1.36.9
+	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
 	helm.sh/helm/v3 v3.19.0
 	k8s.io/api v0.34.1
