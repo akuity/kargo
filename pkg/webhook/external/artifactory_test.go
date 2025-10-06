@@ -3,6 +3,7 @@ package external
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,11 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
+)
+
+const (
+	nestedArtifactoryRepoURL = "artifactory.example.com/test-repo/foo/bar/test-image"
+	basicArtifactoryRepoURL  = "artifactory.example.com/other-test-repo/other-test-image"
 )
 
 func TestArtifactoryHandler(t *testing.T) {
@@ -394,7 +400,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								// Artifactory supports nested repository structures
-								RepoURL:          "artifactory.example.com/test-repo/foo/bar/test-image",
+								RepoURL:          nestedArtifactoryRepoURL,
 								SemverConstraint: "^1.0.0",
 							},
 						}},
@@ -408,8 +414,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								// Artifactory supports nested repository structures
-								RepoURL:          "artifactory.example.com/other-test-repo/other-test-image",
+								RepoURL:          basicArtifactoryRepoURL,
 								SemverConstraint: "^1.0.0",
 							},
 						}},
@@ -430,7 +435,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				)
 				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
 				req.Header.Set(artifactoryRepoURLHeader,
-					"artifactory.example.com/test-repo/foo/bar/test-image,artifactory.example.com/other-test-repo/other-test-image",
+					fmt.Sprintf("%s,%s", nestedArtifactoryRepoURL, basicArtifactoryRepoURL),
 				)
 				return req
 			},
