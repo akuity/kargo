@@ -381,6 +381,64 @@ func TestArtifactoryHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			name:       "warehouse refreshed (custom header with multiple repo URLs)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								// Artifactory supports nested repository structures
+								RepoURL:          "artifactory.example.com/test-repo/foo/bar/test-image",
+								SemverConstraint: "^1.0.0",
+							},
+						}},
+					},
+				},
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "other-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								// Artifactory supports nested repository structures
+								RepoURL:          "artifactory.example.com/other-test-repo/other-test-image",
+								SemverConstraint: "^1.0.0",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validImagePushEventWithUnsetOrigin)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
+				req.Header.Set(artifactoryRepoURLHeader,
+					"artifactory.example.com/test-repo/foo/bar/test-image,artifactory.example.com/other-test-repo/other-test-image",
+				)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 2 warehouse(s)"}`, rr.Body.String())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
