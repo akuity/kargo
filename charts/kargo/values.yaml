@@ -263,6 +263,9 @@ api:
       #     redirectURI: <http(s)>://<api.host>/dex/callback
       #     tenant: <tenant ID>
 
+      ## @param api.oidc.dex.extra_clients Configure extra Dex clients
+      extra_clients: []
+
       ## ServiceAccount specific settings
       serviceAccount:
         ## @param api.oidc.dex.serviceAccount.labels Additional labels to add to the Dex server ServiceAccount.
