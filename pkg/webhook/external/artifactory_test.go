@@ -365,6 +365,29 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "invalid repo url in custom header",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validImagePushEventWithUnsetOrigin)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
+				req.Header.Set(artifactoryRepoURLHeader, "http://[::1]:namedport")
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t,
+					`{"error":"invalid repo URL \"http://[::1]:namedport\" in X-Kargo-Repo-URLs header"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
 			name:       "warehouse refreshed (custom header with repo URLs)",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
