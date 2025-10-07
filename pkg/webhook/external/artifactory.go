@@ -30,7 +30,7 @@ const (
 	artifactoryRepoURLHeader   = "X-Kargo-Repo-URLs"
 )
 
-var validImageTypes = []string{
+var artifactoryValidImageTypes = []string{
 	artifactoryDockerDomain,
 	artifactoryChartImageType,
 }
@@ -155,7 +155,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		if !slices.Contains(validImageTypes, payload.Data.ImageType) {
+		if !slices.Contains(artifactoryValidImageTypes, payload.Data.ImageType) {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
