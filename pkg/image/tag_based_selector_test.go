@@ -23,7 +23,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			// TODO v0.13.0 Remove this test once AllowTags is removed
+			// TODO v1.13.0 Remove this test once AllowTags is removed
 			name: "error parsing allowed tags regex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:   "example/image",
@@ -57,10 +57,10 @@ func TestNewTagBasedSelector(t *testing.T) {
 			name: "success with both AllowTags/IgnoreTags and AllowTagsRegex/IgnoreTagsRegex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL: "example/image",
-				// TODO v0.13.0 Remove this test once AllowTags is removed
+				// TODO v1.13.0 Remove this test once AllowTags is removed
 				AllowTags:      `^v1\.`,
 				AllowTagsRegex: []string{`^v2\.`},
-				// TODO v0.13.0 Remove this test once IgnoreTags is removed
+				// TODO v1.13.0 Remove this test once IgnoreTags is removed
 				IgnoreTags:      []string{"v1.0.0"},
 				IgnoreTagsRegex: []string{`^v1\.0\..*`},
 			},
@@ -70,7 +70,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Len(t, s.allowTagsRegex, 2)
 				require.Equal(t, `^v2\.`, s.allowTagsRegex[0].String())
 				require.Equal(t, `^v1\.`, s.allowTagsRegex[1].String())
-				// TODO v0.13.0 Remove this test once IgnoreTags is removed
+				// TODO v1.13.0 Remove this test once IgnoreTags is removed
 				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
 				require.Len(t, s.ignoreTagsRegex, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
@@ -88,14 +88,14 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.NotNil(t, s.baseSelector)
 				require.Len(t, s.allowTagsRegex, 1)
 				require.Equal(t, `^v1\.`, s.allowTagsRegex[0].String())
-				// TODO v0.13.0 Remove this test once IgnoreTags is removed
+				// TODO v1.13.0 Remove this test once IgnoreTags is removed
 				require.Empty(t, s.ignoreTags)
 				require.Len(t, s.ignoreTagsRegex, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
 			},
 		},
 		{
-			// TODO v0.13.0 Remove this test once AllowTags and IgnoreTags are removed
+			// TODO v1.13.0 Remove this test once AllowTags and IgnoreTags are removed
 			name: "only AllowTags and IgnoreTags are specified (deprecated)",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:    "example/image",

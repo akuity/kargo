@@ -160,7 +160,7 @@ spec:
                             tags that are considered in determining the newest commit of interest. The
                             value in this field only has any effect when the CommitSelectionStrategy is
                             Lexical, NewestTag, or SemVer. This field is optional.
-                            AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex instead.
+                            AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex instead.
                           type: string
                         allowTagsRegex:
                           description: |-
@@ -197,16 +197,16 @@ spec:
 
                             - "SemVer": Selects the commit referenced by the semantically greatest
                               tag. The SemverConstraint field can optionally be used to narrow the set
-                              of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
 
                             - "Lexical": Selects the commit referenced by the lexicographically
                               greatest tag. Useful when tags embed a _leading_ date or timestamp. The
                               AllowTags and IgnoreTags fields can optionally be used to narrow the set
-                              of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
 
                             - "NewestTag": Selects the commit referenced by the most recently created
                               tag. The AllowTags and IgnoreTags fields can optionally be used to
-                              narrow the set of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              narrow the set of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
                           enum:
                           - Lexical
                           - NewestFromBranch
@@ -218,7 +218,7 @@ spec:
                           description: |-
                             DiscoveryLimit is an optional limit on the number of commits that can be
                             discovered for this subscription. The limit is applied after filtering
-                            commits based on the AllowTags and IgnoreTags fields. AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                            commits based on the AllowTags and IgnoreTags fields. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
                             When left unspecified, the field is implicitly treated as if its value
                             were "20". The upper limit for this field is 100.
                           format: int32
@@ -254,35 +254,36 @@ spec:
                             tags and has access to tag metadata variables. The filter
                             is applied\nafter AllowTags, IgnoreTags, and SemverConstraint
                             fields.\nAllowTags and IgnoreTags are deprecated since
-                            v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex
-                            and IgnoreTagsRegex instead.\n\nThe expression should
-                            be a valid expr-lang expression that evaluates to\ntrue
-                            or false. When the expression evaluates to true, the commit/tag
-                            is\nincluded in the set that is considered. When the expression
-                            evaluates to\nfalse, the commit/tag is excluded.\n\nAvailable
-                            variables depend on the CommitSelectionStrategy:\n\nFor
-                            NewestFromBranch (commit filtering):\n  - `id`: The ID
-                            (sha) of the commit.\n  - `commitDate`: The commit date
-                            of the commit.\n  - `author`: The author of the commit
-                            message, in the format \"Name <email>\".\n  - `committer`:
-                            The person who committed the commit, in the format\n\t
-                            \  \"Name <email>\".\n  - `subject`: The subject (first
-                            line) of the commit message.\n\nFor Lexical, NewestTag,
-                            SemVer (tag filtering):\n  - `tag`: The name of the tag.\n
-                            \ - `id`: The ID (sha) of the commit associated with the
-                            tag.\n  - `creatorDate`: The creation date of an annotated
-                            tag, or the commit\n\t\tdate of a lightweight tag.\n  -
-                            `author`: The author of the commit message associated
-                            with the tag,\n\t   in the format \"Name <email>\".\n
-                            \ - `committer`: The person who committed the commit associated
-                            with the\n\t   tag, in the format \"Name <email>\".\n
-                            \ - `subject`: The subject (first line) of the commit
-                            message associated\n\t   with the tag.\n\t - `tagger`:
-                            The person who created the tag, in the format \"Name <email>\".\n\t
-                            \  Only available for annotated tags.\n\t - `annotation`:
-                            The subject (first line) of the tag annotation. Only\n\t
-                            \  available for annotated tags.\n\nRefer to the expr-lang
-                            documentation for more details on syntax and\ncapabilities
+                            v1.10.0 and will be removed in v1.13.0. From v.1.10.0,
+                            errors will be throw during artifact discovery if these
+                            fields are used. Please use AllowTagsRegex and IgnoreTagsRegex
+                            instead.\n\nThe expression should be a valid expr-lang
+                            expression that evaluates to\ntrue or false. When the
+                            expression evaluates to true, the commit/tag is\nincluded
+                            in the set that is considered. When the expression evaluates
+                            to\nfalse, the commit/tag is excluded.\n\nAvailable variables
+                            depend on the CommitSelectionStrategy:\n\nFor NewestFromBranch
+                            (commit filtering):\n  - `id`: The ID (sha) of the commit.\n
+                            \ - `commitDate`: The commit date of the commit.\n  -
+                            `author`: The author of the commit message, in the format
+                            \"Name <email>\".\n  - `committer`: The person who committed
+                            the commit, in the format\n\t   \"Name <email>\".\n  -
+                            `subject`: The subject (first line) of the commit message.\n\nFor
+                            Lexical, NewestTag, SemVer (tag filtering):\n  - `tag`:
+                            The name of the tag.\n  - `id`: The ID (sha) of the commit
+                            associated with the tag.\n  - `creatorDate`: The creation
+                            date of an annotated tag, or the commit\n\t\tdate of a
+                            lightweight tag.\n  - `author`: The author of the commit
+                            message associated with the tag,\n\t   in the format \"Name
+                            <email>\".\n  - `committer`: The person who committed
+                            the commit associated with the\n\t   tag, in the format
+                            \"Name <email>\".\n  - `subject`: The subject (first line)
+                            of the commit message associated\n\t   with the tag.\n\t
+                            - `tagger`: The person who created the tag, in the format
+                            \"Name <email>\".\n\t   Only available for annotated tags.\n\t
+                            - `annotation`: The subject (first line) of the tag annotation.
+                            Only\n\t   available for annotated tags.\n\nRefer to the
+                            expr-lang documentation for more details on syntax and\ncapabilities
                             of the expression language: https://expr-lang.org."
                           type: string
                         ignoreTags:
@@ -292,7 +293,7 @@ spec:
                             supported yet. The value in this field only has any effect when the
                             CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
                             optional.
-                            IgnoreTags is deprecated since v1.11.0 in favour of IgnoreTagsRegex and will be removed in v1.13.0.
+                            IgnoreTags is deprecated since v1.10.0 in favour of IgnoreTagsRegex and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used.
                           items:
                             type: string
                           type: array
@@ -367,7 +368,7 @@ spec:
                             AllowTags is a regular expression that can optionally be used to limit the
                             image tags that are considered in determining the newest version of an
                             image. This field is optional.
-                            AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex instead.
+                            AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex instead.
                           type: string
                         allowTagsRegex:
                           description: AllowTagsRegex is a list of regular expression
@@ -399,7 +400,7 @@ spec:
                             IgnoreTags is a list of tags that must be ignored when determining the
                             newest version of an image. No regular expressions or glob patterns are
                             supported yet. This field is optional.
-                            IgnoreTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use IgnoreTagsRegex instead.
+                            IgnoreTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use IgnoreTagsRegex instead.
                           items:
                             type: string
                           type: array
@@ -428,19 +429,19 @@ spec:
                               tag. Useful when tags embed a leading date or timestamp. The AllowTags
                               and IgnoreTags fields can optionally be used to narrow the set of tags
                               eligible for selection.
-                              AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
 
                             - "NewestBuild": Selects the image that was most recently pushed to the
                               repository. The AllowTags and IgnoreTags fields can optionally be used
                               to narrow the set of tags eligible for selection. This is the least
                               efficient and is likely to cause rate limiting affecting this Warehouse
                               and possibly others. This strategy should be avoided.
-                              AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
 
                             - "SemVer": Selects the image with the semantically greatest tag. The
                               AllowTags and IgnoreTags fields can optionally be used to narrow the set
                               of tags eligible for selection.
-                              AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+                              AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
                           enum:
                           - Digest
                           - Lexical
