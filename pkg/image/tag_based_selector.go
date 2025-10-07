@@ -16,10 +16,27 @@ import (
 // directly.
 type tagBasedSelector struct {
 	*baseSelector
-	allows         *regexp.Regexp
-	ignores        []string
-	ignoreRegex    *regexp.Regexp
-	discoveryLimit int
+	allowTagsRegex  []*regexp.Regexp
+	ignoreTagsRegex []*regexp.Regexp
+	ignoreTags      []string
+	discoveryLimit  int
+}
+
+// compileRegexps compiles the given regular expressions and returns a slice of
+// compiled regular expressions.
+func compileRegexps(regexps []string) ([]*regexp.Regexp, error) {
+	compiledRegexps := make([]*regexp.Regexp, 0, len(regexps))
+	for _, regex := range regexps {
+		compiledRegexp, err := regexp.Compile(regex)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error compiling regular expression %q: %w",
+				regex, err,
+			)
+		}
+		compiledRegexps = append(compiledRegexps, compiledRegexp)
+	}
+	return compiledRegexps, nil
 }
 
 func newTagBasedSelector(
@@ -32,33 +49,72 @@ func newTagBasedSelector(
 	}
 	s := &tagBasedSelector{
 		baseSelector:   base,
-		ignores:        sub.IgnoreTags,
+		ignoreTags:     sub.IgnoreTags,
 		discoveryLimit: int(sub.DiscoveryLimit),
 	}
+
+	allowTagsRegex, err := compileRegexps(sub.AllowTagsRegex)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling allow tags regex: %w", err)
+	}
+
+	// add allowTags
+	// TODO (v1.13.0) remove this once AllowTags is removed
 	if sub.AllowTags != "" {
-		if s.allows, err = regexp.Compile(sub.AllowTags); err != nil {
+		allowTagRegex, err := regexp.Compile(sub.AllowTags)
+		if err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
 				sub.AllowTags, err,
 			)
 		}
+		allowTagsRegex = append(allowTagsRegex, allowTagRegex)
 	}
-	if sub.IgnoreRegex != "" {
-		if s.ignoreRegex, err = regexp.Compile(sub.IgnoreRegex); err != nil {
-			return nil, fmt.Errorf(
-				"error compiling regular expression %q: %w",
-				sub.IgnoreRegex, err,
-			)
-		}
+
+	s.allowTagsRegex = allowTagsRegex
+
+	ignoreTagsRegex, err := compileRegexps(sub.IgnoreTagsRegex)
+	if err != nil {
+		return nil, fmt.Errorf("error compiling ignore tags regex: %w", err)
 	}
+	s.ignoreTagsRegex = append(s.ignoreTagsRegex, ignoreTagsRegex...)
+
 	return s, nil
+}
+
+// matchRegex returns true if the given tag matches the given regex.
+func (t *tagBasedSelector) matchRegex(regex *regexp.Regexp, tag string) bool {
+	return regex == nil || regex.MatchString(tag)
 }
 
 // MatchesTag implements Selector.
 func (t *tagBasedSelector) MatchesTag(tag string) bool {
-	return (t.allows == nil || t.allows.MatchString(tag)) &&
-		!slices.Contains(t.ignores, tag) &&
-		(t.ignoreRegex == nil || !t.ignoreRegex.MatchString(tag))
+
+	// handle ignoreTags
+	// TODO (v1.13.0) remove this once IgnoreTags is removed
+	if slices.Contains(t.ignoreTags, tag) {
+		return false
+	}
+
+	// handle ignoreTagsRegex
+	for _, regex := range t.ignoreTagsRegex {
+		if t.matchRegex(regex, tag) {
+			return false
+		}
+	}
+
+	// if empty allowTagsRegex, we match all tags
+	if len(t.allowTagsRegex) == 0 {
+		return true
+	}
+	// check if tag matches any allowTagsRegex
+	for _, regex := range t.allowTagsRegex {
+		if t.matchRegex(regex, tag) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // getLoggerContext returns key/value pairs that can be used by any selector
@@ -67,7 +123,8 @@ func (t *tagBasedSelector) MatchesTag(tag string) bool {
 func (t *tagBasedSelector) getLoggerContext() []any {
 	return append(
 		t.baseSelector.getLoggerContext(),
-		"tagConstrained", t.allows != nil || len(t.ignores) > 0,
+		// TODO (v1.13.0) remove len(t.ignoreTags).
+		"tagConstrained", len(t.allowTagsRegex) > 0 || len(t.ignoreTags) > 0 || len(t.ignoreTagsRegex) > 0,
 		"discoveryLimit", t.discoveryLimit,
 	)
 }
