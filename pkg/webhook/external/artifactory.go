@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,6 +29,11 @@ const (
 	artifactory                = "artifactory"
 	artifactoryRepoURLHeader   = "X-Kargo-Repo-URLs"
 )
+
+var validImageTypes = []string{
+	artifactoryDockerDomain,
+	artifactoryChartImageType,
+}
 
 func init() {
 	registry.register(
@@ -149,7 +155,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		if payload.Data.ImageType != artifactoryDockerDomain && payload.Data.ImageType != artifactoryChartImageType {
+		if !slices.Contains(validImageTypes, payload.Data.ImageType) {
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
