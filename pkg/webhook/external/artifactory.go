@@ -174,6 +174,14 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			}
 
 			pathSections := strings.Split(payload.Data.Path, "/")
+			if len(pathSections) < 2 {
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(errors.New("invalid path"), http.StatusBadRequest),
+				)
+				return
+			}
+
 			repoURL := strings.Join(
 				append(
 					[]string{originURL.Host, payload.Data.RepoKey},

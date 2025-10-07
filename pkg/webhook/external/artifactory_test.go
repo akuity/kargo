@@ -186,6 +186,24 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "prevent panic if path sections are less than 2",
+			secretData: testSecretData,
+			req: func() *http.Request {
+				validImagePushEventWithInvalidPath := validImagePushEvent
+				validImagePushEventWithInvalidPath.Data.Path = "invalidpath"
+				bodyBytes, err := json.Marshal(validImagePushEventWithInvalidPath)
+				require.NoError(t, err)
+				bodyBuf := bytes.NewBuffer(bodyBytes)
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(t, `{"error":"invalid path"}`, rr.Body.String())
+			},
+		},
+		{
 			name: "no tag match (image)",
 			// This event would prompt the Warehouse to refresh if not for the tag
 			// in the event falling outside the subscription's semver range.
