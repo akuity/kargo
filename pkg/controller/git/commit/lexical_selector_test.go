@@ -174,7 +174,7 @@ func Test_lexicalSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allows: allowAlphas,
+					allowTagsRegex: []*regexp.Regexp{allowAlphas},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -213,7 +213,7 @@ func Test_lexicalSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					ignores: []string{"123"},
+					ignoreTags: []string{"123"},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -252,8 +252,8 @@ func Test_lexicalSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allows:  allowAlphas,
-					ignores: []string{"ABC"},
+					allowTagsRegex: []*regexp.Regexp{allowAlphas},
+					ignoreTags:     []string{"ABC"},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
