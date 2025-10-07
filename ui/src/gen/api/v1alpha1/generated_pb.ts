@@ -1642,7 +1642,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *
    * - "SemVer": Selects the commit referenced by the semantically greatest
    *   tag. The SemverConstraint field can optionally be used to narrow the set
-   *   of tags eligible for selection.
+   *   of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
    *
    * - "Lexical": Selects the commit referenced by the lexicographically
    *   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
@@ -1711,6 +1711,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * tags that are considered in determining the newest commit of interest. The
    * value in this field only has any effect when the CommitSelectionStrategy is
    * Lexical, NewestTag, or SemVer. This field is optional.
+   * AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex instead.
    *
    * +kubebuilder:validation:Optional
    *
@@ -1719,11 +1720,22 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
   allowTags: string;
 
   /**
+   * +kubebuilder:validation:Optional
+   * AllowTagsRegex is a list of regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest.
+   * The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: repeated string allowTagsRegex = 13;
+   */
+  allowTagsRegex: string[];
+
+  /**
    * IgnoreTags is a list of tags that must be ignored when determining the
    * newest commit of interest. No regular expressions or glob patterns are
    * supported yet. The value in this field only has any effect when the
    * CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
    * optional.
+   * IgnoreTags is deprecated since v1.11.0 in favour of IgnoreTagsRegex and will be removed in v1.13.0.
    *
    * +kubebuilder:validation:Optional
    *
@@ -1741,6 +1753,7 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
    * to tags and has access to tag metadata variables. The filter is applied
    * after AllowTags, IgnoreTags, and SemverConstraint fields.
+   * AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
    *
    * The expression should be a valid expr-lang expression that evaluates to
    * true or false. When the expression evaluates to true, the commit/tag is
@@ -2145,16 +2158,19 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    *   tag. Useful when tags embed a leading date or timestamp. The AllowTags
    *   and IgnoreTags fields can optionally be used to narrow the set of tags
    *   eligible for selection.
+   *   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
    *
    * - "NewestBuild": Selects the image that was most recently pushed to the
    *   repository. The AllowTags and IgnoreTags fields can optionally be used
    *   to narrow the set of tags eligible for selection. This is the least
    *   efficient and is likely to cause rate limiting affecting this Warehouse
    *   and possibly others. This strategy should be avoided.
+   *   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
    *
    * - "SemVer": Selects the image with the semantically greatest tag. The
    *   AllowTags and IgnoreTags fields can optionally be used to narrow the set
    *   of tags eligible for selection.
+   *   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex and IgnoreTagsRegex instead.
    *
    * +kubebuilder:default=SemVer
    *
@@ -2215,6 +2231,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * AllowTags is a regular expression that can optionally be used to limit the
    * image tags that are considered in determining the newest version of an
    * image. This field is optional.
+   * AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use AllowTagsRegex instead.
    *
    * +kubebuilder:validation:Optional
    *
@@ -2223,9 +2240,19 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
   allowTags: string;
 
   /**
+   * AllowTagsRegex is a list of regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.
+   *
+   * +kubebuilder:validation:Optional
+   *
+   * @generated from field: repeated string allowTagsRegex = 13;
+   */
+  allowTagsRegex: string[];
+
+  /**
    * IgnoreTags is a list of tags that must be ignored when determining the
    * newest version of an image. No regular expressions or glob patterns are
    * supported yet. This field is optional.
+   * IgnoreTags is deprecated since v1.11.0 and will be removed in v1.13.0. Please use IgnoreTagsRegex instead.
    *
    * +kubebuilder:validation:Optional
    *

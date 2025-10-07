@@ -4963,6 +4963,24 @@ func (m *GitSubscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if len(m.IgnoreTagsRegex) > 0 {
+		for iNdEx := len(m.IgnoreTagsRegex) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.IgnoreTagsRegex[iNdEx])
+			copy(dAtA[i:], m.IgnoreTagsRegex[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.IgnoreTagsRegex[iNdEx])))
+			i--
+			dAtA[i] = 0x72
+		}
+	}
+	if len(m.AllowTagsRegex) > 0 {
+		for iNdEx := len(m.AllowTagsRegex) - 1; iNdEx >= 0; iNdEx-- {
+			i -= len(m.AllowTagsRegex[iNdEx])
+			copy(dAtA[i:], m.AllowTagsRegex[iNdEx])
+			i = encodeVarintGenerated(dAtA, i, uint64(len(m.AllowTagsRegex[iNdEx])))
+			i--
+			dAtA[i] = 0x6a
+		}
+	}
 	i -= len(m.ExpressionFilter)
 	copy(dAtA[i:], m.ExpressionFilter)
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ExpressionFilter)))
@@ -8569,6 +8587,18 @@ func (m *GitSubscription) Size() (n int) {
 	n += 2
 	l = len(m.ExpressionFilter)
 	n += 1 + l + sovGenerated(uint64(l))
+	if len(m.AllowTagsRegex) > 0 {
+		for _, s := range m.AllowTagsRegex {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
+	if len(m.IgnoreTagsRegex) > 0 {
+		for _, s := range m.IgnoreTagsRegex {
+			l = len(s)
+			n += 1 + l + sovGenerated(uint64(l))
+		}
+	}
 	return n
 }
 
@@ -10210,6 +10240,8 @@ func (this *GitSubscription) String() string {
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
 		`StrictSemvers:` + fmt.Sprintf("%v", this.StrictSemvers) + `,`,
 		`ExpressionFilter:` + fmt.Sprintf("%v", this.ExpressionFilter) + `,`,
+		`AllowTagsRegex:` + fmt.Sprintf("%v", this.AllowTagsRegex) + `,`,
+		`IgnoreTagsRegex:` + fmt.Sprintf("%v", this.IgnoreTagsRegex) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -17674,6 +17706,70 @@ func (m *GitSubscription) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ExpressionFilter = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 13:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field AllowTagsRegex", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.AllowTagsRegex = append(m.AllowTagsRegex, string(dAtA[iNdEx:postIndex]))
+			iNdEx = postIndex
+		case 14:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IgnoreTagsRegex", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowGenerated
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthGenerated
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.IgnoreTagsRegex = append(m.IgnoreTagsRegex, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

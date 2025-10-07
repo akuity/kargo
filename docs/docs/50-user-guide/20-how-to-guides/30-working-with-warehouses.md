@@ -62,15 +62,20 @@ fields:
 <a name="allow-tags-constraint"></a>
 
 - `allowTags`: An optional regular expression that limits the eligibility for
+  selection to tags that match the pattern. `allowTags` is deprecated since v1.11.0 and will be removed in v1.13.0. Please use `allowTagsRegex` instead.
+
+<a name="allow-tags-regex"></a>
+
+- `allowTagsRegex`: An optional list of regular expression that limits the eligibility for
   selection to tags that match the pattern.
 
 <a name="ignore-tags-constraint"></a>
 
-- `ignoreTags`: An optional list of tags that should explicitly be ignored.
+- `ignoreTags`: An optional list of tags that should explicitly be ignored. `ignoreTags` is deprecated since v1.11.0 and will be removed in v1.13.0. Please use `ignoreTagsRegex` instead.
 
-<a name="ignore-regex"></a>
+<a name="ignore-tags-regex"></a>
 
-- `ignoreRegex`: An optional regular expression that limits the eligibility for
+- `ignoreTagsRegex`: An optional list of regular expression that limits the eligibility for
   selection to tags that don't match the pattern.
 
 <a name="platform-constraint"></a>
@@ -739,7 +744,7 @@ Both the [`NewestBuild` selection strategy](#newest-build) and any
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
 [`allowTags`](#allow-tags-constraint) or
-[`ignoreTags`](#ignore-tags-constraint) or [`ignoreRegex`](#ignore-regex). Registry architecture, unfortunately,
+[`ignoreTags`](#ignore-tags-constraint). [`allowTags`](#allow-tags-constraint) and [`ignoreTags`](#ignore-tags-constraint) are deprecated since v0.11.0 and will be removed in v0.13.0 in favour of [`allowTagsRegex`](#allow-tags-regex) and [`ignoreTagsRegex`](#ignore-tags-regex). Registry architecture, unfortunately,
 requires such metadata be retrieved image-by-image with a separate API call for
 each. Even with aggressive caching, and especially when the number of image
 revisions to consider is large, this process can take quite some time. The time
