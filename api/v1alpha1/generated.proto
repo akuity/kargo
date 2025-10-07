@@ -257,7 +257,8 @@ message ChartSubscription {
   // no constraints, which means the latest version of the chart will always be
   // used. Care should be taken with leaving this field unspecified, as it can
   // lead to the unanticipated rollout of breaking changes.
-  // More info: https://github.com/masterminds/semver#checking-version-constraints
+  // More info:
+  // https://github.com/masterminds/semver#checking-version-constraints
   //
   // +kubebuilder:validation:Optional
   optional string semverConstraint = 3;
@@ -469,7 +470,8 @@ message ExpressionVariable {
 
   // Value is the value of the variable. It is allowed to utilize expressions
   // in the value.
-  // See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+  // See https://docs.kargo.io/user-guide/reference-docs/expressions for
+  // details.
   optional string value = 2;
 }
 
@@ -657,7 +659,8 @@ message FreightStatus {
   // Metadata is a map of arbitrary metadata associated with the Freight.
   // This is useful for storing additional information about the Freight
   // or Promotion that can be shared across steps or stages.
-  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON>
+      metadata = 4;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -699,7 +702,8 @@ message GitDiscoveryResult {
 
   // Commits is a list of commits discovered by the Warehouse for the
   // GitSubscription. An empty list indicates that the discovery operation was
-  // successful, but no commits matching the GitSubscription criteria were found.
+  // successful, but no commits matching the GitSubscription criteria were
+  // found.
   //
   // +optional
   repeated DiscoveredCommit commits = 2;
@@ -765,16 +769,25 @@ message GitSubscription {
   //
   // - "SemVer": Selects the commit referenced by the semantically greatest
   //   tag. The SemverConstraint field can optionally be used to narrow the set
-  //   of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   of tags eligible for selection. AllowTags and IgnoreTags are deprecated
+  //   since v1.11.0 and will be removed in v1.13.0. From v.1.10.0, errors will
+  //   be throw during artifact discovery if these fields are used. Please use
+  //   AllowTagsRegex and IgnoreTagsRegex instead.
   //
   // - "Lexical": Selects the commit referenced by the lexicographically
   //   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
   //   AllowTags and IgnoreTags fields can optionally be used to narrow the set
-  //   of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   of tags eligible for selection. AllowTags and IgnoreTags are deprecated
+  //   since v1.11.0 and will be removed in v1.13.0. From v.1.10.0, errors will
+  //   be throw during artifact discovery if these fields are used. Please use
+  //   AllowTagsRegex and IgnoreTagsRegex instead.
   //
   // - "NewestTag": Selects the commit referenced by the most recently created
   //   tag. The AllowTags and IgnoreTags fields can optionally be used to
-  //   narrow the set of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   narrow the set of tags eligible for selection. AllowTags and IgnoreTags
+  //   are deprecated since v1.11.0 and will be removed in v1.13.0. From
+  //   v.1.10.0, errors will be throw during artifact discovery if these fields
+  //   are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
   //
   // +kubebuilder:default=NewestFromBranch
   optional string commitSelectionStrategy = 2;
@@ -818,15 +831,19 @@ message GitSubscription {
   // tags that are considered in determining the newest commit of interest. The
   // value in this field only has any effect when the CommitSelectionStrategy is
   // Lexical, NewestTag, or SemVer. This field is optional.
-  // AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex instead.
+  // AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. From
+  // v.1.10.0, errors will be throw during artifact discovery if these fields
+  // are used. Please use AllowTagsRegex instead.
   //
   // +kubebuilder:validation:Optional
   optional string allowTags = 5;
 
   // +kubebuilder:validation:Optional
-  // AllowTagsRegex is a list of regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest.
-  // The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.
-  // +kubebuilder:validation:Optional
+  // AllowTagsRegex is a list of regular expression that can optionally be used
+  // to limit the tags that are considered in determining the newest commit of
+  // interest. The value in this field only has any effect when the
+  // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+  // optional. +kubebuilder:validation:Optional
   repeated string allowTagsRegex = 13;
 
   // IgnoreTags is a list of tags that must be ignored when determining the
@@ -834,14 +851,18 @@ message GitSubscription {
   // supported yet. The value in this field only has any effect when the
   // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
   // optional.
-  // IgnoreTags is deprecated since v1.10.0 in favour of IgnoreTagsRegex and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used.
+  // IgnoreTags is deprecated since v1.11.0 in favour of IgnoreTagsRegex and
+  // will be removed in v1.13.0. From v.1.10.0, errors will be throw during
+  // artifact discovery if these fields are used.
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
 
-  // IgnoreTagsRegex is a list of regular expression that can optionally be used to ignore the tags that are considered in determining the newest commit of interest.
-  // The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.
-  // +kubebuilder:validation:Optional
+  // IgnoreTagsRegex is a list of regular expression that can optionally be used
+  // to ignore the tags that are considered in determining the newest commit of
+  // interest. The value in this field only has any effect when the
+  // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+  // optional. +kubebuilder:validation:Optional
   repeated string ignoreTagsRegex = 14;
 
   // ExpressionFilter is an expression that can optionally be used to limit
@@ -853,7 +874,10 @@ message GitSubscription {
   // For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
   // to tags and has access to tag metadata variables. The filter is applied
   // after AllowTags, IgnoreTags, and SemverConstraint fields.
-  // AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  // AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed
+  // in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery
+  // if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex
+  // instead.
   //
   // The expression should be a valid expr-lang expression that evaluates to
   // true or false. When the expression evaluates to true, the commit/tag is
@@ -865,7 +889,8 @@ message GitSubscription {
   // For NewestFromBranch (commit filtering):
   //   - `id`: The ID (sha) of the commit.
   //   - `commitDate`: The commit date of the commit.
-  //   - `author`: The author of the commit message, in the format "Name <email>".
+  //   - `author`: The author of the commit message, in the format "Name
+  //   <email>".
   //   - `committer`: The person who committed the commit, in the format
   // 	   "Name <email>".
   //   - `subject`: The subject (first line) of the commit message.
@@ -881,8 +906,8 @@ message GitSubscription {
   // 	   tag, in the format "Name <email>".
   //   - `subject`: The subject (first line) of the commit message associated
   // 	   with the tag.
-  // 	 - `tagger`: The person who created the tag, in the format "Name <email>".
-  // 	   Only available for annotated tags.
+  // 	 - `tagger`: The person who created the tag, in the format "Name
+  // <email>". 	   Only available for annotated tags.
   // 	 - `annotation`: The subject (first line) of the tag annotation. Only
   // 	   available for annotated tags.
   //
@@ -931,7 +956,10 @@ message GitSubscription {
 
   // DiscoveryLimit is an optional limit on the number of commits that can be
   // discovered for this subscription. The limit is applied after filtering
-  // commits based on the AllowTags and IgnoreTags fields. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  // commits based on the AllowTags and IgnoreTags fields. AllowTags and
+  // IgnoreTags are deprecated since v1.11.0 and will be removed in v1.13.0.
+  // From v.1.10.0, errors will be throw during artifact discovery if these
+  // fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
   // When left unspecified, the field is implicitly treated as if its value
   // were "20". The upper limit for this field is 100.
   //
@@ -990,10 +1018,12 @@ message Health {
 
   // Config is the opaque configuration of all health checks performed on this
   // Stage.
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 4;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON
+      config = 4;
 
   // Output is the opaque output of all health checks performed on this Stage.
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON output = 5;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON
+      output = 5;
 }
 
 // HealthCheckStep describes a health check directive which can be executed by
@@ -1005,7 +1035,8 @@ message HealthCheckStep {
   optional string uses = 1;
 
   // Config is the configuration for the directive.
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 2;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON
+      config = 2;
 }
 
 // HealthStats contains a summary of the collective health of some resource
@@ -1057,8 +1088,12 @@ message ImageDiscoveryResult {
 
 // ImageSubscription defines a subscription to an image repository.
 //
-// +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
-// +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+// +kubebuilder:validation:XValidation:message="semverConstraint and constraint
+// fields are mutually exclusive",rule="!(has(self.semverConstraint) &&
+// has(self.constraint))" +kubebuilder:validation:XValidation:message="If
+// imageSelectionStrategy is Digest, either constraint or semverConstraint must
+// be set",rule="!(self.imageSelectionStrategy == 'Digest') ||
+// has(self.constraint) || has(self.semverConstraint)"
 message ImageSubscription {
   // RepoURL specifies the URL of the image repository to subscribe to. The
   // value in this field MUST NOT include an image tag. This field is required.
@@ -1068,10 +1103,10 @@ message ImageSubscription {
   // +akuity:test-kubebuilder-pattern=ImageRepoURL
   optional string repoURL = 1;
 
-  // ImageSelectionStrategy specifies the rules for how to identify the newest version
-  // of the image specified by the RepoURL field. This field is optional. When
-  // left unspecified, the field is implicitly treated as if its value were
-  // "SemVer".
+  // ImageSelectionStrategy specifies the rules for how to identify the newest
+  // version of the image specified by the RepoURL field. This field is
+  // optional. When left unspecified, the field is implicitly treated as if its
+  // value were "SemVer".
   //
   // Accepted values:
   //
@@ -1082,19 +1117,28 @@ message ImageSubscription {
   //   tag. Useful when tags embed a leading date or timestamp. The AllowTags
   //   and IgnoreTags fields can optionally be used to narrow the set of tags
   //   eligible for selection.
-  //   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed
+  //   in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery
+  //   if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex
+  //   instead.
   //
   // - "NewestBuild": Selects the image that was most recently pushed to the
   //   repository. The AllowTags and IgnoreTags fields can optionally be used
   //   to narrow the set of tags eligible for selection. This is the least
   //   efficient and is likely to cause rate limiting affecting this Warehouse
   //   and possibly others. This strategy should be avoided.
-  //   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed
+  //   in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery
+  //   if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex
+  //   instead.
   //
   // - "SemVer": Selects the image with the semantically greatest tag. The
   //   AllowTags and IgnoreTags fields can optionally be used to narrow the set
   //   of tags eligible for selection.
-  //   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex instead.
+  //   AllowTags and IgnoreTags are deprecated since v1.11.0 and will be removed
+  //   in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery
+  //   if these fields are used. Please use AllowTagsRegex and IgnoreTagsRegex
+  //   instead.
   //
   // +kubebuilder:default=SemVer
   optional string imageSelectionStrategy = 3;
@@ -1120,7 +1164,8 @@ message ImageSubscription {
   // will always be used. Care should be taken with leaving this field
   // unspecified, as it can lead to the unanticipated rollout of breaking
   // changes.
-  // More info: https://github.com/masterminds/semver#checking-version-constraints
+  // More info:
+  // https://github.com/masterminds/semver#checking-version-constraints
   //
   // Deprecated: Use Constraint instead. This field will be removed in v1.9.0
   //
@@ -1139,12 +1184,16 @@ message ImageSubscription {
   // AllowTags is a regular expression that can optionally be used to limit the
   // image tags that are considered in determining the newest version of an
   // image. This field is optional.
-  // AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use AllowTagsRegex instead.
+  // AllowTags is deprecated since v1.11.0 and will be removed in v1.13.0. From
+  // v.1.10.0, errors will be throw during artifact discovery if these fields
+  // are used. Please use AllowTagsRegex instead.
   //
   // +kubebuilder:validation:Optional
   optional string allowTags = 5;
 
-  // AllowTagsRegex is a list of regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.
+  // AllowTagsRegex is a list of regular expression that can optionally be used
+  // to limit the image tags that are considered in determining the newest
+  // version of an image. This field is optional.
   //
   // +kubebuilder:validation:Optional
   repeated string allowTagsRegex = 13;
@@ -1152,7 +1201,9 @@ message ImageSubscription {
   // IgnoreTags is a list of tags that must be ignored when determining the
   // newest version of an image. No regular expressions or glob patterns are
   // supported yet. This field is optional.
-  // IgnoreTags is deprecated since v1.10.0 and will be removed in v1.13.0. From v.1.10.0, errors will be throw during artifact discovery if these fields are used. Please use IgnoreTagsRegex instead.
+  // IgnoreTags is deprecated since v1.11.0 and will be removed in v1.13.0. From
+  // v.1.10.0, errors will be throw during artifact discovery if these fields
+  // are used. Please use IgnoreTagsRegex instead.
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
@@ -1310,7 +1361,9 @@ message PromotionList {
 // PromotionPolicy defines policies governing the promotion of Freight to a
 // specific Stage.
 //
-// +kubebuilder:validation:XValidation:message="PromotionPolicy must have exactly one of stage or stageSelector set",rule="has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)"
+// +kubebuilder:validation:XValidation:message="PromotionPolicy must have
+// exactly one of stage or stageSelector set",rule="has(self.stage) ?
+// !has(self.stageSelector) : has(self.stageSelector)"
 message PromotionPolicy {
   // Stage is the name of the Stage to which this policy applies.
   //
@@ -1367,7 +1420,8 @@ message PromotionPolicySelector {
   // appropriate permissions could create new resources with labels that match
   // the selector, potentially enabling unauthorized auto-promotion.
   // For sensitive environments, exact Name matching provides tighter control.
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector =
+      2;
 }
 
 // PromotionReference contains the relevant information about a Promotion
@@ -1420,7 +1474,9 @@ message PromotionSpec {
   //
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinItems=1
-  // +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+  // +kubebuilder:validation:items:XValidation:message="Promotion step must have
+  // uses set and must not reference a task",rule="has(self.uses) &&
+  // !has(self.task)"
   repeated PromotionStep steps = 3;
 }
 
@@ -1442,7 +1498,8 @@ message PromotionStatus {
   // to explain why.
   optional string message = 2;
 
-  // Freight is the detail of the piece of freight that was referenced by this promotion.
+  // Freight is the detail of the piece of freight that was referenced by this
+  // promotion.
   optional FreightReference freight = 5;
 
   // FreightCollection contains the details of the piece of Freight referenced
@@ -1471,7 +1528,8 @@ message PromotionStatus {
 
   // State stores the state of the promotion process between reconciliation
   // attempts.
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON state = 10;
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON
+      state = 10;
 }
 
 // PromotionStep describes a directive to be executed as part of a Promotion.
@@ -1512,8 +1570,10 @@ message PromotionStep {
   // Config is opaque configuration for the PromotionStep that is understood
   // only by each PromotionStep's implementation. It is legal to utilize
   // expressions in defining values at any level of this block.
-  // See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+  // See https://docs.kargo.io/user-guide/reference-docs/expressions for
+  // details.
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON
+      config = 3;
 }
 
 // PromotionStepRetry describes the retry policy for a PromotionStep.
@@ -1604,15 +1664,15 @@ message PromotionTaskSpec {
   //
   // +kubebuilder:validation:Required
   // +kubebuilder:validation:MinItems=1
-  // +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTask step must
+  // have uses set and must not reference another task",rule="has(self.uses) &&
+  // !has(self.task)"
   repeated PromotionStep steps = 2;
 }
 
 // PromotionTemplate defines a template for a Promotion that can be used to
 // incorporate Freight into a Stage.
-message PromotionTemplate {
-  optional PromotionTemplateSpec spec = 1;
-}
+message PromotionTemplate { optional PromotionTemplateSpec spec = 1; }
 
 // PromotionTemplateSpec describes the (partial) specification of a Promotion
 // for a Stage. This is a template that can be used to create a Promotion for a
@@ -1627,9 +1687,15 @@ message PromotionTemplateSpec {
   // are listed in this field.
   //
   // +kubebuilder:validation:MinItems=1
-  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step must have exactly one of uses or task set",rule="(has(self.uses) ? !has(self.task) : has(self.task))"
-  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
-  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step
+  // must have exactly one of uses or task set",rule="(has(self.uses) ?
+  // !has(self.task) : has(self.task))"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step
+  // referencing a task cannot set continueOnError",rule="!has(self.task) ||
+  // !has(self.continueOnError)"
+  // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step
+  // referencing a task cannot set retry",rule="!has(self.task) ||
+  // !has(self.retry)"
   repeated PromotionStep steps = 1;
 }
 
@@ -1789,7 +1855,8 @@ message StageStatus {
   // Metadata is a map of arbitrary metadata associated with the Stage.
   // This is useful for storing additional information about the Stage
   // that can be shared across promotions, verifications, or other processes.
-  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
+  map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON>
+      metadata = 15;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of
@@ -2053,4 +2120,3 @@ message WebhookReceiverDetails {
   // URL includes the full address of the receiver's webhook endpoint.
   optional string url = 4;
 }
-
