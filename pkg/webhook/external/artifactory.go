@@ -216,7 +216,15 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 				repoURLs[i] = urls.NormalizeImage(repoURL)
 			case artifactoryChartImageType:
 				repoURLs[i] = urls.NormalizeChart(repoURL)
-				// no default case because this is already checked above
+			default:
+				xhttp.WriteErrorJSON(
+					w,
+					xhttp.Error(
+						fmt.Errorf("unsupported image type %q", payload.Data.ImageType),
+						http.StatusNotImplemented,
+					),
+				)
+				return
 			}
 		}
 		logger = logger.WithValues("repoURLs", repoURLs)
