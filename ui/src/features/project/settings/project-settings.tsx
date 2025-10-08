@@ -13,6 +13,7 @@ import { Breadcrumb, Flex, Menu, Skeleton, Typography } from 'antd';
 import React from 'react';
 import { NavLink, Route, Routes, useLocation, Navigate } from 'react-router-dom';
 
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -31,6 +32,8 @@ export const ProjectSettings = () => {
 
   const getConfigQuery = useQuery(getConfig);
   const config = getConfigQuery.data;
+
+  const { projectSettingsExtensions } = useExtensionsContext();
 
   const settingsViews = React.useMemo(() => {
     return {
@@ -83,6 +86,11 @@ export const ProjectSettings = () => {
     };
   }, [config]);
 
+  const views = React.useMemo(
+    () => [...Object.values(settingsViews), ...projectSettingsExtensions],
+    [projectSettingsExtensions, settingsViews]
+  );
+
   const projectBreadcrumbs = useProjectBreadcrumbs();
 
   return (
@@ -106,10 +114,8 @@ export const ProjectSettings = () => {
               <Menu
                 className='-ml-2 -mt-1'
                 style={{ border: 0, background: 'transparent' }}
-                selectedKeys={Object.values(settingsViews)
-                  .map((i) => i.path)
-                  .filter((i) => location.pathname.endsWith(i))}
-                items={Object.values(settingsViews).map((i) => ({
+                selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+                items={views.map((i) => ({
                   label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
                   icon: <FontAwesomeIcon icon={i.icon} />,
                   key: i.path
@@ -124,7 +130,7 @@ export const ProjectSettings = () => {
                   index
                   element={<Navigate to={settingsViews.general.path} replace={true} />}
                 />
-                {Object.values(settingsViews).map((t) => (
+                {views.map((t) => (
                   <Route key={t.path} path={t.path} element={<t.component />} />
                 ))}
                 <Route path='*' element={<Navigate to='../' replace={true} />} />
