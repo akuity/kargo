@@ -62,7 +62,10 @@ fields:
 <a name="allow-tags-constraint"></a>
 
 - `allowTags`: An optional regular expression that limits the eligibility for
-  selection to tags that match the pattern. `allowTags` is deprecated since v1.11.0 and will be removed in v1.13.0. Please use `allowTagsRegex` instead.
+  selection to tags that match the pattern.
+  `allowTags` is deprecated since v1.10.0 and will be removed in v1.13.0.
+  From v.1.11.0, errors will be throw during artifact discovery if this fields is used.
+  Please use `allowTagsRegex` instead.
 
 <a name="allow-tags-regex"></a>
 
@@ -71,7 +74,10 @@ fields:
 
 <a name="ignore-tags-constraint"></a>
 
-- `ignoreTags`: An optional list of tags that should explicitly be ignored. `ignoreTags` is deprecated since v1.11.0 and will be removed in v1.13.0. Please use `ignoreTagsRegex` instead.
+- `ignoreTags`: An optional list of tags that should explicitly be ignored.
+  `ignoreTags` is deprecated since v1.10.0 and will be removed in v1.13.0.
+  From v.1.11.0, errors will be throw during artifact discovery if this fields is used.
+  Please use `ignoreTagsRegex` instead.
 
 <a name="ignore-tags-regex"></a>
 
@@ -695,7 +701,7 @@ authentication options are covered in detail on the
 
 ## Automatic Freight Creation
 
-By default, `Warehouse`s create new `Freight` following a discovery cycle if 
+By default, `Warehouse`s create new `Freight` following a discovery cycle if
 new artifacts are found. This can be disabled by setting `freightCreationPolicy`
 to `Manual`.
 
@@ -706,7 +712,7 @@ spec:
   freightCreationPolicy: Manual
 ```
 
-For more granular control over the creation of your `Freight`, you can define 
+For more granular control over the creation of your `Freight`, you can define
 `Freight` creation criteria in the form of an expression. One potential use case
 could be back end and front end versions needing to match.
 
@@ -716,10 +722,10 @@ Example:
 spec:
   freightCreationPolicy: Automatic
   subscriptions:
-  - image:
-      repoURL: ghcr.io/example/frontend
-  - image:
-      repoURL: ghcr.io/example/backend
+    - image:
+        repoURL: ghcr.io/example/frontend
+    - image:
+        repoURL: ghcr.io/example/backend
   freightCreationCriteria:
     expression: |
       imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
@@ -744,7 +750,7 @@ Both the [`NewestBuild` selection strategy](#newest-build) and any
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
 [`allowTags`](#allow-tags-constraint) or
-[`ignoreTags`](#ignore-tags-constraint). [`allowTags`](#allow-tags-constraint) and [`ignoreTags`](#ignore-tags-constraint) are deprecated since v1.11.0 and will be removed in v1.13.0 in favour of [`allowTagsRegex`](#allow-tags-regex) and [`ignoreTagsRegex`](#ignore-tags-regex). Registry architecture, unfortunately,
+[`ignoreTags`](#ignore-tags-constraint). [`allowTags`](#allow-tags-constraint) and [`ignoreTags`](#ignore-tags-constraint) are deprecated since v1.10.0 and will be removed in v1.13.0 in favour of [`allowTagsRegex`](#allow-tags-regex) and [`ignoreTagsRegex`](#ignore-tags-regex). Registry architecture, unfortunately,
 requires such metadata be retrieved image-by-image with a separate API call for
 each. Even with aggressive caching, and especially when the number of image
 revisions to consider is large, this process can take quite some time. The time
