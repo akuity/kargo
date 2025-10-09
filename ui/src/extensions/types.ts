@@ -1,3 +1,4 @@
+import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import React from 'react';
 
@@ -38,6 +39,7 @@ export type PromoteTabComponentProps = {
   stage: Stage;
   freight: Freight;
 };
+
 export type PromoteTab = {
   type: 'promoteTab';
   component: (props: PromoteTabComponentProps) => React.ReactNode;
@@ -45,4 +47,27 @@ export type PromoteTab = {
   icon?: React.ReactNode;
 };
 
-export type Extension = StageTab | LayoutExtension | ProjectSubpage | AppSubpage | PromoteTab;
+export type SettingsExtension = {
+  type: 'settings';
+  component: () => React.ReactNode;
+  label: string;
+  icon: IconProp;
+  path: string;
+};
+
+export type ProjectSettingsExtension = {
+  type: 'projectSettings';
+  component: () => React.ReactNode;
+  label: string;
+  icon: IconProp;
+  path: string;
+};
+
+export type Extension =
+  | StageTab
+  | LayoutExtension
+  | ProjectSubpage
+  | AppSubpage
+  | PromoteTab
+  | SettingsExtension
+  | ProjectSettingsExtension;
