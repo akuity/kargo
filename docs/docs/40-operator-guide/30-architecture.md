@@ -444,6 +444,6 @@ OpenTelemetry support for distributed tracing across components (when configured
 ## What's Next?
 
 - **[Basic Installation](./10-basic-installation.md)**: Get Kargo up and running
-- **[Advanced Installation](./20-advanced-installation/)**: Customize your deployment
+- **[Advanced Installation](./20-advanced-installation/10-advanced-with-helm.md)**: Customize your deployment
 - **[Cluster Configuration](./35-cluster-configuration.md)**: Configure cluster-level settings
-- **[Security](./40-security/)**: Secure your Kargo installation
+- **[Security](./40-security/index.md)**: Secure your Kargo installation
