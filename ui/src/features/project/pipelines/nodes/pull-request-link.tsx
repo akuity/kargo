@@ -29,11 +29,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     getPromotion,
     { project: props.stage?.metadata?.namespace, name: currentPromotion },
     {
-      enabled:
-        !!currentPromotion &&
-        !!props.stage?.spec?.promotionTemplate?.spec?.steps?.find(
-          (step) => step?.uses === 'git-open-pr'
-        )
+      enabled: !!currentPromotion
     }
   );
 
