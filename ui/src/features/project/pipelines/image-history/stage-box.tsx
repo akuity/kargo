@@ -55,7 +55,7 @@ export const StageBox = memo(
     const style = {
       backgroundColor: baseColor,
       opacity: showHistory && !isHighlighted ? 0.6 : 1,
-      border: isHighlighted ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent',
+      border: isHighlighted ? '2px solid rgba(0,0,0,0.4)' : '2px solid transparent',
       boxShadow: isHighlighted ? '0 1px 3px rgba(0, 0, 0, 0.2)' : 'none'
     };
 
@@ -63,7 +63,7 @@ export const StageBox = memo(
       <Tooltip title={tooltipTitle}>
         <Button
           onClick={handleClick}
-          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300 border-0 p-0'
+          className='h-6 w-full rounded flex items-center justify-center cursor-pointer transition-all duration-300 p-0'
           style={style}
         >
           {showHistory && (
