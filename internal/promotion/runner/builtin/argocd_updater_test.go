@@ -1026,7 +1026,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 		runner         *argocdUpdater
 		app            *argocd.Application
 		desiredSources argocd.ApplicationSources
-		assertions     func(*testing.T, error)
+		assertions     func(*testing.T, *argocd.Application, error)
 	}{
 		{
 			name: "error patching Application",
@@ -1048,13 +1048,13 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *argocd.Application, err error) {
 				require.ErrorContains(t, err, "error patching Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 		{
-			name: "success",
+			name: "success (no sources to update)",
 			runner: &argocdUpdater{
 				argoCDAppPatchFn: func(
 					context.Context,
@@ -1063,8 +1063,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				) error {
 					return nil
 				},
-				logAppEventFn: func(
-					context.Context,
+				logAppEventFn: func(context.Context,
 					*argocd.Application,
 					string,
 					string,
@@ -1081,29 +1080,183 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, err error) {
+			assertions: func(t *testing.T, _ *argocd.Application, err error) {
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "updates Sources when present",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					context.Context,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
+				) error {
+					return nil
+				},
+				logAppEventFn: func(context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				},
+			},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{{TargetRevision: "old-rev"}},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, patched *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				require.Len(t, patched.Spec.Sources, 1)
+				require.Equal(t, "new-rev", patched.Spec.Sources[0].TargetRevision)
+			},
+		},
+		{
+			name: "updates Source when Sources not present",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					context.Context,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
+				) error {
+					return nil
+				},
+				logAppEventFn: func(context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				}},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{TargetRevision: "old-rev"},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, patched *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				require.NotNil(t, patched.Spec.Source)
+				require.Equal(t, "new-rev", patched.Spec.Source.TargetRevision)
+			},
+		},
+		{
+			name: "updates Sources when both Source and Sources are present",
+			runner: &argocdUpdater{
+				argoCDAppPatchFn: func(
+					context.Context,
+					kubeclient.ObjectWithKind,
+					kubeclient.UnstructuredPatchFn,
+				) error {
+					return nil
+				},
+				logAppEventFn: func(context.Context,
+					*argocd.Application,
+					string,
+					string,
+					string,
+				) {
+				}},
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "fake", Namespace: "fake"},
+				Spec: argocd.ApplicationSpec{
+					Source:  &argocd.ApplicationSource{TargetRevision: "old-rev-source"},
+					Sources: argocd.ApplicationSources{{TargetRevision: "old-rev-sources"}},
+				},
+			},
+			desiredSources: argocd.ApplicationSources{{TargetRevision: "new-rev"}},
+			assertions: func(t *testing.T, patched *argocd.Application, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, patched)
+				// Sources should be updated
+				require.Len(t, patched.Spec.Sources, 1)
+				require.Equal(t, "new-rev", patched.Spec.Sources[0].TargetRevision)
+				// Source should remain untouched
+				require.Equal(t, "old-rev-source", patched.Spec.Source.TargetRevision)
 			},
 		},
 	}
 
-	stepCtx := &promotion.StepContext{
-		Freight: kargoapi.FreightCollection{},
-	}
-	// Tamper with the freight collection ID for testing purposes
-	stepCtx.Freight.ID = "fake-freight-collection-id"
-
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.runner.syncApplication(
-					context.Background(),
-					stepCtx,
-					testCase.app,
-					testCase.desiredSources,
-				),
+			stepCtx := &promotion.StepContext{
+				Freight: kargoapi.FreightCollection{
+					ID: "fake-freight-collection-id",
+				},
+			}
+			err := testCase.runner.syncApplication(
+				context.Background(),
+				stepCtx,
+				testCase.app,
+				testCase.desiredSources,
 			)
+			testCase.assertions(t, testCase.app, err)
+		})
+	}
+}
+
+func TestSyncMessage(t *testing.T) {
+	testCases := []struct {
+		name     string
+		app      *argocd.Application
+		expected string
+	}{
+		{
+			name: "single Source",
+			app: &argocd.Application{
+				Spec: argocd.ApplicationSpec{
+					Source: &argocd.ApplicationSource{
+						TargetRevision: "rev-123",
+					},
+				},
+			},
+			expected: "initiated sync to rev-123",
+		},
+		{
+			name: "single Sources",
+			app: &argocd.Application{
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{
+						{
+							TargetRevision: "rev-456",
+						},
+					},
+				},
+			},
+			expected: "initiated sync to rev-456",
+		},
+		{
+			name: "multiple Sources",
+			app: &argocd.Application{
+				Spec: argocd.ApplicationSpec{
+					Sources: argocd.ApplicationSources{
+						{TargetRevision: "rev-a"},
+						{TargetRevision: "rev-b"},
+					},
+				},
+			},
+			expected: "initiated sync to 2 sources",
+		},
+		{
+			name:     "no Source or Sources",
+			app:      &argocd.Application{},
+			expected: "initiated sync",
+		},
+	}
+
+	runner := &argocdUpdater{}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			message := runner.formatSyncMessage(tc.app)
+			require.Equal(t, tc.expected, message)
 		})
 	}
 }
