@@ -169,18 +169,6 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		var repoURLs []string
 		if repoURLsHeader := r.Header.Get(artifactoryRepoURLHeader); repoURLsHeader != "" {
 			repoURLs = strings.Split(repoURLsHeader, ",")
-			for _, repoURL := range repoURLs {
-				if _, err := url.Parse(repoURL); err != nil {
-					xhttp.WriteErrorJSON(
-						w,
-						xhttp.Error(
-							fmt.Errorf("invalid repo URL %q in %s header", repoURL, artifactoryRepoURLHeader),
-							http.StatusBadRequest,
-						),
-					)
-					return
-				}
-			}
 		} else {
 			originURL, err := url.Parse(payload.Origin)
 			if err != nil {
