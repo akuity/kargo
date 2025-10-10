@@ -17,7 +17,7 @@ jobs:
   test-unit:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     # Install Git from "trixie" repository to get a more recent version than
     # the one available in "stable". This can be removed once the version in
@@ -81,7 +81,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -104,7 +104,7 @@ jobs:
   lint-charts:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -129,7 +129,7 @@ jobs:
       checks: write # Used to create checks (linting comments) on PRs
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -152,7 +152,7 @@ jobs:
   check-codegen:
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -228,7 +228,7 @@ jobs:
     needs: [test-unit, lint-go, lint-charts, lint-proto, lint-and-typecheck-ui, check-codegen]
     runs-on: ubuntu-latest
     container:
-      image: golang:1.25.1-trixie
+      image: golang:1.25.2-trixie
     steps:
     - name: Checkout code
       uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
