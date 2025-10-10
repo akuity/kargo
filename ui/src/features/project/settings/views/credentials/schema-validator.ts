@@ -4,7 +4,7 @@ import { dnsRegex } from '@ui/features/common/utils';
 import { zodValidators } from '@ui/utils/validators';
 
 const imageNameRegex =
-  /^(?:(?:[a-zA-Z0-9.-]+(?::[0-9]+)?\/)?(?:[a-z0-9]+(?:[._-][a-z0-9]+)*\/)*[a-z0-9]+(?:[._-][a-z0-9]+)*)$/;
+  /^(?![a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(\w+([.-]\w+)*(:\d+)?\/)?(\w+([.-]\w+)*)(\/\w+([.-]\w+)*)*$/;
 
 export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
   let schema = z
