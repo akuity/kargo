@@ -107,7 +107,9 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.controller.resources | nindent 10 }}
-
+      {{- with .Values.controller.extraContainers }}
+      {{- toYaml . | nindent 6 }}
+      {{- end }}
       {{- if or .Values.controller.cabundle.configMapName .Values.controller.cabundle.secretName .Values.controller.initContainers  }}
       initContainers:
       {{- with .Values.controller.initContainers }}
