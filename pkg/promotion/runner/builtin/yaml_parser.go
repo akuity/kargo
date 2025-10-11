@@ -88,7 +88,6 @@ func (yp *yamlParser) run(
 
 // readAndParseYAML reads a YAML file and unmarshals it into a map.
 func (yp *yamlParser) readAndParseYAML(workDir string, path string) (map[string]any, error) {
-
 	absFilePath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return nil, fmt.Errorf("error joining path %q: %w", path, err)
@@ -103,12 +102,21 @@ func (yp *yamlParser) readAndParseYAML(workDir string, path string) (map[string]
 		return nil, fmt.Errorf("could not parse empty YAML file: %q", absFilePath)
 	}
 
-	var data map[string]any
-	if err := yaml.Unmarshal(yamlData, &data); err != nil {
+	// Unmarshal generically first so we can detect the root type.
+	var raw any
+	if err := yaml.Unmarshal(yamlData, &raw); err != nil {
 		return nil, fmt.Errorf("could not parse YAML file: %w", err)
 	}
 
-	return data, nil
+	// Normalize root: map stays as-is; sequences & scalars wrapped under "root".
+	switch v := raw.(type) {
+	case map[string]any:
+		return v, nil
+	case []any:
+		return map[string]any{"root": v}, nil
+	default:
+		return map[string]any{"root": v}, nil
+	}
 }
 
 // extractValues evaluates JSONPath expressions using expr and returns extracted values.

@@ -34,6 +34,61 @@ is structured as follows:
 |-------|------|-------------|
 | `outputs` | `map[string]any` | The parsed YAML object. |
 
+### Root Types & Synthetic `root` Key
+
+The YAML document being parsed can have any root type. If the root of the YAML
+is a mapping (object), its keys are exposed directly for expressions (as in the
+example above). If the root is a sequence (list) or a scalar (string, number,
+bool, or null), the value is wrapped under a synthetic key `root` to provide a
+stable object map for expression evaluation.
+
+Summary:
+
+| Original YAML root type | Expression access pattern |
+|-------------------------|---------------------------|
+| Mapping (object)        | Use keys directly (e.g. `image.tag`) |
+| Sequence (list)         | `root` holds the slice (e.g. `root[0].name`) |
+| Scalar (string/number/bool/null) | `root` holds the scalar (e.g. `root`) |
+
+Examples:
+
+Sequence root:
+```yaml
+- name: api
+  image: example/api:v1
+- name: worker
+  image: example/worker:v2
+```
+Expressions:
+| Purpose | Expression | Result |
+|---------|------------|--------|
+| First name | `root[0].name` | `api` |
+| Second image | `root[1].image` | `example/worker:v2` |
+
+Scalar root (string):
+```yaml
+1.2.3
+```
+Expression to capture value:
+| Purpose | Expression | Result |
+|---------|------------|--------|
+| Version | `root` | `1.2.3` |
+
+Scalar root (boolean):
+```yaml
+true
+```
+Expression: `root` → `true`
+
+Scalar root (number):
+```yaml
+42
+```
+Expression: `root` → `42`
+
+Note: This wrapping only affects non-mapping roots. Mapping-based documents are
+left unchanged for backward compatibility.
+
 ## Outputs
 
 The `yaml-parse` step produces the outputs described by the `outputs` field in
