@@ -566,6 +566,14 @@ controller:
     #   args:
     #    - ls
 
+  ## @param controller.extraContainers Optional extra containers to add to the controller pods. This is rendered as the literal YAML.
+  extraContainers: []
+    # - name: sidecar-container
+    #   image: alpine:3.8
+    #   command: [ sh, -c ]
+    #   args:
+    #    - sleep infinity
+
   ## @param controller.env Environment variables to add to controller pods.
   env: []
   #  - name: ENV_NAME
