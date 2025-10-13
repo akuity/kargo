@@ -24,8 +24,8 @@ func TestNewDigestSelector(t *testing.T) {
 		{
 			name: "success",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:          "example/image",
-				SemverConstraint: "latest",
+				RepoURL:    "example/image",
+				Constraint: "latest",
 			},
 			assertions: func(t *testing.T, s Selector, err error) {
 				require.NoError(t, err)

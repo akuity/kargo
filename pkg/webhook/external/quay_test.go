@@ -58,8 +58,8 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "quay.io/mynamespace/repository",
-								SemverConstraint: "^2.0.0", // Constraint won't be met
+								RepoURL:    "quay.io/mynamespace/repository",
+								Constraint: "^2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -96,8 +96,8 @@ func TestQuayHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "quay.io/mynamespace/repository",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "quay.io/mynamespace/repository",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
