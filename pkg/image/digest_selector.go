@@ -43,11 +43,6 @@ func newDigestSelector(
 		baseSelector: base,
 		mutableTag:   sub.Constraint,
 	}
-	if s.mutableTag == "" {
-		// Fall back on the deprecated SemverConstraint field.
-		// TODO: Remove this for v1.9.0.
-		s.mutableTag = sub.SemverConstraint // nolint: staticcheck
-	}
 	return s, nil
 }
 

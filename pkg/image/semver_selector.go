@@ -47,11 +47,6 @@ func newSemverSelector(
 		strictSemvers:    sub.StrictSemvers,
 	}
 	constraintStr := sub.Constraint
-	if constraintStr == "" {
-		// Fall back on the deprecated SemverConstraint field.
-		// TODO: Remove this for v1.9.0.
-		constraintStr = sub.SemverConstraint // nolint: staticcheck
-	}
 	if constraintStr != "" {
 		if s.constraint, err = semver.NewConstraint(constraintStr); err != nil {
 			return nil, fmt.Errorf(
