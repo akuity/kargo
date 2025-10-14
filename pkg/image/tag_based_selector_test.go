@@ -71,8 +71,8 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Equal(t, `^v2\.`, s.allowTagsRegex[0].String())
 				require.Equal(t, `^v1\.`, s.allowTagsRegex[1].String())
 				require.Len(t, s.ignoreTagsRegex, 2)
-				require.Equal(t, `v1\.0\..*`, s.ignoreTagsRegex[0].String())
-				require.Equal(t, `v1\.0\.0$`, s.ignoreTagsRegex[1].String())
+				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
+				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegex[1].String())
 			},
 		},
 	}
