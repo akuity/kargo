@@ -74,7 +74,7 @@ func newTagBasedSelector(
 	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
 	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
 	if len(sub.IgnoreTags) {
-		ignoreTagsRegexStrs = make([]string, len(sub.IgnoreTags))
+		ignoreTagsRegexStrs := make([]string, len(sub.IgnoreTags))
 		for i, ignoreTag := range sub.IgnoreTags {
 			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
 		}
@@ -90,13 +90,6 @@ func newTagBasedSelector(
 
 // MatchesTag implements Selector.
 func (t *tagBasedSelector) MatchesTag(tag string) bool {
-
-	// handle ignoreTags
-	// TODO (v1.13.0) remove this once IgnoreTags is removed
-	if slices.Contains(t.ignoreTags, tag) {
-		return false
-	}
-
 	// handle ignoreTagsRegex
 	for _, regex := range t.ignoreTagsRegex {
 		if regex.MatchString(tag) {
@@ -108,6 +101,7 @@ func (t *tagBasedSelector) MatchesTag(tag string) bool {
 	if len(t.allowTagsRegex) == 0 {
 		return true
 	}
+
 	// check if tag matches any allowTagsRegex
 	for _, regex := range t.allowTagsRegex {
 		if regex.MatchString(regex, tag) {
@@ -124,8 +118,7 @@ func (t *tagBasedSelector) MatchesTag(tag string) bool {
 func (t *tagBasedSelector) getLoggerContext() []any {
 	return append(
 		t.baseSelector.getLoggerContext(),
-		// TODO (v1.13.0) remove len(t.ignoreTags).
-		"tagConstrained", len(t.allowTagsRegex) > 0 || len(t.ignoreTags) > 0 || len(t.ignoreTagsRegex) > 0,
+		"tagConstrained", len(t.allowTagsRegex) > 0 || len(t.ignoreTags) > 0,
 		"discoveryLimit", t.discoveryLimit,
 	)
 }

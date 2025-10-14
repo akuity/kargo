@@ -85,7 +85,7 @@ func newTagBasedSelector(
 	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
 	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
 	if len(sub.IgnoreTags) {
-		ignoreTagsRegexStrs = make([]string, len(sub.IgnoreTags))
+		ignoreTagsRegexStrs := make([]string, len(sub.IgnoreTags))
 		for i, ignoreTag := range sub.IgnoreTags {
 			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
 		}
