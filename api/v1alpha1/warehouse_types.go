@@ -380,8 +380,8 @@ type ImageSubscription struct {
 	//   avoided.
 	//
 	// - "SemVer": Selects the image with the semantically greatest tag. The
-	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
-	//   of tags eligible for selection.
+	//   AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
