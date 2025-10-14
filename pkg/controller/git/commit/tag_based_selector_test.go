@@ -30,7 +30,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 		},
 		{
 			// TODO(v1.13.0): Remove this test once AllowTags is removed.
-			name: "error parsing allowed tags regex",
+			name: "error compiling AllowTags regex",
 			sub: kargoapi.GitSubscription{
 				AllowTags: "[", // Invalid regex
 			},
