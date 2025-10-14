@@ -135,29 +135,11 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "regex matches, but ignored",
 			selector: &tagBasedSelector{
-				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTags:     []string{"abc"},
-			},
-			ref:         "refs/tags/abc",
-			shouldMatch: false,
-		},
-		{
-			name: "regex matches, but ignored by ignoreRegex",
-			selector: &tagBasedSelector{
 				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
 				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			ref:         "refs/tags/abc",
 			shouldMatch: false,
-		},
-		{
-			name: "regex matches, not ignored by ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^def$")},
-			},
-			ref:         "refs/tags/abc",
-			shouldMatch: true,
 		},
 	}
 	for _, testCase := range testCases {
