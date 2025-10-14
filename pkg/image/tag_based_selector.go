@@ -18,7 +18,6 @@ type tagBasedSelector struct {
 	*baseSelector
 	allowTagsRegex  []*regexp.Regexp
 	ignoreTagsRegex []*regexp.Regexp
-	ignoreTags      []string
 	discoveryLimit  int
 }
 
