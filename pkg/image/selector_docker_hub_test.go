@@ -1,5 +1,5 @@
-//go:build dockerhu
-// +build dockerhu
+//go:build dockerhub
+// +build dockerhub
 
 package image
 
@@ -26,10 +26,10 @@ func TestSelectImageDockerHub(t *testing.T) {
 	const debianRepo = "debian"
 	const platform = "linux/amd64"
 
-	ctx := logging.ContextWithLogger(
-		context.Background(),
-		logging.NewLogger(logging.TraceLevel),
-	)
+	logger, err := logging.NewLogger(logging.TraceLevel, logging.DefaultFormat)
+	require.NoError(t, err)
+
+	ctx := logging.ContextWithLogger(context.Background(), logger)
 
 	t.Run("digest strategy miss", func(t *testing.T) {
 		s, err := NewSelector(

@@ -253,7 +253,7 @@ func Test_lexicalSelector_Select(t *testing.T) {
 						},
 					},
 					allowTagsRegex:  []*regexp.Regexp{allowAlphas},
-					ignoreTagsRegex: []*regexp.Regexp{regex.MustCompile("^ABC$")},
+					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^ABC$")},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,

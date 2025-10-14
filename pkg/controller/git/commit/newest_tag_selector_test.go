@@ -213,7 +213,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					ignoreTagsRegex: []*regexp.Regexp{regex.MustCompile("^123$")},
+					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^123$")},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
