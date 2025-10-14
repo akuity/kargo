@@ -54,13 +54,14 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
+			// TODO(v1.13.0): Update this test once AllowTags and IgnoreTags are
+			// removed.
 			name: "success",
 			sub: kargoapi.ImageSubscription{
 				RepoURL: "example/image",
 				// TODO v1.13.0 Remove this test once AllowTags is removed
 				AllowTags:      `^v1\.`,
 				AllowTagsRegex: []string{`^v2\.`},
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
 				IgnoreTags:      []string{"v1.0.0"},
 				IgnoreTagsRegex: []string{`^v1\.0\..*`},
 			},
