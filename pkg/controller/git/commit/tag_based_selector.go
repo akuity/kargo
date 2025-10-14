@@ -33,21 +33,19 @@ type tagBasedSelector struct {
 	) ([]git.TagMetadata, error)
 }
 
-// compileRegexps compiles the given regular expressions and returns a slice of
-// compiled regular expressions.
-func compileRegexps(regexps []string) ([]*regexp.Regexp, error) {
-	compiledRegexps := make([]*regexp.Regexp, 0, len(regexps))
-	for _, regex := range regexps {
-		compiledRegexp, err := regexp.Compile(regex)
-		if err != nil {
+// compileRegexes returns a slice of compiled regular expressions.
+func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
+	regexes := make([]*regexp.Regexp, len(regexps))
+	for i, regexStr := range regexStrs {
+		var err error
+		if regexes[i], err = regexp.Compile(regexStr); err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
-				regex, err,
+				regexStr, err,
 			)
 		}
-		compiledRegexps = append(compiledRegexps, compiledRegexp)
 	}
-	return compiledRegexps, nil
+	return regexes, nil
 }
 
 func newTagBasedSelector(
@@ -63,7 +61,7 @@ func newTagBasedSelector(
 	}
 
 	var err error
-	if s.allowTagsRegex, err = compileRegexps(sub.AllowTagsRegex); err != nil {
+	if s.allowTagsRegex, err = compileRegexes(sub.AllowTagsRegex); err != nil {
 		return nil, err
 	}
 
@@ -79,7 +77,7 @@ func newTagBasedSelector(
 		s.allowTagsRegex = append(s.allowTagsRegex, allowTagRegex)
 	}
 
-	if s.ignoreTagsRegex, err = compileRegexps(sub.IgnoreTagsRegex); err != nil {
+	if s.ignoreTagsRegex, err = compileRegexes(sub.IgnoreTagsRegex); err != nil {
 		return nil, err
 	}
 
@@ -90,7 +88,7 @@ func newTagBasedSelector(
 		for i, ignoreTag := range sub.IgnoreTags {
 			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
 		}
-		ignoreTagsRegexes, err := compileRegexps(ignoreTagsRegexStrs)
+		ignoreTagsRegexes, err := compileRegexes(ignoreTagsRegexStrs)
 		if err != nil {
 			return nil, err
 		}
