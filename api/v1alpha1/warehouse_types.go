@@ -224,7 +224,7 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
-	// AllowTagsRegex is a list of regular expression that can optionally be used
+	// AllowTagsRegex is a list of regular expressions that can optionally be used
 	// to limit the tags that are considered in determining the newest commit of
 	// interest. The values in this field only have any effect when the
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
@@ -244,9 +244,9 @@ type GitSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
-	// IgnoreTagsRegex is a list of regular expression that can optionally be used
-	// to exclude tags from consideration when determining the newest commit of
-	// interest. The values in this field only have any effect when the
+	// IgnoreTagsRegex is a list of regular expressions that can optionally be
+	// used to exclude tags from consideration when determining the newest commit
+	// of interest. The values in this field only have any effect when the
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
 	//
@@ -429,7 +429,7 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
-	// AllowTagsRegex is a list of regular expression that can optionally be used
+	// AllowTagsRegex is a list of regular expressions that can optionally be used
 	// to limit the image tags that are considered in determining the newest
 	// revision of an image. This field is optional.
 	//
