@@ -176,11 +176,8 @@ type GitSubscription struct {
 	//   narrow the set of tags eligible for selection.
 	//
 	// - "NewestTag": Selects the commit referenced by the most recently created
-	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
-	//   narrow the set of tags eligible for selection.
-	//   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	//   From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	//   Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	//   tag. The AllowTagsRegex and IgnoreTagsRegex fields can optionally be used
+	//   to narrow the set of tags eligible for selection.
 	//
 	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
