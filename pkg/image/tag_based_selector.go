@@ -24,8 +24,8 @@ type tagBasedSelector struct {
 // compileRegexes returns a slice of compiled regular expressions.
 func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
 	regexes := make([]*regexp.Regexp, len(regexps))
+	var err error
 	for i, regexStr := range regexStrs {
-		var err error
 		if regexes[i], err = regexp.Compile(regexStr); err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",

@@ -133,7 +133,7 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "regex matches, but ignored",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("^v1\.")},
 					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^v1\.0\.0$"},
 				},
 			},
