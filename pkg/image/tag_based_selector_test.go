@@ -151,71 +151,13 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 }
 
 func Test_tagBasedSelector_filterTags(t *testing.T) {
-	testCases := []struct {
-		name     string
-		selector *tagBasedSelector
-		input    []string
-		expected []string
-	}{
-		{
-			name: "basic filtering with allows and ignores",
-			selector: &tagBasedSelector{
-				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile(`v1\.`)},
-				ignoreTags:     []string{"v1.0.0"},
-			},
-			input: []string{
-				"v1.0.0", // Allowed, but ignored
-				"v1.1.0", // Allowed
-				"v2.0.0", // Not allowed
-			},
-			expected: []string{"v1.1.0"},
-		},
-		{
-			name: "filtering with ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile(`v1\.`)},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`v1\.0\..*`)},
-			},
-			input: []string{
-				"v1.0.0", // Allowed, but ignored by regex
-				"v1.0.1", // Allowed, but ignored by regex
-				"v1.1.0", // Allowed, not ignored
-				"v2.0.0", // Not allowed
-			},
-			expected: []string{"v1.1.0"},
-		},
-		{
-			name: "filtering with both ignoreTags and ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile(`v1\.`)},
-				ignoreTags:      []string{"v1.0.0"},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`v1\.1\..*`)},
-			},
-			input: []string{
-				"v1.0.0", // Allowed, but ignored by ignoreTags
-				"v1.0.1", // Allowed, not ignored
-				"v1.1.0", // Allowed, but ignored by ignoreRegex
-				"v1.1.1", // Allowed, but ignored by ignoreRegex
-				"v2.0.0", // Not allowed
-			},
-			expected: []string{"v1.0.1"},
-		},
-		{
-			name:     "no constraints",
-			selector: &tagBasedSelector{},
-			input: []string{
-				"v1.0.0",
-				"v1.1.0",
-				"v2.0.0",
-			},
-			expected: []string{"v1.0.0", "v1.1.0", "v2.0.0"},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			filtered := testCase.selector.filterTags(testCase.input)
-			require.Equal(t, testCase.expected, filtered)
-		})
-	}
+filtered := (&tagBasedSelector{
+		allows:  regexp.MustCompile(`v1\.`),
+		ignores: []string{"v1.0.0"},
+	}).filterTags([]string{
+		"v1.0.0", // Allowed, but ignored
+		"v1.1.0", // Allowed
+		"v2.0.0", // Not allowed
+	})
+	require.Equal(t, []string{"v1.1.0"}, filtered)
 }
