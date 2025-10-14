@@ -86,7 +86,7 @@ func Test_semverSelector_MatchesTag(t *testing.T) {
 			name: "regex matches",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("^v1\.")},
 				},
 			},
 			tag:         "v1.0.0",
@@ -96,7 +96,7 @@ func Test_semverSelector_MatchesTag(t *testing.T) {
 			name: "regex does not match",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("^v1\.")},
 				},
 			},
 			tag:         "v2.0.0",
@@ -125,7 +125,7 @@ func Test_semverSelector_MatchesTag(t *testing.T) {
 			name: "regex matches, but ignored",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("^v1\.")},
 					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^v1\.0\.0$"}),
 				},
 			},
