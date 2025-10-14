@@ -151,9 +151,9 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 }
 
 func Test_tagBasedSelector_filterTags(t *testing.T) {
-filtered := (&tagBasedSelector{
-		allows:  regexp.MustCompile(`v1\.`),
-		ignores: []string{"v1.0.0"},
+	filtered := (&tagBasedSelector{
+		allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("v1\.")},
+		ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^v1\.0\.0$")},
 	}).filterTags([]string{
 		"v1.0.0", // Allowed, but ignored
 		"v1.1.0", // Allowed
