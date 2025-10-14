@@ -21,21 +21,20 @@ type tagBasedSelector struct {
 	discoveryLimit  int
 }
 
-// compileRegexps compiles the given regular expressions and returns a slice of
-// compiled regular expressions.
-func compileRegexps(regexps []string) ([]*regexp.Regexp, error) {
-	compiledRegexps := make([]*regexp.Regexp, 0, len(regexps))
-	for _, regex := range regexps {
-		compiledRegexp, err := regexp.Compile(regex)
-		if err != nil {
+// compileRegexes returns a slice of compiled regular expressions.
+func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
+	regexes := make([]*regexp.Regexp, len(regexps))
+	for i, regexStr := range regexStrs {
+		var err error
+		if regexes[i], err = regexp.Compile(regexStr); err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
-				regex, err,
+				regexStr, err,
 			)
 		}
-		compiledRegexps = append(compiledRegexps, compiledRegexp)
 	}
-	return compiledRegexps, nil
+	return regexes, nil
+}
 }
 
 func newTagBasedSelector(
@@ -52,25 +51,23 @@ func newTagBasedSelector(
 		discoveryLimit: int(sub.DiscoveryLimit),
 	}
 
-	allowTagsRegex, err := compileRegexps(sub.AllowTagsRegex)
-	if err != nil {
+	var err error
+	if s.allowTagsRegex, err = compileRegexes(sub.AllowTagsRegex); err != nil {
 		return nil, fmt.Errorf("error compiling allow tags regex: %w", err)
 	}
 
-	// add allowTags
-	// TODO (v1.13.0) remove this once AllowTags is removed
+	// TODO(v1.11.0): Return an error if sub.AllowTags is non-empty.
+	// TODO(v1.13.0): Remove this block after the AllowTags field is removed.
 	if sub.AllowTags != "" {
-		allowTagRegex, err := regexp.Compile(sub.AllowTags)
+		allowTagsRegex, err := regexp.Compile(sub.AllowTags)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
 				sub.AllowTags, err,
 			)
 		}
-		allowTagsRegex = append(allowTagsRegex, allowTagRegex)
+		s.allowTagsRegex = append(s.allowTagsRegex, allowTagsRegex)
 	}
-
-	s.allowTagsRegex = allowTagsRegex
 
 	ignoreTagsRegex, err := compileRegexps(sub.IgnoreTagsRegex)
 	if err != nil {
