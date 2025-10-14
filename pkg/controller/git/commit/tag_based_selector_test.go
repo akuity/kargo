@@ -59,13 +59,13 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success with both AllowTags/IgnoreTags and AllowTagsRegex/IgnoreTagsRegex",
+			// TODO(v1.13.0): Update this test once AllowTags and IgnoreTags are
+			// removed.
+			name: "success",
 			sub: kargoapi.GitSubscription{
 				RepoURL: "https://github.com/foo/bar",
-				// TODO v1.13.0 Remove this test once AllowTags is removed
-				AllowTags:      `^v1\.`,
-				AllowTagsRegex: []string{`^v2\.`},
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
+				AllowTags:       `^v1\.`,
+				AllowTagsRegex:  []string{`^v2\.`},
 				IgnoreTags:      []string{"v1.0.0"},
 				IgnoreTagsRegex: []string{`^v1\.0\..*`},
 			},
@@ -75,10 +75,9 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Len(t, s.allowTagsRegex, 2)
 				require.Equal(t, `^v2\.`, s.allowTagsRegex[0].String())
 				require.Equal(t, `^v1\.`, s.allowTagsRegex[1].String())
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
-				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.Len(t, s.ignoreTagsRegex, 1)
+				require.Len(t, s.ignoreTagsRegex, 2)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
+				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegex[1].String())
 			},
 		},
 	}
