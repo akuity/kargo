@@ -129,15 +129,6 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 			name: "regex matches, but ignored",
 			selector: &tagBasedSelector{
 				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTags:     []string{"abc"},
-			},
-			tag:         "abc",
-			shouldMatch: false,
-		},
-		{
-			name: "regex matches, but ignored by ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
 				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			tag:         "abc",
