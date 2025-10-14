@@ -81,41 +81,6 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
 			},
 		},
-		{
-			// TODO v1.13.0 Remove this test once AllowTags and IgnoreTags are removed
-			name: "only AllowTags and IgnoreTags are specified (deprecated)",
-			sub: kargoapi.GitSubscription{
-				RepoURL:    "https://github.com/foo/bar",
-				AllowTags:  `^v1\.`,
-				IgnoreTags: []string{"v1.0.0"},
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegex, 1)
-				require.Equal(t, `^v1\.`, s.allowTagsRegex[0].String())
-				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.Empty(t, s.ignoreTagsRegex)
-			},
-		},
-		{
-			name: "success",
-			sub: kargoapi.GitSubscription{
-				AllowTags:       `^v1\.`,
-				IgnoreTags:      []string{"v1.0.0"},
-				IgnoreTagsRegex: []string{`^v1\.0\..*`},
-				DiscoveryLimit:  5,
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.NotNil(t, s.allowTagsRegex)
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
-				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.NotNil(t, s.ignoreTagsRegex)
-				require.NotNil(t, s.filterTagsByDiffPathsFn)
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
