@@ -68,7 +68,8 @@ func newTagBasedSelector(
 	// TODO(v1.11.0): Return an error if sub.AllowTags is non-empty.
 	// TODO(v1.13.0): Remove this block after the AllowTags field is removed.
 	if sub.AllowTags != "" {
-		if allowTagsRegex, err = regexp.Compile(sub.AllowTags); err != nil {
+		allowTagsRegex, err := regexp.Compile(sub.AllowTags)
+		if err != nil {
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
 				sub.AllowTags, err,

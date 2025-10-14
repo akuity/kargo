@@ -67,11 +67,9 @@ func newTagBasedSelector(
 		s.allowTagsRegex = append(s.allowTagsRegex, allowTagsRegex)
 	}
 
-	ignoreTagsRegex, err := compileRegexps(sub.IgnoreTagsRegex)
-	if err != nil {
+	if s.ignoreTagsRegex, err = compileRegexes(sub.IgnoreTagsRegex); err != nil {
 		return nil, fmt.Errorf("error compiling ignore tags regex: %w", err)
 	}
-	s.ignoreTagsRegex = append(s.ignoreTagsRegex, ignoreTagsRegex...)
 
 	return s, nil
 }
