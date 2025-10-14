@@ -100,13 +100,17 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 		},
 		{
 			name:        "regex matches",
-			selector:    &tagBasedSelector{allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")}},
+			selector:    &tagBasedSelector{
+				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+			},
 			tag:         "abc",
 			shouldMatch: true,
 		},
 		{
 			name:        "regex does not match",
-			selector:    &tagBasedSelector{allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")}},
+			selector:    &tagBasedSelector{
+				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+			},
 			tag:         "123",
 			shouldMatch: false,
 		},
