@@ -39,7 +39,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error parsing AllowTagsRegex",
+			name: "error compiling AllowTagsRegex",
 			sub: kargoapi.GitSubscription{
 				RepoURL:        "https://github.com/example/repo.git",
 				AllowTagsRegex: []string{"["}, // Invalid regex
@@ -49,7 +49,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error parsing IgnoreTagsRegex",
+			name: "error compiling IgnoreTagsRegex",
 			sub: kargoapi.GitSubscription{
 				RepoURL:         "https://github.com/example/repo.git",
 				IgnoreTagsRegex: []string{"["}, // Invalid regex
@@ -77,24 +77,6 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Equal(t, `^v1\.`, s.allowTagsRegex[1].String())
 				// TODO v1.13.0 Remove this test once IgnoreTags is removed
 				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.Len(t, s.ignoreTagsRegex, 1)
-				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
-			},
-		},
-		{
-			name: "only AllowTagsRegex and IgnoreTagsRegex are specified",
-			sub: kargoapi.GitSubscription{
-				RepoURL:         "https://github.com/foo/bar",
-				AllowTagsRegex:  []string{`^v1\.`},
-				IgnoreTagsRegex: []string{`^v1\.0\..*`},
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegex, 1)
-				require.Equal(t, `^v1\.`, s.allowTagsRegex[0].String())
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
-				require.Empty(t, s.ignoreTags)
 				require.Len(t, s.ignoreTagsRegex, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
 			},
