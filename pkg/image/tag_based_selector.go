@@ -71,6 +71,20 @@ func newTagBasedSelector(
 		return nil, fmt.Errorf("error compiling ignore tags regex: %w", err)
 	}
 
+	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
+	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
+	if len(sub.IgnoreTags) {
+		ignoreTagsRegexStrs = make([]string, len(sub.IgnoreTags))
+		for i, ignoreTag := range sub.IgnoreTags {
+			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
+		}
+		ignoreTagsRegexes, err := compileRegexes(ignoreTagsRegexStrs)
+		if err != nil {
+			return nil, err
+		}
+		s.ignoreTagsRegexes = append(s.ignoreTagsRegexes, ignoreTagsRegexes...)
+	}
+
 	return s, nil
 }
 
