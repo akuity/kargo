@@ -35,7 +35,6 @@ func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
 	}
 	return regexes, nil
 }
-}
 
 func newTagBasedSelector(
 	sub kargoapi.ImageSubscription,
@@ -47,7 +46,6 @@ func newTagBasedSelector(
 	}
 	s := &tagBasedSelector{
 		baseSelector:   base,
-		ignoreTags:     sub.IgnoreTags,
 		discoveryLimit: int(sub.DiscoveryLimit),
 	}
 
