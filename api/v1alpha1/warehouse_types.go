@@ -168,16 +168,12 @@ type GitSubscription struct {
 	//
 	// - "SemVer": Selects the commit referenced by the semantically greatest
 	//   tag. The SemverConstraint field can optionally be used to narrow the set
-	//   of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	//   From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	//   Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	//   of tags eligible for selection.
 	//
 	// - "Lexical": Selects the commit referenced by the lexicographically
 	//   greatest tag. Useful when tags embed a _leading_ date or timestamp. The
-	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
-	//   of tags eligible for selection. AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	//   From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	//   Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	//   AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// - "NewestTag": Selects the commit referenced by the most recently created
 	//   tag. The AllowTags and IgnoreTags fields can optionally be used to
@@ -224,17 +220,19 @@ type GitSubscription struct {
 	// tags that are considered in determining the newest commit of interest. The
 	// value in this field only has any effect when the CommitSelectionStrategy is
 	// Lexical, NewestTag, or SemVer. This field is optional.
-	// AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use AllowTagsRegex instead.
+	//
+	// Deprecated: Use AllowTagsRegex instead. Beginning in v1.11.0, artifact
+	// discovery will FAIL if this field is non-empty. This field will be removed
+	// in v1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
-	// +kubebuilder:validation:Optional
-	// AllowTagsRegex is a list of regular expression that can optionally be used to limit the tags that are
-	// considered in determining the newest commit of interest.
-	// The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer.
-	// This field is optional.
+	// AllowTagsRegex is a list of regular expression that can optionally be used
+	// to limit the tags that are considered in determining the newest commit of
+	// interest. The values in this field only have any effect when the
+	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+	// optional.
+	//
 	// +kubebuilder:validation:Optional
 	AllowTagsRegex []string `json:"allowTagsRegex,omitempty" protobuf:"bytes,13,rep,name=allowTagsRegex"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
@@ -242,15 +240,19 @@ type GitSubscription struct {
 	// supported yet. The value in this field only has any effect when the
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
-	// IgnoreTags is deprecated since v1.10.0 in favour of IgnoreTagsRegex and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
+	//
+	// Deprecated: Use IgnoreTagsRegex instead. Beginning in v1.11.0, artifact
+	// discovery will FAIL if this field is non-empty. This field will be removed
+	// in v1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
-	// IgnoreTagsRegex is a list of regular expression that can optionally be used to ignore the tags that
-	// are considered in determining the newest commit of interest.
-	// The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer.
-	// This field is optional.
+	// IgnoreTagsRegex is a list of regular expression that can optionally be used
+	// to exclude tags from consideration when determining the newest commit of
+	// interest. The values in this field only have any effect when the
+	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
+	// optional.
+	//
 	// +kubebuilder:validation:Optional
 	IgnoreTagsRegex []string `json:"ignoreTagsRegex,omitempty" protobuf:"bytes,14,rep,name=ignoreTagsRegex"`
 	// ExpressionFilter is an expression that can optionally be used to limit
@@ -261,10 +263,7 @@ type GitSubscription struct {
 	// commits and has access to commit metadata variables.
 	// For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies
 	// to tags and has access to tag metadata variables. The filter is applied
-	// after AllowTags, IgnoreTags, and SemverConstraint fields.
-	// AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	// after AllowTagsRegex, IgnoreTagsRegex, and SemverConstraint fields.
 	//
 	// The expression should be a valid expr-lang expression that evaluates to
 	// true or false. When the expression evaluates to true, the commit/tag is
@@ -338,10 +337,8 @@ type GitSubscription struct {
 	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
 	// DiscoveryLimit is an optional limit on the number of commits that can be
 	// discovered for this subscription. The limit is applied after filtering
-	// commits based on the AllowTags and IgnoreTags fields.
-	// AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	// commits based on the AllowTagsRegex, IgnoreTagsRegex, and ExpressionFilter
+	// fields.
 	// When left unspecified, the field is implicitly treated as if its value
 	// were "20". The upper limit for this field is 100.
 	//
@@ -374,28 +371,20 @@ type ImageSubscription struct {
 	//   (unintuitively) by the SemverConstraint field.
 	//
 	// - "Lexical": Selects the image referenced by the lexicographically greatest
-	//   tag. Useful when tags embed a leading date or timestamp. The AllowTags
-	//   and IgnoreTags fields can optionally be used to narrow the set of tags
-	//   eligible for selection.
-	//   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	// 	 From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// 	 Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	//   tag. Useful when tags embed a leading date or timestamp. The
+	//   AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+	//   narrow the set of tags eligible for selection.
 	//
 	// - "NewestBuild": Selects the image that was most recently pushed to the
-	//   repository. The AllowTags and IgnoreTags fields can optionally be used
-	//   to narrow the set of tags eligible for selection. This is the least
-	//   efficient and is likely to cause rate limiting affecting this Warehouse
-	//   and possibly others. This strategy should be avoided.
-	//   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	//   From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	//   Please use AllowTagsRegex and IgnoreTagsRegex instead.
+	//   repository. The AllowTagsRegex and IgnoreTagsRegex fields can optionally
+	//   be used to narrow the set of tags eligible for selection. This is the
+	//   least efficient selection strategy and is likely to cause rate limiting
+	//   affecting this Warehouse and possibly others. This strategy should be
+	//   avoided.
 	//
 	// - "SemVer": Selects the image with the semantically greatest tag. The
 	//   AllowTags and IgnoreTags fields can optionally be used to narrow the set
 	//   of tags eligible for selection.
-	//   AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	//   From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	//   Please use AllowTagsRegex and IgnoreTagsRegex instead.
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
@@ -436,30 +425,32 @@ type ImageSubscription struct {
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
-	// AllowTags is deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use AllowTagsRegex instead.
+	//
+	// Deprecated: Use AllowTagsRegex instead. Beginning in v1.11.0, artifact
+	// discovery will FAIL if this field is non-empty. This field will be removed
+	// in v1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
-	// AllowTagsRegex is a list of regular expression that can optionally be used to limit the image tags that
-	// are considered in determining the newest version of an image.
-	// This field is optional.
+	// AllowTagsRegex is a list of regular expression that can optionally be used
+	// to limit the image tags that are considered in determining the newest
+	// revision of an image. This field is optional.
 	//
 	// +kubebuilder:validation:Optional
 	AllowTagsRegex []string `json:"allowTagsRegex,omitempty" protobuf:"bytes,13,rep,name=allowTagsRegex"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.
-	// IgnoreTags is deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use IgnoreTagsRegex instead.
+	//
+	// Deprecated: Use IgnoreTagsRegex instead. Beginning in v1.11.0, artifact
+	// discovery will FAIL if this field is non-empty. This field will be removed
+	// in v1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
-	// IgnoreTagsRegex is a list of regular expression that can optionally be used to ignore the tags that
-	// are considered in determining the newest version of an image.
-	// This field is optional.
+	// IgnoreTagsRegex is a list of regular expressions that can optionally be
+	// used to exclude tags from consideration when determining the newest
+	// revision of an image. This field is optional.
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTagsRegex []string `json:"ignoreTagsRegex,omitempty" protobuf:"bytes,14,rep,name=ignoreTagsRegex"`
@@ -481,11 +472,7 @@ type ImageSubscription struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
 	// DiscoveryLimit is an optional limit on the number of image references
 	// that can be discovered for this subscription. The limit is applied after
-	// filtering images based on the AllowTags and IgnoreTags fields.
-	// AllowTags and IgnoreTags are deprecated since v1.10.0 and will be removed in v1.13.0.
-	// From v.1.11.0, errors will be throw during artifact discovery if these fields are used.
-	// Please use AllowTagsRegex and IgnoreTagsRegex instead.
-
+	// filtering images based on the AllowTagsRegex and IgnoreTagsRegex fields.
 	// When left unspecified, the field is implicitly treated as if its value
 	// were "20". The upper limit for this field is 100.
 	//
