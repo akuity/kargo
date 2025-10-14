@@ -23,8 +23,8 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			// TODO v1.13.0 Remove this test once AllowTags is removed
-			name: "error parsing allowed tags regex",
+			// TODO(v1.13.0): Remove this test once AllowTags is removed.
+			name: "error compiling AllowedTags regex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:   "example/image",
 				AllowTags: "[", // Invalid regex
@@ -34,7 +34,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error parsing AllowTagsRegex",
+			name: "error compiling AllowTagsRegex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:        "example/image",
 				AllowTagsRegex: []string{"["}, // Invalid regex
@@ -44,7 +44,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error parsing IgnoreTagsRegex",
+			name: "error compiling IgnoreTagsRegex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:         "example/image",
 				IgnoreTagsRegex: []string{"["}, // Invalid regex
@@ -54,7 +54,7 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success with both AllowTags/IgnoreTags and AllowTagsRegex/IgnoreTagsRegex",
+			name: "success",
 			sub: kargoapi.ImageSubscription{
 				RepoURL: "example/image",
 				// TODO v1.13.0 Remove this test once AllowTags is removed
@@ -74,59 +74,6 @@ func TestNewTagBasedSelector(t *testing.T) {
 				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
 				require.Len(t, s.ignoreTagsRegex, 1)
 				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
-			},
-		},
-		{
-			name: "only AllowTagsRegex and IgnoreTagsRegex are specified",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:         "example/image",
-				AllowTagsRegex:  []string{`^v1\.`},
-				IgnoreTagsRegex: []string{`^v1\.0\..*`},
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegex, 1)
-				require.Equal(t, `^v1\.`, s.allowTagsRegex[0].String())
-				// TODO v1.13.0 Remove this test once IgnoreTags is removed
-				require.Empty(t, s.ignoreTags)
-				require.Len(t, s.ignoreTagsRegex, 1)
-				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
-			},
-		},
-		{
-			// TODO v1.13.0 Remove this test once AllowTags and IgnoreTags are removed
-			name: "only AllowTags and IgnoreTags are specified (deprecated)",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:    "example/image",
-				AllowTags:  `^v1\.`,
-				IgnoreTags: []string{"v1.0.0"},
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegex, 1)
-				require.Equal(t, `^v1\.`, s.allowTagsRegex[0].String())
-				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.Empty(t, s.ignoreTagsRegex)
-			},
-		},
-		{
-			name: "success",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:         "example/image",
-				AllowTags:       `^v1\.`,
-				IgnoreTags:      []string{"v1.0.0"},
-				IgnoreTagsRegex: []string{`^v1\.0\..*`},
-				DiscoveryLimit:  5,
-			},
-			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, s.baseSelector)
-				require.NotNil(t, s.allowTagsRegex)
-				require.Equal(t, []string{"v1.0.0"}, s.ignoreTags)
-				require.NotNil(t, s.ignoreTagsRegex)
-				require.Equal(t, 5, s.discoveryLimit)
 			},
 		},
 	}

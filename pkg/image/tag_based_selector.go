@@ -82,11 +82,6 @@ func newTagBasedSelector(
 	return s, nil
 }
 
-// matchRegex returns true if the given tag matches the given regex.
-func (t *tagBasedSelector) matchRegex(regex *regexp.Regexp, tag string) bool {
-	return regex == nil || regex.MatchString(tag)
-}
-
 // MatchesTag implements Selector.
 func (t *tagBasedSelector) MatchesTag(tag string) bool {
 
@@ -98,7 +93,7 @@ func (t *tagBasedSelector) MatchesTag(tag string) bool {
 
 	// handle ignoreTagsRegex
 	for _, regex := range t.ignoreTagsRegex {
-		if t.matchRegex(regex, tag) {
+		if regex.MatchString(tag) {
 			return false
 		}
 	}
@@ -109,7 +104,7 @@ func (t *tagBasedSelector) MatchesTag(tag string) bool {
 	}
 	// check if tag matches any allowTagsRegex
 	for _, regex := range t.allowTagsRegex {
-		if t.matchRegex(regex, tag) {
+		if regex.MatchString(regex, tag) {
 			return true
 		}
 	}
