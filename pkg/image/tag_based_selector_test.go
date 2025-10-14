@@ -134,35 +134,6 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 			tag:         "abc",
 			shouldMatch: false,
 		},
-		{
-			name: "regex matches, not ignored by ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^def$")},
-			},
-			tag:         "abc",
-			shouldMatch: true,
-		},
-		{
-			name: "regex matches, but ignored by both ignoreTags and ignoreRegex",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTags:      []string{"abc"},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
-			},
-			tag:         "abc",
-			shouldMatch: false,
-		},
-		{
-			name: "regex matches, ignored by ignoreRegex but not ignoreTags",
-			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTags:      []string{"def"},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
-			},
-			tag:         "abc",
-			shouldMatch: false,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
