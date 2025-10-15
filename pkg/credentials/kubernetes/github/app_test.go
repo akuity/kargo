@@ -8,11 +8,12 @@ import (
 	"maps"
 	"testing"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestNewAppCredentialProvider(t *testing.T) {
