@@ -39,11 +39,11 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-    - image:
-        repoURL: public.ecr.aws/nginx/nginx
-        constraint: ^1.26.0
-    - git:
-        repoURL: https://github.com/example/kargo-demo.git
+  - image:
+      repoURL: public.ecr.aws/nginx/nginx
+      constraint: ^1.26.0
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
 ```
 
 The remainder of this section focuses on the configuration of the individual
@@ -445,10 +445,10 @@ strategy:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: NewestFromBranch
-        expressionFilter: !(author contains '<bot@example.com>')
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(author contains '<bot@example.com>')
 ```
 
 **Filtering commits with specific message patterns:**
@@ -467,10 +467,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: NewestFromBranch
-        expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(author == 'Example Bot') && commitDate.After(date('2025-01-01'))
 ```
 
 **Filtering commits to exclude those with ignore markers:**
@@ -478,10 +478,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: NewestFromBranch
-        expressionFilter: !(subject contains '[kargo-ignore]')
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: !(subject contains '[kargo-ignore]')
 ```
 
 **Filtering tags by author name:**
@@ -489,10 +489,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: SemVer
-        expressionFilter: author == 'John Doe <john@example.com>'
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: SemVer
+      expressionFilter: author == 'John Doe <john@example.com>'
 ```
 
 **Filtering tags created after a specific date:**
@@ -500,10 +500,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: NewestTag
-        expressionFilter: creatorDate.Year() >= 2024
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestTag
+      expressionFilter: creatorDate.Year() >= 2024
 ```
 
 **Filtering tags to exclude those committed by bots:**
@@ -511,10 +511,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: Lexical
-        expressionFilter: !(committer contains '<bot@example.com>')
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: Lexical
+      expressionFilter: !(committer contains '<bot@example.com>')
 ```
 
 **Filtering tags with complex conditions:**
@@ -522,10 +522,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: SemVer
-        expressionFilter: creatorDate.After(date('2024-01-01')) && !(tag contains 'alpha')
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: SemVer
+      expressionFilter: creatorDate.After(date('2024-01-01')) && !(tag contains 'alpha')
 ```
 
 #### Git Subscription Path Filtering
@@ -554,10 +554,10 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/kargo-demo.git
-        includePaths:
-          - apps/guestbook
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
+      includePaths:
+      - apps/guestbook
 ```
 
 The next example demonstrates the opposite: a `Warehouse` with a Git repository
@@ -573,10 +573,10 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/kargo-demo.git
-        excludePaths:
-          - docs
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
+      excludePaths:
+      - docs
 ```
 
 `includePaths` and `excludePaths` may be combined to include a broad set of
@@ -594,12 +594,12 @@ metadata:
   namespace: kargo-demo
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/kargo-demo.git
-        includePaths:
-          - apps/guestbook
-        excludePaths:
-          - apps/guestbook/README.md
+  - git:
+      repoURL: https://github.com/example/kargo-demo.git
+      includePaths:
+      - apps/guestbook
+      excludePaths:
+      - apps/guestbook/README.md
 ```
 
 :::note
@@ -673,10 +673,10 @@ Helm chart repository subscriptions can be defined using the following fields:
   ```yaml
   spec:
     subscriptions:
-      - chart:
-          repoURL: https://charts.example.com
-          name: my-chart
-          semverConstraint: ^1.0.0
+    - chart:
+        repoURL: https://charts.example.com
+        name: my-chart
+        semverConstraint: ^1.0.0
   ```
 
 ## Working with Private Repositories
@@ -709,10 +709,10 @@ Example:
 spec:
   freightCreationPolicy: Automatic
   subscriptions:
-    - image:
-        repoURL: ghcr.io/example/frontend
-    - image:
-        repoURL: ghcr.io/example/backend
+  - image:
+      repoURL: ghcr.io/example/frontend
+  - image:
+      repoURL: ghcr.io/example/backend
   freightCreationCriteria:
     expression: |
       imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
@@ -877,14 +877,14 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers:
-    - name: my-first-receiver
-      github:
-        secretRef:
-          name: my-first-secret
-    - name: my-second-receiver
-      gitlab:
-        secretRef:
-          name: my-second-secret
+  - name: my-first-receiver
+    github:
+      secretRef:
+        name: my-first-secret
+  - name: my-second-receiver
+    gitlab:
+      secretRef:
+        name: my-second-secret
 ---
 apiVersion: v1
 kind: Secret
@@ -931,19 +931,19 @@ spec:
   # ... omitted for brevity ...
 status:
   conditions:
-    - lastTransitionTime: "2025-06-11T22:53:21Z"
-      message: ProjectConfig is synced and ready for use
-      observedGeneration: 1
-      reason: Synced
-      status: "True"
-      type: Ready
+  - lastTransitionTime: "2025-06-11T22:53:21Z"
+    message: ProjectConfig is synced and ready for use
+    observedGeneration: 1
+    reason: Synced
+    status: "True"
+    type: Ready
   webhookReceivers:
-    - name: my-first-receiver
-      path: /webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
-      url: https://kargo.example.com/webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
-    - name: my-second-receiver
-      path: /webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
-      url: https://kargo.example.com/webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+  - name: my-first-receiver
+    path: /webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+    url: https://kargo.example.com/webhook/github/804b6f6bb40eb1f0e371f971d71dd95549be4bc9cbf868046941115f44073c67
+  - name: my-second-receiver
+    path: /webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
+    url: https://kargo.example.com/webhook/gitlab/0eba9ff2a91f04f7787404b8f8f0edaf8cf8c39add34082651a474803cc99015
 ```
 
 Above, you can see the URLs that can be registered with GitHub and GitLab as
