@@ -36,7 +36,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       "fake-constraint",
+				Constraint:             "fake-constraint",
 				DiscoveryLimit:         1,
 			},
 			getDockerHubCreds(),
@@ -53,7 +53,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       "bookworm",
+				Constraint:             "bookworm",
 				DiscoveryLimit:         1,
 			},
 			getDockerHubCreds(),
@@ -76,7 +76,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       "bookworm",
+				Constraint:             "bookworm",
 				Platform:               "linux/made-up-arch",
 				DiscoveryLimit:         1,
 			},
@@ -94,7 +94,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       "bookworm",
+				Constraint:             "bookworm",
 				Platform:               platform,
 				DiscoveryLimit:         1,
 			},
@@ -281,7 +281,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				SemverConstraint:       "^99.0",
+				Constraint:             "^99.0",
 				DiscoveryLimit:         1,
 			},
 			getDockerHubCreds(),
@@ -298,7 +298,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				SemverConstraint:       "^12.0",
+				Constraint:             "^12.0",
 				DiscoveryLimit:         1,
 			},
 			getDockerHubCreds(),
@@ -324,7 +324,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				SemverConstraint:       "^12.0",
+				Constraint:             "^12.0",
 				Platform:               "linux/made-up-arch",
 				DiscoveryLimit:         1,
 			},
@@ -342,7 +342,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				SemverConstraint:       "^12.0",
+				Constraint:             "^12.0",
 				Platform:               platform,
 				DiscoveryLimit:         1,
 			},
