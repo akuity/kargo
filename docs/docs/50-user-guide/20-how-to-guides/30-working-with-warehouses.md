@@ -65,7 +65,6 @@ fields:
 - `allowTagsRegexes`: An optional list of regular expression that limits
   eligibility for selection to tags that match any of the patterns.
 
-
 <a name="ignore-tags-regexes-constraint"></a>
 
 - `ignoreTagsRegexes`: An optional list of regular expression that limits
