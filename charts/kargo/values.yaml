@@ -140,6 +140,23 @@ api:
     ## @param api.adminAccount.tokenTTL Specifies how long ID tokens for the admin account are valid. (i.e. The expiry will be the time of issue plus this duration.)
     tokenTTL: 24h
 
+  ## Optionally provide custom ClusterRole permissions for the various built in roles. This is
+  ## useful if you want to grant extra permissions to these roles without creating entirely new
+  ## roles. These should be a list of valid `roles` as you would include in a `ClusterRole`
+  ## resource.
+  clusterRoles:
+    admin:
+      ## @param api.clusterRoles.admin.additionalRules Additional RBAC rules to add to the kargo-admin ClusterRole.
+      additionalRules: null
+    projectCreator:
+      ## @param api.clusterRoles.projectCreator.additionalRules Additional RBAC rules to add to the kargo-project-creator ClusterRole.
+      additionalRules: null
+    user:
+      ## @param api.clusterRoles.user.additionalRules Additional RBAC rules to add to the kargo-user ClusterRole.
+      additionalRules: null
+    viewer:
+      ## @param api.clusterRoles.viewer.additionalRules Additional RBAC rules to add to the kargo-viewer ClusterRole.
+      additionalRules: null
   ## All settings related to enabling OpenID Connect as an authentication
   ## method.
   oidc:
@@ -157,7 +174,7 @@ api:
     cliClientID:
     ## @param api.oidc.additionalScopes The additional scopes to send to the OIDC provider. This should be set to the scopes you wish to be provided to your identity provider from clients of Kargo, the scopes openid, profile and email are always requested and don't need to be added, this value is intended for any additional ones you require.
     additionalScopes:
-    - groups
+      - groups
 
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
@@ -542,8 +559,7 @@ controller:
     clusterWideSecretReadingEnabled: false
 
   ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
-  initContainers:
-    []
+  initContainers: []
     # - name: download-tools
     #   image: alpine:3.8
     #   command: [ sh, -c ]

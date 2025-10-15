@@ -164,8 +164,8 @@ func TestHarborHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "harbor.example.com/library/alpine",
-								SemverConstraint: "^2.0.0", // Constraint won't be met
+								RepoURL:    "harbor.example.com/library/alpine",
+								Constraint: "^2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -199,8 +199,8 @@ func TestHarborHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "harbor.example.com/library/alpine",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "harbor.example.com/library/alpine",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
@@ -234,8 +234,8 @@ func TestHarborHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "harbor.example.com/library/alpine",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "harbor.example.com/library/alpine",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},

@@ -32,7 +32,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       constraint,
+				Constraint:             constraint,
 				DiscoveryLimit:         1,
 			},
 			nil,
@@ -55,7 +55,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       constraint,
+				Constraint:             constraint,
 				Platform:               platform,
 				DiscoveryLimit:         1,
 			},
@@ -219,7 +219,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                "ghcr.io/akuity/kargo-test",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       tag,
+				Constraint:             tag,
 				DiscoveryLimit:         1,
 			},
 			nil,
@@ -241,7 +241,7 @@ func TestSelectImageGHCR(t *testing.T) {
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				SemverConstraint:       "v0.1.0",
+				Constraint:             "v0.1.0",
 				Platform:               "linux/made-up-arch",
 				DiscoveryLimit:         1,
 			},

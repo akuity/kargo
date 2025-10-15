@@ -125,12 +125,6 @@ strategies are:
   semantically greatest tag. All tags that are not valid semantic versions are
   ignored.
 
-  :::note
-  If the `constraint` field is empty, any constraints defined by the
-  deprecated `semverConstraint` field will be applied instead. The
-  `semverConstraint` field will be removed in v1.9.0.
-  :::
-
   The `strictSemvers` field defaults to `true`, meaning only tags containing
   all three parts of a semantic version (major, minor, and patch) are
   considered. Disabling this should be approached with caution because any
@@ -178,13 +172,6 @@ strategies are:
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag"
   (such as `latest`) specified by the `constraint` field.
-
-  :::note
-  If the `constraint` field is empty, the name of the mutable tag will
-  (unintuitively) be determined by the value of the deprecated
-  `semverConstraint` field. The `semverConstraint` field will be removed in
-  v1.9.0.
-  :::
 
   :::warning
   "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,

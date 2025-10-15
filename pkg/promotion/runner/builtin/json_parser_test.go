@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -316,35 +315,112 @@ func Test_jsonParser_run(t *testing.T) {
 }
 
 func Test_jsonParser_readAndParseJSON(t *testing.T) {
-	tempDir := t.TempDir()
-	validJSON := `{"key": "value", "num": 42, "flag": true}`
-	invalidJSON := `{key: "value"}`
-	tests := []struct {
-		name    string
-		content string
-		expects error
-	}{
-		{"Valid JSON", validJSON, nil},
-		{"Invalid JSON syntax", invalidJSON, errors.New("could not parse JSON file")},
-		{"Empty JSON file", "", errors.New("could not parse JSON file")},
-	}
+	jp := &jsonParser{}
 
-	r := newJSONParser(promotion.StepRunnerCapabilities{})
-	runner, ok := r.(*jsonParser)
-	require.True(t, ok)
+	tests := []struct {
+		name           string
+		content        string
+		expected       map[string]any
+		expectedErrMsg string
+	}{
+		{
+			name: "Valid JSON with map root",
+			content: `{
+				"key": "value",
+				"num": 42,
+				"flag": true
+			}`,
+			expected: map[string]any{
+				"key":  "value",
+				"num":  float64(42),
+				"flag": true,
+			},
+		},
+		{
+			name: "Valid JSON with nested structure",
+			content: `{
+				"app": {
+					"name": "test-app",
+					"version": "1.2.3",
+					"config": {
+						"debug": false,
+						"port": 8080
+					}
+				},
+				"items": [
+					{"name": "first", "value": 100},
+					{"name": "second", "value": 200}
+				]
+			}`,
+			expected: map[string]any{
+				"app": map[string]any{
+					"name":    "test-app",
+					"version": "1.2.3",
+					"config": map[string]any{
+						"debug": false,
+						"port":  float64(8080),
+					},
+				},
+				"items": []any{
+					map[string]any{"name": "first", "value": float64(100)},
+					map[string]any{"name": "second", "value": float64(200)},
+				},
+			},
+		},
+		{
+			name: "Valid JSON with array values",
+			content: `{
+				"numbers": [1, 2, 3, 4, 5],
+				"strings": ["hello", "world"],
+				"mixed": [true, 42, "text", null]
+			}`,
+			expected: map[string]any{
+				"numbers": []any{float64(1), float64(2), float64(3), float64(4), float64(5)},
+				"strings": []any{"hello", "world"},
+				"mixed":   []any{true, float64(42), "text", nil},
+			},
+		},
+		{
+			name: "Valid JSON with null values",
+			content: `{
+				"nullValue": null,
+				"emptyString": "",
+				"zeroNumber": 0
+			}`,
+			expected: map[string]any{
+				"nullValue":   nil,
+				"emptyString": "",
+				"zeroNumber":  float64(0),
+			},
+		},
+		{
+			name:           "Invalid JSON syntax",
+			content:        `{key: "value"}`,
+			expectedErrMsg: "could not parse JSON file",
+		},
+		{
+			name:           "Empty JSON file",
+			content:        "",
+			expectedErrMsg: "could not parse JSON file",
+		},
+	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
 			filePath := filepath.Join(tempDir, "test.json")
+
 			err := os.WriteFile(filePath, []byte(tt.content), 0600)
-			if err != nil {
-				t.Fatalf("failed to write file: %v", err)
-			}
-			_, err = runner.readAndParseJSON(tempDir, "test.json")
-			if tt.expects != nil {
-				assert.ErrorContains(t, err, tt.expects.Error())
+			require.NoError(t, err)
+
+			result, err := jp.readAndParseJSON(tempDir, "test.json")
+
+			if tt.expectedErrMsg != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErrMsg)
 			} else {
 				assert.NoError(t, err)
+				assert.Equal(t, tt.expected, result)
 			}
 		})
 	}
@@ -355,13 +431,13 @@ func Test_jsonParser_extractValues(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		data           map[string]any
+		data           any
 		outputs        []builtin.JSONParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
-			name: "valid json, valid expression",
+			name: "valid expression",
 			data: map[string]any{"key": "value"},
 			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "key"},
@@ -369,12 +445,39 @@ func Test_jsonParser_extractValues(t *testing.T) {
 			expected: map[string]any{"result": "value"},
 		},
 		{
-			name: "valid json, expression points to missing key",
+			name: "root list - access by index",
+			data: []any{"first", "second", "third"},
+			outputs: []builtin.JSONParse{
+				{Name: "result", FromExpression: "$env[0]"},
+			},
+			expected: map[string]any{"result": "first"},
+		},
+		{
+			name: "root list - get length",
+			data: []any{"first", "second", "third"},
+			outputs: []builtin.JSONParse{
+				{Name: "result", FromExpression: "len($env)"},
+			},
+			expected: map[string]any{"result": 3},
+		},
+		{
+			name: "root list of objects - access nested property",
+			data: []any{
+				map[string]any{"name": "item1", "value": 10},
+				map[string]any{"name": "item2", "value": 20},
+			},
+			outputs: []builtin.JSONParse{
+				{Name: "result", FromExpression: "$env[1].name"},
+			},
+			expected: map[string]any{"result": "item2"},
+		},
+		{
+			name: "expression points to missing key",
 			data: map[string]any{"key": "value"},
 			outputs: []builtin.JSONParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
-			expectedErrMsg: "error compiling expression",
+			expected: map[string]any{"result": nil},
 		},
 		{
 			name: "expression evaluates to a nested object",
@@ -423,11 +526,11 @@ func Test_jsonParser_extractValues(t *testing.T) {
 			result, err := jp.extractValues(tt.data, tt.outputs)
 
 			if tt.expectedErrMsg != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedErrMsg)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedErrMsg)
 			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
 			}
 		})
 	}

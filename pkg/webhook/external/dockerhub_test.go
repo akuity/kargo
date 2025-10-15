@@ -84,8 +84,8 @@ func TestDockerHubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "example/repo",
-								SemverConstraint: "^v2.0.0", // Constraint won't be met
+								RepoURL:    "example/repo",
+								Constraint: "^v2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -119,8 +119,8 @@ func TestDockerHubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "example/repo",
-								SemverConstraint: "^v1.0.0",
+								RepoURL:    "example/repo",
+								Constraint: "^v1.0.0",
 							},
 						}},
 					},

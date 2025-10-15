@@ -25,8 +25,8 @@ func TestNewSemverSelector(t *testing.T) {
 		{
 			name: "error parsing semver constraint",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:          "example/image",
-				SemverConstraint: "invalid",
+				RepoURL:    "example/image",
+				Constraint: "invalid",
 			},
 			assertions: func(t *testing.T, _ Selector, err error) {
 				require.ErrorContains(t, err, "error parsing semver constraint")
@@ -35,8 +35,8 @@ func TestNewSemverSelector(t *testing.T) {
 		{
 			name: "success",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:          "example/image",
-				SemverConstraint: "^v1.0.0",
+				RepoURL:    "example/image",
+				Constraint: "^v1.0.0",
 			},
 			assertions: func(t *testing.T, sel Selector, err error) {
 				require.NoError(t, err)

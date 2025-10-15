@@ -1,8 +1,10 @@
 import { faAsterisk, faBarChart, faGear, faTasks } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu, Typography } from 'antd';
+import React from 'react';
 import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
+import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 import { ClusterConfig } from '@ui/features/settings/cluster-config/cluster-config';
@@ -40,6 +42,12 @@ const defaultView = settingsViews.clusterConfig;
 
 export const Settings = () => {
   const location = useLocation();
+  const { settingsExtensions } = useExtensionsContext();
+
+  const views = React.useMemo(
+    () => [...Object.values(settingsViews), ...settingsExtensions],
+    [settingsExtensions]
+  );
 
   return (
     <>
@@ -53,10 +61,8 @@ export const Settings = () => {
             <Menu
               className='-ml-2 -mt-1'
               style={{ border: 0, background: 'transparent' }}
-              selectedKeys={Object.values(settingsViews)
-                .map((i) => i.path)
-                .filter((i) => location.pathname.endsWith(i))}
-              items={Object.values(settingsViews).map((i) => ({
+              selectedKeys={views.map((i) => i.path).filter((i) => location.pathname.endsWith(i))}
+              items={views.map((i) => ({
                 label: <NavLink to={`../${i.path}`}>{i.label}</NavLink>,
                 icon: <FontAwesomeIcon icon={i.icon} />,
                 key: i.path
@@ -66,7 +72,7 @@ export const Settings = () => {
           <div className='flex-1 overflow-hidden' style={{ maxWidth: '920px', minHeight: '700px' }}>
             <Routes>
               <Route index element={<Navigate to={defaultView.path} replace={true} />} />
-              {Object.values(settingsViews).map((t) => (
+              {views.map((t) => (
                 <Route key={t.path} path={t.path} element={<t.component />} />
               ))}
               <Route path='*' element={<Navigate to='../' replace={true} />} />
