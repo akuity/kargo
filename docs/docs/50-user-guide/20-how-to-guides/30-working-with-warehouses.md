@@ -59,7 +59,6 @@ fields:
 - `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
   desired image. (See next section.)
 
-
 <a name="allow-tags-regexes-constraint"></a>
 
 - `allowTagsRegexes`: An optional list of regular expression that limits
