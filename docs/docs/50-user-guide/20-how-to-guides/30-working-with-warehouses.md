@@ -61,28 +61,17 @@ fields:
 
 <a name="allow-tags-constraint"></a>
 
-- `allowTags`: An optional regular expression that limits the eligibility for
-  selection to tags that match the pattern.
-  `allowTags` is deprecated since v1.10.0 and will be removed in v1.13.0.
-  From v.1.11.0, errors will be throw during artifact discovery if this fields is used.
-  Please use `allowTagsRegex` instead.
 
-<a name="allow-tags-regex"></a>
+<a name="allow-tags-regexes-constraint"></a>
 
-- `allowTagsRegex`: An optional list of regular expression that limits the eligibility for
-  selection to tags that match the pattern.
+- `allowTagsRegexes`: An optional list of regular expression that limits
+  eligibility for selection to tags that match any of the patterns.
 
-<a name="ignore-tags-constraint"></a>
 
-- `ignoreTags`: An optional list of tags that should explicitly be ignored.
-  `ignoreTags` is deprecated since v1.10.0 and will be removed in v1.13.0.
-  From v.1.11.0, errors will be throw during artifact discovery if this fields is used.
-  Please use `ignoreTagsRegex` instead.
+<a name="ignore-tags-regexes-constraint"></a>
 
-<a name="ignore-tags-regex"></a>
-
-- `ignoreTagsRegex`: An optional list of regular expression that limits the eligibility for
-  selection to tags that don't match the pattern.
+- `ignoreTagsRegexes`: An optional list of regular expression that limits the
+  eligibility for selection to tags that don't match any of the patterns.
 
 <a name="platform-constraint"></a>
 
@@ -456,10 +445,10 @@ spec:
 ```yaml
 spec:
   subscriptions:
-    - git:
-        repoURL: https://github.com/example/repo.git
-        commitSelectionStrategy: NewestFromBranch
-        expressionFilter: subject contains 'feat:' || subject contains 'fix:'
+  - git:
+      repoURL: https://github.com/example/repo.git
+      commitSelectionStrategy: NewestFromBranch
+      expressionFilter: subject contains 'feat:' || subject contains 'fix:'
 ```
 
 **Filtering commits with multiple criteria:**
