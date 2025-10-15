@@ -2,7 +2,7 @@ import { useQuery } from '@connectrpc/connect-query';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Empty, Flex, Pagination } from 'antd';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
 import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
@@ -16,12 +16,11 @@ import { useStarProjects } from './use-star-projects';
 
 const PAGE_SIZE_KEY = 'projects-page-size';
 const PAGE_NUMBER_KEY = 'projects-page-number';
-const FILTER_KEY = 'projects-filter';
 
 export const ProjectsList = () => {
   const [pageSize, setPageSize] = useLocalStorage(PAGE_SIZE_KEY, 10);
   const [page, setPage] = useLocalStorage(PAGE_NUMBER_KEY, 1);
-  const [filter, setFilter] = useLocalStorage(FILTER_KEY, '');
+  const [filter, setFilter] = useState('');
   const [starredProjectsView, setStarredProjectsView] = useLocalStorage(
     'starred-projects-view',
     false
