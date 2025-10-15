@@ -86,44 +86,50 @@ func (jp *jsonParser) run(
 	}, nil
 }
 
-// readAndParseJSON reads a JSON file and unmarshals it into a map.
-func (jp *jsonParser) readAndParseJSON(workDir string, path string) (map[string]any, error) {
-
+// readAndParseJSON reads and unmarshals a JSON document and returns the result.
+func (jp *jsonParser) readAndParseJSON(
+	workDir string,
+	path string,
+) (any, error) {
 	absFilePath, err := securejoin.SecureJoin(workDir, path)
 	if err != nil {
 		return nil, fmt.Errorf("error joining path %q: %w", path, err)
 	}
-
 	jsonData, err := os.ReadFile(absFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("error reading JSON file %q: %w", absFilePath, err)
 	}
-
-	var data map[string]any
+	var data any
 	if err := json.Unmarshal(jsonData, &data); err != nil {
 		return nil, fmt.Errorf("could not parse JSON file: %w", err)
 	}
-
 	return data, nil
 }
 
-// extractValues evaluates JSONPath expressions using expr and returns extracted values.
-func (jp *jsonParser) extractValues(data map[string]any, outputs []builtin.JSONParse) (map[string]any, error) {
-	results := make(map[string]any)
-
+// extractValues returns select data extracted from the provided data by
+// evaluating it against expressions contained within the provided
+// []builtin.JSONParse.
+func (jp *jsonParser) extractValues(
+	data any,
+	outputs []builtin.JSONParse,
+) (map[string]any, error) {
+	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {
-		program, err := expr.Compile(output.FromExpression, expr.Env(data))
+		program, err := expr.Compile(output.FromExpression)
 		if err != nil {
-			return nil, fmt.Errorf("error compiling expression %q: %w", output.FromExpression, err)
+			return nil, fmt.Errorf(
+				"error compiling expression %q: %w",
+				output.FromExpression, err,
+			)
 		}
-
 		value, err := expr.Run(program, data)
 		if err != nil {
-			return nil, fmt.Errorf("error evaluating expression %q: %w", output.FromExpression, err)
+			return nil, fmt.Errorf(
+				"error evaluating expression %q: %w",
+				output.FromExpression, err,
+			)
 		}
-
 		results[output.Name] = value
 	}
-
 	return results, nil
 }

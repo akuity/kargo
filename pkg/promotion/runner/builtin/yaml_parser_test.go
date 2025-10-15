@@ -2,7 +2,6 @@ package builtin
 
 import (
 	"context"
-	"errors"
 	"os"
 	"path"
 	"path/filepath"
@@ -317,42 +316,100 @@ config:
 }
 
 func Test_yamlParser_readAndParseYAML(t *testing.T) {
-	tempDir := t.TempDir()
-	validYAML := `
+	yp := &yamlParser{}
+
+	tests := []struct {
+		name           string
+		content        string
+		expected       any
+		expectedErrMsg string
+	}{
+		{
+			name: "Valid YAML with map root",
+			content: `
 key: value
 num: 42
 flag: true
-`
-	invalidYAML := `
-key: : value
-  num: 42
-`
-	tests := []struct {
-		name    string
-		content string
-		expects error
-	}{
-		{"Valid YAML", validYAML, nil},
-		{"Invalid YAML syntax", invalidYAML, errors.New("could not parse YAML file")},
-		{"Empty YAML file", "", errors.New("could not parse empty YAML file")},
+`,
+			expected: map[string]any{
+				"key":  "value",
+				"num":  float64(42),
+				"flag": true,
+			},
+		},
+		{
+			name: "Valid YAML with root list",
+			content: `
+- item1
+- item2
+- item3
+`,
+			expected: []any{"item1", "item2", "item3"},
+		},
+		{
+			name: "Valid YAML with nested structure",
+			content: `
+app:
+  name: test-app
+  version: 1.2.3
+  config:
+    debug: false
+    port: 8080
+items:
+  - name: first
+    value: 100
+  - name: second
+    value: 200
+`,
+			expected: map[string]any{
+				"app": map[string]any{
+					"name":    "test-app",
+					"version": "1.2.3",
+					"config": map[string]any{
+						"debug": false,
+						"port":  float64(8080),
+					},
+				},
+				"items": []any{
+					map[string]any{"name": "first", "value": float64(100)},
+					map[string]any{"name": "second", "value": float64(200)},
+				},
+			},
+		},
+		{
+			name: "Valid YAML with scalar root",
+			content: `simple string value
+`,
+			expected: "simple string value",
+		},
+		{
+			name:           "Invalid YAML syntax",
+			content:        "key: : value\n  num: 42",
+			expectedErrMsg: "could not parse YAML file",
+		},
+		{
+			name:           "Empty YAML file",
+			content:        "",
+			expectedErrMsg: "could not parse empty YAML file",
+		},
 	}
-
-	r := newYAMLParser(promotion.StepRunnerCapabilities{})
-	runner, ok := r.(*yamlParser)
-	require.True(t, ok)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			tempDir := t.TempDir()
 			filePath := filepath.Join(tempDir, "test.yaml")
+
 			err := os.WriteFile(filePath, []byte(tt.content), 0600)
-			if err != nil {
-				t.Fatalf("failed to write file: %v", err)
-			}
-			_, err = runner.readAndParseYAML(tempDir, "test.yaml")
-			if tt.expects != nil {
-				assert.ErrorContains(t, err, tt.expects.Error())
+			require.NoError(t, err)
+
+			result, err := yp.readAndParseYAML(tempDir, "test.yaml")
+
+			if tt.expectedErrMsg != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedErrMsg)
 			} else {
-				assert.NoError(t, err)
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
 			}
 		})
 	}
@@ -363,13 +420,13 @@ func Test_yamlParser_extractValues(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		data           map[string]any
+		data           any
 		outputs        []builtin.YAMLParse
 		expected       map[string]any
 		expectedErrMsg string
 	}{
 		{
-			name: "valid yaml, valid expression",
+			name: "valid expression",
 			data: map[string]any{"key": "value"},
 			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "key"},
@@ -377,12 +434,39 @@ func Test_yamlParser_extractValues(t *testing.T) {
 			expected: map[string]any{"result": "value"},
 		},
 		{
-			name: "valid yaml, expression points to missing key",
+			name: "root list - access by index",
+			data: []any{"first", "second", "third"},
+			outputs: []builtin.YAMLParse{
+				{Name: "result", FromExpression: "$env[0]"},
+			},
+			expected: map[string]any{"result": "first"},
+		},
+		{
+			name: "root list - get length",
+			data: []any{"first", "second", "third"},
+			outputs: []builtin.YAMLParse{
+				{Name: "result", FromExpression: "len($env)"},
+			},
+			expected: map[string]any{"result": 3},
+		},
+		{
+			name: "root list of objects - access nested property",
+			data: []any{
+				map[string]any{"name": "item1", "value": 10},
+				map[string]any{"name": "item2", "value": 20},
+			},
+			outputs: []builtin.YAMLParse{
+				{Name: "result", FromExpression: "$env[1].name"},
+			},
+			expected: map[string]any{"result": "item2"},
+		},
+		{
+			name: "expression points to missing key",
 			data: map[string]any{"key": "value"},
 			outputs: []builtin.YAMLParse{
 				{Name: "result", FromExpression: "missingKey"},
 			},
-			expectedErrMsg: "error compiling expression",
+			expected: map[string]any{"result": nil},
 		},
 		{
 			name: "expression evaluates to a nested object",
@@ -431,11 +515,11 @@ func Test_yamlParser_extractValues(t *testing.T) {
 			result, err := yp.extractValues(tt.data, tt.outputs)
 
 			if tt.expectedErrMsg != "" {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tt.expectedErrMsg)
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.expectedErrMsg)
 			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, tt.expected, result)
+				require.NoError(t, err)
+				require.Equal(t, tt.expected, result)
 			}
 		})
 	}
