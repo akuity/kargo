@@ -33,6 +33,9 @@ func (s *EventSender) Send(_ context.Context, evt event.Meta) error {
 	var annotations map[string]string
 	var message string
 	var err error
+
+	var apiVersion string
+
 	// NOTE(thomastaylor312): My kingdom for an enum here so we would know if we exhausted all
 	// cases. Whenever we add a new type, it should be added here or it will fall into default
 	// handling
@@ -44,6 +47,8 @@ func (s *EventSender) Send(_ context.Context, evt event.Meta) error {
 			return fmt.Errorf("failed to assert event type, this is programmer error: %T", evt)
 		}
 		annotations, message = toAnnotationsAndMessage(typedEvt)
+		// We add the apiVersion here if it is a known type as we know it is coming from a Kargo event
+		apiVersion = kargoapi.GroupVersion.Identifier()
 	} else {
 		annotations, err = convertToAnnotations(evt)
 		if err != nil {
@@ -60,9 +65,10 @@ func (s *EventSender) Send(_ context.Context, evt event.Meta) error {
 		return fmt.Errorf("failed to extract event data: %w", err)
 	}
 	reference := corev1.ObjectReference{
-		Namespace: evt.GetProject(),
-		Kind:      evt.Kind(),
-		Name:      evt.GetName(),
+		Namespace:  evt.GetProject(),
+		Kind:       evt.Kind(),
+		Name:       evt.GetName(),
+		APIVersion: apiVersion,
 	}
 	// Use the recorder to send the event
 	s.recorder.AnnotatedEventf(&reference, annotations, corev1.EventTypeNormal, string(evt.Type()), message)
