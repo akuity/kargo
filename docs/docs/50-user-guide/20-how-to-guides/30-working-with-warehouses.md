@@ -721,8 +721,8 @@ Both the [`NewestBuild` selection strategy](#newest-build) and any
 [`platform` constraints](#platform-constraint) are heavily dependent on the
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
-[`allowTags`](#allow-tags-constraint) or
-[`ignoreTags`](#ignore-tags-constraint). [`allowTags`](#allow-tags-constraint) and [`ignoreTags`](#ignore-tags-constraint) are deprecated since v1.10.0 and will be removed in v1.13.0 in favour of [`allowTagsRegex`](#allow-tags-regex) and [`ignoreTagsRegex`](#ignore-tags-regex). Registry architecture, unfortunately,
+[`allowTagsRegexes`](#allow-tags-regexes-constraint) or
+[`ignoreTagsRegexes`](#ignore-tags-regexes-constraint). Registry architecture, unfortunately,
 requires such metadata be retrieved image-by-image with a separate API call for
 each. Even with aggressive caching, and especially when the number of image
 revisions to consider is large, this process can take quite some time. The time
