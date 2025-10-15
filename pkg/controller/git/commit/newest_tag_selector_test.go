@@ -174,7 +174,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allowTagsRegex: []*regexp.Regexp{allowAlphas},
+					allowTagsRegexes: []*regexp.Regexp{allowAlphas},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -213,7 +213,7 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^123$")},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^123$")},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -252,8 +252,8 @@ func Test_newestTagSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allowTagsRegex:  []*regexp.Regexp{allowAlphas},
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^ABC$")},
+					allowTagsRegexes:  []*regexp.Regexp{allowAlphas},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^ABC$")},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,

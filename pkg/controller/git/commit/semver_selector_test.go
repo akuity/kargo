@@ -93,7 +93,7 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "regex matches",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
 				},
 			},
 			ref:         "refs/tags/v1.0.0",
@@ -103,7 +103,7 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "regex does not match",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
 				},
 			},
 			ref:         "refs/tags/v2.0.0",
@@ -113,7 +113,7 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "ignored",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 				},
 			},
 			ref:         "refs/tags/v1.0.0",
@@ -123,7 +123,7 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "not ignored",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v2\.0\.0$`)},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v2\.0\.0$`)},
 				},
 			},
 			ref:         "refs/tags/v1.0.0",
@@ -133,8 +133,8 @@ func Test_semVerSelector_MatchesRef(t *testing.T) {
 			name: "regex matches, but ignored",
 			selector: &semverSelector{
 				tagBasedSelector: &tagBasedSelector{
-					allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
+					allowTagsRegexes:  []*regexp.Regexp{regexp.MustCompile(`^v1\.`)},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 				},
 			},
 			ref:         "refs/tags/v1.0.0",
@@ -319,7 +319,7 @@ func Test_semverSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allowTagsRegex: []*regexp.Regexp{allowMajorV1},
+					allowTagsRegexes: []*regexp.Regexp{allowMajorV1},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -358,7 +358,7 @@ func Test_semverSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,
@@ -397,8 +397,8 @@ func Test_semverSelector_Select(t *testing.T) {
 							}, nil
 						},
 					},
-					allowTagsRegex:  []*regexp.Regexp{allowMajorV1},
-					ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
+					allowTagsRegexes:  []*regexp.Regexp{allowMajorV1},
+					ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 					filterTagsByDiffPathsFn: func(
 						_ git.Repo,
 						tags []git.TagMetadata,

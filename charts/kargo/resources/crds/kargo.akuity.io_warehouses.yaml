@@ -161,15 +161,15 @@ spec:
                             value in this field only has any effect when the CommitSelectionStrategy is
                             Lexical, NewestTag, or SemVer. This field is optional.
 
-                            Deprecated: Use AllowTagsRegex instead. Beginning in v1.11.0, artifact
+                            Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
                             discovery will FAIL if this field is non-empty. This field will be removed
                             in v1.13.0.
                           type: string
-                        allowTagsRegex:
+                        allowTagsRegexes:
                           description: |-
-                            AllowTagsRegex is a list of regular expressions that can optionally be used
-                            to limit the tags that are considered in determining the newest commit of
-                            interest. The values in this field only have any effect when the
+                            AllowTagsRegexes is a list of regular expressions that can optionally be
+                            used to limit the tags that are considered in determining the newest commit
+                            of interest. The values in this field only have any effect when the
                             CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
                             optional.
                           items:
@@ -207,12 +207,12 @@ spec:
 
                             - "Lexical": Selects the commit referenced by the lexicographically
                               greatest tag. Useful when tags embed a _leading_ date or timestamp. The
-                              AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+                              AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to
                               narrow the set of tags eligible for selection.
 
                             - "NewestTag": Selects the commit referenced by the most recently created
-                              tag. The AllowTagsRegex and IgnoreTagsRegex fields can optionally be used
-                              to narrow the set of tags eligible for selection.
+                              tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be
+                              used to narrow the set of tags eligible for selection.
                           enum:
                           - Lexical
                           - NewestFromBranch
@@ -224,10 +224,9 @@ spec:
                           description: |-
                             DiscoveryLimit is an optional limit on the number of commits that can be
                             discovered for this subscription. The limit is applied after filtering
-                            commits based on the AllowTagsRegex, IgnoreTagsRegex, and ExpressionFilter
-                            fields.
-                            When left unspecified, the field is implicitly treated as if its value
-                            were "20". The upper limit for this field is 100.
+                            commits based on the AllowTagsRegexes, IgnoreTagsRegexes, and
+                            ExpressionFilter fields. When left unspecified, the field is implicitly
+                            treated as if its value were "20". The upper limit for this field is 100.
                           format: int32
                           maximum: 100
                           minimum: 1
@@ -259,10 +258,10 @@ spec:
                             has access to commit metadata variables.\nFor tag-based
                             strategies (Lexical, NewestTag, SemVer), the filter applies\nto
                             tags and has access to tag metadata variables. The filter
-                            is applied\nafter AllowTagsRegex, IgnoreTagsRegex, and
-                            SemverConstraint fields.\n\nThe expression should be a
-                            valid expr-lang expression that evaluates to\ntrue or
-                            false. When the expression evaluates to true, the commit/tag
+                            is applied\nafter AllowTagsRegexes, IgnoreTagsRegexes,
+                            and SemverConstraint fields.\n\nThe expression should
+                            be a valid expr-lang expression that evaluates to\ntrue
+                            or false. When the expression evaluates to true, the commit/tag
                             is\nincluded in the set that is considered. When the expression
                             evaluates to\nfalse, the commit/tag is excluded.\n\nAvailable
                             variables depend on the CommitSelectionStrategy:\n\nFor
@@ -298,15 +297,15 @@ spec:
                             CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
                             optional.
 
-                            Deprecated: Use IgnoreTagsRegex instead. Beginning in v1.11.0, artifact
+                            Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
                             discovery will FAIL if this field is non-empty. This field will be removed
                             in v1.13.0.
                           items:
                             type: string
                           type: array
-                        ignoreTagsRegex:
+                        ignoreTagsRegexes:
                           description: |-
-                            IgnoreTagsRegex is a list of regular expressions that can optionally be
+                            IgnoreTagsRegexes is a list of regular expressions that can optionally be
                             used to exclude tags from consideration when determining the newest commit
                             of interest. The values in this field only have any effect when the
                             CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
@@ -379,14 +378,14 @@ spec:
                             image tags that are considered in determining the newest version of an
                             image. This field is optional.
 
-                            Deprecated: Use AllowTagsRegex instead. Beginning in v1.11.0, artifact
+                            Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
                             discovery will FAIL if this field is non-empty. This field will be removed
                             in v1.13.0.
                           type: string
-                        allowTagsRegex:
+                        allowTagsRegexes:
                           description: |-
-                            AllowTagsRegex is a list of regular expressions that can optionally be used
-                            to limit the image tags that are considered in determining the newest
+                            AllowTagsRegexes is a list of regular expressions that can optionally be
+                            used to limit the image tags that are considered in determining the newest
                             revision of an image. This field is optional.
                           items:
                             type: string
@@ -404,9 +403,9 @@ spec:
                           description: |-
                             DiscoveryLimit is an optional limit on the number of image references
                             that can be discovered for this subscription. The limit is applied after
-                            filtering images based on the AllowTagsRegex and IgnoreTagsRegex fields.
-                            When left unspecified, the field is implicitly treated as if its value
-                            were "20". The upper limit for this field is 100.
+                            filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes
+                            fields. When left unspecified, the field is implicitly treated as if its
+                            value were "20". The upper limit for this field is 100.
                           format: int32
                           maximum: 100
                           minimum: 1
@@ -417,15 +416,15 @@ spec:
                             newest version of an image. No regular expressions or glob patterns are
                             supported yet. This field is optional.
 
-                            Deprecated: Use IgnoreTagsRegex instead. Beginning in v1.11.0, artifact
+                            Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
                             discovery will FAIL if this field is non-empty. This field will be removed
                             in v1.13.0.
                           items:
                             type: string
                           type: array
-                        ignoreTagsRegex:
+                        ignoreTagsRegexes:
                           description: |-
-                            IgnoreTagsRegex is a list of regular expressions that can optionally be
+                            IgnoreTagsRegexes is a list of regular expressions that can optionally be
                             used to exclude tags from consideration when determining the newest
                             revision of an image. This field is optional.
                           items:
@@ -446,18 +445,18 @@ spec:
 
                             - "Lexical": Selects the image referenced by the lexicographically greatest
                               tag. Useful when tags embed a leading date or timestamp. The
-                              AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+                              AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to
                               narrow the set of tags eligible for selection.
 
                             - "NewestBuild": Selects the image that was most recently pushed to the
-                              repository. The AllowTagsRegex and IgnoreTagsRegex fields can optionally
-                              be used to narrow the set of tags eligible for selection. This is the
-                              least efficient selection strategy and is likely to cause rate limiting
-                              affecting this Warehouse and possibly others. This strategy should be
-                              avoided.
+                              repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can
+                              optionally be used to narrow the set of tags eligible for selection. This
+                              is the least efficient selection strategy and is likely to cause rate
+                              limiting affecting this Warehouse and possibly others. This strategy
+                              should be avoided.
 
                             - "SemVer": Selects the image with the semantically greatest tag. The
-                              AllowTagsRegex and IgnoreTagsRegex fields can optionally be used to
+                              AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to
                               narrow the set of tags eligible for selection.
                           enum:
                           - Digest

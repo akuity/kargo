@@ -39,20 +39,20 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error compiling AllowTagsRegex",
+			name: "error compiling AllowTagsRegexes",
 			sub: kargoapi.GitSubscription{
-				RepoURL:        "https://github.com/example/repo.git",
-				AllowTagsRegex: []string{"["}, // Invalid regex
+				RepoURL:          "https://github.com/example/repo.git",
+				AllowTagsRegexes: []string{"["}, // Invalid regex
 			},
 			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
 				require.ErrorContains(t, err, "error compiling regular expression")
 			},
 		},
 		{
-			name: "error compiling IgnoreTagsRegex",
+			name: "error compiling IgnoreTagsRegexes",
 			sub: kargoapi.GitSubscription{
-				RepoURL:         "https://github.com/example/repo.git",
-				IgnoreTagsRegex: []string{"["}, // Invalid regex
+				RepoURL:           "https://github.com/example/repo.git",
+				IgnoreTagsRegexes: []string{"["}, // Invalid regex
 			},
 			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
 				require.ErrorContains(t, err, "error compiling regular expression")
@@ -63,21 +63,21 @@ func TestNewTagBasedSelector(t *testing.T) {
 			// removed.
 			name: "success",
 			sub: kargoapi.GitSubscription{
-				RepoURL:         "https://github.com/foo/bar",
-				AllowTags:       `^v1\.`,
-				AllowTagsRegex:  []string{`^v2\.`},
-				IgnoreTags:      []string{"v1.0.0"},
-				IgnoreTagsRegex: []string{`^v1\.0\..*`},
+				RepoURL:           "https://github.com/foo/bar",
+				AllowTags:         `^v1\.`,
+				AllowTagsRegexes:  []string{`^v2\.`},
+				IgnoreTags:        []string{"v1.0.0"},
+				IgnoreTagsRegexes: []string{`^v1\.0\..*`},
 			},
 			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, s.baseSelector)
-				require.Len(t, s.allowTagsRegex, 2)
-				require.Equal(t, `^v2\.`, s.allowTagsRegex[0].String())
-				require.Equal(t, `^v1\.`, s.allowTagsRegex[1].String())
-				require.Len(t, s.ignoreTagsRegex, 2)
-				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegex[0].String())
-				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegex[1].String())
+				require.Len(t, s.allowTagsRegexes, 2)
+				require.Equal(t, `^v2\.`, s.allowTagsRegexes[0].String())
+				require.Equal(t, `^v1\.`, s.allowTagsRegexes[1].String())
+				require.Len(t, s.ignoreTagsRegexes, 2)
+				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegexes[0].String())
+				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegexes[1].String())
 			},
 		},
 	}
@@ -111,7 +111,7 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "regex matches",
 			selector: &tagBasedSelector{
-				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
 			},
 			ref:         "refs/tags/abc",
 			shouldMatch: true,
@@ -119,7 +119,7 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "regex does not match",
 			selector: &tagBasedSelector{
-				allowTagsRegex: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
 			},
 			ref:         "refs/tags/123",
 			shouldMatch: false,
@@ -127,7 +127,7 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "ignored",
 			selector: &tagBasedSelector{
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			ref:         "refs/tags/abc",
 			shouldMatch: false,
@@ -135,7 +135,7 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "not ignored",
 			selector: &tagBasedSelector{
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			ref:         "refs/tags/123",
 			shouldMatch: true,
@@ -143,8 +143,8 @@ func Test_tagBasedSelector_MatchesRef(t *testing.T) {
 		{
 			name: "regex matches, but ignored",
 			selector: &tagBasedSelector{
-				allowTagsRegex:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
-				ignoreTagsRegex: []*regexp.Regexp{regexp.MustCompile("^abc$")},
+				allowTagsRegexes:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			ref:         "refs/tags/abc",
 			shouldMatch: false,
