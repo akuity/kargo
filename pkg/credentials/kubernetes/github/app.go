@@ -188,7 +188,7 @@ func (p *AppCredentialProvider) getAccessToken(
 		return "", err
 	}
 
-	appTokenSource, err := newApplicationTokenSource(appOrClientID, decodedKey)
+	appTokenSource, err := githubauth.NewApplicationTokenSource(appOrClientID, decodedKey)
 	if err != nil {
 		return "", fmt.Errorf("error creating application token source: %w", err)
 	}
