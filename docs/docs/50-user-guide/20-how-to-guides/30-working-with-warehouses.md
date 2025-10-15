@@ -141,8 +141,9 @@ strategies are:
 
   This is useful in scenarios wherein tags incorporate date/time stamps in
   formats such as `yyyymmdd` and you wish to select the tag with the latest
-  stamp. When using this strategy, it is recommended to use the `allowTags`
-  field to limit eligibility to tags that match the expected format.
+  stamp. When using this strategy, it is recommended to use the
+  `allowTagsRegexes` field to limit eligibility to tags matching specific
+  patterns.
 
   Example:
 
@@ -152,7 +153,8 @@ strategies are:
     - image:
         repoURL: public.ecr.aws/nginx/nginx
         imageSelectionStrategy: Lexical
-        allowTags: ^nightly-\d{8}$
+        allowTagsRegexes:
+        - ^nightly-\d{8}$
   ```
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag"
@@ -197,9 +199,9 @@ strategies are:
   result in system-wide performance degradation.**
 
   If using this strategy is unavoidable, it is recommended to use the
-  `allowTags` field to limit the number of tags for which metadata is
-  retrieved to reduce the risk of encountering rate limits. `allowTags` may
-  require periodic adjustment as a repository grows.
+  `allowTagsRegexes` field to limit the number of tags for which metadata is
+  retrieved to reduce the risk of encountering rate limits. `allowTagsRegexes`
+  may require periodic adjustment as a repository grows.
   :::
 
   ```yaml
@@ -208,7 +210,8 @@ strategies are:
     - image:
         repoURL: public.ecr.aws/nginx/nginx
         imageSelectionStrategy: NewestBuild
-        allowTags: ^nightly
+        allowTagsRegexes:
+        - ^nightly
   ```
 
 ### Git Repository Subscriptions
@@ -220,12 +223,13 @@ Git repository subscriptions can be defined using the following fields:
 - `commitSelectionStrategy`: One of four pre-defined strategies for selecting
   the desired commit. (See next section.)
 
-- `allowTags`: An optional regular expression that limits the eligibility for
-  selection to tags that match the pattern. (This is not applicable to selection
-  strategies that do not involve tags.)
+- `allowTagsRegexes`: An optional list of regular expressions that limit
+  eligibility for selection to tags that match any of the patterns. (This is not
+  applicable to selection strategies that do not involve tags.)
 
-- `ignoreTags`: An optional list of tags that should explicitly be ignored.
-  (This is not applicable to selection strategies that do not involve tags.)
+- `ignoreTagsRegexes`: An optional list of regular expressions that limit
+  eligibility for selection to tags that don't match any of the patterns. (This
+  is not applicable to selection strategies that do not involve tags.)
 
 - `expressionFilter`: An optional expression that filters commits and tags based
   on their metadata. See [Expression Filtering](#expression-filtering) for
@@ -323,9 +327,9 @@ strategies are:
 
   This is useful in scenarios wherein you do not wish for the `Warehouse` to
   discover _every new commit_ and tags incorporate date/time stamps in formats
-  such as `yyyymmdd` and you wish to select the tag with the latest stamp.
-  When using this strategy, it is recommended to use the `allowTags` field to
-  limit eligibility to tags that match the expected format.
+  such as `yyyymmdd` and you wish to select the tag with the latest stamp. When
+  using this strategy, it is recommended to use the `allowTagsRegexes` field to
+  limit eligibility to tags matching specific patterns.
 
   Example:
 
@@ -335,13 +339,14 @@ strategies are:
     - git:
         repoURL: https://github.com/example/repo.git
         commitSelectionStrategy: Lexical
-        allowTags: ^nightly-\d{8}$
+        allowTagsRegexes:
+        - ^nightly-\d{8}$
   ```
 
 - `NewestTag`: Selects the commit referenced by the most recently created tag.
 
-  When using this strategy, it is recommended to use the `allowTags` field to
-  limit eligibility to tags that match the expected format.
+  When using this strategy, it is recommended to use the `allowTagsRegexes`
+  field to limit eligibility to tags matching specific patterns.
 
   Example:
 
@@ -351,7 +356,8 @@ strategies are:
     - git:
         repoURL: https://github.com/example/repo.git
         commitSelectionStrategy: NewestTag
-        allowTags: ^nightly
+        allowTagsRegexes:
+        - ^nightly
   ```
 
 #### Expression Filtering
@@ -391,8 +397,9 @@ variables depend on your `commitSelectionStrategy`:
 
 **For tag-based filtering** (`SemVer`, `Lexical`, and `NewestTag` strategies):
 
-- Filters tags based on tag and associated commit metadata
-- Applied after `allowTags`, `ignoreTags` and `semverConstraint` fields
+- Filters tags based on name and associated commit metadata
+- Applied after `allowTagsRegexes`, `ignoreTagsRegexes` and `semverConstraint`
+  fields
 
 ##### Available Expression Filtering Variables
 
@@ -722,12 +729,12 @@ Both the [`NewestBuild` selection strategy](#newest-build) and any
 retrieval of image metadata for every image in the repository not eliminated
 from consideration up-front by other, more efficient constraints such as
 [`allowTagsRegexes`](#allow-tags-regexes-constraint) or
-[`ignoreTagsRegexes`](#ignore-tags-regexes-constraint). Registry architecture, unfortunately,
-requires such metadata be retrieved image-by-image with a separate API call for
-each. Even with aggressive caching, and especially when the number of image
-revisions to consider is large, this process can take quite some time. The time
-required to complete discovery can be protracted even further if the registry's
-rate limit has been exceeded.
+[`ignoreTagsRegexes`](#ignore-tags-regexes-constraint). Registry architecture,
+unfortunately, requires such metadata be retrieved image-by-image with a
+separate API call for each. Even with aggressive caching, and especially when
+the number of image revisions to consider is large, this process can take quite
+some time. The time required to complete discovery can be protracted even
+further if the registry's rate limit has been exceeded.
 
 Kargo can execute a finite number of these discovery processes concurrently and
 registries enforce rate limits on the basis of your public IP or, if applicable,
