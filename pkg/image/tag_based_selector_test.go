@@ -23,7 +23,8 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "error parsing allowed tags regex",
+			// TODO(v1.13.0): Remove this test once AllowTags is removed.
+			name: "error compiling AllowedTags regex",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:   "example/image",
 				AllowTags: "[", // Invalid regex
@@ -33,19 +34,45 @@ func TestNewTagBasedSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "error compiling AllowTagsRegexes",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:          "example/image",
+				AllowTagsRegexes: []string{"["}, // Invalid regex
+			},
+			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
+				require.ErrorContains(t, err, "error compiling regular expression")
+			},
+		},
+		{
+			name: "error compiling IgnoreTagsRegexes",
+			sub: kargoapi.ImageSubscription{
+				RepoURL:           "example/image",
+				IgnoreTagsRegexes: []string{"["}, // Invalid regex
+			},
+			assertions: func(t *testing.T, _ *tagBasedSelector, err error) {
+				require.ErrorContains(t, err, "error compiling ignore tags regex")
+			},
+		},
+		{
+			// TODO(v1.13.0): Update this test once AllowTags and IgnoreTags are
+			// removed.
 			name: "success",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:        "example/image",
-				AllowTags:      `^v1\.`,
-				IgnoreTags:     []string{"v1.0.0"},
-				DiscoveryLimit: 5,
+				RepoURL:           "example/image",
+				AllowTags:         `^v1\.`,
+				AllowTagsRegexes:  []string{`^v2\.`},
+				IgnoreTags:        []string{`v1.0.0`},
+				IgnoreTagsRegexes: []string{`^v1\.0\..*`},
 			},
 			assertions: func(t *testing.T, s *tagBasedSelector, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, s.baseSelector)
-				require.NotNil(t, s.allows)
-				require.Equal(t, []string{"v1.0.0"}, s.ignores)
-				require.Equal(t, 5, s.discoveryLimit)
+				require.Len(t, s.allowTagsRegexes, 2)
+				require.Equal(t, `^v2\.`, s.allowTagsRegexes[0].String())
+				require.Equal(t, `^v1\.`, s.allowTagsRegexes[1].String())
+				require.Len(t, s.ignoreTagsRegexes, 2)
+				require.Equal(t, `^v1\.0\..*`, s.ignoreTagsRegexes[0].String())
+				require.Equal(t, `^v1\.0\.0$`, s.ignoreTagsRegexes[1].String())
 			},
 		},
 	}
@@ -71,34 +98,42 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 			shouldMatch: true,
 		},
 		{
-			name:        "regex matches",
-			selector:    &tagBasedSelector{allows: regexp.MustCompile("[a-z]+")},
+			name: "regex matches",
+			selector: &tagBasedSelector{
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+			},
 			tag:         "abc",
 			shouldMatch: true,
 		},
 		{
-			name:        "regex does not match",
-			selector:    &tagBasedSelector{allows: regexp.MustCompile("[a-z]+")},
+			name: "regex does not match",
+			selector: &tagBasedSelector{
+				allowTagsRegexes: []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+			},
 			tag:         "123",
 			shouldMatch: false,
 		},
 		{
-			name:        "ignored",
-			selector:    &tagBasedSelector{ignores: []string{"abc"}},
+			name: "ignored",
+			selector: &tagBasedSelector{
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
+			},
 			tag:         "abc",
 			shouldMatch: false,
 		},
 		{
-			name:        "not ignored",
-			selector:    &tagBasedSelector{ignores: []string{"abc"}},
+			name: "not ignored",
+			selector: &tagBasedSelector{
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
+			},
 			tag:         "123",
 			shouldMatch: true,
 		},
 		{
 			name: "regex matches, but ignored",
 			selector: &tagBasedSelector{
-				allows:  regexp.MustCompile("[a-z]+"),
-				ignores: []string{"abc"},
+				allowTagsRegexes:  []*regexp.Regexp{regexp.MustCompile("[a-z]+")},
+				ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile("^abc$")},
 			},
 			tag:         "abc",
 			shouldMatch: false,
@@ -117,8 +152,8 @@ func Test_tagBasedSelector_MatchesTag(t *testing.T) {
 
 func Test_tagBasedSelector_filterTags(t *testing.T) {
 	filtered := (&tagBasedSelector{
-		allows:  regexp.MustCompile(`v1\.`),
-		ignores: []string{"v1.0.0"},
+		allowTagsRegexes:  []*regexp.Regexp{regexp.MustCompile(`v1\.`)},
+		ignoreTagsRegexes: []*regexp.Regexp{regexp.MustCompile(`^v1\.0\.0$`)},
 	}).filterTags([]string{
 		"v1.0.0", // Allowed, but ignored
 		"v1.1.0", // Allowed
