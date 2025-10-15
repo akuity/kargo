@@ -59,8 +59,6 @@ fields:
 - `imageSelectionStrategy`: One of four pre-defined strategies for selecting the
   desired image. (See next section.)
 
-<a name="allow-tags-constraint"></a>
-
 
 <a name="allow-tags-regexes-constraint"></a>
 
@@ -70,7 +68,7 @@ fields:
 
 <a name="ignore-tags-regexes-constraint"></a>
 
-- `ignoreTagsRegexes`: An optional list of regular expression that limits the
+- `ignoreTagsRegexes`: An optional list of regular expression that limits
   eligibility for selection to tags that don't match any of the patterns.
 
 <a name="platform-constraint"></a>
@@ -135,9 +133,9 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - image:
-          repoURL: public.ecr.aws/nginx/nginx
-          constraint: ^1.26.0
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        constraint: ^1.26.0
   ```
 
 - `Lexical`: This strategy selects the image with the lexicographically greatest
@@ -153,10 +151,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - image:
-          repoURL: public.ecr.aws/nginx/nginx
-          imageSelectionStrategy: Lexical
-          allowTags: ^nightly-\d{8}$
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        imageSelectionStrategy: Lexical
+        allowTags: ^nightly-\d{8}$
   ```
 
 - `Digest`: This selects the image _currently_ referenced by some "mutable tag"
@@ -179,10 +177,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - image:
-          repoURL: public.ecr.aws/nginx/nginx
-          imageSelectionStrategy: Digest
-          constraint: latest
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        imageSelectionStrategy: Digest
+        constraint: latest
   ```
 
 <a name="newest-build"></a>
@@ -209,10 +207,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - image:
-          repoURL: public.ecr.aws/nginx/nginx
-          imageSelectionStrategy: NewestBuild
-          allowTags: ^nightly
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        imageSelectionStrategy: NewestBuild
+        allowTags: ^nightly
   ```
 
 ### Git Repository Subscriptions
@@ -283,9 +281,9 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - git:
-          repoURL: https://github.com/example/repo.git
-          branch: main
+    - git:
+        repoURL: https://github.com/example/repo.git
+        branch: main
   ```
 
 - `SemVer`: Selects the commit referenced by the tag that best matches a
@@ -316,10 +314,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - git:
-          repoURL: https://github.com/example/repo.git
-          commitSelectionStrategy: SemVer
-          semverConstraint: ^1.0.0
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: SemVer
+        semverConstraint: ^1.0.0
   ```
 
 - `Lexical`: Selects the commit referenced by the lexicographically greatest
@@ -336,10 +334,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - git:
-          repoURL: https://github.com/example/repo.git
-          commitSelectionStrategy: Lexical
-          allowTags: ^nightly-\d{8}$
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: Lexical
+        allowTags: ^nightly-\d{8}$
   ```
 
 - `NewestTag`: Selects the commit referenced by the most recently created tag.
@@ -352,10 +350,10 @@ strategies are:
   ```yaml
   spec:
     subscriptions:
-      - git:
-          repoURL: https://github.com/example/repo.git
-          commitSelectionStrategy: NewestTag
-          allowTags: ^nightly
+    - git:
+        repoURL: https://github.com/example/repo.git
+        commitSelectionStrategy: NewestTag
+        allowTags: ^nightly
   ```
 
 #### Expression Filtering
