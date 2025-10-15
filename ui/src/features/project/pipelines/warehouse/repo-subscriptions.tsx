@@ -129,9 +129,9 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
                 </Descriptions.Item>
               )}
 
-              {(!!subscription?.image?.constraint || !!subscription?.image?.semverConstraint) && (
+              {!!subscription?.image?.constraint && (
                 <Descriptions.Item label='constraint' styles={{ label: DescriptionsLabelStyle }}>
-                  {subscription?.image?.constraint || subscription?.image?.semverConstraint}
+                  {subscription?.image?.constraint}
                 </Descriptions.Item>
               )}
 

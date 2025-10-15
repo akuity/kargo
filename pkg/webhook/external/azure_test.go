@@ -119,8 +119,8 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "fakeregistry.azurecr.io/fakeimage",
-								SemverConstraint: "^2.0.0", // Constraint won't be met
+								RepoURL:    "fakeregistry.azurecr.io/fakeimage",
+								Constraint: "^2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -161,8 +161,8 @@ func TestAzureHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "fakeregistry.azurecr.io/fakeimage",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "fakeregistry.azurecr.io/fakeimage",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},

@@ -220,9 +220,8 @@ func TestValidateSpec(t *testing.T) {
 							RepoURL: "bogus",
 						},
 						Image: &kargoapi.ImageSubscription{
-							Constraint:       "constraint",
-							SemverConstraint: "bogus",
-							Platform:         "bogus",
+							Constraint: "constraint",
+							Platform:   "bogus",
 						},
 						Chart: &kargoapi.ChartSubscription{
 							SemverConstraint: "bogus",
@@ -245,11 +244,6 @@ func TestValidateSpec(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.subscriptions[0].image.constraint",
 							BadValue: "constraint",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0].image.semverConstraint",
-							BadValue: "bogus",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -327,9 +321,8 @@ func TestValidateSubs(t *testing.T) {
 						RepoURL: "bogus",
 					},
 					Image: &kargoapi.ImageSubscription{
-						Constraint:       "bogus",
-						SemverConstraint: "bogus",
-						Platform:         "bogus",
+						Constraint: "bogus",
+						Platform:   "bogus",
 					},
 					Chart: &kargoapi.ChartSubscription{
 						SemverConstraint: "bogus",
@@ -348,11 +341,6 @@ func TestValidateSubs(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subs[0].image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0].image.semverConstraint",
 							BadValue: "bogus",
 						},
 						{
@@ -400,15 +388,15 @@ func TestValidateSubs(t *testing.T) {
 				},
 				{
 					Image: &kargoapi.ImageSubscription{
-						RepoURL:          "example/yet-another-repo",
-						SemverConstraint: "^v1.0.0",
+						RepoURL:    "example/yet-another-repo",
+						Constraint: "^v1.0.0",
 					},
 				},
 				{
 					Image: &kargoapi.ImageSubscription{
 						RepoURL:                "example/still-another-repo",
 						ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-						SemverConstraint:       "latest",
+						Constraint:             "latest",
 					},
 				},
 			},
@@ -443,9 +431,8 @@ func TestValidateSub(t *testing.T) {
 					RepoURL: "bogus",
 				},
 				Image: &kargoapi.ImageSubscription{
-					Constraint:       "bogus",
-					SemverConstraint: "bogus",
-					Platform:         "bogus",
+					Constraint: "bogus",
+					Platform:   "bogus",
 				},
 				Chart: &kargoapi.ChartSubscription{
 					SemverConstraint: "bogus",
@@ -470,11 +457,6 @@ func TestValidateSub(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "sub.image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.image.semverConstraint",
 							BadValue: "bogus",
 						},
 						{
@@ -594,10 +576,9 @@ func TestValidateImageSub(t *testing.T) {
 		{
 			name: "invalid",
 			sub: kargoapi.ImageSubscription{
-				RepoURL:          "bogus",
-				Constraint:       "bogus",
-				SemverConstraint: "bogus",
-				Platform:         "bogus",
+				RepoURL:    "bogus",
+				Constraint: "bogus",
+				Platform:   "bogus",
 			},
 			seen: uniqueSubSet{
 				subscriptionKey{
@@ -612,11 +593,6 @@ func TestValidateImageSub(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image.semverConstraint",
 							BadValue: "bogus",
 						},
 						{
