@@ -24,13 +24,28 @@ const tagPrefix = "refs/tags/"
 // basis of tag names or metadata. It is not intended to be used directly.
 type tagBasedSelector struct {
 	*baseSelector
-	allows  *regexp.Regexp
-	ignores []string
+	allowTagsRegexes  []*regexp.Regexp
+	ignoreTagsRegexes []*regexp.Regexp
 
 	filterTagsByDiffPathsFn func(
 		git.Repo,
 		[]git.TagMetadata,
 	) ([]git.TagMetadata, error)
+}
+
+// compileRegexes returns a slice of compiled regular expressions.
+func compileRegexes(regexStrs []string) ([]*regexp.Regexp, error) {
+	regexes := make([]*regexp.Regexp, len(regexStrs))
+	var err error
+	for i, regexStr := range regexStrs {
+		if regexes[i], err = regexp.Compile(regexStr); err != nil {
+			return nil, fmt.Errorf(
+				"error compiling regular expression %q: %w",
+				regexStr, err,
+			)
+		}
+	}
+	return regexes, nil
 }
 
 func newTagBasedSelector(
@@ -43,16 +58,43 @@ func newTagBasedSelector(
 	}
 	s := &tagBasedSelector{
 		baseSelector: base,
-		ignores:      sub.IgnoreTags,
 	}
-	if sub.AllowTags != "" {
-		if s.allows, err = regexp.Compile(sub.AllowTags); err != nil {
+
+	if s.allowTagsRegexes, err = compileRegexes(sub.AllowTagsRegexes); err != nil {
+		return nil, err
+	}
+
+	// TODO(v1.11.0): Return an error if sub.AllowTags is non-empty.
+	// TODO(v1.13.0): Remove this block after the AllowTags field is removed.
+	if sub.AllowTags != "" { // nolint: staticcheck
+		var allowTagsRegex *regexp.Regexp
+		if allowTagsRegex, err = regexp.Compile(sub.AllowTags); err != nil { // nolint: staticcheck
 			return nil, fmt.Errorf(
 				"error compiling regular expression %q: %w",
-				sub.AllowTags, err,
+				sub.AllowTags, err, // nolint: staticcheck
 			)
 		}
+		s.allowTagsRegexes = append(s.allowTagsRegexes, allowTagsRegex)
 	}
+
+	if s.ignoreTagsRegexes, err = compileRegexes(sub.IgnoreTagsRegexes); err != nil {
+		return nil, err
+	}
+
+	// TODO(v1.11.0): Return an error if sub.IgnoreTags is non-empty.
+	// TODO(v1.13.0): Remove this block after the IgnoreTags field is removed.
+	if len(sub.IgnoreTags) > 0 { // nolint: staticcheck
+		ignoreTagsRegexStrs := make([]string, len(sub.IgnoreTags)) // nolint: staticcheck
+		for i, ignoreTag := range sub.IgnoreTags {                 // nolint: staticcheck
+			ignoreTagsRegexStrs[i] = fmt.Sprintf("^%s$", regexp.QuoteMeta(ignoreTag))
+		}
+		ignoreTagsRegexes, err := compileRegexes(ignoreTagsRegexStrs)
+		if err != nil {
+			return nil, err
+		}
+		s.ignoreTagsRegexes = append(s.ignoreTagsRegexes, ignoreTagsRegexes...)
+	}
+
 	s.filterTagsByDiffPathsFn = s.filterTagsByDiffPaths
 	return s, nil
 }
@@ -71,7 +113,7 @@ func (t *tagBasedSelector) MatchesRef(ref string) bool {
 func (t *tagBasedSelector) getLoggerContext() []any {
 	return append(
 		t.baseSelector.getLoggerContext(),
-		"tagConstrained", t.allows != nil || len(t.ignores) > 0,
+		"tagConstrained", len(t.allowTagsRegexes) > 0 || len(t.ignoreTagsRegexes) > 0,
 	)
 }
 
@@ -80,8 +122,27 @@ func (t *tagBasedSelector) getLoggerContext() []any {
 // to evaluation.
 func (t *tagBasedSelector) matchesTag(tag string) bool {
 	tag = strings.TrimPrefix(tag, tagPrefix)
-	return (t.allows == nil || t.allows.MatchString(tag)) &&
-		!slices.Contains(t.ignores, tag)
+
+	// handle ignoreTagsRegexes
+	for _, regex := range t.ignoreTagsRegexes {
+		if regex.MatchString(tag) {
+			return false
+		}
+	}
+
+	// if empty allowTagsRegexes, we match all tags
+	if len(t.allowTagsRegexes) == 0 {
+		return true
+	}
+
+	// check if tag matches any allowTagsRegexes
+	for _, regex := range t.allowTagsRegexes {
+		if regex.MatchString(tag) {
+			return true
+		}
+	}
+
+	return false
 }
 
 // clone clones a Git repository specified by the selector's repoURL field using
