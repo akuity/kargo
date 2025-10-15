@@ -61,12 +61,12 @@ fields:
 
 <a name="allow-tags-regexes-constraint"></a>
 
-- `allowTagsRegexes`: An optional list of regular expression that limits
+- `allowTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that match any of the patterns.
 
 <a name="ignore-tags-regexes-constraint"></a>
 
-- `ignoreTagsRegexes`: An optional list of regular expression that limits
+- `ignoreTagsRegexes`: An optional list of regular expressions that limit
   eligibility for selection to tags that don't match any of the patterns.
 
 <a name="platform-constraint"></a>
