@@ -308,8 +308,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "ghcr.io/example/repo",
-								SemverConstraint: "^v2.0.0", // Constraint won't be met
+								RepoURL:    "ghcr.io/example/repo",
+								Constraint: "^v2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -348,8 +348,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "ghcr.io/example/repo",
-								SemverConstraint: "^v1.0.0",
+								RepoURL:    "ghcr.io/example/repo",
+								Constraint: "^v1.0.0",
 							},
 						}},
 					},
@@ -627,8 +627,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "ghcr.io/example/repo",
-								SemverConstraint: "^v2.0.0", // Constraint won't be met
+								RepoURL:    "ghcr.io/example/repo",
+								Constraint: "^v2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -667,8 +667,8 @@ func TestGithubHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "ghcr.io/example/repo",
-								SemverConstraint: "^v1.0.0",
+								RepoURL:    "ghcr.io/example/repo",
+								Constraint: "^v1.0.0",
 							},
 						}},
 					},

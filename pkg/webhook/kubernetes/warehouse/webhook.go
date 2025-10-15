@@ -219,15 +219,6 @@ func (w *webhook) validateImageSub(
 				errs = append(errs, err)
 			}
 		}
-		// TODO: Remove this in v1.9.0
-		if sub.SemverConstraint != "" { // nolint:staticcheck
-			if err := validateSemverConstraint(
-				f.Child("semverConstraint"),
-				sub.SemverConstraint, // nolint:staticcheck
-			); err != nil {
-				errs = append(errs, err)
-			}
-		}
 	}
 	if sub.Platform != "" {
 		if !image.ValidatePlatformConstraint(sub.Platform) {

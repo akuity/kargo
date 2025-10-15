@@ -217,8 +217,8 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          "artifactory.example.com/test-repo/test-image",
-								SemverConstraint: "^2.0.0", // Constraint won't be met
+								RepoURL:    "artifactory.example.com/test-repo/test-image",
+								Constraint: "^2.0.0", // Constraint won't be met
 							},
 						}},
 					},
@@ -257,8 +257,8 @@ func TestArtifactoryHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								// Artifactory supports nested repository structures
-								RepoURL:          "artifactory.example.com/test-repo/foo/bar/test-image",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "artifactory.example.com/test-repo/foo/bar/test-image",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
@@ -377,8 +377,8 @@ func TestArtifactoryHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								// Artifactory supports nested repository structures
-								RepoURL:          "artifactory.example.com/test-repo/foo/bar/test-image",
-								SemverConstraint: "^1.0.0",
+								RepoURL:    "artifactory.example.com/test-repo/foo/bar/test-image",
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
@@ -418,8 +418,8 @@ func TestArtifactoryHandler(t *testing.T) {
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								// Artifactory supports nested repository structures
-								RepoURL:          nestedArtifactoryRepoURL,
-								SemverConstraint: "^1.0.0",
+								RepoURL:    nestedArtifactoryRepoURL,
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
@@ -432,8 +432,8 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
-								RepoURL:          basicArtifactoryRepoURL,
-								SemverConstraint: "^1.0.0",
+								RepoURL:    basicArtifactoryRepoURL,
+								Constraint: "^1.0.0",
 							},
 						}},
 					},
