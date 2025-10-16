@@ -51,6 +51,7 @@ func init() {
 // handles inbound webhooks from Jfrog Artifactory.
 type artifactoryWebhookReceiver struct {
 	*baseWebhookReceiver
+	virtualRepoName string
 }
 
 // newArtifactoryWebhookReceiver returns a new instance of
@@ -66,6 +67,7 @@ func newArtifactoryWebhookReceiver(
 			project:    project,
 			secretName: cfg.Artifactory.SecretRef.Name,
 		},
+		virtualRepoName: cfg.Artifactory.VirtualRepoName,
 	}
 }
 
