@@ -172,7 +172,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			xhttp.WriteErrorJSON(
 				w,
 				xhttp.Error(
-					fmt.Errorf("invalid value %q in payload's jpd_origin field", payload.Origin)
+					fmt.Errorf("invalid value %q in payload's jpd_origin field", payload.Origin),
 					http.StatusBadRequest,
 				),
 			)

@@ -65,19 +65,6 @@ func TestArtifactoryHandler(t *testing.T) {
 		Origin: "https://artifactory.example.com",
 	}
 
-	validNestedChartPushEvent := artifactoryEvent{
-		Domain:    artifactoryDockerDomain,
-		EventType: artifactoryPushedEventType,
-		Data: artifactoryEventData{
-			Tag:       "v1.0.0",
-			Path:      "foo/bar/test-chart/latest/chart.tgz",
-			ImageType: artifactoryChartImageType,
-			RepoKey:   "test-repo",
-			ImageName: "test-chart",
-		},
-		Origin: "https://artifactory.example.com",
-	}
-
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
@@ -208,7 +195,9 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, rr.Code)
-				require.JSONEq(t, `{"error":"invalid path"}`, rr.Body.String())
+				require.JSONEq(t, `{"error":"invalid value \"invalidpath\" in payload's data.path field"}`,
+					rr.Body.String(),
+				)
 			},
 		},
 		{
@@ -397,6 +386,8 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
+				validNestedChartPushEvent := validChartPushEvent
+				validNestedChartPushEvent.Data.Path = "foo/bar/test-chart/latest/chart.tgz"
 				bodyBytes, err := json.Marshal(validNestedChartPushEvent)
 				require.NoError(t, err)
 				req := httptest.NewRequest(

@@ -310,7 +310,7 @@ type ArtifactoryWebhookReceiverConfig struct {
 	// virtual repository, an image pushed to
 	// `example.frog.io/proj-<local-repo-name>/<path>/image`, will cause that
 	// receiver to refresh all Warehouses subscribed to
-	// `example.frog.io/proj-virtual/<path>/image`.	
+	// `example.frog.io/proj-virtual/<path>/image`.
 	//
 	// +optional
 	VirtualRepoName string `json:"virtualRepoName,omitempty" protobuf:"bytes,2,opt,name=virtualRepoName"`
