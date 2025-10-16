@@ -19,8 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
+	"github.com/akuity/kargo/pkg/kubernetes"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -40,13 +42,12 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.ensureSystemPermissionsFn)
 	require.NotNil(t, r.ensureControllerPermissionsFn)
 	require.NotNil(t, r.ensureDefaultUserRolesFn)
+	require.NotNil(t, r.ensureExtendedPermissionsFn)
 	require.NotNil(t, r.createServiceAccountFn)
 	require.NotNil(t, r.createRoleFn)
 	require.NotNil(t, r.createRoleBindingFn)
 	require.NotNil(t, r.createClusterRoleFn)
 	require.NotNil(t, r.createClusterRoleBindingFn)
-	require.NotNil(t, r.deleteClusterRoleFn)
-	require.NotNil(t, r.deleteClusterRoleBindingFn)
 }
 
 func TestReconciler_Reconcile(t *testing.T) {
@@ -457,6 +458,101 @@ func TestReconciler_cleanupProject(t *testing.T) {
 			assertions: func(t *testing.T, err error) {
 				require.ErrorContains(t, err, "error deleting ClusterRole")
 				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "handles not found errors gracefully",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test")
+				},
+				deleteClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test")
+				},
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "deletes promotion ArgoCD cluster role binding",
+			project: &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-project",
+				},
+			},
+			reconciler: &reconciler{
+				deleteClusterRoleBindingFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					// Verify both ClusterRoleBindings are deleted
+					name := obj.GetName()
+					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") &&
+						name != kubernetes.ShortenResourceName("kargo-argocd-test-project") {
+						return fmt.Errorf("unexpected ClusterRoleBinding name: %s", name)
+					}
+					return nil
+				},
+				deleteClusterRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.DeleteOption,
+				) error {
+					// Only the admin ClusterRole should be deleted
+					name := obj.GetName()
+					if name != kubernetes.ShortenResourceName("kargo-project-admin-test-project") {
+						return fmt.Errorf("unexpected ClusterRole name: %s", name)
+					}
+					return nil
+				},
+				getNamespaceFn: func(
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
+				) error {
+					return apierrors.NewNotFound(schema.GroupResource{}, "test-project")
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
 			},
 		},
 		{
@@ -1972,6 +2068,443 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					&kargoapi.Project{},
 				),
 			)
+		})
+	}
+}
+
+func TestReconciler_ensureExtendedPermissions(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fake-project",
+		},
+	}
+
+	scheme := runtime.NewScheme()
+	err := corev1.AddToScheme(scheme)
+	require.NoError(t, err)
+	err = rbacv1.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	testCases := []struct {
+		name       string
+		cfg        ReconcilerConfig
+		client     client.Client
+		assertions func(*testing.T, client.Client, error)
+	}{
+		{
+			name: "error creating ServiceAccount",
+			cfg: ReconcilerConfig{
+				ControlPlaneServiceAccountName: "test-control-plane",
+			},
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(
+						context.Context,
+						client.WithWatch,
+						client.Object,
+						...client.CreateOption,
+					) error {
+						return fmt.Errorf("something went wrong")
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error creating ServiceAccount")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "ServiceAccounts already exist",
+			cfg: ReconcilerConfig{
+				ControlPlaneServiceAccountName: "test-control-plane",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&corev1.ServiceAccount{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-control-plane",
+							Namespace: testProject.Name,
+							Annotations: map[string]string{
+								rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+							},
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+				// Verify ServiceAccount still exists
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-control-plane",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "creates control plane ServiceAccount and RoleBinding",
+			cfg: ReconcilerConfig{
+				ControlPlaneServiceAccountName: "test-control-plane",
+				ControlPlaneClusterRoleName:    "test-control-plane-role",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify ServiceAccount was created
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-control-plane",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+				require.Equal(t, rbacapi.AnnotationValueTrue, sa.Annotations[rbacapi.AnnotationKeyManaged])
+
+				// Verify RoleBinding was created
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-control-plane",
+						Namespace: testProject.Name,
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, "test-control-plane-role", rb.RoleRef.Name)
+				require.Equal(t, "ClusterRole", rb.RoleRef.Kind)
+				require.Equal(t, rbacapi.AnnotationValueTrue, rb.Annotations[rbacapi.AnnotationKeyManaged])
+			},
+		},
+		{
+			name: "ArgoCD configured - creates ArgoCD ServiceAccount",
+			cfg: ReconcilerConfig{
+				ArgoCDServiceAccountName: "kargo-argocd-service-account",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify ArgoCD ServiceAccount was created
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "kargo-argocd-service-account",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+				require.Equal(t, rbacapi.AnnotationValueTrue, sa.Annotations[rbacapi.AnnotationKeyManaged])
+			},
+		},
+		{
+			name: "ArgoCD configured and not watching namespace only - creates ClusterRoleBinding",
+			cfg: ReconcilerConfig{
+				ArgoCDServiceAccountName: "kargo-argocd-service-account",
+				ArgoCDClusterRoleName:    "kargo-argocd",
+				ArgoCDWatchNamespaceOnly: false,
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify ClusterRoleBinding was created
+				crb := &rbacv1.ClusterRoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
+					},
+					crb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, "kargo-argocd", crb.RoleRef.Name)
+				require.Equal(t, rbacapi.AnnotationValueTrue, crb.Annotations[rbacapi.AnnotationKeyManaged])
+				require.Len(t, crb.Subjects, 1)
+				require.Equal(t, "kargo-argocd-service-account", crb.Subjects[0].Name)
+				require.Equal(t, testProject.Name, crb.Subjects[0].Namespace)
+			},
+		},
+		{
+			name: "ArgoCD configured and watching namespace only - creates RoleBinding",
+			cfg: ReconcilerConfig{
+				ArgoCDServiceAccountName: "kargo-argocd-service-account",
+				ArgoCDRoleName:           "kargo-argocd",
+				ArgoCDNamespace:          "argocd",
+				ArgoCDWatchNamespaceOnly: true,
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify ArgoCD RoleBinding was created
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
+						Namespace: "argocd",
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, "kargo-argocd", rb.RoleRef.Name)
+				require.Equal(t, "Role", rb.RoleRef.Kind)
+				require.Len(t, rb.Subjects, 1)
+				require.Equal(t, "kargo-argocd-service-account", rb.Subjects[0].Name)
+			},
+		},
+		{
+			name: "manage orchestrator enabled without dedicated namespace",
+			cfg: ReconcilerConfig{
+				ManageOrchestrator:             true,
+				OrchestratorServiceAccountName: "test-orchestrator",
+				OrchestratorClusterRoleName:    "test-orchestrator-role",
+				TokenManagerClusterRoleName:    "test-token-manager",
+				ControlPlaneServiceAccountName: "test-control-plane",
+				ControlPlaneClusterRoleName:    "test-control-plane-role",
+				ManagedResourceNamespace:       "", // Empty means use project namespace
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify orchestrator ServiceAccount was created
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-orchestrator",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+
+				// Verify control plane ServiceAccount was created
+				sa = &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-control-plane",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.NoError(t, err)
+
+				// Verify orchestrator RoleBindings were created
+				roleBindings := []string{
+					"test-orchestrator",
+					"test-token-manager",
+					"test-control-plane",
+					kubernetes.ShortenResourceName(fmt.Sprintf("%s-secrets-reader", "test-orchestrator")),
+				}
+
+				for _, rbName := range roleBindings {
+					rb := &rbacv1.RoleBinding{}
+					err = cl.Get(
+						context.Background(),
+						types.NamespacedName{
+							Name:      rbName,
+							Namespace: testProject.Name,
+						},
+						rb,
+					)
+					require.NoError(t, err, "RoleBinding %s should exist", rbName)
+				}
+			},
+		},
+		{
+			name: "manage orchestrator enabled with dedicated namespace",
+			cfg: ReconcilerConfig{
+				ManageOrchestrator:             true,
+				OrchestratorServiceAccountName: "test-orchestrator",
+				ManagedResourceNamespace:       "kargo-resources",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify orchestrator ServiceAccount was NOT created in project namespace
+				sa := &corev1.ServiceAccount{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "test-orchestrator",
+						Namespace: testProject.Name,
+					},
+					sa,
+				)
+				require.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "manage resource manager role without dedicated namespace",
+			cfg: ReconcilerConfig{
+				ManagerServiceAccountName: "manager-sa",
+				ManagerClusterRoleName:    "kargo-manager",
+				ManagedResourceNamespace:  "", // Empty means use project namespace
+				KargoNamespace:            "kargo-system",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify manager RoleBinding was created
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "kargo-manager",
+						Namespace: testProject.Name,
+					},
+					rb,
+				)
+				require.NoError(t, err)
+				require.Equal(t, "kargo-manager", rb.RoleRef.Name)
+				require.Len(t, rb.Subjects, 1)
+				require.Equal(t, "manager-sa", rb.Subjects[0].Name)
+				require.Equal(t, "kargo-system", rb.Subjects[0].Namespace)
+			},
+		},
+		{
+			name: "do not manage resource manager role with dedicated namespace",
+			cfg: ReconcilerConfig{
+				ManagerServiceAccountName: "manager-sa",
+				ManagedResourceNamespace:  "kargo-resources",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+
+				// Verify manager RoleBinding was NOT created
+				rb := &rbacv1.RoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name:      "kargo-manager",
+						Namespace: testProject.Name,
+					},
+					rb,
+				)
+				require.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "error creating RoleBinding",
+			cfg: ReconcilerConfig{
+				ControlPlaneServiceAccountName: "test-control-plane",
+				ControlPlaneClusterRoleName:    "test-control-plane-role",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(
+						_ context.Context,
+						_ client.WithWatch,
+						obj client.Object,
+						_ ...client.CreateOption,
+					) error {
+						if _, ok := obj.(*rbacv1.RoleBinding); ok {
+							return fmt.Errorf("something went wrong")
+						}
+						return nil
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error creating RoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "error creating ClusterRoleBinding",
+			cfg: ReconcilerConfig{
+				ArgoCDServiceAccountName: "kargo-argocd-service-account",
+				ArgoCDClusterRoleName:    "kargo-argocd-role",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Create: func(
+						_ context.Context,
+						_ client.WithWatch,
+						obj client.Object,
+						_ ...client.CreateOption,
+					) error {
+						if _, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+							return fmt.Errorf("something went wrong")
+						}
+						return nil
+					},
+				}).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error creating ClusterRoleBinding")
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "ClusterRoleBinding already exists",
+			cfg: ReconcilerConfig{
+				ArgoCDServiceAccountName: "kargo-argocd-service-account",
+				ArgoCDClusterRoleName:    "kargo-argocd-role",
+			},
+			client: fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(
+					&rbacv1.ClusterRoleBinding{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, cl client.Client, err error) {
+				require.NoError(t, err)
+				// Verify it still exists
+				crb := &rbacv1.ClusterRoleBinding{}
+				err = cl.Get(
+					context.Background(),
+					types.NamespacedName{
+						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
+					},
+					crb,
+				)
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			r := newReconciler(testCase.client, testCase.cfg)
+			err := r.ensureExtendedPermissions(context.Background(), testProject)
+			testCase.assertions(t, testCase.client, err)
 		})
 	}
 }
