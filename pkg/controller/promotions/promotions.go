@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -514,7 +513,7 @@ func (r *reconciler) promote(
 		workingPromo,
 		stage,
 		targetFreightRef,
-		promotion.WithActor(parseCreateActorAnnotation(&promo)),
+		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
 	)
@@ -678,23 +677,6 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
-}
-
-// parseCreateActorAnnotation extracts the v1alpha1.AnnotationKeyCreateActor
-// value from the Promotion's annotations and returns it. If the value contains
-// a colon, it is split and the second part is returned. Otherwise, the entire
-// value or an empty string is returned.
-func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
-	var creator string
-	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
-		if v != kargoapi.EventActorUnknown {
-			creator = v
-		}
-		if parts := strings.Split(v, ":"); len(parts) == 2 {
-			creator = parts[1]
-		}
-	}
-	return creator
 }
 
 var defaultRequeueInterval = 5 * time.Minute

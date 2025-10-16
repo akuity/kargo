@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -137,4 +138,21 @@ func AddMigrationAnnotationValue(obj client.Object, migrationType string) {
 	}
 	annotations[kargoapi.AnnotationKeyMigrated] = string(b)
 	obj.SetAnnotations(annotations)
+}
+
+// CreateActorAnnotationValue extracts the v1alpha1.AnnotationKeyCreateActor
+// value from the Promotion's annotations and returns it. If the value contains
+// a colon, it is split and the second part is returned. Otherwise, the entire
+// value or an empty string is returned.
+func CreateActorAnnotationValue(promo *kargoapi.Promotion) string {
+	var creator string
+	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
+		if v != kargoapi.EventActorUnknown {
+			creator = v
+		}
+		if parts := strings.Split(v, ":"); len(parts) == 2 {
+			creator = parts[1]
+		}
+	}
+	return creator
 }
