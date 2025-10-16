@@ -46,14 +46,16 @@ const (
 var assets embed.FS
 
 type loginOptions struct {
-	Config        libConfig.CLIConfig
-	InsecureTLS   bool
-	UseAdmin      bool
-	UseKubeconfig bool
-	UseSSO        bool
-	Password      string
-	CallbackPort  int
-	ServerAddress string
+	Config               libConfig.CLIConfig
+	InsecureTLS          bool
+	UseAdmin             bool
+	UseKubeconfig        bool
+	UseSSO               bool
+	UseProxyAuth         bool
+	Password             string
+	ProxyAuthCredentials string
+	CallbackPort         int
+	ServerAddress        string
 }
 
 func NewCommand(
@@ -109,11 +111,12 @@ func (o *loginOptions) addFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVar(&o.UseKubeconfig, "kubeconfig", false,
 		"Log in using a token obtained from the local Kubernetes configuration's current context. "+
 			"If set, --admin and --sso must not be set.")
-	cmd.Flags().StringVar(&o.Password, "password", "",
-		"Specify the password for non-interactive admin user login. Only used when --admin is specified.")
 	cmd.Flags().BoolVar(&o.UseSSO, "sso", false,
 		"Log in using OpenID Connect and the server's configured identity provider. "+
 			"If set, --admin and --kubeconfig must not be set.")
+	cmd.Flags().BoolVar(&o.UseProxyAuth, "proxy-authorization", false, "Use Proxy-Authorization http header.")
+	cmd.Flags().StringVar(&o.Password, "password", "",
+		"Specify the password for non-interactive admin user login. Only used when --admin is specified.")
 	cmd.Flags().IntVar(&o.CallbackPort, "port", 0,
 		"Port to use for the callback URL; 0 selects any available, unprivileged port. "+
 			"Only used when --sso is specified.")
@@ -205,6 +208,17 @@ func (o *loginOptions) run(ctx context.Context) error {
 		refreshToken = ""
 	}
 
+	if o.UseProxyAuth {
+		for o.ProxyAuthCredentials == "" {
+			prompt := &survey.Password{
+				Message: "Proxy Authorization token",
+			}
+			if err = survey.AskOne(prompt, &o.ProxyAuthCredentials); err != nil {
+				return err
+			}
+		}
+	}
+
 	if o.Config.APIAddress != o.ServerAddress {
 		o.Config = libConfig.NewDefaultCLIConfig()
 	}
@@ -214,6 +228,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 	o.Config.BearerToken = bearerToken
 	o.Config.RefreshToken = refreshToken
 	o.Config.InsecureSkipTLSVerify = o.InsecureTLS
+	o.Config.ProxyAuthCredentials = o.ProxyAuthCredentials
 
 	if err = libConfig.SaveCLIConfig(o.Config); err != nil {
 		return fmt.Errorf("error persisting configuration: %w", err)
