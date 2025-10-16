@@ -46,6 +46,26 @@ type ReconcilerConfig struct {
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
 	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+
+	ManageExtendedPermissions bool `envconfig:"MANAGE_EXTENDED_PERMISSIONS" default:"false"`
+
+	ManageOrchestrator             bool   `envconfig:"MANAGE_ORCHESTRATOR" default:"false"`
+	OrchestratorServiceAccountName string `envconfig:"ORCHESTRATOR_SERVICE_ACCOUNT_NAME" default:""`
+	OrchestratorClusterRoleName    string `envconfig:"ORCHESTRATOR_CLUSTER_ROLE_NAME" default:""`
+	TokenManagerClusterRoleName    string `envconfig:"TOKEN_MANAGER_CLUSTER_ROLE_NAME" default:""`
+
+	ControlPlaneServiceAccountName string `envconfig:"CONTROL_PLANE_SERVICE_ACCOUNT_NAME" default:""`
+	ControlPlaneClusterRoleName    string `envconfig:"CONTROL_PLANE_CLUSTER_ROLE_NAME" default:""`
+
+	ManagerServiceAccountName string `envconfig:"MANAGER_SERVICE_ACCOUNT_NAME" default:""`
+	ManagerClusterRoleName    string `envconfig:"MANAGER_CLUSTER_ROLE_NAME" default:""`
+	ManagedResourceNamespace  string `envconfig:"MANAGED_RESOURCE_NAMESPACE" default:""`
+
+	ArgoCDServiceAccountName string `envconfig:"ARGOCD_SERVICE_ACCOUNT_NAME" default:""`
+	ArgoCDRoleName           string `envconfig:"ARGOCD_ROLE_NAME" default:""`
+	ArgoCDClusterRoleName    string `envconfig:"ARGOCD_CLUSTER_ROLE_NAME" default:""`
+	ArgoCDNamespace          string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
+	ArgoCDWatchNamespaceOnly bool   `envconfig:"ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY" default:"false"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -118,6 +138,8 @@ type reconciler struct {
 	ensureControllerPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	ensureDefaultUserRolesFn func(context.Context, *kargoapi.Project) error
+
+	ensureExtendedPermissionsFn func(context.Context, *kargoapi.Project) error
 
 	createServiceAccountFn func(
 		context.Context,
@@ -232,6 +254,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.ensureSystemPermissionsFn = r.ensureSystemPermissions
 	r.ensureControllerPermissionsFn = r.ensureControllerPermissions
 	r.ensureDefaultUserRolesFn = r.ensureDefaultUserRoles
+	r.ensureExtendedPermissionsFn = r.ensureExtendedPermissions
 	r.createServiceAccountFn = r.client.Create
 	r.createRoleFn = r.client.Create
 	r.createRoleBindingFn = r.client.Create
@@ -366,19 +389,32 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 	logger := logging.LoggerFromContext(ctx)
 
 	// Delete cluster-scoped resources that are specific to the Project
-	crbName := fmt.Sprintf("kargo-project-admin-%s", project.Name)
-	if err := r.deleteClusterRoleBindingFn(
-		ctx,
-		&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
-	); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("error deleting ClusterRoleBinding %q: %w", crbName, err)
+	crbs := map[string]bool{
+		kubernetes.ShortenResourceName(fmt.Sprintf("kargo-project-admin-%s", project.Name)): true,
 	}
-	crName := crbName
-	if err := r.deleteClusterRoleFn(
-		ctx,
-		&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crName}},
-	); err != nil && !apierrors.IsNotFound(err) {
-		return fmt.Errorf("error deleting ClusterRole %q: %w", crName, err)
+	if r.cfg.ManageExtendedPermissions && r.cfg.ArgoCDClusterRoleName != "" {
+		crbs[kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name))] = false
+	}
+	for crbName, hasCR := range crbs {
+		if err := r.deleteClusterRoleBindingFn(
+			ctx,
+			&rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: crbName}},
+		); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error deleting ClusterRoleBinding %q: %w", crbName, err)
+		}
+
+		if !hasCR {
+			// No ClusterRole to delete for this ClusterRoleBinding.
+			continue
+		}
+
+		crName := crbName
+		if err := r.deleteClusterRoleFn(
+			ctx,
+			&rbacv1.ClusterRole{ObjectMeta: metav1.ObjectMeta{Name: crName}},
+		); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error deleting ClusterRole %q: %w", crName, err)
+		}
 	}
 
 	// Get namespace for the Project
@@ -520,6 +556,19 @@ func (r *reconciler) syncProject(
 			ObservedGeneration: project.GetGeneration(),
 		})
 		return *status, fmt.Errorf("error ensuring default project roles: %w", err)
+	}
+
+	if r.cfg.ManageExtendedPermissions {
+		if err := r.ensureExtendedPermissionsFn(ctx, project); err != nil {
+			conditions.Set(status, &metav1.Condition{
+				Type:               kargoapi.ConditionTypeReady,
+				Status:             metav1.ConditionFalse,
+				Reason:             "EnsuringExtendedPermissionsFailed",
+				Message:            "Failed to ensure existence of extended permissions: " + err.Error(),
+				ObservedGeneration: project.GetGeneration(),
+			})
+			return *status, fmt.Errorf("error ensuring extended permissions: %w", err)
+		}
 	}
 
 	conditions.Delete(status, kargoapi.ConditionTypeReconciling)
@@ -1092,6 +1141,290 @@ func (r *reconciler) ensureDefaultUserRoles(
 		crbLogger.Debug("ClusterRoleBinding already exists")
 	}
 	crbLogger.Debug("created ClusterRoleBinding")
+
+	return nil
+}
+
+func (r *reconciler) ensureExtendedPermissions(
+	ctx context.Context,
+	project *kargoapi.Project,
+) error {
+	logger := logging.LoggerFromContext(ctx).WithValues("project", project.Name)
+
+	var serviceAccounts []string
+
+	// If a control plane ServiceAccount is configured, then add it to the list
+	// of ServiceAccounts to create and bind extended permissions to.
+	if r.cfg.ControlPlaneServiceAccountName != "" {
+		serviceAccounts = append(serviceAccounts, r.cfg.ControlPlaneServiceAccountName)
+	}
+
+	// If a dedicated namespace for managed resources is configured, then we do
+	// not have to create the orchestrator ServiceAccount in every Project
+	// namespace.
+	if r.cfg.ManageOrchestrator && r.cfg.ManagedResourceNamespace == "" && r.cfg.OrchestratorServiceAccountName != "" {
+		serviceAccounts = append([]string{
+			r.cfg.OrchestratorServiceAccountName,
+		}, serviceAccounts...)
+	}
+
+	// If an Argo CD ServiceAccount is configured, then add it to the list of
+	// ServiceAccounts to create and bind extended permissions to.
+	//
+	// Note: We only do this if Argo CD is not restricted to watch its own
+	// namespace only. If it is, then the Argo CD ServiceAccount does not need
+	// to exist in every Project namespace, and we do not need to create a
+	// ClusterRoleBinding for it.
+	if r.cfg.ArgoCDServiceAccountName != "" {
+		serviceAccounts = append(serviceAccounts, r.cfg.ArgoCDServiceAccountName)
+	}
+
+	saAnnotations := map[string]string{
+		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+	}
+
+	for _, saName := range serviceAccounts {
+		saLogger := logger.WithValues(
+			"name", saName,
+			"namespace", project.Name,
+		)
+
+		if err := r.createServiceAccountFn(
+			ctx,
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        saName,
+					Namespace:   project.Name,
+					Annotations: saAnnotations,
+				},
+			},
+		); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				saLogger.Debug("ServiceAccount already exists in project namespace")
+				continue
+			}
+			return fmt.Errorf(
+				"error creating ServiceAccount %q in project namespace %q: %w",
+				saName,
+				project.Name,
+				err,
+			)
+		}
+	}
+
+	var clusterRoleBindings []*rbacv1.ClusterRoleBinding
+
+	if r.cfg.ArgoCDServiceAccountName != "" && !r.cfg.ArgoCDWatchNamespaceOnly {
+		// ClusterRoleBinding for the Argo CD ServiceAccount to access and
+		// operate on Argo CD Application resources in any namespace.
+		clusterRoleBindings = append(clusterRoleBindings, &rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: kubernetes.ShortenResourceName(fmt.Sprintf("%s-%s", r.cfg.ArgoCDClusterRoleName, project.Name)),
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     r.cfg.ArgoCDClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.ArgoCDServiceAccountName,
+					Namespace: project.Name,
+				},
+			},
+		})
+	}
+
+	for _, crb := range clusterRoleBindings {
+		crbLogger := logger.WithValues("name", crb.Name, "project", project.Name)
+		if err := r.createClusterRoleBindingFn(ctx, crb); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				crbLogger.Debug("ClusterRoleBinding already exists for Project")
+				continue
+			}
+
+			return fmt.Errorf(
+				"error creating ClusterRoleBinding %q for Project %q: %w",
+				crb.Name, project.Name, err,
+			)
+		}
+	}
+
+	rbAnnotations := map[string]string{
+		rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+	}
+
+	var roleBindings []*rbacv1.RoleBinding
+
+	if r.cfg.ControlPlaneServiceAccountName != "" && r.cfg.ControlPlaneClusterRoleName != "" {
+		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+			// RoleBinding for the control plane ServiceAccount to access and
+			// operate on a minimal set of Kargo resources in the Project
+			// namespace.
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        r.cfg.ControlPlaneServiceAccountName,
+				Namespace:   project.Name,
+				Annotations: rbAnnotations,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     r.cfg.ControlPlaneClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.ControlPlaneClusterRoleName,
+					Namespace: project.Name,
+				},
+			},
+		})
+	}
+
+	if r.cfg.ManagerServiceAccountName != "" && r.cfg.ManagedResourceNamespace == "" {
+		// RoleBinding for the manager ServiceAccount to manage resources in
+		// the Project namespace, if no dedicated managed resources namespace
+		// is configured.
+		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        r.cfg.ManagerClusterRoleName,
+				Namespace:   project.Name,
+				Annotations: rbAnnotations,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     r.cfg.ManagerClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.ManagerServiceAccountName,
+					Namespace: r.cfg.KargoNamespace,
+				},
+			},
+		})
+	}
+
+	if r.cfg.OrchestratorServiceAccountName != "" {
+		// RoleBinding for the orchestrator ServiceAccount to access and operate
+		// on resources in the Project namespace.
+		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        r.cfg.OrchestratorServiceAccountName,
+				Namespace:   project.Name,
+				Annotations: rbAnnotations,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     r.cfg.OrchestratorClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.OrchestratorServiceAccountName,
+					Namespace: project.Name,
+				},
+			},
+		})
+
+		if r.cfg.TokenManagerClusterRoleName != "" {
+			// RoleBinding for the orchestrator ServiceAccount to create and
+			// manage ServiceAccount tokens in the Project namespace.
+			roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        r.cfg.TokenManagerClusterRoleName,
+					Namespace:   project.Name,
+					Annotations: rbAnnotations,
+				},
+				RoleRef: rbacv1.RoleRef{
+					APIGroup: rbacv1.GroupName,
+					Kind:     "ClusterRole",
+					Name:     r.cfg.TokenManagerClusterRoleName,
+				},
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      "ServiceAccount",
+						Name:      r.cfg.OrchestratorClusterRoleName,
+						Namespace: project.Name,
+					},
+				},
+			})
+		}
+
+		// RoleBinding for the orchestrator ServiceAccount to access Secrets
+		// in the Project namespace.
+		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: kubernetes.ShortenResourceName(
+					fmt.Sprintf("%s-secrets-reader", r.cfg.OrchestratorServiceAccountName),
+				),
+				Namespace:   project.Name,
+				Annotations: rbAnnotations,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "ClusterRole",
+				Name:     projectSecretsReaderClusterRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.OrchestratorServiceAccountName,
+					Namespace: project.Name,
+				},
+			},
+		})
+	}
+
+	if r.cfg.ArgoCDServiceAccountName != "" && r.cfg.ArgoCDNamespace != "" && r.cfg.ArgoCDWatchNamespaceOnly {
+		// RoleBinding for the Argo CD ServiceAccount to access and operate
+		// on Applications in the Argo CD namespace.
+		roleBindings = append(roleBindings, &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: kubernetes.ShortenResourceName(
+					fmt.Sprintf("%s-%s", r.cfg.ArgoCDRoleName, project.Name),
+				),
+				Namespace:   r.cfg.ArgoCDNamespace,
+				Annotations: rbAnnotations,
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     r.cfg.ArgoCDRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      "ServiceAccount",
+					Name:      r.cfg.ArgoCDServiceAccountName,
+					Namespace: project.Name,
+				},
+			},
+		})
+	}
+
+	for _, rb := range roleBindings {
+		rbLogger := logger.WithValues(
+			"name", rb.Name,
+			"namespace", project.Name,
+		)
+
+		if err := r.createRoleBindingFn(ctx, rb); err != nil {
+			if apierrors.IsAlreadyExists(err) {
+				rbLogger.Debug("RoleBinding already exists in project namespace")
+				continue
+			}
+			return fmt.Errorf(
+				"error creating RoleBinding %q in project namespace %q: %w",
+				rb.Name, project.Name, err,
+			)
+		}
+	}
 
 	return nil
 }

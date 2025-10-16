@@ -4,18 +4,23 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
-	gocache "github.com/patrickmn/go-cache"
-	"github.com/stretchr/testify/assert/yaml"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/expressions"
-	exprfn "github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/health"
-	"github.com/akuity/kargo/pkg/kargo"
 )
+
+// StepRunner is an interface for components that implement the logic for
+// execution of an individual Step in a user-defined promotion process.
+type StepRunner interface {
+	// Run executes an individual Step from a user-defined promotion process
+	// using the provided StepContext. Implementations may indirectly modify
+	// that context through the returned StepResult to allow StepRunners of
+	// subsequent Steps to access the results of this execution.
+	Run(context.Context, *StepContext) (StepResult, error)
+}
 
 // Context is the context of a user-defined promotion process that is executed
 // by the Engine.
@@ -61,11 +66,142 @@ type Context struct {
 	Vars []kargoapi.ExpressionVariable
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
+
+	// currentStepMetadata is a pointer to the StepMetadata for the
+	// current step being executed. It is used to track the execution state of
+	// the current step.
+	currentStepMetadata *StepMetadata
+}
+
+// Result is the result of a user-defined promotion process executed by the
+// Engine. It aggregates the status and output of the individual StepResults
+// returned by the StepRunner executing each Step.
+type Result struct {
+	// Status is the high-level outcome of the user-defined promotion executed by
+	// the Engine.
+	Status kargoapi.PromotionPhase
+	// Message is an optional message that provides additional context about the
+	// outcome of the user-defined promotion executed by the Engine.
+	Message string
+	// HealthChecks collects health.Criteria returned from the execution of
+	// individual Steps by their corresponding StepRunners. These criteria can
+	// later be used as input to health.Checkers.
+	HealthChecks []health.Criteria
+	// If the promotion process remains in-progress, perhaps waiting for a change
+	// in some external state, the value of this field will indicate where to
+	// resume the process in the next reconciliation.
+	CurrentStep int64
+	// StepExecutionMetadata tracks metadata pertaining to the execution
+	// of individual promotion steps.
+	StepExecutionMetadata kargoapi.StepExecutionMetadataList
+	// State is the current state of the promotion process.
+	State State
+}
+
+// ContextOption is a function that configures a Context.
+type ContextOption func(*Context)
+
+// WithUIBaseURL sets the UIBaseURL of the Context.
+func WithUIBaseURL(url string) ContextOption {
+	return func(c *Context) {
+		c.UIBaseURL = url
+	}
+}
+
+// WithWorkDir sets the WorkDir of the Context.
+func WithWorkDir(dir string) ContextOption {
+	return func(c *Context) {
+		c.WorkDir = dir
+	}
+}
+
+// WithActor sets the Actor of the Context.
+func WithActor(actor string) ContextOption {
+	return func(c *Context) {
+		c.Actor = actor
+	}
+}
+
+// NewContext creates a new Context for a user-defined promotion process
+// executed by the Engine. It initializes the Context with the provided
+// Promotion, Stage, and TargetFreightRef, and applies any additional options
+// provided.
+func NewContext(
+	promo *kargoapi.Promotion,
+	stage *kargoapi.Stage,
+	targetFreightRef kargoapi.FreightReference,
+	opts ...ContextOption,
+) Context {
+	ctx := Context{
+		Project:               promo.Namespace,
+		Stage:                 stage.Name,
+		Promotion:             promo.Name,
+		FreightRequests:       stage.Spec.RequestedFreight,
+		Freight:               *promo.Status.FreightCollection.DeepCopy(),
+		TargetFreightRef:      targetFreightRef,
+		StartFromStep:         promo.Status.CurrentStep,
+		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
+		State:                 State(promo.Status.GetState()),
+		Vars:                  promo.Spec.Vars,
+	}
+
+	for _, opt := range opts {
+		opt(&ctx)
+	}
+
+	return ctx
+}
+
+// SetCurrentStep sets the current step to the provided Step and returns a
+// StepMetadata that can be used to update the execution metadata of the step.
+func (c *Context) SetCurrentStep(step Step) *StepMetadata {
+	meta := c.GetStepExecutionMetadata(step)
+	c.currentStepMetadata = (*StepMetadata)(meta)
+	return c.currentStepMetadata
+}
+
+// GetCurrentStep retrieves the StepMetadata for the current step being executed.
+// If no current step is set, it returns nil.
+func (c *Context) GetCurrentStep() *StepMetadata {
+	return c.currentStepMetadata
+}
+
+// GetCurrentStepIndex retrieves the index of the current step being executed.
+// It derives this from the length of StepExecutionMetadata, which is built
+// incrementally as steps are encountered.
+func (c *Context) GetCurrentStepIndex() int64 {
+	if len(c.StepExecutionMetadata) == 0 {
+		return 0
+	}
+	return int64(len(c.StepExecutionMetadata) - 1)
+}
+
+// GetStepExecutionMetadata retrieves the StepExecutionMetadata for a given
+// Step. If metadata for the Step does not already exist, it creates a new
+// StepExecutionMetadata entry with the Step's alias and ContinueOnError
+// property, and returns it.
+func (c *Context) GetStepExecutionMetadata(step Step) *kargoapi.StepExecutionMetadata {
+	for i := range c.StepExecutionMetadata {
+		if c.StepExecutionMetadata[i].Alias == step.Alias {
+			// Found existing metadata for this step, return it.
+			return &c.StepExecutionMetadata[i]
+		}
+	}
+
+	// If not found, append new metadata
+	c.StepExecutionMetadata = append(
+		c.StepExecutionMetadata,
+		kargoapi.StepExecutionMetadata{
+			Alias:           step.Alias,
+			ContinueOnError: step.ContinueOnError,
+		},
+	)
+	return &c.StepExecutionMetadata[len(c.StepExecutionMetadata)-1]
 }
 
 // DeepCopy creates a deep copy of the Context. It can be used to ensure that
 // modifications to the Context do not affect the original Context.
-func (c Context) DeepCopy() Context {
+func (c *Context) DeepCopy() Context {
 	newC := Context{
 		UIBaseURL:             c.UIBaseURL,
 		WorkDir:               c.WorkDir,
@@ -122,322 +258,89 @@ type Step struct {
 	Config []byte
 }
 
-// StepEnvOption is a functional option for customizing the environment of a
-// Step built by BuildEnv.
-type StepEnvOption func(map[string]any)
-
-// StepEnvWithVars returns a StepEnvOption that adds the provided vars to the
-// environment of the Step.
-func StepEnvWithVars(vars map[string]any) StepEnvOption {
-	return func(env map[string]any) {
-		env["vars"] = vars
-	}
-}
-
-// StepEnvWithStepMetas returns a StepEnvOption that adds StepExecutionMetadata
-// indexed by alias to the environment of the Step.
-func StepEnvWithStepMetas(promoCtx Context) StepEnvOption {
-	metas := make(map[string]any, len(promoCtx.StepExecutionMetadata))
-	for _, stepMeta := range promoCtx.StepExecutionMetadata {
-		metas[stepMeta.Alias] = stepMeta
-	}
-	return func(env map[string]any) {
-		env["stepMetas"] = metas
-	}
-}
-
-// StepEnvWithOutputs returns a StepEnvOption that adds the provided outputs to
-// the environment of the Step.
-func StepEnvWithOutputs(outputs State) StepEnvOption {
-	return func(env map[string]any) {
-		env["outputs"] = outputs
-	}
-}
-
-// StepEnvWithTaskOutputs returns a StepEnvOption that adds the provided
-// task outputs to the environment of the Step.
-func StepEnvWithTaskOutputs(alias string, outputs State) StepEnvOption {
-	return func(env map[string]any) {
-		// Ensure that if the Step originated from a task, the task outputs are
-		// available to the Step. This allows inflated Steps to access the outputs
-		// of the other Steps in the task without needing to know the alias
-		// (namespace) of the task.
-		if taskOutput := getTaskOutputs(alias, outputs); taskOutput != nil {
-			env["task"] = map[string]any{
-				"outputs": taskOutput,
-			}
+// NewSteps creates a slice of Steps from the provided Promotion. Each Step in
+// the slice corresponds to a step defined in the Promotion's spec.
+func NewSteps(promo *kargoapi.Promotion) []Step {
+	result := make([]Step, len(promo.Spec.Steps))
+	for i, step := range promo.Spec.Steps {
+		result[i] = Step{
+			Kind:            step.Uses,
+			Alias:           step.As,
+			If:              step.If,
+			ContinueOnError: step.ContinueOnError,
+			Retry:           step.Retry,
+			Vars:            step.Vars,
+			Config:          step.Config.Raw,
 		}
 	}
+	return result
 }
 
-// BuildEnv returns the environment for the Step. The environment includes the
-// context of the Promotion and any additional options provided (e.g. outputs,
-// task outputs, vars, secrets).
-//
-// The environment is a (nested) map of string keys to any values. The keys are
-// used as variables in the Step configuration.
-func (s *Step) BuildEnv(promoCtx Context, opts ...StepEnvOption) map[string]any {
-	env := map[string]any{
-		"ctx": map[string]any{
-			"project":   promoCtx.Project,
-			"promotion": promoCtx.Promotion,
-			"stage":     promoCtx.Stage,
-			"targetFreight": map[string]any{
-				"name": promoCtx.TargetFreightRef.Name,
-				"origin": map[string]any{
-					"name": promoCtx.TargetFreightRef.Origin.Name,
-				},
-			},
-			"meta": map[string]any{
-				"promotion": map[string]any{
-					"actor": promoCtx.Actor,
-				},
-			},
-		},
-	}
+// StepMetadata is a type that represents metadata about the execution of a
+// single step in a user-defined promotion process. It is used to track the
+// status, start and finish times, error counts, and other relevant information
+// about the step's execution. This metadata is stored in the
+// StepExecutionMetadata field of the Context and is used to provide detailed
+// information about the execution of each step in the promotion process.
+type StepMetadata kargoapi.StepExecutionMetadata
 
-	// Apply all provided options
-	for _, opt := range opts {
-		opt(env)
-	}
-
-	return env
+// WithStatus sets the status of the StepMetadata and returns the updated
+// StepMetadata. This method is used to update the status of the step during
+// its execution, such as when it starts, finishes, or encounters an error.
+func (m *StepMetadata) WithStatus(status kargoapi.PromotionStepStatus) *StepMetadata {
+	m.Status = status
+	return m
 }
 
-// Skip returns true if the Step should be skipped based on the If condition.
-// The If condition is evaluated against the provided Context.
-func (s *Step) Skip(
-	ctx context.Context,
-	cl client.Client,
-	cache *gocache.Cache,
-	promoCtx Context,
-) (bool, error) {
-	// If no "if" condition is provided, then this step is automatically skipped
-	// if any of the previous steps have errored or failed and is not skipped
-	// otherwise.
-	if s.If == "" {
-		return promoCtx.StepExecutionMetadata.HasFailures(), nil
-	}
-
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
-	if err != nil {
-		return false, err
-	}
-
-	env := s.BuildEnv(
-		promoCtx,
-		StepEnvWithStepMetas(promoCtx),
-		StepEnvWithOutputs(promoCtx.State),
-		StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
-		StepEnvWithVars(vars),
-	)
-
-	v, err := expressions.EvaluateTemplate(
-		s.If,
-		env,
-		slices.Concat(
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
-			exprfn.FreightOperations(
-				ctx,
-				cl,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
-			),
-			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
-			exprfn.UtilityOperations(),
-		)...,
-	)
-	if err != nil {
-		return false, err
-	}
-
-	if b, ok := v.(bool); ok {
-		return !b, nil
-	}
-
-	return false, fmt.Errorf("expression must evaluate to a boolean")
+// WithMessage sets the message of the StepMetadata and returns the updated
+// StepMetadata. This method is used to provide additional context or details
+// about the step's execution, such as error messages or informational messages
+// that may be useful for debugging or understanding the step's outcome.
+func (m *StepMetadata) WithMessage(message string) *StepMetadata {
+	m.Message = message
+	return m
 }
 
-// GetConfig returns the Config unmarshalled into a map. Any expr-lang
-// expressions are evaluated against the provided Context and State prior to
-// unmarshaling.
-func (s *Step) GetConfig(
-	ctx context.Context,
-	cl client.Client,
-	cache *gocache.Cache,
-	promoCtx Context,
-) (Config, error) {
-	if s.Config == nil {
-		return nil, nil
-	}
-
-	vars, err := s.GetVars(ctx, cl, cache, promoCtx)
-	if err != nil {
-		return nil, err
-	}
-
-	env := s.BuildEnv(
-		promoCtx,
-		StepEnvWithStepMetas(promoCtx),
-		StepEnvWithOutputs(promoCtx.State),
-		StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
-		StepEnvWithVars(vars),
-	)
-
-	evaledCfgJSON, err := expressions.EvaluateJSONTemplate(
-		s.Config,
-		env,
-		slices.Concat(
-			exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
-			exprfn.FreightOperations(
-				ctx,
-				cl,
-				promoCtx.Project,
-				promoCtx.FreightRequests,
-				promoCtx.Freight.References(),
-			),
-			exprfn.StatusOperations(s.Alias, promoCtx.StepExecutionMetadata),
-			exprfn.UtilityOperations(),
-		)...,
-	)
-	if err != nil {
-		return nil, err
-	}
-	var config map[string]any
-	if err := yaml.Unmarshal(evaledCfgJSON, &config); err != nil {
-		return nil, nil
-	}
-	return config, nil
+// WithMessagef formats the message using the provided format string and
+// arguments, sets it as the message of the StepMetadata, and returns the
+// updated StepMetadata. This method is useful for constructing dynamic messages
+// that include variable content, such as error details or step-specific
+// information.
+func (m *StepMetadata) WithMessagef(format string, a ...any) *StepMetadata {
+	m.Message = fmt.Sprintf(format, a...)
+	return m
 }
 
-// GetVars returns the variables defined in the Step. The variables are
-// evaluated against the provided Context.
-func (s *Step) GetVars(
-	ctx context.Context,
-	cl client.Client,
-	cache *gocache.Cache,
-	promoCtx Context,
-) (map[string]any, error) {
-	vars := make(map[string]any)
-
-	// Evaluate the global variables defined in the Promotion itself, these
-	// variables DO NOT have access to the (task) outputs.
-	for _, v := range promoCtx.Vars {
-		newVar, err := expressions.EvaluateTemplate(
-			v.Value,
-			s.BuildEnv(promoCtx, StepEnvWithVars(vars)),
-			slices.Concat(
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
-				exprfn.FreightOperations(
-					ctx,
-					cl,
-					promoCtx.Project,
-					promoCtx.FreightRequests,
-					promoCtx.Freight.References(),
-				),
-				exprfn.UtilityOperations(),
-			)...,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
-		}
-		vars[v.Name] = newVar
-	}
-
-	// Evaluate the variables defined in the Step. These variables DO have access
-	// to the (task) outputs.
-	for _, v := range s.Vars {
-		newVar, err := expressions.EvaluateTemplate(
-			v.Value,
-			s.BuildEnv(
-				promoCtx,
-				StepEnvWithStepMetas(promoCtx),
-				StepEnvWithOutputs(promoCtx.State),
-				StepEnvWithTaskOutputs(s.Alias, promoCtx.State),
-				StepEnvWithVars(vars),
-			),
-			slices.Concat(
-				exprfn.DataOperations(ctx, cl, cache, promoCtx.Project),
-				exprfn.FreightOperations(
-					ctx,
-					cl,
-					promoCtx.Project,
-					promoCtx.FreightRequests,
-					promoCtx.Freight.References(),
-				),
-				exprfn.UtilityOperations(),
-			)...,
-		)
-		if err != nil {
-			return nil, fmt.Errorf("error pre-processing promotion variable %q: %w", v.Name, err)
-		}
-		vars[v.Name] = newVar
-	}
-
-	return vars, nil
+// Error increments the error count of the StepMetadata and returns the updated
+// StepMetadata. This method is used to track the number of errors encountered
+// during the execution of the step. It is typically called when the step fails
+// or encounters an error condition.
+func (m *StepMetadata) Error() *StepMetadata {
+	m.ErrorCount++
+	return m
 }
 
-// Result is the result of a user-defined promotion process executed by the
-// Engine. It aggregates the status and output of the individual StepResults
-// returned by the StepRunner executing each Step.
-type Result struct {
-	// Status is the high-level outcome of the user-defined promotion executed by
-	// the Engine.
-	Status kargoapi.PromotionPhase
-	// Message is an optional message that provides additional context about the
-	// outcome of the user-defined promotion executed by the Engine.
-	Message string
-	// HealthChecks collects health.Criteria returned from the execution of
-	// individual Steps by their corresponding StepRunners. These criteria can
-	// later be used as input to health.Checkers.
-	HealthChecks []health.Criteria
-	// If the promotion process remains in-progress, perhaps waiting for a change
-	// in some external state, the value of this field will indicate where to
-	// resume the process in the next reconciliation.
-	CurrentStep int64
-	// StepExecutionMetadata tracks metadata pertaining to the execution
-	// of individual promotion steps.
-	StepExecutionMetadata kargoapi.StepExecutionMetadataList
-	// State is the current state of the promotion process.
-	State State
-}
-
-// getTaskOutputs returns the outputs of a task that are relevant to the current
-// Step. This is useful when a Step is inflated from a task and needs to access
-// the outputs of that task.
-func getTaskOutputs(alias string, state State) State {
-	if namespace := getAliasNamespace(alias); namespace != "" {
-		taskOutputs := make(State)
-		for k, v := range state.DeepCopy() {
-			if getAliasNamespace(k) == namespace {
-				taskOutputs[k[len(namespace)+2:]] = v
-			}
-		}
-		return taskOutputs
+// Started sets the StartedAt timestamp to the current time if it is not already
+// set, and resets the error count to zero. It returns the updated StepMetadata.
+// This method is used to mark the start of the step's execution, indicating
+// when the step began processing.
+func (m *StepMetadata) Started() *StepMetadata {
+	if m.StartedAt == nil {
+		m.StartedAt = ptr.To(metav1.Now())
+		m.ErrorCount = 0
 	}
-	return nil
+	return m
 }
 
-// getAliasNamespace returns the namespace part of an alias, if it exists.
-// The namespace part is the part before the first "::" separator. Typically,
-// this is used for steps inflated from a task.
-func getAliasNamespace(alias string) string {
-	parts := strings.Split(alias, kargo.PromotionAliasSeparator)
-	if len(parts) != 2 {
-		return ""
+// Finished sets the FinishedAt timestamp to the current time if it is not
+// already set, indicating that the step has completed its execution. It returns
+// the updated StepMetadata. This method is used to mark the end of the step's
+// execution, indicating when the step finished processing.
+func (m *StepMetadata) Finished() *StepMetadata {
+	if m.FinishedAt == nil {
+		m.FinishedAt = ptr.To(metav1.Now())
 	}
-	return parts[0]
-}
-
-// StepRunner is an interface for components that implement the logic for
-// execution of an individual Step in a user-defined promotion process.
-type StepRunner interface {
-	// Run executes an individual Step from a user-defined promotion process using
-	// the provided StepContext. Implementations may indirectly modify that
-	// context through the returned StepResult to allow StepRunners for subsequent
-	// Steps to access the results of this execution.
-	Run(context.Context, *StepContext) (StepResult, error)
+	return m
 }
 
 // StepContext is a type that represents the context in which a

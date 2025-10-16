@@ -9,8 +9,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type PromotionPhase string
-
 const (
 	// PromotionPhasePending denotes a Promotion that has not been executed yet.
 	// i.e. It is currently waiting in a queue. Queues are stage-specific and
@@ -37,6 +35,9 @@ const (
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
+// PromotionPhase is a high-level summary of the current state of a Promotion.
+type PromotionPhase string
+
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
 	switch *p {
@@ -47,7 +48,25 @@ func (p *PromotionPhase) IsTerminal() bool {
 	}
 }
 
+// PromotionStepStatus is a high-level summary of the current state of a
+// PromotionStep.
 type PromotionStepStatus string
+
+// Valid returns true if the PromotionStepStatus is valid. It checks against
+// the known PromotionStepStatus constants.
+func (s PromotionStepStatus) Valid() bool {
+	switch s {
+	case PromotionStepStatusSucceeded,
+		PromotionStepStatusSkipped,
+		PromotionStepStatusAborted,
+		PromotionStepStatusFailed,
+		PromotionStepStatusErrored,
+		PromotionStepStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
 
 const (
 	// PromotionStepStatusRunning denotes a PromotionStep that is currently

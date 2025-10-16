@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -268,4 +269,72 @@ func TestAddMigrationAnnotationValue(t *testing.T) {
 		require.True(t, result2)
 		require.True(t, result3)
 	})
+}
+
+func TestCreateActorAnnotationValue(t *testing.T) {
+	tests := []struct {
+		name  string
+		promo *kargoapi.Promotion
+		want  string
+	}{
+		{
+			name: "basic case",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: fmt.Sprintf(
+							"%s%s", kargoapi.EventActorEmailPrefix, "fake-actor",
+						),
+					},
+				},
+			},
+			want: "fake-actor",
+		},
+		{
+			name: "single element",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorAdmin,
+					},
+				},
+			},
+			want: kargoapi.EventActorAdmin,
+		},
+		{
+			name: "unknown actor",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: kargoapi.EventActorUnknown,
+					},
+				},
+			},
+			want: "",
+		},
+		{
+
+			name: "no annotation",
+			promo: &kargoapi.Promotion{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "fake-promo",
+					Namespace: "fake-namespace",
+				},
+			},
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CreateActorAnnotationValue(tt.promo)
+			require.Equal(t, tt.want, result)
+		})
+	}
 }
