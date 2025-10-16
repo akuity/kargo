@@ -111,7 +111,7 @@
                     "x-kubernetes-map-type": "atomic"
                   },
                   "virtualRepoName": {
-                    "description": "VirtualRepoName is the name of the Artifactory virtual repository from\nwhich webhook events will be events can be resolved for. If present, this value will end up\nsubstituting the local or remote repository repoKey in the webhook payload.\nFor example: if your virtual repoURL is myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact\nthe \"my-virtual-repo-name\" part is what should be set here.",
+                    "description": "VirtualRepoName is the name of the Artifactory virtual repository from\nwhich webhook events can be resolved for. If present, this value will end up\nsubstituting the local or remote repository repoKey in the webhook payload.\nFor example: if your virtual repoURL is myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact\nthe \"my-virtual-repo-name\" part is what should be set here.",
                     "type": "string"
                   }
                 },

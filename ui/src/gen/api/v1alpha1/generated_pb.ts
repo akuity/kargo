@@ -299,7 +299,7 @@ export type ArtifactoryWebhookReceiverConfig = Message<"github.com.akuity.kargo.
 
   /**
    * VirtualRepoName is the name of the Artifactory virtual repository from
-   * which webhook events will be events can be resolved for. If present, this value will end up
+   * which webhook events can be resolved for. If present, this value will end up
    * substituting the local or remote repository repoKey in the webhook payload.
    * For example: if your virtual repoURL is myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact
    * the "my-virtual-repo-name" part is what should be set here.
