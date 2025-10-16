@@ -1755,6 +1755,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
+| virtualRepoName | [string](#string) |  VirtualRepoName is the name of the Artifactory virtual repository from which webhook events will be events can be resolved for. If present, this value will end up substituting the local or remote repository repoKey in the webhook payload. For example: if your virtual repoURL is myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact the "my-virtual-repo-name" part is what should be set here.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions"></a>
 
