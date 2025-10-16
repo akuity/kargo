@@ -420,7 +420,7 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		argocdMgr,
-		promotion.NewSimpleEngine(
+		promotion.NewLocalEngine(
 			kargoMgr.GetClient(),
 			argoCDClient,
 			credentialsDB,
