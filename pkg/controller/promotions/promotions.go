@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -37,6 +36,7 @@ import (
 
 // ReconcilerConfig represents configuration for the promotion reconciler.
 type ReconcilerConfig struct {
+	Enable                  bool   `envconfig:"ENABLE_PROMOTION_RECONCILER" default:"true"`
 	IsDefaultController     bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
 	ShardName               string `envconfig:"SHARD_NAME"`
 	APIServerBaseURL        string `envconfig:"API_SERVER_BASE_URL"`
@@ -508,34 +508,15 @@ func (r *reconciler) promote(
 	)
 
 	// Prepare promotion steps and vars for the promotion execution engine.
-	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
-	for i, step := range workingPromo.Spec.Steps {
-		steps[i] = promotion.Step{
-			Kind:            step.Uses,
-			Alias:           step.As,
-			If:              step.If,
-			ContinueOnError: step.ContinueOnError,
-			Retry:           step.Retry,
-			Vars:            step.Vars,
-			Config:          step.Config.Raw,
-		}
-	}
-
-	promoCtx := promotion.Context{
-		UIBaseURL:             r.cfg.APIServerBaseURL,
-		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:               stageNamespace,
-		Stage:                 stageName,
-		Promotion:             workingPromo.Name,
-		FreightRequests:       stage.Spec.RequestedFreight,
-		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
-		TargetFreightRef:      targetFreightRef,
-		StartFromStep:         promo.Status.CurrentStep,
-		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
-		State:                 promotion.State(workingPromo.Status.GetState()),
-		Vars:                  workingPromo.Spec.Vars,
-		Actor:                 parseCreateActorAnnotation(&promo),
-	}
+	steps := promotion.NewSteps(workingPromo)
+	promoCtx := promotion.NewContext(
+		workingPromo,
+		stage,
+		targetFreightRef,
+		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
+		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
+		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
+	)
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
 		// process again from the beginning, but we DON'T clear shared state. This
@@ -696,23 +677,6 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
-}
-
-// parseCreateActorAnnotation extracts the v1alpha1.AnnotationKeyCreateActor
-// value from the Promotion's annotations and returns it. If the value contains
-// a colon, it is split and the second part is returned. Otherwise, the entire
-// value or an empty string is returned.
-func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
-	var creator string
-	if v, ok := promo.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
-		if v != kargoapi.EventActorUnknown {
-			creator = v
-		}
-		if parts := strings.Split(v, ":"); len(parts) == 2 {
-			creator = parts[1]
-		}
-	}
-	return creator
 }
 
 var defaultRequeueInterval = 5 * time.Minute

@@ -1,968 +1,844 @@
 package promotion
 
 import (
-	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8sruntime "k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func TestStep_GetConfig(t *testing.T) {
-	testScheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(testScheme))
-
-	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-		&kargoapi.Warehouse{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-warehouse",
-				Namespace: "fake-project",
-			},
-			Spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
-					{
-						Git: &kargoapi.GitSubscription{
-							RepoURL: "https://fake-git-repo",
-						},
-					},
-					{
-						Image: &kargoapi.ImageSubscription{
-							RepoURL: "fake-image-repo",
-						},
-					},
-					{
-						Chart: &kargoapi.ChartSubscription{
-							RepoURL: "https://fake-chart-repo",
-							Name:    "fake-chart",
-						},
-					},
-					{
-						Chart: &kargoapi.ChartSubscription{
-							RepoURL: "oci://fake-oci-repo/fake-chart",
-						},
-					},
-				},
-			},
-		},
-	).Build()
-
-	testCases := []struct {
-		name        string
-		promoCtx    Context
-		rawCfg      []byte
-		expectedCfg Config
-	}{
-		{
-			name: "test context",
-			// Test that expressions can reference promotion context
-			promoCtx: Context{
-				Project:   "fake-project",
-				Stage:     "fake-stage",
-				Promotion: "fake-promotion",
-				Actor:     "fake-creator",
-				TargetFreightRef: kargoapi.FreightReference{
-					Name: "fake-freight",
-					Origin: kargoapi.FreightOrigin{
-						Name: "fake-warehouse",
-					},
-				},
-			},
-			rawCfg: []byte(`{
-				"project": "${{ ctx.project }}",
-				"stage": "${{ ctx.stage }}",
-				"promotion": "${{ ctx.promotion }}",
-				"actor": "${{ ctx.meta.promotion.actor }}",
-				"targetFreight": {
-					"name": "${{ ctx.targetFreight.name }}",
-					"origin": "${{ ctx.targetFreight.origin.name }}"
-				}
-			}`),
-			expectedCfg: Config{
-				"project":   "fake-project",
-				"stage":     "fake-stage",
-				"promotion": "fake-promotion",
-				"actor":     "fake-creator",
-				"targetFreight": map[string]any{
-					"name":   "fake-freight",
-					"origin": "fake-warehouse",
-				},
-			},
-		},
-		{
-			name: "test vars with literal values",
-			// Test that vars can be assigned literal values
-			promoCtx: Context{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "strVar",
-						Value: "foo",
-					},
-					{
-						Name:  "boolVar",
-						Value: "true",
-					},
-					{
-						Name:  "numVar",
-						Value: "42",
-					},
-				},
-			},
-			rawCfg: []byte(`{
-				"strVar": "${{ vars.strVar }}",
-				"boolVar": "${{ vars.boolVar }}",
-				"numVar": "${{ vars.numVar }}"
-			}`),
-			expectedCfg: Config{
-				"strVar":  "foo",
-				"boolVar": true,
-				"numVar":  42,
-			},
-		},
-		{
-			name: "test vars with expressions",
-			// Test using expressions to define the value of vars
-			promoCtx: Context{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "strVar",
-						Value: "${{ 'f' + 'o' + 'o' }}",
-					},
-					{
-						Name:  "boolVar",
-						Value: "${{ vars.strVar == 'foo' }}",
-					},
-					{
-						Name:  "numVar",
-						Value: "${{ 40 + 2 }}",
-					},
-				},
-			},
-			rawCfg: []byte(`{
-				"strVar": "${{ vars.strVar }}",
-				"boolVar": "${{ vars.boolVar }}",
-				"numVar": "${{ vars.numVar }}"
-			}`),
-			expectedCfg: Config{
-				"strVar":  "foo",
-				"boolVar": true,
-				"numVar":  42,
-			},
-		},
-		{
-			name: "test outputs",
-			// Test that expressions can reference outputs
-			promoCtx: Context{
-				State: State{
-					"strOutput":  "foo",
-					"boolOutput": true,
-					"numOutput":  42,
-				},
-			},
-			rawCfg: []byte(`{
-				"strOutput": "${{ outputs.strOutput }}",
-				"boolOutput": "${{ outputs.boolOutput }}",
-				"numOutput": "${{ outputs.numOutput }}"
-			}`),
-			expectedCfg: Config{
-				"strOutput":  "foo",
-				"boolOutput": true,
-				"numOutput":  42,
-			},
-		},
-		{
-			name: "test warehouse function",
-			// Test that the warehouse() function can be used to reference freight
-			// origins
-			promoCtx: Context{
-				TargetFreightRef: kargoapi.FreightReference{
-					Name: "fake-freight",
-					Origin: kargoapi.FreightOrigin{
-						Name: "fake-origin-warehouse",
-					},
-				},
-				Vars: []kargoapi.ExpressionVariable{{
-					Name:  "warehouseName",
-					Value: "fake-warehouse",
-				}},
-			},
-			rawCfg: []byte(`{
-				"origin1": "${{ warehouse('fake-warehouse') }}",
-				"origin2": "${{ warehouse(vars.warehouseName) }}",
-				"origin3": "${{ warehouse(ctx.targetFreight.origin.name) }}"
-			}`),
-			expectedCfg: Config{
-				"origin1": map[string]any{
-					"kind": "Warehouse",
-					"name": "fake-warehouse",
-				},
-				"origin2": map[string]any{
-					"kind": "Warehouse",
-					"name": "fake-warehouse",
-				},
-				"origin3": map[string]any{
-					"kind": "Warehouse",
-					"name": "fake-origin-warehouse",
-				},
-			},
-		},
-		{
-			name: "test commitFrom function",
-			// Test different ways to use the commitFrom() function
-			promoCtx: Context{
-				Project: "fake-project",
-				FreightRequests: []kargoapi.FreightRequest{{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "fake-warehouse",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-				}},
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/fake-warehouse": {
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "fake-warehouse",
-							},
-							Commits: []kargoapi.GitCommit{{
-								RepoURL: "https://fake-git-repo",
-								ID:      "fake-commit-id",
-							}},
-						},
-					},
-				},
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "warehouseName",
-						Value: "fake-warehouse",
-					},
-					{
-						Name:  "repoURL",
-						Value: "https://fake-git-repo",
-					},
-				},
-			},
-			// Two ways to use the commitFrom() function:
-			// 1. Pass a git repo URL
-			// 2. Pass a git repo URL and origin
-			rawCfg: []byte(`{
-				"commitID1": "${{ commitFrom('https://fake-git-repo').ID }}",
-				"commitID2": "${{ commitFrom(vars.repoURL).ID }}",
-				"commitID3": "${{ commitFrom('https://fake-git-repo', warehouse('fake-warehouse')).ID }}",
-				"commitID4": "${{ commitFrom(vars.repoURL, warehouse(vars.warehouseName)).ID }}"
-			}`),
-			expectedCfg: Config{
-				"commitID1": "fake-commit-id",
-				"commitID2": "fake-commit-id",
-				"commitID3": "fake-commit-id",
-				"commitID4": "fake-commit-id",
-			},
-		},
-		{
-			name: "test imageFrom function",
-			// Test different ways to use the imageFrom() function
-			promoCtx: Context{
-				Project: "fake-project",
-				FreightRequests: []kargoapi.FreightRequest{{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "fake-warehouse",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-				}},
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/fake-warehouse": {
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "fake-warehouse",
-							},
-							Images: []kargoapi.Image{{
-								RepoURL: "fake-image-repo",
-								Tag:     "fake-image-tag",
-							}},
-						},
-					},
-				},
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "warehouseName",
-						Value: "fake-warehouse",
-					},
-					{
-						Name:  "repoURL",
-						Value: "fake-image-repo",
-					},
-				},
-			},
-			// Two ways to use the imageFrom() function:
-			// 1. Pass an image repo URL
-			// 2. Pass an image repo URL and origin
-			rawCfg: []byte(`{
-				"imageTag1": "${{ imageFrom('fake-image-repo').Tag }}",
-				"imageTag2": "${{ imageFrom(vars.repoURL).Tag }}",
-				"imageTag3": "${{ imageFrom('fake-image-repo', warehouse('fake-warehouse')).Tag }}",
-				"imageTag4": "${{ imageFrom(vars.repoURL, warehouse(vars.warehouseName)).Tag }}"
-			}`),
-			expectedCfg: Config{
-				"imageTag1": "fake-image-tag",
-				"imageTag2": "fake-image-tag",
-				"imageTag3": "fake-image-tag",
-				"imageTag4": "fake-image-tag",
-			},
-		},
-		{
-			name: "test chartFrom function",
-			// Test different ways to use the chartFrom() function
-			promoCtx: Context{
-				Project: "fake-project",
-				FreightRequests: []kargoapi.FreightRequest{{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "fake-warehouse",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-				}},
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/fake-warehouse": {
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "fake-warehouse",
-							},
-							Charts: []kargoapi.Chart{
-								{
-									RepoURL: "https://fake-chart-repo",
-									Name:    "fake-chart",
-									Version: "fake-chart-version",
-								},
-								{
-									RepoURL: "oci://fake-oci-repo/fake-chart",
-									Version: "fake-oci-chart-version",
-								},
-							},
-						},
-					},
-				},
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "warehouseName",
-						Value: "fake-warehouse",
-					},
-					{
-						Name:  "repoURL",
-						Value: "https://fake-chart-repo",
-					},
-					{
-						Name:  "chartName",
-						Value: "fake-chart",
-					},
-					{
-						Name:  "ociRepoURL",
-						Value: "oci://fake-oci-repo/fake-chart",
-					},
-				},
-			},
-			// Four ways to use the chartFrom() function:
-			// 1. Pass an OCI chart repo URL
-			// 2. Pass an OCI chart repo URL and origin
-			// 3. Pass an HTTPS chart repo URL and chart name
-			// 4. Pass an HTTPS chart repo URL, chart name, and origin
-			// nolint: lll
-			rawCfg: []byte(`{
-				"chartVersion1": "${{ chartFrom('oci://fake-oci-repo/fake-chart').Version }}",
-				"chartVersion2": "${{ chartFrom(vars.ociRepoURL).Version }}",
-				"chartVersion3": "${{ chartFrom('oci://fake-oci-repo/fake-chart', warehouse('fake-warehouse')).Version }}",
-				"chartVersion4": "${{ chartFrom(vars.ociRepoURL, warehouse(vars.warehouseName)).Version }}",
-				"chartVersion5": "${{ chartFrom('https://fake-chart-repo', 'fake-chart').Version }}",
-				"chartVersion6": "${{ chartFrom(vars.repoURL, vars.chartName).Version }}",
-				"chartVersion7": "${{ chartFrom('https://fake-chart-repo', 'fake-chart', warehouse('fake-warehouse')).Version }}",
-				"chartVersion8": "${{ chartFrom(vars.repoURL, vars.chartName, warehouse(vars.warehouseName)).Version }}"
-			}`),
-			expectedCfg: Config{
-				"chartVersion1": "fake-oci-chart-version",
-				"chartVersion2": "fake-oci-chart-version",
-				"chartVersion3": "fake-oci-chart-version",
-				"chartVersion4": "fake-oci-chart-version",
-				"chartVersion5": "fake-chart-version",
-				"chartVersion6": "fake-chart-version",
-				"chartVersion7": "fake-chart-version",
-				"chartVersion8": "fake-chart-version",
-			},
-		},
-		{
-			name:        "test success function",
-			promoCtx:    Context{},
-			rawCfg:      []byte(`{"wasSuccessful": "${{ success() }}"}`),
-			expectedCfg: Config{"wasSuccessful": true},
-		},
-		{
-			name:        "test failure function",
-			promoCtx:    Context{},
-			rawCfg:      []byte(`{"wasFailure": "${{ failure() }}"}`),
-			expectedCfg: Config{"wasFailure": false},
-		},
-		{
-			name:        "test always function",
-			promoCtx:    Context{},
-			rawCfg:      []byte(`{"alwaysTrue": "${{ always() }}"}`),
-			expectedCfg: Config{"alwaysTrue": true},
-		},
-		{
-			name: "test status function",
-			promoCtx: Context{
-				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
-					{
-						Alias:  "test-step",
-						Status: kargoapi.PromotionStepStatusFailed,
-					},
-				},
-			},
-			rawCfg:      []byte(`{"status": "${{ status(\"test-step\") }}"}`),
-			expectedCfg: Config{"status": "Failed"},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			promoStep := Step{
-				Config: testCase.rawCfg,
-			}
-			stepCfg, err := promoStep.GetConfig(
-				context.Background(),
-				testClient,
-				nil,
-				testCase.promoCtx,
-			)
-			require.NoError(t, err)
-			require.Equal(t, testCase.expectedCfg, stepCfg)
-		})
-	}
-}
-
-func TestStep_GetVars(t *testing.T) {
-	testScheme := k8sruntime.NewScheme()
-	require.NoError(t, kargoapi.AddToScheme(testScheme))
-
-	testClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-		&kargoapi.Warehouse{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-warehouse",
-				Namespace: "fake-project",
-			},
-			Spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
-					{
-						Git: &kargoapi.GitSubscription{
-							RepoURL: "https://fake-git-repo",
-						},
-					},
-				},
-			},
-		},
-	).Build()
-
-	testCases := []struct {
-		name         string
-		promoCtx     Context
-		step         Step
-		expectedVars map[string]any
-		expectErr    bool
-	}{
-		{
-			name: "global vars with literal values",
-			promoCtx: Context{
-				Project: "fake-project",
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "str",
-						Value: "foo",
-					},
-					{
-						Name:  "bool",
-						Value: "true",
-					},
-					{
-						Name:  "num",
-						Value: "42",
-					},
-				},
-			},
-			step: Step{},
-			expectedVars: map[string]any{
-				"str":  "foo",
-				"bool": "true",
-				"num":  "42",
-			},
-		},
-		{
-			name: "global vars with expressions",
-			promoCtx: Context{
-				Project: "fake-project",
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "str",
-						Value: "${{ 'f' + 'o' + 'o' }}",
-					},
-					{
-						Name:  "bool",
-						Value: "${{ 1 == 1 }}",
-					},
-					{
-						Name:  "num",
-						Value: "${{ 40 + 2 }}",
-					},
-				},
-			},
-			step: Step{},
-			expectedVars: map[string]any{
-				"str":  "foo",
-				"bool": true,
-				"num":  float64(42),
-			},
-		},
-		{
-			name: "step vars with literal values",
-			promoCtx: Context{
-				Project: "fake-project",
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "str",
-						Value: "foo",
-					},
-					{
-						Name:  "bool",
-						Value: "true",
-					},
-					{
-						Name:  "num",
-						Value: "42",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"str":  "foo",
-				"bool": "true",
-				"num":  "42",
-			},
-		},
-		{
-			name: "step vars with expressions",
-			promoCtx: Context{
-				Project: "fake-project",
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "str",
-						Value: "${{ 'f' + 'o' + 'o' }}",
-					},
-					{
-						Name:  "bool",
-						Value: "${{ 1 == 1 }}",
-					},
-					{
-						Name:  "num",
-						Value: "${{ 40 + 2 }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"str":  "foo",
-				"bool": true,
-				"num":  float64(42),
-			},
-		},
-		{
-			name: "step vars referencing global vars",
-			promoCtx: Context{
-				Project: "fake-project",
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "global",
-						Value: "global-value",
-					},
-				},
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "local",
-						Value: "${{ vars.global + '-suffix' }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"global": "global-value",
-				"local":  "global-value-suffix",
-			},
-		},
-		{
-			name: "step vars referencing other step vars",
-			promoCtx: Context{
-				Project: "fake-project",
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "v1",
-						Value: "value1",
-					},
-					{
-						Name:  "v2",
-						Value: "${{ vars.v1 + '-suffix' }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"v1": "value1",
-				"v2": "value1-suffix",
-			},
-		},
-		{
-			name: "step vars referencing outputs",
-			promoCtx: Context{
-				Project: "fake-project",
-				State: State{
-					"output1": "output-value",
-				},
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "fromOutput",
-						Value: "${{ outputs.output1 + '-suffix' }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"fromOutput": "output-value-suffix",
-			},
-		},
-		{
-			name: "step vars referencing task outputs",
-			promoCtx: Context{
-				Project: "fake-project",
-				State: State{
-					"task::alias": map[string]any{
-						"foo": "baz",
-					},
-				},
-			},
-			step: Step{
-				Alias: "task::other-alias",
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "fromTask",
-						Value: "${{ task.outputs.alias.foo + '-suffix' }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"fromTask": "baz-suffix",
-			},
-		},
-		{
-			name: "invalid expression in global var",
-			promoCtx: Context{
-				Project: "fake-project",
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "invalid",
-						Value: "${{ invalid.expression }}",
-					},
-				},
-			},
-			step:      Step{},
-			expectErr: true,
-		},
-		{
-			name: "invalid expression in step var",
-			promoCtx: Context{
-				Project: "fake-project",
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "invalid",
-						Value: "${{ invalid.expression }}",
-					},
-				},
-			},
-			expectErr: true,
-		},
-		{
-			name: "warehouse function in vars",
-			promoCtx: Context{
-				Project: "fake-project",
-				FreightRequests: []kargoapi.FreightRequest{{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "fake-warehouse",
-					},
-				}},
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "wh",
-						Value: "${{ warehouse('fake-warehouse') }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"wh": map[string]any{
-					"kind": string(kargoapi.FreightOriginKindWarehouse),
-					"name": "fake-warehouse",
-				},
-			},
-		},
-		{
-			name: "context properties in vars",
-			promoCtx: Context{
-				Project:   "fake-project",
-				Stage:     "fake-stage",
-				Promotion: "fake-promotion",
-				Actor:     "fake-creator",
-				TargetFreightRef: kargoapi.FreightReference{
-					Name: "fake-freight",
-					Origin: kargoapi.FreightOrigin{
-						Name: "fake-warehouse",
-					},
-				},
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "proj",
-						Value: "${{ ctx.project }}",
-					},
-					{
-						Name:  "stage",
-						Value: "${{ ctx.stage }}",
-					},
-					{
-						Name:  "promo",
-						Value: "${{ ctx.promotion }}",
-					},
-					{
-						Name:  "actor",
-						Value: "${{ ctx.meta.promotion.actor }}",
-					},
-					{
-						Name:  "targetFreight",
-						Value: "${{ ctx.targetFreight.origin.name }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"proj":          "fake-project",
-				"stage":         "fake-stage",
-				"promo":         "fake-promotion",
-				"actor":         "fake-creator",
-				"targetFreight": "fake-warehouse",
-			},
-		},
-		{
-			name: "freight functions in vars",
-			promoCtx: Context{
-				Project: "fake-project",
-				FreightRequests: []kargoapi.FreightRequest{{
-					Origin: kargoapi.FreightOrigin{
-						Kind: kargoapi.FreightOriginKindWarehouse,
-						Name: "fake-warehouse",
-					},
-					Sources: kargoapi.FreightSources{
-						Direct: true,
-					},
-				}},
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/fake-warehouse": {
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "fake-warehouse",
-							},
-							Commits: []kargoapi.GitCommit{{
-								RepoURL: "https://fake-git-repo",
-								ID:      "fake-commit-id",
-							}},
-						},
-					},
-				},
-			},
-			step: Step{
-				Vars: []kargoapi.ExpressionVariable{
-					{
-						Name:  "commit",
-						Value: "${{ commitFrom('https://fake-git-repo').ID }}",
-					},
-				},
-			},
-			expectedVars: map[string]any{
-				"commit": "fake-commit-id",
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			vars, err := testCase.step.GetVars(
-				context.Background(),
-				testClient,
-				nil,
-				testCase.promoCtx,
-			)
-
-			if testCase.expectErr {
-				require.Error(t, err)
-				return
-			}
-
-			require.NoError(t, err)
-			require.Equal(t, testCase.expectedVars, vars)
-		})
-	}
-}
-
-func TestStep_Skip(t *testing.T) {
+func TestContext_SetCurrentStep(t *testing.T) {
 	tests := []struct {
 		name       string
-		step       *Step
-		ctx        Context
-		assertions func(*testing.T, bool, error)
+		context    *Context
+		step       Step
+		assertions func(t *testing.T, ctx *Context, result *StepMetadata)
 	}{
 		{
-			name: "no if condition with failures",
-			step: &Step{},
-			ctx: Context{
-				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
-					Status: kargoapi.PromotionStepStatusFailed,
-				}},
+			name: "sets current step with new metadata",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{},
 			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.True(t, b)
-				assert.NoError(t, err)
+			step: Step{
+				Alias:           "new-step",
+				ContinueOnError: true,
 			},
-		},
-		{
-			name: "no if condition without failures",
-			step: &Step{},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.False(t, b)
-				assert.NoError(t, err)
+			assertions: func(t *testing.T, ctx *Context, result *StepMetadata) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "new-step", result.Alias)
+				assert.True(t, result.ContinueOnError)
+				assert.Equal(t, result, ctx.GetCurrentStep())
+				assert.Len(t, ctx.StepExecutionMetadata, 1)
 			},
 		},
 		{
-			name: "if condition uses vars",
-			step: &Step{
-				If: "${{ vars.foo == 'bar' }}",
-			},
-			ctx: Context{
-				Vars: []kargoapi.ExpressionVariable{
+			name: "sets current step with existing metadata",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
 					{
-						Name:  "foo",
-						Value: "bar",
+						Alias:           "existing-step",
+						ContinueOnError: false,
+						Status:          kargoapi.PromotionStepStatusRunning,
 					},
 				},
 			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.NoError(t, err)
-				assert.False(t, b)
+			step: Step{
+				Alias:           "existing-step",
+				ContinueOnError: true,
+			},
+			assertions: func(t *testing.T, ctx *Context, result *StepMetadata) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "existing-step", result.Alias)
+				assert.False(t, result.ContinueOnError) // Should preserve existing value
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, result.Status)
+				assert.Equal(t, result, ctx.GetCurrentStep())
+				assert.Len(t, ctx.StepExecutionMetadata, 1)
 			},
 		},
 		{
-			name: "if condition uses outputs",
-			ctx: Context{
-				State: State{
-					"foo": "bar",
-				},
-			},
-			step: &Step{
-				If: "${{ outputs.foo == 'bar' }}",
-			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.NoError(t, err)
-				assert.False(t, b)
-			},
-		},
-		{
-			name: "if condition uses task outputs",
-			ctx: Context{
-				State: State{
-					"task::alias": map[string]any{
-						"foo": "baz",
+			name: "replaces previous current step",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:           "step1",
+						ContinueOnError: false,
+					},
+					{
+						Alias:           "step2",
+						ContinueOnError: true,
 					},
 				},
 			},
-			step: &Step{
-				Alias: "task::other-alias",
-				If:    "${{ task.outputs.alias.foo == 'bar' }}",
+			step: Step{
+				Alias:           "step2",
+				ContinueOnError: false,
 			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.NoError(t, err)
-				assert.True(t, b)
-			},
-		},
-		{
-			name: "if condition uses expression function",
-			step: &Step{
-				If: "${{ commitFrom('https://git.example.com', warehouse('fake-warehouse')).ID == 'foo' }}",
-			},
-			ctx: Context{
-				Project: "fake-project",
-				Freight: kargoapi.FreightCollection{
-					Freight: map[string]kargoapi.FreightReference{
-						"Warehouse/fake-warehouse": {
-							Origin: kargoapi.FreightOrigin{
-								Kind: kargoapi.FreightOriginKindWarehouse,
-								Name: "fake-warehouse",
-							},
-							Commits: []kargoapi.GitCommit{{
-								RepoURL: "https://git.example.com",
-								ID:      "foo",
-							}},
-						},
-					},
-				},
-			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.NoError(t, err)
-				assert.False(t, b)
-			},
-		},
-		{
-			name: "if condition does not evaluate to a boolean",
-			step: &Step{
-				If: "invalid condition",
-			},
-			assertions: func(t *testing.T, b bool, err error) {
-				assert.ErrorContains(t, err, "must evaluate to a boolean")
-				assert.False(t, b)
+			assertions: func(t *testing.T, ctx *Context, result *StepMetadata) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "step2", result.Alias)
+				assert.True(t, result.ContinueOnError) // Should preserve existing value
+				assert.Equal(t, result, ctx.GetCurrentStep())
 			},
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := tt.step.Skip(
-				context.Background(),
-				fake.NewClientBuilder().Build(),
-				nil,
-				tt.ctx,
-			)
-			tt.assertions(t, got, err)
+			result := tt.context.SetCurrentStep(tt.step)
+			tt.assertions(t, tt.context, result)
+		})
+	}
+}
+
+func TestContext_GetCurrentStep(t *testing.T) {
+	tests := []struct {
+		name       string
+		context    *Context
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "returns nil when no current step is set",
+			context: &Context{
+				currentStepMetadata: nil,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "returns current step metadata when set",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:           "current-step",
+						ContinueOnError: true,
+						Status:          kargoapi.PromotionStepStatusRunning,
+					},
+				},
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.NotNil(t, result)
+				assert.Equal(t, "current-step", result.Alias)
+				assert.True(t, result.ContinueOnError)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, result.Status)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Set current step if we have metadata
+			if len(tt.context.StepExecutionMetadata) > 0 {
+				step := Step{
+					Alias:           tt.context.StepExecutionMetadata[0].Alias,
+					ContinueOnError: tt.context.StepExecutionMetadata[0].ContinueOnError,
+				}
+				tt.context.SetCurrentStep(step)
+			}
+
+			result := tt.context.GetCurrentStep()
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_WithStatus(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		status     kargoapi.PromotionStepStatus
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "sets status on empty metadata",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			status: kargoapi.PromotionStepStatusSucceeded,
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "overwrites existing status",
+			metadata: &StepMetadata{
+				Alias:  "test-step",
+				Status: kargoapi.PromotionStepStatusRunning,
+			},
+			status: kargoapi.PromotionStepStatusFailed,
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, kargoapi.PromotionStepStatusFailed, result.Status)
+				assert.Equal(t, "test-step", result.Alias)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.WithStatus(tt.status)
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_WithMessage(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		message    string
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "sets message on empty metadata",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			message: "Test message",
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "Test message", result.Message)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "overwrites existing message",
+			metadata: &StepMetadata{
+				Alias:   "test-step",
+				Message: "Old message",
+			},
+			message: "New message",
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "New message", result.Message)
+				assert.Equal(t, "test-step", result.Alias)
+			},
+		},
+		{
+			name: "sets empty message",
+			metadata: &StepMetadata{
+				Alias:   "test-step",
+				Message: "Existing message",
+			},
+			message: "",
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "", result.Message)
+				assert.Equal(t, "test-step", result.Alias)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.WithMessage(tt.message)
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_WithMessagef(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		format     string
+		args       []any
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "formats message with single argument",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			format: "Step %s completed",
+			args:   []any{"test-step"},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "Step test-step completed", result.Message)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "formats message with multiple arguments",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			format: "Step %s failed with error %d: %s",
+			args:   []any{"deploy", 500, "Internal Server Error"},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "Step deploy failed with error 500: Internal Server Error", result.Message)
+			},
+		},
+		{
+			name: "formats message with no arguments",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			format: "Static message",
+			args:   []any{},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "Static message", result.Message)
+			},
+		},
+		{
+			name: "overwrites existing message",
+			metadata: &StepMetadata{
+				Alias:   "test-step",
+				Message: "Old message",
+			},
+			format: "New formatted message: %v",
+			args:   []any{42},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, "New formatted message: 42", result.Message)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.WithMessagef(tt.format, tt.args...)
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_Error(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "increments error count from zero",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				ErrorCount: 0,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, uint32(1), result.ErrorCount)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "increments existing error count",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				ErrorCount: 3,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.Equal(t, uint32(4), result.ErrorCount)
+				assert.Equal(t, "test-step", result.Alias)
+			},
+		},
+		{
+			name: "multiple error calls accumulate",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				ErrorCount: 1,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				// Call Error multiple times
+				result.Error().Error()
+				assert.Equal(t, uint32(4), result.ErrorCount) // 1 + 1 + 1 + 1
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.Error()
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_Started(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "sets StartedAt when nil",
+			metadata: &StepMetadata{
+				Alias:     "test-step",
+				StartedAt: nil,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.NotNil(t, result.StartedAt)
+				assert.WithinDuration(t, time.Now(), result.StartedAt.Time, time.Second)
+				assert.Equal(t, uint32(0), result.ErrorCount)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "does not overwrite existing StartedAt",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				StartedAt:  ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+				ErrorCount: 5,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				// Should preserve original time and error count
+				assert.True(t, result.StartedAt.Before(ptr.To(metav1.Time{Time: time.Now().Add(-time.Minute * 50)})))
+				assert.Equal(t, uint32(5), result.ErrorCount) // Should not reset error count
+			},
+		},
+		{
+			name: "resets error count when StartedAt is nil",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				StartedAt:  nil,
+				ErrorCount: 10,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.NotNil(t, result.StartedAt)
+				assert.Equal(t, uint32(0), result.ErrorCount)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.Started()
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_Finished(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "sets FinishedAt when nil",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				FinishedAt: nil,
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.NotNil(t, result.FinishedAt)
+				assert.WithinDuration(t, time.Now(), result.FinishedAt.Time, time.Second)
+				assert.Equal(t, "test-step", result.Alias)
+				assert.Equal(t, result, result) // Should return self for chaining
+			},
+		},
+		{
+			name: "does not overwrite existing FinishedAt",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				FinishedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Hour))),
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				// Should preserve original time
+				assert.True(t, result.FinishedAt.Before(ptr.To(metav1.Time{Time: time.Now().Add(-time.Minute * 50)})))
+			},
+		},
+		{
+			name: "preserves other fields",
+			metadata: &StepMetadata{
+				Alias:      "test-step",
+				FinishedAt: nil,
+				StartedAt:  ptr.To(metav1.NewTime(time.Now().Add(-time.Minute * 5))),
+				ErrorCount: 2,
+				Status:     kargoapi.PromotionStepStatusSucceeded,
+				Message:    "Test message",
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				assert.NotNil(t, result.FinishedAt)
+				assert.NotNil(t, result.StartedAt)
+				assert.Equal(t, uint32(2), result.ErrorCount)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+				assert.Equal(t, "Test message", result.Message)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.metadata.Finished()
+			tt.assertions(t, result)
+		})
+	}
+}
+
+func TestStepMetadata_ChainedCalls(t *testing.T) {
+	tests := []struct {
+		name       string
+		metadata   *StepMetadata
+		assertions func(t *testing.T, result *StepMetadata)
+	}{
+		{
+			name: "methods can be chained together",
+			metadata: &StepMetadata{
+				Alias: "test-step",
+			},
+			assertions: func(t *testing.T, result *StepMetadata) {
+				// Test method chaining
+				final := result.Started().
+					WithStatus(kargoapi.PromotionStepStatusRunning).
+					WithMessage("Step is running").
+					Error().
+					Error().
+					WithMessagef("Step failed after %d errors", 2).
+					WithStatus(kargoapi.PromotionStepStatusFailed).
+					Finished()
+
+				assert.NotNil(t, final.StartedAt)
+				assert.NotNil(t, final.FinishedAt)
+				assert.Equal(t, kargoapi.PromotionStepStatusFailed, final.Status)
+				assert.Equal(t, "Step failed after 2 errors", final.Message)
+				assert.Equal(t, uint32(2), final.ErrorCount)
+				assert.Equal(t, "test-step", final.Alias)
+
+				// Verify all methods return the same instance
+				assert.Equal(t, result, final)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assertions(t, tt.metadata)
+		})
+	}
+}
+
+func TestContext_GetCurrentStepIndex(t *testing.T) {
+	tests := []struct {
+		name              string
+		context           *Context
+		expectedStepIndex int64
+	}{
+		{
+			name: "empty metadata returns 0",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{},
+			},
+			expectedStepIndex: 0,
+		},
+		{
+			name: "single step metadata returns 0",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{Alias: "step1"},
+				},
+			},
+			expectedStepIndex: 0,
+		},
+		{
+			name: "two steps metadata returns 1",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{Alias: "step1"},
+					{Alias: "step2"},
+				},
+			},
+			expectedStepIndex: 1,
+		},
+		{
+			name: "three steps metadata returns 2",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{Alias: "step1"},
+					{Alias: "step2"},
+					{Alias: "step3"},
+				},
+			},
+			expectedStepIndex: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.context.GetCurrentStepIndex()
+			assert.Equal(t, tt.expectedStepIndex, result)
+		})
+	}
+}
+
+func TestContext_GetStepExecutionMetadata(t *testing.T) {
+	tests := []struct {
+		name       string
+		context    *Context
+		step       Step
+		assertions func(t *testing.T, ctx *Context, result *kargoapi.StepExecutionMetadata)
+	}{
+		{
+			name: "returns existing metadata when found",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:           "existing-step",
+						ContinueOnError: true,
+					},
+				},
+			},
+			step: Step{
+				Alias:           "existing-step",
+				ContinueOnError: false,
+			},
+			assertions: func(t *testing.T, ctx *Context, result *kargoapi.StepExecutionMetadata) {
+				assert.Equal(t, "existing-step", result.Alias)
+				assert.True(t, result.ContinueOnError) // Should preserve existing value
+				assert.Len(t, ctx.StepExecutionMetadata, 1)
+			},
+		},
+		{
+			name: "creates new metadata when not found",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:           "other-step",
+						ContinueOnError: false,
+					},
+				},
+			},
+			step: Step{
+				Alias:           "new-step",
+				ContinueOnError: true,
+			},
+			assertions: func(t *testing.T, ctx *Context, result *kargoapi.StepExecutionMetadata) {
+				assert.Equal(t, "new-step", result.Alias)
+				assert.True(t, result.ContinueOnError)
+				assert.Len(t, ctx.StepExecutionMetadata, 2)
+				assert.Equal(t, "new-step", ctx.StepExecutionMetadata[1].Alias)
+			},
+		},
+		{
+			name: "creates new metadata when list is empty",
+			context: &Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{},
+			},
+			step: Step{
+				Alias:           "first-step",
+				ContinueOnError: false,
+			},
+			assertions: func(t *testing.T, ctx *Context, result *kargoapi.StepExecutionMetadata) {
+				assert.Equal(t, "first-step", result.Alias)
+				assert.False(t, result.ContinueOnError)
+				assert.Len(t, ctx.StepExecutionMetadata, 1)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.context.GetStepExecutionMetadata(tt.step)
+			tt.assertions(t, tt.context, result)
+		})
+	}
+}
+
+func TestContext_DeepCopy(t *testing.T) {
+	tests := []struct {
+		name       string
+		context    *Context
+		assertions func(t *testing.T, original *Context, deepCopy Context)
+	}{
+		{
+			name: "creates deep copy of all fields",
+			context: &Context{
+				UIBaseURL:     "https://example.com",
+				WorkDir:       "/tmp/work",
+				Project:       "test-project",
+				Stage:         "test-stage",
+				Promotion:     "test-promotion",
+				StartFromStep: 2,
+				Actor:         "test-actor",
+				FreightRequests: []kargoapi.FreightRequest{
+					{
+						Origin: kargoapi.FreightOrigin{
+							Kind: "Warehouse",
+							Name: "test-warehouse",
+						},
+					},
+				},
+				Freight: kargoapi.FreightCollection{
+					ID: "test-collection-id",
+					Freight: map[string]kargoapi.FreightReference{
+						"warehouse-1": {
+							Name: "freight-1",
+							Origin: kargoapi.FreightOrigin{
+								Kind: "Warehouse",
+								Name: "warehouse1",
+							},
+						},
+						"warehouse-2": {
+							Name: "freight-2",
+							Origin: kargoapi.FreightOrigin{
+								Kind: "Warehouse",
+								Name: "warehouse-2",
+							},
+						},
+					},
+					VerificationHistory: []kargoapi.VerificationInfo{
+						{
+							ID:      "verification-1",
+							Phase:   kargoapi.VerificationPhaseSuccessful,
+							Message: "Test verification",
+						},
+					},
+				},
+				TargetFreightRef: kargoapi.FreightReference{
+					Name: "target-freight",
+					Origin: kargoapi.FreightOrigin{
+						Kind: "Warehouse",
+						Name: "target-warehouse",
+					},
+				},
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{
+					{
+						Alias:           "test-step",
+						ContinueOnError: true,
+					},
+				},
+				State: State{
+					"key": "value",
+				},
+				Vars: []kargoapi.ExpressionVariable{
+					{
+						Name:  "test-var",
+						Value: "test-value",
+					},
+				},
+			},
+			assertions: func(t *testing.T, original *Context, deepCopy Context) {
+				// Verify all fields are copied
+				assert.Equal(t, original.UIBaseURL, deepCopy.UIBaseURL)
+				assert.Equal(t, original.WorkDir, deepCopy.WorkDir)
+				assert.Equal(t, original.Project, deepCopy.Project)
+				assert.Equal(t, original.Stage, deepCopy.Stage)
+				assert.Equal(t, original.Promotion, deepCopy.Promotion)
+				assert.Equal(t, original.StartFromStep, deepCopy.StartFromStep)
+				assert.Equal(t, original.Actor, deepCopy.Actor)
+
+				// Verify FreightRequests is deep copied
+				assert.Equal(t, len(original.FreightRequests), len(deepCopy.FreightRequests))
+				if len(original.FreightRequests) > 0 {
+					assert.Equal(t, original.FreightRequests[0].Origin.Name, deepCopy.FreightRequests[0].Origin.Name)
+					// Verify it's a different slice
+					assert.NotSame(t, &original.FreightRequests[0], &deepCopy.FreightRequests[0])
+				}
+
+				// Verify FreightCollection is deep copied
+				assert.Equal(t, original.Freight.ID, deepCopy.Freight.ID)
+				assert.Equal(t, len(original.Freight.Freight), len(deepCopy.Freight.Freight))
+				assert.Equal(t, len(original.Freight.VerificationHistory), len(deepCopy.Freight.VerificationHistory))
+
+				// Verify Freight map contents
+				for key, originalFreight := range original.Freight.Freight {
+					copyFreight, exists := deepCopy.Freight.Freight[key]
+					assert.True(t, exists, "Freight key %s should exist in copy", key)
+					assert.Equal(t, originalFreight.Name, copyFreight.Name)
+					assert.Equal(t, originalFreight.Origin, copyFreight.Origin)
+				}
+
+				// Verify VerificationHistory contents
+				if len(original.Freight.VerificationHistory) > 0 {
+					assert.Equal(
+						t,
+						original.Freight.VerificationHistory[0].ID,
+						deepCopy.Freight.VerificationHistory[0].ID,
+					)
+					assert.Equal(
+						t,
+						original.Freight.VerificationHistory[0].Phase,
+						deepCopy.Freight.VerificationHistory[0].Phase,
+					)
+					assert.Equal(
+						t,
+						original.Freight.VerificationHistory[0].Message,
+						deepCopy.Freight.VerificationHistory[0].Message,
+					)
+				}
+
+				// Verify TargetFreightRef is deep copied
+				assert.Equal(t, original.TargetFreightRef.Name, deepCopy.TargetFreightRef.Name)
+				assert.Equal(t, original.TargetFreightRef.Origin, deepCopy.TargetFreightRef.Origin)
+
+				// Verify StepExecutionMetadata is deep copied
+				assert.Equal(t, len(original.StepExecutionMetadata), len(deepCopy.StepExecutionMetadata))
+				if len(original.StepExecutionMetadata) > 0 {
+					assert.Equal(t, original.StepExecutionMetadata[0].Alias, deepCopy.StepExecutionMetadata[0].Alias)
+				}
+
+				// Verify State is deep copied
+				assert.Equal(t, original.State["key"], deepCopy.State["key"])
+
+				// Verify Vars is cloned
+				assert.Equal(t, len(original.Vars), len(deepCopy.Vars))
+				if len(original.Vars) > 0 {
+					assert.Equal(t, original.Vars[0].Name, deepCopy.Vars[0].Name)
+				}
+
+				// Verify modifications to copy don't affect original
+				deepCopy.UIBaseURL = "modified"
+				deepCopy.StartFromStep = 999
+				deepCopy.Freight.ID = "modified-id"
+				if len(deepCopy.FreightRequests) > 0 {
+					deepCopy.FreightRequests[0].Origin.Name = "modified"
+				}
+				if len(deepCopy.StepExecutionMetadata) > 0 {
+					deepCopy.StepExecutionMetadata[0].Alias = "modified"
+				}
+				deepCopy.State["key"] = "modified"
+				if len(deepCopy.Freight.Freight) > 0 {
+					for key := range deepCopy.Freight.Freight {
+						freight := deepCopy.Freight.Freight[key]
+						freight.Name = "modified-freight"
+						deepCopy.Freight.Freight[key] = freight
+						break
+					}
+				}
+
+				assert.Equal(t, "https://example.com", original.UIBaseURL)
+				assert.Equal(t, int64(2), original.StartFromStep)
+				assert.Equal(t, "test-collection-id", original.Freight.ID)
+				if len(original.FreightRequests) > 0 {
+					assert.Equal(t, "test-warehouse", original.FreightRequests[0].Origin.Name)
+				}
+				if len(original.StepExecutionMetadata) > 0 {
+					assert.Equal(t, "test-step", original.StepExecutionMetadata[0].Alias)
+				}
+				assert.Equal(t, "value", original.State["key"])
+				if len(original.Freight.Freight) > 0 {
+					for _, freight := range original.Freight.Freight {
+						assert.NotEqual(t, "modified-freight", freight.Name)
+						break
+					}
+				}
+			},
+		},
+		{
+			name: "handles nil FreightRequests",
+			context: &Context{
+				UIBaseURL:       "https://example.com",
+				FreightRequests: nil,
+				Freight: kargoapi.FreightCollection{
+					ID:      "empty-collection",
+					Freight: nil,
+				},
+			},
+			assertions: func(t *testing.T, original *Context, deepCopy Context) {
+				assert.Nil(t, deepCopy.FreightRequests)
+				assert.Equal(t, original.UIBaseURL, deepCopy.UIBaseURL)
+				assert.Equal(t, original.Freight.ID, deepCopy.Freight.ID)
+				assert.Nil(t, deepCopy.Freight.Freight)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.assertions(t, tt.context, tt.context.DeepCopy())
 		})
 	}
 }

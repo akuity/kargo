@@ -1,11 +1,11 @@
 package promotion
 
-// stepRunnerRegistry is a map of StepRunnerRegistrations indexed by promotion
+// StepRunnerRegistry is a map of StepRunnerRegistrations indexed by promotion
 // step kind.
-type stepRunnerRegistry map[string]StepRunnerRegistration
+type StepRunnerRegistry map[string]StepRunnerRegistration
 
-// register adds a StepRunnerRegistration to the stepRunnerRegistry.
-func (s stepRunnerRegistry) register(
+// Register adds a StepRunnerRegistration to the StepRunnerRegistry.
+func (s StepRunnerRegistry) Register(
 	stepKind string,
 	registration StepRunnerRegistration,
 ) {
@@ -21,9 +21,10 @@ func (s stepRunnerRegistry) register(
 	s[stepKind] = registration
 }
 
-// getStepRunner returns the StepRunnerRegistration for the specified promotion
-// step kind. If no such registration exists, nil is returned instead.
-func (s stepRunnerRegistry) getStepRunnerRegistration(
+// GetStepRunnerRegistration returns the StepRunnerRegistration for the
+// specified promotion step kind. If no such registration exists, nil is
+// returned instead.
+func (s StepRunnerRegistry) GetStepRunnerRegistration(
 	stepKind string,
 ) *StepRunnerRegistration {
 	if registration, exists := s[stepKind]; exists {
@@ -32,8 +33,8 @@ func (s stepRunnerRegistry) getStepRunnerRegistration(
 	return nil
 }
 
-// stepRunnerReg is this package's internal stepRunnerRegistry.
-var stepRunnerReg = stepRunnerRegistry{}
+// stepRunnerRegistry is this package's internal StepRunnerRegistry.
+var stepRunnerRegistry = StepRunnerRegistry{}
 
 // RegisterStepRunner adds a StepRunnerRegistration to the package's internal
 // registry.
@@ -41,7 +42,7 @@ func RegisterStepRunner(
 	stepKind string,
 	registration StepRunnerRegistration,
 ) {
-	stepRunnerReg.register(stepKind, registration)
+	stepRunnerRegistry.Register(stepKind, registration)
 }
 
 // GetStepRunnerRegistration returns the StepRunnerRegistration for the
@@ -50,5 +51,10 @@ func RegisterStepRunner(
 func GetStepRunnerRegistration(
 	stepKind string,
 ) *StepRunnerRegistration {
-	return stepRunnerReg.getStepRunnerRegistration(stepKind)
+	return stepRunnerRegistry.GetStepRunnerRegistration(stepKind)
+}
+
+// GetStepRunnerRegistrations returns the package's internal StepRunnerRegistry.
+func GetStepRunnerRegistrations() StepRunnerRegistry {
+	return stepRunnerRegistry
 }
