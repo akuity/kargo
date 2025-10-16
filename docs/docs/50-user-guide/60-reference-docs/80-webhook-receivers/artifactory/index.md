@@ -86,22 +86,47 @@ spec:
     artifactory:
       secretRef:
         name: artifactory-wh-secret
-      virtualRepoName: my-virtual-repo-name
 ```
+
+### Special Note For Virtual Repositories
 
 :::info
 The `artifactory.virtualRepoName` must be set if your warehouse subscribes to a 
 virtual repository. This is because the webhook event Artifactory sends does
 not include the name of the virtual repository. Instead, it includes
-the repo key for the underlying local or remote repositories the event generated 
-from. So in order to properly refresh a warehouse subscribed to a virtual
-repository, `virtualRepoName` must be configured. 
+the repo key for the underlying local/remote repository the event generated 
+from.
 
-If your virtual repoURL is
+If the URL of your virtual repository is
 `https://myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact` than the 
 `my-virtual-repo-name` part is what should be set for the `virtualRepoName`
 field.
 :::
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: artifactory-wh-secret
+  namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
+data:
+  secret-token: <base64-encoded secret token>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers: 
+  - name: artifactory-wh-receiver
+    artifactory:
+      secretRef:
+        name: artifactory-wh-secret
+      virtualRepoName: my-virtual-repo-name
+```
 
 ## Retrieving the Receiver's URL
 
