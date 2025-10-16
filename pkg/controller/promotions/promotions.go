@@ -508,34 +508,15 @@ func (r *reconciler) promote(
 	)
 
 	// Prepare promotion steps and vars for the promotion execution engine.
-	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
-	for i, step := range workingPromo.Spec.Steps {
-		steps[i] = promotion.Step{
-			Kind:            step.Uses,
-			Alias:           step.As,
-			If:              step.If,
-			ContinueOnError: step.ContinueOnError,
-			Retry:           step.Retry,
-			Vars:            step.Vars,
-			Config:          step.Config.Raw,
-		}
-	}
-
-	promoCtx := promotion.Context{
-		UIBaseURL:             r.cfg.APIServerBaseURL,
-		WorkDir:               filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID)),
-		Project:               stageNamespace,
-		Stage:                 stageName,
-		Promotion:             workingPromo.Name,
-		FreightRequests:       stage.Spec.RequestedFreight,
-		Freight:               *workingPromo.Status.FreightCollection.DeepCopy(),
-		TargetFreightRef:      targetFreightRef,
-		StartFromStep:         promo.Status.CurrentStep,
-		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
-		State:                 promotion.State(workingPromo.Status.GetState()),
-		Vars:                  workingPromo.Spec.Vars,
-		Actor:                 parseCreateActorAnnotation(&promo),
-	}
+	steps := promotion.NewSteps(workingPromo)
+	promoCtx := promotion.NewContext(
+		workingPromo,
+		stage,
+		targetFreightRef,
+		promotion.WithActor(parseCreateActorAnnotation(&promo)),
+		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
+		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
+	)
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
 		// process again from the beginning, but we DON'T clear shared state. This

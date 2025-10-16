@@ -74,20 +74,19 @@ func (e *simpleEngine) Promote(
 	ctx context.Context,
 	promoCtx Context,
 	steps []Step,
-) (Result, error) {
-	workDir, err := e.setupWorkDir(promoCtx.WorkDir)
-	if err != nil {
-		return Result{Status: kargoapi.PromotionPhaseErrored}, err
-	}
-	if workDir != promoCtx.WorkDir {
-		defer os.RemoveAll(workDir)
+) (_ Result, err error) {
+	if promoCtx.WorkDir == "" {
+		// If no working directory is provided, we create a temporary one.
+		if promoCtx.WorkDir, err = e.setupWorkDir(promoCtx.WorkDir); err != nil {
+			return Result{Status: kargoapi.PromotionPhaseErrored}, err
+		}
+		defer os.RemoveAll(promoCtx.WorkDir)
 	}
 
-	result := e.executeSteps(ctx, promoCtx, steps, workDir)
+	result := e.executeSteps(ctx, promoCtx, steps)
 	if result.Status == kargoapi.PromotionPhaseErrored {
 		err = errors.New(result.Message)
 	}
-
 	return result, err
 }
 
@@ -96,7 +95,6 @@ func (e *simpleEngine) executeSteps(
 	ctx context.Context,
 	pCtx Context,
 	steps []Step,
-	workDir string,
 ) Result {
 	// NB: Make a deep copy of the Context so that we don't modify the original.
 	promoCtx := pCtx.DeepCopy()
@@ -128,7 +126,10 @@ func (e *simpleEngine) executeSteps(
 			exprDataCache = e.cacheFunc()
 		}
 
-		if e.shouldSkipStep(ctx, exprDataCache, promoCtx, step, stepExecMeta) {
+		// Create StepEvaluator for this step with the shared cache
+		evaluator := NewStepEvaluator(e.kargoClient, exprDataCache)
+
+		if e.shouldSkipStep(ctx, evaluator, promoCtx, step, stepExecMeta) {
 			continue
 		}
 
@@ -164,10 +165,10 @@ func (e *simpleEngine) executeSteps(
 		}
 
 		// Execute the step.
-		result, err := e.executeStep(ctx, exprDataCache, promoCtx, step, runner, workDir)
+		result, err := e.executeStep(ctx, evaluator, promoCtx, step, runner)
 
 		// Propagate the output of the step to the state.
-		e.propagateStepOutput(promoCtx, step, *registration, result)
+		e.propagateStepOutput(promoCtx, step, registration.Metadata, result)
 
 		// Confirm that the step has a valid status.
 		if !isValidStepStatus(result.Status) {
@@ -248,12 +249,12 @@ func (e *simpleEngine) isContextCanceled(ctx context.Context, meta *kargoapi.Ste
 
 func (e *simpleEngine) shouldSkipStep(
 	ctx context.Context,
-	cache *gocache.Cache,
+	evaluator *StepEvaluator,
 	promoCtx Context,
 	step Step,
 	meta *kargoapi.StepExecutionMetadata,
 ) bool {
-	skip, err := step.Skip(ctx, e.kargoClient, cache, promoCtx)
+	skip, err := evaluator.ShouldSkip(ctx, promoCtx, step)
 	if err != nil {
 		meta.Status = kargoapi.PromotionStepStatusErrored
 		meta.Message = fmt.Sprintf("error checking if step %q should be skipped: %s", step.Alias, err)
@@ -274,7 +275,7 @@ func (e *simpleEngine) shouldSkipStep(
 func (e *simpleEngine) propagateStepOutput(
 	promoCtx Context,
 	step Step,
-	stepReg StepRunnerRegistration,
+	stepRunnerMeta StepRunnerMetadata,
 	result StepResult,
 ) {
 	// Update the state with the output of the step.
@@ -283,7 +284,7 @@ func (e *simpleEngine) propagateStepOutput(
 	// If the step instructs that the output should be propagated to the
 	// task namespace, do so.
 	if slices.Contains(
-		stepReg.Metadata.RequiredCapabilities,
+		stepRunnerMeta.RequiredCapabilities,
 		StepCapabilityTaskOutputPropagation,
 	) {
 		if aliasNamespace := getAliasNamespace(step.Alias); aliasNamespace != "" {
@@ -454,11 +455,10 @@ func determinePromoPhase(
 // executeStep executes a single Step.
 func (e *simpleEngine) executeStep(
 	ctx context.Context,
-	cache *gocache.Cache,
+	evaluator *StepEvaluator,
 	promoCtx Context,
 	step Step,
 	runner StepRunner,
-	workDir string,
 ) (result StepResult, err error) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -471,7 +471,7 @@ func (e *simpleEngine) executeStep(
 		}
 	}()
 
-	stepCtx, err := e.prepareStepContext(ctx, cache, promoCtx, step, workDir)
+	stepCtx, err := evaluator.BuildStepContext(ctx, promoCtx, step)
 	if err != nil {
 		return StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
@@ -482,43 +482,6 @@ func (e *simpleEngine) executeStep(
 		err = fmt.Errorf("error running step %q: %w", step.Alias, err)
 	}
 	return result, err
-}
-
-// prepareStepContext prepares a StepContext corresponding to the provided Step.
-func (e *simpleEngine) prepareStepContext(
-	ctx context.Context,
-	cache *gocache.Cache,
-	promoCtx Context,
-	step Step,
-	workDir string,
-) (*StepContext, error) {
-	stepCfg, err := step.GetConfig(ctx, e.kargoClient, cache, promoCtx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get step config: %w", err)
-	}
-
-	var freightRequests []kargoapi.FreightRequest
-	if promoCtx.FreightRequests != nil {
-		freightRequests = make([]kargoapi.FreightRequest, len(promoCtx.FreightRequests))
-		for i, fr := range promoCtx.FreightRequests {
-			freightRequests[i] = *fr.DeepCopy()
-		}
-	}
-
-	return &StepContext{
-		UIBaseURL:        promoCtx.UIBaseURL,
-		WorkDir:          workDir,
-		SharedState:      promoCtx.State.DeepCopy(),
-		Alias:            step.Alias,
-		Config:           stepCfg,
-		Project:          promoCtx.Project,
-		Stage:            promoCtx.Stage,
-		Promotion:        promoCtx.Promotion,
-		PromotionActor:   promoCtx.Actor,
-		FreightRequests:  freightRequests,
-		Freight:          *promoCtx.Freight.DeepCopy(),
-		TargetFreightRef: promoCtx.TargetFreightRef,
-	}, nil
 }
 
 // setupWorkDir creates a temporary working directory if one is not provided.
