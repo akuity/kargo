@@ -10,16 +10,41 @@ minor release roughly every six weeks, with two or three major features
 completed per release, although this varies slightly by scope.
 
 :::caution
-This roadmap tracks only _major_ features and is subject to change at any time,
-for the most up-to-date information, please see the [GitHub
-Project](https://github.com/akuity/kargo/milestones)
+Although Kargo is open source, this roadmap is informed, foremost, by the needs
+of [Akuity](https://akuity.io/) customers. It tracks only major features and is
+subject to modification as customer needs and priorities shift. For complete,
+up-to-date information on the scope of any given release, please refer directly
+to [project milestones](https://github.com/akuity/kargo/milestones) on GitHub.
+
+_Please note that feature requests and unsolicited contributions driven by the
+community are prioritized differently than planned roadmap items. Anything not
+appearing on the roadmap is handled on a "best effort" basis. Not all issues
+that are opened will be addressed. Not all PRs that are opened will be merged.
+For those that may be, no specific timeframes for review are guaranteed._
 :::
 
 ## In Progress
 
+### v1.9.0
+
+__Expected:__ November, 2025
+
+This release is focused on:
+
+* Facilitating external automation and other integrations via Kargo-managed
+  service accounts.
+* Improving Warehouse performance through more aggressive caching.
+* Relieving confusion over "global" vs "cluster-scoped" credentials and other
+  Secrets through careful, minimally breaking refactoring.
+* Extending webhook compatibility to unspecified repository hosts via a generic
+  webhook receiver.
+
 ### v1.8.0
 
-__Expected:__ TBD
+__Expected:__ October, 2025
+
+This release is focused on UI enhancements and general "quality-of-life"
+improvements, but also boasts a grab bag of small features.
 
 ## Completed
 
