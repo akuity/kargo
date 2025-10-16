@@ -45,11 +45,10 @@ func DefaultExprDataCacheFn() *gocache.Cache {
 // simpleEngine is a simple implementation of the Engine interface that uses
 // built-in StepRunners.
 type simpleEngine struct {
-	registry     stepRunnerRegistry
-	kargoClient  client.Client
-	argocdClient client.Client
-	credsDB      credentials.Database
-	cacheFunc    ExprDataCacheFn
+	executor    StepExecutor
+	registry    stepRunnerRegistry
+	kargoClient client.Client
+	cacheFunc   ExprDataCacheFn
 }
 
 // NewSimpleEngine returns a simple implementation of the Engine interface that
@@ -61,11 +60,10 @@ func NewSimpleEngine(
 	cacheFunc ExprDataCacheFn,
 ) Engine {
 	return &simpleEngine{
-		registry:     stepRunnerReg,
-		kargoClient:  kargoClient,
-		argocdClient: argocdClient,
-		credsDB:      credsDB,
-		cacheFunc:    cacheFunc,
+		executor:    NewLocalStepExecutor(stepRunnerReg, kargoClient, argocdClient, credsDB),
+		registry:    stepRunnerReg,
+		kargoClient: kargoClient,
+		cacheFunc:   cacheFunc,
 	}
 }
 
@@ -146,26 +144,26 @@ func (e *simpleEngine) executeSteps(
 			// if our validation webhook was aware of registered steps.
 			continue
 		}
-		capabilities := StepRunnerCapabilities{}
-		for _, capability := range registration.Metadata.RequiredCapabilities {
-			switch capability {
-			case StepCapabilityAccessControlPlane:
-				capabilities.KargoClient = e.kargoClient
-			case StepCapabilityAccessArgoCD:
-				capabilities.ArgoCDClient = e.argocdClient
-			case StepCapabilityAccessCredentials:
-				capabilities.CredsDB = e.credsDB
-			}
-		}
-		runner := registration.Factory(capabilities)
 
 		// Mark the step as started.
 		if stepExecMeta.StartedAt == nil {
 			stepExecMeta.StartedAt = ptr.To(metav1.Now())
 		}
 
-		// Execute the step.
-		result, err := e.executeStep(ctx, evaluator, promoCtx, step, runner)
+		// Build step context for execution.
+		stepCtx, err := evaluator.BuildStepContext(ctx, promoCtx, step)
+		if err != nil {
+			stepExecMeta.Status = kargoapi.PromotionStepStatusErrored
+			stepExecMeta.Message = fmt.Sprintf("error building step context: %s", err)
+			stepExecMeta.FinishedAt = ptr.To(metav1.Now())
+			continue
+		}
+
+		// Execute the step using the executor.
+		result, err := e.executor.ExecuteStep(ctx, StepExecutionRequest{
+			Context: *stepCtx,
+			Step:    step,
+		})
 
 		// Propagate the output of the step to the state.
 		e.propagateStepOutput(promoCtx, step, registration.Metadata, result)
@@ -450,38 +448,6 @@ func determinePromoPhase(
 		// This really shouldn't ever happen. We'll treat it as an error.
 		return kargoapi.PromotionPhaseErrored, worstMsg
 	}
-}
-
-// executeStep executes a single Step.
-func (e *simpleEngine) executeStep(
-	ctx context.Context,
-	evaluator *StepEvaluator,
-	promoCtx Context,
-	step Step,
-	runner StepRunner,
-) (result StepResult, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			result = StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}
-			err = &TerminalError{
-				Err: fmt.Errorf("step %q panicked: %v", step.Alias, r),
-			}
-		}
-	}()
-
-	stepCtx, err := evaluator.BuildStepContext(ctx, promoCtx, step)
-	if err != nil {
-		return StepResult{
-			Status: kargoapi.PromotionStepStatusErrored,
-		}, &TerminalError{Err: err}
-	}
-
-	if result, err = runner.Run(ctx, stepCtx); err != nil {
-		err = fmt.Errorf("error running step %q: %w", step.Alias, err)
-	}
-	return result, err
 }
 
 // setupWorkDir creates a temporary working directory if one is not provided.
