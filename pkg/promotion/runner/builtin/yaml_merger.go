@@ -57,11 +57,6 @@ func (y *yamlMerger) convert(cfg promotion.Config) (builtin.YAMLMergeConfig, err
 	return validateAndConvert[builtin.YAMLMergeConfig](y.schemaLoader, cfg, stepKindYAMLMerge)
 }
 
-// validate validates yamlMerger configuration against a JSON schema.
-func (y *yamlMerger) validate(cfg promotion.Config) error {
-	return validate(y.schemaLoader, gojsonschema.NewGoLoader(cfg), stepKindYAMLMerge)
-}
-
 func (y *yamlMerger) run(
 	_ context.Context,
 	stepCtx *promotion.StepContext,

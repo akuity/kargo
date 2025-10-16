@@ -32,7 +32,7 @@ Merging is performed as follows:
 |------|------|----------|-------------|
 | `inFiles` | `[]string` | Y | Paths to a YAML files. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outFile` | `string`   | Y | The path to the output file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `ignoreMissingFiles` | `bool` | N | When set to true, the directive will skip input files that does not exist. Defaults to `false`. |
+| `ignoreMissingFiles` | `bool` | N | When set to `true`, the directive will skip input files that does not exist. Defaults to `false`. |
 
 ## Output
 
@@ -46,7 +46,7 @@ Merging is performed as follows:
 
 In the following example, multiple Helm values files (one "base", a second with
 environment-specific overrides, and a third with cluster-specific overrides) are
-merged into a new, single file, which is then committed to a Stage-specific
+merged into a new, single file, which is then committed to a `Stage`-specific
 branch:
 
 ```yaml
