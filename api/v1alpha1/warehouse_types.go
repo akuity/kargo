@@ -346,8 +346,7 @@ type GitSubscription struct {
 
 // ImageSubscription defines a subscription to an image repository.
 //
-// +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
-// +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+// +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, constraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
 type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
@@ -364,7 +363,7 @@ type ImageSubscription struct {
 	// Accepted values:
 	//
 	// - "Digest": Selects the image currently referenced by the tag specified
-	//   (unintuitively) by the SemverConstraint field.
+	//   by the Constraint field.
 	//
 	// - "Lexical": Selects the image referenced by the lexicographically greatest
 	//   tag. Useful when tags embed a leading date or timestamp. The
@@ -398,8 +397,7 @@ type ImageSubscription struct {
 	// Constraint specifies constraints on what new image versions are
 	// permissible. Acceptable values for this field vary contextually by
 	// ImageSelectionStrategy. The field is optional and is ignored by some
-	// strategies. When non-empty, the value in this field takes precedence over
-	// the value of the deprecated SemverConstraint field.
+	// strategies.
 	//
 	// +kubebuilder:validation:Optional
 	Constraint string `json:"constraint,omitempty" protobuf:"bytes,11,opt,name=constraint"`
