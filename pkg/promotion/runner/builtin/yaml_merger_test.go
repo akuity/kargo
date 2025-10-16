@@ -14,18 +14,16 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-func Test_yamlMerger_validate(t *testing.T) {
-	tests := []struct {
-		name          string
-		config        map[string]any
-		expectedError string
-	}{
+func Test_yamlMerger_convert(t *testing.T) {
+	tests := []validationTestCase{
 		{
 			name: "inFiles not specified (missing path field)",
 			config: map[string]any{
 				"outFile": "valid.yaml",
 			},
-			expectedError: "(root): inFiles is required",
+			expectedProblems: []string{
+				"(root): inFiles is required",
+			},
 		},
 		{
 			name: "inFiles field is an empty array",
@@ -33,7 +31,9 @@ func Test_yamlMerger_validate(t *testing.T) {
 				"inFiles": []string{},
 				"outFile": "valid.yaml",
 			},
-			expectedError: "invalid yaml-merge config: inFiles: Array must have at least 1 items",
+			expectedProblems: []string{
+				"invalid yaml-merge config: inFiles: Array must have at least 1 items",
+			},
 		},
 		{
 			name: "inFiles contains empty string",
@@ -41,14 +41,16 @@ func Test_yamlMerger_validate(t *testing.T) {
 				"inFiles": []string{""},
 				"outFile": "valid.yaml",
 			},
-			expectedError: "",
+			expectedProblems: nil,
 		},
 		{
 			name: "outFile not specified (missing path field)",
 			config: map[string]any{
 				"inFiles": []string{"valid.yaml"},
 			},
-			expectedError: "invalid yaml-merge config: (root): outFile is required",
+			expectedProblems: []string{
+				"invalid yaml-merge config: (root): outFile is required",
+			},
 		},
 		{
 			name: "outFile is empty string",
@@ -56,7 +58,9 @@ func Test_yamlMerger_validate(t *testing.T) {
 				"inFiles": []string{"valid.yaml"},
 				"outFile": "",
 			},
-			expectedError: "invalid yaml-merge config: outFile: String length must be greater than or equal to 1",
+			expectedProblems: []string{
+				"invalid yaml-merge config: outFile: String length must be greater than or equal to 1",
+			},
 		},
 		{
 			name: "valid configuration (inFiles + outFile present)",
@@ -64,7 +68,7 @@ func Test_yamlMerger_validate(t *testing.T) {
 				"inFiles": []string{"valid.yaml"},
 				"outFile": "valid.yaml",
 			},
-			expectedError: "",
+			expectedProblems: nil,
 		},
 	}
 
@@ -72,17 +76,18 @@ func Test_yamlMerger_validate(t *testing.T) {
 	runner, ok := r.(*yamlMerger)
 	require.True(t, ok)
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			err := runner.validate(tc.config)
-			if tc.expectedError == "" {
-				assert.NoError(t, err)
-			} else {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), tc.expectedError)
-			}
-		})
-	}
+	runValidationTests(t, runner.convert, tests)
+	// for _, tc := range tests {
+	// 	t.Run(tc.name, func(t *testing.T) {
+	// 		err := runner.validate(tc.config)
+	// 		if tc.expectedError == "" {
+	// 			assert.NoError(t, err)
+	// 		} else {
+	// 			assert.Error(t, err)
+	// 			assert.Contains(t, err.Error(), tc.expectedError)
+	// 		}
+	// 	})
+	// }
 }
 
 func Test_YAMLMerger_run(t *testing.T) {
