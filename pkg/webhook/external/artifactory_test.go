@@ -18,11 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 )
 
-const (
-	nestedArtifactoryRepoURL = "artifactory.example.com/test-repo/foo/bar/test-image"
-	basicArtifactoryRepoURL  = "artifactory.example.com/other-test-repo/other-test-image"
-)
-
 func TestArtifactoryHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
@@ -63,6 +58,19 @@ func TestArtifactoryHandler(t *testing.T) {
 		Data: artifactoryEventData{
 			Tag:       "v1.0.0",
 			Path:      "test-chart/latest/chart.tgz",
+			ImageType: artifactoryChartImageType,
+			RepoKey:   "test-repo",
+			ImageName: "test-chart",
+		},
+		Origin: "https://artifactory.example.com",
+	}
+
+	validNestedChartPushEvent := artifactoryEvent{
+		Domain:    artifactoryDockerDomain,
+		EventType: artifactoryPushedEventType,
+		Data: artifactoryEventData{
+			Tag:       "v1.0.0",
+			Path:      "foo/bar/test-chart/latest/chart.tgz",
 			ImageType: artifactoryChartImageType,
 			RepoKey:   "test-repo",
 			ImageName: "test-chart",
@@ -365,8 +373,8 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed (virtual repo)",
-			secretData: testSecretData,
+			name:            "warehouse refreshed (virtual repo)",
+			secretData:      testSecretData,
 			virtualRepoName: "virtual-test-repo",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -377,7 +385,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
-								RepoURL:          "oci://artifactory.example.com/virtual-test-repo/test-chart",
+								RepoURL:          "oci://artifactory.example.com/virtual-test-repo/foo/bar/test-chart",
 								SemverConstraint: "^1.0.0",
 							},
 						}},
@@ -389,7 +397,7 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validChartPushEvent)
+				bodyBytes, err := json.Marshal(validNestedChartPushEvent)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
