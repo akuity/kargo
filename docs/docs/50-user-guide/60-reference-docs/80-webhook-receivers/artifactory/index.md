@@ -88,20 +88,31 @@ spec:
         name: artifactory-wh-secret
 ```
 
-### Special Note For Virtual Repositories
+### Virtual Repositories
 
-:::info
-The `artifactory.virtualRepoName` must be set if your warehouse subscribes to a 
-virtual repository. This is because the webhook event Artifactory sends does
-not include the name of the virtual repository. Instead, it includes
-the repo key for the underlying local/remote repository the event generated 
-from.
+When Warehouses intended to be refreshed by an Artifactory webhook receiver
+subscribe to Artifactory
+[virtual repositories](https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-repositories) there will be discrepancies between the URLs the receiver will
+infer for the
+[local repositories](https://jfrog.com/help/r/jfrog-artifactory-documentation/local-repositories) from which push events have originated and the URLs actually used
+by those Warehouses' subscriptions.
 
-If the URL of your virtual repository is
-`https://myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact` than the 
-`my-virtual-repo-name` part is what should be set for the `virtualRepoName`
-field.
-:::
+To compensate for this, a value can be provided for the Artifactory webhook
+receiver configuration's `virtualRepoName` field. When specified, its value
+supersedes the local repository name found in the webhook's payload, which
+allows the receiver to infer the correct virtual repository URL for which all
+subscribed Warehouses should be refreshed.
+
+In practice, when using virtual repositories, a separate Artifactory webhook
+receiver should be configured _for each_, but one such receiver can handle
+events originating from _any number_ of local repositories that are aggregated by
+that virtual repository. For example, if a virtual repository `proj-virtual`
+aggregates container images from all of the `proj` Artifactory project's local
+image repositories, with a single webhook configured to post to the following
+receiver, an image pushed to
+`example.frog.io/proj-<local-repo-name>/<path>/image`, will correctly cause that
+receiver to refresh all Warehouses subscribed to
+`example.frog.io/proj-virtual/<path>/image`.
 
 ```yaml
 apiVersion: v1
@@ -121,11 +132,11 @@ metadata:
   namespace: kargo-demo
 spec:
   webhookReceivers: 
-  - name: artifactory-wh-receiver
+  - name: proj-virtual-wh-receiver
     artifactory:
       secretRef:
         name: artifactory-wh-secret
-      virtualRepoName: my-virtual-repo-name
+      virtualRepoName: proj-virtual
 ```
 
 ## Retrieving the Receiver's URL

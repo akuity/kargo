@@ -171,7 +171,10 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		if err != nil {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+				xhttp.Error(
+					fmt.Errorf("invalid value %q in payload's jpd_origin field", payload.Origin)
+					http.StatusBadRequest,
+				),
 			)
 			return
 		}
@@ -180,18 +183,22 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		if len(pathSections) < 2 {
 			xhttp.WriteErrorJSON(
 				w,
-				xhttp.Error(errors.New("invalid path"), http.StatusBadRequest),
+				xhttp.Error(
+					fmt.Errorf("invalid value %q in payload's data.path field", payload.Data.Path),
+					http.StatusBadRequest,
+				),
 			)
 			return
 		}
 
+		repoName := payload.Data.RepoKey
 		if a.virtualRepoName != "" {
-			payload.Data.RepoKey = a.virtualRepoName
+			repoName = a.virtualRepoName
 		}
 
 		repoURL := strings.Join(
 			append(
-				[]string{originURL.Host, payload.Data.RepoKey},
+				[]string{originURL.Host, repoName},
 				pathSections[:len(pathSections)-2]...,
 			),
 			"/",
