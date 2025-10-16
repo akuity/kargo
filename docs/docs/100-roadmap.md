@@ -10,17 +10,19 @@ minor release roughly every six weeks, with two or three major features
 completed per release, although this varies slightly by scope.
 
 :::caution
-Although Kargo is open source, this roadmap is informed, foremost, by the needs
-of [Akuity](https://akuity.io/) customers. It tracks only major features and is
-subject to modification as customer needs and priorities shift. For complete,
-up-to-date information on the scope of any given release, please refer directly
-to [project milestones](https://github.com/akuity/kargo/milestones) on GitHub.
+This roadmap highlights only major, _planned_ work for the **open source**
+edition of Kargo. Priorities may evolve over time based on community feedback
+and Akuity customer needs. For more detailed and up-to-date plans, please refer
+to our [project milestones](https://github.com/akuity/kargo/milestones) on
+GitHub. If you’re interested in what’s coming to our hosted, enterprise edition
+of Kargo, please [get in touch with us](https://akuity.io/get-in-touch)!
 
-_Please note that feature requests and unsolicited contributions driven by the
-community are prioritized differently than planned roadmap items. Anything not
-appearing on the roadmap is handled on a "best effort" basis. Not all issues
-that are opened will be addressed. Not all PRs that are opened will be merged.
-For those that may be, no specific timeframes for review are guaranteed._
+Ideas and contributions from the community are always welcome, however, items
+not appearing on the roadmap are reviewed on a best-effort basis. If you would
+like to contribute, please avoid wasted or duplicated effort by discussing
+feature requests and design proposals with maintainers prior to starting work.
+While we cannot guarantee specific timelines or outcomes, we value and consider
+every submission.
 :::
 
 ## In Progress
