@@ -72,8 +72,8 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			testRegistry := stepRunnerRegistry{}
-			testRegistry.register(
+			testRegistry := StepRunnerRegistry{}
+			testRegistry.Register(
 				"success-step",
 				StepRunnerRegistration{
 					Factory: func(StepRunnerCapabilities) StepRunner {
@@ -85,7 +85,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					},
 				},
 			)
-			testRegistry.register(
+			testRegistry.Register(
 				"error-step",
 				StepRunnerRegistration{
 					Factory: func(StepRunnerCapabilities) StepRunner {
@@ -98,7 +98,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 					},
 				},
 			)
-			testRegistry.register(
+			testRegistry.Register(
 				"context-waiter",
 				StepRunnerRegistration{
 					Factory: func(StepRunnerCapabilities) StepRunner {

@@ -19,7 +19,7 @@ import (
 // registry.
 type LocalOrchestrator struct {
 	executor  StepExecutor
-	registry  stepRunnerRegistry
+	registry  StepRunnerRegistry
 	client    client.Client
 	cacheFunc ExprDataCacheFn
 }
@@ -27,7 +27,7 @@ type LocalOrchestrator struct {
 // NewLocalOrchestrator creates a new LocalOrchestrator instance with the
 // provided client, step runner registry, and cache function.
 func NewLocalOrchestrator(
-	registry stepRunnerRegistry,
+	registry StepRunnerRegistry,
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
 	cacheFunc ExprDataCacheFn,
@@ -113,7 +113,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		// should consider validating the steps existence during the creation
 		// of the Promotion, or e.g. work with a typed within the executor to
 		// identify the lack of a registered runner.
-		registration := o.registry.getStepRunnerRegistration(step.Kind)
+		registration := o.registry.GetStepRunnerRegistration(step.Kind)
 		if registration == nil {
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
 				"no promotion step runner found for kind %q", step.Kind,

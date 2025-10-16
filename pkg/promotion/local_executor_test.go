@@ -13,7 +13,7 @@ import (
 )
 
 func TestNewLocalStepExecutor(t *testing.T) {
-	registry := stepRunnerRegistry{
+	registry := StepRunnerRegistry{
 		"fake-step": StepRunnerRegistration{
 			Factory: func(_ StepRunnerCapabilities) StepRunner {
 				return &MockStepRunner{}
@@ -43,13 +43,13 @@ func TestNewLocalStepExecutor(t *testing.T) {
 func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 	tests := []struct {
 		name       string
-		registry   stepRunnerRegistry
+		registry   StepRunnerRegistry
 		request    StepExecutionRequest
 		assertions func(t *testing.T, result StepResult, err error)
 	}{
 		{
 			name:     "no runner registered for step kind",
-			registry: stepRunnerRegistry{},
+			registry: StepRunnerRegistry{},
 			request: StepExecutionRequest{
 				Context: StepContext{},
 				Step: Step{
@@ -65,7 +65,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 		},
 		{
 			name: "successful step execution",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"test-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -91,7 +91,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 		},
 		{
 			name: "step execution returns error",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"test-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -118,7 +118,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 		},
 		{
 			name: "step execution panics",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"test-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -149,10 +149,10 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := stepRunnerRegistry{}
+			registry := StepRunnerRegistry{}
 
 			for k, v := range tt.registry {
-				registry.register(k, v)
+				registry.Register(k, v)
 			}
 
 			executor := NewLocalStepExecutor(registry, nil, nil, nil)

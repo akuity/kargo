@@ -18,7 +18,7 @@ import (
 func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 	tests := []struct {
 		name       string
-		registry   stepRunnerRegistry
+		registry   StepRunnerRegistry
 		promoCtx   Context
 		steps      []Step
 		assertions func(*testing.T, Result)
@@ -377,7 +377,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "output propagation to task namespace",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"task-level-output-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -422,7 +422,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "stand alone output composition step",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"task-level-output-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -462,7 +462,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "panic during step execution",
-			registry: stepRunnerRegistry{
+			registry: StepRunnerRegistry{
 				"success-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -515,7 +515,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			t.Cleanup(cancel)
 
-			defaultSteps := stepRunnerRegistry{
+			defaultSteps := StepRunnerRegistry{
 				"success-step": StepRunnerRegistration{
 					Factory: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
@@ -578,14 +578,14 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				},
 			}
 
-			registry := stepRunnerRegistry{}
+			registry := StepRunnerRegistry{}
 
 			for k, v := range defaultSteps {
-				registry.register(k, v)
+				registry.Register(k, v)
 			}
 
 			for k, v := range tt.registry {
-				registry.register(k, v)
+				registry.Register(k, v)
 			}
 
 			orchestrator := NewLocalOrchestrator(

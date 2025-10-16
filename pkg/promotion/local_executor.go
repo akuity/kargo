@@ -13,7 +13,7 @@ import (
 // LocalStepExecutor is a concrete implementation of StepExecutor that
 // executes steps locally using step runners registered in a registry.
 type LocalStepExecutor struct {
-	registry stepRunnerRegistry
+	registry StepRunnerRegistry
 
 	kargoClient  client.Client
 	argoCDClient client.Client
@@ -24,7 +24,7 @@ type LocalStepExecutor struct {
 // step runner registry. This executor will use the registered runners to
 // execute steps in the promotion process.
 func NewLocalStepExecutor(
-	registry stepRunnerRegistry,
+	registry StepRunnerRegistry,
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
 ) *LocalStepExecutor {
@@ -43,7 +43,7 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
-	registration := e.registry.getStepRunnerRegistration(req.Step.Kind)
+	registration := e.registry.GetStepRunnerRegistration(req.Step.Kind)
 	if registration == nil {
 		return StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,

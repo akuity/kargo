@@ -54,7 +54,7 @@ func NewLocalEngine(
 ) *LocalEngine {
 	return &LocalEngine{
 		orchestator: NewLocalOrchestrator(
-			stepRunnerReg,
+			stepRunnerRegistry,
 			kargoClient,
 			argocdClient,
 			credsDB,
