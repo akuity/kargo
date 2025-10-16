@@ -2146,8 +2146,7 @@ export const ImageDiscoveryResultSchema: GenMessage<ImageDiscoveryResult> = /*@_
 /**
  * ImageSubscription defines a subscription to an image repository.
  *
- * +kubebuilder:validation:XValidation:message="semverConstraint and constraint fields are mutually exclusive",rule="!(has(self.semverConstraint) && has(self.constraint))"
- * +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+ * +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, constraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ImageSubscription
  */
@@ -2173,7 +2172,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * Accepted values:
    *
    * - "Digest": Selects the image currently referenced by the tag specified
-   *   (unintuitively) by the SemverConstraint field.
+   *   by the Constraint field.
    *
    * - "Lexical": Selects the image referenced by the lexicographically greatest
    *   tag. Useful when tags embed a leading date or timestamp. The
@@ -2217,8 +2216,7 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * Constraint specifies constraints on what new image versions are
    * permissible. Acceptable values for this field vary contextually by
    * ImageSelectionStrategy. The field is optional and is ignored by some
-   * strategies. When non-empty, the value in this field takes precedence over
-   * the value of the deprecated SemverConstraint field.
+   * strategies.
    *
    * +kubebuilder:validation:Optional
    *
