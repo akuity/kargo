@@ -185,6 +185,10 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
+		if a.virtualRepoName != "" {
+			payload.Data.RepoKey = a.virtualRepoName
+		}
+		
 		repoURL := strings.Join(
 			append(
 				[]string{originURL.Host, payload.Data.RepoKey},

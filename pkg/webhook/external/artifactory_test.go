@@ -78,11 +78,12 @@ func TestArtifactoryHandler(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name       string
-		client     client.Client
-		secretData map[string][]byte
-		req        func() *http.Request
-		assertions func(*testing.T, *httptest.ResponseRecorder)
+		name            string
+		client          client.Client
+		secretData      map[string][]byte
+		virtualRepoName string
+		req             func() *http.Request
+		assertions      func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
 			name: "signing key (shared secret) missing from Secret data",
@@ -363,6 +364,46 @@ func TestArtifactoryHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			name:       "warehouse refreshed (virtual repo)",
+			secretData: testSecretData,
+			virtualRepoName: "virtual-test-repo",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://artifactory.example.com/virtual-test-repo/test-chart",
+								SemverConstraint: "^1.0.0",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validChartPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -379,6 +420,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
+				virtualRepoName: testCase.virtualRepoName,
 			}).getHandler(requestBody)(w, testCase.req())
 
 			testCase.assertions(t, w)
