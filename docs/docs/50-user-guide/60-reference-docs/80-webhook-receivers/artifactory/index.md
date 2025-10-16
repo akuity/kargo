@@ -86,7 +86,22 @@ spec:
     artifactory:
       secretRef:
         name: artifactory-wh-secret
+      virtualRepoName: my-virtual-repo-name
 ```
+
+:::info
+The `artifactory.virtualRepoName` must be set if your warehouse subscribes to a 
+virtual repository. This is because the webhook event Artifactory sends does
+not include the name of the virtual repository. Instead, it includes
+the repo key for the underlying local or remote repositories the event generated 
+from. So in order to properly refresh a warehouse subscribed to a virtual
+repository, `virtualRepoName` must be configured. 
+
+If your virtual repoURL is
+`https://myinstance.jfrog.io/my-virtual-repo-name/path/to/artifact` than the 
+`my-virtual-repo-name` part is what should be set for the `virtualRepoName`
+field.
+:::
 
 ## Retrieving the Receiver's URL
 
@@ -167,18 +182,6 @@ kubectl get projectconfigs kargo-demo \
         :::caution
         The webhook receiver won't accept unsigned requests.
         :::
-
-    1. Optionally, in the <Hlt>Headers</Hlt> section, you can set a custom `X-Kargo-Repo-URLs` header.
-
-        :::info
-        The value of `X-Kargo-Repo-URLs` can either be a single repository URL
-        or a comma-separated list of repository URLs. If set, any warehouses 
-        with subscriptions to the designated repository URL(s) will be
-        refreshed. This can be useful for repositories with unconventional 
-        naming schemes or self-hosted instances.
-        :::
-
-        ![Custom Headers](./img/custom-headers.png "Custom Headers")
 
     1. Click <Hlt>Save</Hlt>.
 
