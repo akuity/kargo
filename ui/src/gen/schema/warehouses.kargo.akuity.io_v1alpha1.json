@@ -194,7 +194,7 @@
                     "type": "array"
                   },
                   "constraint": {
-                    "description": "Constraint specifies constraints on what new image versions are\npermissible. Acceptable values for this field vary contextually by\nImageSelectionStrategy. The field is optional and is ignored by some\nstrategies. When non-empty, the value in this field takes precedence over\nthe value of the deprecated SemverConstraint field.",
+                    "description": "Constraint specifies constraints on what new image versions are\npermissible. Acceptable values for this field vary contextually by\nImageSelectionStrategy. The field is optional and is ignored by some\nstrategies.",
                     "type": "string"
                   },
                   "discoveryLimit": {
@@ -221,7 +221,7 @@
                   },
                   "imageSelectionStrategy": {
                     "default": "SemVer",
-                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  (unintuitively) by the SemverConstraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. Useful when tags embed a leading date or timestamp. The\n  AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to\n  narrow the set of tags eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can\n  optionally be used to narrow the set of tags eligible for selection. This\n  is the least efficient selection strategy and is likely to cause rate\n  limiting affecting this Warehouse and possibly others. This strategy\n  should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to\n  narrow the set of tags eligible for selection.",
+                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  by the Constraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. Useful when tags embed a leading date or timestamp. The\n  AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to\n  narrow the set of tags eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can\n  optionally be used to narrow the set of tags eligible for selection. This\n  is the least efficient selection strategy and is likely to cause rate\n  limiting affecting this Warehouse and possibly others. This strategy\n  should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to\n  narrow the set of tags eligible for selection.",
                     "enum": [
                       "Digest",
                       "Lexical",
@@ -257,12 +257,8 @@
                 "type": "object",
                 "x-kubernetes-validations": [
                   {
-                    "message": "semverConstraint and constraint fields are mutually exclusive",
-                    "rule": "!(has(self.semverConstraint) && has(self.constraint))"
-                  },
-                  {
-                    "message": "If imageSelectionStrategy is Digest, either constraint or semverConstraint must be set",
-                    "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint) || has(self.semverConstraint)"
+                    "message": "If imageSelectionStrategy is Digest, constraint must be set",
+                    "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
                   }
                 ]
               }
