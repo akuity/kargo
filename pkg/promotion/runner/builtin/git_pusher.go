@@ -145,6 +145,11 @@ func (g *gitPushPusher) run(
 		// Always force push for generated branches to ensure they can be overwritten
 		pushOpts.Force = true
 	}
+
+	// Disable pull/rebase when force pushing to allow overwriting remote history
+	if pushOpts.Force {
+		pushOpts.PullRebase = false
+	}
 	if pushOpts.TargetBranch == "" {
 		// If targetBranch is still empty, we want to set it to the current branch
 		// because we will want to return the branch that was pushed to, but we
