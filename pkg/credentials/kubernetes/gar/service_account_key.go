@@ -42,7 +42,9 @@ func (p *ServiceAccountKeyProvider) Supports(
 	data map[string][]byte,
 	_ map[string]string,
 ) bool {
-	if credType != credentials.TypeImage || data == nil || data[serviceAccountKeyKey] == nil {
+	if credType != credentials.TypeImage && credType != credentials.TypeHelm ||
+		data == nil ||
+		data[serviceAccountKeyKey] == nil {
 		return false
 	}
 

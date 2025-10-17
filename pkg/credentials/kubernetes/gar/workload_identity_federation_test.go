@@ -50,14 +50,14 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			},
 		},
 		{
-			name: "rejects non-image credentials",
+			name: "rejects unsupported credentials",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-image credentials")
+				assert.False(t, result, "should not support unsupported credentials")
 			},
 		},
 		{
@@ -75,6 +75,49 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			name:     "rejects empty project ID",
 			provider: &WorkloadIdentityFederationProvider{},
 			credType: credentials.TypeImage,
+			repoURL:  fakeGARRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.False(t, result, "should not support when project ID is empty")
+			},
+		},
+		// Helm chart test cases
+		{
+			name: "supports Helm credentials for GAR chart URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result, "should support GAR chart URL with Helm credentials")
+			},
+		},
+		{
+			name: "supports Helm credentials for GCR chart URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGCRRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result, "should support GCR chart URL with Helm credentials")
+			},
+		},
+		{
+			name: "rejects Helm credentials for non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  "docker.io/library/alpine",
+			assert: func(t *testing.T, result bool) {
+				assert.False(t, result, "should not support non-GAR/GCR URL with Helm credentials")
+			},
+		},
+		{
+			name:     "rejects Helm credentials with empty project ID",
+			provider: &WorkloadIdentityFederationProvider{},
+			credType: credentials.TypeHelm,
 			repoURL:  fakeGARRepoURL,
 			assert: func(t *testing.T, result bool) {
 				assert.False(t, result, "should not support when project ID is empty")
