@@ -126,6 +126,28 @@ func Test_gitPusher_convert(t *testing.T) {
 				"targetBranch": "fake-branch",
 			},
 		},
+		{
+			name: "force is true",
+			config: promotion.Config{ // Should be completely valid
+				"path":  "/fake/path",
+				"force": true,
+			},
+		},
+		{
+			name: "force is false",
+			config: promotion.Config{ // Should be completely valid
+				"path":  "/fake/path",
+				"force": false,
+			},
+		},
+		{
+			name: "force with targetBranch",
+			config: promotion.Config{ // Should be completely valid
+				"path":         "/fake/path",
+				"targetBranch": "fake-branch",
+				"force":        true,
+			},
+		},
 	}
 
 	r := newGitPusher(promotion.StepRunnerCapabilities{})
@@ -241,6 +263,123 @@ func Test_gitPusher_run(t *testing.T) {
 	branchName, ok := res.Output[stateKeyBranch]
 	require.True(t, ok)
 	require.Equal(t, "kargo/promotion/fake-promotion", branchName)
+	expectedCommit, err := workTree.LastCommitID()
+	require.NoError(t, err)
+	actualCommit, ok := res.Output[stateKeyCommit]
+	require.True(t, ok)
+	require.Equal(t, expectedCommit, actualCommit)
+	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+	actualCommitURL := res.Output[stateKeyCommitURL]
+	require.Equal(t, expectedCommitURL, actualCommitURL)
+}
+
+func Test_gitPusher_run_withForcePush(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	defer server.Close()
+
+	// This is the URL of the "remote" repository
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	workDir := t.TempDir()
+
+	// Finagle a local bare repo and working tree into place the way that
+	// gitCloner might have so we can verify gitPusher's ability to reload the
+	// working tree from the file system.
+	repo, err := git.CloneBare(
+		testRepoURL,
+		nil,
+		&git.BareCloneOptions{
+			BaseDir: workDir,
+		},
+	)
+	require.NoError(t, err)
+	defer repo.Close()
+	// "master" is still the default branch name for a new repository
+	// unless you configure it otherwise.
+	workTreePath := filepath.Join(workDir, "master")
+	workTree, err := repo.AddWorkTree(
+		workTreePath,
+		&git.AddWorkTreeOptions{Orphan: true},
+	)
+	require.NoError(t, err)
+	// `git worktree add` doesn't give much control over the branch name when you
+	// create an orphaned working tree, so we have to follow up with this to make
+	// the branch name look like what we wanted. gitCloner does this internally as
+	// well.
+	err = workTree.CreateOrphanedBranch("master")
+	require.NoError(t, err)
+
+	// Write a file.
+	err = os.WriteFile(filepath.Join(workTree.Dir(), "test.txt"), []byte("foo"), 0600)
+	require.NoError(t, err)
+
+	// Commit the changes similarly to how gitCommitter would
+	// have. It will be gitPushStepRunner's job to push this commit.
+	err = workTree.AddAllAndCommit("Initial commit", nil)
+	require.NoError(t, err)
+
+	// Set up a fake git provider
+	// Cannot register multiple providers with the same name, so this takes
+	// care of that problem
+	fakeGitProviderName := uuid.NewString()
+	gitprovider.Register(
+		fakeGitProviderName,
+		gitprovider.Registration{
+			Predicate: func(_ string) bool {
+				return true
+			},
+			NewProvider: func(
+				string,
+				*gitprovider.Options,
+			) (gitprovider.Interface, error) {
+				return &gitprovider.Fake{
+					GetCommitURLFn: func(
+						repoURL string,
+						sha string,
+					) (string, error) {
+						return fmt.Sprintf("%s/commit/%s", repoURL, sha), nil
+					},
+				}, nil
+			},
+		},
+	)
+
+	// Now we can proceed to test gitPusher with force push...
+
+	r := newGitPusher(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
+	runner, ok := r.(*gitPushPusher)
+	require.True(t, ok)
+	require.NotNil(t, runner.branchMus)
+
+	res, err := runner.run(
+		context.Background(),
+		&promotion.StepContext{
+			Project:   "fake-project",
+			Stage:     "fake-stage",
+			Promotion: "fake-promotion",
+			WorkDir:   workDir,
+		},
+		builtin.GitPushConfig{
+			Path:         "master",
+			TargetBranch: "main",
+			Force:        true,
+			Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+		},
+	)
+	require.NoError(t, err)
+	branchName, ok := res.Output[stateKeyBranch]
+	require.True(t, ok)
+	require.Equal(t, "main", branchName)
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[stateKeyCommit]
