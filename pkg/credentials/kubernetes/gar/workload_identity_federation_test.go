@@ -15,9 +15,11 @@ import (
 
 func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 	const (
-		fakeProjectID  = "test-project"
-		fakeGCRRepoURL = "gcr.io/my-project/my-repo"
-		fakeGARRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeProjectID       = "test-project"
+		fakeGCRImageRepoURL = "gcr.io/my-project/my-repo"
+		fakeGARImageRepoURL = "us-central1-docker.pkg.dev/my-project/my-repo"
+		fakeGCRChartRepoURL = "oci://gcr.io/my-project/my-repo"
+		fakeGARChartRepoURL = "oci://us-central1-docker.pkg.dev/my-project/my-repo"
 	)
 
 	testCases := []struct {
@@ -33,7 +35,7 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			assert: func(t *testing.T, result bool) {
 				assert.True(t, result, "should support GAR URL with image credentials")
 			},
@@ -44,20 +46,20 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeImage,
-			repoURL:  fakeGCRRepoURL,
+			repoURL:  fakeGCRImageRepoURL,
 			assert: func(t *testing.T, result bool) {
 				assert.True(t, result, "should support GCR URL with image credentials")
 			},
 		},
 		{
-			name: "rejects non-image credentials",
+			name: "rejects unsupported credentials",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeGit,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-image credentials")
+				assert.False(t, result, "should not support unsupported credentials")
 			},
 		},
 		{
@@ -75,7 +77,61 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 			name:     "rejects empty project ID",
 			provider: &WorkloadIdentityFederationProvider{},
 			credType: credentials.TypeImage,
-			repoURL:  fakeGARRepoURL,
+			repoURL:  fakeGARImageRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.False(t, result, "should not support when project ID is empty")
+			},
+		},
+		// Helm chart test cases
+		{
+			name: "supports Helm credentials for GAR OCI URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARChartRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result, "should support GAR OCI URL with Helm credentials")
+			},
+		},
+		{
+			name: "supports Helm credentials for GCR OCI URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGCRChartRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.True(t, result, "should support GCR OCI URL with Helm credentials")
+			},
+		},
+		{
+			name: "rejects Helm credentials for non-OCI URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARChartRepoURL,
+			assert: func(t *testing.T, result bool) {
+				assert.False(t, result, "should not support non-OCI URL with Helm credentials")
+			},
+		},
+		{
+			name: "rejects Helm credentials for non-GAR/GCR URL",
+			provider: &WorkloadIdentityFederationProvider{
+				projectID: fakeProjectID,
+			},
+			credType: credentials.TypeHelm,
+			repoURL:  "oci://docker.io/library/alpine",
+			assert: func(t *testing.T, result bool) {
+				assert.False(t, result, "should not support non-GAR/GCR URL with Helm credentials")
+			},
+		},
+		{
+			name:     "rejects Helm credentials with empty project ID",
+			provider: &WorkloadIdentityFederationProvider{},
+			credType: credentials.TypeHelm,
+			repoURL:  fakeGARChartRepoURL,
 			assert: func(t *testing.T, result bool) {
 				assert.False(t, result, "should not support when project ID is empty")
 			},

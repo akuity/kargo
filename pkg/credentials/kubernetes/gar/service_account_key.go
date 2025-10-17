@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -42,7 +43,13 @@ func (p *ServiceAccountKeyProvider) Supports(
 	data map[string][]byte,
 	_ map[string]string,
 ) bool {
-	if credType != credentials.TypeImage || data == nil || data[serviceAccountKeyKey] == nil {
+	if !(credType == credentials.TypeImage || credType == credentials.TypeHelm) ||
+		data == nil ||
+		data[serviceAccountKeyKey] == nil {
+		return false
+	}
+
+	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
 		return false
 	}
 
