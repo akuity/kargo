@@ -24,7 +24,9 @@ const plugin: DeepLinkPluginsInstallation['Promotion'] = {
         try {
           const deepLink = getPullRequestLink(promotionState[alias]);
 
-          deepLinks.push([alias, deepLink]);
+          if (typeof deepLink === 'string' && deepLink !== '') {
+            deepLinks.push([alias, deepLink]);
+          }
         } catch {
           // TODO: failed to get deep link.. most probably due to invalid config/output
         }
