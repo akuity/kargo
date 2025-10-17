@@ -176,273 +176,205 @@ characters:
 
 func TestMergeFiles(t *testing.T) {
 	tests := []struct {
-		name       string
-		inputPaths map[string]string
-		outputPath string
-		assertions func(*testing.T, string, error)
+		name        string
+		files       map[string]string
+		outPath     string
+		skipFiles   []string // Files to not create (for testing missing files)
+		skipOutDir  bool     // Skip creating output directory
+		expectedErr string
+		validate    func(*testing.T, string)
 	}{
 		{
-			name:       "successful run with modified outputs",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
+			name:        "error when no input files provided",
+			outPath:     "modified.yaml",
+			files:       map[string]string{},
+			expectedErr: "inFiles and outFile must not be empty",
+		},
+		{
+			name: "error when no output path provided",
+			files: map[string]string{
+				"base.yaml": `app:
+  version: "1.0.0"
+`,
+			},
+			expectedErr: "inFiles and outFile must not be empty",
+		},
+		{
+			name:        "error when both input and output are empty",
+			expectedErr: "inFiles and outFile must not be empty",
+		},
+		{
+			name:    "error when input file does not exist",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"missing.yaml": ``,
+			},
+			skipFiles:   []string{"missing.yaml"},
+			expectedErr: "error parsing first input file",
+		},
+		{
+			name:    "error when first file has invalid YAML",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"invalid.yaml": `this is:
+not a yaml file
+`,
+			},
+			expectedErr: "error parsing first input file",
+		},
+		{
+			name:    "error when output directory does not exist",
+			outPath: "missing_dir/output.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
+  version: "1.0.0"
+`,
+			},
+			skipOutDir:  true,
+			expectedErr: "error writing the merged file to",
+		},
+		{
+			name:    "merge single file successfully",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
   version: "1.0.0"
 features:
-  newFeature: false`,
-				"overrides.yaml": `
-app:
-  version: "2.0.0"`,
+  newVersion: unknown
+`,
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
+			validate: func(t *testing.T, workDir string) {
 				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
 				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "2.0.0"`)
-				assert.Contains(t, string(content), `  newFeature: false`)
+				assert.Contains(t, string(content), `version: "1.0.0"`)
+				assert.Contains(t, string(content), `newVersion: unknown`)
 			},
 		},
 		{
-			name:       "successful run with modified outputs using 2 patch files",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
+			name:    "merge multiple files successfully",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
+  version: "1.0.0"
+features:
+  newFeature: false`,
+				"overrides.yaml": `app:
+  version: "2.0.0"`,
+			},
+			validate: func(t *testing.T, workDir string) {
+				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(content), `version: "2.0.0"`)
+				assert.Contains(t, string(content), `newFeature: false`)
+			},
+		},
+		{
+			name:    "merge three files with cascading overrides",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
   version: "1.0.0"
 features:
   newFeature: false
 `,
-				"overrides.yaml": `
-app:
+				"overrides.yaml": `app:
   version: "2.0.0"
 `,
-				"overrides_2.yaml": `
-app:
- version: "4.0.0"
+				"overrides_2.yaml": `app:
+  version: "4.0.0"
 features:
-  more: "cakes"
+  more: "foo"
 added:
   - 12
   - 32
 `,
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
+			validate: func(t *testing.T, workDir string) {
 				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
 				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "4.0.0"`)
-				assert.Contains(t, string(content), `  newFeature: false`)
-				assert.Contains(t, string(content), `  more: "cakes"`)
+				assert.Contains(t, string(content), `version: "4.0.0"`)
+				assert.Contains(t, string(content), `newFeature: false`)
+				assert.Contains(t, string(content), `more: "foo"`)
 			},
 		},
 		{
-			name:       "no extra quotes around true number",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
-  version: "1.0.0"
-features:
-  newVersion: unknown
-`,
-				"overrides.yaml": `
-app:
-  version: "2.0.0"
-features:
-    newVersion: 42
-`,
-			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
-				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
-				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "2.0.0"`)
-				assert.Contains(t, string(content), `  newVersion: 42`)
-			},
-		},
-		{
-			name:       "extra quotes around string containing a valid number",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
-  version: "1.0.0"
-features:
-  newVersion: unknown
-`,
-				"overrides.yaml": `
-app:
-  version: "2.0.0"
-features:
-    newVersion: "42"
-`,
-			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
-				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
-				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "2.0.0"`)
-				assert.Contains(t, string(content), `  newVersion: "42"`)
-			},
-		},
-		{
-			name:       "success with single YAML file",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
-  version: "1.0.0"
-features:
-  newVersion: unknown
-`,
-			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
-				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
-				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "1.0.0"`)
-				assert.Contains(t, string(content), `  newVersion: unknown`)
-			},
-		},
-		{
-			name:       "success with dict and object",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-characters:
-- name: Anakin
+			name:    "merge complex structures with arrays",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `characters:
+- name: Something
   affiliation: Light side
-- name: Jabba
+- name: Wise
   affiliation: Toads
 weapon:
   kind: lightsabre
   color: green
 `,
-				"overrides.yaml": `
-characters:
-- name: Anakin
+				"overrides.yaml": `characters:
+- name: Something
   affiliation: Dark side
 weapon:
   color: red
 episode: 3
 `,
 			},
-			assertions: func(t *testing.T, workDir string, err error) {
-				assert.NoError(t, err)
+			validate: func(t *testing.T, workDir string) {
 				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
 				require.NoError(t, err)
-				require.Equal(
-					t,
-					string(`characters:
-- name: Anakin
+				expected := `characters:
+- name: Something
   affiliation: Dark side
 weapon:
   kind: lightsabre
   color: red
 episode: 3
-`),
-					string(content),
-				)
-			},
-		},
-
-		{
-			name:       "no InFiles",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "inFiles and OutFile must not be empty")
+`
+				assert.Equal(t, expected, string(content))
 			},
 		},
 		{
-			name:       "no OutFile",
-			outputPath: "",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
+			name:    "preserve number types without extra quotes",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
   version: "1.0.0"
 features:
-  newFeature: false
+  newVersion: unknown
 `,
-			},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "inFiles and OutFile must not be empty")
-			},
-		},
-		{
-			name:       "no Infiles and no OutFile",
-			outputPath: "",
-			inputPaths: map[string]string{},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "inFiles and OutFile must not be empty")
-			},
-		},
-		{
-			name:       "failed to read InFiles file",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"no_file.yaml": ``,
-			},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "error parsing first input file")
-			},
-		},
-		{
-			name:       "failed to read first InFiles content",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-this is:
-not a yaml file
-`,
-			},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "error parsing first input file")
-			},
-		},
-		{
-			name:       "failed to read second InFiles content",
-			outputPath: "modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
-  version: "1.0.0"
-features:
-  newFeature: false
-`,
-				"second.yaml": `
-this is:
-not a yaml file
-`,
-			},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "error parsing input file")
-			},
-		},
-		{
-			name:       "outputs folder does not exist",
-			outputPath: "no_folder/modified.yaml",
-			inputPaths: map[string]string{
-				"base.yaml": `
-app:
-  version: "1.0.0"
-features:
-  newFeature: false
-`,
-				"overrides.yaml": `
-app:
+				"overrides.yaml": `app:
   version: "2.0.0"
+features:
+  newVersion: 42
 `,
 			},
-			assertions: func(t *testing.T, _ string, err error) {
-				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "error writing the merged file to")
+			validate: func(t *testing.T, workDir string) {
+				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(content), `version: "2.0.0"`)
+				assert.Contains(t, string(content), `newVersion: 42`)
+				assert.NotContains(t, string(content), `newVersion: "42"`)
+			},
+		},
+		{
+			name:    "preserve string numbers with quotes",
+			outPath: "modified.yaml",
+			files: map[string]string{
+				"base.yaml": `app:
+  version: "1.0.0"
+features:
+  newVersion: unknown
+`,
+				"overrides.yaml": `app:
+  version: "2.0.0"
+features:
+  newVersion: "42"
+`,
+			},
+			validate: func(t *testing.T, workDir string) {
+				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(content), `version: "2.0.0"`)
+				assert.Contains(t, string(content), `newVersion: "42"`)
 			},
 		},
 	}
@@ -451,32 +383,53 @@ app:
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := t.TempDir()
 
-			// if outputPath is not empty, set it to the right place
-			var workOutFile string
-			if tt.outputPath != "" && tt.outputPath != "no_file.yaml" {
-				workOutFile = path.Join(workDir, tt.outputPath)
-			}
+			// Build input file paths and create files
+			var inPaths []string
+			for fileName, content := range tt.files {
+				filePath := path.Join(workDir, fileName)
+				inPaths = append(inPaths, filePath)
 
-			workInFiles := []string{}
-			for p, c := range tt.inputPaths {
-				workInFiles = append(workInFiles, path.Join(workDir, p))
-
-				// do not add the file if it is supposed to be in a non-existing folder
-				if path.Dir(p) == "no_folder" {
+				// Skip creating files that should be missing
+				skip := false
+				for _, skipFile := range tt.skipFiles {
+					if fileName == skipFile {
+						skip = true
+						break
+					}
+				}
+				if skip {
 					continue
 				}
-				require.NoError(t, os.MkdirAll(path.Join(workDir, path.Dir(p)), 0o700))
 
-				// create the file if is is supposed to exist
-				if p != "no_file.yaml" {
-					require.NoError(t, os.WriteFile(path.Join(workDir, p), []byte(c), 0o600))
-				}
-
+				// Create directory and file
+				require.NoError(t, os.MkdirAll(path.Dir(filePath), 0o700))
+				require.NoError(t, os.WriteFile(filePath, []byte(content), 0o600))
 			}
 
-			sort.Strings(workInFiles)
-			err := MergeFiles(workInFiles, workOutFile)
-			tt.assertions(t, workDir, err)
+			// Sort for consistent ordering
+			sort.Strings(inPaths)
+
+			// Build output path
+			var outPath string
+			if tt.outPath != "" {
+				outPath = path.Join(workDir, tt.outPath)
+				// Create output directory unless we're testing missing directory
+				if !tt.skipOutDir {
+					require.NoError(t, os.MkdirAll(path.Dir(outPath), 0o700))
+				}
+			}
+
+			err := MergeFiles(inPaths, outPath)
+
+			if tt.expectedErr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				require.NoError(t, err)
+				if tt.validate != nil {
+					tt.validate(t, workDir)
+				}
+			}
 		})
 	}
 }

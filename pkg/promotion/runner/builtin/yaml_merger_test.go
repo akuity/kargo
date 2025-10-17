@@ -82,101 +82,82 @@ func Test_yamlMerger_convert(t *testing.T) {
 func Test_YAMLMerger_run(t *testing.T) {
 	tests := []struct {
 		name       string
-		stepCtx    *promotion.StepContext
 		cfg        builtin.YAMLMergeConfig
 		files      map[string]string
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
-			name: "successful run with modified outputs",
-			stepCtx: &promotion.StepContext{
-				Project: "test-project",
-			},
+			name: "successful merge with multiple files",
 			cfg: builtin.YAMLMergeConfig{
 				InFiles: []string{"base.yaml", "overrides.yaml"},
 				OutFile: "modified.yaml",
 			},
 			files: map[string]string{
-				"base.yaml": `
-app:
+				"base.yaml": `app:
   version: "1.0.0"
 features:
   newFeature: false
 `,
-				"overrides.yaml": `
-app:
+				"overrides.yaml": `app:
   version: "2.0.0"
 `,
 			},
-			assertions: func(t *testing.T, workDir string, _ promotion.StepResult, err error) {
-				assert.NoError(t, err)
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
 				content, err := os.ReadFile(path.Join(workDir, "modified.yaml"))
 				require.NoError(t, err)
-				assert.Contains(t, string(content), `  version: "2.0.0"`)
-				assert.Contains(t, string(content), `  newFeature: false`)
+				assert.Contains(t, string(content), `version: "2.0.0"`)
+				assert.Contains(t, string(content), `newFeature: false`)
+
+				assert.NotNil(t, result.Output)
+				commitMsg, ok := result.Output["commitMessage"].(string)
+				require.True(t, ok)
+				assert.Contains(t, commitMsg, "Merged 2 YAML files")
 			},
 		},
 		{
-			name: "failed to read InFiles file when ignoreMissingFiles is false",
-			stepCtx: &promotion.StepContext{
-				Project: "test-project",
-			},
+			name: "error when input file not found and ignoreMissingFiles is false",
 			cfg: builtin.YAMLMergeConfig{
-				InFiles:            []string{"non-existent/values.yaml"},
-				OutFile:            "modified.yaml",
+				InFiles:            []string{"non-existent.yaml"},
+				OutFile:            "output.yaml",
 				IgnoreMissingFiles: false,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.Equal(t, err.Error(), "input file not found: non-existent/values.yaml")
+				require.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.Contains(t, err.Error(), `input file "non-existent.yaml" not found`)
 			},
 		},
 		{
-			name: "failed when nonexistent input file is given",
-			stepCtx: &promotion.StepContext{
-				Project: "test-project",
-			},
+			name: "error when all files missing and ignoreMissingFiles is true",
 			cfg: builtin.YAMLMergeConfig{
-				InFiles:            []string{"non-existent/values.yaml"},
-				OutFile:            "modified.yaml",
+				InFiles:            []string{"missing1.yaml", "missing2.yaml"},
+				OutFile:            "output.yaml",
 				IgnoreMissingFiles: true,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.NoError(t, err)
-				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusSucceeded,
-					Output: map[string]any{"commitMessage": "no YAML files merged"},
-				}, result)
+				require.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.Contains(t, err.Error(), "no input files found to merge")
 			},
 		},
 		{
-			name: "no outputs provided",
-			stepCtx: &promotion.StepContext{
-				Project: "test-project",
-			},
+			name: "error when output path is invalid",
 			cfg: builtin.YAMLMergeConfig{
-				InFiles: []string{"base.yaml", "overrides.yaml"},
+				InFiles: []string{"base.yaml"},
 				OutFile: "",
 			},
 			files: map[string]string{
-				"base.yaml": `
-app:
+				"base.yaml": `app:
   version: "1.0.0"
-features:
-  newFeature: false
-`,
-				"overrides.yaml": `
-app:
-  version: "2.0.0"
 `,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, result)
-				assert.Contains(t, err.Error(), "could not merge YAML files: ")
+				require.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.Contains(t, err.Error(), "error merging YAML files")
 			},
 		},
 	}
@@ -185,12 +166,16 @@ app:
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stepCtx := tt.stepCtx
+			stepCtx := &promotion.StepContext{
+				Project: "test-project",
+				WorkDir: t.TempDir(),
+			}
 
-			stepCtx.WorkDir = t.TempDir()
-			for p, c := range tt.files {
-				require.NoError(t, os.MkdirAll(path.Join(stepCtx.WorkDir, path.Dir(p)), 0o700))
-				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
+			// Setup test files
+			for filePath, content := range tt.files {
+				fullPath := path.Join(stepCtx.WorkDir, filePath)
+				require.NoError(t, os.MkdirAll(path.Dir(fullPath), 0o700))
+				require.NoError(t, os.WriteFile(fullPath, []byte(content), 0o600))
 			}
 
 			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
@@ -201,36 +186,38 @@ app:
 
 func Test_YAMLMerger_generateCommitMessage(t *testing.T) {
 	tests := []struct {
-		name            string
-		path            string
-		files           []string
-		expectedMessage string
+		name     string
+		outPath  string
+		inFiles  []string
+		expected string
 	}{
 		{
-			name: "successful run with two files",
-			path: "out/test.yaml",
-			files: []string{
-				"base.yaml",
-				"overrides.yaml",
-			},
-			expectedMessage: `Merged YAML files to out/test.yaml
-
+			name:    "multiple files",
+			outPath: "out/test.yaml",
+			inFiles: []string{"base.yaml", "overrides.yaml"},
+			expected: `Merged 2 YAML files to out/test.yaml
 - base.yaml
 - overrides.yaml`,
 		},
 		{
-			name:            "successful run without files",
-			path:            "out/test.yaml",
-			files:           []string{},
-			expectedMessage: `no YAML files merged`,
+			name:     "single file",
+			outPath:  "out/test.yaml",
+			inFiles:  []string{"base.yaml"},
+			expected: "Merged base.yaml to out/test.yaml",
+		},
+		{
+			name:     "no files returns empty string",
+			outPath:  "out/test.yaml",
+			inFiles:  []string{},
+			expected: "",
 		},
 	}
-	runner := &yamlMerger{}
 
+	runner := &yamlMerger{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := runner.generateCommitMessage(tt.path, tt.files)
-			require.Equal(t, result, tt.expectedMessage)
+			result := runner.generateCommitMessage(tt.outPath, tt.inFiles)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

@@ -169,20 +169,23 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 
 	// read all other YAML files and merge them
 	for _, inputPath := range inputPaths[1:] {
-		patchNode, err := kyaml.ReadFile(inputPath)
-		if err != nil {
-			return fmt.Errorf("error parsing input file %s: %w", inputPath, err)
+		patchNode, readErr := kyaml.ReadFile(inputPath)
+		if readErr != nil {
+			return fmt.Errorf("error parsing input file %s: %w", inputPath, readErr)
 		}
 
-		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: MergeListIncreaseDirection})
+		mergedNode, err = merge2.Merge(
+			patchNode,
+			mergedNode,
+			kyaml.MergeOptions{ListIncreaseDirection: MergeListIncreaseDirection},
+		)
 		if err != nil {
 			return fmt.Errorf("error merging file %s: %w", inputPath, err)
 		}
 	}
 
 	// write the resulting file
-	err = kyaml.WriteFile(mergedNode, outputPath)
-	if err != nil {
+	if err = kyaml.WriteFile(mergedNode, outputPath); err != nil {
 		return fmt.Errorf("error writing the merged file to %s: %w", outputPath, err)
 	}
 
