@@ -134,12 +134,15 @@ func (g *gitPushPusher) run(
 		// Attempt to rebase on top of the state of the remote branch to help
 		// avoid conflicts.
 		PullRebase: true,
+		// Allow force push if explicitly requested in config
+		Force: cfg.Force,
 	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
 		// TargetBranch and GenerateTargetBranch are mutually exclusive, so we're
 		// never overwriting a user-specified target branch here.
 		pushOpts.TargetBranch = fmt.Sprintf("kargo/promotion/%s", stepCtx.Promotion)
+		// Always force push for generated branches to ensure they can be overwritten
 		pushOpts.Force = true
 	}
 	if pushOpts.TargetBranch == "" {
