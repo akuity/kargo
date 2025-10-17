@@ -3,7 +3,6 @@ package external
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -17,11 +16,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
-)
-
-const (
-	nestedArtifactoryRepoURL = "artifactory.example.com/test-repo/foo/bar/test-image"
-	basicArtifactoryRepoURL  = "artifactory.example.com/other-test-repo/other-test-image"
 )
 
 func TestArtifactoryHandler(t *testing.T) {
@@ -79,11 +73,12 @@ func TestArtifactoryHandler(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name       string
-		client     client.Client
-		secretData map[string][]byte
-		req        func() *http.Request
-		assertions func(*testing.T, *httptest.ResponseRecorder)
+		name            string
+		client          client.Client
+		secretData      map[string][]byte
+		virtualRepoName string
+		req             func() *http.Request
+		assertions      func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
 			name: "signing key (shared secret) missing from Secret data",
@@ -200,7 +195,9 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusBadRequest, rr.Code)
-				require.JSONEq(t, `{"error":"invalid path"}`, rr.Body.String())
+				require.JSONEq(t, `{"error":"invalid value \"invalidpath\" in payload's data.path field"}`,
+					rr.Body.String(),
+				)
 			},
 		},
 		{
@@ -365,8 +362,9 @@ func TestArtifactoryHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed (custom header with repo URLs)",
-			secretData: testSecretData,
+			name:            "warehouse refreshed (virtual repo)",
+			secretData:      testSecretData,
+			virtualRepoName: "virtual-test-repo",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
@@ -375,10 +373,9 @@ func TestArtifactoryHandler(t *testing.T) {
 					},
 					Spec: kargoapi.WarehouseSpec{
 						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{
-								// Artifactory supports nested repository structures
-								RepoURL:    "artifactory.example.com/test-repo/foo/bar/test-image",
-								Constraint: "^1.0.0",
+							Chart: &kargoapi.ChartSubscription{
+								RepoURL:          "oci://artifactory.example.com/virtual-test-repo/foo/bar/test-chart",
+								SemverConstraint: "^1.0.0",
 							},
 						}},
 					},
@@ -389,7 +386,9 @@ func TestArtifactoryHandler(t *testing.T) {
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
 			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validImagePushEventWithUnsetOrigin)
+				validNestedChartPushEvent := validChartPushEvent
+				validNestedChartPushEvent.Data.Path = "foo/bar/test-chart/latest/chart.tgz"
+				bodyBytes, err := json.Marshal(validNestedChartPushEvent)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
@@ -397,69 +396,11 @@ func TestArtifactoryHandler(t *testing.T) {
 					bytes.NewBuffer(bodyBytes),
 				)
 				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
-				req.Header.Set(artifactoryRepoURLHeader, "artifactory.example.com/test-repo/foo/bar/test-image")
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, rr.Code)
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
-			},
-		},
-		{
-			name:       "warehouse refreshed (custom header with multiple repo URLs)",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "fake-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{
-								// Artifactory supports nested repository structures
-								RepoURL:    nestedArtifactoryRepoURL,
-								Constraint: "^1.0.0",
-							},
-						}},
-					},
-				},
-				&kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "other-warehouse",
-					},
-					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Image: &kargoapi.ImageSubscription{
-								RepoURL:    basicArtifactoryRepoURL,
-								Constraint: "^1.0.0",
-							},
-						}},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Warehouse{},
-				indexer.WarehousesBySubscribedURLsField,
-				indexer.WarehousesBySubscribedURLs,
-			).Build(),
-			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validImagePushEventWithUnsetOrigin)
-				require.NoError(t, err)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bytes.NewBuffer(bodyBytes),
-				)
-				req.Header.Set(artifactoryAuthHeader, signWithoutAlgoPrefix(bodyBytes))
-				req.Header.Set(artifactoryRepoURLHeader,
-					fmt.Sprintf("%s,%s", nestedArtifactoryRepoURL, basicArtifactoryRepoURL),
-				)
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 2 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 	}
@@ -478,6 +419,7 @@ func TestArtifactoryHandler(t *testing.T) {
 					project:    testProjectName,
 					secretData: testCase.secretData,
 				},
+				virtualRepoName: testCase.virtualRepoName,
 			}).getHandler(requestBody)(w, testCase.req())
 
 			testCase.assertions(t, w)
