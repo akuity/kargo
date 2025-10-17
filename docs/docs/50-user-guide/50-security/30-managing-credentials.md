@@ -511,9 +511,9 @@ section of the Operator Guide.
 
 ### Google Artifact Registry
 
-The authentication options described in this section are applicable only to
-container image repositories whose URLs indicate they are hosted in Google
-Artifact Registry.
+The authentication options described in this section are applicable to both
+container image repositories and OCI Helm chart repositories whose URLs indicate
+they are hosted in Google Artifact Registry.
 
 #### Long-Lived Credentials {#gar-long-lived-credentials}
 
@@ -549,6 +549,21 @@ metadata:
 stringData:
   gcpServiceAccountKey: <base64-encoded service account key>
   repoURL: <artifact registry url>
+```
+
+For OCI Helm chart repositories, the `Secret` should be labeled with `helm` instead:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: <name>
+  namespace: <project namespace>
+  labels:
+    kargo.akuity.io/cred-type: helm
+stringData:
+  gcpServiceAccountKey: <base64-encoded service account key>
+  repoURL: <oci helm chart repository url>
 ```
 
 :::note
