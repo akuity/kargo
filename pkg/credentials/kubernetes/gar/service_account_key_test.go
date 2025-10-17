@@ -36,7 +36,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		expected bool
 	}{
 		{
-			name:     "valid GAR repo with service account key",
+			name:     "valid GCR image repo with service account key",
 			credType: credentials.TypeImage,
 			repoURL:  fakeGCRImageRepoURL,
 			data: map[string][]byte{
@@ -45,7 +45,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "valid GCR repo with service account key",
+			name:     "valid GAR image repo with service account key",
 			credType: credentials.TypeImage,
 			repoURL:  fakeGARImageRepoURL,
 			data: map[string][]byte{
@@ -87,7 +87,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		},
 		// Helm chart test cases
 		{
-			name:     "valid GAR OCI Helm repo with service account key",
+			name:     "valid GAR chart repo with service account key",
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGARChartRepoURL,
 			data: map[string][]byte{
@@ -96,7 +96,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "valid GCR OCI Helm repo with service account key",
+			name:     "valid GCR chart repo with service account key",
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGCRChartRepoURL,
 			data: map[string][]byte{
@@ -105,16 +105,16 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name:     "Helm repo without oci:// prefix",
+			name:     "Helm chart repo without oci:// prefix",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGARChartRepoURL,
+			repoURL:  fakeGARImageRepoURL, // Uses image URL without oci:// prefix
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
 			expected: false,
 		},
 		{
-			name:     "Helm repo with non-GAR/GCR URL",
+			name:     "Helm chart repo with non-GAR/GCR URL",
 			credType: credentials.TypeHelm,
 			repoURL:  "oci://docker.io/library/nginx",
 			data: map[string][]byte{
@@ -123,7 +123,7 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "Helm repo missing service account key",
+			name:     "Helm chart repo missing service account key",
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGARChartRepoURL,
 			data:     map[string][]byte{},

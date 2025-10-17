@@ -84,36 +84,36 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 		},
 		// Helm chart test cases
 		{
-			name: "supports Helm credentials for GAR OCI URL",
+			name: "supports Helm credentials for GAR chart URL",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGARChartRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GAR OCI URL with Helm credentials")
+				assert.True(t, result, "should support GAR chart URL with Helm credentials")
 			},
 		},
 		{
-			name: "supports Helm credentials for GCR OCI URL",
+			name: "supports Helm credentials for GCR chart URL",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeHelm,
 			repoURL:  fakeGCRChartRepoURL,
 			assert: func(t *testing.T, result bool) {
-				assert.True(t, result, "should support GCR OCI URL with Helm credentials")
+				assert.True(t, result, "should support GCR chart URL with Helm credentials")
 			},
 		},
 		{
-			name: "rejects Helm credentials for non-OCI URL",
+			name: "rejects Helm credentials for chart URL without oci:// prefix",
 			provider: &WorkloadIdentityFederationProvider{
 				projectID: fakeProjectID,
 			},
 			credType: credentials.TypeHelm,
-			repoURL:  fakeGARChartRepoURL,
+			repoURL:  fakeGARImageRepoURL, // Uses image URL without oci:// prefix
 			assert: func(t *testing.T, result bool) {
-				assert.False(t, result, "should not support non-OCI URL with Helm credentials")
+				assert.False(t, result, "should not support chart URL without oci:// prefix")
 			},
 		},
 		{

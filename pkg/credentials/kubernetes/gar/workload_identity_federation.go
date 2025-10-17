@@ -87,7 +87,7 @@ func (p *WorkloadIdentityFederationProvider) Supports(
 	_ map[string][]byte,
 	_ map[string]string,
 ) bool {
-	if p.projectID == "" || !(credType == credentials.TypeImage || credType == credentials.TypeHelm) {
+	if p.projectID == "" || credType != credentials.TypeImage && credType != credentials.TypeHelm {
 		return false
 	}
 
