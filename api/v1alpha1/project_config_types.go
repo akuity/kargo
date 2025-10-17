@@ -287,6 +287,33 @@ type ArtifactoryWebhookReceiverConfig struct {
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// VirtualRepoName is the name of an Artifactory virtual repository.
+	//
+	// When unspecified, the Artifactory webhook receiver depends on the value of
+	// the webhook payload's `data.repo_key` field when inferring the URL of the
+	// repository from which the webhook originated, which will always be an
+	// Artifactory "local repository." In cases where a Warehouse subscribes to
+	// such a repository indirectly via a "virtual repository," there will be a
+	// discrepancy between the inferred (local) repository URL and the URL
+	// actually used by the subscription, which can prevent the receiver from
+	// identifying such a Warehouse as one in need of refreshing. When specified,
+	// the value of the VirtualRepoName field supersedes the value of the webhook
+	// payload's `data.repo_key` field to compensate for that discrepancy.
+	//
+	// In practice, when using virtual repositories, a separate Artifactory
+	// webhook receiver should be configured for each, but one such receiver can
+	// handle inbound webhooks from any number of local repositories that are
+	// aggregated by that virtual repository. For example, if a virtual repository
+	// `proj-virtual` aggregates container images from all of the `proj`
+	// Artifactory project's local image repositories, with a single webhook
+	// configured to post to a single receiver configured for the `proj-virtual`
+	// virtual repository, an image pushed to
+	// `example.frog.io/proj-<local-repo-name>/<path>/image`, will cause that
+	// receiver to refresh all Warehouses subscribed to
+	// `example.frog.io/proj-virtual/<path>/image`.
+	//
+	// +optional
+	VirtualRepoName string `json:"virtualRepoName,omitempty" protobuf:"bytes,2,opt,name=virtualRepoName"`
 }
 
 // AzureWebhookReceiverConfig describes a webhook receiver that is compatible

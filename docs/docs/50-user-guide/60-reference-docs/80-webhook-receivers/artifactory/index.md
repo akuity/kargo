@@ -88,6 +88,57 @@ spec:
         name: artifactory-wh-secret
 ```
 
+### Virtual Repositories
+
+When Warehouses intended to be refreshed by an Artifactory webhook receiver
+subscribe to Artifactory
+[virtual repositories](https://jfrog.com/help/r/jfrog-artifactory-documentation/virtual-repositories) there will be discrepancies between the URLs the receiver will
+infer for the
+[local repositories](https://jfrog.com/help/r/jfrog-artifactory-documentation/local-repositories) from which push events have originated and the URLs actually used
+by those Warehouses' subscriptions.
+
+To compensate for this, a value can be provided for the Artifactory webhook
+receiver configuration's `virtualRepoName` field. When specified, its value
+supersedes the local repository name found in the webhook's payload, which
+allows the receiver to infer the correct virtual repository URL for which all
+subscribed Warehouses should be refreshed.
+
+In practice, when using virtual repositories, a separate Artifactory webhook
+receiver should be configured _for each_, but one such receiver can handle
+events originating from _any number_ of local repositories that are aggregated by
+that virtual repository. For example, if a virtual repository `proj-virtual`
+aggregates container images from all of the `proj` Artifactory project's local
+image repositories, with a single webhook configured to post to the following
+receiver, an image pushed to
+`example.frog.io/proj-<local-repo-name>/<path>/image`, will correctly cause that
+receiver to refresh all Warehouses subscribed to
+`example.frog.io/proj-virtual/<path>/image`.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: artifactory-wh-secret
+  namespace: kargo-demo
+  labels:
+    kargo.akuity.io/cred-type: generic
+data:
+  secret-token: <base64-encoded secret token>
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers: 
+  - name: proj-virtual-wh-receiver
+    artifactory:
+      secretRef:
+        name: artifactory-wh-secret
+      virtualRepoName: proj-virtual
+```
+
 ## Retrieving the Receiver's URL
 
 Kargo will generate a hard-to-guess URL from the receiver's configuration. This
@@ -167,18 +218,6 @@ kubectl get projectconfigs kargo-demo \
         :::caution
         The webhook receiver won't accept unsigned requests.
         :::
-
-    1. Optionally, in the <Hlt>Headers</Hlt> section, you can set a custom `X-Kargo-Repo-URLs` header.
-
-        :::info
-        The value of `X-Kargo-Repo-URLs` can either be a single repository URL
-        or a comma-separated list of repository URLs. If set, any warehouses 
-        with subscriptions to the designated repository URL(s) will be
-        refreshed. This can be useful for repositories with unconventional 
-        naming schemes or self-hosted instances.
-        :::
-
-        ![Custom Headers](./img/custom-headers.png "Custom Headers")
 
     1. Click <Hlt>Save</Hlt>.
 
