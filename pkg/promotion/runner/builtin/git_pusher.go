@@ -132,15 +132,17 @@ func (g *gitPushPusher) run(
 		// Start with whatever was specified in the config, which may be empty.
 		TargetBranch: cfg.TargetBranch,
 		// Attempt to rebase on top of the state of the remote branch to help
-		// avoid conflicts.
-		PullRebase: true,
+		// avoid conflicts, unless force push is enabled.
+		PullRebase: !cfg.ForcePush,
+		// Set force push based on configuration
+		Force: cfg.ForcePush,
 	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
 		// TargetBranch and GenerateTargetBranch are mutually exclusive, so we're
 		// never overwriting a user-specified target branch here.
 		pushOpts.TargetBranch = fmt.Sprintf("kargo/promotion/%s", stepCtx.Promotion)
-		pushOpts.Force = true
+		pushOpts.Force = true // Always force push for generated branches
 	}
 	if pushOpts.TargetBranch == "" {
 		// If targetBranch is still empty, we want to set it to the current branch

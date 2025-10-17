@@ -219,6 +219,10 @@ type GitOpenPRConfig struct {
 }
 
 type GitPushConfig struct {
+	// Whether to force push to the target branch. When true, this will overwrite the remote
+	// branch history without attempting to rebase. Use with caution as this can cause data
+	// loss. Default is false.
+	ForcePush bool `json:"forcePush,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
 	// currently checked out branch.

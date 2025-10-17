@@ -32,9 +32,15 @@ Stages that write to the same branch do not write to the same files.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
+| `forcePush` | `boolean` | N | Whether to force push to the target branch. When true, this will overwrite the remote branch history without attempting to rebase. Use with caution as this can cause data loss. Default is false. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
+
 | `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
+
+:::warning
+When `forcePush` is set to `true`, the step will overwrite the remote branch history without attempting to rebase or resolve conflicts. This can cause data loss if other commits have been pushed to the same branch. Use this option only when you're certain that you want to replace the entire branch history.
+:::
 
 ## Output
 
