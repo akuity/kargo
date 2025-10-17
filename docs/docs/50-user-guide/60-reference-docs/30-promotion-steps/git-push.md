@@ -34,6 +34,7 @@ Stages that write to the same branch do not write to the same files.
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
+| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
 | `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
 
 ## Output
@@ -94,4 +95,31 @@ steps:
     path: ./out
     generateTargetBranch: true
 # Open a PR and wait for it to be merged or closed...
+```
+
+### Force Push for Complete Branch Replacement
+
+In this example, the step force pushes to completely replace the content of a
+target branch. This is useful when pushing rendered manifests or generated
+content that doesn't depend on previous state and you want to ignore the git
+history.
+
+:::warning
+**Use force push with caution!** This will overwrite any commits that exist on
+the remote branch but not in your local branch. This can cause data loss if
+not used carefully.
+:::
+
+```yaml
+steps:
+# Clone, prepare the contents of ./out, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests
+- uses: git-push
+  config:
+    path: ./out
+    targetBranch: main
+    force: true
 ```
