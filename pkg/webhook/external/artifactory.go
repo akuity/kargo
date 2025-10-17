@@ -27,7 +27,6 @@ const (
 	artifactoryAuthHeader      = "X-Jfrog-Event-Auth"
 	artifactorySecretDataKey   = "secret-token"
 	artifactory                = "artifactory"
-	artifactoryRepoURLHeader   = "X-Kargo-Repo-URLs"
 )
 
 var artifactoryValidImageTypes = []string{
@@ -51,6 +50,7 @@ func init() {
 // handles inbound webhooks from Jfrog Artifactory.
 type artifactoryWebhookReceiver struct {
 	*baseWebhookReceiver
+	virtualRepoName string
 }
 
 // newArtifactoryWebhookReceiver returns a new instance of
@@ -66,6 +66,7 @@ func newArtifactoryWebhookReceiver(
 			project:    project,
 			secretName: cfg.Artifactory.SecretRef.Name,
 		},
+		virtualRepoName: cfg.Artifactory.VirtualRepoName,
 	}
 }
 
@@ -166,58 +167,61 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 			return
 		}
 
-		var repoURLs []string
-		if repoURLsHeader := r.Header.Get(artifactoryRepoURLHeader); repoURLsHeader != "" {
-			repoURLs = strings.Split(repoURLsHeader, ",")
-		} else {
-			originURL, err := url.Parse(payload.Origin)
-			if err != nil {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
-				)
-				return
-			}
-
-			pathSections := strings.Split(payload.Data.Path, "/")
-			if len(pathSections) < 2 {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid path"), http.StatusBadRequest),
-				)
-				return
-			}
-
-			repoURL := strings.Join(
-				append(
-					[]string{originURL.Host, payload.Data.RepoKey},
-					pathSections[:len(pathSections)-2]...,
+		originURL, err := url.Parse(payload.Origin)
+		if err != nil {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("invalid value %q in payload's jpd_origin field", payload.Origin),
+					http.StatusBadRequest,
 				),
-				"/",
 			)
-			repoURLs = append(repoURLs, repoURL)
+			return
 		}
 
-		for i, repoURL := range repoURLs {
-			switch payload.Data.ImageType {
-			case artifactoryDockerDomain:
-				repoURLs[i] = urls.NormalizeImage(repoURL)
-			case artifactoryChartImageType:
-				repoURLs[i] = urls.NormalizeChart(repoURL)
-			default:
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(
-						fmt.Errorf("unsupported image type %q", payload.Data.ImageType),
-						http.StatusNotImplemented,
-					),
-				)
-				return
-			}
+		pathSections := strings.Split(payload.Data.Path, "/")
+		if len(pathSections) < 2 {
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("invalid value %q in payload's data.path field", payload.Data.Path),
+					http.StatusBadRequest,
+				),
+			)
+			return
 		}
-		logger = logger.WithValues("repoURLs", repoURLs)
+
+		repoName := payload.Data.RepoKey
+		if a.virtualRepoName != "" {
+			repoName = a.virtualRepoName
+		}
+
+		repoURL := strings.Join(
+			append(
+				[]string{originURL.Host, repoName},
+				pathSections[:len(pathSections)-2]...,
+			),
+			"/",
+		)
+
+		switch payload.Data.ImageType {
+		case artifactoryDockerDomain:
+			repoURL = urls.NormalizeImage(repoURL)
+		case artifactoryChartImageType:
+			repoURL = urls.NormalizeChart(repoURL)
+		default:
+			xhttp.WriteErrorJSON(
+				w,
+				xhttp.Error(
+					fmt.Errorf("unsupported image type %q", payload.Data.ImageType),
+					http.StatusNotImplemented,
+				),
+			)
+			return
+		}
+		logger = logger.WithValues("repoURL", repoURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, payload.Data.Tag)
+		refreshWarehouses(ctx, w, a.client, a.project, []string{repoURL}, payload.Data.Tag)
 	})
 }
 

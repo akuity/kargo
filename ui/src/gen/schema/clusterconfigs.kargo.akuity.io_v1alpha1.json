@@ -35,6 +35,10 @@
                     },
                     "type": "object",
                     "x-kubernetes-map-type": "atomic"
+                  },
+                  "virtualRepoName": {
+                    "description": "VirtualRepoName is the name of an Artifactory virtual repository.\n\nWhen unspecified, the Artifactory webhook receiver depends on the value of\nthe webhook payload's `data.repo_key` field when inferring the URL of the\nrepository from which the webhook originated, which will always be an\nArtifactory \"local repository.\" In cases where a Warehouse subscribes to\nsuch a repository indirectly via a \"virtual repository,\" there will be a\ndiscrepancy between the inferred (local) repository URL and the URL\nactually used by the subscription, which can prevent the receiver from\nidentifying such a Warehouse as one in need of refreshing. When specified,\nthe value of the VirtualRepoName field supersedes the value of the webhook\npayload's `data.repo_key` field to compensate for that discrepancy.\n\nIn practice, when using virtual repositories, a separate Artifactory\nwebhook receiver should be configured for each, but one such receiver can\nhandle inbound webhooks from any number of local repositories that are\naggregated by that virtual repository. For example, if a virtual repository\n`proj-virtual` aggregates container images from all of the `proj`\nArtifactory project's local image repositories, with a single webhook\nconfigured to post to a single receiver configured for the `proj-virtual`\nvirtual repository, an image pushed to\n`example.frog.io/proj-<local-repo-name>/<path>/image`, will cause that\nreceiver to refresh all Warehouses subscribed to\n`example.frog.io/proj-virtual/<path>/image`.",
+                    "type": "string"
                   }
                 },
                 "required": [
