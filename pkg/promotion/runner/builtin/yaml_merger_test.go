@@ -77,17 +77,6 @@ func Test_yamlMerger_convert(t *testing.T) {
 	require.True(t, ok)
 
 	runValidationTests(t, runner.convert, tests)
-	// for _, tc := range tests {
-	// 	t.Run(tc.name, func(t *testing.T) {
-	// 		err := runner.validate(tc.config)
-	// 		if tc.expectedError == "" {
-	// 			assert.NoError(t, err)
-	// 		} else {
-	// 			assert.Error(t, err)
-	// 			assert.Contains(t, err.Error(), tc.expectedError)
-	// 		}
-	// 	})
-	// }
 }
 
 func Test_YAMLMerger_run(t *testing.T) {
@@ -140,7 +129,7 @@ app:
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
 				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.Contains(t, err.Error(), "error accessing file ")
+				assert.Equal(t, err.Error(), "input file not found: non-existent/values.yaml")
 			},
 		},
 		{
@@ -154,9 +143,11 @@ app:
 				IgnoreMissingFiles: true,
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				assert.Error(t, err)
-				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, result)
-				assert.Contains(t, err.Error(), "could not merge YAML files:")
+				assert.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusSucceeded,
+					Output: map[string]any{"commitMessage": "no YAML files merged"},
+				}, result)
 			},
 		},
 		{
@@ -204,6 +195,42 @@ app:
 
 			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
+		})
+	}
+}
+
+func Test_YAMLMerger_generateCommitMessage(t *testing.T) {
+	tests := []struct {
+		name            string
+		path            string
+		files           []string
+		expectedMessage string
+	}{
+		{
+			name: "successful run with two files",
+			path: "out/test.yaml",
+			files: []string{
+				"base.yaml",
+				"overrides.yaml",
+			},
+			expectedMessage: `Merged YAML files to out/test.yaml
+
+- base.yaml
+- overrides.yaml`,
+		},
+		{
+			name:            "successful run without files",
+			path:            "out/test.yaml",
+			files:           []string{},
+			expectedMessage: `no YAML files merged`,
+		},
+	}
+	runner := &yamlMerger{}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := runner.generateCommitMessage(tt.path, tt.files)
+			require.Equal(t, result, tt.expectedMessage)
 		})
 	}
 }

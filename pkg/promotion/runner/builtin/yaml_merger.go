@@ -62,14 +62,13 @@ func (y *yamlMerger) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.YAMLMergeConfig,
 ) (promotion.StepResult, error) {
-
 	// Secure join the input paths to prevent path traversal attacks.
 	filePaths := []string{}
 	for _, path := range cfg.InFiles {
 		inFile, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("could not secure join input file %q: %w", path, err)
+				fmt.Errorf("invalid input file path %q: %w", path, err)
 		}
 
 		// only add existing files
@@ -79,7 +78,7 @@ func (y *yamlMerger) run(
 				continue
 			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("error accessing file %s: %w", inFile, err)
+				fmt.Errorf("input file not found: %s", path)
 
 		}
 		filePaths = append(filePaths, inFile)
@@ -90,20 +89,22 @@ func (y *yamlMerger) run(
 	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not secure join outFile %q: %w", cfg.OutFile, err)
+			fmt.Errorf("invalid output file path %q: %w", cfg.OutFile, err)
 	}
 
-	// ensure output path fully exist
+	// ensure output path fully exists
 	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating directory structure %s: %w", filepath.Dir(outFile), err)
 	}
 
-	// Merge files
-	err = yaml.MergeFiles(filePaths, outFile)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("could not merge YAML files: %w", err)
+	// merge files if the provided list is not empty, which may happen
+	// when IgnoreMissingFiles to true
+	if len(filePaths) != 0 {
+		if err = yaml.MergeFiles(filePaths, outFile); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("could not merge YAML files: %w", err)
+		}
 	}
 
 	// Add a commit message fragment to the step's output.

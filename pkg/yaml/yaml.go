@@ -13,6 +13,12 @@ import (
 	"sigs.k8s.io/kustomize/kyaml/yaml/merge2"
 )
 
+const (
+	// MergeListIncreaseDirection indicates should merge function prepend the items from
+	// source list to destination or append.
+	MergeListIncreaseDirection = 1
+)
+
 // Update represents a discrete update to be made to a YAML document.
 type Update struct {
 	// Key is the dot-separated path to the field to update.
@@ -152,7 +158,7 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 // MergeFiles merges a list of YAML files.
 func MergeFiles(inputPaths []string, outputPath string) error {
 	if len(inputPaths) == 0 || outputPath == "" {
-		return fmt.Errorf("inFiles and OutFile must not be empty")
+		return fmt.Errorf("inFiles and outFile must not be empty")
 	}
 
 	// read first YAML file
@@ -161,16 +167,16 @@ func MergeFiles(inputPaths []string, outputPath string) error {
 		return fmt.Errorf("error parsing first input file: %w", err)
 	}
 
-	// read all other YAML file and apply the patch
-	for i := 1; i < len(inputPaths); i++ {
-		patchNode, fileErr := kyaml.ReadFile(inputPaths[i])
-		if fileErr != nil {
-			return fmt.Errorf("error parsing input file %s: %w", inputPaths[i], fileErr)
+	// read all other YAML files and merge them
+	for _, inputPath := range inputPaths[1:] {
+		patchNode, err := kyaml.ReadFile(inputPath)
+		if err != nil {
+			return fmt.Errorf("error parsing input file %s: %w", inputPath, err)
 		}
 
-		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: 1})
+		mergedNode, err = merge2.Merge(patchNode, mergedNode, kyaml.MergeOptions{ListIncreaseDirection: MergeListIncreaseDirection})
 		if err != nil {
-			return fmt.Errorf("error merging file %s: %w", inputPaths[i], err)
+			return fmt.Errorf("error merging file %s: %w", inputPath, err)
 		}
 	}
 
