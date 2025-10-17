@@ -83,7 +83,18 @@ type UnstructuredPatchFn func(src, dest unstructured.Unstructured) error
 // patch the object, or convert the result back to its typed form.
 func PatchUnstructured(ctx context.Context, c client.Client, obj ObjectWithKind, modify UnstructuredPatchFn) error {
 	destObj := unstructured.Unstructured{}
-	destObj.SetGroupVersionKind(obj.GroupVersionKind())
+
+	gvk := obj.GroupVersionKind()
+	if gvk.Empty() {
+		var err error
+		if gvk, err = c.GroupVersionKindFor(obj); err != nil {
+			return fmt.Errorf(
+				"unable to determine GroupVersionKind for object %q in namespace %q: %w",
+				obj.GetName(), obj.GetNamespace(), err,
+			)
+		}
+	}
+	destObj.SetGroupVersionKind(gvk)
 
 	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		if err := c.Get(ctx, client.ObjectKeyFromObject(obj), &destObj); err != nil {
