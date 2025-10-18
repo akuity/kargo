@@ -89,6 +89,14 @@ func UtilityOperations() []expr.Option {
 	}
 }
 
+// PromotionOperations returns a slice of expr.Option containing functions for
+// promotion-specific operations, such as URL generation.
+func PromotionOperations(uiBaseURL, project, stage string) []expr.Option {
+	return []expr.Option{
+		UIForURL(uiBaseURL, project, stage),
+	}
+}
+
 // StatusOperations returns a slice of expr.Option containing functions for
 // assessing the status of all preceding steps.
 func StatusOperations(
@@ -966,4 +974,37 @@ const (
 // The cache key is a string formatted as "<prefix>/<project>/<name>".
 func getCacheKey(prefix, project, name string) string {
 	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
+}
+
+// UIForURL returns an expr.Option that provides a `ui_for_url()` function for use in expressions.
+func UIForURL(uiBaseURL, project, stage string) expr.Option {
+	return expr.Function(
+		"ui_for_url",
+		getUIForURL(uiBaseURL, project, stage),
+		new(func(stageName ...string) string),
+	)
+}
+
+func getUIForURL(uiBaseURL, project, stage string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) > 1 {
+			return nil, fmt.Errorf("expected 0 or 1 arguments, got %d", len(a))
+		}
+
+		var targetStage string
+		if len(a) == 0 {
+			targetStage = stage
+		} else {
+			stageName, ok := a[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("argument must be string, got %T", a[0])
+			}
+			if stageName == "" {
+				return nil, fmt.Errorf("stage name must not be empty")
+			}
+			targetStage = stageName
+		}
+
+		return fmt.Sprintf("%s/project/%s/stage/%s", uiBaseURL, project, targetStage), nil
+	}
 }
