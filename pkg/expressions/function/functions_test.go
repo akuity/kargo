@@ -1869,3 +1869,60 @@ func Test_semverDiff(t *testing.T) {
 		})
 	}
 }
+
+func Test_uiForURL(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/stage/my-stage", result)
+			},
+		},
+		{
+			name: "with stage name",
+			args: []any{"production"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/stage/production", result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"stage1", "stage2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 0 or 1 arguments, got 2")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string, got int")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty stage name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "stage name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn := getUIForURL("https://kargo.example.com", "my-project", "my-stage")
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
