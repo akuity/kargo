@@ -1870,7 +1870,40 @@ func Test_semverDiff(t *testing.T) {
 	}
 }
 
-func Test_uiForURL(t *testing.T) {
+func Test_linkForProject(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project", result)
+			},
+		},
+		{
+			name: "with arguments",
+			args: []any{"extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 0 arguments, got 1")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn := getProjectLink("https://kargo.example.com", "my-project")
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_linkForStage(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       []any
@@ -1920,7 +1953,121 @@ func Test_uiForURL(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fn := getUIForURL("https://kargo.example.com", "my-project", "my-stage")
+			fn := getStageLink("https://kargo.example.com", "my-project", "my-stage")
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_linkForFreight(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/freight/freight-123", result)
+			},
+		},
+		{
+			name: "with freight ID",
+			args: []any{"freight-456"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/freight/freight-456", result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"freight1", "freight2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 0 or 1 arguments, got 2")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string, got int")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty freight ID",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "freight ID must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn := getFreightLink("https://kargo.example.com", "my-project", "freight-123")
+			result, err := fn(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_linkForPromotion(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/promotion/my-promo", result)
+			},
+		},
+		{
+			name: "with promotion name",
+			args: []any{"promo-2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, "https://kargo.example.com/project/my-project/promotion/promo-2", result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"p1", "p2"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 0 or 1 arguments, got 2")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string, got int")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty promotion name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "promotion name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fn := getPromotionLink("https://kargo.example.com", "my-project", "my-promo")
 			result, err := fn(tt.args...)
 			tt.assertions(t, result, err)
 		})

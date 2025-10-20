@@ -91,9 +91,12 @@ func UtilityOperations() []expr.Option {
 
 // PromotionOperations returns a slice of expr.Option containing functions for
 // promotion-specific operations, such as URL generation.
-func PromotionOperations(uiBaseURL, project, stage string) []expr.Option {
+func PromotionOperations(uiBaseURL, project, stage, freightID, promotion string) []expr.Option {
 	return []expr.Option{
-		UIForURL(uiBaseURL, project, stage),
+		ProjectLink(uiBaseURL, project),
+		StageLink(uiBaseURL, project, stage),
+		FreightLink(uiBaseURL, project, freightID),
+		PromotionLink(uiBaseURL, project, promotion),
 	}
 }
 
@@ -976,16 +979,46 @@ func getCacheKey(prefix, project, name string) string {
 	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
 }
 
-// UIForURL returns an expr.Option that provides a `ui_for_url()` function for use in expressions.
-func UIForURL(uiBaseURL, project, stage string) expr.Option {
+// ProjectLink returns an expr.Option that provides a `linkForProject()` function for
+// use in expressions.
+func ProjectLink(uiBaseURL, project string) expr.Option {
 	return expr.Function(
-		"ui_for_url",
-		getUIForURL(uiBaseURL, project, stage),
+		"linkForProject",
+		getProjectLink(uiBaseURL, project),
+		new(func() string),
+	)
+}
+
+// getProjectLink returns a function that generates a URL for the specified project.
+// The function takes no arguments and returns the project URL using the provided
+// base URL and project name.
+func getProjectLink(uiBaseURL, project string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) > 0 {
+			return nil, fmt.Errorf("expected 0 arguments, got %d", len(a))
+		}
+		return fmt.Sprintf("%s/project/%s", uiBaseURL, project), nil
+	}
+}
+
+// StageLink returns an expr.Option that provides a `linkForStage()` function for
+// use in expressions.
+func StageLink(uiBaseURL, project, stage string) expr.Option {
+	return expr.Function(
+		"linkForStage",
+		getStageLink(uiBaseURL, project, stage),
 		new(func(stageName ...string) string),
 	)
 }
 
-func getUIForURL(uiBaseURL, project, stage string) exprFn {
+// getStageLink returns a function that generates a URL for a stage. The function
+// can be called with zero or one argument:
+//   - With no arguments: returns the URL for the current stage
+//   - With one argument: returns the URL for the specified stage name
+//
+// If an invalid argument is provided (wrong type, empty string, or too many
+// arguments), the function returns an error.
+func getStageLink(uiBaseURL, project, stage string) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) > 1 {
 			return nil, fmt.Errorf("expected 0 or 1 arguments, got %d", len(a))
@@ -1006,5 +1039,87 @@ func getUIForURL(uiBaseURL, project, stage string) exprFn {
 		}
 
 		return fmt.Sprintf("%s/project/%s/stage/%s", uiBaseURL, project, targetStage), nil
+	}
+}
+
+// FreightLink returns an expr.Option that provides a `linkForFreight()` function for
+// use in expressions.
+func FreightLink(uiBaseURL, project, freightID string) expr.Option {
+	return expr.Function(
+		"linkForFreight",
+		getFreightLink(uiBaseURL, project, freightID),
+		new(func(freightID ...string) string),
+	)
+}
+
+// getFreightLink returns a function that generates a URL for freight. The function
+// can be called with zero or one argument:
+//   - With no arguments: returns the URL for the current freight
+//   - With one argument: returns the URL for the specified freight ID
+//
+// If an invalid argument is provided (wrong type, empty string, or too many
+// arguments), the function returns an error.
+func getFreightLink(uiBaseURL, project, freightID string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) > 1 {
+			return nil, fmt.Errorf("expected 0 or 1 arguments, got %d", len(a))
+		}
+
+		var targetFreightID string
+		if len(a) == 0 {
+			targetFreightID = freightID
+		} else {
+			freightIDArg, ok := a[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("argument must be string, got %T", a[0])
+			}
+			if freightIDArg == "" {
+				return nil, fmt.Errorf("freight ID must not be empty")
+			}
+			targetFreightID = freightIDArg
+		}
+
+		return fmt.Sprintf("%s/project/%s/freight/%s", uiBaseURL, project, targetFreightID), nil
+	}
+}
+
+// PromotionLink returns an expr.Option that provides a `linkForPromotion()` function for
+// use in expressions.
+func PromotionLink(uiBaseURL, project, promotion string) expr.Option {
+	return expr.Function(
+		"linkForPromotion",
+		getPromotionLink(uiBaseURL, project, promotion),
+		new(func(promotionName ...string) string),
+	)
+}
+
+// getPromotionLink returns a function that generates a URL for a promotion. The function
+// can be called with zero or one argument:
+//   - With no arguments: returns the URL for the current promotion
+//   - With one argument: returns the URL for the specified promotion name
+//
+// If an invalid argument is provided (wrong type, empty string, or too many
+// arguments), the function returns an error.
+func getPromotionLink(uiBaseURL, project, promotion string) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) > 1 {
+			return nil, fmt.Errorf("expected 0 or 1 arguments, got %d", len(a))
+		}
+
+		var targetPromotion string
+		if len(a) == 0 {
+			targetPromotion = promotion
+		} else {
+			name, ok := a[0].(string)
+			if !ok {
+				return nil, fmt.Errorf("argument must be string, got %T", a[0])
+			}
+			if name == "" {
+				return nil, fmt.Errorf("promotion name must not be empty")
+			}
+			targetPromotion = name
+		}
+
+		return fmt.Sprintf("%s/project/%s/promotion/%s", uiBaseURL, project, targetPromotion), nil
 	}
 }
