@@ -341,8 +341,40 @@ controller restart clears the cache.
 
 ### Azure Container Registry (ACR)
 
-Support for authentication to ACR repositories using workload identity is not
-yet implemented. Assuming/impersonating a project-specific principal in Azure is
-notably complex. So, while a future release is very likely to implement some
-form of support for ACR and workload identity, it is unlikely to match the
-capabilities Kargo provides for ECR or GAR.
+Kargo can be configured to authenticate to ACR repositories using 
+[Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview).
+
+If Kargo locates no `Secret` resources matching a repository URL and is deployed
+within an AKS cluster with workload identity enabled, it will attempt to use it 
+to authenticate. Leveraging this eliminates the need to store ACR credentials
+in a `Secret` resource.
+
+Follow 
+[this guide](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)
+to set up workload identity in your AKS cluster. You will associate a managed 
+identity with the `kargo-controller` `ServiceAccount` within the namespace in 
+which Kargo is (or will be) installed.
+
+:::note
+To use workload identity, you will need to annotate the `kargo-controller` 
+`ServiceAccount` with the client ID of the managed identity using the 
+`azure.workload.identity/client-id` annotation. This can be done via the 
+`controller.serviceAccount.annotations` setting in Kargo's Helm chart at 
+installation.
+:::
+
+The managed identity associated with the Kargo controller should be granted the 
+`AcrPull` role on the ACR repositories that Kargo needs to access. This can be 
+done at the registry level or at the repository level for more granular access 
+control.
+
+:::caution
+For optimal adherence to the principle of least permissions, the managed identity
+associated with the `kargo-controller` `ServiceAccount` should be limited only
+to the `AcrPull` role on the specific ACR repositories required by your Kargo
+projects.
+:::
+
+Tokens Kargo obtains for accessing any specific ACR repository are valid for 
+approximately 3 hours and cached for 2.5 hours. A controller restart clears 
+the cache.
