@@ -34,7 +34,7 @@ Stages that write to the same branch do not write to the same files.
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
-| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you need to rewrite commit history (e.g., after cleaning up commits, removing sensitive data, or synchronizing divergent histories). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. When `force: true`, the step will skip the pull/rebase operation to allow overwriting remote history. Default is `false`. |
+| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
 | `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
 
 ## Output
@@ -44,7 +44,6 @@ Stages that write to the same branch do not write to the same files.
 | `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 | `commitURL` | `string` | The URL of the commit that was pushed to the remote repository. |
-
 
 ## Examples
 
@@ -75,7 +74,7 @@ steps:
 In this example, changes are pushed to a generated branch name that follows
 the pattern `kargo/promotion/<promotionName>`. By setting
 `generateTargetBranch: true`, the step creates a unique branch name that can
-be referenced by subsequent steps. 
+be referenced by subsequent steps.
 
 This is commonly used as part of a pull request workflow, where changes are
 first pushed to an intermediate branch before being proposed as a pull request.
@@ -97,3 +96,27 @@ steps:
 # Open a PR and wait for it to be merged or closed...
 ```
 
+### Force Push for Rendered Manifests
+
+In this example, rendered manifests are pushed with force enabled. This is useful when the rendered output completely replaces the previous state and doesn't depend on any previous commits in the branch.
+
+This pattern is common when using tools like `helm-template` or `kustomize-build` to generate Kubernetes manifests, where each promotion generates a fresh set of manifests that should completely replace what was previously in the branch.
+
+```yaml
+steps:
+# Clone, render manifests, etc...
+- uses: helm-template
+  config:
+    chart: ./charts/my-app
+    values: ./values/staging.yaml
+    outPath: ./out
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests for staging
+- uses: git-push
+  config:
+    path: ./out
+    targetBranch: staging
+    force: true  # Force push to completely replace branch content
+```
