@@ -224,11 +224,16 @@ func RunningPromotionsByArgoCDApplications(
 				continue
 			}
 
+			var rawConfig []byte
+			if step.Config != nil {
+				rawConfig = step.Config.Raw
+			}
+
 			dirStep := promotion.Step{
 				Kind:   step.Uses,
 				Alias:  step.As,
 				Vars:   step.Vars,
-				Config: step.Config.Raw,
+				Config: rawConfig,
 			}
 
 			// As step-level variables are allowed to reference to output, we
