@@ -511,9 +511,9 @@ section of the Operator Guide.
 
 ### Google Artifact Registry
 
-The authentication options described in this section are applicable only to
-container image repositories whose URLs indicate they are hosted in Google
-Artifact Registry.
+The authentication options described in this section are applicable to both
+container image repositories and OCI Helm chart repositories whose URLs indicate
+they are hosted in Google Artifact Registry.
 
 #### Long-Lived Credentials {#gar-long-lived-credentials}
 
@@ -538,18 +538,35 @@ out this process and will cache the access token for a period of 40 minutes.
 
 To use this option, your `Secret` should take the following form:
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: <name>
-  namespace: <project namespace>
-  labels:
-    kargo.akuity.io/cred-type: image
-stringData:
-  gcpServiceAccountKey: <base64-encoded service account key>
-  repoURL: <artifact registry url>
-```
+* For a container image repository:
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: <name>
+    namespace: <project namespace>
+    labels:
+      kargo.akuity.io/cred-type: image
+  stringData:
+    gcpServiceAccountKey: <base64-encoded service account key>
+    repoURL: us-central1-docker.pkg.dev/my-project/my-images
+  ```
+
+* For an OCI Helm chart repository:
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: <name>
+    namespace: <project namespace>
+    labels:
+      kargo.akuity.io/cred-type: helm
+  stringData:
+    gcpServiceAccountKey: <base64-encoded service account key>
+    repoURL: oci://us-central1-docker.pkg.dev/my-project/my-helm-charts/my-chart
+  ```
 
 :::note
 Service account keys contain structured data, so it is important that the
@@ -577,7 +594,8 @@ Federation instead.
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within a GKE cluster, it will attempt to use
 [Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
-to authenticate, but this relies upon some external setup. Leveraging this
+to authenticate. This works for both container image repositories and OCI Helm
+chart repositories, and relies upon some external setup. Leveraging this
 option eliminates the need to store credentials in a `Secret` resource.
 
 :::info
