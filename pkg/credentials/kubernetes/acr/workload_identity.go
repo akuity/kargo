@@ -16,6 +16,20 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
+const (
+	// ACRTokenValidityHours is the typical validity period for ACR refresh tokens
+	ACRTokenValidityHours = 3
+	// CacheTTLMinutes is how long we cache ACR tokens before refreshing them.
+	// Set to 2.5 hours to ensure we refresh before the 3-hour token expiry.
+	CacheTTLMinutes = 150
+	// CleanupIntervalMinutes is how often the cache cleanup runs
+	CleanupIntervalMinutes = 30
+	// ACRTokenUsername is the fixed username used for ACR token authentication
+	ACRTokenUsername = "00000000-0000-0000-0000-000000000000"
+	// ACRScope is the Azure AD scope required for ACR authentication
+	ACRScope = "https://containerregistry.azure.net/.default"
+)
+
 // WorkloadIdentityProvider implements credentials.Provider for Azure Container Registry
 // workload identity authentication.
 type WorkloadIdentityProvider struct {
@@ -41,9 +55,8 @@ func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 
 	p := &WorkloadIdentityProvider{
 		tokenCache: cache.New(
-			// ACR refresh tokens are typically valid for 3 hours. We'll cache them for 2.5 hours.
-			150*time.Minute, // Default ttl for each entry
-			30*time.Minute,  // Cleanup interval
+			CacheTTLMinutes*time.Minute,        // Default ttl for each entry
+			CleanupIntervalMinutes*time.Minute, // Cleanup interval
 		),
 		credential: credential,
 	}
@@ -99,8 +112,13 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
 		token := entry.(string) // nolint: forcetypeassert
+		logging.LoggerFromContext(ctx).Debug(
+			"using cached ACR token from workload identity provider",
+			"registry", registryName,
+			"project", project,
+		)
 		return &credentials.Credentials{
-			Username: "00000000-0000-0000-0000-000000000000", // ACR username for token auth
+			Username: ACRTokenUsername,
 			Password: token,
 		}, nil
 	}
@@ -126,8 +144,14 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	// Cache the token
 	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
 
+	logging.LoggerFromContext(ctx).Debug(
+		"obtained new ACR token from workload identity provider",
+		"registry", registryName,
+		"project", project,
+	)
+
 	return &credentials.Credentials{
-		Username: "00000000-0000-0000-0000-000000000000", // ACR username for token auth
+		Username: ACRTokenUsername,
 		Password: accessToken,
 	}, nil
 }
@@ -137,9 +161,8 @@ func (p *WorkloadIdentityProvider) getAccessToken(ctx context.Context, registryN
 	logger := logging.LoggerFromContext(ctx).WithValues("registryName", registryName)
 
 	// Get Azure AD access token with the standard ACR scope
-	scope := "https://containerregistry.azure.net/.default"
 	token, err := p.credential.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{scope},
+		Scopes: []string{ACRScope},
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to get Azure AD access token for ACR: %w", err)
