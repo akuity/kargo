@@ -510,6 +510,10 @@ func (r *reconciler) promote(
 	// Prepare promotion steps and vars for the promotion execution engine.
 	steps := make([]promotion.Step, len(workingPromo.Spec.Steps))
 	for i, step := range workingPromo.Spec.Steps {
+		var rawConfig []byte
+		if step.Config != nil {
+			rawConfig = step.Config.Raw
+		}
 		steps[i] = promotion.Step{
 			Kind:            step.Uses,
 			Alias:           step.As,
@@ -517,7 +521,7 @@ func (r *reconciler) promote(
 			ContinueOnError: step.ContinueOnError,
 			Retry:           step.Retry,
 			Vars:            step.Vars,
-			Config:          step.Config.Raw,
+			Config:          rawConfig,
 		}
 	}
 
