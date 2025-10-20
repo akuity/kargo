@@ -142,7 +142,16 @@ func (g *gitPushPusher) run(
 		// TargetBranch and GenerateTargetBranch are mutually exclusive, so we're
 		// never overwriting a user-specified target branch here.
 		pushOpts.TargetBranch = fmt.Sprintf("kargo/promotion/%s", stepCtx.Promotion)
-		// Always force push for generated branches to ensure they can be overwritten
+		// Since the name of the generated branch incorporates the Promotion's
+		// name, which itself incorporates a UUID, we assume this branch did not exist
+		// in the remote repository prior to this Promotion. If it somehow does, the
+		// only practical explanation for that would be that, for some reason, the
+		// entire promotion process has restarted from step zero AFTER having
+		// executed this step successfully on a prior attempt. (This can happen,
+		// for instance, if the controller were restarted mid-promotion.) Enabling
+		// the force push option here prevents this step from failing under those
+		// circumstances, and as long as the reasonable assumption that this
+		// branch is specific to this Promotion only holds, it is also safe to do this.
 		pushOpts.Force = true
 	}
 
