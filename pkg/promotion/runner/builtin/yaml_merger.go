@@ -72,19 +72,17 @@ func (y *yamlMerger) run(
 		}
 
 		if _, err = os.Stat(inFile); err != nil {
-			if os.IsNotExist(err) && cfg.IgnoreMissingFiles {
-				continue
+			if os.IsNotExist(err) {
+				if cfg.IgnoreMissingFiles {
+					continue
+				}
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+					fmt.Errorf("input file %q not found: %w", path, err)
 			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("input file %q not found: %w", path, err)
+				fmt.Errorf("unexpected error with file %q: %w", path, err)
 		}
 		filePaths = append(filePaths, inFile)
-	}
-
-	// Require at least one input file to merge
-	if len(filePaths) == 0 {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("no input files found to merge")
 	}
 
 	// Validate output path
@@ -97,13 +95,25 @@ func (y *yamlMerger) run(
 	// Ensure output directory exists
 	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error creating directory %q: %w", filepath.Dir(outFile), err)
+			fmt.Errorf("error ensuring existence of directory %q: %w", filepath.Dir(outFile), err)
 	}
 
-	// Merge YAML files
-	if err = yaml.MergeFiles(filePaths, outFile); err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error merging YAML files: %w", err)
+	if len(filePaths) == 0 {
+		if !cfg.IgnoreMissingFiles {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("no input files found to merge")
+		}
+		// Create an empty output file when ignoreMissingFiles is true
+		if err = os.WriteFile(outFile, []byte{}, 0o600); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error creating empty output file: %w", err)
+		}
+	} else {
+		// Merge YAML files
+		if err = yaml.MergeFiles(filePaths, outFile); err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error merging YAML files: %w", err)
+		}
 	}
 
 	// Generate commit message with relative paths

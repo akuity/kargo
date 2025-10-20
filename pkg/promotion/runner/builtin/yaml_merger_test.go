@@ -87,6 +87,36 @@ func Test_YAMLMerger_run(t *testing.T) {
 		assertions func(*testing.T, string, promotion.StepResult, error)
 	}{
 		{
+			name: "error when input file not found and ignoreMissingFiles is false",
+			cfg: builtin.YAMLMergeConfig{
+				InFiles:            []string{"non-existent.yaml"},
+				OutFile:            "output.yaml",
+				IgnoreMissingFiles: false,
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.Contains(t, err.Error(), `input file "non-existent.yaml" not found`)
+			},
+		},
+		{
+			name: "error when output path is invalid",
+			cfg: builtin.YAMLMergeConfig{
+				InFiles: []string{"base.yaml"},
+				OutFile: "",
+			},
+			files: map[string]string{
+				"base.yaml": `app:
+  version: "1.0.0"
+`,
+			},
+			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
+				require.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
+				assert.Contains(t, err.Error(), "error merging YAML files")
+			},
+		},
+		{
 			name: "successful merge with multiple files",
 			cfg: builtin.YAMLMergeConfig{
 				InFiles: []string{"base.yaml", "overrides.yaml"},
@@ -118,46 +148,21 @@ features:
 			},
 		},
 		{
-			name: "error when input file not found and ignoreMissingFiles is false",
-			cfg: builtin.YAMLMergeConfig{
-				InFiles:            []string{"non-existent.yaml"},
-				OutFile:            "output.yaml",
-				IgnoreMissingFiles: false,
-			},
-			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				require.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-				assert.Contains(t, err.Error(), `input file "non-existent.yaml" not found`)
-			},
-		},
-		{
-			name: "error when all files missing and ignoreMissingFiles is true",
+			name: "creates empty file when all files missing and ignoreMissingFiles is true",
 			cfg: builtin.YAMLMergeConfig{
 				InFiles:            []string{"missing1.yaml", "missing2.yaml"},
 				OutFile:            "output.yaml",
 				IgnoreMissingFiles: true,
 			},
-			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				require.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-				assert.Contains(t, err.Error(), "no input files found to merge")
-			},
-		},
-		{
-			name: "error when output path is invalid",
-			cfg: builtin.YAMLMergeConfig{
-				InFiles: []string{"base.yaml"},
-				OutFile: "",
-			},
-			files: map[string]string{
-				"base.yaml": `app:
-  version: "1.0.0"
-`,
-			},
-			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
-				require.Error(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.Status)
-				assert.Contains(t, err.Error(), "error merging YAML files")
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				// Verify empty output file was created
+				outputPath := path.Join(workDir, "output.yaml")
+				content, err := os.ReadFile(outputPath)
+				require.NoError(t, err)
+				assert.Empty(t, content, "output file should be empty")
 			},
 		},
 	}
