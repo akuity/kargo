@@ -263,6 +263,10 @@ type Step struct {
 func NewSteps(promo *kargoapi.Promotion) []Step {
 	result := make([]Step, len(promo.Spec.Steps))
 	for i, step := range promo.Spec.Steps {
+		var rawConfig []byte
+		if step.Config != nil {
+			rawConfig = step.Config.Raw
+		}
 		result[i] = Step{
 			Kind:            step.Uses,
 			Alias:           step.As,
@@ -270,7 +274,7 @@ func NewSteps(promo *kargoapi.Promotion) []Step {
 			ContinueOnError: step.ContinueOnError,
 			Retry:           step.Retry,
 			Vars:            step.Vars,
-			Config:          step.Config.Raw,
+			Config:          rawConfig,
 		}
 	}
 	return result
