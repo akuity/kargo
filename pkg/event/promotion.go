@@ -425,6 +425,10 @@ func newPromotion(
 			continue
 		}
 		var cfg builtin.ArgoCDUpdateConfig
+		if step.Config == nil {
+			continue
+		}
+
 		if err := json.Unmarshal(step.Config.Raw, &cfg); err != nil {
 			continue
 		}
