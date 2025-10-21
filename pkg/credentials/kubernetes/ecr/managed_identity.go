@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -82,7 +81,7 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 
 func (p *ManagedIdentityProvider) Supports(
 	credType credentials.Type,
-	repoURL string,
+	_ string,
 	_ map[string][]byte,
 	_ map[string]string,
 ) bool {
@@ -91,10 +90,6 @@ func (p *ManagedIdentityProvider) Supports(
 	}
 
 	if credType != credentials.TypeImage && credType != credentials.TypeHelm {
-		return false
-	}
-
-	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
 		return false
 	}
 
