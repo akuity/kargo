@@ -68,29 +68,49 @@ func (s *staticWebhookReceiver) getSecretValues(
 }
 
 // getHandler implements WebhookReceiver.
-func (s *staticWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
+func (s *staticWebhookReceiver) getHandler(_ []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx)
-
 		switch s.rule.Action {
 		case kargoapi.StaticWebhookActionRefresh:
-			if failures, err := refreshTargets(ctx, s.client, s.rule.Targets); err != nil {
-				numSuccessful := len(s.rule.Targets) - failures
-				logger.Info("finished refreshing targets with some failures",
-					"numSuccessful", numSuccessful,
-					"numFailed", failures,
-				)
-				xhttp.WriteErrorJSON(w,
-					fmt.Errorf("%d out of %d targets failed to refresh",
-						failures,
-						len(s.rule.Targets),
-					),
-				)
-				return
-			}
-			msg := fmt.Sprintf("successfully refreshed %d target(s)", len(s.rule.Targets))
-			xhttp.WriteResponseJSON(w, http.StatusOK, map[string]string{"msg": msg})
+			s.handleRefresh(w, r)
+		// If we decide to support other actions in the future, add cases here.
+		default:
+			xhttp.WriteErrorJSON(
+				w,
+				fmt.Errorf("unsupported action: %q", s.rule.Action),
+			)
 		}
 	})
+}
+
+func (s *staticWebhookReceiver) handleRefresh(w http.ResponseWriter, req *http.Request) {
+	ctx := req.Context()
+	logger := logging.LoggerFromContext(ctx)
+
+	targets := s.rule.Targets
+	if t := req.URL.Query().Get("target"); t != "" {
+		for _, rt := range s.rule.Targets {
+			if rt.Name == t {
+				targets = []kargoapi.StaticWebhookTarget{rt}
+				break
+			}
+		}
+	}
+
+	if failures, err := refreshTargets(ctx, s.client, targets); err != nil {
+		numSuccessful := len(s.rule.Targets) - failures
+		logger.Info("finished refreshing targets with some failures",
+			"numSuccessful", numSuccessful,
+			"numFailed", failures,
+		)
+		xhttp.WriteErrorJSON(w,
+			fmt.Errorf("refreshed %d/%d target(s) successfully",
+				numSuccessful,
+				len(s.rule.Targets),
+			),
+		)
+		return
+	}
+	msg := fmt.Sprintf("successfully refreshed %d target(s)", len(s.rule.Targets))
+	xhttp.WriteResponseJSON(w, http.StatusOK, map[string]string{"msg": msg})
 }

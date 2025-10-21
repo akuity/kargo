@@ -21,6 +21,9 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+// refreshTargets refreshes all targets specified in the given list. It returns the
+// number of targets that failed to refresh along with an aggregated error of
+// all encountered errors.
 func refreshTargets(
 	ctx context.Context,
 	client client.Client,
@@ -36,18 +39,24 @@ func refreshTargets(
 		}
 		switch t.Type {
 		case kargoapi.StaticWebhookTargetTypeWarehouse:
-			logger.Debug("refreshing Warehouse",
-				"namespace", t.Namespace,
-				"name", t.Name,
-			)
 			if _, err := api.RefreshWarehouse(ctx, client, nsName); err != nil {
 				logger.Error(err, "error refreshing Warehouse",
 					"namespace", t.Namespace,
 					"name", t.Name,
 				)
-				errors = append(errors, err)
+				errors = append(errors,
+					fmt.Errorf("error refreshing Warehouse %q in namespace %q: %w",
+						t.Namespace,
+						t.Name,
+						err,
+					),
+				)
 				failures++
 			}
+			logger.Info("refreshed Warehouse",
+				"namespace", t.Namespace,
+				"name", t.Name,
+			)
 		// If we decide to support refreshing other resources in the future, add cases here.
 		default:
 			err := fmt.Errorf("unsupported target type: %q", t.Type)
