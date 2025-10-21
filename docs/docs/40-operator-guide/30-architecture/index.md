@@ -237,7 +237,7 @@ and attempts to avoid the weaknesses of Argo CD's common topologies:
 **Hub-and-spoke:**
 
 - ✅ **High observability:** A centralized control plane amounts to a "single
-  pain of glass."
+  pane of glass."
 
 - ❌ **Security risks:** A centralized controller with privileged access to many
   clusters represents a high-value target and a single point of catastrophic
@@ -262,7 +262,7 @@ observability of a centralized control plane with the security and scalability
 of decentralized controllers:
 
 - ✅ **High observability:** A centralized control plane amounts to a "single
-  pain of glass."
+  pane of glass."
 
 - ✅ **More secure:** Distributed controllers that "phone home" to the
   centralized control plane mean the control plane has no privileged access to
