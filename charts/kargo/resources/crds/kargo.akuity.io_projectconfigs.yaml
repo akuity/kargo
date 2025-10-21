@@ -501,45 +501,41 @@ spec:
                           description: |-
                             Rules specifies the list of rules that define actions to be taken when
                             webhook events are received.
-                          items:
-                            properties:
-                              action:
-                                description: Action specifies the action to be performed
-                                  when the rule matches an incoming webhook event.
-                                enum:
-                                - RefreshWarehouses
-                                type: string
-                              targets:
-                                description: Targets specifies the list of targets
-                                  to which the action should be applied.
-                                items:
-                                  description: Target represents a target to which
-                                    an action should be applied.
-                                  properties:
-                                    name:
-                                      description: Name specifies the name of the
-                                        target.
-                                      type: string
-                                    namespace:
-                                      description: Namespace specifies the namespace
-                                        of the target.
-                                      type: string
-                                    type:
-                                      description: Type specifies the type of the
-                                        target.
-                                      enum:
-                                      - Warehouse
-                                      type: string
-                                  required:
-                                  - name
-                                  - namespace
-                                  - type
-                                  type: object
-                                type: array
-                            required:
-                            - action
-                            type: object
-                          type: array
+                          properties:
+                            action:
+                              description: Action specifies the action to be performed
+                                when the rule matches an incoming webhook event.
+                              enum:
+                              - RefreshWarehouses
+                              type: string
+                            targets:
+                              description: Targets specifies the list of targets to
+                                which the action should be applied.
+                              items:
+                                description: StaticWebhookTarget represents a target
+                                  to which an action should be applied.
+                                properties:
+                                  name:
+                                    description: Name specifies the name of the target.
+                                    type: string
+                                  namespace:
+                                    description: Namespace specifies the namespace
+                                      of the target.
+                                    type: string
+                                  type:
+                                    description: Type specifies the type of the target.
+                                    enum:
+                                    - Warehouse
+                                    type: string
+                                required:
+                                - name
+                                - namespace
+                                - type
+                                type: object
+                              type: array
+                          required:
+                          - action
+                          type: object
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook

@@ -2544,6 +2544,34 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-StaticWebhookReceiverConfig"></a>
+
+### StaticWebhookReceiverConfig
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
+| rules | [StaticWebhookRule](#github-com-akuity-kargo-api-v1alpha1-StaticWebhookRule) |  Rules specifies the list of rules that define actions to be taken when webhook events are received.   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-StaticWebhookRule"></a>
+
+### StaticWebhookRule
+ StaticWebhookRule defines a rule for processing incoming webhook events.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| action | [string](#string) |  Action specifies the action to be performed when the rule matches an incoming webhook event.   |
+| targets | [StaticWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-StaticWebhookTarget) |  Targets specifies the list of targets to which the action should be applied. |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-StaticWebhookTarget"></a>
+
+### StaticWebhookTarget
+ StaticWebhookTarget represents a target to which an action should be applied.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| type | [string](#string) |  Type specifies the type of the target.   |
+| name | [string](#string) |  Name specifies the name of the target.   |
+| namespace | [string](#string) |  Namespace specifies the namespace of the target.   |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-StepExecutionMetadata"></a>
 
 ### StepExecutionMetadata
@@ -2659,6 +2687,7 @@ RawFormat specifies the format for raw resource representation.
 | artifactory | [ArtifactoryWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig) |  Artifactory contains the configuration for a webhook receiver that is compatible with JFrog Artifactory payloads. |
 | azure | [AzureWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig) |  Azure contains the configuration for a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads. |
 | gitea | [GiteaWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig) |  Gitea contains the configuration for a webhook receiver that is compatible with Gitea payloads. |
+| static | [StaticWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-StaticWebhookReceiverConfig) |  Static contains the configuration for a webhook receiver that receives generic webhook events and performs actions based on static rules defined by the user. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WebhookReceiverDetails"></a>
 

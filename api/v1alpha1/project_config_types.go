@@ -365,33 +365,33 @@ type StaticWebhookReceiverConfig struct {
 	// webhook events are received.
 	//
 	// +kubebuilder:validation:Required
-	Rules []StaticWebhookRule `json:"rules,omitempty" protobuf:"bytes,2,rep,name=rules"`
+	Rule StaticWebhookRule `json:"rules,omitempty" protobuf:"bytes,2,opt,name=rules"`
 }
 
-// Action represents an action to be performed in response to a webhook event.
-type Action string
+// StaticWebhookAction represents an action to be performed in response to a webhook event.
+type StaticWebhookAction string
 
 const (
-	// ActionRefreshWarehouses indicates that the action to be performed is to
+	// ActioStaticWebhookActionRefreshnRefreshWarehouses indicates that the action to be performed is to
 	// patch the annotation key kargo.akuity.io/refresh with a new value;
 	// signaling downstream controllers to perform reconciliation against the target.
-	ActionRefresh Action = "Refresh"
+	StaticWebhookActionRefresh StaticWebhookAction = "Refresh"
 )
 
-// TargetType represents the type of target to which an action should be applied.
-type TargetType string
+// StaticWebhookTargetType represents the type of target to which an action should be applied.
+type StaticWebhookTargetType string
 
 const (
-	// TargetTypeWarehouse indicates that the target is a Warehouse.
-	TargetTypeWarehouse TargetType = "Warehouse"
+	//  StaticWebhookTargetType indicates that the target is a Warehouse.
+	StaticWebhookTargetTypeWarehouse StaticWebhookTargetType = "Warehouse"
 )
 
-// Target represents a target to which an action should be applied.
-type Target struct {
+// StaticWebhookTarget represents a target to which an action should be applied.
+type StaticWebhookTarget struct {
 	// Type specifies the type of the target.
 	//
 	// +kubebuilder:validation:Enum=Warehouse
-	Type TargetType `json:"type" protobuf:"bytes,1,opt,name=type"`
+	Type StaticWebhookTargetType `json:"type" protobuf:"bytes,1,opt,name=type"`
 
 	// Name specifies the name of the target.
 	//
@@ -404,14 +404,15 @@ type Target struct {
 	Namespace string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
 }
 
+// StaticWebhookRule defines a rule for processing incoming webhook events.
 type StaticWebhookRule struct {
 	// Action specifies the action to be performed when the rule matches an incoming webhook event.
 	//
 	// +kubebuilder:validation:Enum=RefreshWarehouses
-	Action Action `json:"action" protobuf:"bytes,1,opt,name=action"`
+	Action StaticWebhookAction `json:"action" protobuf:"bytes,1,opt,name=action"`
 
 	// Targets specifies the list of targets to which the action should be applied.
-	Targets []Target `json:"targets,omitempty" protobuf:"bytes,2,rep,name=targets"`
+	Targets []StaticWebhookTarget `json:"targets,omitempty" protobuf:"bytes,2,rep,name=targets"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

@@ -1847,9 +1847,10 @@ message StaticWebhookReceiverConfig {
   // webhook events are received.
   //
   // +kubebuilder:validation:Required
-  repeated StaticWebhookRule rules = 2;
+  optional StaticWebhookRule rules = 2;
 }
 
+// StaticWebhookRule defines a rule for processing incoming webhook events.
 message StaticWebhookRule {
   // Action specifies the action to be performed when the rule matches an incoming webhook event.
   //
@@ -1857,7 +1858,25 @@ message StaticWebhookRule {
   optional string action = 1;
 
   // Targets specifies the list of targets to which the action should be applied.
-  repeated Target targets = 2;
+  repeated StaticWebhookTarget targets = 2;
+}
+
+// StaticWebhookTarget represents a target to which an action should be applied.
+message StaticWebhookTarget {
+  // Type specifies the type of the target.
+  //
+  // +kubebuilder:validation:Enum=Warehouse
+  optional string type = 1;
+
+  // Name specifies the name of the target.
+  //
+  // +kubebuilder:validation:Required
+  optional string name = 2;
+
+  // Namespace specifies the namespace of the target.
+  //
+  // +kubebuilder:validation:Required
+  optional string namespace = 3;
 }
 
 // StepExecutionMetadata tracks metadata pertaining to the execution of
@@ -1888,24 +1907,6 @@ message StepExecutionMetadata {
   // also will not permit this failure to impact the overall status of the
   // Promotion.
   optional bool continueOnError = 7;
-}
-
-// Target represents a target to which an action should be applied.
-message Target {
-  // Type specifies the type of the target.
-  //
-  // +kubebuilder:validation:Enum=Warehouse
-  optional string type = 1;
-
-  // Name specifies the name of the target.
-  //
-  // +kubebuilder:validation:Required
-  optional string name = 2;
-
-  // Namespace specifies the namespace of the target.
-  //
-  // +kubebuilder:validation:Required
-  optional string namespace = 3;
 }
 
 // Verification describes how to verify that a Promotion has been successful
