@@ -132,6 +132,9 @@ type WebhookReceiverConfig struct {
 	// Gitea contains the configuration for a webhook receiver that is compatible
 	// with Gitea payloads.
 	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
+	// Static contains the configuration for a webhook receiver that receives generic webhook events
+	// and performs actions based on static rules defined by the user.
+	Static *StaticWebhookReceiverConfig `json:"static,omitempty" protobuf:"bytes,11,opt,name=static"`
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -340,6 +343,75 @@ type AzureWebhookReceiverConfig struct {
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+}
+
+type StaticWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly when registering a webhook.
+	// It is used only by Kargo to create a complex, hard-to-guess URL,
+	// which implicitly serves as a shared secret.
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+
+	// Rules specifies the list of rules that define actions to be taken when
+	// webhook events are received.
+	//
+	// +kubebuilder:validation:Required
+	Rules []StaticWebhookRule `json:"rules,omitempty" protobuf:"bytes,2,rep,name=rules"`
+}
+
+// Action represents an action to be performed in response to a webhook event.
+type Action string
+
+const (
+	// ActionRefreshWarehouses indicates that the action to be performed is to
+	// patch the annotation key kargo.akuity.io/refresh with a new value;
+	// signaling downstream controllers to perform reconciliation against the target.
+	ActionRefresh Action = "Refresh"
+)
+
+// TargetType represents the type of target to which an action should be applied.
+type TargetType string
+
+const (
+	// TargetTypeWarehouse indicates that the target is a Warehouse.
+	TargetTypeWarehouse TargetType = "Warehouse"
+)
+
+// Target represents a target to which an action should be applied.
+type Target struct {
+	// Type specifies the type of the target.
+	//
+	// +kubebuilder:validation:Enum=Warehouse
+	Type TargetType `json:"type" protobuf:"bytes,1,opt,name=type"`
+
+	// Name specifies the name of the target.
+	//
+	// +kubebuilder:validation:Required
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+
+	// Namespace specifies the namespace of the target.
+	//
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace,omitempty" protobuf:"bytes,3,opt,name=namespace"`
+}
+
+type StaticWebhookRule struct {
+	// Action specifies the action to be performed when the rule matches an incoming webhook event.
+	//
+	// +kubebuilder:validation:Enum=RefreshWarehouses
+	Action Action `json:"action" protobuf:"bytes,1,opt,name=action"`
+
+	// Targets specifies the list of targets to which the action should be applied.
+	Targets []Target `json:"targets,omitempty" protobuf:"bytes,2,rep,name=targets"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
