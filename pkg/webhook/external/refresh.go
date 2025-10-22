@@ -21,56 +21,6 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
-// refreshTargets refreshes all targets specified in the given list. It returns the
-// number of targets that failed to refresh along with an aggregated error of
-// all encountered errors.
-func refreshTargets(
-	ctx context.Context,
-	client client.Client,
-	targets []kargoapi.StaticWebhookTarget,
-) (int, error) {
-	logger := logging.LoggerFromContext(ctx)
-	var errors []error
-	var failures int
-	for _, t := range targets {
-		nsName := types.NamespacedName{
-			Namespace: t.Namespace,
-			Name:      t.Name,
-		}
-		switch t.Type {
-		case kargoapi.StaticWebhookTargetTypeWarehouse:
-			if _, err := api.RefreshWarehouse(ctx, client, nsName); err != nil {
-				logger.Error(err, "error refreshing Warehouse",
-					"namespace", t.Namespace,
-					"name", t.Name,
-				)
-				errors = append(errors,
-					fmt.Errorf("error refreshing Warehouse %q in namespace %q: %w",
-						t.Namespace,
-						t.Name,
-						err,
-					),
-				)
-				failures++
-			}
-			logger.Info("refreshed Warehouse",
-				"namespace", t.Namespace,
-				"name", t.Name,
-			)
-		// If we decide to support refreshing other resources in the future, add cases here.
-		default:
-			err := fmt.Errorf("unsupported target type: %q", t.Type)
-			logger.Error(err, "error refreshing target",
-				"namespace", t.Namespace,
-				"name", t.Name,
-				"type", t.Type,
-			)
-			errors = append(errors, err)
-		}
-	}
-	return failures, kerrors.Flatten(kerrors.NewAggregate(errors))
-}
-
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are
@@ -222,4 +172,55 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) 
 		}
 	}
 	return false, nil
+}
+
+// refreshTargets refreshes all targets specified in the given list. It returns the
+// number of targets that failed to refresh along with an aggregated error of
+// all encountered errors.
+func refreshTargets(
+	ctx context.Context,
+	kClient client.Client,
+	targets []kargoapi.StaticWebhookTarget,
+) (int, error) {
+	logger := logging.LoggerFromContext(ctx)
+	var errors []error
+	var failures int
+	for _, t := range targets {
+		nsName := types.NamespacedName{
+			Namespace: t.Namespace,
+			Name:      t.Name,
+		}
+		switch t.Type {
+		case kargoapi.StaticWebhookTargetTypeWarehouse:
+			if _, err := api.RefreshWarehouse(ctx, kClient, nsName); err != nil {
+				logger.Error(err, "error refreshing Warehouse",
+					"namespace", t.Namespace,
+					"name", t.Name,
+				)
+				errors = append(errors,
+					fmt.Errorf("error refreshing Warehouse %q in namespace %q: %w",
+						t.Namespace,
+						t.Name,
+						err,
+					),
+				)
+				failures++
+				continue
+			}
+			logger.Info("refreshed Warehouse",
+				"namespace", t.Namespace,
+				"name", t.Name,
+			)
+		// If we decide to support refreshing other resources in the future, add cases here.
+		default:
+			err := fmt.Errorf("unsupported target type: %q", t.Type)
+			logger.Error(err, "error refreshing target",
+				"namespace", t.Namespace,
+				"name", t.Name,
+				"type", t.Type,
+			)
+			errors = append(errors, err)
+		}
+	}
+	return failures, kerrors.Flatten(kerrors.NewAggregate(errors))
 }

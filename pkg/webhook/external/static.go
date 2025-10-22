@@ -77,7 +77,10 @@ func (s *staticWebhookReceiver) getHandler(_ []byte) http.HandlerFunc {
 		default:
 			xhttp.WriteErrorJSON(
 				w,
-				fmt.Errorf("unsupported action: %q", s.rule.Action),
+				xhttp.Error(
+					fmt.Errorf("unsupported action: %q", s.rule.Action),
+					http.StatusBadRequest,
+				),
 			)
 		}
 	})
@@ -89,6 +92,7 @@ func (s *staticWebhookReceiver) handleRefresh(w http.ResponseWriter, req *http.R
 
 	targets := s.rule.Targets
 	if t := req.URL.Query().Get("target"); t != "" {
+		logger.Info("filtering refresh to single target", "target", t)
 		for _, rt := range s.rule.Targets {
 			if rt.Name == t {
 				targets = []kargoapi.StaticWebhookTarget{rt}
@@ -99,18 +103,24 @@ func (s *staticWebhookReceiver) handleRefresh(w http.ResponseWriter, req *http.R
 
 	if failures, err := refreshTargets(ctx, s.client, targets); err != nil {
 		numSuccessful := len(s.rule.Targets) - failures
-		logger.Info("finished refreshing targets with some failures",
+		logger.Error(err, "failures during refresh",
+			"totalTargets", len(s.rule.Targets),
 			"numSuccessful", numSuccessful,
 			"numFailed", failures,
 		)
-		xhttp.WriteErrorJSON(w,
-			fmt.Errorf("refreshed %d/%d target(s) successfully",
-				numSuccessful,
-				len(s.rule.Targets),
-			),
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusInternalServerError,
+			map[string]string{
+				"error": fmt.Sprintf(
+					"failed to refresh %d of %d target(s)",
+					failures,
+					len(s.rule.Targets),
+				),
+			},
 		)
 		return
 	}
-	msg := fmt.Sprintf("successfully refreshed %d target(s)", len(s.rule.Targets))
+	msg := fmt.Sprintf("successfully refreshed %d target(s)", len(targets))
 	xhttp.WriteResponseJSON(w, http.StatusOK, map[string]string{"msg": msg})
 }
