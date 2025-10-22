@@ -408,7 +408,7 @@ type StaticWebhookTarget struct {
 type StaticWebhookRule struct {
 	// Action specifies the action to be performed when the rule matches an incoming webhook event.
 	//
-	// +kubebuilder:validation:Enum=RefreshWarehouses
+	// +kubebuilder:validation:Enum=Refresh
 	Action StaticWebhookAction `json:"action" protobuf:"bytes,1,opt,name=action"`
 
 	// Targets specifies the list of targets to which the action should be applied.

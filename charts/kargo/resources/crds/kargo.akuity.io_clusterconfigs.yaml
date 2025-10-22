@@ -411,7 +411,7 @@ spec:
                               description: Action specifies the action to be performed
                                 when the rule matches an incoming webhook event.
                               enum:
-                              - RefreshWarehouses
+                              - Refresh
                               type: string
                             targets:
                               description: Targets specifies the list of targets to

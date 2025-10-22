@@ -3704,7 +3704,7 @@ export type StaticWebhookRule = Message<"github.com.akuity.kargo.api.v1alpha1.St
   /**
    * Action specifies the action to be performed when the rule matches an incoming webhook event.
    *
-   * +kubebuilder:validation:Enum=RefreshWarehouses
+   * +kubebuilder:validation:Enum=Refresh
    *
    * @generated from field: optional string action = 1;
    */
