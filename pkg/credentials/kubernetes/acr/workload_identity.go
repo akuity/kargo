@@ -170,13 +170,16 @@ func (p *WorkloadIdentityProvider) getAccessToken(ctx context.Context, registryN
 		return "", fmt.Errorf("failed to create ACR authentication client: %w", err)
 	}
 
-	// Exchange Azure AD token for ACR refresh token
-	// Key fix: use registry hostname as service parameter (not full URL or just name)
+	// Exchange Azure AD token for ACR refresh token.
+	// Note: Despite Azure's naming, this "refresh token" is actually used as an
+	// access token for ACR authentication. It's what we provide as the password
+	// when authenticating with ACR using the standard Docker login flow.
+	// The service parameter must be the registry hostname format: "registryname.azurecr.io"
 	registryHostname := fmt.Sprintf("%s.azurecr.io", registryName)
 	refreshTokenResp, err := authClient.ExchangeAADAccessTokenForACRRefreshToken(
 		ctx,
 		azcontainerregistry.PostContentSchemaGrantTypeAccessToken,
-		registryHostname, // Use hostname format: "registryname.azurecr.io"
+		registryHostname,
 		&azcontainerregistry.AuthenticationClientExchangeAADAccessTokenForACRRefreshTokenOptions{
 			AccessToken: &token.Token,
 		},

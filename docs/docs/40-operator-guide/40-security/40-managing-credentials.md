@@ -349,18 +349,41 @@ within an AKS cluster with workload identity enabled, it will attempt to use it
 to authenticate. Leveraging this eliminates the need to store ACR credentials
 in a `Secret` resource.
 
-Follow 
-[this guide](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)
-to set up workload identity in your AKS cluster. You will associate a managed 
+:::danger
+Azure Workload Identity setup is complex and error-prone. Follow the 
+[official Azure guide](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)
+_exactly_ to set up workload identity in your AKS cluster. You will associate a managed 
 identity with the `kargo-controller` `ServiceAccount` within the namespace in 
-which Kargo is (or will be) installed.
+which Kargo is (or will be) installed. Missing any details can result in
+authentication failures that are difficult to troubleshoot.
 
-:::note
-To use workload identity, you will need to annotate the `kargo-controller` 
-`ServiceAccount` with the client ID of the managed identity using the 
-`azure.workload.identity/client-id` annotation. This can be done via the 
-`controller.serviceAccount.annotations` setting in Kargo's Helm chart at 
-installation.
+After following the Azure guide, verify you have completed these steps:
+
+* Your AKS cluster has the **OIDC Issuer** enabled
+* Your AKS cluster has the **Workload Identity** feature enabled
+* You have created a **User-Assigned Managed Identity** in Azure
+* You have established a **federated identity credential** that links your
+  managed identity to the `kargo-controller` ServiceAccount (with the 
+  correct namespace, service account name, and OIDC issuer URL)
+* You have annotated the **`kargo-controller` ServiceAccount** with the client
+  ID of your managed identity using the `azure.workload.identity/client-id`
+  annotation (via `controller.serviceAccount.annotations` in the Helm chart)
+* The managed identity has been granted the **`AcrPull` role** on your ACR
+  registry or specific repositories
+* You have added the **`azure.workload.identity/use: "true"` label** to the
+  `kargo-controller` pod template spec via `controller.podLabels` in the
+  Helm chart
+:::
+
+:::warning
+To use workload identity, you _must_ add the label 
+`azure.workload.identity/use: "true"` to the `kargo-controller` pod template 
+spec. This [label is required](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview?tabs=dotnet#pod-labels)
+for the azure-workload-identity mutating admission webhook to inject the necessary Azure-specific environment variables and projected service account token volume.
+Without this label, workload identity authentication will fail.
+
+This can be configured via the `controller.podLabels` setting in Kargo's Helm 
+chart at installation.
 :::
 
 The managed identity associated with the Kargo controller should be granted the 
