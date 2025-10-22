@@ -14,9 +14,8 @@ import (
 
 func TestManagedIdentityProvider_Supports(t *testing.T) {
 	const (
-		fakeAccountID  = "123456789012"
-		fakeRepoURL    = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
-		fakeOCIRepoURL = "oci://123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
+		fakeAccountID = "123456789012"
+		fakeRepoURL   = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
 	)
 
 	testCases := []struct {
@@ -45,22 +44,13 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "OCI helm credentials supported",
+			name: "helm credentials supported",
 			provider: &ManagedIdentityProvider{
 				accountID: fakeAccountID,
 			},
 			credType: credentials.TypeHelm,
-			repoURL:  fakeOCIRepoURL,
+			repoURL:  fakeRepoURL,
 			expected: true,
-		},
-		{
-			name: "non-OCI helm credentials not supported",
-			provider: &ManagedIdentityProvider{
-				accountID: fakeAccountID,
-			},
-			credType: credentials.TypeHelm,
-			repoURL:  "https://123456789012.dkr.ecr.us-west-2.amazonaws.com/repo",
-			expected: false,
 		},
 		{
 			name: "git credentials not supported",
