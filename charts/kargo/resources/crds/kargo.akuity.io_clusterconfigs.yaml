@@ -402,9 +402,9 @@ spec:
                         Static contains the configuration for a webhook receiver that receives generic webhook events
                         and performs actions based on static rules defined by the user.
                       properties:
-                        rules:
+                        rule:
                           description: |-
-                            Rules specifies the list of rules that define actions to be taken when
+                            Rules specifies the rule that define actions to be taken when
                             webhook events are received.
                           properties:
                             action:
@@ -467,7 +467,7 @@ spec:
                           type: object
                           x-kubernetes-map-type: atomic
                       required:
-                      - rules
+                      - rule
                       - secretRef
                       type: object
                   required:

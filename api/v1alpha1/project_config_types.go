@@ -361,18 +361,18 @@ type StaticWebhookReceiverConfig struct {
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 
-	// Rules specifies the list of rules that define actions to be taken when
+	// Rules specifies the rule that define actions to be taken when
 	// webhook events are received.
 	//
 	// +kubebuilder:validation:Required
-	Rule StaticWebhookRule `json:"rules,omitempty" protobuf:"bytes,2,opt,name=rules"`
+	Rule StaticWebhookRule `json:"rule,omitempty" protobuf:"bytes,2,opt,name=rule"`
 }
 
 // StaticWebhookAction represents an action to be performed in response to a webhook event.
 type StaticWebhookAction string
 
 const (
-	// ActioStaticWebhookActionRefreshnRefreshWarehouses indicates that the action to be performed is to
+	// StaticWebhookActionRefresh indicates that the action to be performed is to
 	// patch the annotation key kargo.akuity.io/refresh with a new value;
 	// signaling downstream controllers to perform reconciliation against the target.
 	StaticWebhookActionRefresh StaticWebhookAction = "Refresh"

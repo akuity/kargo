@@ -1843,11 +1843,11 @@ message StaticWebhookReceiverConfig {
   // +kubebuilder:validation:Required
   optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
 
-  // Rules specifies the list of rules that define actions to be taken when
+  // Rules specifies the rule that define actions to be taken when
   // webhook events are received.
   //
   // +kubebuilder:validation:Required
-  optional StaticWebhookRule rules = 2;
+  optional StaticWebhookRule rule = 2;
 }
 
 // StaticWebhookRule defines a rule for processing incoming webhook events.

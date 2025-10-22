@@ -298,8 +298,8 @@
               "static": {
                 "description": "Static contains the configuration for a webhook receiver that receives generic webhook events\nand performs actions based on static rules defined by the user.",
                 "properties": {
-                  "rules": {
-                    "description": "Rules specifies the list of rules that define actions to be taken when\nwebhook events are received.",
+                  "rule": {
+                    "description": "Rules specifies the rule that define actions to be taken when\nwebhook events are received.",
                     "properties": {
                       "action": {
                         "description": "Action specifies the action to be performed when the rule matches an incoming webhook event.",
@@ -358,7 +358,7 @@
                   }
                 },
                 "required": [
-                  "rules",
+                  "rule",
                   "secretRef"
                 ],
                 "type": "object"
