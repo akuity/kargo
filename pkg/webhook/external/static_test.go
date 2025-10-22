@@ -124,6 +124,68 @@ func TestStaticHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "singled out warehouse not specified in target list",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "somegenerichost.com/repo",
+							},
+						}},
+					},
+				},
+				// even though the warehouse exists, it is not in the target list
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "other-fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Image: &kargoapi.ImageSubscription{
+								RepoURL: "somegenerichost.com/otherrepo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				testURLWithQuery := testURL + "?target=other-fake-warehouse"
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURLWithQuery,
+					bytes.NewBuffer([]byte(`{"foo":"bar"}`)),
+				)
+			},
+			rule: kargoapi.StaticWebhookRule{
+				Action: kargoapi.StaticWebhookActionRefresh,
+				Targets: []kargoapi.StaticWebhookTarget{
+					{
+						Name:      "fake-warehouse",
+						Namespace: testProjectName,
+						Type:      kargoapi.StaticWebhookTargetTypeWarehouse,
+					},
+				},
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, rr.Code)
+				require.JSONEq(
+					t,
+					`{"error":"query param target \"other-fake-warehouse\" is not specified in target list"}`,
+					rr.Body.String(),
+				)
+			},
+		},
+		{
 			name: "all targeted warehouses refreshed",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{

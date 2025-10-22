@@ -93,12 +93,23 @@ func (s *staticWebhookReceiver) handleRefresh(w http.ResponseWriter, req *http.R
 	targets := s.rule.Targets
 	if t := req.URL.Query().Get("target"); t != "" {
 		logger.Info("filtering refresh to single target", "target", t)
+		filteredTargets := []kargoapi.StaticWebhookTarget{}
 		for _, rt := range s.rule.Targets {
 			if rt.Name == t {
-				targets = []kargoapi.StaticWebhookTarget{rt}
+				filteredTargets = append(filteredTargets, rt)
 				break
 			}
 		}
+		if len(filteredTargets) == 0 {
+			xhttp.WriteErrorJSON(w,
+				xhttp.Error(
+					fmt.Errorf("query param target %q is not specified in target list", t),
+					http.StatusBadRequest,
+				),
+			)
+			return
+		}
+		targets = filteredTargets
 	}
 
 	if failures, err := refreshTargets(ctx, s.client, targets); err != nil {
