@@ -73,10 +73,6 @@ func (p *WorkloadIdentityProvider) Supports(
 	_ map[string][]byte,
 	_ map[string]string,
 ) bool {
-	if p.credential == nil {
-		return false
-	}
-
 	if credType != credentials.TypeImage && credType != credentials.TypeHelm {
 		return false
 	}

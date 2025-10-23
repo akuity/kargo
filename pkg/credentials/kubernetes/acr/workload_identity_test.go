@@ -15,77 +15,53 @@ import (
 )
 
 func TestWorkloadIdentityProvider_Supports(t *testing.T) {
-	const (
-		fakeRepoURL      = "myregistry.azurecr.io/my-repo"
-		fakeHTTPSRepoURL = "https://myregistry.azurecr.io/my-repo"
-	)
+	const testOCIRepoURL = "myregistry.azurecr.io/my-repo"
+	const testHTTPSRepoURL = "https://myregistry.azurecr.io/my-repo"
 
 	testCases := []struct {
 		name     string
-		provider *WorkloadIdentityProvider
 		credType credentials.Type
 		repoURL  string
 		expected bool
 	}{
 		{
-			name: "no credential configured",
-			provider: &WorkloadIdentityProvider{
-				credential: nil,
-			},
+			name:     "image credential type supported",
 			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
-			expected: false,
-		},
-		{
-			name: "image credential type supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-			},
-			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
+			repoURL:  testOCIRepoURL,
 			expected: true,
 		},
 		{
-			name: "helm credential type supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-			},
+			name:     "helm credential type supported",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeRepoURL,
+			repoURL:  testOCIRepoURL,
 			expected: true,
 		},
 		{
-			name: "helm HTTP/S repo URLs not supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-			},
+			name:     "helm HTTP/S repo URLs not supported",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeHTTPSRepoURL,
+			repoURL:  testHTTPSRepoURL,
 			expected: false,
 		},
 		{
-			name: "git credential type not supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-			},
+			name:     "git credential type not supported",
 			credType: credentials.TypeGit,
-			repoURL:  fakeRepoURL,
+			repoURL:  testOCIRepoURL,
 			expected: false,
 		},
 		{
 			name: "non-ACR repo URL not supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-			},
+
 			credType: credentials.TypeImage,
 			repoURL:  "docker.io/library/nginx",
 			expected: false,
 		},
 	}
 
+	p := &WorkloadIdentityProvider{credential: &mockCredential{}}
+
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
+			result := p.Supports(tt.credType, tt.repoURL, nil, nil)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
