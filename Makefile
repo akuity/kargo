@@ -430,16 +430,6 @@ hack-uninstall-cert-manager: install-helm
 hack-ngrok:
 	ngrok http --hostname=$(KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME) 30083
 
-.PHONY: start-api-local
-start-api-local:
-	./hack/start-api.sh
-
-.PHONY: start-controller-local
-start-controller-local:
-	KUBECONFIG=~/.kube/config \
-	ARGOCD_KUBECONFIG=~/.kube/config \
-	go run ./cmd/controlplane controller
-
 ################################################################################
 # Docs                                                                         #
 #                                                                              #
