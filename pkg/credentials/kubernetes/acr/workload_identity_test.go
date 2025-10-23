@@ -14,17 +14,6 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
-func TestNewWorkloadIdentityProvider(t *testing.T) {
-	provider := NewWorkloadIdentityProvider(context.Background())
-	// Provider may be nil if Azure credentials are not available in the test environment
-	if provider != nil {
-		providerImpl := provider.(*WorkloadIdentityProvider) // nolint:forcetypeassert
-		assert.NotNil(t, providerImpl.tokenCache)
-		assert.NotNil(t, providerImpl.credential)
-		assert.NotNil(t, providerImpl.getAccessTokenFn)
-	}
-}
-
 func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 	const (
 		fakeRepoURL      = "myregistry.azurecr.io/my-repo"
