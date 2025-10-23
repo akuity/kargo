@@ -43,7 +43,8 @@ type WorkloadIdentityProvider struct {
 }
 
 // NewWorkloadIdentityProvider returns a new WorkloadIdentityProvider
-// if Azure workload identity credentials are available.
+// if Azure workload identity credentials are available. Otherwise, it returns
+// nil.
 func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
