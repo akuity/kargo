@@ -106,7 +106,6 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		token := entry.(string) // nolint: forcetypeassert
 		logger.Debug(
 			"using cached ACR token from workload identity provider",
 			"registry", registryName,
@@ -114,7 +113,7 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 		)
 		return &credentials.Credentials{
 			Username: acrTokenUsername,
-			Password: token,
+			Password: entry.(string), // nolint: forcetypeassert
 		}, nil
 	}
 
