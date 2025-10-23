@@ -101,11 +101,8 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	if len(matches) != 2 { // This doesn't look like an ACR URL
 		return nil, nil
 	}
-
-	var (
-		registryName = matches[1]
-		cacheKey     = tokenCacheKey(registryName, project)
-	)
+	registryName := matches[1]
+	cacheKey := tokenCacheKey(registryName, project)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
