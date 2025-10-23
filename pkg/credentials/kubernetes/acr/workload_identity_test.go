@@ -99,7 +99,6 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 		fakeRepoURL      = "myregistry.azurecr.io/repo"
 		fakeRegistryName = "myregistry"
 		fakeToken        = "fake-access-token"
-		expectedUsername = "00000000-0000-0000-0000-000000000000"
 	)
 
 	testCases := []struct {
@@ -155,7 +154,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
-				assert.Equal(t, expectedUsername, creds.Username)
+				assert.Equal(t, acrTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
 			},
 		},
@@ -174,7 +173,7 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
-				assert.Equal(t, expectedUsername, creds.Username)
+				assert.Equal(t, acrTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
 
 				// Verify the token was cached
