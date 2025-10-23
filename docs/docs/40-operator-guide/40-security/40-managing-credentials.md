@@ -15,7 +15,7 @@ necessary credentials.
 :::info
 __Not what you were looking for?__
 
-If you're user a looking to learn more about managing
+If you're a user looking to learn more about managing
 credentials at the project level, refer instead to the
 [Managing Credentials](../../50-user-guide/50-security/30-managing-credentials.md)
 section of the User's Guide.
@@ -235,7 +235,7 @@ assuming arbitrary IAM roles.
 :::
 
 :::caution
-For optimal adherence to the principle of least permissions, the IAM role
+For optimal adherence to the principle of least privilege, the IAM role
 associated with the `kargo-controller` `ServiceAccount` should be limited only
 to the ability to assume project-specific IAM roles. Project-specific IAM roles
 should be limited only to read-only access to applicable ECR repositories.
@@ -420,7 +420,7 @@ necessary credentials.
 :::
 
 :::caution
-For optimal adherence to the principle of least permissions, the managed identity
+For optimal adherence to the principle of least privilege, the managed identity
 associated with the `kargo-controller` `ServiceAccount` should be limited only
 to the `AcrPull` role on the specific ACR repositories required by your Kargo
 projects.
@@ -433,7 +433,7 @@ the cache.
 :::note
 When authenticating to ECR using EKS Pod Identity or IRSA (Amazon), or when
 authenticating to GAR using Workload Identity Federation (Google), the option
-exists for strict adherence to the the principle of least permissions by
+exists for strict adherence to the the principle of least privilege by
 granting the identity associated with the Kargo controller no permissions other
 than those required to assume/impersonate other, Project-specific identities.
 Project-specific identities can then be granted access only to the specific
