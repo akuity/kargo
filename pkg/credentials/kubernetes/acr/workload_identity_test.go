@@ -28,7 +28,6 @@ func TestNewWorkloadIdentityProvider(t *testing.T) {
 func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 	const (
 		fakeRepoURL      = "myregistry.azurecr.io/my-repo"
-		fakeOCIRepoURL   = "oci://myregistry.azurecr.io/my-repo"
 		fakeHTTPSRepoURL = "https://myregistry.azurecr.io/my-repo"
 	)
 
@@ -49,7 +48,7 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "image credentials supported",
+			name: "image credential type supported",
 			provider: &WorkloadIdentityProvider{
 				credential: &mockCredential{},
 			},
@@ -58,16 +57,16 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: true,
 		},
 		{
-			name: "OCI helm credentials supported",
+			name: "helm credential type supported",
 			provider: &WorkloadIdentityProvider{
 				credential: &mockCredential{},
 			},
 			credType: credentials.TypeHelm,
-			repoURL:  fakeOCIRepoURL,
+			repoURL:  fakeRepoURL,
 			expected: true,
 		},
 		{
-			name: "non-OCI helm credentials not supported",
+			name: "helm HTTP/S repo URLs not supported",
 			provider: &WorkloadIdentityProvider{
 				credential: &mockCredential{},
 			},
@@ -76,7 +75,7 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "git credentials not supported",
+			name: "git credential type not supported",
 			provider: &WorkloadIdentityProvider{
 				credential: &mockCredential{},
 			},
@@ -85,7 +84,7 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "non-ACR URL not supported",
+			name: "non-ACR repo URL not supported",
 			provider: &WorkloadIdentityProvider{
 				credential: &mockCredential{},
 			},
@@ -251,14 +250,8 @@ func TestACRURLRegex(t *testing.T) {
 		registry string
 	}{
 		{
-			name:     "standard ACR URL",
+			name:     "ACR URL",
 			url:      "myregistry.azurecr.io/repo",
-			expected: true,
-			registry: "myregistry",
-		},
-		{
-			name:     "OCI ACR URL",
-			url:      "oci://myregistry.azurecr.io/repo",
 			expected: true,
 			registry: "myregistry",
 		},
@@ -294,6 +287,36 @@ func TestACRURLRegex(t *testing.T) {
 			} else {
 				assert.Nil(t, matches, "Expected regex not to match")
 			}
+		})
+	}
+}
+
+func TestTokenCacheKey(t *testing.T) {
+	testCases := []struct {
+		name     string
+		parts    []string
+		expected string
+	}{
+		{
+			name:     "single part",
+			parts:    []string{"test"},
+			expected: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // sha256 of "test"
+		},
+		{
+			name:     "multiple parts",
+			parts:    []string{"registry", "project"},
+			expected: "1ce59597b20d4eaf682ca8ea2f9e542eacb3b008cd0eedaddee686f5565d2c04", // sha256 of "registry:project"
+		},
+		{
+			name:     "empty parts",
+			parts:    []string{},
+			expected: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // sha256 of empty string
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tokenCacheKey(tt.parts...)
+			assert.Equal(t, tt.expected, result)
 		})
 	}
 }

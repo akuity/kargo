@@ -2,7 +2,9 @@ package acr
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -26,6 +28,10 @@ const (
 	// acrScope is the Azure AD scope required for ACR authentication
 	acrScope = "https://containerregistry.azure.net/.default"
 )
+
+// acrURLRegex matches Azure Container Registry URLs.
+// Pattern matches: <registry-name>.azurecr.io
+var acrURLRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)\.azurecr\.io/`)
 
 // WorkloadIdentityProvider implements credentials.Provider for Azure Container Registry
 // workload identity authentication.
@@ -194,4 +200,19 @@ func (p *WorkloadIdentityProvider) getAccessToken(ctx context.Context, registryN
 
 	logger.Debug("successfully obtained ACR refresh token")
 	return *refreshTokenResp.RefreshToken, nil
+}
+
+// tokenCacheKey returns a cache key in the form of a hash for the given parts.
+// Using a hash ensures that any sensitive data is not stored in a decodable
+// form.
+func tokenCacheKey(parts ...string) string {
+	const separator = ":"
+	h := sha256.New()
+	for i := range parts {
+		if i > 0 {
+			_, _ = h.Write([]byte(separator))
+		}
+		_, _ = h.Write([]byte(parts[i]))
+	}
+	return fmt.Sprintf("%x", h.Sum(nil))
 }
