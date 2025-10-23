@@ -15,7 +15,7 @@ necessary credentials.
 :::info
 __Not what you were looking for?__
 
-If you're user looking to learn more about managing
+If you're user a looking to learn more about managing
 credentials at the project level, refer instead to the
 [Managing Credentials](../../50-user-guide/50-security/30-managing-credentials.md)
 section of the User's Guide.
@@ -341,55 +341,83 @@ controller restart clears the cache.
 
 ### Azure Container Registry (ACR)
 
-Kargo can be configured to authenticate to ACR repositories using 
+Kargo can be configured to authenticate to ACR repositories using
 [Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview).
 
 If Kargo locates no `Secret` resources matching a repository URL and is deployed
-within an AKS cluster with workload identity enabled, it will attempt to use it 
+within an AKS cluster with workload identity enabled, it will attempt to use it
 to authenticate. Leveraging this eliminates the need to store ACR credentials
-in a `Secret` resource.
+in a `Secret` resource. Workload Identity can be enabled when creating a
+[new cluster](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#create-an-aks-cluster)
+or can be added to an
+[existing cluster](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#update-an-existing-aks-cluster).
 
 :::danger
-Azure Workload Identity setup is complex and error-prone. Follow the 
-[official Azure guide](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster)
-_exactly_ to set up workload identity in your AKS cluster. You will associate a managed 
-identity with the `kargo-controller` `ServiceAccount` within the namespace in 
-which Kargo is (or will be) installed. Missing any details can result in
-authentication failures that are difficult to troubleshoot.
+Azure Workload Identity can be complex to configure and difficult to
+troubleshoot.
 
-After following the Azure guide, verify you have completed these steps:
+Before continuing, be certain of the following:
 
-* Your AKS cluster has the **OIDC Issuer** enabled
-* Your AKS cluster has the **Workload Identity** feature enabled
-* You have created a **User-Assigned Managed Identity** in Azure
-* You have established a **federated identity credential** that links your
-  managed identity to the `kargo-controller` ServiceAccount (with the 
-  correct namespace, service account name, and OIDC issuer URL)
-* You have annotated the **`kargo-controller` ServiceAccount** with the client
-  ID of your managed identity using the `azure.workload.identity/client-id`
-  annotation (via `controller.serviceAccount.annotations` in the Helm chart)
-* The managed identity has been granted the **`AcrPull` role** on your ACR
-  registry or specific repositories
-* You have added the **`azure.workload.identity/use: "true"` label** to the
-  `kargo-controller` pod template spec via `controller.podLabels` in the
-  Helm chart
+* Your AKS cluster has the __OIDC Issuer__ feature enabled.
+* Your AKS cluster has the __Workload Identity__ feature enabled.
 :::
+
+For Workload Identity to work, the Kargo controller's Kubernetes
+`ServiceAccount` will need to be federated with a __managed identity__. Follow
+[these instructions](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#create-a-managed-identity)
+to create one and [these](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#create-the-federated-identity-credential)
+to federate it with the controller's `ServiceAccount`.
+
+:::info
+Federating the managed identity to the Kargo controller's
+`ServiceAccount` establishes a trust relationship. In AKS clusters with Workload
+Identity enabled, a
+[mutating admission webhook](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#mutatingadmissionwebhook) will
+intercept the creation of any `Pod` resource labeled with
+`azure.workload.identity/use: "true"` _and_ using a `ServiceAccount` that's
+been federated to a managed identity. Knowing such a `Pod` is authorized to act
+on behalf of the associated managed identity, the webhook will modify the
+`Pod`'s spec to inject credentials in a well-known location for discovery by any
+Azure clients executing within any of its containers.
+:::
+
+To access container images or Helm charts hosted in ACR, the managed identity
+[must be granted the `AcrPull` role](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-authentication-managed-identity?tabs=azure-cli#grant-identity-access-to-the-container-registry)
+on the registry or on individual repositories within it.
+
+:::danger
+Before continuing, be certain of the following:
+
+* You have created a __User-Assigned Managed Identity__.
+
+  ⚠️ This is different from an App Registration!
+
+* You have created a __Federated Identity Credential__ that associates the
+  managed identity with the Kubernetes `ServiceAccount` used by the Kargo
+  controller. (In a typical installation of Kargo, this is the
+  `kargo-controller` `ServiceAccount` in the `kargo` namespace.)
+
+* The managed identity has been granted the __`AcrPull` role__ on your ACR
+  registry or specific repositories within it.
+:::
+
+For Workload Identity to inject credentials into any `Pod`, that pod must be
+labeled with `azure.workload.identity/use: "true"`. This label can be affixed
+to Kargo controller pods by using the `controller.podLabels` setting in Kargo's
+Helm chart at the time of installation or upgrade. For further guidance on this,
+refer to the advanced installation guides for
+[Helm](../20-advanced-installation/10-advanced-with-helm.md)
+or [Argo CD](../20-advanced-installation/20-advanced-with-argocd.md)
 
 :::warning
-To use workload identity, you _must_ add the label 
-`azure.workload.identity/use: "true"` to the `kargo-controller` pod template 
-spec. This [label is required](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview?tabs=dotnet#pod-labels)
-for the azure-workload-identity mutating admission webhook to inject the necessary Azure-specific environment variables and projected service account token volume.
-Without this label, workload identity authentication will fail.
-
-This can be configured via the `controller.podLabels` setting in Kargo's Helm 
-chart at installation.
+If the `azure.workload.identity/use: "true"` label is present on the Kargo
+controller's `Pod`, but the `Pod` was started prior to Workload Identity having
+been enabled in the cluster or prior to the controller's `ServiceAccount` having
+been federated with a managed identity, the `Pod` will not have been injected
+with necessary credentials. Such a `Pod` should be deleted. The controller's
+`Deployment` will create a replacement `Pod` which will be injected with
+necessary credentials.
 :::
-
-The managed identity associated with the Kargo controller should be granted the 
-`AcrPull` role on the ACR repositories that Kargo needs to access. This can be 
-done at the registry level or at the repository level for more granular access 
-control.
 
 :::caution
 For optimal adherence to the principle of least permissions, the managed identity
@@ -401,3 +429,16 @@ projects.
 Tokens Kargo obtains for accessing any specific ACR repository are valid for 
 approximately 3 hours and cached for 2.5 hours. A controller restart clears 
 the cache.
+
+:::note
+When authenticating to ECR using EKS Pod Identity or IRSA (Amazon), or when
+authenticating to GAR using Workload Identity Federation (Google), the option
+exists for strict adherence to the the principle of least permissions by
+granting the identity associated with the Kargo controller no permissions other
+than those required to assume/impersonate other, Project-specific identities.
+Project-specific identities can then be granted access only to the specific
+registries or repositories.
+
+Assuming/impersonating a project-specific identity in Azure is considerably more
+complex than doing so in AWS or GCP. As a result, the Kargo controller lacks the option described above for Azure Workload Identity / ACR.
+:::
