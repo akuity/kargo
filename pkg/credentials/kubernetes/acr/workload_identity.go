@@ -2,7 +2,6 @@ package acr
 
 import (
 	"context"
-	"crypto/sha256"
 	"fmt"
 	"regexp"
 	"time"
@@ -33,18 +32,19 @@ const (
 // Pattern matches: <registry-name>.azurecr.io
 var acrURLRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)\.azurecr\.io/`)
 
-// WorkloadIdentityProvider implements credentials.Provider for Azure Container Registry
-// workload identity authentication.
+// WorkloadIdentityProvider implements credentials.Provider for Azure Container
+// Registry Workload Identity.
 type WorkloadIdentityProvider struct {
+	// tokenCache is an in-memory cache of ACR registry access tokens keyed by
+	// registry name.
 	tokenCache *cache.Cache
 	credential azcore.TokenCredential
 
 	getAccessTokenFn func(ctx context.Context, registryName string) (string, error)
 }
 
-// NewWorkloadIdentityProvider returns a new WorkloadIdentityProvider
-// if Azure workload identity credentials are available. Otherwise, it returns
-// nil.
+// NewWorkloadIdentityProvider returns a new WorkloadIdentityProvider if Azure
+// workload identity credentials are available. Otherwise, it returns nil.
 func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -84,7 +84,7 @@ func (p *WorkloadIdentityProvider) Supports(
 
 func (p *WorkloadIdentityProvider) GetCredentials(
 	ctx context.Context,
-	project string,
+	_ string,
 	credType credentials.Type,
 	repoURL string,
 	_ map[string][]byte,
@@ -94,23 +94,15 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 		return nil, nil
 	}
 
-	logger := logging.LoggerFromContext(ctx)
-
 	// Extract the registry name from the ACR URL
 	matches := acrURLRegex.FindStringSubmatch(repoURL)
 	if len(matches) != 2 { // This doesn't look like an ACR URL
 		return nil, nil
 	}
 	registryName := matches[1]
-	cacheKey := tokenCacheKey(registryName, project)
 
 	// Check the cache for the token
-	if entry, exists := p.tokenCache.Get(cacheKey); exists {
-		logger.Debug(
-			"using cached ACR token from workload identity provider",
-			"registry", registryName,
-			"project", project,
-		)
+	if entry, exists := p.tokenCache.Get(registryName); exists {
 		return &credentials.Credentials{
 			Username: acrTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
@@ -120,13 +112,6 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	// Cache miss, get a new token
 	accessToken, err := p.getAccessTokenFn(ctx, registryName)
 	if err != nil {
-		// Log the error but don't fail hard - this allows fallback to other
-		// credential providers if ACR authentication fails
-		logger.Error(
-			err, "error getting ACR access token",
-			"registry", registryName,
-			"project", project,
-		)
 		return nil, fmt.Errorf("error getting ACR access token: %w", err)
 	}
 
@@ -136,13 +121,7 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	}
 
 	// Cache the token
-	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
-
-	logger.Debug(
-		"obtained new ACR token from workload identity provider",
-		"registry", registryName,
-		"project", project,
-	)
+	p.tokenCache.Set(registryName, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
 		Username: acrTokenUsername,
@@ -151,9 +130,10 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 }
 
 // getAccessToken returns an ACR refresh token using Azure workload identity.
-func (p *WorkloadIdentityProvider) getAccessToken(ctx context.Context, registryName string) (string, error) {
-	logger := logging.LoggerFromContext(ctx).WithValues("registryName", registryName)
-
+func (p *WorkloadIdentityProvider) getAccessToken(
+	ctx context.Context,
+	registryName string,
+) (string, error) {
 	// Get Azure AD access token with the standard ACR scope
 	token, err := p.credential.GetToken(ctx, policy.TokenRequestOptions{
 		Scopes: []string{acrScope},
@@ -170,42 +150,27 @@ func (p *WorkloadIdentityProvider) getAccessToken(ctx context.Context, registryN
 	}
 
 	// Exchange Azure AD token for ACR refresh token.
+	//
 	// Note: Despite Azure's naming, this "refresh token" is actually used as an
-	// access token for ACR authentication. It's what we provide as the password
-	// when authenticating with ACR using the standard Docker login flow.
-	// The service parameter must be the registry hostname format: "registryname.azurecr.io"
-	registryHostname := fmt.Sprintf("%s.azurecr.io", registryName)
+	// access token. i.e. It's what's provide as the password when authenticating
+	// using any OCI client.
 	refreshTokenResp, err := authClient.ExchangeAADAccessTokenForACRRefreshToken(
 		ctx,
 		azcontainerregistry.PostContentSchemaGrantTypeAccessToken,
-		registryHostname,
+		fmt.Sprintf("%s.azurecr.io", registryName),
 		&azcontainerregistry.AuthenticationClientExchangeAADAccessTokenForACRRefreshTokenOptions{
 			AccessToken: &token.Token,
 		},
 	)
 	if err != nil {
-		return "", fmt.Errorf("failed to exchange Azure AD token for ACR refresh token: %w", err)
+		return "", fmt.Errorf(
+			"failed to exchange Azure AD token for ACR refresh token: %w", err,
+		)
 	}
 
 	if refreshTokenResp.RefreshToken == nil {
 		return "", fmt.Errorf("received empty ACR refresh token")
 	}
 
-	logger.Debug("successfully obtained ACR refresh token")
 	return *refreshTokenResp.RefreshToken, nil
-}
-
-// tokenCacheKey returns a cache key in the form of a hash for the given parts.
-// Using a hash ensures that any sensitive data is not stored in a decodable
-// form.
-func tokenCacheKey(parts ...string) string {
-	const separator = ":"
-	h := sha256.New()
-	for i := range parts {
-		if i > 0 {
-			_, _ = h.Write([]byte(separator))
-		}
-		_, _ = h.Write([]byte(parts[i]))
-	}
-	return fmt.Sprintf("%x", h.Sum(nil))
 }

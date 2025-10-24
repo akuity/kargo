@@ -68,110 +68,109 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 }
 
 func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
-	ctx := context.Background()
-
-	const (
-		fakeProject      = "fake-project"
-		fakeRepoURL      = "myregistry.azurecr.io/repo"
-		fakeRegistryName = "myregistry"
-		fakeToken        = "fake-access-token"
-	)
+	const testRepoURL = "myregistry.azurecr.io/repo"
+	const testRegistryName = "myregistry"
+	const testToken = "fake-access-token"
 
 	testCases := []struct {
 		name       string
 		provider   *WorkloadIdentityProvider
-		project    string
 		credType   credentials.Type
 		repoURL    string
 		setupCache func(cache *cache.Cache)
-		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
 		{
-			name: "not supported",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
-			},
-			project:  fakeProject,
+			name:     "not supported",
+			provider: &WorkloadIdentityProvider{},
 			credType: credentials.TypeGit,
 			repoURL:  "git://repo",
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(
+				t *testing.T,
+				_ *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
 		},
 		{
-			name: "non-ACR URL",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
-			},
-			project:  fakeProject,
+			name:     "non-ACR URL",
+			provider: &WorkloadIdentityProvider{},
 			credType: credentials.TypeImage,
 			repoURL:  "not-an-acr-url",
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(
+				t *testing.T,
+				_ *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
 		},
 		{
-			name: "cache hit",
-			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
-			},
-			project:  fakeProject,
+			name:     "cache hit",
+			provider: &WorkloadIdentityProvider{},
 			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
+			repoURL:  testRepoURL,
 			setupCache: func(c *cache.Cache) {
-				cacheKey := tokenCacheKey(fakeRegistryName, fakeProject)
-				c.Set(cacheKey, fakeToken, cache.DefaultExpiration)
+				c.Set(testRegistryName, testToken, cache.DefaultExpiration)
 			},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			assertions: func(
+				t *testing.T,
+				_ *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, acrTokenUsername, creds.Username)
-				assert.Equal(t, fakeToken, creds.Password)
+				assert.Equal(t, testToken, creds.Password)
 			},
 		},
 		{
 			name: "cache miss, successful token fetch",
 			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
 				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return fakeToken, nil
+					return testToken, nil
 				},
 			},
-			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
-			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
+			repoURL:  testRepoURL,
+			assertions: func(
+				t *testing.T,
+				c *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
 				assert.NoError(t, err)
 				assert.NotNil(t, creds)
 				assert.Equal(t, acrTokenUsername, creds.Username)
-				assert.Equal(t, fakeToken, creds.Password)
+				assert.Equal(t, testToken, creds.Password)
 
 				// Verify the token was cached
-				cacheKey := tokenCacheKey(fakeRegistryName, fakeProject)
-				cachedToken, found := c.Get(cacheKey)
+				cachedToken, found := c.Get(testRegistryName)
 				assert.True(t, found)
-				assert.Equal(t, fakeToken, cachedToken)
+				assert.Equal(t, testToken, cachedToken)
 			},
 		},
 		{
 			name: "error in getAccessToken",
 			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
 				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
 					return "", errors.New("access token error")
 				},
 			},
-			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
+			repoURL:  testRepoURL,
+			assertions: func(
+				t *testing.T,
+				_ *cache.Cache,
+				creds *credentials.Credentials,
+				err error,
+			) {
 				assert.ErrorContains(t, err, "error getting ACR access token")
 				assert.Nil(t, creds)
 			},
@@ -179,28 +178,33 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 		{
 			name: "empty token from getAccessToken",
 			provider: &WorkloadIdentityProvider{
-				credential: &mockCredential{},
-				tokenCache: cache.New(10*time.Hour, time.Hour),
 				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
 					return "", nil
 				},
 			},
-			project:  fakeProject,
 			credType: credentials.TypeImage,
-			repoURL:  fakeRepoURL,
+			repoURL:  testRepoURL,
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
 				assert.Nil(t, creds)
 			},
 		},
 	}
-
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
+			tt.provider.credential = &mockCredential{}
+			tt.provider.tokenCache = cache.New(10*time.Hour, time.Hour)
 			if tt.setupCache != nil {
 				tt.setupCache(tt.provider.tokenCache)
 			}
-			creds, err := tt.provider.GetCredentials(ctx, tt.project, tt.credType, tt.repoURL, nil, nil)
+			creds, err := tt.provider.GetCredentials(
+				context.Background(),
+				"",
+				tt.credType,
+				tt.repoURL,
+				nil,
+				nil,
+			)
 			tt.assertions(t, tt.provider.tokenCache, creds, err)
 		})
 	}
@@ -251,36 +255,6 @@ func TestACRURLRegex(t *testing.T) {
 			} else {
 				assert.Nil(t, matches, "Expected regex not to match")
 			}
-		})
-	}
-}
-
-func TestTokenCacheKey(t *testing.T) {
-	testCases := []struct {
-		name     string
-		parts    []string
-		expected string
-	}{
-		{
-			name:     "single part",
-			parts:    []string{"test"},
-			expected: "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08", // sha256 of "test"
-		},
-		{
-			name:     "multiple parts",
-			parts:    []string{"registry", "project"},
-			expected: "1ce59597b20d4eaf682ca8ea2f9e542eacb3b008cd0eedaddee686f5565d2c04", // sha256 of "registry:project"
-		},
-		{
-			name:     "empty parts",
-			parts:    []string{},
-			expected: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // sha256 of empty string
-		},
-	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tokenCacheKey(tt.parts...)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
