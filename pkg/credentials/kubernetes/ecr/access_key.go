@@ -49,10 +49,6 @@ func (p *AccessKeyProvider) Supports(
 		return false
 	}
 
-	if credType == credentials.TypeHelm && !strings.HasPrefix(repoURL, "oci://") {
-		return false
-	}
-
 	if matches := ecrURLRegex.FindStringSubmatch(repoURL); len(matches) != 2 {
 		return false
 	}
