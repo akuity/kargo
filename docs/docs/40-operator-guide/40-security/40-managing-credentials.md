@@ -401,22 +401,53 @@ Before continuing, be certain of the following:
   registry or specific repositories within it.
 :::
 
-For Workload Identity to inject credentials into any `Pod`, that pod must be
-labeled with `azure.workload.identity/use: "true"`. This label can be affixed
-to Kargo controller pods by using the `controller.podLabels` setting in Kargo's
-Helm chart at the time of installation or upgrade. For further guidance on this,
-refer to the advanced installation guides for
+For Workload Identity to inject credentials into any `Pod`, two specific Kargo
+configuration settings are required:
+
+1. Controller `Pod`s must be labeled with `azure.workload.identity/use: "true"`.
+
+    This label can be affixed to Kargo controller `Pod`s by using the
+    `controller.podLabels` setting in Kargo's Helm chart at the time of
+    installation or upgrade.
+
+1. The controller's `ServiceAccount` must be annotated with
+   `azure.workload.identity/client-id: <managed identity client id>`.
+
+    :::warning
+    Azure documentation states this annotation is optional, however, in
+    practice, it often _is_ required.
+    :::
+
+    This annotation can be affixed to the Kargo controller's `ServiceAccount` by
+    using the `controller.serviceAccount.annotations` setting in Kargo's Helm
+    chart at the time of installation or upgrade.
+
+Example Helm values:
+
+```yaml
+controller:
+  podLabels:
+    azure.workload.identity/use: "true"
+  serviceAccount:
+    annotations:
+      azure.workload.identity/client-id: <managed identity client id>
+```
+
+:::info
+For further guidance on this, refer to the advanced installation guides for
 [Helm](../20-advanced-installation/10-advanced-with-helm.md)
 or [Argo CD](../20-advanced-installation/20-advanced-with-argocd.md)
+:::
 
 :::warning
 If the `azure.workload.identity/use: "true"` label is present on the Kargo
-controller's `Pod`, but the `Pod` was started prior to Workload Identity having
-been enabled in the cluster or prior to the controller's `ServiceAccount` having
-been federated with a managed identity, the `Pod` will not have been injected
-with necessary credentials. Such a `Pod` should be deleted. The controller's
-`Deployment` will create a replacement `Pod` which will be injected with
-necessary credentials.
+controller's `Pod` and the `azure.workload.identity/client-id` annotation is
+also present on the Kargo controller's `ServiceAccount`, _but_ the `Pod` was
+started prior to Workload Identity having been enabled in the cluster or prior
+to the controller's `ServiceAccount` having been federated with a managed
+identity, the `Pod` will not have been injected with necessary credentials. Such
+a `Pod` should be deleted. The controller's `Deployment` will create a
+replacement `Pod` which will be injected with necessary credentials.
 :::
 
 :::caution
@@ -440,5 +471,6 @@ Project-specific identities can then be granted access only to the specific
 registries or repositories.
 
 Assuming/impersonating a project-specific identity in Azure is considerably more
-complex than doing so in AWS or GCP. As a result, the Kargo controller lacks the option described above for Azure Workload Identity / ACR.
+complex than doing so in AWS or GCP. As a result, the Kargo controller lacks the
+option described above for Azure Workload Identity / ACR.
 :::
