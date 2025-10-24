@@ -125,7 +125,12 @@ func (t *tarExtractor) run(
 	}
 
 	// Move the extracted files from the temporary directory to the final output
-	// path atomically
+	// path atomically, creating any necessary parent directories.
+	if err = os.MkdirAll(outPath, defaultDirPermissions); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("failed to create directory %q: %w", outPath, err)
+	}
+
 	if err = intfs.SimpleAtomicMove(tempDir, outPath); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
