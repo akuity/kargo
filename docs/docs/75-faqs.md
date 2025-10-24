@@ -153,8 +153,8 @@ to approach it depending on your needs and our
 ### _How do I integrate with multiple Argo CD control planes?_
 
 To get an overview of how this can be achieved, head on over to our
-[Architecture](./40-operator-guide/30-architecture.md) section to learn about the topology of
-a large-scale Kargo deployment.
+[Architecture](./40-operator-guide/30-architecture/index.md) section to learn
+about the topology of a large-scale Kargo deployment.
 
 ### _How do I integrate Kargo into my CI pipelines?_
 
