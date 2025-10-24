@@ -279,7 +279,7 @@ export const StageNode = (props: { stage: Stage }) => {
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
             <Space>
               <Dropdown
-                trigger={['hover']}
+                trigger={['click']}
                 overlayClassName='w-fit'
                 menu={{
                   items: dropdownItems
