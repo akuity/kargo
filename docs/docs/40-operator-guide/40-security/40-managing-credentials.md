@@ -76,6 +76,21 @@ contain the following keys:
     repositories, all beginning with `https://github.com/example-org`, and can
     use the same token for accessing all of them.
     :::
+  
+    :::note
+    URLs are normalized before any attempt to match them to any regular
+    expressions:
+
+    * For Git URLs, normalization drops any trailing `/` or `.git`.
+
+    * For OCI chart repository URLs, normalization drops the leading `oci://`.
+
+    Keep these in mind when writing regular expressions meant to be matched by
+    certain repository URLS.
+
+    __Beginning in v1.8.0, Kargo will be more forgiving by attempting to
+    match regular expressions to both original _and_ normalized URLs.__
+    :::
 
 * Either:
 
