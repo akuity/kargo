@@ -191,12 +191,11 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
             'overflow-hidden': !dndContext.active
           })}
           onWheel={(e) => {
-            if (e.deltaX > 0) {
+            if (e.deltaY > 0) {
               scrollCarouselRight();
-              return;
+            } else if (e.deltaY < 0) {
+              scrollCarouselLeft();
             }
-
-            scrollCarouselLeft();
           }}
         >
           <div className='flex gap-1 relative right-0' ref={freightListStyleRef}>
