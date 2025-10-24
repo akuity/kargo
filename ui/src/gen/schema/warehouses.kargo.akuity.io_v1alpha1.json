@@ -194,7 +194,7 @@
                     "type": "array"
                   },
                   "constraint": {
-                    "description": "Constraint specifies constraints on what new image versions are\npermissible. Acceptable values for this field vary contextually by\nImageSelectionStrategy. The field is optional and is ignored by some\nstrategies.",
+                    "description": "Constraint specifies constraints on what new image versions are\npermissible. Acceptable values for this field vary contextually by\nImageSelectionStrategy. The field is optional and is ignored by some\nstrategies. When left unspecified, (and the ImageSelectionStrategy is\n SemVer or unspecified), there will be no constraints, which means\nthe latest semantically tagged version of an image will always be used.",
                     "type": "string"
                   },
                   "discoveryLimit": {

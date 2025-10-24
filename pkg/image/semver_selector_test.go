@@ -45,6 +45,18 @@ func TestNewSemverSelector(t *testing.T) {
 				require.NotNil(t, s.tagBasedSelector)
 			},
 		},
+		{
+			name: "success when no constraint field is specified",
+			sub: kargoapi.ImageSubscription{
+				RepoURL: "example/image",
+			},
+			assertions: func(t *testing.T, selector Selector, err error) {
+				require.NoError(t, err)
+				s, ok := selector.(*semverSelector)
+				require.True(t, ok)
+				require.Nil(t, s.constraint)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

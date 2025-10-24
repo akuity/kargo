@@ -2248,7 +2248,9 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * Constraint specifies constraints on what new image versions are
    * permissible. Acceptable values for this field vary contextually by
    * ImageSelectionStrategy. The field is optional and is ignored by some
-   * strategies.
+   * strategies. When left unspecified, (and the ImageSelectionStrategy is
+   *  SemVer or unspecified), there will be no constraints, which means
+   * the latest semantically tagged version of an image will always be used.
    *
    * +kubebuilder:validation:Optional
    *
