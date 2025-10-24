@@ -218,6 +218,85 @@ In the example above, the promotion policy applies to all `Stage`s with the
 `example.org/allow-auto-promotion: "true"` label and names matching the
 `glob:prod-*` pattern.
 
+### Message Channels
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+Projects can define message channels to facilitate notifications and message sending as part of
+their workflows. Message channels can be configured for various platforms, such as Slack or SMTP.
+Channels are defined using the `MessageChannel` custom resource. This can be done either by applying
+YAML manifests or in the Kargo UI (also via YAML, though this will be made more user-friendly in
+future releases).
+
+Any message channel specification must include only a single channel type (e.g., Slack or SMTP, not
+both) and an optional `secretRef` to a Kubernetes `Secret` containing any necessary credentials.
+
+#### Examples
+
+##### Slack
+
+This is an example `MessageChannel` configuration for Slack showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: slack
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the Slack token. This is required for Slack. The Secret must
+  # contain the following key:
+  # - `apiKey`: The Slack token with permissions to post messages to the desired channel
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: slack-token
+  # Configuration specific to Slack
+  slack:
+    # The channel ID to send messages to. This field is required
+    channelID: C1234567890
+```
+
+##### SMTP
+
+This is an example `MessageChannel` configuration for SMTP showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: smtp
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the SMTP credentials. This is required for SMTP. The Secret
+  # must contain the following keys:
+  # - `username`: The SMTP username
+  # - `password`: The SMTP password
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: smtp-credentials
+  smtp:
+    # The email address to use in the "From" field. This field is required
+    from: no-reply@example.com
+    # The default recipient email addresses. This field is optional and can be overridden. The first
+    # address in the list will be the primary recipient, and any additional addresses will be CC'd.
+    to: [you@example.com]
+    # The SMTP server host. This field is required
+    host: smtp.gmail.com
+    # The SMTP server port. This field is required
+    port: 587
+    # Whether to use TLS when connecting to the SMTP server. This field is optional and defaults to
+    # true
+    useTLS: true
+    # Whether to skip TLS certificate verification. This field is optional and defaults to false.
+    # In most cases this should only be set to true for testing with self-signed certificates.
+    insecureSkipVerify: false
+```
+
 ## Namespace Adoption
 
 At times, `Namespace`s may require specific configuration to
@@ -268,7 +347,6 @@ the corresponding `Project` resource with
 
 Kargo provides tools to manage `Project`s using either its UI or
 CLI. This section explains how to handle `Project`s effectively through both interfaces.
-
 
 ### Creating a Project
 
