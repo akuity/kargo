@@ -1827,6 +1827,58 @@ message StageStatus {
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 15;
 }
 
+message StaticWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly when registering a webhook.
+  // It is used only by Kargo to create a complex, hard-to-guess URL,
+  // which implicitly serves as a shared secret.
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+
+  // Rules specifies the rule that define actions to be taken when
+  // webhook events are received.
+  //
+  // +kubebuilder:validation:Required
+  optional StaticWebhookRule rule = 2;
+}
+
+// StaticWebhookRule defines a rule for processing incoming webhook events.
+message StaticWebhookRule {
+  // Action specifies the action to be performed when the rule matches an incoming webhook event.
+  //
+  // +kubebuilder:validation:Enum=Refresh
+  optional string action = 1;
+
+  // Targets specifies the list of targets to which the action should be applied.
+  repeated StaticWebhookTarget targets = 2;
+}
+
+// StaticWebhookTarget represents a target to which an action should be applied.
+message StaticWebhookTarget {
+  // Type specifies the type of the target.
+  //
+  // +kubebuilder:validation:Enum=Warehouse
+  optional string type = 1;
+
+  // Name specifies the name of the target.
+  //
+  // +kubebuilder:validation:Required
+  optional string name = 2;
+
+  // Namespace specifies the namespace of the target.
+  //
+  // +kubebuilder:validation:Required
+  optional string namespace = 3;
+}
+
 // StepExecutionMetadata tracks metadata pertaining to the execution of
 // a promotion step.
 message StepExecutionMetadata {
@@ -2075,6 +2127,10 @@ message WebhookReceiverConfig {
   // Gitea contains the configuration for a webhook receiver that is compatible
   // with Gitea payloads.
   optional GiteaWebhookReceiverConfig gitea = 7;
+
+  // Static contains the configuration for a webhook receiver that receives generic webhook events
+  // and performs actions based on static rules defined by the user.
+  optional StaticWebhookReceiverConfig static = 11;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
