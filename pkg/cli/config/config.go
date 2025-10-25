@@ -65,6 +65,8 @@ type CLIConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// Project is the default Project for the command.
 	Project string `json:"project,omitempty"`
+	// Proxy-Authorization http header token/credentials
+	ProxyAuthCredentials string `json:"proxyAuthCredentials,omitempty"`
 }
 
 // NewDefaultCLIConfig returns a new default CLI configuration.
@@ -142,6 +144,7 @@ func MaskedConfig(config CLIConfig) CLIConfig {
 		APIAddress:            config.APIAddress,
 		BearerToken:           dataMask,
 		RefreshToken:          dataMask,
+		ProxyAuthCredentials:  dataMask,
 		InsecureSkipTLSVerify: config.InsecureSkipTLSVerify,
 		Project:               config.Project,
 	}
