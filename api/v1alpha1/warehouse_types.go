@@ -482,7 +482,7 @@ type ImageSubscription struct {
 	// with the administrator's policy, artifact discovery will FAIL.
 	//
 	// +kubebuilder:default=false
-	UseCachedTags bool `json:"useCachedTags,omitempty"`
+	UseCachedTags bool `json:"useCachedTags,omitempty" protobuf:"varint,15,opt,name=useCachedTags"`
 }
 
 // ChartSubscription defines a subscription to a Helm chart repository.
