@@ -9,17 +9,22 @@ import (
 )
 
 const authHeaderKey = "Authorization"
+const proxyAuthHeaderKey = "Proxy-Authorization"
 
 // authInterceptor implements connect.Interceptor and is used to decorate
 // outbound requests/connections with an appropriate Authorization header.
 type authInterceptor struct {
-	credential string
+	credential      string
+	proxyCredential string
 }
 
 func (a *authInterceptor) WrapUnary(next connect.UnaryFunc) connect.UnaryFunc {
 	return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
 		if a.credential != "" {
 			setAuthHeader(req.Header(), a.credential)
+		}
+		if a.proxyCredential != "" {
+			setProxyAuthHeader(req.Header(), a.proxyCredential)
 		}
 		return next(ctx, req)
 	}
@@ -30,6 +35,9 @@ func (a *authInterceptor) WrapStreamingClient(next connect.StreamingClientFunc) 
 		conn := next(ctx, spec)
 		if a.credential != "" {
 			setAuthHeader(conn.RequestHeader(), a.credential)
+		}
+		if a.proxyCredential != "" {
+			setProxyAuthHeader(conn.RequestHeader(), a.proxyCredential)
 		}
 		return conn
 	}
@@ -45,5 +53,11 @@ func (a *authInterceptor) WrapStreamingHandler(next connect.StreamingHandlerFunc
 func setAuthHeader(header http.Header, cred string) {
 	if cred != "" {
 		header.Set(authHeaderKey, fmt.Sprintf("Bearer %s", cred))
+	}
+}
+
+func setProxyAuthHeader(header http.Header, proxyCred string) {
+	if proxyCred != "" {
+		header.Set(proxyAuthHeaderKey, fmt.Sprintf("Bearer %s", proxyCred))
 	}
 }

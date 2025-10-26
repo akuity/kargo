@@ -242,7 +242,7 @@ func adminLogin(
 	password string,
 	insecureTLS bool,
 ) (string, error) {
-	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", "", insecureTLS)
 
 	cfgRes, err := kargoClient.GetPublicConfig(
 		ctx,
@@ -294,7 +294,7 @@ func ssoLogin(
 	callbackPort int,
 	insecureTLS bool,
 ) (string, string, error) {
-	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
+	kargoClient := client.GetClient(serverAddress, "", "", insecureTLS)
 
 	res, err := kargoClient.GetPublicConfig(
 		ctx,

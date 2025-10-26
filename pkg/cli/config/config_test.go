@@ -11,8 +11,9 @@ import (
 
 func TestLoadCLIConfig(t *testing.T) {
 	testConfig := CLIConfig{
-		APIAddress:  "http://localhost:8080",
-		BearerToken: "thisisafaketoken",
+		APIAddress:           "http://localhost:8080",
+		BearerToken:          "thisisafaketoken",
+		ProxyAuthCredentials: "thisisafakeproxytoken",
 	}
 	testCases := []struct {
 		name       string
@@ -67,8 +68,9 @@ func TestLoadCLIConfig(t *testing.T) {
 
 func TestSaveCLIConfig(t *testing.T) {
 	testConfig := CLIConfig{
-		APIAddress:  "http://localhost:8080",
-		BearerToken: "thisisafaketoken",
+		APIAddress:           "http://localhost:8080",
+		BearerToken:          "thisisafaketoken",
+		ProxyAuthCredentials: "thisisafakeproxytoken",
 	}
 
 	configPath := getTestConfigPath()

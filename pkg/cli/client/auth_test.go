@@ -13,16 +13,22 @@ import (
 
 func TestInterceptorUnaryServerAuth(t *testing.T) {
 	testSets := map[string]struct {
-		credential              string
-		expectedAuthHeaderValue string
+		credential                   string
+		proxyCredential              string
+		expectedAuthHeaderValue      string
+		expectedProxyAuthHeaderValue string
 	}{
 		"without credential": {
-			credential:              "",
-			expectedAuthHeaderValue: "",
+			credential:                   "",
+			proxyCredential:              "",
+			expectedAuthHeaderValue:      "",
+			expectedProxyAuthHeaderValue: "",
 		},
 		"with credential": {
-			credential:              "some-token",
-			expectedAuthHeaderValue: "Bearer some-token",
+			credential:                   "some-token",
+			proxyCredential:              "some-token",
+			expectedAuthHeaderValue:      "Bearer some-token",
+			expectedProxyAuthHeaderValue: "Bearer some-token",
 		},
 	}
 	for name, ts := range testSets {

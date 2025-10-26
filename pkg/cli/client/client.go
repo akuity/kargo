@@ -45,7 +45,7 @@ func GetClientFromConfig(
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing token: %w", err)
 	}
-	return GetClient(cfg.APIAddress, cfg.BearerToken, skipTLSVerify), nil
+	return GetClient(cfg.APIAddress, cfg.BearerToken, cfg.ProxyAuthCredentials, skipTLSVerify), nil
 }
 
 // GetClient returns a new client for the Kargo API server located at the
@@ -55,6 +55,7 @@ func GetClientFromConfig(
 func GetClient(
 	serverAddress string,
 	credential string,
+	proxyCredential string,
 	insecureTLS bool,
 ) svcv1alpha1connect.KargoServiceClient {
 	httpClient := cleanhttp.DefaultClient()
@@ -66,17 +67,47 @@ func GetClient(
 		}
 		httpClient.Transport = transport
 	}
-
-	if credential == "" {
+	// Both credentials are empty
+	if credential == "" && proxyCredential == "" {
 		return svcv1alpha1connect.NewKargoServiceClient(httpClient, serverAddress)
 	}
+
+	if credential != "" && proxyCredential == "" {
+		return svcv1alpha1connect.NewKargoServiceClient(
+			httpClient,
+			serverAddress,
+			connect.WithClientOptions(
+				connect.WithInterceptors(
+					&authInterceptor{
+						credential: credential,
+					},
+				),
+			),
+		)
+	}
+
+	if credential == "" {
+		return svcv1alpha1connect.NewKargoServiceClient(
+			httpClient,
+			serverAddress,
+			connect.WithClientOptions(
+				connect.WithInterceptors(
+					&authInterceptor{
+						proxyCredential: proxyCredential,
+					},
+				),
+			),
+		)
+	}
+
 	return svcv1alpha1connect.NewKargoServiceClient(
 		httpClient,
 		serverAddress,
 		connect.WithClientOptions(
 			connect.WithInterceptors(
 				&authInterceptor{
-					credential: credential,
+					credential:      credential,
+					proxyCredential: proxyCredential,
 				},
 			),
 		),
