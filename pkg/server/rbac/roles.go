@@ -682,16 +682,18 @@ func ResourcesToRole(
 		kargoRole.KargoManaged = true
 	}
 
-	for annotationKey, annotationValue := range sa.Annotations {
-		if strings.HasPrefix(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix) {
-			kargoRole.Claims = append(
-				kargoRole.Claims,
-				rbacapi.Claim{
-					Name:   strings.ReplaceAll(annotationKey, rbacapi.AnnotationKeyOIDCClaimNamePrefix, ""),
-					Values: strings.Split(annotationValue, ","),
-				},
-			)
-		}
+	claims, err := rbacapi.OIDCClaimsFromAnnotationValues(sa.Annotations)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse OIDC claims from annotation values: %w", err)
+	}
+
+	for name, values := range claims {
+		kargoRole.Claims = append(kargoRole.Claims,
+			rbacapi.Claim{
+				Name:   name,
+				Values: values,
+			},
+		)
 	}
 
 	slices.SortFunc(kargoRole.Claims, func(lhs, rhs rbacapi.Claim) int {
