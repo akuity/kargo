@@ -40,7 +40,7 @@ func newTagBasedSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
 ) (*tagBasedSelector, error) {
-	base, err := newBaseSelector(sub, creds)
+	base, err := newBaseSelector(sub, creds, sub.UseCachedTags)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
@@ -141,14 +141,14 @@ func (t *tagBasedSelector) filterTags(tags []string) []string {
 func (t *tagBasedSelector) getImagesByTags(
 	ctx context.Context,
 	tags []string,
-) ([]image, error) {
+) ([]Image, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	limit := t.discoveryLimit
 	if limit == 0 || limit > len(tags) {
 		limit = len(tags)
 	}
-	images := make([]image, 0, limit)
+	images := make([]Image, 0, limit)
 	for _, tag := range tags {
 		if len(images) >= limit {
 			break

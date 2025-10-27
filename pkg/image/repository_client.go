@@ -15,10 +15,10 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/hashicorp/go-cleanhttp"
-	"github.com/patrickmn/go-cache"
 	"go.uber.org/ratelimit"
 	"golang.org/x/sync/semaphore"
 
+	"github.com/akuity/kargo/pkg/cache"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -46,6 +46,8 @@ var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
 // repositoryClient is a client for retrieving information from a specific image
 // container repository.
 type repositoryClient struct {
+	imageCache    cache.Cache[Image]
+	useCachedTags bool
 	registry      *registry
 	repoURL       string
 	repoRef       name.Reference
@@ -54,35 +56,35 @@ type repositoryClient struct {
 	// The following behaviors are overridable for testing purposes:
 
 	getImageByTagFn func(
-		context.Context,
-		string,
-		*platformConstraint,
-	) (*image, error)
+		ctx context.Context,
+		tag string,
+		platform *platformConstraint,
+	) (*Image, error)
 
 	getImageByDigestFn func(
 		context.Context,
 		string,
 		*platformConstraint,
-	) (*image, error)
+	) (*Image, error)
 
 	getImageFromRemoteDescFn func(
 		context.Context,
 		*remote.Descriptor,
 		*platformConstraint,
-	) (*image, error)
+	) (*Image, error)
 
 	getImageFromV1ImageIndexFn func(
 		ctx context.Context,
 		digest string,
 		idx v1.ImageIndex,
 		platform *platformConstraint,
-	) (*image, error)
+	) (*Image, error)
 
 	getImageFromV1ImageFn func(
 		digest string,
 		img v1.Image,
 		platform *platformConstraint,
-	) (*image, error)
+	) (*Image, error)
 
 	remoteListFn func(name.Repository, ...remote.Option) ([]string, error)
 
@@ -96,6 +98,7 @@ func newRepositoryClient(
 	repoURL string,
 	insecureSkipTLSVerify bool,
 	creds *Credentials,
+	useCachedTags bool,
 ) (*repositoryClient, error) {
 	repoRef, err := name.ParseReference(repoURL)
 	if err != nil {
@@ -119,9 +122,11 @@ func newRepositoryClient(
 	}
 
 	r := &repositoryClient{
-		registry: reg,
-		repoURL:  repoURL,
-		repoRef:  repoRef,
+		imageCache:    imageCache,
+		useCachedTags: useCachedTags,
+		registry:      reg,
+		repoURL:       repoURL,
+		repoRef:       repoRef,
 		remoteOptions: []remote.Option{
 			remote.WithTransport(&rateLimitedRoundTripper{
 				limiter:              reg.rateLimiter,
@@ -157,7 +162,25 @@ func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
 	tag string,
 	platform *platformConstraint,
-) (*image, error) {
+) (*Image, error) {
+	logger := logging.LoggerFromContext(ctx)
+	logger.Trace(
+		"retrieving image",
+		"tag", tag,
+	)
+
+	cacheKey := fmt.Sprintf("%s:%s", r.repoURL, tag)
+
+	if r.useCachedTags {
+		if img, exists, err := r.imageCache.Get(ctx, cacheKey); err != nil {
+			logger.Error(err, "error retrieving image from cache", "tag", tag)
+		} else if exists {
+			return &img, nil
+		} else {
+			logger.Trace("image found in cache", "tag", tag)
+		}
+	}
+
 	repoRef := r.repoRef.Context().Tag(tag)
 	opts := append(r.remoteOptions, remote.WithContext(ctx))
 	desc, err := r.remoteGetFn(repoRef, opts...)
@@ -167,6 +190,7 @@ func (r *repositoryClient) getImageByTag(
 			tag, r.repoURL, err,
 		)
 	}
+
 	img, err := r.getImageFromRemoteDescFn(ctx, desc, platform)
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -174,9 +198,19 @@ func (r *repositoryClient) getImageByTag(
 			tag, r.repoURL, err,
 		)
 	}
+
 	if img != nil {
 		img.Tag = tag
+		if r.useCachedTags {
+			// Cache the image
+			if err = r.imageCache.Set(ctx, cacheKey, *img); err != nil {
+				logger.Error(err, "error caching image", "tag", tag)
+			} else {
+				logger.Trace("cached image", "tag", tag)
+			}
+		}
 	}
+
 	return img, nil
 }
 
@@ -186,22 +220,20 @@ func (r *repositoryClient) getImageByDigest(
 	ctx context.Context,
 	digest string,
 	platform *platformConstraint,
-) (*image, error) {
+) (*Image, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Trace(
 		"retrieving image",
 		"digest", digest,
 	)
 
-	if entry, exists := r.registry.imageCache.Get(digest); exists {
-		img := entry.(image) // nolint: forcetypeassert
+	if img, exists, err := r.imageCache.Get(ctx, digest); err != nil {
+		logger.Error(err, "error retrieving image from cache", "digest", digest)
+	} else if exists {
 		return &img, nil
+	} else {
+		logger.Trace("image found in cache", "digest", digest)
 	}
-
-	logger.Trace(
-		"image NOT found in cache",
-		"digest", digest,
-	)
 
 	repoRef := r.repoRef.Context().Digest(digest)
 	opts := append(r.remoteOptions, remote.WithContext(ctx))
@@ -221,13 +253,15 @@ func (r *repositoryClient) getImageByDigest(
 		)
 	}
 
-	if img != nil {
+	// If we're using cached tags, the caller is going to be caching the image
+	// by tag, so we'll skip caching it by digest to save space.
+	if img != nil && !r.useCachedTags {
 		// Cache the image
-		r.registry.imageCache.Set(digest, *img, cache.DefaultExpiration)
-		logger.Trace(
-			"cached image",
-			"digest", digest,
-		)
+		if err = r.imageCache.Set(ctx, digest, *img); err != nil {
+			logger.Error(err, "error caching image", "digest", digest)
+		} else {
+			logger.Trace("cached image", "digest", digest)
+		}
 	}
 
 	return img, nil
@@ -238,7 +272,7 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 	ctx context.Context,
 	desc *remote.Descriptor,
 	platform *platformConstraint,
-) (*image, error) {
+) (*Image, error) {
 	switch desc.MediaType {
 	case types.OCIImageIndex, types.DockerManifestList:
 		idx, err := desc.ImageIndex()
@@ -306,7 +340,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	digest string,
 	idx v1.ImageIndex,
 	platform *platformConstraint,
-) (*image, error) {
+) (*Image, error) {
 	idxManifest, err := idx.IndexManifest()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -407,7 +441,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		// this in the future.
 	}
 
-	return &image{
+	return &Image{
 		Digest:      digest,
 		CreatedAt:   createdAt,
 		Annotations: annotations,
@@ -421,7 +455,7 @@ func (r *repositoryClient) getImageFromV1Image(
 	digest string,
 	img v1.Image,
 	platform *platformConstraint,
-) (*image, error) {
+) (*Image, error) {
 	cfg, err := img.ConfigFile()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -443,7 +477,7 @@ func (r *repositoryClient) getImageFromV1Image(
 		)
 	}
 
-	return &image{
+	return &Image{
 		Digest: digest,
 		CreatedAt: getCreationTime(
 			[]map[string]string{

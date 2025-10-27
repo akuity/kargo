@@ -51,12 +51,13 @@ func TestNewBaseSelector(t *testing.T) {
 					s.platform,
 				)
 				require.NotNil(t, s.repoClient)
+				require.True(t, s.repoClient.useCachedTags)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newBaseSelector(testCase.sub, nil)
+			s, err := newBaseSelector(testCase.sub, nil, true)
 			testCase.assertions(t, s, err)
 		})
 	}
@@ -65,7 +66,7 @@ func TestNewBaseSelector(t *testing.T) {
 func Test_baseSelector_imagesToAPIImages(t *testing.T) {
 	now := time.Now()
 	apiImages := (&baseSelector{}).imagesToAPIImages(
-		[]image{
+		[]Image{
 			{
 				Tag:         "foo",
 				Digest:      "foo-digest",

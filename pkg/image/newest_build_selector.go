@@ -114,7 +114,7 @@ func (n *newestBuildSelector) Select(
 func (n *newestBuildSelector) getImagesByTags(
 	ctx context.Context,
 	tags []string,
-) ([]image, error) {
+) ([]Image, error) {
 	// We'll cancel this context at the first error we encounter so that other
 	// goroutines can stop early.
 	ctx, cancel := context.WithCancel(ctx)
@@ -123,7 +123,7 @@ func (n *newestBuildSelector) getImagesByTags(
 	var wg sync.WaitGroup
 
 	// This channel is for collecting results
-	imageCh := make(chan image, len(tags))
+	imageCh := make(chan Image, len(tags))
 	// This buffered channel has room for one error
 	errCh := make(chan error, 1)
 
@@ -171,7 +171,7 @@ func (n *newestBuildSelector) getImagesByTags(
 		return nil, nil
 	}
 	// Unpack the channel into a slice
-	images := make([]image, len(imageCh))
+	images := make([]Image, len(imageCh))
 	for i := range images {
 		// This will never block because we know that the channel is closed,
 		// we know exactly how many items are in it, and we don't loop past that
@@ -183,8 +183,8 @@ func (n *newestBuildSelector) getImagesByTags(
 
 // sort sorts the provided images in place, in chronologically descending order,
 // breaking ties lexically by tag.
-func (n *newestBuildSelector) sort(images []image) {
-	slices.SortFunc(images, func(lhs, rhs image) int {
+func (n *newestBuildSelector) sort(images []Image) {
+	slices.SortFunc(images, func(lhs, rhs Image) int {
 		if comp := rhs.CreatedAt.Compare(*lhs.CreatedAt); comp != 0 {
 			return comp
 		}
