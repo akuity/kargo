@@ -375,6 +375,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -410,6 +411,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -446,6 +448,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -474,6 +477,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -502,6 +506,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -538,6 +543,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -582,12 +588,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func() func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
+						context.Context,
 						*promotion.StepContext,
 						*builtin.ArgoCDAppUpdate,
 						*argocd.Application,
@@ -636,6 +644,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -663,6 +672,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -1027,6 +1037,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			}
 
 			phase, mustUpdate, err := runner.mustPerformUpdate(
+				t.Context(),
 				&promotion.StepContext{Promotion: testPromotionID},
 				&stepCfg.Apps[0],
 				app,
