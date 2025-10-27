@@ -649,7 +649,7 @@ func (r *reconciler) terminatePromotion(
 	now := &metav1.Time{Time: time.Now()}
 
 	// If a step was running, mark the step as aborted.
-	MarkStepAbortedIfRunning(newStatus, promo, now)
+	api.MarkStepAbortedIfRunning(newStatus, promo, now)
 
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
 	if actor != "" {
@@ -703,15 +703,4 @@ func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
 		return time.Until(targetTimeout)
 	}
 	return defaultRequeueInterval
-}
-
-// MarkStepAbortedIfRunning updates the newStatus to mark the current step as
-// aborted if the promotion is running and the current step is running.
-func MarkStepAbortedIfRunning(newStatus *kargoapi.PromotionStatus, promo *kargoapi.Promotion, finishedAt *metav1.Time) {
-	if newStatus.Phase == kargoapi.PromotionPhaseRunning &&
-		int64(len(newStatus.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
-		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning {
-		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
-		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = finishedAt
-	}
 }
