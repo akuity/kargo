@@ -335,6 +335,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			stepCfg: builtin.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(
 					t, err, "Argo CD integration is disabled on this controller",
 				)
@@ -357,6 +358,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(t, err, "error getting Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -385,6 +387,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -427,6 +430,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RequeueAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -454,6 +458,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RequeueAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -481,6 +486,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RequeueAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -515,6 +521,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(t, err, "error building desired sources for Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -558,6 +565,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(t, err, "error syncing Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -612,6 +620,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -639,6 +648,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.ErrorContains(t, err, "could not determine promotion step status")
 			},
 		},
@@ -666,6 +676,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Nil(t, res.RequeueAfter)
 				require.NoError(t, err)
 			},
 		},

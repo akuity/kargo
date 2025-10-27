@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -264,6 +265,16 @@ func (a *argocdUpdater) run(
 
 	logger.Debug("done executing argocd-update promotion step")
 
+	// TODO(krancour): This enables more aggressive requeuing while waiting to
+	// observe the Application has successfully synced. This is a workaround for
+	// an as-yet-unexplained phenomenon where Application status change events do
+	// not seem to be promptly triggering re-reconciliation of the Promotion
+	// resource.
+	var requeueAfter *time.Duration
+	if aggregatedStatus == kargoapi.PromotionStepStatusRunning {
+		requeueAfter = ptr.To(30 * time.Second)
+	}
+
 	return promotion.StepResult{
 		Status: aggregatedStatus,
 		HealthCheck: &health.Criteria{
@@ -272,6 +283,7 @@ func (a *argocdUpdater) run(
 				"apps": appHealthChecks,
 			},
 		},
+		RequeueAfter: requeueAfter,
 	}, nil
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -96,6 +97,9 @@ type Result struct {
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
+	// RequeueAfter is an optional, SUGGESTED duration after which the Promotion
+	// should be requeued for reconciliation.
+	RequeueAfter *time.Duration
 }
 
 // ContextOption is a function that configures a Context.
@@ -412,4 +416,7 @@ type StepResult struct {
 	// returned by some StepRunner upon successful execution of a Step. These
 	// criteria can be used later as input to a health.Checker.
 	HealthCheck *health.Criteria
+	// RequeueAfter is an optional, SUGGESTED duration after which the this step's
+	// Promotion should be requeued for reconciliation.
+	RequeueAfter *time.Duration
 }
