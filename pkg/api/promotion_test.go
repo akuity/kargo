@@ -356,3 +356,43 @@ func TestComparePromotionPhase(t *testing.T) {
 		})
 	}
 }
+
+func TestIsCurrentStepRunningRunning(t *testing.T) {
+	tests := []struct {
+		name           string
+		promotion      *kargoapi.Promotion
+		expectedResult bool
+	}{
+		{
+			name: "promotion is running",
+			promotion: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						Status: kargoapi.PromotionStepStatusRunning,
+					}},
+					CurrentStep: 0,
+					Phase:       kargoapi.PromotionPhaseRunning,
+				},
+			},
+			expectedResult: true,
+		},
+		{
+			name: "promotion is not running",
+			promotion: &kargoapi.Promotion{
+				Status: kargoapi.PromotionStatus{
+					StepExecutionMetadata: []kargoapi.StepExecutionMetadata{{
+						Status: kargoapi.PromotionStepStatusSucceeded,
+					}},
+					CurrentStep: 0,
+					Phase:       kargoapi.PromotionPhasePending,
+				},
+			},
+			expectedResult: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expectedResult, IsCurrentStepRunning(tt.promotion))
+		})
+	}
+}
