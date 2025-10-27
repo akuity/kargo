@@ -158,13 +158,10 @@ func ComparePromotionPhase(a, b kargoapi.PromotionPhase) int {
 	}
 }
 
-// MarkStepAbortedIfRunning updates the newStatus to mark the current step as
-// aborted if the promotion is running and the current step is running.
-func MarkStepAbortedIfRunning(newStatus *kargoapi.PromotionStatus, promo *kargoapi.Promotion, finishedAt *metav1.Time) {
-	if newStatus.Phase == kargoapi.PromotionPhaseRunning &&
-		int64(len(newStatus.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
-		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning {
-		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
-		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = finishedAt
-	}
+// IsCurrentStepRunning returns true if the current step of the given Promotion is
+// running.
+func IsCurrentStepRunning(promo *kargoapi.Promotion) bool {
+	return promo.Status.Phase == kargoapi.PromotionPhaseRunning &&
+		int64(len(promo.Status.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
+		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning
 }

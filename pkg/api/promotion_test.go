@@ -357,11 +357,11 @@ func TestComparePromotionPhase(t *testing.T) {
 	}
 }
 
-func TestMarkStepAbortedIfRunning(t *testing.T) {
+func TestIsCurrentStepRunningRunning(t *testing.T) {
 	tests := []struct {
 		name           string
 		promotion      *kargoapi.Promotion
-		expectedStatus kargoapi.PromotionStepStatus
+		expectedResult bool
 	}{
 		{
 			name: "promotion is running",
@@ -374,7 +374,7 @@ func TestMarkStepAbortedIfRunning(t *testing.T) {
 					Phase:       kargoapi.PromotionPhaseRunning,
 				},
 			},
-			expectedStatus: kargoapi.PromotionStepStatusAborted,
+			expectedResult: true,
 		},
 		{
 			name: "promotion is not running",
@@ -387,16 +387,12 @@ func TestMarkStepAbortedIfRunning(t *testing.T) {
 					Phase:       kargoapi.PromotionPhasePending,
 				},
 			},
-			expectedStatus: kargoapi.PromotionStepStatusSucceeded,
+			expectedResult: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			now := metav1.Now()
-			newStatus := tt.promotion.Status.DeepCopy()
-			MarkStepAbortedIfRunning(newStatus, tt.promotion, &now)
-			step := newStatus.StepExecutionMetadata[newStatus.CurrentStep]
-			require.Equal(t, tt.expectedStatus, step.Status)
+			require.Equal(t, tt.expectedResult, IsCurrentStepRunning(tt.promotion))
 		})
 	}
 }

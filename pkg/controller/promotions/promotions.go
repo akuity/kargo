@@ -649,7 +649,10 @@ func (r *reconciler) terminatePromotion(
 	now := &metav1.Time{Time: time.Now()}
 
 	// If a step was running, mark the step as aborted.
-	api.MarkStepAbortedIfRunning(newStatus, promo, now)
+	if api.IsCurrentStepRunning(promo) {
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = now
+	}
 
 	newStatus.Phase = kargoapi.PromotionPhaseAborted
 	if actor != "" {
