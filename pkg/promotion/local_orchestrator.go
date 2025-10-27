@@ -33,7 +33,7 @@ func NewLocalOrchestrator(
 	cacheFunc ExprDataCacheFn,
 ) *LocalOrchestrator {
 	return &LocalOrchestrator{
-		executor:  NewLocalStepExecutor(registry, argoCDClient, kargoClient, credsDB),
+		executor:  NewLocalStepExecutor(registry, kargoClient, argoCDClient, credsDB),
 		registry:  registry,
 		client:    kargoClient,
 		cacheFunc: cacheFunc,
