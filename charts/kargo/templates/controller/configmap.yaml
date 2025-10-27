@@ -31,6 +31,8 @@ data:
   {{- if .Values.controller.gitClient.signingKeySecret.name }}
   GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
   {{- end }}
+  ALLOW_IMAGE_TAG_CACHING: {{ quote .Values.controller.imageCache.allowUseCachedTags }}
+  REQUIRE_IMAGE_TAG_CACHING: {{ quote .Values.controller.imageCache.requireUseCachedTags }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}
