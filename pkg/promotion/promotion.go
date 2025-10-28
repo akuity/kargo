@@ -98,8 +98,8 @@ type Result struct {
 	// State is the current state of the promotion process.
 	State State
 	// RetryAfter is an optional, SUGGESTED duration after which a Promotion
-	// reporting itself to to be in a Running status should be retried. Note: This
-	// is unrelated to retrying upon non-terminal failures.
+	// reporting itself to be in a Running status should be retried. Note: This is
+	// unrelated to retrying upon non-terminal failures.
 	RetryAfter *time.Duration
 }
 
@@ -418,7 +418,7 @@ type StepResult struct {
 	// criteria can be used later as input to a health.Checker.
 	HealthCheck *health.Criteria
 	// RetryAfter is an optional, SUGGESTED duration after which a step reporting
-	// itself to to be in a Running status should be retried. Note: This is
-	// unrelated to retrying upon non-terminal failures.
+	// itself to be in a Running status should be retried. Note: This is unrelated
+	// to retrying upon non-terminal failures.
 	RetryAfter *time.Duration
 }
