@@ -63,6 +63,12 @@ export type ProjectSettingsExtension = {
   path: string;
 };
 
+export type ArgoCDExtension = {
+  type: 'argocdExtension';
+  component: () => React.ReactNode;
+  tabBarExtraContent?: () => React.ReactNode;
+};
+
 export type Extension =
   | StageTab
   | LayoutExtension
@@ -70,4 +76,5 @@ export type Extension =
   | AppSubpage
   | PromoteTab
   | SettingsExtension
-  | ProjectSettingsExtension;
+  | ProjectSettingsExtension
+  | ArgoCDExtension;
