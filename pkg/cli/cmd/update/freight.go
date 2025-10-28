@@ -73,7 +73,7 @@ func (o *updateFreightAliasOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project the freight belongs to. If not set, the default project will be used.",
 	)
-	option.Name(cmd.Flags(), &o.Name, "The name of the freight to to be updated.")
+	option.Name(cmd.Flags(), &o.Name, "The name of the freight to be updated.")
 	option.OldAlias(cmd.Flags(), &o.OldAlias, "The existing alias of the freight to be updated.")
 	option.NewAlias(cmd.Flags(), &o.NewAlias, "The new alias to be assigned to the freight.")
 
