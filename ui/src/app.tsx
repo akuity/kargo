@@ -10,8 +10,8 @@ import { Project } from '@ui/pages/project';
 import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { themeConfig } from './config/themeConfig';
-import { useExtensionsContext } from './extensions/extensions-context';
 import { AppExtensions } from './extensions/pages/app-extensions';
+import { ArgoCDExtension } from './extensions/pages/argocd-extension';
 import { ProjectExtensions } from './extensions/pages/project-extensions';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
@@ -29,69 +29,60 @@ import { User } from './pages/user';
 import './app.less';
 import 'antd/dist/reset.css';
 
-export const App = () => {
-  const { argoCDExtension } = useExtensionsContext();
-
-  return (
-    <TransportProvider transport={transport}>
-      <QueryClientProvider client={queryClient}>
-        <ConfigProvider theme={themeConfig}>
-          <AuthContextProvider>
-            <BrowserRouter>
-              <Routes>
-                <Route element={<ProtectedRoute />}>
-                  <Route element={<MainLayout />}>
-                    <Route path={paths.projects} element={<Projects />} />
-                    <Route path={paths.project} element={<Project />} />
-                    <Route path={paths.projectEvents} element={<Events />} />
-                    <Route path={paths.stage} element={<Project />} />
-                    <Route path={paths.promotion} element={<Project />} />
-                    <Route path={paths.promote} element={<Project />} />
-                    <Route path={paths.freight} element={<Project />} />
-                    <Route path={paths.warehouse} element={<Project />} />
-                    <Route path={paths.downloads} element={<Downloads />} />
-                    <Route path={paths.user} element={<User />} />
-                    <Route
-                      path={paths.createStage}
-                      element={<Project tab='pipelines' creatingStage={true} />}
-                    />
-                    <Route
-                      path={paths.createWarehouse}
-                      element={<Project tab='pipelines' creatingWarehouse />}
-                    />
-                    <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
-                    <Route path={paths.projectSettings}>
-                      <Route index element={<ProjectSettings />} />
-                      <Route path='*' element={<ProjectSettings />} />
-                    </Route>
-                    <Route path={paths.projectExtensions}>
-                      <Route path='*' element={<ProjectExtensions />} />
-                    </Route>
-                    {argoCDExtension && (
-                      <Route
-                        path={paths.projectArgoCDExtension}
-                        element={<argoCDExtension.component />}
-                      />
-                    )}
-
-                    <Route path={paths.appExtensions}>
-                      <Route path='*' element={<AppExtensions />} />
-                    </Route>
-                    <Route path={paths.settings}>
-                      <Route index element={<Settings />} />
-                      <Route path='*' element={<Settings />} />
-                    </Route>
+export const App = () => (
+  <TransportProvider transport={transport}>
+    <QueryClientProvider client={queryClient}>
+      <ConfigProvider theme={themeConfig}>
+        <AuthContextProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route element={<ProtectedRoute />}>
+                <Route element={<MainLayout />}>
+                  <Route path={paths.projects} element={<Projects />} />
+                  <Route path={paths.project} element={<Project />} />
+                  <Route path={paths.projectEvents} element={<Events />} />
+                  <Route path={paths.stage} element={<Project />} />
+                  <Route path={paths.promotion} element={<Project />} />
+                  <Route path={paths.promote} element={<Project />} />
+                  <Route path={paths.freight} element={<Project />} />
+                  <Route path={paths.warehouse} element={<Project />} />
+                  <Route path={paths.downloads} element={<Downloads />} />
+                  <Route path={paths.user} element={<User />} />
+                  <Route
+                    path={paths.createStage}
+                    element={<Project tab='pipelines' creatingStage={true} />}
+                  />
+                  <Route
+                    path={paths.createWarehouse}
+                    element={<Project tab='pipelines' creatingWarehouse />}
+                  />
+                  <Route path={paths.promotionTasks} element={<Project tab='promotionTasks' />} />
+                  <Route path={paths.projectSettings}>
+                    <Route index element={<ProjectSettings />} />
+                    <Route path='*' element={<ProjectSettings />} />
                   </Route>
-                  <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
+                  <Route path={paths.projectExtensions}>
+                    <Route path='*' element={<ProjectExtensions />} />
+                  </Route>
+                  <Route path={paths.projectArgoCDExtension} element={<ArgoCDExtension />} />
+
+                  <Route path={paths.appExtensions}>
+                    <Route path='*' element={<AppExtensions />} />
+                  </Route>
+                  <Route path={paths.settings}>
+                    <Route index element={<Settings />} />
+                    <Route path='*' element={<Settings />} />
+                  </Route>
                 </Route>
-                <Route path={paths.login} element={<Login />} />
-                <Route path={paths.tokenRenew} element={<TokenRenew />} />
-              </Routes>
-            </BrowserRouter>
-          </AuthContextProvider>
-        </ConfigProvider>
-        <ReactQueryDevtools buttonPosition='bottom-left' />
-      </QueryClientProvider>
-    </TransportProvider>
-  );
-};
+                <Route path={paths.analysisRunLogs} element={<AnalysisRunLogsPage />} />
+              </Route>
+              <Route path={paths.login} element={<Login />} />
+              <Route path={paths.tokenRenew} element={<TokenRenew />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthContextProvider>
+      </ConfigProvider>
+      <ReactQueryDevtools buttonPosition='bottom-left' />
+    </QueryClientProvider>
+  </TransportProvider>
+);
