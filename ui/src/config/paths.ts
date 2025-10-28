@@ -13,6 +13,7 @@ export const paths = {
   createWarehouse: '/project/:name/create-warehouse',
   projectSettings: '/project/:name/settings',
   projectExtensions: '/project/:name/ext',
+  projectArgoCDExtension: '/project/:name/argocd/:namespace/:appName',
   user: '/user',
   settings: '/settings',
   analysisRunLogs: '/ext/project/:name/stage/:stageName/analysis-run/:analysisRunId/logs',

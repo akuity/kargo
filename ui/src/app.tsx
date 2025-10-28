@@ -11,6 +11,7 @@ import { paths } from './config/paths';
 import { queryClient } from './config/query-client';
 import { themeConfig } from './config/themeConfig';
 import { AppExtensions } from './extensions/pages/app-extensions';
+import { ArgoCDExtension } from './extensions/pages/argocd-extension';
 import { ProjectExtensions } from './extensions/pages/project-extensions';
 import { AuthContextProvider } from './features/auth/context/auth-context-provider';
 import { ProtectedRoute } from './features/auth/protected-route';
@@ -63,6 +64,8 @@ export const App = () => (
                   <Route path={paths.projectExtensions}>
                     <Route path='*' element={<ProjectExtensions />} />
                   </Route>
+                  <Route path={paths.projectArgoCDExtension} element={<ArgoCDExtension />} />
+
                   <Route path={paths.appExtensions}>
                     <Route path='*' element={<AppExtensions />} />
                   </Route>
