@@ -644,7 +644,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
-			name:                     "timeout occurs after next suggested interval",
+			name:                     "timeout would occur after suggested interval elapses",
 			suggestedRequeueInterval: ptr.To(time.Minute),
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
@@ -671,7 +671,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
-			name:                     "timeout occurs before next default interval",
+			name:                     "timeout would occur before suggested interval elapses",
 			suggestedRequeueInterval: ptr.To(time.Minute),
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
@@ -699,7 +699,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
-			name: "timeout occurs after next default interval",
+			name: "timeout would occur after default interval elapses",
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
 					Steps: []kargoapi.PromotionStep{{
@@ -725,7 +725,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			},
 		},
 		{
-			name: "timeout occurs before next default interval",
+			name: "timeout would occur before next default interval elapses",
 			promo: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
 					Steps: []kargoapi.PromotionStep{{

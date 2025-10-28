@@ -328,7 +328,7 @@ func (r *reconciler) Reconcile(
 
 	newStatus := promo.Status.DeepCopy()
 
-	var requeueAfter *time.Duration
+	var suggestedRequeueInterval *time.Duration
 
 	// Wrap the promoteFn() call in an anonymous function to recover() any panics, so
 	// we can update the promo's phase with Error if it does. This breaks an infinite
@@ -347,7 +347,7 @@ func (r *reconciler) Reconcile(
 		}()
 		var otherStatus *kargoapi.PromotionStatus
 		var promoteErr error
-		otherStatus, requeueAfter, promoteErr = r.promoteFn(
+		otherStatus, suggestedRequeueInterval, promoteErr = r.promoteFn(
 			promoCtx,
 			*promo,
 			stage,
@@ -462,7 +462,7 @@ func (r *reconciler) Reconcile(
 	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
 		return ctrl.Result{
-			RequeueAfter: calculateRequeueInterval(promo, requeueAfter),
+			RequeueAfter: calculateRequeueInterval(promo, suggestedRequeueInterval),
 		}, nil
 	}
 	return ctrl.Result{}, nil
@@ -593,7 +593,7 @@ func (r *reconciler) promote(
 	}
 
 	if workingPromo.Status.Phase == kargoapi.PromotionPhaseRunning {
-		return &workingPromo.Status, res.RequeueAfter, nil
+		return &workingPromo.Status, res.RetryAfter, nil
 	}
 
 	return &workingPromo.Status, nil, nil

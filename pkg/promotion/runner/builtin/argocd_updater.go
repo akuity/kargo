@@ -290,15 +290,15 @@ func (a *argocdUpdater) run(
 		"status", aggregatedStatus,
 	)
 
-	// TODO(krancour): This enables more aggressive requeuing while waiting to
+	// TODO(krancour): This enables more aggressive polling while waiting to
 	// observe the Application has successfully synced. This is a workaround for
-	// an as-yet-unexplained phenomenon where Application status change events do
-	// not seem to be promptly triggering re-reconciliation of the Promotion
-	// resource.
-	var requeueAfter *time.Duration
+	// an as-yet-unexplained, but rare phenomenon where Application status change
+	// events do not seem to be promptly triggering re-reconciliation of the
+	// Promotion resources.
+	var retryAfter *time.Duration
 	if aggregatedStatus == kargoapi.PromotionStepStatusRunning {
-		requeueAfter = ptr.To(30 * time.Second)
-		logger.Info("promotion to be requeued", "interval", requeueAfter)
+		retryAfter = ptr.To(30 * time.Second)
+		logger.Info("step to be retried", "interval", retryAfter)
 	}
 
 	return promotion.StepResult{
@@ -309,7 +309,7 @@ func (a *argocdUpdater) run(
 				"apps": appHealthChecks,
 			},
 		},
-		RequeueAfter: requeueAfter,
+		RetryAfter: retryAfter,
 	}, nil
 }
 

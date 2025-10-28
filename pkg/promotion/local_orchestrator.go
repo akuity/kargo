@@ -168,7 +168,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 				StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
-				RequeueAfter:          result.RequeueAfter,
+				RetryAfter:            result.RetryAfter,
 			}, nil
 		}
 

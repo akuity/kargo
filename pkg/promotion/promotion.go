@@ -97,9 +97,10 @@ type Result struct {
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
-	// RequeueAfter is an optional, SUGGESTED duration after which the Promotion
-	// should be requeued for reconciliation.
-	RequeueAfter *time.Duration
+	// RetryAfter is an optional, SUGGESTED duration after which a Promotion
+	// reporting itself to to be in a Running status should be retried. Note: This
+	// is unrelated to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }
 
 // ContextOption is a function that configures a Context.
@@ -416,7 +417,8 @@ type StepResult struct {
 	// returned by some StepRunner upon successful execution of a Step. These
 	// criteria can be used later as input to a health.Checker.
 	HealthCheck *health.Criteria
-	// RequeueAfter is an optional, SUGGESTED duration after which the this step's
-	// Promotion should be requeued for reconciliation.
-	RequeueAfter *time.Duration
+	// RetryAfter is an optional, SUGGESTED duration after which a step reporting
+	// itself to to be in a Running status should be retried. Note: This is
+	// unrelated to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }
