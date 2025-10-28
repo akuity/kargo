@@ -335,6 +335,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			stepCfg: builtin.ArgoCDUpdateConfig{},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(
 					t, err, "Argo CD integration is disabled on this controller",
 				)
@@ -357,6 +358,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(t, err, "error getting Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -373,6 +375,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -385,6 +388,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -407,6 +411,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return []argocd.ApplicationSource{{}}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -427,6 +432,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -442,6 +448,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -454,6 +461,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -469,6 +477,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -481,6 +490,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -496,6 +506,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -515,6 +526,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(t, err, "error building desired sources for Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -531,6 +543,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -558,6 +571,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(t, err, "error syncing Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
@@ -574,12 +588,14 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func() func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
 				) (argocd.OperationPhase, bool, error) {
 					var count uint
 					return func(
+						context.Context,
 						*promotion.StepContext,
 						*builtin.ArgoCDAppUpdate,
 						*argocd.Application,
@@ -612,6 +628,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -627,6 +644,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -639,6 +657,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.ErrorContains(t, err, "could not determine promotion step status")
 			},
 		},
@@ -653,6 +672,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 					return &argocd.Application{}, nil
 				},
 				mustPerformUpdateFn: func(
+					context.Context,
 					*promotion.StepContext,
 					*builtin.ArgoCDAppUpdate,
 					*argocd.Application,
@@ -666,6 +686,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -1016,6 +1037,7 @@ func Test_argoCDUpdater_mustPerformUpdate(t *testing.T) {
 			}
 
 			phase, mustUpdate, err := runner.mustPerformUpdate(
+				t.Context(),
 				&promotion.StepContext{Promotion: testPromotionID},
 				&stepCfg.Apps[0],
 				app,

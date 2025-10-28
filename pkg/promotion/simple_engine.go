@@ -189,6 +189,7 @@ func (e *simpleEngine) executeSteps(
 				StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
+				RetryAfter:            result.RetryAfter,
 			}
 		}
 

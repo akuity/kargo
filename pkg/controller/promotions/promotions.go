@@ -80,7 +80,7 @@ type reconciler struct {
 		kargoapi.Promotion,
 		*kargoapi.Stage,
 		*kargoapi.Freight,
-	) (*kargoapi.PromotionStatus, error)
+	) (*kargoapi.PromotionStatus, *time.Duration, error)
 
 	terminatePromotionFn func(
 		context.Context,
@@ -328,6 +328,8 @@ func (r *reconciler) Reconcile(
 
 	newStatus := promo.Status.DeepCopy()
 
+	var suggestedRequeueInterval *time.Duration
+
 	// Wrap the promoteFn() call in an anonymous function to recover() any panics, so
 	// we can update the promo's phase with Error if it does. This breaks an infinite
 	// cycle of a bad promo continuously failing to reconcile, and surfaces the error.
@@ -343,7 +345,9 @@ func (r *reconciler) Reconcile(
 				newStatus.Message = fmt.Sprintf("%v", err)
 			}
 		}()
-		otherStatus, promoteErr := r.promoteFn(
+		var otherStatus *kargoapi.PromotionStatus
+		var promoteErr error
+		otherStatus, suggestedRequeueInterval, promoteErr = r.promoteFn(
 			promoCtx,
 			*promo,
 			stage,
@@ -457,7 +461,9 @@ func (r *reconciler) Reconcile(
 	// If the promotion is still running, we'll need to periodically check on
 	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
-		return ctrl.Result{RequeueAfter: calculateRequeueInterval(promo)}, nil
+		return ctrl.Result{
+			RequeueAfter: calculateRequeueInterval(promo, suggestedRequeueInterval),
+		}, nil
 	}
 	return ctrl.Result{}, nil
 }
@@ -467,19 +473,22 @@ func (r *reconciler) promote(
 	promo kargoapi.Promotion,
 	stage *kargoapi.Stage,
 	targetFreight *kargoapi.Freight,
-) (*kargoapi.PromotionStatus, error) {
+) (*kargoapi.PromotionStatus, *time.Duration, error) {
 	logger := logging.LoggerFromContext(ctx)
 	stageName := stage.Name
 	stageNamespace := promo.Namespace
 
 	if targetFreight == nil {
 		// nolint:staticcheck
-		return nil, fmt.Errorf("Freight %q not found in namespace %q", promo.Spec.Freight, promo.Namespace)
+		return nil, nil, fmt.Errorf(
+			"Freight %q not found in namespace %q",
+			promo.Spec.Freight, promo.Namespace,
+		)
 	}
 
 	if !stage.IsFreightAvailable(targetFreight) {
 		// nolint:staticcheck
-		return nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"Freight %q is not available to Stage %q in namespace %q",
 			promo.Spec.Freight,
 			stageName,
@@ -549,7 +558,7 @@ func (r *reconciler) promote(
 		promoCtx.StepExecutionMetadata = nil
 		workingPromo.Status.HealthChecks = nil
 	} else if !os.IsExist(err) {
-		return nil, fmt.Errorf("error creating working directory: %w", err)
+		return nil, nil, fmt.Errorf("error creating working directory: %w", err)
 	}
 	defer func() {
 		if workingPromo.Status.Phase.IsTerminal() {
@@ -576,7 +585,7 @@ func (r *reconciler) promote(
 	}
 	if err != nil {
 		workingPromo.Status.Phase = kargoapi.PromotionPhaseErrored
-		return &workingPromo.Status, err
+		return &workingPromo.Status, nil, err
 	}
 
 	logger.Debug("promotion", "phase", workingPromo.Status.Phase)
@@ -606,7 +615,11 @@ func (r *reconciler) promote(
 		}
 	}
 
-	return &workingPromo.Status, nil
+	if workingPromo.Status.Phase == kargoapi.PromotionPhaseRunning {
+		return &workingPromo.Status, res.RetryAfter, nil
+	}
+
+	return &workingPromo.Status, nil, nil
 }
 
 // buildTargetFreightCollection constructs a FreightCollection that contains all
@@ -721,31 +734,38 @@ func parseCreateActorAnnotation(promo *kargoapi.Promotion) string {
 
 var defaultRequeueInterval = 5 * time.Minute
 
-func calculateRequeueInterval(p *kargoapi.Promotion) time.Duration {
+func calculateRequeueInterval(
+	p *kargoapi.Promotion,
+	suggestedRequeueInterval *time.Duration,
+) time.Duration {
+	requeueInterval := defaultRequeueInterval
+	if suggestedRequeueInterval != nil {
+		requeueInterval = *suggestedRequeueInterval
+	}
+
 	// Ensure we have a step for the current step index.
 	if int(p.Status.CurrentStep) >= len(p.Spec.Steps) {
-		return defaultRequeueInterval
+		return requeueInterval
 	}
 
 	step := p.Spec.Steps[p.Status.CurrentStep]
 	registration := promotion.GetStepRunnerRegistration(step.Uses)
 	timeout := step.Retry.GetTimeout(registration.Metadata.DefaultTimeout)
 
-	// If the timeout is 0 (no timeout), we should requeue at the default
-	// interval.
+	// If the timeout is 0 (no timeout), we should requeue at the full interval.
 	if timeout == 0 {
-		return defaultRequeueInterval
+		return requeueInterval
 	}
 
 	// Ensure we have an execution metadata entry for the current step.
 	if int(p.Status.CurrentStep) >= len(p.Status.StepExecutionMetadata) {
-		return defaultRequeueInterval
+		return requeueInterval
 	}
 
 	md := p.Status.StepExecutionMetadata[p.Status.CurrentStep]
 	targetTimeout := md.StartedAt.Add(timeout)
-	if targetTimeout.Before(time.Now().Add(defaultRequeueInterval)) {
+	if targetTimeout.Before(time.Now().Add(requeueInterval)) {
 		return time.Until(targetTimeout)
 	}
-	return defaultRequeueInterval
+	return requeueInterval
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	gocache "github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert/yaml"
@@ -401,6 +402,10 @@ type Result struct {
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
+	// RetryAfter is an optional, SUGGESTED duration after which a Promotion
+	// reporting itself to be in a Running status should be retried. Note: This is
+	// unrelated to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }
 
 // getTaskOutputs returns the outputs of a task that are relevant to the current
@@ -505,4 +510,8 @@ type StepResult struct {
 	// returned by some StepRunner upon successful execution of a Step. These
 	// criteria can be used later as input to a health.Checker.
 	HealthCheck *health.Criteria
+	// RetryAfter is an optional, SUGGESTED duration after which a step reporting
+	// itself to be in a Running status should be retried. Note: This is unrelated
+	// to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }
