@@ -370,6 +370,25 @@ message ClusterPromotionTaskList {
   repeated ClusterPromotionTask items = 2;
 }
 
+// ConditionSelector encapsulates a condition used to match resources based
+// on specific criteria.
+message ConditionSelector {
+  // Key is the key of the condition to be matched.
+  //
+  // kubebuilder:validation:Required
+  optional string key = 1;
+
+  // Operator is the set of operators that can be used in a scope selector requirement.
+  //
+  // kubebuilder:validation:Required
+  optional string operator = 2;
+
+  // Value is the value of the condition to be matched.
+  //
+  // +kubebuilder:validation:Required
+  optional string value = 3;
+}
+
 // CurrentStage reflects a Stage's current use of Freight.
 message CurrentStage {
   // Since is the time at which the Stage most recently started using the
@@ -686,6 +705,72 @@ message FreightStatus {
   // This is useful for storing additional information about the Freight
   // or Promotion that can be shared across steps or stages.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
+}
+
+// GenericWebhookAction describes an action to be performed on a resource
+// and the conditions under which it should be performed.
+message GenericWebhookAction {
+  // Name is the name of the action to be performed.
+  //
+  // +kubebuilder:validation:Enum=Refresh;
+  optional string action = 1;
+
+  // MatchConditions is a list of conditions that must be met for the action to be performed.
+  //
+  // +optional
+  repeated ConditionSelector matchConditions = 2;
+
+  // Parameters contains additional parameters for the action.
+  //
+  // +optional
+  map<string, string> parameters = 3;
+
+  // Targets is a list of targets on which the action should be performed.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated GenericWebhookTarget targets = 4;
+}
+
+// GenericWebhookReceiverConfig describes a generic webhook receiver
+// that can be configured to handle arbitrary webhook payloads using
+// a set of user-defined actions, targets, and match conditions using expressions and/or labels.
+message GenericWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value is
+  // the shared secret used to authenticate the webhook requests sent by the
+  // generic webhook sender.
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+
+  // Actions is a list of actions to be performed when a webhook event is received.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated GenericWebhookAction actions = 2;
+}
+
+// GenericWebhookTarget describes a target resource for a generic webhook event.
+message GenericWebhookTarget {
+  // Kind is the kind of the target resource (e.g., "Warehouse", "Stage").
+  //
+  // +kubebuilder:validation:Required
+  optional string kind = 1;
+
+  // LabelSelector is a label selector to identify the target resources.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
+
+  // IndexSelector is an index selector to identify the target resources.
+  //
+  // +optional
+  optional IndexSelector indexSelector = 3;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -1219,6 +1304,35 @@ message ImageSubscription {
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
   optional int32 discoveryLimit = 9;
+}
+
+// IndexSelector encapsulates a selector used to derive index keys
+// based on expressions.
+message IndexSelector {
+  // MatchExpressions is a list of index selector requirements.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated IndexSelectorRequirement matchExpressions = 1;
+}
+
+// IndexSelectorRequirement encapsulates a requirement used to select indexes
+// based on specific criteria.
+message IndexSelectorRequirement {
+  // Key is the key of the index.
+  //
+  // kubebuilder:validation:Required
+  optional string key = 1;
+
+  // Operator indicates the operation that should be used to evaluate
+  // whether the selection requirement is satisfied.
+  //
+  // kubebuilder:validation:Required
+  optional string operator = 2;
+
+  // Values is a list of values or a single value returned from an expression.
+  //
+  // kubebuilder:validation:Required
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 3;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace
@@ -2075,6 +2189,9 @@ message WebhookReceiverConfig {
   // Gitea contains the configuration for a webhook receiver that is compatible
   // with Gitea payloads.
   optional GiteaWebhookReceiverConfig gitea = 7;
+
+  // Generic contains the configuration for a generic webhook receiver.
+  optional GenericWebhookReceiverConfig generic = 11;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
