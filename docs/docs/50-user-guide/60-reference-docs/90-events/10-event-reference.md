@@ -7,11 +7,19 @@ description: Reference documentation for Kargo events and types.
 This document contains a complete reference of all Kargo events, including their types and
 descriptions.
 
+:::info
+
+These events are always emitted by Kargo to the Kubernetes event log with the keys encoded in the
+annotations of the event. However, they are primarily consumed by the Pro version of Kargo (such as
+the [Notification feature](./100-notifications/index.md))
+
+:::
+
 ## Event Fields
 
 Many Kargo events share common fields. The following sections describe these common fields, which
 are referenced in individual event definitions. Each field is given as it appears in the event
-payload (serialized as JSON) and, if optional, noted whether the type is a pointer when used in
+payload (serialized as JSON) and, if optional, notes whether the type is a pointer when used in
 expr-lang expressions.
 
 In each event definition in [Event Types](#event-types), the included fields are listed under
@@ -31,7 +39,7 @@ These fields are included in all Kargo events:
 
 ### Freight Fields
 
-Freight payloads describe the artifact under evaluation or promotion.
+Freight payloads describe the collection of artifacts under evaluation or promotion.
 
 | Field Name   | Type               | Description                                                                       | Optional         |
 | ------------ | ------------------ | --------------------------------------------------------------------------------- | ---------------- |
@@ -120,7 +128,6 @@ The complete list of built-in Kargo event types is provided below:
 - `FreightVerificationAborted`
 - `FreightVerificationInconclusive`
 - `FreightVerificationUnknown`
-
 
 Below are the detailed definitions for each event type.
 

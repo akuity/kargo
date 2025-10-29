@@ -1,11 +1,12 @@
 ---
+sidebar_label: Message Formatting
 description: Message formatting options for Kargo notifications.
 ---
 
-# Message Formatting
-
 <span class="tag professional"></span>
 <span class="tag beta"></span>
+
+# Message Formatting
 
 ## Overview
 

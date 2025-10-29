@@ -44,17 +44,19 @@ added in future releases.
 
 By default, the `send-message` step will use the given message and send a plain formatting message
 to the configured channel. However, in some cases you may want to send a richly formatted message,
-such as a Slack message with blocks. To do this, you can use the `encodingType` field to specify the
-format of the message. The supported structures for each message type can be found in the
-[Notification documentation](../90-events/100-notifications/20-message-formatting.md). See the
-example section below for an example of sending a richly formatted Slack message.
+such as a Slack message with [blocks](https://docs.slack.dev/block-kit/). To do this, you can use
+the `encodingType` field to specify the format of the message. The supported structures for each
+message type can be found in the [Notification
+documentation](../90-events/100-notifications/20-message-formatting.md). See the example section
+below for an example of sending a richly formatted Slack message.
 
 :::warning
 
-If `encodingType` is set, all configuration options for the specific channel (e.g. `slack` or
-`smtp`) must be set in the message body itself according to the body format. Any options that are
-set will be ignored. For example, if you want to override the Slack channel ID, you must set it in
-the message body and not in the `slack.channelID` field.
+If `encodingType` is set for a message, it assumes that all configuration options will be passed in
+the encoded body passed as the `message` field (see [the Slack example
+below](#sending-a-richly-formatted-slack-message)) rather than using the config specific fields such
+as `slack.channelID` or `smtp.html`. Any options that are set in the `config` block other than
+`message` and `encodingType` will be ignored.
 
 :::
 

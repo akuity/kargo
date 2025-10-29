@@ -227,26 +227,28 @@ artifact discovery process.
 Their `spec` fields are identical, but `ClusterMessageChannel`s are available to every Project in
 the cluster without needing to create a Project-scoped `MessageChannel` resource. The other
 difference is that `ClusterMessageChannel`s must reference `Secret`s in the designated cluster
-secrets namespace. By default, that namespace is `kargo-cluster-secrets`, but can be changed by the
-operator at the time of installation. (Refer to the [Kargo Helm Chart's
-README.md](https://github.com/akuity/kargo/tree/main/charts/kargo)). For example, here is a
+secrets namespace (generally `kargo-cluster-secrets`). For example, here is a
 `ClusterMessageChannel` that sends messages to a Slack channel:
 
 ```yaml
 apiVersion: ee.kargo.akuity.io/v1alpha1
 kind: ClusterMessageChannel
 metadata:
-  name: slack
+  name: devops-team-slack
 spec:
   # A reference to a Secret containing the Slack token. This is required for Slack. The Secret must
   # contain the following key:
   # - `apiKey`: The Slack token with permissions to post messages to the desired channel
   secretRef:
-    # The `namespace` field is ignored for `ClusterMessageChannel` as it is only allowed to reference
-    # Secrets in the cluster-secret-namespace
+    # The name of the Secret in the cluster secrets namespace
     name: slack-token
   # Configuration specific to Slack
   slack:
-    # The channel ID to send messages to. This field is required
+    # The Slack-specific channel ID to send messages to. This field is required
     channelID: C1234567890
 ```
+
+This is only a small example to illustrate the structure of a `ClusterMessageChannel`. For more
+detailed information about all the different spec fields and configuration options, refer to the
+documentation for
+[`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).

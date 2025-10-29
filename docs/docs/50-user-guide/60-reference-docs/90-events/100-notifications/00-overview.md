@@ -1,11 +1,12 @@
 ---
+sidebar_label: Key Concepts
 description: An overview of Kargo notifications concepts and components.
 ---
 
-# Key Concepts
-
 <span class="tag professional"></span>
 <span class="tag beta"></span>
+
+# Key Concepts
 
 :::info
 

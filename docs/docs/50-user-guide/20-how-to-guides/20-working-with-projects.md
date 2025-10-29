@@ -242,7 +242,7 @@ This is an example `MessageChannel` configuration for Slack showing all options 
 apiVersion: ee.kargo.akuity.io/v1alpha1
 kind: MessageChannel
 metadata:
-  name: slack
+  name: test-env-slack
   # Must match the namespace of the Project
   namespace: kargo-demo
 spec:
@@ -267,7 +267,7 @@ This is an example `MessageChannel` configuration for SMTP showing all options w
 apiVersion: ee.kargo.akuity.io/v1alpha1
 kind: MessageChannel
 metadata:
-  name: smtp
+  name: engineering-team-smtp
   # Must match the namespace of the Project
   namespace: kargo-demo
 spec:
