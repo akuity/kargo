@@ -16,7 +16,9 @@ import (
 )
 
 type Options struct {
-	InsecureTLS bool
+	Credentials      string
+	ProxyCredentials string
+	InsecureTLS      bool
 }
 
 // AddFlags adds the flags for the client options to the provided flag set.
@@ -45,7 +47,11 @@ func GetClientFromConfig(
 	if err != nil {
 		return nil, fmt.Errorf("error refreshing token: %w", err)
 	}
-	return GetClient(cfg.APIAddress, cfg.BearerToken, cfg.ProxyAuthCredentials, skipTLSVerify), nil
+	return GetClient(cfg.APIAddress, &Options{
+		Credentials:      cfg.BearerToken,
+		ProxyCredentials: cfg.ProxyAuthCredentials,
+		InsecureTLS:      skipTLSVerify,
+	}), nil
 }
 
 // GetClient returns a new client for the Kargo API server located at the
@@ -54,62 +60,29 @@ func GetClientFromConfig(
 // requests.
 func GetClient(
 	serverAddress string,
-	credential string,
-	proxyCredential string,
-	insecureTLS bool,
+	opts *Options,
 ) svcv1alpha1connect.KargoServiceClient {
 	httpClient := cleanhttp.DefaultClient()
 
-	if insecureTLS {
+	if opts.InsecureTLS {
 		transport := cleanhttp.DefaultTransport()
 		transport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
 		}
 		httpClient.Transport = transport
 	}
-	// Both credentials are empty
-	if credential == "" && proxyCredential == "" {
-		return svcv1alpha1connect.NewKargoServiceClient(httpClient, serverAddress)
-	}
 
-	if credential != "" && proxyCredential == "" {
-		return svcv1alpha1connect.NewKargoServiceClient(
-			httpClient,
-			serverAddress,
-			connect.WithClientOptions(
-				connect.WithInterceptors(
-					&authInterceptor{
-						credential: credential,
-					},
-				),
-			),
-		)
+	interceptor := &authInterceptor{}
+	if opts.Credentials == "" {
+		interceptor.credential = opts.Credentials
 	}
-
-	if credential == "" {
-		return svcv1alpha1connect.NewKargoServiceClient(
-			httpClient,
-			serverAddress,
-			connect.WithClientOptions(
-				connect.WithInterceptors(
-					&authInterceptor{
-						proxyCredential: proxyCredential,
-					},
-				),
-			),
-		)
+	if opts.ProxyCredentials == "" {
+		interceptor.proxyCredential = opts.ProxyCredentials
 	}
 
 	return svcv1alpha1connect.NewKargoServiceClient(
 		httpClient,
 		serverAddress,
-		connect.WithClientOptions(
-			connect.WithInterceptors(
-				&authInterceptor{
-					credential:      credential,
-					proxyCredential: proxyCredential,
-				},
-			),
-		),
+		connect.WithClientOptions(connect.WithInterceptors(interceptor)),
 	)
 }

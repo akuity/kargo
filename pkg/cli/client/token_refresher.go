@@ -106,7 +106,11 @@ func redeemRefreshToken(
 	refreshToken string,
 	insecureTLS bool,
 ) (string, string, error) {
-	client := GetClient(serverAddress, "", "", insecureTLS)
+	client := GetClient(serverAddress, &Options{
+		Credentials:      "",
+		ProxyCredentials: "",
+		InsecureTLS:      insecureTLS,
+	})
 
 	res, err := client.GetPublicConfig(
 		ctx,
