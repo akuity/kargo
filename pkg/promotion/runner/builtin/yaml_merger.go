@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
@@ -62,84 +61,73 @@ func (y *yamlMerger) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.YAMLMergeConfig,
 ) (promotion.StepResult, error) {
-	// Validate and collect input file paths
-	filePaths := make([]string, 0, len(cfg.InFiles))
-	for _, path := range cfg.InFiles {
-		inFile, err := securejoin.SecureJoin(stepCtx.WorkDir, path)
+	// Update input paths and check for the existence of files at those locations
+	relInputPaths := make([]string, 0, len(cfg.InFiles))
+	absInputPaths := make([]string, 0, len(cfg.InFiles))
+	for _, relInputPath := range cfg.InFiles {
+		absInputPath, err := securejoin.SecureJoin(stepCtx.WorkDir, relInputPath)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("invalid input file path %q: %w", path, err)
+				fmt.Errorf(
+					"error joining path %s with work dir %s: %w",
+					relInputPath, stepCtx.WorkDir, err,
+				)
 		}
-
-		if _, err = os.Stat(inFile); err != nil {
+		if _, err = os.Stat(absInputPath); err != nil {
 			if os.IsNotExist(err) {
 				if cfg.IgnoreMissingFiles {
 					continue
 				}
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-					fmt.Errorf("input file %q not found: %w", path, err)
+					fmt.Errorf("input file %q not found: %w", relInputPath, err)
 			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("unexpected error with file %q: %w", path, err)
+				fmt.Errorf("unexpected error with file %q: %w", relInputPath, err)
 		}
-		filePaths = append(filePaths, inFile)
+		relInputPaths = append(relInputPaths, relInputPath)
+		absInputPaths = append(absInputPaths, absInputPath)
 	}
 
-	// Validate output path
 	outFile, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.OutFile)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("invalid output file path %q: %w", cfg.OutFile, err)
+			fmt.Errorf(
+				"error joining path %s with work dir %s: %w",
+				cfg.OutFile, stepCtx.WorkDir, err,
+			)
 	}
 
-	// Ensure output directory exists
-	if err = os.MkdirAll(filepath.Dir(outFile), 0o700); err != nil {
+	if err = yaml.MergeFiles(absInputPaths, outFile); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error ensuring existence of directory %q: %w", filepath.Dir(outFile), err)
+			fmt.Errorf("error merging YAML files: %w", err)
 	}
 
-	if len(filePaths) == 0 {
-		if !cfg.IgnoreMissingFiles {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("no input files found to merge")
-		}
-		// Create an empty output file when ignoreMissingFiles is true
-		if err = os.WriteFile(outFile, []byte{}, 0o600); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("error creating empty output file: %w", err)
-		}
-	} else {
-		// Merge YAML files
-		if err = yaml.MergeFiles(filePaths, outFile); err != nil {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-				fmt.Errorf("error merging YAML files: %w", err)
-		}
-	}
-
-	// Generate commit message with relative paths
+	// Generate commit message with relative paths. This does not include any
+	// that were ignored.
 	result := promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}
-	if commitMsg := y.generateCommitMessage(cfg.OutFile, cfg.InFiles); commitMsg != "" {
-		result.Output = map[string]any{
-			"commitMessage": commitMsg,
-		}
+	if msg := y.generateCommitMessage(relInputPaths, cfg.OutFile); msg != "" {
+		result.Output = map[string]any{"commitMessage": msg}
 	}
 	return result, nil
 }
 
-func (y *yamlMerger) generateCommitMessage(outPath string, inFiles []string) string {
-	if len(inFiles) == 0 {
+func (y *yamlMerger) generateCommitMessage(
+	inPaths []string,
+	outPath string,
+) string {
+	if len(inPaths) == 0 {
 		return ""
 	}
-
-	var commitMsg strings.Builder
-	if len(inFiles) == 1 {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("Merged %s to %s", inFiles[0], outPath))
+	var msg strings.Builder
+	if len(inPaths) == 1 {
+		_, _ = msg.WriteString(fmt.Sprintf("Wrote %s to %s", inPaths[0], outPath))
 	} else {
-		_, _ = commitMsg.WriteString(fmt.Sprintf("Merged %d YAML files to %s", len(inFiles), outPath))
-		for _, file := range inFiles {
-			_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", file))
+		_, _ = msg.WriteString(
+			fmt.Sprintf("Merged %d YAML files to %s", len(inPaths), outPath),
+		)
+		for _, path := range inPaths {
+			_, _ = msg.WriteString(fmt.Sprintf("\n- %s", path))
 		}
 	}
-
-	return commitMsg.String()
+	return msg.String()
 }
