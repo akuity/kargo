@@ -216,3 +216,39 @@ A webhook receiver's only job is to extract a repository URL from the webhook
 request's payload, query for all `Warehouse` resources across all Projects
 having subscriptions to that repository, and request each to execute their
 artifact discovery process.
+
+## Cluster Message Channels
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+`ClusterMessageChannel` resources are cluster-scoped analogs to
+[`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).
+Their `spec` fields are identical, but `ClusterMessageChannel`s are available to every Project in
+the cluster without needing to create a Project-scoped `MessageChannel` resource. The other
+difference is that `ClusterMessageChannel`s must reference `Secret`s in the designated cluster
+secrets namespace (generally `kargo-cluster-secrets`). For example, here is a
+`ClusterMessageChannel` that sends messages to a Slack channel:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: ClusterMessageChannel
+metadata:
+  name: devops-team-slack
+spec:
+  # A reference to a Secret containing the Slack token. This is required for Slack. The Secret must
+  # contain the following key:
+  # - `apiKey`: The Slack token with permissions to post messages to the desired channel
+  secretRef:
+    # The name of the Secret in the cluster secrets namespace
+    name: slack-token
+  # Configuration specific to Slack
+  slack:
+    # The Slack-specific channel ID to send messages to. This field is required
+    channelID: C1234567890
+```
+
+This is only a small example to illustrate the structure of a `ClusterMessageChannel`. For more
+detailed information about all the different spec fields and configuration options, refer to the
+documentation for
+[`MessageChannel`](../50-user-guide/20-how-to-guides/20-working-with-projects.md#message-channels).
