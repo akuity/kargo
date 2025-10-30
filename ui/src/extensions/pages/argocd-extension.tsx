@@ -25,7 +25,6 @@ export const ArgoCDExtension = () => {
           separator='>'
           items={[...projectBreadcrumbs, { title: 'ArgoCD' }, { title: appName }]}
         />
-        {argoCDExtension?.tabBarExtraContent && <argoCDExtension.tabBarExtraContent />}
       </BaseHeader>
       {argoCDExtension ? <argoCDExtension.component /> : <LoadingState />}
     </>

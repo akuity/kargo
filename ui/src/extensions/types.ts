@@ -66,7 +66,6 @@ export type ProjectSettingsExtension = {
 export type ArgoCDExtension = {
   type: 'argocdExtension';
   component: () => React.ReactNode;
-  tabBarExtraContent?: () => React.ReactNode;
 };
 
 export type Extension =
