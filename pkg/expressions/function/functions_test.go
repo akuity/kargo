@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1881,13 +1882,13 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"1.2.3"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(1), parsed["major"])
-				assert.Equal(t, uint64(2), parsed["minor"])
-				assert.Equal(t, uint64(3), parsed["patch"])
-				assert.Equal(t, "", parsed["prerelease"])
-				assert.Equal(t, "", parsed["metadata"])
+				assert.Equal(t, uint64(1), parsed.Major())
+				assert.Equal(t, uint64(2), parsed.Minor())
+				assert.Equal(t, uint64(3), parsed.Patch())
+				assert.Equal(t, "", parsed.Prerelease())
+				assert.Equal(t, "", parsed.Metadata())
 			},
 		},
 		{
@@ -1895,13 +1896,13 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"v2.5.9"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(2), parsed["major"])
-				assert.Equal(t, uint64(5), parsed["minor"])
-				assert.Equal(t, uint64(9), parsed["patch"])
-				assert.Equal(t, "", parsed["prerelease"])
-				assert.Equal(t, "", parsed["metadata"])
+				assert.Equal(t, uint64(2), parsed.Major())
+				assert.Equal(t, uint64(5), parsed.Minor())
+				assert.Equal(t, uint64(9), parsed.Patch())
+				assert.Equal(t, "", parsed.Prerelease())
+				assert.Equal(t, "", parsed.Metadata())
 			},
 		},
 		{
@@ -1909,13 +1910,13 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"1.0.0-alpha"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(1), parsed["major"])
-				assert.Equal(t, uint64(0), parsed["minor"])
-				assert.Equal(t, uint64(0), parsed["patch"])
-				assert.Equal(t, "alpha", parsed["prerelease"])
-				assert.Equal(t, "", parsed["metadata"])
+				assert.Equal(t, uint64(1), parsed.Major())
+				assert.Equal(t, uint64(0), parsed.Minor())
+				assert.Equal(t, uint64(0), parsed.Patch())
+				assert.Equal(t, "alpha", parsed.Prerelease())
+				assert.Equal(t, "", parsed.Metadata())
 			},
 		},
 		{
@@ -1923,13 +1924,13 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"1.0.0+build123"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(1), parsed["major"])
-				assert.Equal(t, uint64(0), parsed["minor"])
-				assert.Equal(t, uint64(0), parsed["patch"])
-				assert.Equal(t, "", parsed["prerelease"])
-				assert.Equal(t, "build123", parsed["metadata"])
+				assert.Equal(t, uint64(1), parsed.Major())
+				assert.Equal(t, uint64(0), parsed.Minor())
+				assert.Equal(t, uint64(0), parsed.Patch())
+				assert.Equal(t, "", parsed.Prerelease())
+				assert.Equal(t, "build123", parsed.Metadata())
 			},
 		},
 		{
@@ -1937,13 +1938,13 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"2.1.3-rc.1+build.456"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(2), parsed["major"])
-				assert.Equal(t, uint64(1), parsed["minor"])
-				assert.Equal(t, uint64(3), parsed["patch"])
-				assert.Equal(t, "rc.1", parsed["prerelease"])
-				assert.Equal(t, "build.456", parsed["metadata"])
+				assert.Equal(t, uint64(2), parsed.Major())
+				assert.Equal(t, uint64(1), parsed.Minor())
+				assert.Equal(t, uint64(3), parsed.Patch())
+				assert.Equal(t, "rc.1", parsed.Prerelease())
+				assert.Equal(t, "build.456", parsed.Metadata())
 			},
 		},
 		{
@@ -1951,11 +1952,11 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"0.0.0"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(0), parsed["major"])
-				assert.Equal(t, uint64(0), parsed["minor"])
-				assert.Equal(t, uint64(0), parsed["patch"])
+				assert.Equal(t, uint64(0), parsed.Major())
+				assert.Equal(t, uint64(0), parsed.Minor())
+				assert.Equal(t, uint64(0), parsed.Patch())
 			},
 		},
 		{
@@ -1963,11 +1964,11 @@ func Test_semverParse(t *testing.T) {
 			args: []any{"999.888.777"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				parsed, ok := result.(map[string]any)
+				parsed, ok := result.(*semver.Version)
 				require.True(t, ok)
-				assert.Equal(t, uint64(999), parsed["major"])
-				assert.Equal(t, uint64(888), parsed["minor"])
-				assert.Equal(t, uint64(777), parsed["patch"])
+				assert.Equal(t, uint64(999), parsed.Major())
+				assert.Equal(t, uint64(888), parsed.Minor())
+				assert.Equal(t, uint64(777), parsed.Patch())
 			},
 		},
 		{

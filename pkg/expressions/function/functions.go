@@ -434,16 +434,15 @@ func SemverDiff() expr.Option {
 // SemverParse returns an expr.Option that provides a `semverParse()` function
 // for use in expressions.
 //
-// The semverParse function parses a semantic version string and returns a map
-// containing its individual components: major, minor, patch, prerelease, and
-// metadata. This is useful for scenarios where you need to inspect or
-// manipulate specific version components, such as bumping the major, minor, or
-// patch version.
+// The semverParse function parses a semantic version string and returns a
+// *semver.Version struct. This allows direct access to version component
+// methods like Major(), Minor(), Patch(), Prerelease(), and Metadata(), as
+// well as utility methods like IncMajor(), IncMinor(), and IncPatch().
 func SemverParse() expr.Option {
 	return expr.Function(
 		"semverParse",
 		semverParse,
-		new(func(verStr string) map[string]any),
+		new(func(verStr string) *semver.Version),
 	)
 }
 
@@ -974,10 +973,10 @@ func semverDiff(a ...any) (any, error) {
 	return "None", nil
 }
 
-// semverParse parses a semantic version string and returns a map containing
-// its individual components: major, minor, patch, prerelease, and metadata.
-// This enables users to inspect and manipulate version components in
-// expressions, such as bumping version numbers.
+// semverParse parses a semantic version string and returns a *semver.Version
+// struct. This enables users to access version component methods like Major(),
+// Minor(), Patch(), as well as utility methods like IncMajor(), IncMinor(),
+// and IncPatch() for version manipulation in expressions.
 func semverParse(a ...any) (any, error) {
 	if len(a) != 1 {
 		return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -993,13 +992,7 @@ func semverParse(a ...any) (any, error) {
 		return nil, fmt.Errorf("invalid semantic version: %w", err)
 	}
 
-	return map[string]any{
-		"major":      ver.Major(),
-		"minor":      ver.Minor(),
-		"patch":      ver.Patch(),
-		"prerelease": ver.Prerelease(),
-		"metadata":   ver.Metadata(),
-	}, nil
+	return ver, nil
 }
 
 const (
