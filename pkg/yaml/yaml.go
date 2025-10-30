@@ -11,12 +11,6 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-const (
-	// MergeListIncreaseDirection indicates should merge function prepend the items from
-	// source list to destination or append.
-	MergeListIncreaseDirection = 1
-)
-
 // Update represents a discrete update to be made to a YAML document.
 type Update struct {
 	// Key is the dot-separated path to the field to update.
