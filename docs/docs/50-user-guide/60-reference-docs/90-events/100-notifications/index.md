@@ -1,12 +1,11 @@
 ---
-sidebar_label: Notifications
 description: An overview of Kargo notifications concepts and components.
 ---
 
+# Notifications
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-
-# Notifications
 
 :::info
 

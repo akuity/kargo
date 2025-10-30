@@ -3,9 +3,10 @@ sidebar_label: gha-wait-for-workflow
 description: Waits for GitHub Actions workflow runs to complete with optional status validation.
 ---
 
+# `gha-wait-for-workflow`
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-# `gha-wait-for-workflow`
 
 :::info
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.
@@ -17,9 +18,9 @@ The `gha-wait-for-workflow` promotion step provides integration with GitHub Acti
 
 All GitHub Actions operations require proper authentication credentials stored in a Kubernetes `Secret`.
 
-| Name                       | Type     | Required | Description                                                                          |
-|----------------------------|----------|----------|--------------------------------------------------------------------------------------|
-| `credentials.secretName`   | `string` | Y        | Name of the `Secret` containing the GitHub credentials in the project namespace.     |
+| Name                     | Type     | Required | Description                                                                      |
+| ------------------------ | -------- | -------- | -------------------------------------------------------------------------------- |
+| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the GitHub credentials in the project namespace. |
 
 The referenced `Secret` should contain the following keys:
 
@@ -39,11 +40,11 @@ The GitHub token must have the following permissions:
 
 ## Configuration
 
-| Name                 | Type      | Required | Description                                                                         |
-|----------------------|-----------|----------|-------------------------------------------------------------------------------------|
-| `owner`              | `string`  | Y        | The owner of the repository (user or organization).                                 |
-| `repo`               | `string`  | Y        | The name of the repository.                                                         |
-| `runID`              | `integer` | Y        | The workflow run ID to wait for.                                                    |
+| Name                 | Type      | Required | Description                                                                                |
+| -------------------- | --------- | -------- | ------------------------------------------------------------------------------------------ |
+| `owner`              | `string`  | Y        | The owner of the repository (user or organization).                                        |
+| `repo`               | `string`  | Y        | The name of the repository.                                                                |
+| `runID`              | `integer` | Y        | The workflow run ID to wait for.                                                           |
 | `expectedConclusion` | `string`  | N        | The expected final conclusion status. If not provided, conclusion status is not validated. |
 
 Valid values for `expectedConclusion`:
@@ -58,8 +59,8 @@ Valid values for `expectedConclusion`:
 
 ## Output
 
-| Name         | Type     | Description                                                    |
-|--------------|----------|----------------------------------------------------------------|
+| Name         | Type     | Description                                                       |
+| ------------ | -------- | ----------------------------------------------------------------- |
 | `conclusion` | `string` | The final conclusion status of the workflow run after completion. |
 
 ## Example

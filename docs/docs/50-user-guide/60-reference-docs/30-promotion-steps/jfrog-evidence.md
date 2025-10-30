@@ -3,9 +3,10 @@ sidebar_label: jfrog-evidence
 description: Manages evidence creation, verification, and deletion for artifacts in JFrog Artifactory.
 ---
 
+# `jfrog-evidence`
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-# `jfrog-evidence`
 
 :::info
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.7 and above.
@@ -22,9 +23,9 @@ For more information about JFrog's Evidence feature, see the [official JFrog Evi
 
 All JFrog Evidence operations require proper authentication credentials stored in a Kubernetes `Secret`.
 
-| Name                     | Type     | Required | Description                                                                                                                  |
-| ------------------------ | -------- | -------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the JFrog credentials in the project namespace.                                                                        |
+| Name                     | Type     | Required | Description                                                                     |
+| ------------------------ | -------- | -------- | ------------------------------------------------------------------------------- |
+| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the JFrog credentials in the project namespace. |
 
 The referenced `Secret` should contain the following keys:
 
@@ -40,20 +41,20 @@ Creates cryptographically signed kargo promotion evidence for an artifact in JFr
 
 #### Configuration
 
-| Name                      | Type     | Required | Description                                                                                                     |
-| ------------------------- | -------- | -------- | --------------------------------------------------------------------------------------------------------------- |
-| `create.privateKey`       | `string` | Y        | The private key to sign the evidence.                                                                           |
-| `create.packageRepo`      | `string` | Y        | The package repository name of the artifact.                                                                    |
-| `create.packageName`      | `string` | Y        | The package name of the artifact inside the repository.                                                         |
-| `create.packageVersion`   | `string` | Y        | The package version of the artifact.                                                                            |
-| `create.promotionStatus`  | `string` | Y        | Status indicating the promotion state. Valid values: `Pending`, `Running`, `Succeeded`, `Failed`, `Errored`, `Aborted`. |
-| `create.privateKeyAlias`  | `string` | N        | Name for the public key created from the private key. Used for verification. If omitted, verification is skipped. |
-| `create.metadata`         | `object` | N        | JSON metadata that will be stored inside the evidence predicate.                                                |
+| Name                     | Type     | Required | Description                                                                                                             |
+| ------------------------ | -------- | -------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `create.privateKey`      | `string` | Y        | The private key to sign the evidence.                                                                                   |
+| `create.packageRepo`     | `string` | Y        | The package repository name of the artifact.                                                                            |
+| `create.packageName`     | `string` | Y        | The package name of the artifact inside the repository.                                                                 |
+| `create.packageVersion`  | `string` | Y        | The package version of the artifact.                                                                                    |
+| `create.promotionStatus` | `string` | Y        | Status indicating the promotion state. Valid values: `Pending`, `Running`, `Succeeded`, `Failed`, `Errored`, `Aborted`. |
+| `create.privateKeyAlias` | `string` | N        | Name for the public key created from the private key. Used for verification. If omitted, verification is skipped.       |
+| `create.metadata`        | `object` | N        | JSON metadata that will be stored inside the evidence predicate.                                                        |
 
 #### Output
 
-| Name   | Type     | Description                                                   |
-| ------ | -------- | ------------------------------------------------------------- |
+| Name   | Type     | Description                                                      |
+| ------ | -------- | ---------------------------------------------------------------- |
 | `name` | `string` | The name/identifier of the created evidence for later reference. |
 
 
@@ -109,12 +110,12 @@ Removes specific evidence from an artifact in JFrog Artifactory. This is typical
 
 #### Configuration
 
-| Name                     | Type     | Required | Description                                       |
-| ------------------------ | -------- | -------- | ------------------------------------------------- |
-| `delete.packageRepo`     | `string` | Y        | The package repository name of the artifact.      |
-| `delete.packageName`     | `string` | Y        | The package name of the artifact inside the repository. |
-| `delete.packageVersion`  | `string` | Y        | The package version of the artifact.              |
-| `delete.evidenceName`    | `string` | Y        | Evidence name/identifier to delete.               |
+| Name                    | Type     | Required | Description                                             |
+| ----------------------- | -------- | -------- | ------------------------------------------------------- |
+| `delete.packageRepo`    | `string` | Y        | The package repository name of the artifact.            |
+| `delete.packageName`    | `string` | Y        | The package name of the artifact inside the repository. |
+| `delete.packageVersion` | `string` | Y        | The package version of the artifact.                    |
+| `delete.evidenceName`   | `string` | Y        | Evidence name/identifier to delete.                     |
 
 #### Output
 
@@ -145,19 +146,19 @@ Queries for existing evidence and verifies its authenticity and content. This op
 
 #### Configuration
 
-| Name                                  | Type      | Required | Description                                                                                                    |
-| ------------------------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `process.query.packageRepo`           | `string`  | Y        | The package repository name of the artifact.                                                                   |
-| `process.query.packageName`           | `string`  | Y        | The package name of the artifact inside the repository.                                                        |
-| `process.query.packageVersion`        | `string`  | Y        | The package version of the artifact.                                                                           |
-| `process.query.evidenceNameRegex`     | `string`  | N*       | Regular expression to match evidence names. *Either this or `predicateType` is required.                       |
-| `process.query.predicateType`         | `string`  | N*       | The predicate type to query for. *Either this or `evidenceNameRegex` is required.                             |
-| `process.verify.verifyExpression`     | `string`  | N**      | Expr expression to evaluate on the predicate. Must return boolean. **One of the verify options is required.   |
-| `process.verify.localKeys`            | `array`   | N**      | Local private/public keys for signature verification. **One of the verify options is required.                |
-| `process.verify.useArtifactoryKeys`   | `boolean` | N**      | Use keys present in evidence data for verification. **One of the verify options is required.                  |
-| `process.outputs`                     | `array`   | N        | Output configurations to extract data from evidence results.                                                   |
-| `process.outputs[].name`              | `string`  | Y        | Name of the output variable.                                                                                   |
-| `process.outputs[].expression`        | `string`  | Y        | Expr expression to extract data from evidence query results.                                                   |
+| Name                                | Type      | Required | Description                                                                                                 |
+| ----------------------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------- |
+| `process.query.packageRepo`         | `string`  | Y        | The package repository name of the artifact.                                                                |
+| `process.query.packageName`         | `string`  | Y        | The package name of the artifact inside the repository.                                                     |
+| `process.query.packageVersion`      | `string`  | Y        | The package version of the artifact.                                                                        |
+| `process.query.evidenceNameRegex`   | `string`  | N*       | Regular expression to match evidence names. *Either this or `predicateType` is required.                    |
+| `process.query.predicateType`       | `string`  | N*       | The predicate type to query for. *Either this or `evidenceNameRegex` is required.                           |
+| `process.verify.verifyExpression`   | `string`  | N**      | Expr expression to evaluate on the predicate. Must return boolean. **One of the verify options is required. |
+| `process.verify.localKeys`          | `array`   | N**      | Local private/public keys for signature verification. **One of the verify options is required.              |
+| `process.verify.useArtifactoryKeys` | `boolean` | N**      | Use keys present in evidence data for verification. **One of the verify options is required.                |
+| `process.outputs`                   | `array`   | N        | Output configurations to extract data from evidence results.                                                |
+| `process.outputs[].name`            | `string`  | Y        | Name of the output variable.                                                                                |
+| `process.outputs[].expression`      | `string`  | Y        | Expr expression to extract data from evidence query results.                                                |
 
 #### Available Data for Expressions
 
