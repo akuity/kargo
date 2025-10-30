@@ -1869,3 +1869,153 @@ func Test_semverDiff(t *testing.T) {
 		})
 	}
 }
+
+func Test_semverParse(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "valid basic semver",
+			args: []any{"1.2.3"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(1), parsed["major"])
+				assert.Equal(t, uint64(2), parsed["minor"])
+				assert.Equal(t, uint64(3), parsed["patch"])
+				assert.Equal(t, "", parsed["prerelease"])
+				assert.Equal(t, "", parsed["metadata"])
+			},
+		},
+		{
+			name: "semver with v prefix",
+			args: []any{"v2.5.9"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(2), parsed["major"])
+				assert.Equal(t, uint64(5), parsed["minor"])
+				assert.Equal(t, uint64(9), parsed["patch"])
+				assert.Equal(t, "", parsed["prerelease"])
+				assert.Equal(t, "", parsed["metadata"])
+			},
+		},
+		{
+			name: "semver with prerelease",
+			args: []any{"1.0.0-alpha"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(1), parsed["major"])
+				assert.Equal(t, uint64(0), parsed["minor"])
+				assert.Equal(t, uint64(0), parsed["patch"])
+				assert.Equal(t, "alpha", parsed["prerelease"])
+				assert.Equal(t, "", parsed["metadata"])
+			},
+		},
+		{
+			name: "semver with metadata",
+			args: []any{"1.0.0+build123"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(1), parsed["major"])
+				assert.Equal(t, uint64(0), parsed["minor"])
+				assert.Equal(t, uint64(0), parsed["patch"])
+				assert.Equal(t, "", parsed["prerelease"])
+				assert.Equal(t, "build123", parsed["metadata"])
+			},
+		},
+		{
+			name: "complex semver with prerelease and metadata",
+			args: []any{"2.1.3-rc.1+build.456"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(2), parsed["major"])
+				assert.Equal(t, uint64(1), parsed["minor"])
+				assert.Equal(t, uint64(3), parsed["patch"])
+				assert.Equal(t, "rc.1", parsed["prerelease"])
+				assert.Equal(t, "build.456", parsed["metadata"])
+			},
+		},
+		{
+			name: "zero version",
+			args: []any{"0.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(0), parsed["major"])
+				assert.Equal(t, uint64(0), parsed["minor"])
+				assert.Equal(t, uint64(0), parsed["patch"])
+			},
+		},
+		{
+			name: "large version numbers",
+			args: []any{"999.888.777"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, uint64(999), parsed["major"])
+				assert.Equal(t, uint64(888), parsed["minor"])
+				assert.Equal(t, uint64(777), parsed["patch"])
+			},
+		},
+		{
+			name: "invalid semver",
+			args: []any{"invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "invalid semantic version")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty string",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "invalid semantic version")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"1.0.0", "2.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := semverParse(tt.args...)
+			tt.assertions(t, result, err)
+		})
+	}
+}
