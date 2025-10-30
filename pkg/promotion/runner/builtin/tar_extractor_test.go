@@ -228,6 +228,58 @@ func Test_tarExtractor_run(t *testing.T) {
 			},
 		},
 		{
+			name: "creates parent directories for nested output path",
+			setupFiles: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				// Create a tar file
+				tarPath := filepath.Join(tmpDir, "archive.tar")
+				tarFile, err := os.Create(tarPath)
+				require.NoError(t, err)
+				defer tarFile.Close()
+
+				tw := tar.NewWriter(tarFile)
+				defer tw.Close()
+
+				// Add a simple file
+				data := []byte("test content")
+				hdr := &tar.Header{
+					Name: "file.txt",
+					Mode: 0o600,
+					Size: int64(len(data)),
+				}
+				require.NoError(t, tw.WriteHeader(hdr))
+				_, err = tw.Write(data)
+				require.NoError(t, err)
+
+				return tmpDir
+			},
+			cfg: builtin.UntarConfig{
+				InPath:  "archive.tar",
+				OutPath: filepath.Join("nested", "extracted"),
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.Status)
+
+				// Verify extraction worked and parent directories were created
+				extractDir := filepath.Join(workDir, "nested", "extracted")
+				filePath := filepath.Join(extractDir, "file.txt")
+				content, err := os.ReadFile(filePath)
+				assert.NoError(t, err)
+				assert.Equal(t, "test content", string(content))
+
+				// Verify no temp directories remain
+				entries, err := os.ReadDir(workDir)
+				assert.NoError(t, err)
+				for _, entry := range entries {
+					assert.False(t, entry.IsDir() && entry.Name()[0] == '.' &&
+						len(entry.Name()) > 6 && entry.Name()[1:6] == "untar",
+						"No temporary directories should remain: %s", entry.Name())
+				}
+			},
+		},
+		{
 			name: "atomically replaces existing destination",
 			setupFiles: func(t *testing.T) string {
 				tmpDir := t.TempDir()

@@ -157,3 +157,10 @@ func ComparePromotionPhase(a, b kargoapi.PromotionPhase) int {
 		return 0
 	}
 }
+
+// IsCurrentStepRunning returns true if the promotion is in a running state and the current step is also running.
+func IsCurrentStepRunning(promo *kargoapi.Promotion) bool {
+	return promo.Status.Phase == kargoapi.PromotionPhaseRunning &&
+		int64(len(promo.Status.StepExecutionMetadata)) == promo.Status.CurrentStep+1 &&
+		promo.Status.StepExecutionMetadata[promo.Status.CurrentStep].Status == kargoapi.PromotionStepStatusRunning
+}

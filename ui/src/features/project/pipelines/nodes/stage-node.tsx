@@ -22,6 +22,7 @@ import { HealthStatusIcon } from '@ui/features/common/health-status/health-statu
 import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
 import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
 import {
   approveFreight,
   promoteToStage
@@ -35,7 +36,6 @@ import { stageIndexer } from '../graph/node-indexer';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
-import { ArgoCDLink } from './argocd-link';
 import style from './node-size-source-of-truth.module.less';
 import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
@@ -134,13 +134,9 @@ export const StageNode = (props: { stage: Stage }) => {
         <Flex gap={24} justify='center'>
           {Phase}
           {stageHealth?.status && (
-            <Flex gap={16}>
-              <Flex align='center' gap={4}>
-                {stageHealth?.status}
-                <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
-              </Flex>
-
-              <ArgoCDLink stage={props.stage} shards={dictionaryContext?.argocdShards} />
+            <Flex align='center' gap={4}>
+              {stageHealth?.status}
+              <HealthStatusIcon noTooltip className='text-[8px]' health={stageHealth} />
             </Flex>
           )}
         </Flex>
@@ -264,7 +260,8 @@ export const StageNode = (props: { stage: Stage }) => {
         styles={{
           header: {
             ...headerStyle,
-            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.15)'
+            textShadow: '1px 1px 2px rgba(0, 0, 0, 0.15)',
+            paddingRight: '8px'
           },
           body: {
             height: '100%',
@@ -272,38 +269,38 @@ export const StageNode = (props: { stage: Stage }) => {
           }
         }}
         title={
-          <Flex align='center'>
+          <>
             {autoPromotionMode && (
               <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
             )}
             <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
-            <Space>
-              <Dropdown
-                trigger={['hover']}
-                overlayClassName='w-fit'
-                menu={{
-                  items: dropdownItems
-                }}
-              >
-                <Button
-                  size='small'
-                  icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
-                />
-              </Dropdown>
-              <Button
-                icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
-                size='small'
-                onClick={() =>
-                  navigate(
-                    generatePath(paths.stage, {
-                      name: props.stage?.metadata?.namespace,
-                      stageName: props.stage?.metadata?.name
-                    })
-                  )
-                }
-              />
-            </Space>
-          </Flex>
+          </>
+        }
+        extra={
+          <Space size={6}>
+            <ArgoCDLink stage={props.stage} />
+            <Dropdown
+              trigger={['click']}
+              overlayClassName='w-fit'
+              menu={{
+                items: dropdownItems
+              }}
+            >
+              <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
+            </Dropdown>
+            <Button
+              icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
+              size='small'
+              onClick={() =>
+                navigate(
+                  generatePath(paths.stage, {
+                    name: props.stage?.metadata?.namespace,
+                    stageName: props.stage?.metadata?.name
+                  })
+                )
+              }
+            />
+          </Space>
         }
         className={classNames(
           'stage-node',

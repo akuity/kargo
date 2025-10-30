@@ -267,15 +267,15 @@ func TestGet(t *testing.T) {
 				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
-						Values: []string{"foo-email", "bar-email"},
+						Values: []string{"bar-email", "foo-email"},
 					},
 					{
 						Name:   "groups",
-						Values: []string{"foo-group", "bar-group"},
+						Values: []string{"bar-group", "foo-group"},
 					},
 					{
 						Name:   "sub",
-						Values: []string{"foo-sub", "bar-sub"},
+						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
 				// There should have been no attempt to normalize these rules
@@ -328,15 +328,15 @@ func TestGet(t *testing.T) {
 				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
-						Values: []string{"foo-email", "bar-email"},
+						Values: []string{"bar-email", "foo-email"},
 					},
 					{
 						Name:   "groups",
-						Values: []string{"foo-group", "bar-group"},
+						Values: []string{"bar-group", "foo-group"},
 					},
 					{
 						Name:   "sub",
-						Values: []string{"foo-sub", "bar-sub"},
+						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
 				Rules: []rbacv1.PolicyRule{
@@ -654,15 +654,15 @@ func TestList(t *testing.T) {
 				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
-						Values: []string{"foo-email", "bar-email"},
+						Values: []string{"bar-email", "foo-email"},
 					},
 					{
 						Name:   "groups",
-						Values: []string{"foo-group", "bar-group"},
+						Values: []string{"bar-group", "foo-group"},
 					},
 					{
 						Name:   "sub",
-						Values: []string{"foo-sub", "bar-sub"},
+						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
 				Rules: []rbacv1.PolicyRule{
@@ -725,15 +725,15 @@ func TestList(t *testing.T) {
 				Claims: []rbacapi.Claim{
 					{
 						Name:   "email",
-						Values: []string{"foo-email", "bar-email"},
+						Values: []string{"bar-email", "foo-email"},
 					},
 					{
 						Name:   "groups",
-						Values: []string{"foo-group", "bar-group"},
+						Values: []string{"bar-group", "foo-group"},
 					},
 					{
 						Name:   "sub",
-						Values: []string{"foo-sub", "bar-sub"},
+						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
 				// There should have been no attempt to normalize these rules
@@ -1369,5 +1369,154 @@ func managedObjectMeta(annotations map[string]string) metav1.ObjectMeta {
 		Namespace:   testProject,
 		Name:        testKargoRoleName,
 		Annotations: annotations,
+	}
+}
+
+func TestResourcesToRole(t *testing.T) {
+	testCases := []struct {
+		name           string
+		sa             *corev1.ServiceAccount
+		roles          []rbacv1.Role
+		expectedClaims []rbacapi.Claim
+		assertions     func(t *testing.T, role *rbacapi.Role, err error)
+	}{
+		{
+			name: "nil service account",
+			sa:   nil,
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.Nil(t, role)
+				require.Nil(t, err)
+			},
+		},
+		{
+			name: "no resources",
+			sa:   new(corev1.ServiceAccount),
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Claims)
+				require.Empty(t, role.Rules)
+			},
+		},
+		{
+			name: "kargo-managed",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+					},
+				},
+			},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.True(t, role.KargoManaged)
+				require.Empty(t, role.Claims)
+				require.Empty(t, role.Rules)
+			},
+		},
+		{
+			name: "with old annotations",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("groups"): "foo:bar",
+					},
+				},
+			},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Rules)
+				require.Len(t, role.Claims, 1)
+				require.Len(t, role.Claims[0].Values, 1)
+				require.Equal(t, "groups", role.Claims[0].Name)
+				require.Equal(t, "foo:bar", role.Claims[0].Values[0])
+			},
+		},
+		{
+			name: "with new annotations",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaims: `{"groups":["foo:bar"]}`,
+					},
+				},
+			},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Rules)
+				require.Len(t, role.Claims, 1)
+				require.Len(t, role.Claims[0].Values, 1)
+				require.Equal(t, "groups", role.Claims[0].Name)
+				require.Equal(t, "foo:bar", role.Claims[0].Values[0])
+			},
+		},
+		{
+			name: "with both old and new annotations",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						rbacapi.AnnotationKeyOIDCClaim("sub"): "foo-sub",
+						rbacapi.AnnotationKeyOIDCClaims: `
+						{
+							"email":["email@inbox.com"],
+							"sub":["another-sub"],
+							"groups":["another-group"]
+						}`,
+						rbacapi.AnnotationKeyOIDCClaim("groups"): "foo:bar",
+					},
+				},
+			},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Rules)
+				require.Len(t, role.Claims, 3)
+
+				claimsMap := map[string]rbacapi.Claim{}
+				for _, claim := range role.Claims {
+					claimsMap[claim.Name] = claim
+				}
+
+				emailClaim, ok := claimsMap["email"]
+				require.True(t, ok)
+				require.Len(t, emailClaim.Values, 1)
+				require.Equal(t, "email@inbox.com", emailClaim.Values[0])
+
+				groupsClaim, ok := claimsMap["groups"]
+				require.True(t, ok)
+				require.Len(t, groupsClaim.Values, 2)
+				require.Equal(t, "another-group", groupsClaim.Values[0])
+				require.Equal(t, "foo:bar", groupsClaim.Values[1])
+
+				subClaim, ok := claimsMap["sub"]
+				require.True(t, ok)
+				require.Len(t, subClaim.Values, 2)
+				require.Equal(t, "another-sub", subClaim.Values[0])
+				require.Equal(t, "foo-sub", subClaim.Values[1])
+			},
+		},
+		{
+			name: "policy rules",
+			sa:   new(corev1.ServiceAccount),
+			roles: []rbacv1.Role{
+				*managedRole([]rbacv1.PolicyRule{{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages", "promotions"},
+					Verbs:     []string{"list", "get"},
+				}}),
+			},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Claims)
+				require.Len(t, role.Rules, 1)
+				require.Equal(t, []string{kargoapi.GroupVersion.Group}, role.Rules[0].APIGroups)
+				require.Equal(t, []string{"stages", "promotions"}, role.Rules[0].Resources)
+				require.Equal(t, []string{"list", "get"}, role.Rules[0].Verbs)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			role, err := ResourcesToRole(tc.sa, tc.roles, nil)
+			tc.assertions(t, role, err)
+		})
 	}
 }

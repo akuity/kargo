@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -96,6 +97,10 @@ type Result struct {
 	StepExecutionMetadata kargoapi.StepExecutionMetadataList
 	// State is the current state of the promotion process.
 	State State
+	// RetryAfter is an optional, SUGGESTED duration after which a Promotion
+	// reporting itself to be in a Running status should be retried. Note: This is
+	// unrelated to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }
 
 // ContextOption is a function that configures a Context.
@@ -263,6 +268,10 @@ type Step struct {
 func NewSteps(promo *kargoapi.Promotion) []Step {
 	result := make([]Step, len(promo.Spec.Steps))
 	for i, step := range promo.Spec.Steps {
+		var rawConfig []byte
+		if step.Config != nil {
+			rawConfig = step.Config.Raw
+		}
 		result[i] = Step{
 			Kind:            step.Uses,
 			Alias:           step.As,
@@ -270,7 +279,7 @@ func NewSteps(promo *kargoapi.Promotion) []Step {
 			ContinueOnError: step.ContinueOnError,
 			Retry:           step.Retry,
 			Vars:            step.Vars,
-			Config:          step.Config.Raw,
+			Config:          rawConfig,
 		}
 	}
 	return result
@@ -408,4 +417,8 @@ type StepResult struct {
 	// returned by some StepRunner upon successful execution of a Step. These
 	// criteria can be used later as input to a health.Checker.
 	HealthCheck *health.Criteria
+	// RetryAfter is an optional, SUGGESTED duration after which a step reporting
+	// itself to be in a Running status should be retried. Note: This is unrelated
+	// to retrying upon non-terminal failures.
+	RetryAfter *time.Duration
 }

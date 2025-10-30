@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -69,6 +70,7 @@ type argocdUpdater struct {
 	) (argocd.ApplicationSources, error)
 
 	mustPerformUpdateFn func(
+		context.Context,
 		*promotion.StepContext,
 		*builtin.ArgoCDAppUpdate,
 		*argocd.Application,
@@ -151,7 +153,7 @@ func (a *argocdUpdater) run(
 	}
 
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("executing argocd-update promotion step")
+	logger.Info("executing argocd-update promotion step")
 
 	updateResults := make([]argocd.OperationPhase, 0, len(stepCfg.Apps))
 	appHealthChecks := make([]checkers.ArgoCDAppHealthCheck, len(stepCfg.Apps))
@@ -180,8 +182,15 @@ func (a *argocdUpdater) run(
 			DesiredRevisions: desiredRevisions,
 		}
 
+		appLogger := logger.WithValues("app", app.Name, "namespace", app.Namespace)
+
 		// Check if the update needs to be performed and retrieve its phase.
-		phase, mustUpdate, err := a.mustPerformUpdateFn(stepCtx, update, app)
+		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, stepCtx, update, app)
+		if mustUpdate {
+			appLogger.Info("Argo CD Application requires update")
+		} else {
+			logger.Info("Argo CD Application does not require update")
+		}
 
 		// If we have a phase, append it to the results.
 		if phase != "" {
@@ -197,8 +206,9 @@ func (a *argocdUpdater) run(
 					// this update by waiting.
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 				}
-				// Log the error as a warning, but continue to the next update.
-				logger.Info(err.Error())
+				// Log the error for observability but continue processing other
+				// updates.
+				appLogger.Info("Argo CD Application update cannot be performed", "reason", err.Error())
 			}
 			if phase.Failed() {
 				// Record the reason for the failure if available.
@@ -222,7 +232,7 @@ func (a *argocdUpdater) run(
 		// Log the error, as it contains information about why we need to
 		// perform an update.
 		if err != nil {
-			logger.Debug(err.Error())
+			appLogger.Info("performing update of Argo CD Application", "reason", err.Error())
 		}
 
 		// Build the desired source(s) for the Argo CD Application.
@@ -262,7 +272,21 @@ func (a *argocdUpdater) run(
 		)
 	}
 
-	logger.Debug("done executing argocd-update promotion step")
+	logger.Info(
+		"done executing argocd-update promotion step",
+		"status", aggregatedStatus,
+	)
+
+	// TODO(krancour): This enables more aggressive polling while waiting to
+	// observe the Application has successfully synced. This is a workaround for
+	// an as-yet-unexplained, but rare phenomenon where Application status change
+	// events do not seem to be promptly triggering re-reconciliation of the
+	// Promotion resources.
+	var retryAfter *time.Duration
+	if aggregatedStatus == kargoapi.PromotionStepStatusRunning {
+		retryAfter = ptr.To(30 * time.Second)
+		logger.Info("step to be retried", "interval", retryAfter)
+	}
 
 	return promotion.StepResult{
 		Status: aggregatedStatus,
@@ -272,6 +296,7 @@ func (a *argocdUpdater) run(
 				"apps": appHealthChecks,
 			},
 		},
+		RetryAfter: retryAfter,
 	}, nil
 }
 
@@ -327,19 +352,30 @@ updateLoop:
 }
 
 func (a *argocdUpdater) mustPerformUpdate(
+	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	update *builtin.ArgoCDAppUpdate,
 	app *argocd.Application,
 ) (phase argocd.OperationPhase, mustUpdate bool, err error) {
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"app", app.Name, "namespace", app.Namespace,
+	)
+
 	status := app.Status.OperationState
 	if status == nil {
 		// The application has no operation.
+		logger.Info("no current operation found")
 		return "", true, nil
 	}
 
 	// Deal with the possibility that the operation was not initiated by Kargo
 	if !isKargoInitiatedOperation(status.Operation) {
+		logger.Info(
+			"current operation was not initiated by Kargo",
+			"initiatedBy", status.Operation.InitiatedBy.Username,
+		)
 		if !status.Phase.Completed() {
+			logger.Info("waiting for current operation to complete")
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
 			// NB: We return the current phase here because we want the caller
@@ -350,8 +386,11 @@ func (a *argocdUpdater) mustPerformUpdate(
 			)
 		}
 		// Initiate our own operation.
+		logger.Info("current operation is complete; can start a new one")
 		return "", true, nil
 	}
+
+	logger.Info("current operation was initiated by Kargo")
 
 	// Deal with the possibility that the operation was not initiated for the
 	// current freight collection. i.e. Not related to the current promotion.
@@ -363,8 +402,10 @@ func (a *argocdUpdater) mustPerformUpdate(
 		}
 	}
 	if !correctPromotionIDFound {
+		logger.Info("current operation was not initiated for this promotion")
 		// The operation was not initiated for the current Promotion.
 		if !status.Phase.Completed() {
+			logger.Info("waiting for current operation to complete")
 			// We should wait for the operation to complete before attempting to
 			// apply an update ourselves.
 			// NB: We return the current phase here because we want the caller
@@ -375,15 +416,20 @@ func (a *argocdUpdater) mustPerformUpdate(
 			)
 		}
 		// Initiate our own operation.
+		logger.Info("current operation is complete; can start a new one")
 		return "", true, nil
 	}
 
 	if !status.Phase.Completed() {
 		// The operation is still running.
+		logger.Info("waiting for current operation to complete")
 		return status.Phase, false, nil
 	}
 
+	logger.Info("current operation is complete")
+
 	if status.SyncResult == nil {
+		logger.Info("no sync result found")
 		// We do not have a sync result, so we cannot determine if the operation
 		// was successful. The best recourse is to retry the operation.
 		return "", true, errors.New("operation completed without a sync result")
@@ -394,8 +440,11 @@ func (a *argocdUpdater) mustPerformUpdate(
 	if len(desiredRevisions) == 0 {
 		// We do not have any desired revisions, so we cannot determine if the
 		// operation was successful.
+		logger.Info("no desired revisions specified")
 		return status.Phase, false, nil
 	}
+
+	logger.Info("desired revisions were specified for some sources")
 
 	observedRevisions := status.SyncResult.Revisions
 	if len(observedRevisions) == 0 {
@@ -407,12 +456,18 @@ func (a *argocdUpdater) mustPerformUpdate(
 			continue
 		}
 		if observedRevision != desiredRevision {
+			logger.Info(
+				"sync result revision does not match desired revision",
+				"sourceIndex", i,
+			)
 			return "", true, fmt.Errorf(
 				"sync result revisions %v do not match desired revisions %v",
 				observedRevisions, desiredRevisions,
 			)
 		}
 	}
+
+	logger.Info("desired revisions were observably applied")
 
 	// The operation has completed.
 	return status.Phase, false, nil

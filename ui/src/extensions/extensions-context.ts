@@ -21,6 +21,8 @@ export const useExtensionsContext = () => {
     promoteTabs: ctx?.extensions.filter((extension) => extension.type === 'promoteTab') || [],
     settingsExtensions: ctx?.extensions.filter((extension) => extension.type === 'settings') || [],
     projectSettingsExtensions:
-      ctx?.extensions.filter((extension) => extension.type === 'projectSettings') || []
+      ctx?.extensions.filter((extension) => extension.type === 'projectSettings') || [],
+    argoCDExtension:
+      ctx?.extensions.filter((extension) => extension.type === 'argocdExtension')[0] || null
   };
 };

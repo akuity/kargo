@@ -21,8 +21,7 @@ func TestNewAccessKeyProvider(t *testing.T) {
 
 func TestAccessKeyProvider_Supports(t *testing.T) {
 	const (
-		fakeRepoURL    = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
-		fakeOCIRepoURL = "oci://123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
+		fakeRepoURL = "123456789012.dkr.ecr.us-west-2.amazonaws.com/my-repo"
 
 		fakeRegion = "us-west-2"
 		fakeID     = "AKIAIOSFODNN7EXAMPLE"                     // nolint:gosec
@@ -50,7 +49,7 @@ func TestAccessKeyProvider_Supports(t *testing.T) {
 		{
 			name:     "valid helm oci credentials",
 			credType: credentials.TypeHelm,
-			repoURL:  fakeOCIRepoURL,
+			repoURL:  fakeRepoURL,
 			data: map[string][]byte{
 				regionKey: []byte(fakeRegion),
 				idKey:     []byte(fakeID),

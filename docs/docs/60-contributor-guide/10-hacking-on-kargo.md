@@ -142,11 +142,6 @@ as you continue iterating on your changes.
 The remainder of this section covers the approaches we recommend for enabling
 this.
 
-:::info
-We may eventually provide convenient methods of running _some_ Kargo components
-as native processes.
-:::
-
 1. Launch or re-use an existing local Kubernetes cluster.
 
     Any of the following options are viable:
