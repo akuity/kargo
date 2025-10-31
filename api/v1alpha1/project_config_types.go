@@ -345,9 +345,15 @@ type AzureWebhookReceiverConfig struct {
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
 
-// GenericWebhookReceiverConfig describes a generic webhook receiver
-// that can be configured to handle arbitrary webhook payloads using
-// a set of user-defined actions, targets, and match conditions using expressions and/or labels.
+// GenericWebhookReceiverConfig describes a generic webhook receiver that can be
+// configured to respond to any arbitrary POST by applying user-defined actions
+// user-defined sets of resources selected by labels and/or pre-built indices.
+// Both types of selectors support using values extracted from the request by
+// means of expressions. Currently refreshing resources is the only supported
+// action and Warehouse is the only supported kind. "Refreshing" means
+// immediately enqueuing the target resource for immediate reconciliation by its
+// controller. The practical effect of refreshing a Warehouses is triggering its
+// artifact discovery process.
 type GenericWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret must be in the same namespace as the
@@ -356,9 +362,10 @@ type GenericWebhookReceiverConfig struct {
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "cluster Secrets" namespace.
 	//
-	// The Secret's data map is expected to contain a `secret` key whose value is
-	// the shared secret used to authenticate the webhook requests sent by the
-	// generic webhook sender.
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with the sender. It is used only by
+	// Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
+	// shared secret.
 	//
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
@@ -372,12 +379,14 @@ type GenericWebhookReceiverConfig struct {
 // GenericWebhookAction describes an action to be performed on a resource
 // and the conditions under which it should be performed.
 type GenericWebhookAction struct {
-	// Name is the name of the action to be performed.
+	// Name is the name of the action to be performed. `Refresh` is the only
+	// action currently supported.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
 	Action GenericWebhookActionName `json:"action" protobuf:"bytes,1,opt,name=action"`
 
-	// MatchConditions is a list of conditions that must be met for the action to be performed.
+	// MatchConditions is a list of criteria that must be met for the action to
+	// be performed.
 	//
 	// +optional
 	MatchConditions []ConditionSelector `json:"matchConditions,omitempty" protobuf:"bytes,2,rep,name=matchConditions"`
@@ -387,7 +396,8 @@ type GenericWebhookAction struct {
 	// +optional
 	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 
-	// Targets is a list of targets on which the action should be performed.
+	// Targets is a list of selection criteria for the resources on which the
+	// action should be performed.
 	//
 	// +kubebuilder:validation:MinItems=1
 	Targets []GenericWebhookTarget `json:"targets,omitempty" protobuf:"bytes,4,rep,name=targets"`
@@ -401,7 +411,8 @@ const (
 	GenericWebhookActionNameRefresh GenericWebhookActionName = "Refresh"
 )
 
-// GenericWebhookTarget describes a target resource for a generic webhook event.
+// GenericWebhookTarget describes selection criteria for resources to which some
+// action is to be applied.
 type GenericWebhookTarget struct {
 	// Kind is the kind of the target resource (e.g., "Warehouse", "Stage").
 	//
