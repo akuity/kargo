@@ -521,7 +521,6 @@ func (r *reconciler) promote(
 	promoCtx := promotion.NewContext(
 		workingPromo,
 		stage,
-		targetFreightRef,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
