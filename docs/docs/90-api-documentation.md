@@ -1875,9 +1875,8 @@ RawFormat specifies the format for raw resource representation.
  ConditionSelector encapsulates a condition used to match resources based on specific criteria.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| key | [string](#string) |  Key is the key of the condition to be matched.   |
-| operator | [string](#string) |  Operator is the set of operators that can be used in a scope selector requirement.   |
-| value | [string](#string) |  Value is the value of the condition to be matched.   |
+| key | [string](#string) |  Name is the name of the condition to be matched.   |
+| expression | [string](#string) |  Expression is an expression that evaluates to a boolean value indicating whether the condition is met.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-CurrentStage"></a>
 
