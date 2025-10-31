@@ -19,6 +19,12 @@
       "description": "The number of the pull request to wait for.",
       "minimum": 1
     },
+    "pollInterval": {
+      "type": "string",
+      "format": "duration",
+      "description": "The interval at which to poll the pull request status. If not specified, the controller's default requeue interval (5 minutes) will be used.",
+      "pattern": "^(?:\\d+(ns|us|µs|ms|s|m|h))+$"
+    },
     "repoURL": {
       "type": "string",
       "description": "The URL of a remote Git repository to clone.",

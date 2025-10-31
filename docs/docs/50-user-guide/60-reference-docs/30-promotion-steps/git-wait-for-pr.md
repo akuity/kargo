@@ -17,6 +17,7 @@ and is commonly followed by an `argocd-update` step.
 | `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to wait for. |
+| `pollInterval` | `string` | N | Optional. The interval (e.g., `10s`, `1m`) at which to poll while the step is running. If not specified, the controller's default 5-minute requeue interval is used. |
 
 ## Output
 
