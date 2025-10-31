@@ -189,7 +189,7 @@ func (a *argocdUpdater) run(
 		if mustUpdate {
 			appLogger.Info("Argo CD Application requires update")
 		} else {
-			logger.Info("Argo CD Application does not require update")
+			appLogger.Info("Argo CD Application does not require update")
 		}
 
 		// If we have a phase, append it to the results.
