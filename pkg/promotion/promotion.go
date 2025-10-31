@@ -134,7 +134,6 @@ func WithActor(actor string) ContextOption {
 func NewContext(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
-	targetFreightRef kargoapi.FreightReference,
 	opts ...ContextOption,
 ) Context {
 	ctx := Context{
@@ -142,12 +141,18 @@ func NewContext(
 		Stage:                 stage.Name,
 		Promotion:             promo.Name,
 		FreightRequests:       stage.Spec.RequestedFreight,
-		Freight:               *promo.Status.FreightCollection.DeepCopy(),
-		TargetFreightRef:      targetFreightRef,
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
+	}
+
+	if promo.Status.Freight != nil {
+		ctx.TargetFreightRef = *promo.Status.Freight.DeepCopy()
+	}
+
+	if promo.Status.FreightCollection != nil {
+		ctx.Freight = *promo.Status.FreightCollection.DeepCopy()
 	}
 
 	for _, opt := range opts {
