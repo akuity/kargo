@@ -246,7 +246,11 @@
                                       "description": "IndexSelectorRequirement encapsulates a requirement used to select indexes\nbased on specific criteria.",
                                       "properties": {
                                         "key": {
-                                          "description": "Key is the key of the index.\n\nkubebuilder:validation:Required",
+                                          "description": "Key is the key of the index.",
+                                          "enum": [
+                                            "subscribedURLs",
+                                            "receiverPaths"
+                                          ],
                                           "type": "string"
                                         },
                                         "operator": {

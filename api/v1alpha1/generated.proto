@@ -1320,7 +1320,7 @@ message IndexSelector {
 message IndexSelectorRequirement {
   // Key is the key of the index.
   //
-  // kubebuilder:validation:Required
+  // +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
   optional string key = 1;
 
   // Operator indicates the operation that should be used to evaluate

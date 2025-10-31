@@ -433,7 +433,7 @@ type IndexSelector struct {
 type IndexSelectorRequirement struct {
 	// Key is the key of the index.
 	//
-	// kubebuilder:validation:Required
+	// +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
 	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
 
 	// Operator indicates the operation that should be used to evaluate

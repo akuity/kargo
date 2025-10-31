@@ -2567,7 +2567,7 @@ export type IndexSelectorRequirement = Message<"github.com.akuity.kargo.api.v1al
   /**
    * Key is the key of the index.
    *
-   * kubebuilder:validation:Required
+   * +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
    *
    * @generated from field: optional string key = 1;
    */
