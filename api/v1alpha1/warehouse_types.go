@@ -366,9 +366,9 @@ type ImageSubscription struct {
 	//   by the Constraint field.
 	//
 	// - "Lexical": Selects the image referenced by the lexicographically greatest
-	//   tag. Useful when tags embed a leading date or timestamp. The
-	//   AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to
-	//   narrow the set of tags eligible for selection.
+	//   tag. This strategy is useful when tags embed a leading date or timestamp.
+	//   The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used
+	//   to narrow the set of tags eligible for selection.
 	//
 	// - "NewestBuild": Selects the image that was most recently pushed to the
 	//   repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can
@@ -378,8 +378,13 @@ type ImageSubscription struct {
 	//   should be avoided.
 	//
 	// - "SemVer": Selects the image with the semantically greatest tag. The
-	//   AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to
-	//   narrow the set of tags eligible for selection.
+	//   Constraint field may optionally include a semver version constraint to
+	//   restrict the set of tags eligible for selection to those representing
+	//   semantic versions in a given range. The AllowTagsRegexes and
+	//   IgnoreTagsRegexes fields can optionally be used to further narrow the
+	//   set of tags eligible for selection.
+	//   See the following for for a description of semver version constraint
+	//   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints
 	//
 	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
@@ -394,10 +399,13 @@ type ImageSubscription struct {
 	//
 	// +kubebuilder:default=true
 	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,10,opt,name=strictSemvers"`
-	// Constraint specifies constraints on what new image versions are
-	// permissible. Acceptable values for this field vary contextually by
-	// ImageSelectionStrategy. The field is optional and is ignored by some
-	// strategies.
+	// Constraint specifies ImageSelectionStrategy-specific constraints on what
+	// new image revisions are permissible. Acceptable values for this field vary
+	// contextually by ImageSelectionStrategy. The field is optional for some
+	// strategies. Others either require it or ignore it. For strategies that
+	// treat this field as optional, specifying no value means "no constraints."
+	// Refer to the descriptions of individual strategies to learn if or how they
+	// use this field.
 	//
 	// +kubebuilder:validation:Optional
 	Constraint string `json:"constraint,omitempty" protobuf:"bytes,11,opt,name=constraint"`

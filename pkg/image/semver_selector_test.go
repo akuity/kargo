@@ -33,7 +33,7 @@ func TestNewSemverSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success -- with constraint specified",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:    "example/image",
 				Constraint: "^v1.0.0",
@@ -43,6 +43,18 @@ func TestNewSemverSelector(t *testing.T) {
 				s, ok := sel.(*semverSelector)
 				require.True(t, ok)
 				require.NotNil(t, s.tagBasedSelector)
+			},
+		},
+		{
+			name: "success -- with no constraint specified",
+			sub: kargoapi.ImageSubscription{
+				RepoURL: "example/image",
+			},
+			assertions: func(t *testing.T, selector Selector, err error) {
+				require.NoError(t, err)
+				s, ok := selector.(*semverSelector)
+				require.True(t, ok)
+				require.Nil(t, s.constraint)
 			},
 		},
 	}
