@@ -1,12 +1,11 @@
 ---
-sidebar_label: Key Concepts
 description: An overview of Kargo notifications concepts and components.
 ---
 
+# Key Concepts
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-
-# Key Concepts
 
 :::info
 
@@ -34,11 +33,11 @@ step](../../30-promotion-steps/send-message.md) to send notifications when speci
 
 ## Event Routers
 
-At their core, `EventRouter`s are responsible for listening to specific events within Kargo and routing
-them to the appropriate channels based on defined criteria. They act as the bridge between events and
-channels, ensuring that notifications are sent to the right destinations when relevant events occur. Due to their design, the same event can be
-routed to multiple channels or different events can be routed to the same channel without duplicating
-notification logic.
+At their core, `EventRouter`s are responsible for listening to specific events within Kargo and
+routing them to the appropriate channels based on defined criteria. They act as the bridge between
+events and channels, ensuring that notifications are sent to the right destinations when relevant
+events occur. Due to their design, the same event can be routed to multiple channels or different
+events can be routed to the same channel without duplicating notification logic.
 
 The lack of "notification" in the name is intentional, as `EventRouter`s do not themselves send
 notifications. Instead, they route events to channels after rendering data from the event, which
