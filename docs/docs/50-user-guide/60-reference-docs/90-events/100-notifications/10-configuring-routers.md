@@ -1,12 +1,11 @@
 ---
-sidebar_label: Configuring Event Routers
 description: How to configure and use EventRouters for notifications
 ---
 
+# Configuring Event Routers
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-
-# Configuring Event Routers
 
 [Event Routers](./00-overview.md#event-routers) are used to route events to different destinations
 based on specified criteria. This document provides guidance on how to configure and use Event
