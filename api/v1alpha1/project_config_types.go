@@ -440,7 +440,7 @@ type IndexSelectorRequirement struct {
 	// whether the selection requirement is satisfied.
 	//
 	// kubebuilder:validation:Required
-	Operator Operator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	Operator metav1.FieldSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Values is a list of values or a single value returned from an expression.
 	//
@@ -459,32 +459,13 @@ type ConditionSelector struct {
 	// Operator is the set of operators that can be used in a scope selector requirement.
 	//
 	// kubebuilder:validation:Required
-	Operator Operator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	Operator metav1.FieldSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Value is the value of the condition to be matched.
 	//
 	// +kubebuilder:validation:Required
 	Value string `json:"value,omitempty" protobuf:"bytes,3,opt,name=value"`
 }
-
-// Operator represents a set of operators that can be used in a
-// condition selector requirement.
-type Operator string
-
-const (
-	// OpEquals indicates equality comparison.
-	OpEquals Operator = "Equals"
-	// OpNotEquals indicates inequality comparison.
-	OpNotEquals Operator = "NotEquals"
-	// OpIndicates inclusion in a set.
-	OpIn Operator = "In"
-	// OpNotIn indicates exclusion from a set.
-	OpNotIn Operator = "NotIn"
-	// OpExists indicates existence of a key.
-	OpExists Operator = "Exists"
-	// OpDoesNotExist indicates non-existence of a key.
-	OpDoesNotExist Operator = "DoesNotExist"
-)
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
 type WebhookReceiverDetails struct {
