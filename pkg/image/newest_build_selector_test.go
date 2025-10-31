@@ -51,7 +51,7 @@ func Test_newestBuildSelector_sort(t *testing.T) {
 
 	now := time.Now().UTC()
 
-	images := []image{
+	images := []Image{
 		{CreatedAt: &now},
 		{CreatedAt: timePtr(now.Add(time.Hour))},
 		{CreatedAt: timePtr(now.Add(5 * time.Hour))},
@@ -66,7 +66,7 @@ func Test_newestBuildSelector_sort(t *testing.T) {
 
 	require.Equal(
 		t,
-		[]image{
+		[]Image{
 			{CreatedAt: timePtr(now.Add(24 * time.Hour))},
 			{CreatedAt: timePtr(now.Add(8 * time.Hour))},
 			{CreatedAt: timePtr(now.Add(7 * time.Hour))},

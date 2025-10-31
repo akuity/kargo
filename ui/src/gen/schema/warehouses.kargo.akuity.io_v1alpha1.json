@@ -248,6 +248,11 @@
                     "default": true,
                     "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the ImageSelectionStrategy is SemVer. This should be disabled\ncautiously, as it is not uncommon to tag container images with short Git\ncommit hashes, which have the potential to contain numeric characters only\nand could be mistaken for a semver string containing the major version\nnumber only.",
                     "type": "boolean"
+                  },
+                  "useCachedTags": {
+                    "default": false,
+                    "description": "UseCachedTags specifies whether to use cached tags when discovering new\nimage revisions. When set to true, image metadata cached by tag will be\nused when available, which can help reduce the number of requests made to\nthe image repository and dramatically improve performance. When set to\nfalse, image metadata is only ever cached by digest. This setting is only\nsafe to enable when it's known with certainty that relevant tags are\n\"immutable\" (i.e. the exact images referenced by tags remain constant over\ntime and tags are never \"re-used\" to point to new/different images). This\nsetting will automatically be ignored by the Digest selection strategy,\nwhich assumes that tags are mutable. Note that the Kargo administrator may\nchoose to either disallow the use of this setting OR require that it be\nused (for non-Digest selection strategies). When configuration disagrees\nwith the administrator's policy, artifact discovery will FAIL.",
+                    "type": "boolean"
                   }
                 },
                 "required": [
