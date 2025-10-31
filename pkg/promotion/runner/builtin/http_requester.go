@@ -152,7 +152,22 @@ func (h *httpRequester) run(
 		// - Success unmet, failure undefined
 		// - Success undefined, failure unmet
 		// - Success unmet, failure unmet
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+		var retryAfter *time.Duration
+		if cfg.PollInterval != "" {
+			if d, err := time.ParseDuration(cfg.PollInterval); err == nil {
+				retryAfter = &d
+			} else {
+				logging.LoggerFromContext(ctx).WithValues(
+					"step", stepKindHTTP,
+					"pollInterval", cfg.PollInterval,
+				).Info("unparseable pollInterval; using default requeue interval", "error", err)
+			}
+		}
+
+		return promotion.StepResult{
+			Status:     kargoapi.PromotionStepStatusRunning,
+			RetryAfter: retryAfter,
+		}, nil
 	}
 }
 
