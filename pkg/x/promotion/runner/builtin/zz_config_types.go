@@ -524,6 +524,15 @@ type UntarConfig struct {
 	StripComponents *int64 `json:"stripComponents,omitempty"`
 }
 
+type YAMLMergeConfig struct {
+	// allow directive to pass even if an input file does not exist.
+	IgnoreMissingFiles bool `json:"ignoreMissingFiles,omitempty"`
+	// InFiles is the list of paths of YAML files to merge
+	InFiles []string `json:"inFiles"`
+	// OutFile is the path to the merged YAML file to created or updated.
+	OutFile string `json:"outFile"`
+}
+
 type YAMLParseConfig struct {
 	// An array of outputs to extract from the YAML file.
 	Outputs []YAMLParse `json:"outputs"`
