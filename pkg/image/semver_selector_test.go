@@ -33,7 +33,7 @@ func TestNewSemverSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name: "success -- with constraint specified",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:    "example/image",
 				Constraint: "^v1.0.0",
@@ -46,7 +46,7 @@ func TestNewSemverSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success when no constraint field is specified",
+			name: "success -- with no constraint specified",
 			sub: kargoapi.ImageSubscription{
 				RepoURL: "example/image",
 			},
