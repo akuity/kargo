@@ -777,27 +777,27 @@ Example:
   config:
     path: ./Chart.yaml
     outputs:
-      - name: currentVersion
-        fromExpression: version
-      - name: parsed
-        fromExpression: semverParse(version)
+    - name: currentVersion
+      fromExpression: version
+    - name: parsed
+      fromExpression: semverParse(version)
 
 # Update chart with bumped minor version (e.g., 1.2.3 → 1.3.0)
 - uses: yaml-update
   config:
     path: ./Chart.yaml
     updates:
-      - key: version
-        value: ${{ task.outputs['read-version'].parsed.IncMinor().String() }}
+    - key: version
+      value: ${{ task.outputs['read-version'].parsed.IncMinor().String() }}
 
 # Or access individual components
 - uses: set-var
   config:
     vars:
-      - name: majorVersion
-        value: ${{ task.outputs['read-version'].parsed.Major() }}
-      - name: minorVersion
-        value: ${{ task.outputs['read-version'].parsed.Minor() }}
+    - name: majorVersion
+      value: ${{ task.outputs['read-version'].parsed.Major() }}
+    - name: minorVersion
+      value: ${{ task.outputs['read-version'].parsed.Minor() }}
 ```
 
 ### `semverDiff(version1, version2)`

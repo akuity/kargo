@@ -1872,29 +1872,11 @@ func Test_semverDiff(t *testing.T) {
 }
 
 func Test_semverParse(t *testing.T) {
-	tests := []struct {
+	testCases := []struct {
 		name       string
 		args       []any
 		assertions func(t *testing.T, result any, err error)
 	}{
-		{
-			name: "success",
-			args: []any{"1.2.3"},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.NoError(t, err)
-				parsed, ok := result.(*semver.Version)
-				require.True(t, ok)
-				assert.NotNil(t, parsed)
-			},
-		},
-		{
-			name: "invalid semver",
-			args: []any{"invalid"},
-			assertions: func(t *testing.T, result any, err error) {
-				assert.ErrorContains(t, err, "invalid semantic version")
-				assert.Nil(t, result)
-			},
-		},
 		{
 			name: "no arguments",
 			args: []any{},
@@ -1919,12 +1901,31 @@ func Test_semverParse(t *testing.T) {
 				assert.Nil(t, result)
 			},
 		},
+		{
+			name: "invalid semver",
+			args: []any{"invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "invalid semantic version")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "success",
+			args: []any{"1.2.3"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(*semver.Version)
+				require.True(t, ok)
+				assert.NotNil(t, parsed)
+			},
+		},
+
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := semverParse(tt.args...)
-			tt.assertions(t, result, err)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := semverParse(testCase.args...)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
