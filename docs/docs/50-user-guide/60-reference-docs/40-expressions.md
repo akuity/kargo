@@ -789,15 +789,6 @@ Example:
     updates:
     - key: version
       value: ${{ task.outputs['read-version'].parsed.IncMinor().String() }}
-
-# Or access individual components
-- uses: set-var
-  config:
-    vars:
-    - name: majorVersion
-      value: ${{ task.outputs['read-version'].parsed.Major() }}
-    - name: minorVersion
-      value: ${{ task.outputs['read-version'].parsed.Minor() }}
 ```
 
 ### `semverDiff(version1, version2)`
