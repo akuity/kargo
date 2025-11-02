@@ -39,7 +39,7 @@ require (
 	github.com/google/go-github/v74 v74.0.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
-	github.com/jferrl/go-githubauth v1.4.2
+	github.com/jferrl/go-githubauth v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.18.1
 	github.com/ktrysmt/go-bitbucket v0.9.87
@@ -67,7 +67,7 @@ require (
 	golang.org/x/oauth2 v0.32.0
 	golang.org/x/sync v0.17.0
 	golang.org/x/text v0.30.0
-	google.golang.org/api v0.253.0
+	google.golang.org/api v0.254.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
@@ -225,7 +225,7 @@ require (
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251014184007-4626949a642f // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
