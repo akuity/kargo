@@ -770,25 +770,24 @@ as prerelease and build metadata components.
 Example:
 
 ```yaml
-# Read current chart version and bump the minor version
+# Read current chart version from Char.yaml
 
 - uses: yaml-parse
   as: read-version
   config:
-    path: ./Chart.yaml
+    path: ./src/Chart.yaml
     outputs:
     - name: currentVersion
       fromExpression: version
-    - name: parsed
-      fromExpression: semverParse(version)
 
-# Update chart with bumped minor version (e.g., 1.2.3 → 1.3.0)
+# Update Chart.yaml with bumped minor version
+
 - uses: yaml-update
   config:
-    path: ./Chart.yaml
+    path: ./src/Chart.yaml
     updates:
     - key: version
-      value: ${{ task.outputs['read-version'].parsed.IncMinor().String() }}
+      value: ${{ semverParse(task.outputs['read-version'].currentVersion).IncMinor().String() }}
 ```
 
 ### `semverDiff(version1, version2)`
