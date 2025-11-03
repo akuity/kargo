@@ -305,7 +305,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1*appHealthCooldownDuration + time.Second),
+						Time: time.Now().Add(-1*appHealthCooldownDuration + appHealthCooldownDuration/2),
 					},
 				},
 				Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
