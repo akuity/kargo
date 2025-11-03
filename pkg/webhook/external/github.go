@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	gh "github.com/google/go-github/v74/github"
+	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
