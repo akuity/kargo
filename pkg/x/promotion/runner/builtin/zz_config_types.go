@@ -460,7 +460,7 @@ type KustomizeSetImageConfig struct {
 	// left unspecified, all images from the Freight collection will be set in the Kustomization
 	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
 	// subscribing to the same repository), which requires manual configuration.
-	Images []Image `json:"images"`
+	Images []Image `json:"images,omitempty"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 }

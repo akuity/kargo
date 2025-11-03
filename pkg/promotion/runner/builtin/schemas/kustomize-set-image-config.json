@@ -3,7 +3,7 @@
   "title": "KustomizeSetImageConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["path", "images"],
+  "required": ["path"],
   "properties": {
     "path": {
       "type": "string",
