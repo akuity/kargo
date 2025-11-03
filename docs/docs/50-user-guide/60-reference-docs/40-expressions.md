@@ -770,7 +770,7 @@ as prerelease and build metadata components.
 Example:
 
 ```yaml
-# Read current chart version from Char.yaml
+# Read current chart version from Chart.yaml
 
 - uses: yaml-parse
   as: read-version
