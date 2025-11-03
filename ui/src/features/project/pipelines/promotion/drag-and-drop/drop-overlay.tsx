@@ -4,6 +4,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Typography } from 'antd';
 import classNames from 'classnames';
 
+import { isStageControlFlow } from '@ui/features/project/pipelines/nodes/stage-meta-utils';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import styles from './drop-overlay.module.less';
@@ -24,6 +25,8 @@ export const DropOverlay = ({ isOver, stage }: Props) => {
       )
     );
 
+  const controlFlow = isStageControlFlow(stage);
+
   return (
     <div
       className={classNames(styles.dropOverlay, {
@@ -34,7 +37,7 @@ export const DropOverlay = ({ isOver, stage }: Props) => {
       <>
         <FontAwesomeIcon icon={faTruckArrowRight} />
         <Typography.Title level={5} className='!mb-0'>
-          Promote
+          Promote {controlFlow && 'to Downstream'}
         </Typography.Title>
       </>
     </div>
