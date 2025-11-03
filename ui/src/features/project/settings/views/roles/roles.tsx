@@ -88,7 +88,7 @@ export const RolesSettings = () => {
         />
       )}
       <Table
-        className='my-2'
+        className='my-2 overflow-x-scroll'
         key={data?.roles?.length}
         dataSource={(data?.roles || []).sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
