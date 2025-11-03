@@ -1,5 +1,10 @@
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
-import { faExclamationCircle, faRedo, faRefresh } from '@fortawesome/free-solid-svg-icons';
+import {
+  faExclamationCircle,
+  faExternalLink,
+  faRedo,
+  faRefresh
+} from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Space } from 'antd';
@@ -17,6 +22,7 @@ import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { currentFreightHasVerification } from '../common/utils';
+import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
 
 export const StageActions = ({
   stage,
@@ -62,6 +68,20 @@ export const StageActions = ({
   return (
     <>
       <Space size={16}>
+        <ArgoCDLink
+          stage={stage}
+          externalLinksOnly
+          buttonProps={{
+            type: 'link',
+            iconPosition: 'end',
+            icon: <FontAwesomeIcon icon={faExternalLink} size='sm' />
+          }}
+        >
+          <Space size={8}>
+            <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '28px', marginTop: '-2px' }} />
+            ArgoCD
+          </Space>
+        </ArgoCDLink>
         {currentFreightHasVerification(stage) && (
           <>
             {verificationEnabled && (
