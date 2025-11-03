@@ -278,7 +278,13 @@ export const StageNode = (props: { stage: Stage }) => {
         }
         extra={
           <Space size={6}>
-            <ArgoCDLink stage={props.stage} />
+            <ArgoCDLink
+              stage={props.stage}
+              buttonProps={{
+                size: 'small',
+                icon: <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />
+              }}
+            />
             <Dropdown
               trigger={['click']}
               overlayClassName='w-fit'
