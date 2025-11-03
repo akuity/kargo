@@ -8,12 +8,14 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   promoteDownstream,
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
+
+import { isStageControlFlow } from '../nodes/stage-meta-utils';
 
 import { FreightDetails } from './freight-details';
 import styles from './promote.module.less';
@@ -27,6 +29,8 @@ export const Promote = (props: PromoteProps) => {
   const actionContext = useActionContext();
   const navigate = useNavigate();
   const { promoteTabs } = useExtensionsContext();
+
+  const isControlFlow = isStageControlFlow(props.stage);
 
   const freightAlias = props.freight?.alias;
   const stageName = props.stage?.metadata?.name;
@@ -66,7 +70,7 @@ export const Promote = (props: PromoteProps) => {
       freight: props.freight?.metadata?.name
     };
 
-    if (actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM) {
+    if (isControlFlow) {
       promoteDownstreamActionMutation.mutate(payload);
       return;
     }
@@ -93,7 +97,7 @@ export const Promote = (props: PromoteProps) => {
           onClick={onPromote}
           loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
         >
-          Promote{actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM && ' to downstream'}
+          Promote{isControlFlow && ' to downstream'}
         </Button>
       }
     >
