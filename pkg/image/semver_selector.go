@@ -42,18 +42,18 @@ func newSemverSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building tag based selector: %w", err)
 	}
-	constraintStr, err := semver.NewConstraint(sub.Constraint)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error parsing semver constraint %q: %w",
-			constraintStr, err,
-		)
-	}
-
 	s := &semverSelector{
 		tagBasedSelector: tagBased,
 		strictSemvers:    sub.StrictSemvers,
-		constraint:       constraintStr,
+	}
+	if sub.Constraint != "" {
+		s.constraint, err = semver.NewConstraint(sub.Constraint)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error parsing semver constraint %q: %w",
+				s.constraint, err,
+			)
+		}
 	}
 
 	return s, nil
