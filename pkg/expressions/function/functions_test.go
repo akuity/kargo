@@ -1919,7 +1919,6 @@ func Test_semverParse(t *testing.T) {
 				assert.NotNil(t, parsed)
 			},
 		},
-
 	}
 
 	for _, testCase := range testCases {
