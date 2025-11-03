@@ -1,6 +1,6 @@
 import { faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Dropdown } from 'antd';
+import { Dropdown, ButtonProps, Button } from 'antd';
 import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import z from 'zod';
@@ -14,11 +14,18 @@ import { useDictionaryContext } from '../context/dictionary-context';
 const ARGOCD_CONTEXT_KEY = 'kargo.akuity.io/argocd-context';
 const SHARD_LABEL_KEY = 'kargo.akuity.io/shard';
 
-type ArgoCDLinkProps = {
+type ArgoCDLinkProps = React.PropsWithChildren<{
   stage: Stage;
-};
+  externalLinksOnly?: boolean;
+  buttonProps: ButtonProps;
+}>;
 
-export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
+export const ArgoCDLink = ({
+  buttonProps,
+  children,
+  externalLinksOnly,
+  stage
+}: ArgoCDLinkProps) => {
   const navigate = useNavigate();
   const { name: projectName } = useParams();
   const { argoCDExtension } = useExtensionsContext();
@@ -27,7 +34,7 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
   const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
   // Remove trailing slash if present
   const argoCDShardURL = dictionaryContext?.argocdShards?.[shardKey]?.url?.replace(/\/$/, '');
-  const isExtensionLoaded = Boolean(argoCDExtension);
+  const isExtensionArgoCD = Boolean(argoCDExtension) && !externalLinksOnly;
 
   const argoCDApps = React.useMemo(() => {
     const rawValues = stage.metadata?.annotations?.[ARGOCD_CONTEXT_KEY];
@@ -43,7 +50,7 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
 
   const openArgoCD = React.useCallback(
     (link: ArgoCDContext) => {
-      if (isExtensionLoaded) {
+      if (isExtensionArgoCD) {
         navigate(
           generatePath(paths.projectArgoCDExtension, {
             name: projectName,
@@ -59,7 +66,7 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
         );
       }
     },
-    [isExtensionLoaded, navigate, projectName, argoCDShardURL]
+    [isExtensionArgoCD, navigate, projectName, argoCDShardURL]
   );
 
   if (argoCDApps.length === 0 || !argoCDShardURL) {
@@ -68,11 +75,9 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
 
   if (argoCDApps.length === 1) {
     return (
-      <Button
-        icon={<img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />}
-        size='small'
-        onClick={() => openArgoCD(argoCDApps[0])}
-      />
+      <Button onClick={() => openArgoCD(argoCDApps[0])} {...buttonProps}>
+        {children}
+      </Button>
     );
   }
 
@@ -92,7 +97,7 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
                 }}
               >
                 {`${app.name} - ${app.namespace}`}
-                {!isExtensionLoaded && (
+                {!isExtensionArgoCD && (
                   <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
                 )}
               </a>
@@ -101,12 +106,7 @@ export const ArgoCDLink = ({ stage }: ArgoCDLinkProps) => {
         })
       }}
     >
-      <a onClick={(e) => e.preventDefault()}>
-        <Button
-          size='small'
-          icon={<img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />}
-        />
-      </a>
+      <Button {...buttonProps}>{children}</Button>
     </Dropdown>
   );
 };
