@@ -1,5 +1,4 @@
 //go:build dockerhub
-// +build dockerhub
 
 package image
 

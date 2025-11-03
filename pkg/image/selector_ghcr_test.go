@@ -1,5 +1,4 @@
 //go:build ghcr
-// +build ghcr
 
 package image
 
