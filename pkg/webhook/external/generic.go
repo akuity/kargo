@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"slices"
 
-	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -17,11 +17,10 @@ import (
 	"github.com/akuity/kargo/pkg/expressions"
 	xhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
-
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
 
 const (
@@ -101,6 +100,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 		// Shared environment for all actions.
 		globalEnv := map[string]any{
+			"normalize": urls.Normalize,
 			"request": map[string]any{
 				"header":  r.Header.Get,
 				"headers": r.Header.Values,
@@ -130,7 +130,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 					continue
 				}
 				for _, target := range action.Targets {
-					_, err := g.buildListOptionsForTarget(ctx, target, actionEnv)
+					_, err := g.buildListOptionsForTarget(target, actionEnv)
 					if err != nil {
 						logger.Error(err, "failed to build list options for warehouse target")
 						continue
@@ -144,14 +144,13 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 }
 
 func (g *genericWebhookReceiver) buildListOptionsForTarget(
-	ctx context.Context,
 	t kargoapi.GenericWebhookTarget,
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(g.project)}
 
 	if len(t.IndexSelector.MatchExpressions) > 0 {
-		indexSelectorListOpts, err := g.newListOptionsForIndexSelector(ctx, t.IndexSelector, env)
+		indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create field selector: %w", err)
 		}
@@ -168,26 +167,33 @@ func (g *genericWebhookReceiver) buildListOptionsForTarget(
 	return listOpts, nil
 }
 
-func (g *genericWebhookReceiver) newListOptionsForIndexSelector(
-	ctx context.Context,
+func newListOptionsForIndexSelector(
 	is kargoapi.IndexSelector,
 	env map[string]any,
 ) ([]client.ListOption, error) {
-	logger := logging.LoggerFromContext(ctx)
 	var listOpts []client.ListOption
 	for _, expr := range is.MatchExpressions {
-		resultList, err := parseValuesAsList(&expr.Values, env)
+		// If '${{' is not included, expressions.EvaluateTemplate will return 'value' as is.
+		result, err := expressions.EvaluateTemplate(expr.Value, env)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse values for index selector expression: %w", err)
+			return nil, fmt.Errorf("failed to evaluate values expression: %w", err)
 		}
 
-		for _, result := range resultList {
-			logger.Debug("index selector evaluated value", "key", expr.Key, "value", result)
-			listOpts = append(listOpts, client.MatchingFields{
-				// the key is the index name
-				expr.Key: result,
-			})
+		resultStr, ok := result.(string)
+		if !ok {
+			return nil, fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
 		}
+
+		var s fields.Selector
+		switch expr.Operator {
+		case kargoapi.IndexSelectorRequirementOperatorEqual:
+			s = fields.OneTermEqualSelector(expr.Key, resultStr)
+		case kargoapi.IndexSelectorRequirementOperatorNotEqual:
+			s = fields.OneTermNotEqualSelector(expr.Key, resultStr)
+		default:
+			return nil, fmt.Errorf("unsupported operator %q in index selector expression", expr.Operator)
+		}
+		listOpts = append(listOpts, client.MatchingFieldsSelector{Selector: s})
 	}
 	return listOpts, nil
 }
@@ -245,36 +251,6 @@ func evaluateConditionSelector(cs kargoapi.ConditionSelector, env map[string]any
 		return !contains, nil
 	}
 	return contains, nil
-}
-
-func parseValuesAsList(values *apiextensionsv1.JSON, env map[string]any) ([]string, error) {
-	if values == nil {
-		return nil, nil
-	}
-
-	var list []string // list of expressions, static values, or combination of the two
-	if err := yaml.Unmarshal(values.Raw, &list); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal values as []string: %w", err)
-	}
-
-	var resultList []string // the final evaluated list of strings
-	for _, v := range list {
-		// If '${{' is not included, expressions.EvaluateTemplate will return 'v' as is.
-		result, err := expressions.EvaluateTemplate(v, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate values expression: %w", err)
-		}
-
-		switch res := result.(type) {
-		case []any:
-			for _, r := range res {
-				resultList = append(resultList, fmt.Sprintf("%v", r))
-			}
-		default:
-			resultList = append(resultList, fmt.Sprintf("%v", res))
-		}
-	}
-	return resultList, nil
 }
 
 func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOption, error) {

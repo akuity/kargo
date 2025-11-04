@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/selection"
 )
@@ -451,14 +450,23 @@ type IndexSelectorRequirement struct {
 	// Operator indicates the operation that should be used to evaluate
 	// whether the selection requirement is satisfied.
 	//
-	// kubebuilder:validation:Enum=In;NotIn;
-	Operator metav1.FieldSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	// kubebuilder:validation:Enum=Equal;NotEqual;
+	Operator IndexSelectorRequirementOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Values is a list of values or a single value returned from an expression.
 	//
 	// kubebuilder:validation:Required
-	Values apiextensionsv1.JSON `json:"values" protobuf:"bytes,3,opt,name=values"`
+	Value string `json:"value" protobuf:"bytes,3,opt,name=value"`
 }
+
+// IndexSelectorRequirementOperator represents a set of operators that can be
+// used in an index selector requirement.
+type IndexSelectorRequirementOperator string
+
+const (
+	IndexSelectorRequirementOperatorEqual    IndexSelectorRequirementOperator = "Equal"
+	IndexSelectorRequirementOperatorNotEqual IndexSelectorRequirementOperator = "NotEqual"
+)
 
 // ConditionSelector encapsulates a condition used to match resources based
 // on specific criteria.

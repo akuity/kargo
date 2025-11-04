@@ -257,18 +257,18 @@
                                           "type": "string"
                                         },
                                         "operator": {
-                                          "description": "Operator indicates the operation that should be used to evaluate\nwhether the selection requirement is satisfied.\n\nkubebuilder:validation:Enum=In;NotIn;",
+                                          "description": "Operator indicates the operation that should be used to evaluate\nwhether the selection requirement is satisfied.\n\nkubebuilder:validation:Enum=Equal;NotEqual;",
                                           "type": "string"
                                         },
-                                        "values": {
+                                        "value": {
                                           "description": "Values is a list of values or a single value returned from an expression.\n\nkubebuilder:validation:Required",
-                                          "x-kubernetes-preserve-unknown-fields": true
+                                          "type": "string"
                                         }
                                       },
                                       "required": [
                                         "key",
                                         "operator",
-                                        "values"
+                                        "value"
                                       ],
                                       "type": "object"
                                     },

@@ -315,18 +315,18 @@ spec:
                                                   Operator indicates the operation that should be used to evaluate
                                                   whether the selection requirement is satisfied.
 
-                                                  kubebuilder:validation:Enum=In;NotIn;
+                                                  kubebuilder:validation:Enum=Equal;NotEqual;
                                                 type: string
-                                              values:
+                                              value:
                                                 description: |-
                                                   Values is a list of values or a single value returned from an expression.
 
                                                   kubebuilder:validation:Required
-                                                x-kubernetes-preserve-unknown-fields: true
+                                                type: string
                                             required:
                                             - key
                                             - operator
-                                            - values
+                                            - value
                                             type: object
                                           minItems: 1
                                           type: array

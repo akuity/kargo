@@ -1337,13 +1337,13 @@ message IndexSelectorRequirement {
   // Operator indicates the operation that should be used to evaluate
   // whether the selection requirement is satisfied.
   //
-  // kubebuilder:validation:Enum=In;NotIn;
+  // kubebuilder:validation:Enum=Equal;NotEqual;
   optional string operator = 2;
 
   // Values is a list of values or a single value returned from an expression.
   //
   // kubebuilder:validation:Required
-  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON values = 3;
+  optional string value = 3;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace

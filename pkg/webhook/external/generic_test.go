@@ -4,132 +4,81 @@ import (
 	"testing"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/urls"
 	"github.com/stretchr/testify/require"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func Test_parseValuesAsList(t *testing.T) {
+func Test_newListOptionsForIndexSelector(t *testing.T) {
+	// This is indirectly tested via Test_buildListOptionsForTarget,
+	// so we just need a basic smoke test here.
+	testRepoURL := urls.NormalizeGit("https://github.com/example/repo.git")
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
 	tests := []struct {
 		name      string
-		values    *apiextensionsv1.JSON
+		kClient   client.Client
+		selector  kargoapi.IndexSelector
 		env       map[string]any
-		expected  []string
 		expectErr bool
 	}{
 		{
-			name:     "nil values",
-			values:   nil,
-			env:      nil,
-			expected: nil,
-		},
-		{
-			name:      "invalid json",
-			values:    &apiextensionsv1.JSON{Raw: []byte(`{invalid json}`)},
-			env:       nil,
-			expectErr: true,
-		},
-		{
-			name:      "expression does not evaluate to []string",
-			values:    &apiextensionsv1.JSON{Raw: []byte(`"42"`)},
-			env:       nil,
-			expectErr: true,
-		},
-		{
-			name:     "list of strings",
-			values:   &apiextensionsv1.JSON{Raw: []byte(`["a", "b", "c"]`)},
-			env:      nil,
-			expected: []string{"a", "b", "c"},
-		},
-		{
-			name: "list of expressions returning 1 value each",
-			values: &apiextensionsv1.JSON{
-				Raw: []byte(
-					`[
-					"${{ request.body.repository.clone_url }}", 
-					"${{ request.body.repository.other_url }}"
-				]`,
-				)},
-			env: map[string]any{
-				"request": map[string]any{
-					"body": map[string]any{
-						"repository": map[string]any{
-							"clone_url": "https://example.com/repo.git",
-							"other_url": "https://example.com/other.git",
-						},
+			name: "Equal selector satisfied",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "some-namespace",
+						Name:      "some-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
+						}},
 					},
 				},
-			},
-			expected: []string{
-				"https://example.com/repo.git",
-				"https://example.com/other.git",
-			},
-		},
-		{
-			name: "list of expressions returning multiple value each",
-			values: &apiextensionsv1.JSON{
-				Raw: []byte(
-					`[
-						"${{ request.body.repository.branchOne.commits }}", 
-						"${{ request.body.repository.branchTwo.commits }}"
-					]`,
-				),
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			selector: kargoapi.IndexSelector{
+				MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					{
+						Key:      indexer.WarehousesBySubscribedURLsField,
+						Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+						Value:    "${{ request.body.repository.clone_url }}",
+					},
+				},
 			},
 			env: map[string]any{
 				"request": map[string]any{
 					"body": map[string]any{
 						"repository": map[string]any{
-							"branchOne": map[string]any{
-								"commits": []string{"abc123", "efg456"},
-							},
-							"branchTwo": map[string]any{
-								"commits": []string{"ghi789", "jkl000"},
-							},
+							"clone_url": testRepoURL,
 						},
 					},
 				},
 			},
-			expected: []string{"abc123", "efg456", "ghi789", "jkl000"},
-		},
-		{
-			name: "mixed static, expression single value, and expression multiple values",
-			values: &apiextensionsv1.JSON{
-				Raw: []byte(
-					`[
-						"my-static-value",
-						"${{ request.body.repository.clone_url }}", 
-						"${{ request.body.repository.branchOne.commits }}"
-					]`,
-				),
-			},
-			env: map[string]any{
-				"request": map[string]any{
-					"body": map[string]any{
-						"repository": map[string]any{
-							"clone_url": "https://example.com/repo.git",
-							"branchOne": map[string]any{
-								"commits": []string{"abc123", "efg456"},
-							},
-						},
-					},
-				},
-			},
-			expected: []string{
-				"my-static-value",
-				"https://example.com/repo.git",
-				"abc123", "efg456",
-			},
+			expectErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := parseValuesAsList(tt.values, tt.env)
+			listOpts, err := newListOptionsForIndexSelector(tt.selector, tt.env)
 			if tt.expectErr {
 				require.Error(t, err)
 				return
 			}
+			whList := new(kargoapi.WarehouseList)
+			err = tt.kClient.List(t.Context(), whList, listOpts...)
 			require.NoError(t, err)
-			require.Equal(t, tt.expected, got)
+			require.Len(t, whList.Items, 1)
 		})
 	}
 }

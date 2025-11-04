@@ -2295,7 +2295,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | key | [string](#string) |  Key is the key of the index.   |
 | operator | [string](#string) |  Operator indicates the operation that should be used to evaluate whether the selection requirement is satisfied.   |
-| values | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Values is a list of values or a single value returned from an expression.   |
+| value | [string](#string) |  Values is a list of values or a single value returned from an expression.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Project"></a>
 

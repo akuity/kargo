@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	networkingv1 "k8s.io/api/networking/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
@@ -918,8 +917,4 @@ func Test_buildTargetFreightCollection(t *testing.T) {
 			require.Len(t, result.Freight, tc.expectedNumFreight)
 		})
 	}
-}
-
-func thing() {
-	networkingv1.NetworkPolicy
 }
