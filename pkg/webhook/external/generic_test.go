@@ -3,8 +3,10 @@ package external
 import (
 	"testing"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 func Test_parseValuesAsList(t *testing.T) {
@@ -122,6 +124,132 @@ func Test_parseValuesAsList(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := parseValuesAsList(tt.values, tt.env)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_evaluateConditionSelector(t *testing.T) {
+	tests := []struct {
+		name      string
+		selector  kargoapi.ConditionSelector
+		env       map[string]any
+		expected  bool
+		expectErr bool
+	}{
+		{
+			name: "In operator - static condition met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "apple",
+				Operator: selection.In,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env:      nil,
+			expected: true,
+		},
+		{
+			name: "In operator - static condition not met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "date",
+				Operator: selection.In,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env:      nil,
+			expected: false,
+		},
+		{
+			name: "In operator - expression condition met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "${{ request.body.fruit }}",
+				Operator: selection.In,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env: map[string]any{
+				"request": map[string]any{
+					"body": map[string]any{
+						"fruit": "banana",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "In operator - expression condition not met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "${{ request.body.fruit }}",
+				Operator: selection.In,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env: map[string]any{
+				"request": map[string]any{
+					"body": map[string]any{
+						"fruit": "date",
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "NotIn operator - static condition met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "date",
+				Operator: selection.NotIn,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env:      nil,
+			expected: true,
+		},
+		{
+			name: "NotIn operator - static condition not met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "apple",
+				Operator: selection.NotIn,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env:      nil,
+			expected: false,
+		},
+		{
+			name: "NotIn operator - expression condition met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "${{ request.body.fruit }}",
+				Operator: selection.NotIn,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env: map[string]any{
+				"request": map[string]any{
+					"body": map[string]any{
+						"fruit": "date",
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "NotIn operator - expression condition not met",
+			selector: kargoapi.ConditionSelector{
+				Key:      "${{ request.body.fruit }}",
+				Operator: selection.NotIn,
+				Values:   []string{"apple", "banana", "cherry"},
+			},
+			env: map[string]any{
+				"request": map[string]any{
+					"body": map[string]any{
+						"fruit": "banana",
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := evaluateConditionSelector(tt.selector, tt.env)
 			if tt.expectErr {
 				require.Error(t, err)
 				return

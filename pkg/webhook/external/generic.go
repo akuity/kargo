@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 
 	"gopkg.in/yaml.v2"
 	"k8s.io/apimachinery/pkg/labels"
@@ -225,19 +226,25 @@ func conditionsMet(
 }
 
 func evaluateConditionSelector(cs kargoapi.ConditionSelector, env map[string]any) (bool, error) {
-	// TODO: create expression from ConditionSelector fields
-	// this doensn't seem right
-	expression := fmt.Sprintf("%s %s %q", cs.Key, cs.Operator, cs.Values)
-	// key will always be an expression
-	result, err := expressions.EvaluateTemplate(expression, env)
+	// Evaluate the key expression to get the actual value to check against.
+	// If the key is not an expression, it will be returned as is.
+	result, err := expressions.EvaluateTemplate(cs.Key, env)
 	if err != nil {
 		return false, fmt.Errorf("failed to compile expression: %w", err)
 	}
-	met, ok := result.(bool)
+
+	strResult, ok := result.(string)
 	if !ok {
 		return false, fmt.Errorf("expression result %q evaluated to %T; not a boolean", result, result)
 	}
-	return met, nil
+
+	// The only operators supported are In and NotIn.
+	// If we're dealing with NotIn, we need to invert the result.
+	contains := slices.Contains(cs.Values, strResult)
+	if cs.Operator == selection.NotIn {
+		return !contains, nil
+	}
+	return contains, nil
 }
 
 func parseValuesAsList(values *apiextensionsv1.JSON, env map[string]any) ([]string, error) {
