@@ -4,6 +4,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 )
 
 // +kubebuilder:object:root=true
@@ -450,7 +451,7 @@ type IndexSelectorRequirement struct {
 	// Operator indicates the operation that should be used to evaluate
 	// whether the selection requirement is satisfied.
 	//
-	// kubebuilder:validation:Required
+	// kubebuilder:validation:Enum=In;NotIn;
 	Operator metav1.FieldSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Values is a list of values or a single value returned from an expression.
@@ -469,13 +470,13 @@ type ConditionSelector struct {
 
 	// Operator is the set of operators that can be used in a scope selector requirement.
 	//
-	// kubebuilder:validation:Required
-	Operator metav1.FieldSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	// kubebuilder:validation:Enum=In;NotIn;
+	Operator selection.Operator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Value is the value of the condition to be matched.
 	//
 	// +kubebuilder:validation:Required
-	Value string `json:"value,omitempty" protobuf:"bytes,3,opt,name=value"`
+	Values []string `json:"value,omitempty" protobuf:"bytes,3,rep,name=value"`
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

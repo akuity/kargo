@@ -237,14 +237,16 @@ spec:
                               and the conditions under which it should be performed.
                             properties:
                               action:
-                                description: Name is the name of the action to be
-                                  performed.
+                                description: |-
+                                  Name is the name of the action to be performed. `Refresh` is the only
+                                  action currently supported.
                                 enum:
                                 - Refresh
                                 type: string
                               matchConditions:
-                                description: MatchConditions is a list of conditions
-                                  that must be met for the action to be performed.
+                                description: |-
+                                  MatchConditions is a list of criteria that must be met for the action to
+                                  be performed.
                                 items:
                                   description: |-
                                     ConditionSelector encapsulates a condition used to match resources based
@@ -260,12 +262,14 @@ spec:
                                       description: |-
                                         Operator is the set of operators that can be used in a scope selector requirement.
 
-                                        kubebuilder:validation:Required
+                                        kubebuilder:validation:Enum=In;NotIn;
                                       type: string
                                     value:
                                       description: Value is the value of the condition
                                         to be matched.
-                                      type: string
+                                      items:
+                                        type: string
+                                      type: array
                                   required:
                                   - key
                                   - operator
@@ -279,11 +283,13 @@ spec:
                                   for the action.
                                 type: object
                               targets:
-                                description: Targets is a list of targets on which
-                                  the action should be performed.
+                                description: |-
+                                  Targets is a list of selection criteria for the resources on which the
+                                  action should be performed.
                                 items:
-                                  description: GenericWebhookTarget describes a target
-                                    resource for a generic webhook event.
+                                  description: |-
+                                    GenericWebhookTarget describes selection criteria for resources to which some
+                                    action is to be applied.
                                   properties:
                                     indexSelector:
                                       description: IndexSelector is an index selector
@@ -309,7 +315,7 @@ spec:
                                                   Operator indicates the operation that should be used to evaluate
                                                   whether the selection requirement is satisfied.
 
-                                                  kubebuilder:validation:Required
+                                                  kubebuilder:validation:Enum=In;NotIn;
                                                 type: string
                                               values:
                                                 description: |-
@@ -396,9 +402,10 @@ spec:
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "cluster Secrets" namespace.
 
-                            The Secret's data map is expected to contain a `secret` key whose value is
-                            the shared secret used to authenticate the webhook requests sent by the
-                            generic webhook sender.
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with the sender. It is used only by
+                            Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
+                            shared secret.
                           properties:
                             name:
                               default: ""

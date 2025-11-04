@@ -1875,8 +1875,9 @@ RawFormat specifies the format for raw resource representation.
  ConditionSelector encapsulates a condition used to match resources based on specific criteria.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| key | [string](#string) |  Name is the name of the condition to be matched.   |
-| expression | [string](#string) |  Expression is an expression that evaluates to a boolean value indicating whether the condition is met.   |
+| key | [string](#string) |  Key is the key of the condition to be matched.   |
+| operator | [string](#string) |  Operator is the set of operators that can be used in a scope selector requirement.   |
+| value | [string](#string) |  Value is the value of the condition to be matched.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-CurrentStage"></a>
 
@@ -2093,10 +2094,10 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookAction describes an action to be performed on a resource and the conditions under which it should be performed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| action | [string](#string) |  Name is the name of the action to be performed.   |
-| matchConditions | [ConditionSelector](#github-com-akuity-kargo-api-v1alpha1-ConditionSelector) |  MatchConditions is a list of conditions that must be met for the action to be performed.  +optional |
+| action | [string](#string) |  Name is the name of the action to be performed. `Refresh` is the only action currently supported.   |
+| matchConditions | [ConditionSelector](#github-com-akuity-kargo-api-v1alpha1-ConditionSelector) |  MatchConditions is a list of criteria that must be met for the action to be performed.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional parameters for the action.  +optional |
-| targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of targets on which the action should be performed.   |
+| targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of selection criteria for the resources on which the action should be performed.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry"></a>
 
@@ -2110,16 +2111,16 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookReceiverConfig"></a>
 
 ### GenericWebhookReceiverConfig
- GenericWebhookReceiverConfig describes a generic webhook receiver that can be configured to handle arbitrary webhook payloads using a set of user-defined actions, targets, and match conditions using expressions and/or labels.
+ GenericWebhookReceiverConfig describes a generic webhook receiver that can be configured to respond to any arbitrary POST by applying user-defined actions user-defined sets of resources selected by labels and/or pre-built indices. Both types of selectors support using values extracted from the request by means of expressions. Currently refreshing resources is the only supported action and Warehouse is the only supported kind. "Refreshing" means immediately enqueuing the target resource for immediate reconciliation by its controller. The practical effect of refreshing a Warehouses is triggering its artifact discovery process.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by the generic webhook sender.   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
 | actions | [GenericWebhookAction](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction) |  Actions is a list of actions to be performed when a webhook event is received.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget"></a>
 
 ### GenericWebhookTarget
- GenericWebhookTarget describes a target resource for a generic webhook event.
+ GenericWebhookTarget describes selection criteria for resources to which some action is to be applied.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of the target resource (e.g., "Warehouse", "Stage").   |

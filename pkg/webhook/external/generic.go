@@ -15,7 +15,6 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
 	xhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,10 +22,6 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 )
-
-var supportedIndices = []string{
-	indexer.WarehousesBySubscribedURLsField,
-}
 
 const (
 	genericSecretDataKey = "secret"
@@ -134,11 +129,12 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 					continue
 				}
 				for _, target := range action.Targets {
-					_, err := g.buildListOptionsForTarget(target, actionEnv)
+					_, err := g.buildListOptionsForTarget(ctx, target, actionEnv)
 					if err != nil {
 						logger.Error(err, "failed to build list options for warehouse target")
 						continue
 					}
+					g.client.List(ctx, &kargoapi.WarehouseList{}, nil)
 					// TODO(Faris): pass listOpts to generic refresh func
 				}
 			}
@@ -147,13 +143,14 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 }
 
 func (g *genericWebhookReceiver) buildListOptionsForTarget(
+	ctx context.Context,
 	t kargoapi.GenericWebhookTarget,
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(g.project)}
 
 	if len(t.IndexSelector.MatchExpressions) > 0 {
-		indexSelectorListOpts, err := g.newListOptionsForIndexSelector(t.IndexSelector, env)
+		indexSelectorListOpts, err := g.newListOptionsForIndexSelector(ctx, t.IndexSelector, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create field selector: %w", err)
 		}
@@ -171,30 +168,25 @@ func (g *genericWebhookReceiver) buildListOptionsForTarget(
 }
 
 func (g *genericWebhookReceiver) newListOptionsForIndexSelector(
+	ctx context.Context,
 	is kargoapi.IndexSelector,
 	env map[string]any,
 ) ([]client.ListOption, error) {
+	logger := logging.LoggerFromContext(ctx)
 	var listOpts []client.ListOption
 	for _, expr := range is.MatchExpressions {
-		parsed, err := parseValuesAsList(&expr.Values)
+		resultList, err := parseValuesAsList(&expr.Values, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse values for index selector expression: %w", err)
 		}
 
-		result, err := expressions.EvaluateTemplate(parsed, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate values expression for index selector: %w", err)
+		for _, result := range resultList {
+			logger.Debug("index selector evaluated value", "key", expr.Key, "value", result)
+			listOpts = append(listOpts, client.MatchingFields{
+				// the key is the index name
+				expr.Key: result,
+			})
 		}
-
-		resultAsList, ok := result.([]string)
-		if !ok {
-			return nil, fmt.Errorf("index selector values expression evaluated to %T; expected []string", result)
-		}
-
-		listOpts = append(listOpts, client.MatchingFields{
-			// the key is the index name
-			expr.Key: resultAsList,
-		})
 	}
 	return listOpts, nil
 }
@@ -214,20 +206,29 @@ func conditionsMet(
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
 	for _, condition := range conditions {
-		conditionMet, err := evaluateCondition(condition.Expression, env)
+		cLogger := logger.WithValues(
+			"key", condition.Key,
+			"operator", condition.Operator,
+			"value", condition.Values,
+		)
+		conditionMet, err := evaluateConditionSelector(condition, env)
 		if err != nil {
-			logger.Error(err, "failed to evaluate condition", "condition", condition.Name)
+			cLogger.Error(err, "failed to evaluate condition")
 			continue
 		}
 		if !conditionMet {
-			logger.Debug("condition not met", "condition", condition.Name)
+			cLogger.Info("condition not met")
 			return false, nil
 		}
 	}
 	return true, nil
 }
 
-func evaluateCondition(expression string, env map[string]any) (bool, error) {
+func evaluateConditionSelector(cs kargoapi.ConditionSelector, env map[string]any) (bool, error) {
+	// TODO: create expression from ConditionSelector fields
+	// this doensn't seem right
+	expression := fmt.Sprintf("%s %s %q", cs.Key, cs.Operator, cs.Values)
+	// key will always be an expression
 	result, err := expressions.EvaluateTemplate(expression, env)
 	if err != nil {
 		return false, fmt.Errorf("failed to compile expression: %w", err)
@@ -239,31 +240,34 @@ func evaluateCondition(expression string, env map[string]any) (bool, error) {
 	return met, nil
 }
 
-func parseValuesAsList(values *apiextensionsv1.JSON) ([]string, error) {
+func parseValuesAsList(values *apiextensionsv1.JSON, env map[string]any) ([]string, error) {
 	if values == nil {
 		return nil, nil
 	}
 
-	// Try to unmarshal as array first. If this succeeds, we are dealing with a list.
-	var list []string
-	if err := yaml.Unmarshal(values.Raw, &list); err == nil {
-		return list, nil
+	var list []string // list of expressions, static values, or combination of the two
+	if err := yaml.Unmarshal(values.Raw, &list); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal values as []string: %w", err)
 	}
 
-	// Not a list. Assume we are dealing with an expr-lang string that we
-	// have to "unpack" into a list.
-	var expr string
-	if err := yaml.Unmarshal(values.Raw, &expr); err != nil {
-		return nil, fmt.Errorf("values must be either a string or array of strings: %w", err)
+	var resultList []string // the final evaluated list of strings
+	for _, v := range list {
+		// If '${{' is not included, expressions.EvaluateTemplate will return 'v' as is.
+		result, err := expressions.EvaluateTemplate(v, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate values expression: %w", err)
+		}
+
+		switch res := result.(type) {
+		case []any:
+			for _, r := range res {
+				resultList = append(resultList, fmt.Sprintf("%v", r))
+			}
+		default:
+			resultList = append(resultList, fmt.Sprintf("%v", res))
+		}
 	}
-
-	// TODO: now that we have an expr-lang string, evaluate it using the
-	// library combined with request data to get a YAML or JSON "list".
-
-	// TODO: after evaluating the expression, attempt to unmarshal this
-	// again into a []string.
-	var exprList []string
-	return exprList
+	return resultList, nil
 }
 
 func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOption, error) {

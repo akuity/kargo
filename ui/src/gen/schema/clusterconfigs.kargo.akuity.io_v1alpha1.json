@@ -118,14 +118,14 @@
                       "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
                       "properties": {
                         "action": {
-                          "description": "Name is the name of the action to be performed.",
+                          "description": "Name is the name of the action to be performed. `Refresh` is the only\naction currently supported.",
                           "enum": [
                             "Refresh"
                           ],
                           "type": "string"
                         },
                         "matchConditions": {
-                          "description": "MatchConditions is a list of conditions that must be met for the action to be performed.",
+                          "description": "MatchConditions is a list of criteria that must be met for the action to\nbe performed.",
                           "items": {
                             "description": "ConditionSelector encapsulates a condition used to match resources based\non specific criteria.",
                             "properties": {
@@ -134,12 +134,15 @@
                                 "type": "string"
                               },
                               "operator": {
-                                "description": "Operator is the set of operators that can be used in a scope selector requirement.\n\nkubebuilder:validation:Required",
+                                "description": "Operator is the set of operators that can be used in a scope selector requirement.\n\nkubebuilder:validation:Enum=In;NotIn;",
                                 "type": "string"
                               },
                               "value": {
                                 "description": "Value is the value of the condition to be matched.",
-                                "type": "string"
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
                               }
                             },
                             "required": [
@@ -159,9 +162,9 @@
                           "type": "object"
                         },
                         "targets": {
-                          "description": "Targets is a list of targets on which the action should be performed.",
+                          "description": "Targets is a list of selection criteria for the resources on which the\naction should be performed.",
                           "items": {
-                            "description": "GenericWebhookTarget describes a target resource for a generic webhook event.",
+                            "description": "GenericWebhookTarget describes selection criteria for resources to which some\naction is to be applied.",
                             "properties": {
                               "indexSelector": {
                                 "description": "IndexSelector is an index selector to identify the target resources.",
@@ -180,7 +183,7 @@
                                           "type": "string"
                                         },
                                         "operator": {
-                                          "description": "Operator indicates the operation that should be used to evaluate\nwhether the selection requirement is satisfied.\n\nkubebuilder:validation:Required",
+                                          "description": "Operator indicates the operation that should be used to evaluate\nwhether the selection requirement is satisfied.\n\nkubebuilder:validation:Enum=In;NotIn;",
                                           "type": "string"
                                         },
                                         "values": {
@@ -269,7 +272,7 @@
                     "type": "array"
                   },
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by the\ngeneric webhook sender.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with the sender. It is used only by\nKargo to create a complex, hard-to-guess URL, which implicitly serves as a\nshared secret.",
                     "properties": {
                       "name": {
                         "default": "",
