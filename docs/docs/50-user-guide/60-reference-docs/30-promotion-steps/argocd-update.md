@@ -146,7 +146,8 @@ steps:
       sources:
       - repoURL: ${{ chartRepo }}
         chart: my-chart
-        targetRevision: ${{ chartFrom(chartRepo, "my-chart").Version }}
+        desiredRevision: ${{ chartFrom(chartRepo, "my-chart").Version }}
+        updateTargetRevision: true
 ```
 
 ### Updating an Image with Kustomize
