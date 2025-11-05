@@ -192,7 +192,7 @@
                       "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
                       "properties": {
                         "action": {
-                          "description": "Name is the name of the action to be performed. `Refresh` is the only\naction currently supported.",
+                          "description": "Name is the name of the action to be performed.",
                           "enum": [
                             "Refresh"
                           ],

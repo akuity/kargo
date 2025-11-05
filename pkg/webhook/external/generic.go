@@ -1,13 +1,11 @@
 package external
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 	"net/http"
-	"slices"
 
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
@@ -111,22 +109,15 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		}
 
 		for _, action := range g.config.Actions {
-			switch action.Action {
+			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
 				actionEnv := newActionEnv(action, globalEnv)
-				conditionsMet, err := conditionsMet(ctx, action.MatchConditions, actionEnv)
-				if err != nil {
-					logger.Error(err, "error evaluating match conditions for refresh action")
-					xhttp.WriteErrorJSON(w,
-						xhttp.Error(
-							fmt.Errorf("error evaluating match conditions for refresh action: %w", err),
-							http.StatusBadRequest,
-						),
-					)
-					return
-				}
+				summary, conditionsMet := evaluateConditions(action.MatchConditions, actionEnv)
 				if !conditionsMet {
-					logger.Info("match conditions not met; skipping refresh action", "action", action)
+					logger.Info("match conditions not met; skipping refresh action",
+						"action", action,
+						"summary", summary,
+					)
 					continue
 				}
 				for _, target := range action.Targets {
@@ -204,53 +195,6 @@ func newActionEnv(action kargoapi.GenericWebhookAction, globalEnv map[string]any
 		actionEnv[paramKey] = paramValue
 	}
 	return actionEnv
-}
-
-func conditionsMet(
-	ctx context.Context,
-	conditions []kargoapi.ConditionSelector,
-	env map[string]any,
-) (bool, error) {
-	logger := logging.LoggerFromContext(ctx)
-	for _, condition := range conditions {
-		cLogger := logger.WithValues(
-			"key", condition.Key,
-			"operator", condition.Operator,
-			"value", condition.Values,
-		)
-		conditionMet, err := evaluateConditionSelector(condition, env)
-		if err != nil {
-			cLogger.Error(err, "failed to evaluate condition")
-			continue
-		}
-		if !conditionMet {
-			cLogger.Info("condition not met")
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-func evaluateConditionSelector(cs kargoapi.ConditionSelector, env map[string]any) (bool, error) {
-	// Evaluate the key expression to get the actual value to check against.
-	// If the key is not an expression, it will be returned as is.
-	result, err := expressions.EvaluateTemplate(cs.Key, env)
-	if err != nil {
-		return false, fmt.Errorf("failed to compile expression: %w", err)
-	}
-
-	strResult, ok := result.(string)
-	if !ok {
-		return false, fmt.Errorf("expression result %q evaluated to %T; not a boolean", result, result)
-	}
-
-	// The only operators supported are In and NotIn.
-	// If we're dealing with NotIn, we need to invert the result.
-	contains := slices.Contains(cs.Values, strResult)
-	if cs.Operator == selection.NotIn {
-		return !contains, nil
-	}
-	return contains, nil
 }
 
 func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOption, error) {

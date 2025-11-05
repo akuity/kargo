@@ -1522,8 +1522,7 @@ export const FreightStatusSchema: GenMessage<FreightStatus> = /*@__PURE__*/
  */
 export type GenericWebhookAction = Message<"github.com.akuity.kargo.api.v1alpha1.GenericWebhookAction"> & {
   /**
-   * Name is the name of the action to be performed. `Refresh` is the only
-   * action currently supported.
+   * Name is the name of the action to be performed.
    *
    * +kubebuilder:validation:Enum=Refresh;
    *
