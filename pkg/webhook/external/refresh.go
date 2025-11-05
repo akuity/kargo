@@ -19,35 +19,48 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+type refreshTargetResult struct {
+	Kind                    kargoapi.GenericWebhookTargetKind `json:"kind"`
+	Err                     error                             `json:"error,omitempty"`
+	WarehouseRefreshResults []refreshWarehouseResult          `json:"warehouseRefreshResults,omitempty"`
+}
+
+type refreshWarehouseResult struct {
+	Message string `json:"message,omitempty"`
+	Error   error  `json:"error,omitempty"`
+}
+
 func handleRefreshAction(
 	ctx context.Context,
-	w http.ResponseWriter,
 	c client.Client,
 	project string,
 	actionEnv map[string]any,
 	targets []kargoapi.GenericWebhookTarget,
-) {
+) []refreshTargetResult {
 	logger := logging.LoggerFromContext(ctx)
-	for _, target := range targets {
+	results := make([]refreshTargetResult, len(targets))
+	for i, target := range targets {
+		results[i] = refreshTargetResult{Kind: target.Kind}
 		switch target.Kind {
 		case kargoapi.GenericWebhookTargetKindWarehouse:
 			listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
 			if err != nil {
 				logger.Error(err, "failed to build list options for warehouse target")
+				results[i].Err = fmt.Errorf("failed to build list options for warehouse target: %w", err)
 				continue
 			}
 
 			var whList kargoapi.WarehouseList
 			if err := c.List(ctx, &whList, listOpts...); err != nil {
 				logger.Error(err, "error listing warehouse targets")
-				xhttp.WriteErrorJSON(w, err)
-				return
+				results[i].Err = fmt.Errorf("error listing warehouse targets: %w", err)
+				continue
 			}
 
 			logger.Debug("found Warehouses to refresh", "count", len(whList.Items))
 
-			var failures int
-			for _, wh := range whList.Items {
+			results[i].WarehouseRefreshResults = make([]refreshWarehouseResult, len(whList.Items))
+			for j, wh := range whList.Items {
 				whKey := client.ObjectKeyFromObject(&wh)
 				whLogger := logger.WithValues(
 					"namespace", whKey.Namespace,
@@ -55,39 +68,23 @@ func handleRefreshAction(
 				)
 				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
 					whLogger.Error(err, "error refreshing Warehouse")
-					failures++
+					results[i].WarehouseRefreshResults[j].Error = fmt.Errorf(
+						"failed to refresh Warehouse %s/%s: %w",
+						whKey.Namespace, whKey.Name, err,
+					)
 				} else {
 					whLogger.Debug("refreshed Warehouse")
+					results[i].WarehouseRefreshResults[j].Message = fmt.Sprintf(
+						"successfully refreshed Warehouse %s/%s",
+						whKey.Namespace, whKey.Name,
+					)
 				}
 			}
-
-			if failures > 0 {
-				xhttp.WriteResponseJSON(
-					w,
-					http.StatusInternalServerError,
-					map[string]string{
-						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
-							failures,
-							len(whList.Items),
-						),
-					},
-				)
-				return
-			}
-			xhttp.WriteResponseJSON(
-				w,
-				http.StatusOK,
-				map[string]string{
-					"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(whList.Items)),
-				},
-			)
 		default:
-			err := fmt.Errorf("unsupported generic webhook target type: %q", target.Kind)
-			logger.Error(err, "error refreshing targets")
-			xhttp.WriteErrorJSON(w, err)
-			return
+			results[i].Err = fmt.Errorf("unsupported generic webhook target type: %q", target.Kind)
 		}
 	}
+	return results
 }
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are

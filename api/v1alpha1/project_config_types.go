@@ -3,7 +3,6 @@ package v1alpha1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/selection"
 )
 
 // +kubebuilder:object:root=true
@@ -384,11 +383,11 @@ type GenericWebhookAction struct {
 	// +kubebuilder:validation:Enum=Refresh;
 	Name GenericWebhookActionName `json:"action" protobuf:"bytes,1,opt,name=action"`
 
-	// MatchConditions is a list of criteria that must be met for the action to
+	// MatchExpression is the validation criteria that must be met for the action to
 	// be performed.
 	//
 	// +optional
-	MatchConditions []ConditionSelector `json:"matchConditions,omitempty" protobuf:"bytes,2,rep,name=matchConditions"`
+	MatchExpression string `json:"matchExpression,omitempty" protobuf:"bytes,2,opt,name=matchExpression"`
 
 	// Parameters contains additional parameters for the action.
 	//
@@ -423,7 +422,8 @@ type GenericWebhookTarget struct {
 	// +optional
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty" protobuf:"bytes,2,opt,name=labelSelector"`
 
-	// IndexSelector is an index selector to identify the target resources.
+	// IndexSelector is a selector used to identify cached target resources by cache key.
+	// If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
 	//
 	// +optional
 	IndexSelector IndexSelector `json:"indexSelector,omitempty" protobuf:"bytes,3,opt,name=indexSelector"`
@@ -473,25 +473,6 @@ const (
 	IndexSelectorRequirementOperatorEqual    IndexSelectorRequirementOperator = "Equal"
 	IndexSelectorRequirementOperatorNotEqual IndexSelectorRequirementOperator = "NotEqual"
 )
-
-// ConditionSelector encapsulates a condition used to match resources based
-// on specific criteria.
-type ConditionSelector struct {
-	// Key is the key of the condition to be matched.
-	//
-	// kubebuilder:validation:Required
-	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
-
-	// Operator is the set of operators that can be used in a scope selector requirement.
-	//
-	// kubebuilder:validation:Enum=In;NotIn;
-	Operator selection.Operator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
-
-	// Value is the value of the condition to be matched.
-	//
-	// +kubebuilder:validation:Required
-	Values []string `json:"value,omitempty" protobuf:"bytes,3,rep,name=value"`
-}
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
 type WebhookReceiverDetails struct {

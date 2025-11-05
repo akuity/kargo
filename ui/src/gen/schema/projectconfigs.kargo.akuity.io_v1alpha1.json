@@ -198,35 +198,9 @@
                           ],
                           "type": "string"
                         },
-                        "matchConditions": {
-                          "description": "MatchConditions is a list of criteria that must be met for the action to\nbe performed.",
-                          "items": {
-                            "description": "ConditionSelector encapsulates a condition used to match resources based\non specific criteria.",
-                            "properties": {
-                              "key": {
-                                "description": "Key is the key of the condition to be matched.\n\nkubebuilder:validation:Required",
-                                "type": "string"
-                              },
-                              "operator": {
-                                "description": "Operator is the set of operators that can be used in a scope selector requirement.\n\nkubebuilder:validation:Enum=In;NotIn;",
-                                "type": "string"
-                              },
-                              "value": {
-                                "description": "Value is the value of the condition to be matched.",
-                                "items": {
-                                  "type": "string"
-                                },
-                                "type": "array"
-                              }
-                            },
-                            "required": [
-                              "key",
-                              "operator",
-                              "value"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
+                        "matchExpression": {
+                          "description": "MatchExpression is the validation criteria that must be met for the action to\nbe performed.",
+                          "type": "string"
                         },
                         "parameters": {
                           "additionalProperties": {
@@ -241,7 +215,7 @@
                             "description": "GenericWebhookTarget describes selection criteria for resources to which some\naction is to be applied.",
                             "properties": {
                               "indexSelector": {
-                                "description": "IndexSelector is an index selector to identify the target resources.",
+                                "description": "IndexSelector is a selector used to identify cached target resources by cache key.\nIf used with LabelSelector, the results are the combined (logical AND) of the two criteria.",
                                 "properties": {
                                   "matchExpressions": {
                                     "description": "MatchExpressions is a list of index selector requirements.",

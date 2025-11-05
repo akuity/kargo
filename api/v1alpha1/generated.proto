@@ -370,25 +370,6 @@ message ClusterPromotionTaskList {
   repeated ClusterPromotionTask items = 2;
 }
 
-// ConditionSelector encapsulates a condition used to match resources based
-// on specific criteria.
-message ConditionSelector {
-  // Key is the key of the condition to be matched.
-  //
-  // kubebuilder:validation:Required
-  optional string key = 1;
-
-  // Operator is the set of operators that can be used in a scope selector requirement.
-  //
-  // kubebuilder:validation:Enum=In;NotIn;
-  optional string operator = 2;
-
-  // Value is the value of the condition to be matched.
-  //
-  // +kubebuilder:validation:Required
-  repeated string value = 3;
-}
-
 // CurrentStage reflects a Stage's current use of Freight.
 message CurrentStage {
   // Since is the time at which the Stage most recently started using the
@@ -715,11 +696,11 @@ message GenericWebhookAction {
   // +kubebuilder:validation:Enum=Refresh;
   optional string action = 1;
 
-  // MatchConditions is a list of criteria that must be met for the action to
+  // MatchExpression is the validation criteria that must be met for the action to
   // be performed.
   //
   // +optional
-  repeated ConditionSelector matchConditions = 2;
+  optional string matchExpression = 2;
 
   // Parameters contains additional parameters for the action.
   //
@@ -777,7 +758,8 @@ message GenericWebhookTarget {
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
 
-  // IndexSelector is an index selector to identify the target resources.
+  // IndexSelector is a selector used to identify cached target resources by cache key.
+  // If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
   //
   // +optional
   optional IndexSelector indexSelector = 3;

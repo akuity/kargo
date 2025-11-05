@@ -337,39 +337,11 @@ spec:
                                 enum:
                                 - Refresh
                                 type: string
-                              matchConditions:
+                              matchExpression:
                                 description: |-
-                                  MatchConditions is a list of criteria that must be met for the action to
+                                  MatchExpression is the validation criteria that must be met for the action to
                                   be performed.
-                                items:
-                                  description: |-
-                                    ConditionSelector encapsulates a condition used to match resources based
-                                    on specific criteria.
-                                  properties:
-                                    key:
-                                      description: |-
-                                        Key is the key of the condition to be matched.
-
-                                        kubebuilder:validation:Required
-                                      type: string
-                                    operator:
-                                      description: |-
-                                        Operator is the set of operators that can be used in a scope selector requirement.
-
-                                        kubebuilder:validation:Enum=In;NotIn;
-                                      type: string
-                                    value:
-                                      description: Value is the value of the condition
-                                        to be matched.
-                                      items:
-                                        type: string
-                                      type: array
-                                  required:
-                                  - key
-                                  - operator
-                                  - value
-                                  type: object
-                                type: array
+                                type: string
                               parameters:
                                 additionalProperties:
                                   type: string
@@ -386,8 +358,9 @@ spec:
                                     action is to be applied.
                                   properties:
                                     indexSelector:
-                                      description: IndexSelector is an index selector
-                                        to identify the target resources.
+                                      description: |-
+                                        IndexSelector is a selector used to identify cached target resources by cache key.
+                                        If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
                                       properties:
                                         matchExpressions:
                                           description: MatchExpressions is a list

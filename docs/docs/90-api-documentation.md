@@ -1869,16 +1869,6 @@ RawFormat specifies the format for raw resource representation.
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta |   |
 | items | [ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |   |
 
-<a name="github-com-akuity-kargo-api-v1alpha1-ConditionSelector"></a>
-
-### ConditionSelector
- ConditionSelector encapsulates a condition used to match resources based on specific criteria.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |  Key is the key of the condition to be matched.   |
-| operator | [string](#string) |  Operator is the set of operators that can be used in a scope selector requirement.   |
-| value | [string](#string) |  Value is the value of the condition to be matched.   |
-
 <a name="github-com-akuity-kargo-api-v1alpha1-CurrentStage"></a>
 
 ### CurrentStage
@@ -2095,7 +2085,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | action | [string](#string) |  Name is the name of the action to be performed.   |
-| matchConditions | [ConditionSelector](#github-com-akuity-kargo-api-v1alpha1-ConditionSelector) |  MatchConditions is a list of criteria that must be met for the action to be performed.  +optional |
+| matchConditions | [string](#string) |  MatchExpression is the validation criteria that must be met for the action to be performed.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional parameters for the action.  +optional |
 | targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of selection criteria for the resources on which the action should be performed.   |
 
@@ -2125,7 +2115,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of the target resource.   |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources.  +optional |
-| indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is an index selector to identify the target resources.  +optional |
+| indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector, the results are the combined (logical AND) of the two criteria.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
