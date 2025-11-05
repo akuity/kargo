@@ -85,27 +85,12 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		logger := logging.LoggerFromContext(ctx)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		var body any
-		if err := json.Unmarshal(requestBody, &body); err != nil {
-			xhttp.WriteErrorJSON(w,
-				xhttp.Error(
-					fmt.Errorf("invalid request body: %w", err),
-					http.StatusBadRequest,
-				),
-			)
-			return
-		}
-
 		// Shared environment for all actions.
-		globalEnv := map[string]any{
-			"normalize": urls.Normalize,
-			"request": map[string]any{
-				"header":  r.Header.Get,
-				"headers": r.Header.Values,
-				"body":    body,
-				"method":  r.Method,
-				"url":     r.URL.String(),
-			},
+		globalEnv, err := newGlobalEnv(requestBody, r)
+		if err != nil {
+			logger.Error(err, "error creating global environment")
+			xhttp.WriteErrorJSON(w, err)
+			return
 		}
 
 		for _, action := range g.config.Actions {
@@ -120,25 +105,36 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 					)
 					continue
 				}
-				for _, target := range action.Targets {
-					_, err := g.buildListOptionsForTarget(target, actionEnv)
-					if err != nil {
-						logger.Error(err, "failed to build list options for warehouse target")
-						continue
-					}
-					g.client.List(ctx, &kargoapi.WarehouseList{}, nil)
-					// TODO(Faris): pass listOpts to generic refresh func
-				}
+				handleRefreshAction(ctx, w, g.client, g.project, actionEnv, action.Targets)
 			}
+			// add new action handlers here
 		}
 	})
 }
 
-func (g *genericWebhookReceiver) buildListOptionsForTarget(
+func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
+	var body any
+	if err := json.Unmarshal(requestBody, &body); err != nil {
+		return nil, fmt.Errorf("invalid request body: %w", err)
+	}
+	return map[string]any{
+		"normalize": urls.Normalize,
+		"request": map[string]any{
+			"header":  r.Header.Get,
+			"headers": r.Header.Values,
+			"body":    body,
+			"method":  r.Method,
+			"url":     r.URL.String(),
+		},
+	}, nil
+}
+
+func buildListOptionsForTarget(
+	project string,
 	t kargoapi.GenericWebhookTarget,
 	env map[string]any,
 ) ([]client.ListOption, error) {
-	listOpts := []client.ListOption{client.InNamespace(g.project)}
+	listOpts := []client.ListOption{client.InNamespace(project)}
 
 	if len(t.IndexSelector.MatchExpressions) > 0 {
 		indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)

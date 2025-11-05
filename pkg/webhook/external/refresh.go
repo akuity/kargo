@@ -19,6 +19,77 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+func handleRefreshAction(
+	ctx context.Context,
+	w http.ResponseWriter,
+	c client.Client,
+	project string,
+	actionEnv map[string]any,
+	targets []kargoapi.GenericWebhookTarget,
+) {
+	logger := logging.LoggerFromContext(ctx)
+	for _, target := range targets {
+		switch target.Kind {
+		case kargoapi.GenericWebhookTargetKindWarehouse:
+			listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
+			if err != nil {
+				logger.Error(err, "failed to build list options for warehouse target")
+				continue
+			}
+
+			var whList kargoapi.WarehouseList
+			if err := c.List(ctx, &whList, listOpts...); err != nil {
+				logger.Error(err, "error listing warehouse targets")
+				xhttp.WriteErrorJSON(w, err)
+				return
+			}
+
+			logger.Debug("found Warehouses to refresh", "count", len(whList.Items))
+
+			var failures int
+			for _, wh := range whList.Items {
+				whKey := client.ObjectKeyFromObject(&wh)
+				whLogger := logger.WithValues(
+					"namespace", whKey.Namespace,
+					"name", whKey.Name,
+				)
+				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
+					whLogger.Error(err, "error refreshing Warehouse")
+					failures++
+				} else {
+					whLogger.Debug("refreshed Warehouse")
+				}
+			}
+
+			if failures > 0 {
+				xhttp.WriteResponseJSON(
+					w,
+					http.StatusInternalServerError,
+					map[string]string{
+						"error": fmt.Sprintf("failed to refresh %d of %d warehouses",
+							failures,
+							len(whList.Items),
+						),
+					},
+				)
+				return
+			}
+			xhttp.WriteResponseJSON(
+				w,
+				http.StatusOK,
+				map[string]string{
+					"msg": fmt.Sprintf("refreshed %d warehouse(s)", len(whList.Items)),
+				},
+			)
+		default:
+			err := fmt.Errorf("unsupported generic webhook target type: %q", target.Kind)
+			logger.Error(err, "error refreshing targets")
+			xhttp.WriteErrorJSON(w, err)
+			return
+		}
+	}
+}
+
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are

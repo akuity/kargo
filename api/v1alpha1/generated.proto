@@ -767,9 +767,9 @@ message GenericWebhookReceiverConfig {
 // GenericWebhookTarget describes selection criteria for resources to which some
 // action is to be applied.
 message GenericWebhookTarget {
-  // Kind is the kind of the target resource (e.g., "Warehouse", "Stage").
+  // Kind is the kind of the target resource.
   //
-  // +kubebuilder:validation:Required
+  // +kubebuilder:validation:Enum=Warehouse;
   optional string kind = 1;
 
   // LabelSelector is a label selector to identify the target resources.

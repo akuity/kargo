@@ -332,7 +332,9 @@ spec:
                                       type: object
                                     kind:
                                       description: Kind is the kind of the target
-                                        resource (e.g., "Warehouse", "Stage").
+                                        resource.
+                                      enum:
+                                      - Warehouse
                                       type: string
                                     labelSelector:
                                       description: LabelSelector is a label selector

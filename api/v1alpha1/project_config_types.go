@@ -413,10 +413,10 @@ const (
 // GenericWebhookTarget describes selection criteria for resources to which some
 // action is to be applied.
 type GenericWebhookTarget struct {
-	// Kind is the kind of the target resource (e.g., "Warehouse", "Stage").
+	// Kind is the kind of the target resource.
 	//
-	// +kubebuilder:validation:Required
-	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// +kubebuilder:validation:Enum=Warehouse;
+	Kind GenericWebhookTargetKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 
 	// LabelSelector is a label selector to identify the target resources.
 	//
@@ -428,6 +428,13 @@ type GenericWebhookTarget struct {
 	// +optional
 	IndexSelector IndexSelector `json:"indexSelector,omitempty" protobuf:"bytes,3,opt,name=indexSelector"`
 }
+
+// GenericWebhookTargetKind represents the kind of a target resource.
+type GenericWebhookTargetKind string
+
+const (
+	GenericWebhookTargetKindWarehouse GenericWebhookTargetKind = "Warehouse"
+)
 
 // IndexSelector encapsulates a selector used to derive index keys
 // based on expressions.

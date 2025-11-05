@@ -1625,9 +1625,9 @@ export const GenericWebhookReceiverConfigSchema: GenMessage<GenericWebhookReceiv
  */
 export type GenericWebhookTarget = Message<"github.com.akuity.kargo.api.v1alpha1.GenericWebhookTarget"> & {
   /**
-   * Kind is the kind of the target resource (e.g., "Warehouse", "Stage").
+   * Kind is the kind of the target resource.
    *
-   * +kubebuilder:validation:Required
+   * +kubebuilder:validation:Enum=Warehouse;
    *
    * @generated from field: optional string kind = 1;
    */

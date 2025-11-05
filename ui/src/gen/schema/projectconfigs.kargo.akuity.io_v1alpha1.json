@@ -279,7 +279,10 @@
                                 "type": "object"
                               },
                               "kind": {
-                                "description": "Kind is the kind of the target resource (e.g., \"Warehouse\", \"Stage\").",
+                                "description": "Kind is the kind of the target resource.",
+                                "enum": [
+                                  "Warehouse"
+                                ],
                                 "type": "string"
                               },
                               "labelSelector": {

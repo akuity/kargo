@@ -2094,7 +2094,7 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookAction describes an action to be performed on a resource and the conditions under which it should be performed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| action | [string](#string) |  Name is the name of the action to be performed. `Refresh` is the only action currently supported.   |
+| action | [string](#string) |  Name is the name of the action to be performed.   |
 | matchConditions | [ConditionSelector](#github-com-akuity-kargo-api-v1alpha1-ConditionSelector) |  MatchConditions is a list of criteria that must be met for the action to be performed.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional parameters for the action.  +optional |
 | targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of selection criteria for the resources on which the action should be performed.   |
@@ -2123,7 +2123,7 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookTarget describes selection criteria for resources to which some action is to be applied.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| kind | [string](#string) |  Kind is the kind of the target resource (e.g., "Warehouse", "Stage").   |
+| kind | [string](#string) |  Kind is the kind of the target resource.   |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources.  +optional |
 | indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is an index selector to identify the target resources.  +optional |
 
