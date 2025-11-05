@@ -97,6 +97,16 @@ fields:
     This is a security risk and should only be used in development environments.
     :::
 
+- `strictSemvers`: StrictSemvers specifies whether only "strict" semver tags
+  should be considered. `StrictSemvers` specifies whether only "strict" semver
+  tags should be considered. A "strict" semver tag is one containing ALL of
+  major, minor, and patch version components. This is enabled by default, but
+  only has any effect when the `ImageSelectionStrategy` is `SemVer`. This
+  should be disabled cautiously, as it is not uncommon to tag container images
+  with short Git commit hashes, which have the potential to contain numeric
+  characters only and could be mistaken for a semver string containing the
+  major version number only.
+
 #### Image Selection Strategies
 
 For subscriptions to container image repositories, the `imageSelectionStrategy`
