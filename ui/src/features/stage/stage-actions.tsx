@@ -1,6 +1,5 @@
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import {
-  faChevronDown,
   faExclamationCircle,
   faExternalLink,
   faRedo,
@@ -8,7 +7,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Dropdown, Space } from 'antd';
+import { Button, Space } from 'antd';
 import React from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -23,13 +22,11 @@ import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { currentFreightHasVerification } from '../common/utils';
-
-import { useGetArgoCDLinks } from './use-get-argocd-links';
+import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
 
 export const StageActions = ({
   stage,
-  verificationRunning,
-  argocdShard
+  verificationRunning
 }: {
   stage: Stage;
   verificationRunning?: boolean;
@@ -68,64 +65,23 @@ export const StageActions = ({
 
   const verificationEnabled = stage?.spec?.verification;
 
-  const argocdLinks = useGetArgoCDLinks(stage, argocdShard);
-
   return (
     <>
-      {argocdLinks?.length > 0 ? (
-        <div className='ml-auto mr-5 text-base flex gap-2 items-center'>
-          {argocdLinks?.length === 1 && (
-            <a
-              target='_blank'
-              href={argocdLinks[0]}
-              className='ml-auto mr-5 text-base flex gap-2 items-center'
-            >
-              <img src='/argo-logo.svg' alt='Argo' style={{ width: '28px' }} />
-              ArgoCD
-              <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
-            </a>
-          )}
-          {argocdLinks?.length > 1 && (
-            <Dropdown
-              menu={{
-                items: argocdLinks.map((link, idx) => {
-                  const parts = link?.split('/');
-                  const name = parts?.[parts.length - 1];
-                  const namespace = parts?.[parts.length - 2];
-                  return {
-                    key: idx,
-                    label: (
-                      <a target='_blank' href={link}>
-                        {namespace} - {name}
-                        <FontAwesomeIcon icon={faExternalLink} className='text-xs ml-2' />
-                      </a>
-                    )
-                  };
-                })
-              }}
-            >
-              <a onClick={(e) => e.preventDefault()}>
-                <Space>
-                  <img src='/argo-logo.svg' alt='Argo' style={{ width: '28px' }} />
-                  ArgoCD
-                  <FontAwesomeIcon icon={faChevronDown} className='text-xs' />
-                </Space>
-              </a>
-            </Dropdown>
-          )}
-        </div>
-      ) : argocdShard?.url ? (
-        <a
-          target='_blank'
-          href={argocdShard?.url}
-          className='ml-auto mr-5 text-base flex gap-2 items-center'
-        >
-          <img src='/argo-logo.svg' alt='Argo' style={{ width: '28px' }} />
-          ArgoCD
-          <FontAwesomeIcon icon={faExternalLink} className='text-xs' />
-        </a>
-      ) : null}
       <Space size={16}>
+        <ArgoCDLink
+          stage={stage}
+          externalLinksOnly
+          buttonProps={{
+            type: 'link',
+            iconPosition: 'end',
+            icon: <FontAwesomeIcon icon={faExternalLink} size='sm' />
+          }}
+        >
+          <Space size={8}>
+            <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '28px', marginTop: '-2px' }} />
+            ArgoCD
+          </Space>
+        </ArgoCDLink>
         {currentFreightHasVerification(stage) && (
           <>
             {verificationEnabled && (

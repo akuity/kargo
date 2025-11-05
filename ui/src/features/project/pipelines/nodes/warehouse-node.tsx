@@ -1,6 +1,6 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
-  faArrowUpRightFromSquare,
+  faBarsStaggered,
   faCircleNotch,
   faMinus,
   faPlus,
@@ -71,7 +71,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
             {warehouseState.hasError && <Badge status='error' />}
           </Flex>
           <Button
-            icon={<FontAwesomeIcon icon={faArrowUpRightFromSquare} />}
+            icon={<FontAwesomeIcon icon={faBarsStaggered} />}
             size='small'
             onClick={() =>
               navigate(

@@ -455,7 +455,7 @@ type KustomizeSetImageConfig struct {
 	// left unspecified, all images from the Freight collection will be set in the Kustomization
 	// file. Unless there is an ambiguous image name (for example, due to two Warehouses
 	// subscribing to the same repository), which requires manual configuration.
-	Images []Image `json:"images"`
+	Images []Image `json:"images,omitempty"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 }
@@ -517,6 +517,15 @@ type UntarConfig struct {
 	// StripComponents is the number of leading components to strip from file names in the
 	// archive.
 	StripComponents *int64 `json:"stripComponents,omitempty"`
+}
+
+type YAMLMergeConfig struct {
+	// allow directive to pass even if an input file does not exist.
+	IgnoreMissingFiles bool `json:"ignoreMissingFiles,omitempty"`
+	// InFiles is the list of paths of YAML files to merge
+	InFiles []string `json:"inFiles"`
+	// OutFile is the path to the merged YAML file to created or updated.
+	OutFile string `json:"outFile"`
 }
 
 type YAMLParseConfig struct {

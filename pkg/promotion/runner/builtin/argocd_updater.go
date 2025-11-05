@@ -182,20 +182,14 @@ func (a *argocdUpdater) run(
 			DesiredRevisions: desiredRevisions,
 		}
 
+		appLogger := logger.WithValues("app", app.Name, "namespace", app.Namespace)
+
 		// Check if the update needs to be performed and retrieve its phase.
 		phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, stepCtx, update, app)
 		if mustUpdate {
-			logger.Info(
-				"Argo CD Application requires update",
-				"name", app.Name,
-				"namespace", app.Namespace,
-			)
+			appLogger.Info("Argo CD Application requires update")
 		} else {
-			logger.Info(
-				"Argo CD Application does not require update",
-				"name", app.Name,
-				"namespace", app.Namespace,
-			)
+			appLogger.Info("Argo CD Application does not require update")
 		}
 
 		// If we have a phase, append it to the results.
@@ -212,13 +206,9 @@ func (a *argocdUpdater) run(
 					// this update by waiting.
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 				}
-				// Log the error as a warning, but continue to the next update.
-				logger.Info(
-					"reason for not updating",
-					"name", app.Name,
-					"namespace", app.Namespace,
-					"reason", err.Error(),
-				)
+				// Log the error for observability but continue processing other
+				// updates.
+				appLogger.Info("Argo CD Application update cannot be performed", "reason", err.Error())
 			}
 			if phase.Failed() {
 				// Record the reason for the failure if available.
@@ -242,10 +232,7 @@ func (a *argocdUpdater) run(
 		// Log the error, as it contains information about why we need to
 		// perform an update.
 		if err != nil {
-			logger.Info(
-				"reason for updating Argo CD Application %q in namespace %q: %s",
-				app.Name, app.Namespace, err.Error(),
-			)
+			appLogger.Info("performing update of Argo CD Application", "reason", err.Error())
 		}
 
 		// Build the desired source(s) for the Argo CD Application.

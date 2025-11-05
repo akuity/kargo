@@ -3,9 +3,10 @@ sidebar_label: jira
 description: Integrates with Jira to manage issues, comments, and track promotion workflows.
 ---
 
+# `jira`
+
 <span class="tag professional"></span>
 <span class="tag beta"></span>
-# `jira`
 
 :::info
 This promotion step is only available in Kargo on the
@@ -27,7 +28,7 @@ All Jira operations require proper authentication credentials stored in a Kubern
 `Secret`.
 
 | Name                     | Type     | Required | Description                                                                      |
-|--------------------------|----------|----------|----------------------------------------------------------------------------------|
+| ------------------------ | -------- | -------- | -------------------------------------------------------------------------------- |
 | `credentials.secretName` | `string` | Y        | Name of the  `Secret`  containing the Jira credentials in the project namespace. |
 
 
@@ -184,12 +185,12 @@ Searches for Jira issues using JQL
 
 #### Configuration
 
-| Name                         | Type      | Required | Description                                                                                   |
-| ---------------------------- | --------- | -------- | --------------------------------------------------------------------------------------------- |
-| `searchIssue.jql`            | `string`  | Y        | The JQL query to search for issues.                                                           |
+| Name                         | Type      | Required | Description                                                                                                                         |
+| ---------------------------- | --------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `searchIssue.jql`            | `string`  | Y        | The JQL query to search for issues.                                                                                                 |
 | `searchIssue.expectMultiple` | `boolean` | N        | If true, expects multiple results and returns the first matching result. If false, expects single result and fails with >1 results. |
-| `searchIssue.fields`         | `array`   | N        | List of fields to include in search results.                                                  |
-| `searchIssue.expands`        | `array`   | N        | List of fields to expand in search results.                                                   |
+| `searchIssue.fields`         | `array`   | N        | List of fields to include in search results.                                                                                        |
+| `searchIssue.expands`        | `array`   | N        | List of fields to expand in search results.                                                                                         |
 
 #### Output
 

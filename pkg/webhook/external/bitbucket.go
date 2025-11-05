@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -131,7 +131,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		// Note: github.com/google/go-github/v71/github has a great implementation
+		// Note: github.com/google/go-github/v76/github has a great implementation
 		// of HMAC signature validation that isn't GitHub-specific, so we've opted
 		// to use it here for Bitbucket as well.
 		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
