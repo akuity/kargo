@@ -86,6 +86,7 @@ func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, 
 func UtilityOperations() []expr.Option {
 	return []expr.Option{
 		SemverDiff(),
+		SemverParse(),
 	}
 }
 
@@ -427,6 +428,21 @@ func SemverDiff() expr.Option {
 		"semverDiff",
 		semverDiff,
 		new(func(ver1Str, ver2Str string) string),
+	)
+}
+
+// SemverParse returns an expr.Option that provides a `semverParse()` function
+// for use in expressions.
+//
+// The semverParse function parses a semantic version string and returns a
+// *semver.Version struct. This allows direct access to version component
+// methods like Major(), Minor(), Patch(), Prerelease(), and Metadata(), as
+// well as utility methods like IncMajor(), IncMinor(), and IncPatch().
+func SemverParse() expr.Option {
+	return expr.Function(
+		"semverParse",
+		semverParse,
+		new(func(verStr string) *semver.Version),
 	)
 }
 
@@ -955,6 +971,28 @@ func semverDiff(a ...any) (any, error) {
 		return "Metadata", nil
 	}
 	return "None", nil
+}
+
+// semverParse parses a semantic version string and returns a *semver.Version
+// struct. This enables users to access version component methods like Major(),
+// Minor(), Patch(), as well as utility methods like IncMajor(), IncMinor(),
+// and IncPatch() for version manipulation in expressions.
+func semverParse(a ...any) (any, error) {
+	if len(a) != 1 {
+		return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+	}
+
+	verStr, ok := a[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("argument must be string, got %T", a[0])
+	}
+
+	ver, err := semver.NewVersion(verStr)
+	if err != nil {
+		return nil, fmt.Errorf("invalid semantic version: %w", err)
+	}
+
+	return ver, nil
 }
 
 const (

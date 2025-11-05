@@ -740,6 +740,56 @@ config:
   status: ${{ status("my-step-alias") }}
 ```
 
+### `semverParse(version)`
+
+The `semverParse()` function parses a semantic version string and returns a
+struct that provides access to its individual components through method calls.
+This is useful for scenarios where you need to inspect or manipulate specific
+version components, such as bumping the major, minor, or patch version.
+
+The returned struct provides the following methods:
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `Major()` | `number` | Returns the major version component. |
+| `Minor()` | `number` | Returns the minor version component. |
+| `Patch()` | `number` | Returns the patch version component. |
+| `Prerelease()` | `string` | Returns the prerelease identifier (empty string if none). |
+| `Metadata()` | `string` | Returns the build metadata (empty string if none). |
+| `IncMajor()` | `Version` | Returns a new version with the major version incremented and minor/patch reset to 0. |
+| `IncMinor()` | `Version` | Returns a new version with the minor version incremented and patch reset to 0. |
+| `IncPatch()` | `Version` | Returns a new version with the patch version incremented. |
+| `String()` | `string` | Returns the full version string. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse versions. It supports versions with or without the `v` prefix, as well
+as prerelease and build metadata components.
+:::
+
+Example:
+
+```yaml
+# Read current chart version from Chart.yaml
+
+- uses: yaml-parse
+  as: read-version
+  config:
+    path: ./src/Chart.yaml
+    outputs:
+    - name: currentVersion
+      fromExpression: version
+
+# Update Chart.yaml with bumped minor version
+
+- uses: yaml-update
+  config:
+    path: ./src/Chart.yaml
+    updates:
+    - key: version
+      value: ${{ semverParse(task.outputs['read-version'].currentVersion).IncMinor().String() }}
+```
+
 ### `semverDiff(version1, version2)`
 
 The `semverDiff()` function compares two semantic version strings and returns
