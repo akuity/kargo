@@ -96,6 +96,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		for _, action := range g.config.Actions {
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
+				// append action parameters to a copy of the global env
 				actionEnv := newActionEnv(action, globalEnv)
 				summary, conditionsMet := evaluateConditions(action.MatchConditions, actionEnv)
 				if !conditionsMet {
