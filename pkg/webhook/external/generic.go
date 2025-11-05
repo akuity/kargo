@@ -102,7 +102,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				actionEnv := newActionEnv(action, globalEnv)
 				if met, err := conditionMet(action.MatchExpression, actionEnv); err != nil || !met {
 					logger.Info("match expression not met; skipping refresh action",
-						"action", action,
+						"action", action.Name,
 						"expression", action.MatchExpression,
 					)
 					results[i].ConditionFailure = conditionResult{

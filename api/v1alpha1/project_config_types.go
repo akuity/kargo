@@ -418,6 +418,7 @@ type GenericWebhookTarget struct {
 	Kind GenericWebhookTargetKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 
 	// LabelSelector is a label selector to identify the target resources.
+	// If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
 	//
 	// +optional
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty" protobuf:"bytes,2,opt,name=labelSelector"`

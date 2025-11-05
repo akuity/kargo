@@ -2085,7 +2085,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | action | [string](#string) |  Name is the name of the action to be performed.   |
-| matchConditions | [string](#string) |  MatchExpression is the validation criteria that must be met for the action to be performed.  +optional |
+| matchExpression | [string](#string) |  MatchExpression is the validation criteria that must be met for the action to be performed.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional parameters for the action.  +optional |
 | targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of selection criteria for the resources on which the action should be performed.   |
 

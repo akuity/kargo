@@ -260,7 +260,7 @@
                                 "type": "string"
                               },
                               "labelSelector": {
-                                "description": "LabelSelector is a label selector to identify the target resources.",
+                                "description": "LabelSelector is a label selector to identify the target resources.\nIf used with IndexSelector, the results are the combined (logical AND) of the two criteria.",
                                 "properties": {
                                   "matchExpressions": {
                                     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",

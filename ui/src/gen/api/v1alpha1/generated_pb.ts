@@ -1593,6 +1593,7 @@ export type GenericWebhookTarget = Message<"github.com.akuity.kargo.api.v1alpha1
 
   /**
    * LabelSelector is a label selector to identify the target resources.
+   * If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
    *
    * +optional
    *
