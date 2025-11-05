@@ -11,6 +11,7 @@ type CallbackProps = {
   stage: string;
   freight: string;
   onClose?: () => void;
+  onApprove?: () => void;
 };
 
 export const useManualApprovalModal = () => {
@@ -18,7 +19,7 @@ export const useManualApprovalModal = () => {
   const manualApproveActionMutation = useMutation(approveFreight);
   const navigate = useNavigate();
 
-  return ({ freight, onClose, projectName, stage }: CallbackProps) =>
+  return ({ freight, onClose, projectName, stage, onApprove }: CallbackProps) =>
     confirm({
       title: 'Manual approval required',
       okText: 'Approve',
@@ -52,6 +53,12 @@ export const useManualApprovalModal = () => {
           {
             onSuccess: () => {
               onClose?.();
+
+              if (onApprove) {
+                onApprove();
+                return;
+              }
+
               navigate(
                 generatePath(paths.promote, {
                   name: projectName,

@@ -25,7 +25,8 @@ import { IAction, useActionContext } from '@ui/features/project/pipelines/contex
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
 import {
   approveFreight,
-  promoteToStage
+  promoteToStage,
+  queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -34,6 +35,7 @@ import { useDictionaryContext } from '../context/dictionary-context';
 import { useGraphContext } from '../context/graph-context';
 import { stageIndexer } from '../graph/node-indexer';
 import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
+import { useManualApprovalModal } from '../promotion/use-manual-approval-modal';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
@@ -51,6 +53,9 @@ import { useGetUpstreamFreight } from './use-get-upstream-freight';
 import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
+  const projectName = props.stage?.metadata?.namespace || '';
+  const stageName = props.stage?.metadata?.name || '';
+
   const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
@@ -60,8 +65,7 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const headerStyle = useStageHeaderStyle(props.stage);
 
-  const autoPromotionMode =
-    dictionaryContext?.stageAutoPromotionMap?.[props.stage?.metadata?.name || ''];
+  const autoPromotionMode = dictionaryContext?.stageAutoPromotionMap?.[stageName];
 
   const stagePhase = getStagePhase(props.stage);
   const stageHealth = getStageHealth(props.stage);
@@ -76,15 +80,57 @@ export const StageNode = (props: { stage: Stage }) => {
     onSuccess: (response) => {
       navigate(
         generatePath(paths.promotion, {
-          name: props.stage?.metadata?.namespace,
+          name: projectName,
           promotionId: response.promotion?.metadata?.name
         })
       );
     }
   });
 
-  const totalSubscribersToThisStage =
-    dictionaryContext?.subscribersByStage?.[props.stage?.metadata?.name || '']?.size || 0;
+  const queryFreightMutation = useMutation(queryFreight);
+
+  const checkFreightPromotionEligibility = async (freight: string) => {
+    const freightResponse = await queryFreightMutation.mutateAsync({
+      project: projectName,
+      stage: stageName
+    });
+
+    return Boolean(
+      freightResponse?.groups?.['']?.freight?.find((item) => item?.metadata?.name === freight)
+    );
+  };
+
+  const showManualApproveModal = useManualApprovalModal();
+
+  const ensureEligibilityBeforeAction = async (
+    freight: string | undefined,
+    onEligible: (eligibleFreight: string) => void,
+    options?: { runAfterApproval?: (eligibleFreight: string) => void }
+  ) => {
+    if (!freight) {
+      return;
+    }
+
+    const isEligible = await checkFreightPromotionEligibility(freight);
+
+    if (!isEligible) {
+      showManualApproveModal({
+        freight,
+        projectName,
+        stage: stageName,
+        onApprove: options?.runAfterApproval
+          ? () => {
+              options.runAfterApproval?.(freight);
+            }
+          : undefined
+      });
+      return;
+    }
+
+    onEligible(freight);
+  };
+
+  const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
   const manualApproveActionMutation = useMutation(approveFreight, {
     onSuccess: (_, vars) => {
@@ -120,7 +166,7 @@ export const StageNode = (props: { stage: Stage }) => {
       Phase = (
         <Link
           to={generatePath(paths.promotion, {
-            name: props.stage?.metadata?.namespace,
+            name: projectName,
             promotionId: props.stage?.status?.currentPromotion?.name || ''
           })}
         >
@@ -152,6 +198,48 @@ export const StageNode = (props: { stage: Stage }) => {
     );
   }
 
+  const navigateToPromote = (freight: string) =>
+    navigate(
+      generatePath(paths.promote, {
+        name: projectName,
+        freight,
+        stage: stageName
+      })
+    );
+
+  const promoteFreight = (freight: string) =>
+    promoteActionMutation.mutate({
+      stage: stageName,
+      project: projectName,
+      freight
+    });
+
+  const handleNavigateWithEligibility = (freight?: string) =>
+    ensureEligibilityBeforeAction(freight, (eligibleFreight) => navigateToPromote(eligibleFreight));
+
+  const handleInstantPromoteWithEligibility = (freight?: string) =>
+    ensureEligibilityBeforeAction(freight, (eligibleFreight) => promoteFreight(eligibleFreight), {
+      runAfterApproval: (eligibleFreight) => promoteFreight(eligibleFreight)
+    });
+
+  const buildFreightMenuItems = (
+    handler: (freight?: string) => Promise<void> | void
+  ): ItemType[] | undefined =>
+    upstreamFreights?.map((upstreamFreight) => ({
+      key: upstreamFreight?.name,
+      label: upstreamFreight?.origin?.name,
+      onClick: () => {
+        void handler(upstreamFreight?.name);
+      }
+    }));
+
+  const getSingleFreightHandler = (handler: (freight?: string) => Promise<void> | void) =>
+    upstreamFreights?.length === 1
+      ? () => {
+          void handler(upstreamFreights?.[0]?.name);
+        }
+      : undefined;
+
   const dropdownItems: ItemType[] = [];
 
   if (!controlFlow) {
@@ -170,36 +258,17 @@ export const StageNode = (props: { stage: Stage }) => {
     });
   }
 
-  if ((upstreamFreights?.length || 0) > 0) {
+  const hasUpstreamFreights = (upstreamFreights?.length || 0) > 0;
+  const hasMultipleUpstreamFreights = (upstreamFreights?.length || 0) > 1;
+
+  if (hasUpstreamFreights) {
     dropdownItems.push({
       key: 'upstream-freight-promo',
       label: 'Promote from upstream',
-      onClick:
-        upstreamFreights?.length === 1
-          ? () =>
-              navigate(
-                generatePath(paths.promote, {
-                  name: props.stage?.metadata?.namespace,
-                  freight: upstreamFreights?.[0]?.name,
-                  stage: props.stage?.metadata?.name
-                })
-              )
-          : undefined,
-      children:
-        (upstreamFreights?.length || 0) > 1
-          ? upstreamFreights?.map((f) => ({
-              key: f?.name,
-              label: f?.origin?.name,
-              onClick: () =>
-                navigate(
-                  generatePath(paths.promote, {
-                    name: props.stage?.metadata?.namespace,
-                    freight: f?.name,
-                    stage: props.stage?.metadata?.name
-                  })
-                )
-            }))
-          : undefined
+      onClick: getSingleFreightHandler(handleNavigateWithEligibility),
+      children: hasMultipleUpstreamFreights
+        ? buildFreightMenuItems(handleNavigateWithEligibility)
+        : undefined
     });
 
     dropdownItems.push({
@@ -216,28 +285,10 @@ export const StageNode = (props: { stage: Stage }) => {
           Instant promote from upstream
         </>
       ),
-      onClick:
-        upstreamFreights?.length === 1
-          ? () =>
-              promoteActionMutation.mutate({
-                stage: props.stage?.metadata?.name,
-                project: props.stage?.metadata?.namespace,
-                freight: upstreamFreights?.[0]?.name
-              })
-          : undefined,
-      children:
-        (upstreamFreights?.length || 0) > 1
-          ? upstreamFreights?.map((f) => ({
-              key: f?.name,
-              label: f?.origin?.name,
-              onClick: () =>
-                promoteActionMutation.mutate({
-                  stage: props.stage?.metadata?.name,
-                  project: props.stage?.metadata?.namespace,
-                  freight: f?.name
-                })
-            }))
-          : undefined
+      onClick: getSingleFreightHandler(handleInstantPromoteWithEligibility),
+      children: hasMultipleUpstreamFreights
+        ? buildFreightMenuItems(handleInstantPromoteWithEligibility)
+        : undefined
     });
   }
 
@@ -292,7 +343,11 @@ export const StageNode = (props: { stage: Stage }) => {
                 items: dropdownItems
               }}
             >
-              <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
+              <Button
+                size='small'
+                loading={queryFreightMutation.isPending}
+                icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
+              />
             </Dropdown>
             <Button
               icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
