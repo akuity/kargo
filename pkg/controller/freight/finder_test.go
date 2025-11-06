@@ -854,3 +854,247 @@ func TestFindChart(t *testing.T) {
 		})
 	}
 }
+
+func TestFindArtifact(t *testing.T) {
+
+	const testNamespace = "test-namespace"
+
+	scheme := runtime.NewScheme()
+	err := kargoapi.AddToScheme(scheme)
+	require.NoError(t, err)
+
+	const testSubName = "fake-sub"
+
+	testOrigin1 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "test-warehouse",
+	}
+	testOrigin2 := kargoapi.FreightOrigin{
+		Kind: kargoapi.FreightOriginKindWarehouse,
+		Name: "some-other-warehouse",
+	}
+
+	testArtifact1 := kargoapi.GenericArtifactReference{SubscriptionName: testSubName}
+	testArtifact2 := kargoapi.GenericArtifactReference{SubscriptionName: testSubName}
+
+	testCases := []struct {
+		name          string
+		client        func() client.Client
+		stage         *kargoapi.Stage
+		desiredOrigin *kargoapi.FreightOrigin
+		freight       []kargoapi.FreightReference
+		assertions    func(*testing.T, *kargoapi.GenericArtifactReference, error)
+	}{
+		{
+			name:          "desired origin specified, but artifact not found",
+			stage:         &kargoapi.Stage{},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{{
+				Origin:         testOrigin2, // Wrong origin
+				OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+			}},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Nil(t, artifact)
+			},
+		},
+		{
+			name:          "desired origin specified and artifact is found",
+			stage:         &kargoapi.Stage{},
+			desiredOrigin: &testOrigin1,
+			freight: []kargoapi.FreightReference{
+				{
+					Origin:         testOrigin1, // Correct origin
+					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact1},
+				},
+				{
+					Origin:         testOrigin2,
+					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, &testArtifact1, artifact)
+			},
+		},
+		{
+			name: "desired origin not specified and warehouse not found",
+			client: func() client.Client {
+				// This client will not find a Warehouse with a name matching the
+				// desired origin
+				return fake.NewClientBuilder().WithScheme(scheme).Build()
+			},
+			stage: &kargoapi.Stage{
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.ErrorContains(t, err, "Warehouse")
+				require.ErrorContains(t, err, "not found in namespace")
+			},
+		},
+		{
+			name: "desired origin not specified and cannot be inferred",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin1.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							// This Warehouse has no subscription to the desired repo
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Git: &kargoapi.GitSubscription{
+									RepoURL: "not-the-right-repo",
+								},
+							}},
+						},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Nil(t, artifact)
+			},
+		},
+		{
+			name: "desired origin not specified and more than one possible origin found",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin1.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							}},
+						},
+					},
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin2.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							}},
+						},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNamespace,
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{
+						// This Stage requests Freight from two Warehouses that both get
+						// commits from the same repo
+						{Origin: testOrigin1},
+						{Origin: testOrigin2},
+					},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.ErrorContains(
+					t,
+					err,
+					"multiple requested Freight could potentially provide",
+				)
+			},
+		},
+		{
+			name: "desired origin not specified and successfully inferred",
+			client: func() client.Client {
+				return fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: testNamespace,
+							Name:      testOrigin1.Name,
+						},
+						Spec: kargoapi.WarehouseSpec{
+							Subscriptions: []kargoapi.RepoSubscription{{
+								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							}},
+						},
+					},
+				).Build()
+			},
+			stage: &kargoapi.Stage{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testNamespace,
+				},
+				Spec: kargoapi.StageSpec{
+					RequestedFreight: []kargoapi.FreightRequest{{Origin: testOrigin1}},
+				},
+			},
+			freight: []kargoapi.FreightReference{
+				{
+					Origin:         testOrigin1, // Correct origin
+					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact1},
+				},
+				{
+					Origin:         testOrigin2,
+					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				artifact *kargoapi.GenericArtifactReference,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, &testArtifact1, artifact)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			var cl client.Client
+			if testCase.client != nil {
+				cl = testCase.client()
+			}
+			commit, err := FindArtifact(
+				context.Background(),
+				cl,
+				testCase.stage.Namespace,
+				testCase.stage.Spec.RequestedFreight,
+				testCase.desiredOrigin,
+				testCase.freight,
+				testSubName,
+			)
+			testCase.assertions(t, commit, err)
+		})
+	}
+}
