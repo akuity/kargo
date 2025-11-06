@@ -796,7 +796,7 @@ func Test_getChartFromFreight(t *testing.T) {
 	}
 }
 
-func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
+func Test_getChartFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		artifacts  *kargoapi.DiscoveredArtifacts
@@ -897,6 +897,215 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			fn := getChartFromDiscoveredArtifacts(tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getArtifactFromFreight(t *testing.T) {
+	const testProject = "fake-project"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testCases := []struct {
+		name        string
+		objects     []client.Object
+		freightReqs []kargoapi.FreightRequest
+		freightRefs []kargoapi.FreightReference
+		args        []any
+		assertions  func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "subscription name only",
+			objects: []client.Object{
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-warehouse",
+						Namespace: testProject,
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Other: &kargoapi.GenericSubscription{
+								ArtifactKind: "fake-kind",
+								Name:         "fake-sub",
+							},
+						}},
+					},
+				},
+			},
+			freightReqs: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+			}},
+			freightRefs: []kargoapi.FreightReference{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+				OtherArtifacts: []kargoapi.GenericArtifactReference{{
+					SubscriptionName: "fake-sub",
+					Version:          "fake-version",
+				}},
+			}},
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				assert.True(t, ok)
+				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
+				assert.Equal(t, "fake-version", artifact.Version)
+			},
+		},
+		{
+			name: "subscription name and origin",
+			freightReqs: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+			}},
+			freightRefs: []kargoapi.FreightReference{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+				OtherArtifacts: []kargoapi.GenericArtifactReference{{
+					SubscriptionName: "fake-sub",
+					Version:          "fake-version",
+				}},
+			}},
+			args: []any{"fake-sub", kargoapi.FreightOrigin{
+				Kind: "Warehouse",
+				Name: "fake-warehouse",
+			}},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				assert.True(t, ok)
+				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
+				assert.Equal(t, "fake-version", artifact.Version)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1-2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"fake-sub", kargoapi.FreightOrigin{}, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1-2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid first argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid second argument type",
+			args: []any{"fake-sub", "invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "second argument must be FreightOrigin")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "success",
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				Build()
+			result, err := getArtifactFromFreight(
+				ctx,
+				c,
+				testProject,
+				testCase.freightReqs,
+				testCase.freightRefs,
+			)(testCase.args...)
+			testCase.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getArtifactFromDiscoveredArtifacts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		artifacts  *kargoapi.DiscoveredArtifacts
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "wrong number of args",
+			args: []any{"one", "two"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "expected 1 argument, got 2")
+			},
+		},
+		{
+			name: "invalid arg type",
+			args: []any{1},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "first argument must be string, got int")
+			},
+		},
+		{
+			name: "success",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				OtherResults: []kargoapi.GenericDiscoveryResult{{
+					SubscriptionName: "fake-sub",
+					ArtifactReferences: []kargoapi.GenericArtifactReference{
+						{Version: "v1.0.0"},
+						{Version: "v1.1.0"},
+					},
+				}},
+			},
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				require.True(t, ok)
+				require.Equal(t, "v1.0.0", artifact.Version)
+			},
+		},
+		{
+			name: "no artifact found",
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := getArtifactFromDiscoveredArtifacts(
+				testCase.artifacts,
+			)(testCase.args...)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
