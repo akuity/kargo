@@ -91,22 +91,22 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		results := make([]actionResult, len(g.config.Actions))
 		for i, action := range g.config.Actions {
 			results[i].ActionName = action.Name
+			// append action specific parameters to a copy of the global env
+			actionEnv := newActionEnv(action, globalEnv)
+			if met, err := conditionMet(action.MatchExpression, actionEnv); err != nil || !met {
+				logger.Info("match expression not met; skipping refresh action",
+					"action", action.Name,
+					"expression", action.MatchExpression,
+				)
+				results[i].ConditionFailure = conditionResult{
+					Expression: action.MatchExpression,
+					Met:        met,
+					Error:      err,
+				}
+				continue
+			}
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
-				// append action specific parameters to a copy of the global env
-				actionEnv := newActionEnv(action, globalEnv)
-				if met, err := conditionMet(action.MatchExpression, actionEnv); err != nil || !met {
-					logger.Info("match expression not met; skipping refresh action",
-						"action", action.Name,
-						"expression", action.MatchExpression,
-					)
-					results[i].ConditionFailure = conditionResult{
-						Expression: action.MatchExpression,
-						Met:        met,
-						Error:      err,
-					}
-					continue
-				}
 				results[i].RefreshResults = handleRefreshAction(
 					ctx, g.client, g.project, actionEnv, action.Targets,
 				)
