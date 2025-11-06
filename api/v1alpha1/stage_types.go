@@ -487,6 +487,9 @@ type FreightReference struct {
 	Images []Image `json:"images,omitempty" protobuf:"bytes,3,rep,name=images"`
 	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,4,rep,name=charts"`
+	// OtherArtifacts describes specific versions of artifacts other
+	// than Git repository commits, container images, and Helm charts.
+	OtherArtifacts []GenericArtifactReference `json:"otherArtifacts,omitempty"`
 }
 
 // FreightCollection is a collection of FreightReferences, each of which
