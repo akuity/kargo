@@ -35,6 +35,7 @@ func init() {
 type newestFromBranchSelector struct {
 	*baseSelector
 	branch string
+	sinceDate *time.Time
 
 	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
@@ -56,9 +57,22 @@ func newNewestFromBranchSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
+
+	var sinceDate *time.Time = nil
+
+	if sub.SinceDate != "" {
+		parsedTime, err := time.Parse("2006-01-02", sub.SinceDate)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing since date: %w", err)
+		}
+		parsedTime = parsedTime.UTC()
+		sinceDate = &parsedTime
+	}
+
 	s := &newestFromBranchSelector{
 		baseSelector: base,
 		branch:       sub.Branch,
+		sinceDate:    sinceDate,
 	}
 	s.selectCommitsFn = s.selectCommits
 	s.listCommitsFn = s.listCommits
@@ -147,6 +161,18 @@ func (n *newestFromBranchSelector) selectCommits(
 		}
 
 		for _, commit := range commits {
+
+			if n.sinceDate != nil {
+				// If sinceDate is specified, skip commits older than sinceDate.
+				if len(selectedCommits) == 0 && commit.CommitDate.Before(*n.sinceDate) {
+					return nil, fmt.Errorf("no commits found in branch before %s", n.sinceDate.Format("2006-01-02"))
+				}
+
+				if len(selectedCommits) >= 1 && commit.CommitDate.Before(*n.sinceDate) {
+					return trimSlice(selectedCommits, n.discoveryLimit), nil
+				}
+			}
+
 			// Filter commits based on expressions.
 			include, err := n.evaluateCommitExpression(commit)
 			if err != nil {

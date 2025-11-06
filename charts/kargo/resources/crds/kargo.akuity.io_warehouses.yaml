@@ -353,6 +353,13 @@ spec:
                             should be taken with leaving this field unspecified, as it can lead to the
                             unanticipated rollout of breaking changes.
                           type: string
+                        sinceDate:
+                          description: |-
+                            SinceDate is an optional date that can be used to cutoff discovery of commits past this date.
+                            It will immediately return any discovered commits, regardless of discovery limit upon
+                            reaching a commit with this age. When left unspecified, there is no date cutoff.
+                            The date is in the format YYYY-MM-DD.
+                          type: string
                         strictSemvers:
                           default: true
                           description: |-
