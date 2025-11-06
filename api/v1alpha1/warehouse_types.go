@@ -3,6 +3,7 @@ package v1alpha1
 import (
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -145,6 +146,9 @@ type RepoSubscription struct {
 	Image *ImageSubscription `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
 	// Chart describes a subscription to a Helm chart repository.
 	Chart *ChartSubscription `json:"chart,omitempty" protobuf:"bytes,3,opt,name=chart"`
+	// Other describes a subscription to something that is not a Git, container
+	// image, or Helm chart repository.
+	Other *GenericSubscription `json:"other,omitempty"`
 }
 
 // GitSubscription defines a subscription to a Git repository.
@@ -510,6 +514,33 @@ type ChartSubscription struct {
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
 }
 
+// GenericSubscription represents a subscription to something that is not a Git,
+// container image, or Helm chart repository.
+type GenericSubscription struct {
+	// ArtifactKind specifies the kind of artifact this subscription is for.
+	//
+	// +kubebuilder:validation:MinLength=1
+	ArtifactKind string `json:"artifactKind"`
+	// Name is a unique (with respect to a Warehouse) name used for identifying
+	// this subscription.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// Config is opaque configuration for this subscription. This is only
+	// understood by a corresponding Subscriber implementation for the
+	// ArtifactKind.
+	//
+	// +optional
+	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+	// DiscoveryLimit is an optional limit on the number of artifacts that can
+	// be discovered for this subscription.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty"`
+}
+
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
 	// Conditions contains the last observations of the Warehouse's current
@@ -566,6 +597,12 @@ type DiscoveredArtifacts struct {
 	//
 	// +optional
 	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,3,rep,name=charts"`
+	// OtherResults holds the artifact references discovered by the Warehouse
+	// for all subscriptions that are not to a Git, container image, or Helm
+	// chart repository.
+	//
+	// +optional
+	OtherResults []GenericDiscoveryResult `json:"otherResults,omitempty"`
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -677,6 +714,56 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
+}
+
+// GenericDiscoveryResult represents the result of an artifact discovery
+// operation for a subscription to something other than a Git, container image,
+// or Helm chart repository.
+type GenericDiscoveryResult struct {
+	// SubscriptionName is the name of the GenericSubscription that discovered
+	// these results.
+	//
+	// +kubebuilder:validation:MinLength=1
+	SubscriptionName string `json:"name"`
+	// ArtifactReferences is a list of references to specific versions of an
+	// artifact.
+	//
+	// +optional
+	ArtifactReferences []GenericArtifactReference `json:"artifactReferences" protobuf:"bytes,2,rep,name=artifactReferences"`
+}
+
+// GenericArtifactReference is a reference to a specific version of an artifact
+// other than a Git repository commit, container image, or Helm. chart.
+type GenericArtifactReference struct {
+	// SubscriptionName is the name of the GenericSubscription that discovered
+	// this artifact.
+	//
+	// +kubebuilder:validation:MinLength=1
+	SubscriptionName string `json:"subscriptionName"`
+	// Version identifies a specific revision of this artifact.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Version string `json:"version"`
+	// Details is an opaque collection of artifact attributes. These are only
+	// understood by a corresponding Subscriber implementation that created them.
+	//
+	// +optional
+	Details *apiextensionsv1.JSON `json:"details,omitempty"`
+}
+
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided GenericArtifactReference. I.e., all relevant fields must be equal.
+func (g *GenericArtifactReference) DeepEquals(
+	other *GenericArtifactReference,
+) bool {
+	if g == nil && other == nil {
+		return true
+	}
+	if g == nil || other == nil {
+		return false
+	}
+	return g.SubscriptionName == other.SubscriptionName &&
+		g.Version == other.Version
 }
 
 // +kubebuilder:object:root=true

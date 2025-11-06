@@ -121,3 +121,69 @@ func TestWarehouse_GetInterval(t *testing.T) {
 		})
 	}
 }
+
+func TestGenericArtifactReference_DeepEquals(t *testing.T) {
+	testCases := []struct {
+		name           string
+		a              *GenericArtifactReference
+		b              *GenericArtifactReference
+		expectedResult bool
+	}{
+		{
+			name:           "a and b both nil",
+			expectedResult: true,
+		},
+		{
+			name:           "only a is nil",
+			b:              &GenericArtifactReference{},
+			expectedResult: false,
+		},
+		{
+			name:           "only b is nil",
+			a:              &GenericArtifactReference{},
+			expectedResult: false,
+		},
+		{
+			name: "subscription name differs",
+			a: &GenericArtifactReference{
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+			},
+			b: &GenericArtifactReference{
+				SubscriptionName: "bar",
+				Version:          "v1.0.0",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "version differs",
+			a: &GenericArtifactReference{
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+			},
+			b: &GenericArtifactReference{
+				SubscriptionName: "foo",
+				Version:          "v1.1.0",
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match",
+			a: &GenericArtifactReference{
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+			},
+			b: &GenericArtifactReference{
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+			},
+			expectedResult: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expectedResult, testCase.a.DeepEquals(testCase.b))
+			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
+		})
+	}
+}
