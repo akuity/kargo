@@ -1,0 +1,124 @@
+package external
+
+import (
+	"fmt"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/expressions"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/fields"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+
+// buildListOptionsForTarget builds a list of client.ListOption based on the
+// provided GenericWebhookTarget's selectors. The returned ListOptions can be
+// used to list Kubernetes resources that match the target's selection criteria.
+func buildListOptionsForTarget(
+	project string,
+	t kargoapi.GenericWebhookTarget,
+	env map[string]any,
+) ([]client.ListOption, error) {
+	listOpts := []client.ListOption{client.InNamespace(project)}
+	if len(t.IndexSelector.MatchExpressions) > 0 {
+		indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create field selector: %w", err)
+		}
+		listOpts = append(listOpts, indexSelectorListOpts...)
+	}
+	if len(t.LabelSelector.MatchLabels) > 0 || len(t.LabelSelector.MatchExpressions) > 0 {
+		labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create label selector: %w", err)
+		}
+		listOpts = append(listOpts, labelSelectorListOpts...)
+	}
+	return listOpts, nil
+}
+
+// newListOptionsForIndexSelector creates a list of client.ListOption based on
+// the provided IndexSelector and environment for expression evaluation.
+func newListOptionsForIndexSelector(
+	is kargoapi.IndexSelector,
+	env map[string]any,
+) ([]client.ListOption, error) {
+	var listOpts []client.ListOption
+	for _, expr := range is.MatchExpressions {
+		// If '${{' is not included, expressions.EvaluateTemplate will return 'value' as is.
+		result, err := expressions.EvaluateTemplate(expr.Value, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate values expression: %w", err)
+		}
+
+		resultStr, ok := result.(string)
+		if !ok {
+			return nil, fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
+		}
+
+		var s fields.Selector
+		switch expr.Operator {
+		case kargoapi.IndexSelectorRequirementOperatorEqual:
+			s = fields.OneTermEqualSelector(expr.Key, resultStr)
+		case kargoapi.IndexSelectorRequirementOperatorNotEqual:
+			s = fields.OneTermNotEqualSelector(expr.Key, resultStr)
+		default:
+			return nil, fmt.Errorf("unsupported operator %q in index selector expression", expr.Operator)
+		}
+		listOpts = append(listOpts, client.MatchingFieldsSelector{Selector: s})
+	}
+	return listOpts, nil
+}
+
+// newListOptionsForLabelSelector creates a list of client.ListOption based on
+// the provided LabelSelector.
+func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOption, error) {
+	var requirements []labels.Requirement
+	for _, e := range ls.MatchExpressions {
+		op, err := labelOpToSelectionOp(e.Operator)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
+		}
+		req, err := labels.NewRequirement(e.Key, op, e.Values)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create label requirement: %w", err)
+		}
+		requirements = append(requirements, *req)
+	}
+	for k, v := range ls.MatchLabels {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		if err != nil {
+			return nil, fmt.Errorf("failed to create label requirement: %w", err)
+		}
+		requirements = append(requirements, *req)
+	}
+	return []client.ListOption{
+		client.MatchingLabelsSelector{
+			Selector: labels.NewSelector().Add(requirements...),
+		},
+	}, nil
+}
+
+// labelOpToSelectionOp converts a metav1.LabelSelectorOperator
+// into a selection.Operator, which is used to build label requirements.
+// Returns an error if the operator is not recognized. GT and LT operators
+// are not supported.
+func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, error) {
+	switch op {
+	case metav1.LabelSelectorOpIn:
+		return selection.In, nil
+	case metav1.LabelSelectorOpNotIn:
+		return selection.NotIn, nil
+	case metav1.LabelSelectorOpExists:
+		return selection.Exists, nil
+	case metav1.LabelSelectorOpDoesNotExist:
+		return selection.DoesNotExist, nil
+	default:
+		// selection.GreaterThan, selection.LessThan, selection.Equal, and
+		// selection.NotEquals don't have a label selector operator equivalent so
+		// they're not supported.
+		return "", fmt.Errorf("unsupported LabelSelectorOperator: %q", op)
+	}
+}
