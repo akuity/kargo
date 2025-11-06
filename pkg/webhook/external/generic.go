@@ -135,7 +135,18 @@ func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 		return nil, fmt.Errorf("invalid request body: %w", err)
 	}
 	return map[string]any{
-		"normalize": urls.Normalize,
+		"normalize": func(urlType, url string) string {
+			switch urlType {
+			case "git":
+				return urls.NormalizeGit(url)
+			case "image":
+				return urls.NormalizeImage(url)
+			case "chart":
+				return urls.NormalizeChart(url)
+			default:
+				return url
+			}
+		},
 		"request": map[string]any{
 			"header":  r.Header.Get,
 			"headers": r.Header.Values,

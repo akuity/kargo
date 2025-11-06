@@ -57,7 +57,7 @@ func handleRefreshAction(
 				continue
 			}
 
-			logger.Debug("found Warehouses to refresh", "count", len(whList.Items))
+			logger.Info("found Warehouses to refresh", "count", len(whList.Items))
 
 			results[i].WarehouseRefreshResults = make([]refreshWarehouseResult, len(whList.Items))
 			for j, wh := range whList.Items {
