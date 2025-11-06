@@ -42,7 +42,7 @@ type Freight struct {
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,5,rep,name=charts"`
 	// OtherArtifacts describes specific versions of artifacts other
 	// than Git repository commits, container images, and Helm charts.
-	OtherArtifacts []GenericArtifactReference `json:"otherArtifacts,omitempty"`
+	OtherArtifacts []GenericArtifactReference `json:"otherArtifacts,omitempty" protobuf:"bytes,10,rep,name=otherArtifacts"`
 	// Status describes the current status of this Freight.
 	Status FreightStatus `json:"status,omitempty" protobuf:"bytes,6,opt,name=status"`
 }

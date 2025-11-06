@@ -1887,6 +1887,7 @@ RawFormat specifies the format for raw resource representation.
 | git | [GitDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult) |  Git holds the commits discovered by the Warehouse for the Git subscriptions.  +optional |
 | images | [ImageDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ImageDiscoveryResult) |  Images holds the image references discovered by the Warehouse for the image subscriptions.  +optional |
 | charts | [ChartDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult) |  Charts holds the charts discovered by the Warehouse for the chart subscriptions.  +optional |
+| otherResults | [GenericDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GenericDiscoveryResult) |  OtherResults holds the artifact references discovered by the Warehouse for all subscriptions that are not to a Git, container image, or Helm chart repository.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit"></a>
 
@@ -1951,6 +1952,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
+| otherArtifacts | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  OtherArtifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 | status | [FreightStatus](#github-com-akuity-kargo-api-v1alpha1-FreightStatus) |  Status describes the current status of this Freight. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightCollection"></a>
@@ -2009,6 +2011,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
+| otherArtifacts | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  OtherArtifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightRequest"></a>
 
@@ -2077,6 +2080,36 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [VerifiedStage](#github-com-akuity-kargo-api-v1alpha1-VerifiedStage) |   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference"></a>
+
+### GenericArtifactReference
+ GenericArtifactReference is a reference to a specific version of an artifact other than a Git repository commit, container image, or Helm. chart.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered this artifact.   |
+| version | [string](#string) |  Version identifies a specific revision of this artifact.   |
+| details | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Details is an opaque collection of artifact attributes. These are only understood by a corresponding Subscriber implementation that created them.  +optional |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericDiscoveryResult"></a>
+
+### GenericDiscoveryResult
+ GenericDiscoveryResult represents the result of an artifact discovery operation for a subscription to something other than a Git, container image, or Helm chart repository.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered these results.   |
+| artifactReferences | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  ArtifactReferences is a list of references to specific versions of an artifact.  +optional |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericSubscription"></a>
+
+### GenericSubscription
+ GenericSubscription represents a subscription to something that is not a Git, container image, or Helm chart repository.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| artifactKind | [string](#string) |  ArtifactKind specifies the kind of artifact this subscription is for.   |
+| name | [string](#string) |  Name is a unique (with respect to a Warehouse) name used for identifying this subscription.   |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Config is opaque configuration for this subscription. This is only understood by a corresponding Subscriber implementation for the ArtifactKind.  +optional |
+| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
@@ -2477,6 +2510,7 @@ RawFormat specifies the format for raw resource representation.
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |
+| other | [GenericSubscription](#github-com-akuity-kargo-api-v1alpha1-GenericSubscription) |  Other describes a subscription to something that is not a Git, container image, or Helm chart repository. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Stage"></a>
 

@@ -403,6 +403,13 @@ message DiscoveredArtifacts {
   //
   // +optional
   repeated ChartDiscoveryResult charts = 3;
+
+  // OtherResults holds the artifact references discovered by the Warehouse
+  // for all subscriptions that are not to a Git, container image, or Helm
+  // chart repository.
+  //
+  // +optional
+  repeated GenericDiscoveryResult otherResults = 5;
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -530,6 +537,10 @@ message Freight {
   // Charts describes specific versions of specific Helm charts.
   repeated Chart charts = 5;
 
+  // OtherArtifacts describes specific versions of artifacts other
+  // than Git repository commits, container images, and Helm charts.
+  repeated GenericArtifactReference otherArtifacts = 10;
+
   // Status describes the current status of this Freight.
   optional FreightStatus status = 6;
 }
@@ -603,6 +614,10 @@ message FreightReference {
 
   // Charts describes specific versions of specific Helm charts.
   repeated Chart charts = 4;
+
+  // OtherArtifacts describes specific versions of artifacts other
+  // than Git repository commits, container images, and Helm charts.
+  repeated GenericArtifactReference otherArtifacts = 9;
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -686,6 +701,74 @@ message FreightStatus {
   // This is useful for storing additional information about the Freight
   // or Promotion that can be shared across steps or stages.
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
+}
+
+// GenericArtifactReference is a reference to a specific version of an artifact
+// other than a Git repository commit, container image, or Helm. chart.
+message GenericArtifactReference {
+  // SubscriptionName is the name of the GenericSubscription that discovered
+  // this artifact.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string subscriptionName = 1;
+
+  // Version identifies a specific revision of this artifact.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string version = 2;
+
+  // Details is an opaque collection of artifact attributes. These are only
+  // understood by a corresponding Subscriber implementation that created them.
+  //
+  // +optional
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON details = 3;
+}
+
+// GenericDiscoveryResult represents the result of an artifact discovery
+// operation for a subscription to something other than a Git, container image,
+// or Helm chart repository.
+message GenericDiscoveryResult {
+  // SubscriptionName is the name of the GenericSubscription that discovered
+  // these results.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 3;
+
+  // ArtifactReferences is a list of references to specific versions of an
+  // artifact.
+  //
+  // +optional
+  repeated GenericArtifactReference artifactReferences = 2;
+}
+
+// GenericSubscription represents a subscription to something that is not a Git,
+// container image, or Helm chart repository.
+message GenericSubscription {
+  // ArtifactKind specifies the kind of artifact this subscription is for.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string artifactKind = 1;
+
+  // Name is a unique (with respect to a Warehouse) name used for identifying
+  // this subscription.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 2;
+
+  // Config is opaque configuration for this subscription. This is only
+  // understood by a corresponding Subscriber implementation for the
+  // ArtifactKind.
+  //
+  // +optional
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+
+  // DiscoveryLimit is an optional limit on the number of artifacts that can
+  // be discovered for this subscription.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=100
+  // +kubebuilder:default=20
+  optional int32 discoveryLimit = 4;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.
@@ -1708,6 +1791,10 @@ message RepoSubscription {
 
   // Chart describes a subscription to a Helm chart repository.
   optional ChartSubscription chart = 3;
+
+  // Other describes a subscription to something that is not a Git, container
+  // image, or Helm chart repository.
+  optional GenericSubscription other = 4;
 }
 
 // Stage is the Kargo API's main type.
