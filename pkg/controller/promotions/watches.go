@@ -107,6 +107,16 @@ func (u *UpdatedArgoCDAppHandler[T]) Update(
 	}
 }
 
+// NewPromotionAcknowledgedByStageHandler creates a new
+// PromotionAcknowledgedByStageHandler with the given shard predicate.
+func NewPromotionAcknowledgedByStageHandler[T any](
+	shardPredicate controller.ResponsibleFor[kargoapi.Stage],
+) *PromotionAcknowledgedByStageHandler[T] {
+	return &PromotionAcknowledgedByStageHandler[T]{
+		shardPredicate: shardPredicate,
+	}
+}
+
 // PromotionAcknowledgedByStageHandler is an event handler that enqueues a
 // Promotion for reconciliation when it has been acknowledged by the Stage\
 // it is for.
