@@ -148,7 +148,7 @@ type RepoSubscription struct {
 	Chart *ChartSubscription `json:"chart,omitempty" protobuf:"bytes,3,opt,name=chart"`
 	// Other describes a subscription to something that is not a Git, container
 	// image, or Helm chart repository.
-	Other *GenericSubscription `json:"other,omitempty"`
+	Other *GenericSubscription `json:"other,omitempty" protobuf:"bytes,4,opt,name=other"`
 }
 
 // GitSubscription defines a subscription to a Git repository.
@@ -520,25 +520,25 @@ type GenericSubscription struct {
 	// ArtifactKind specifies the kind of artifact this subscription is for.
 	//
 	// +kubebuilder:validation:MinLength=1
-	ArtifactKind string `json:"artifactKind"`
+	ArtifactKind string `json:"artifactKind" protobuf:"bytes,1,opt,name=artifactKind"`
 	// Name is a unique (with respect to a Warehouse) name used for identifying
 	// this subscription.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
 	// Config is opaque configuration for this subscription. This is only
 	// understood by a corresponding Subscriber implementation for the
 	// ArtifactKind.
 	//
 	// +optional
-	Config *apiextensionsv1.JSON `json:"config,omitempty"`
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 	// DiscoveryLimit is an optional limit on the number of artifacts that can
 	// be discovered for this subscription.
 	//
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=20
-	DiscoveryLimit int32 `json:"discoveryLimit,omitempty"`
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
 }
 
 // WarehouseStatus describes a Warehouse's most recently observed state.
@@ -602,7 +602,7 @@ type DiscoveredArtifacts struct {
 	// chart repository.
 	//
 	// +optional
-	OtherResults []GenericDiscoveryResult `json:"otherResults,omitempty"`
+	OtherResults []GenericDiscoveryResult `json:"otherResults,omitempty" protobuf:"bytes,5,rep,name=otherResults"`
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -724,7 +724,7 @@ type GenericDiscoveryResult struct {
 	// these results.
 	//
 	// +kubebuilder:validation:MinLength=1
-	SubscriptionName string `json:"name"`
+	SubscriptionName string `json:"name" protobuf:"bytes,3,opt,name=name"`
 	// ArtifactReferences is a list of references to specific versions of an
 	// artifact.
 	//
@@ -739,16 +739,16 @@ type GenericArtifactReference struct {
 	// this artifact.
 	//
 	// +kubebuilder:validation:MinLength=1
-	SubscriptionName string `json:"subscriptionName"`
+	SubscriptionName string `json:"subscriptionName" protobuf:"bytes,1,opt,name=subscriptionName"`
 	// Version identifies a specific revision of this artifact.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Version string `json:"version"`
+	Version string `json:"version" protobuf:"bytes,2,opt,name=version"`
 	// Details is an opaque collection of artifact attributes. These are only
 	// understood by a corresponding Subscriber implementation that created them.
 	//
 	// +optional
-	Details *apiextensionsv1.JSON `json:"details,omitempty"`
+	Details *apiextensionsv1.JSON `json:"details,omitempty" protobuf:"bytes,3,opt,name=details"`
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
