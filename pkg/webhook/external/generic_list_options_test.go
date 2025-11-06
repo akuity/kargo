@@ -4,14 +4,14 @@ import (
 	"errors"
 	"testing"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/stretchr/testify/require"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 func Test_buildListOptionsTarget(t *testing.T) {
