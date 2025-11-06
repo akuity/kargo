@@ -173,7 +173,10 @@ func (w *webhook) ValidateCreate(
 		errs = append(errs, fieldErr)
 	}
 
-	if len(freight.Commits) == 0 && len(freight.Images) == 0 && len(freight.Charts) == 0 {
+	if len(freight.Commits) == 0 &&
+		len(freight.Images) == 0 &&
+		len(freight.Charts) == 0 &&
+		len(freight.OtherArtifacts) == 0 {
 		errs = append(
 			errs,
 			field.Invalid(
@@ -541,6 +544,17 @@ func compareFreight(existing, updated *kargoapi.Freight) (*field.Path, any, bool
 	for i, chart := range existing.Charts {
 		if !chart.DeepEquals(&updated.Charts[i]) {
 			return field.NewPath("charts").Index(i), updated.Charts[i], false
+		}
+	}
+
+	if len(existing.OtherArtifacts) != len(updated.OtherArtifacts) {
+		return field.NewPath("otherArtifacts"), updated.OtherArtifacts, false
+	}
+	for i, artifact := range existing.OtherArtifacts {
+		if !artifact.DeepEquals(&updated.OtherArtifacts[i]) {
+			return field.NewPath("otherArtifacts").Index(i),
+				updated.OtherArtifacts[i],
+				false
 		}
 	}
 
