@@ -29,7 +29,7 @@ func TestHandleRefreshAction(t *testing.T) {
 		project    string
 		targets    []kargoapi.GenericWebhookTarget
 		actionEnv  map[string]any
-		assertions func(*testing.T, []refreshTargetResult)
+		assertions func(*testing.T, []targetResult)
 	}{
 		{
 			name: "error listing Warehouses",
@@ -48,11 +48,11 @@ func TestHandleRefreshAction(t *testing.T) {
 			targets: []kargoapi.GenericWebhookTarget{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 			}},
-			assertions: func(t *testing.T, results []refreshTargetResult) {
+			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.Error(t, results[0].Err)
-				require.Contains(t, results[0].Err.Error(), "error listing warehouse targets")
+				require.Error(t, results[0].ListError)
+				require.Contains(t, results[0].ListError.Error(), "error listing warehouse targets")
 			},
 		},
 		{
@@ -136,12 +136,12 @@ func TestHandleRefreshAction(t *testing.T) {
 					},
 				},
 			}},
-			assertions: func(t *testing.T, results []refreshTargetResult) {
+			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.NoError(t, results[0].Err)
-				require.Len(t, results[0].WarehouseRefreshResults, 1)
-				require.Equal(t, "test-project/warehouse-1", results[0].WarehouseRefreshResults[0].Success)
+				require.NoError(t, results[0].ListError)
+				require.Len(t, results[0].RefreshResults, 1)
+				require.Equal(t, "test-project/warehouse-1", results[0].RefreshResults[0].Success)
 			},
 		},
 		{
@@ -204,13 +204,13 @@ func TestHandleRefreshAction(t *testing.T) {
 					}},
 				},
 			}},
-			assertions: func(t *testing.T, results []refreshTargetResult) {
+			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
-				require.Len(t, results[0].WarehouseRefreshResults, 2)
-				firstWhResult := results[0].WarehouseRefreshResults[0]
+				require.Len(t, results[0].RefreshResults, 2)
+				firstWhResult := results[0].RefreshResults[0]
 				require.Empty(t, firstWhResult.Failure)
 				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
-				secondResult := results[0].WarehouseRefreshResults[1]
+				secondResult := results[0].RefreshResults[1]
 				require.NotEmpty(t, secondResult.Failure)
 				require.Contains(t, secondResult.Failure, "test-namespace/frontend-warehouse")
 			},
@@ -221,11 +221,11 @@ func TestHandleRefreshAction(t *testing.T) {
 			targets: []kargoapi.GenericWebhookTarget{{
 				Kind: "UnsupportedKind",
 			}},
-			assertions: func(t *testing.T, results []refreshTargetResult) {
+			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, "UnsupportedKind", string(results[0].Kind))
-				require.Error(t, results[0].Err)
-				require.ErrorContains(t, results[0].Err, "unsupported generic webhook target type")
+				require.Error(t, results[0].ListError)
+				require.ErrorContains(t, results[0].ListError, "skipped listing of unsupported target type")
 			},
 		},
 	}

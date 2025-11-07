@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"net/http"
+	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -89,34 +90,36 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			return
 		}
 
-		results := make([]actionResult, len(g.config.Actions))
+		actionResults := make([]actionResult, len(g.config.Actions))
 		for i, action := range g.config.Actions {
-			results[i].ActionName = action.Name
-			// append action specific parameters to a copy of the global env
-			actionEnv := newActionEnv(action, globalEnv)
-			if satisfied, err := conditionSatisfied(action.MatchExpression, actionEnv); err != nil || !satisfied {
-				logger.Info("match expression not met; skipping refresh action",
-					"action", action.Name,
-					"expression", action.MatchExpression,
-					"satisfied", satisfied,
-					"evalError", err,
-				)
-				results[i].Condition = &conditionResult{
-					Expression: action.MatchExpression,
-					EvalError:  fmt.Sprintf("%v", err),
-				}
+			aLogger := logger.WithValues("action", action.Name, "expression", action.MatchExpression)
+			actionResults[i].ActionName = action.Name
+			actionResults[i].ConditionResult = conditionResult{Expression: action.MatchExpression}
+
+			actionEnv := newActionEnv(action.Parameters, globalEnv)
+			satisfied, err := conditionSatisfied(action.MatchExpression, actionEnv)
+			if err != nil {
+				aLogger.Error(err, "failed to evaluate match expression; skipping action")
+				actionResults[i].ConditionResult.EvalError = fmt.Sprintf("%v", err)
 				continue
 			}
+
+			actionResults[i].ConditionResult.Satisfied = satisfied
+			if !satisfied {
+				logger.Info("condition not satisfied; skipping action")
+				continue
+			}
+
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
-				results[i].RefreshResults = handleRefreshAction(
+				actionResults[i].TargetResults = handleRefreshAction(
 					ctx, g.client, g.project, actionEnv, action.Targets,
 				)
 			}
 			// add new action handlers here
 		}
-		resp := map[string]any{"results": results}
-		if shouldReportAsError(results) {
+		resp := map[string]any{"actionResults": actionResults}
+		if shouldReportAsError(actionResults) {
 			xhttp.WriteResponseJSON(w, http.StatusInternalServerError, resp)
 			return
 		}
@@ -125,15 +128,15 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 }
 
 type actionResult struct {
-	ActionName     kargoapi.GenericWebhookActionName `json:"actionName"`
-	Condition      *conditionResult                  `json:"conditionFailure,omitempty"`
-	RefreshResults []refreshTargetResult             `json:"refreshResults,omitempty"`
+	ActionName      kargoapi.GenericWebhookActionName `json:"actionName"`
+	ConditionResult conditionResult                   `json:"conditionResult"`
+	TargetResults   []targetResult                    `json:"targetResults,omitempty"`
 }
 
 type conditionResult struct {
 	Expression string `json:"expression"`
 	Satisfied  bool   `json:"satisfied"`
-	EvalError  string `json:"evalError"`
+	EvalError  string `json:"evalError,omitempty"`
 }
 
 func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
@@ -164,10 +167,10 @@ func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 	}, nil
 }
 
-func newActionEnv(action kargoapi.GenericWebhookAction, globalEnv map[string]any) map[string]any {
+func newActionEnv(params map[string]string, globalEnv map[string]any) map[string]any {
 	actionEnv := maps.Clone(globalEnv)
-	m := make(map[string]any, len(action.Parameters))
-	for paramKey, paramValue := range action.Parameters {
+	m := make(map[string]any, len(params))
+	for paramKey, paramValue := range params {
 		m[paramKey] = paramValue
 	}
 	actionEnv["params"] = m
@@ -186,22 +189,26 @@ func conditionSatisfied(expression string, env map[string]any) (bool, error) {
 	return satisfied, nil
 }
 
-func shouldReportAsError(results []actionResult) bool {
-	for _, result := range results {
-		// eval errors should be treated as 500s
-		if result.Condition != nil && result.Condition.EvalError != "<nil>" {
+// should reportAsError determines whether the overall webhook processing should be
+// reported as an error based on the action results. Returns true if any action
+// resulted in an expression evaluation error or any of its underlying
+// targets had errors.
+func shouldReportAsError(actionResults []actionResult) bool {
+	return slices.ContainsFunc(actionResults, func(ar actionResult) bool {
+		return ar.ConditionResult.EvalError != "" || hasTargetErrors(ar)
+	})
+}
+
+func hasTargetErrors(ar actionResult) bool {
+	for _, tr := range ar.TargetResults {
+		if tr.ListError != nil {
 			return true
 		}
-		for _, refreshResult := range result.RefreshResults {
-			// building list options and failing to list
-			if refreshResult.Err != nil {
+		switch ar.ActionName {
+		case kargoapi.GenericWebhookActionNameRefresh:
+			refreshFailure := func(rr refreshResult) bool { return rr.Failure != "" }
+			if slices.ContainsFunc(tr.RefreshResults, refreshFailure) {
 				return true
-			}
-			for _, whr := range refreshResult.WarehouseRefreshResults {
-				// refresh failures
-				if whr.Failure != "" {
-					return true
-				}
 			}
 		}
 	}

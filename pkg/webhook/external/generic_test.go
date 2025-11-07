@@ -70,10 +70,10 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"results":[
+					"actionResults":[
 						{
 							"actionName":"Refresh",
-							"conditionFailure":{
+							"conditionResult":{
 								"expression":"${{ foo() }}",
 								"satisfied":false,
 								"evalError": "reflect: call of reflect.Value.Call on zero Value (1:2)\n |  foo() \n | .^"
@@ -107,13 +107,12 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
 				expected := `{
-					"results":[
+					"actionResults":[
 						{
 							"actionName":"Refresh",
-							"conditionFailure":{
+							"conditionResult":{
 								"expression":"${{ request.header('X-Event-Type') == 'push' }}",
-								"satisfied":false,
-								"evalError": "<nil>"
+								"satisfied":false
 							}
 						}
 					]}
@@ -144,10 +143,10 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"results":[
+					"actionResults":[
 						{
 							"actionName":"Refresh",
-							"conditionFailure":{
+							"conditionResult":{
 								"expression":"${{ request.header('X-Event-Type') }}",
 								"satisfied":false,
 								"evalError": "match expression result \"pull_request\" is of type string; expected bool"
@@ -305,13 +304,17 @@ func TestGenericHandler(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `
 				{
-					"results":[
+					"actionResults":[
 						{
 							"actionName":"Refresh",
-							"refreshResults":[
+							"conditionResult":{
+								"expression":"${{ request.header('X-Event-Type') == params.event }}",
+								"satisfied":true
+							},
+							"targetResults":[
 								{
 									"kind":"Warehouse",
-									"warehouseRefreshResults":[
+									"refreshResults":[
 										{"success":"test-project/api-warehouse"},
 										{"failure":"test-project/failure-warehouse"}
 									]
@@ -399,13 +402,17 @@ func TestGenericHandler(t *testing.T) {
 				require.Equal(t, http.StatusOK, w.Code)
 				expected := `
 				{
-					"results":[
+					"actionResults":[
 						{
 							"actionName":"Refresh",
-							"refreshResults":[
+							"conditionResult":{
+								"expression":"${{ request.header('X-Event-Type') == params.event }}",
+								"satisfied":true
+							},
+							"targetResults":[
 								{
 									"kind":"Warehouse",
-									"warehouseRefreshResults":[
+									"refreshResults":[
 										{"success":"test-project/api-warehouse"}
 									]
 								}
