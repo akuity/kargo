@@ -84,7 +84,8 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		globalEnv, err := newGlobalEnv(requestBody, r)
 		if err != nil {
 			logger.Error(err, "error creating global environment")
-			xhttp.WriteErrorJSON(w, err)
+			// this can only fail if the request body is invalid json
+			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusBadRequest))
 			return
 		}
 
@@ -93,15 +94,17 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			results[i].ActionName = action.Name
 			// append action specific parameters to a copy of the global env
 			actionEnv := newActionEnv(action, globalEnv)
-			if met, err := conditionMet(action.MatchExpression, actionEnv); err != nil || !met {
+			if satisfied, err := conditionSatisfied(action.MatchExpression, actionEnv); err != nil || !satisfied {
 				logger.Info("match expression not met; skipping refresh action",
 					"action", action.Name,
 					"expression", action.MatchExpression,
+					"satisfied", satisfied,
+					"evalError", err,
 				)
-				results[i].ConditionFailure = conditionResult{
+				results[i].Condition = conditionResult{
 					Expression: action.MatchExpression,
-					Met:        met,
-					Error:      err,
+					Satisfied:  satisfied,
+					EvalError:  fmt.Sprintf("%v", err),
 				}
 				continue
 			}
@@ -113,20 +116,39 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			}
 			// add new action handlers here
 		}
-		xhttp.WriteResponseJSON(w, http.StatusOK, map[string]any{"results": results})
+		resp := map[string]any{"results": results}
+		if shouldReportAsError(results) {
+			xhttp.WriteResponseJSON(w, http.StatusInternalServerError, resp)
+			return
+		}
+		xhttp.WriteResponseJSON(w, http.StatusOK, resp)
 	})
 }
 
+func shouldReportAsError(results []actionResult) bool {
+	for _, result := range results {
+		if result.Condition.EvalError != "<nil>" {
+			return true
+		}
+		for _, refreshResult := range result.RefreshResults {
+			if refreshResult.Err != nil {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 type actionResult struct {
-	ActionName       kargoapi.GenericWebhookActionName `json:"actionName"`
-	ConditionFailure conditionResult                   `json:"conditionFailure,omitempty"`
-	RefreshResults   []refreshTargetResult             `json:"refreshResults,omitempty"`
+	ActionName     kargoapi.GenericWebhookActionName `json:"actionName"`
+	Condition      conditionResult                   `json:"conditionFailure,omitempty"`
+	RefreshResults []refreshTargetResult             `json:"refreshResults,omitempty"`
 }
 
 type conditionResult struct {
 	Expression string `json:"expression"`
-	Met        bool   `json:"met"`
-	Error      error  `json:"error,omitempty"`
+	Satisfied  bool   `json:"satisfied"`
+	EvalError  string `json:"evalError"`
 }
 
 func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
@@ -165,14 +187,14 @@ func newActionEnv(action kargoapi.GenericWebhookAction, globalEnv map[string]any
 	return actionEnv
 }
 
-func conditionMet(expression string, env map[string]any) (bool, error) {
+func conditionSatisfied(expression string, env map[string]any) (bool, error) {
 	result, err := expressions.EvaluateTemplate(expression, env)
 	if err != nil {
-		return false, fmt.Errorf("failed to evaluate match expression: %w", err)
+		return false, err
 	}
-	met, ok := result.(bool)
+	satisfied, ok := result.(bool)
 	if !ok {
-		return false, fmt.Errorf("match expression did not evaluate to a boolean")
+		return false, fmt.Errorf("match expression result %q is of type %T; expected bool", result, result)
 	}
-	return met, nil
+	return satisfied, nil
 }
