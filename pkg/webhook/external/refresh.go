@@ -40,29 +40,30 @@ func refreshTargets(
 	logger := logging.LoggerFromContext(ctx)
 	targetResults := make([]targetResult, len(targets))
 	for i, target := range targets {
+		tLogger := logger.WithValues("targetKind", target.Kind)
 		targetResults[i] = targetResult{Kind: target.Kind}
 		switch target.Kind {
 		case kargoapi.GenericWebhookTargetKindWarehouse:
 			listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
 			if err != nil {
-				logger.Error(err, "failed to build list options for warehouse target")
+				tLogger.Error(err, "failed to build list options for warehouse target")
 				targetResults[i].ListError = fmt.Errorf("failed to build list options for warehouse target: %w", err)
 				continue
 			}
 
 			var whList kargoapi.WarehouseList
 			if err := c.List(ctx, &whList, listOpts...); err != nil {
-				logger.Error(err, "error listing warehouse targets")
+				tLogger.Error(err, "error listing warehouse targets")
 				targetResults[i].ListError = fmt.Errorf("error listing warehouse targets: %w", err)
 				continue
 			}
 
-			logger.Info("found Warehouses to refresh", "count", len(whList.Items))
+			tLogger.Info("found Warehouses to refresh", "count", len(whList.Items))
 
 			targetResults[i].RefreshResults = make([]refreshResult, len(whList.Items))
 			for j, wh := range whList.Items {
 				whKey := client.ObjectKeyFromObject(&wh)
-				whLogger := logger.WithValues(
+				whLogger := tLogger.WithValues(
 					"namespace", whKey.Namespace,
 					"name", whKey.Name,
 				)

@@ -106,10 +106,11 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 			actionResults[i].ConditionResult.Satisfied = satisfied
 			if !satisfied {
-				logger.Info("condition not satisfied; skipping action")
+				aLogger.Info("condition not satisfied; skipping action")
 				continue
 			}
 
+			ctx = logging.ContextWithLogger(ctx, aLogger)
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
 				actionResults[i].TargetResults = refreshTargets(
