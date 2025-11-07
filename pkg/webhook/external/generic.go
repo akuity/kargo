@@ -103,7 +103,6 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				)
 				results[i].Condition = &conditionResult{
 					Expression: action.MatchExpression,
-					Satisfied:  satisfied,
 					EvalError:  fmt.Sprintf("%v", err),
 				}
 				continue
