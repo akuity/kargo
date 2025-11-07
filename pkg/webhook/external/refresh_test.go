@@ -141,11 +141,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
 				require.NoError(t, results[0].Err)
 				require.Len(t, results[0].WarehouseRefreshResults, 1)
-				require.Equal(
-					t,
-					"successfully refreshed Warehouse test-project/warehouse-1",
-					results[0].WarehouseRefreshResults[0].Message,
-				)
+				require.Equal(t, "test-project/warehouse-1", results[0].WarehouseRefreshResults[0].Success)
 			},
 		},
 		{
@@ -212,15 +208,11 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Len(t, results, 1)
 				require.Len(t, results[0].WarehouseRefreshResults, 2)
 				firstWhResult := results[0].WarehouseRefreshResults[0]
-				require.NoError(t, firstWhResult.Error)
-				require.Equal(t, firstWhResult.Message,
-					"successfully refreshed Warehouse test-namespace/backend-warehouse",
-				)
+				require.Empty(t, firstWhResult.Failure)
+				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 				secondResult := results[0].WarehouseRefreshResults[1]
-				require.Error(t, secondResult.Error)
-				require.ErrorContains(t, secondResult.Error,
-					"failed to refresh Warehouse test-namespace/frontend-warehouse",
-				)
+				require.NotEmpty(t, secondResult.Failure)
+				require.Contains(t, secondResult.Failure, "test-namespace/frontend-warehouse")
 			},
 		},
 		{

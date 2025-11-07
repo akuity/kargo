@@ -26,8 +26,8 @@ type refreshTargetResult struct {
 }
 
 type refreshWarehouseResult struct {
-	Message string `json:"message,omitempty"`
-	Error   error  `json:"error,omitempty"`
+	Success string `json:"success,omitempty"`
+	Failure string `json:"failure,omitempty"`
 }
 
 func handleRefreshAction(
@@ -67,17 +67,11 @@ func handleRefreshAction(
 					"name", whKey.Name,
 				)
 				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
-					whLogger.Error(err, "error refreshing Warehouse")
-					results[i].WarehouseRefreshResults[j].Error = fmt.Errorf(
-						"failed to refresh Warehouse %s/%s: %w",
-						whKey.Namespace, whKey.Name, err,
-					)
+					whLogger.Error(err, "error refreshing")
+					results[i].WarehouseRefreshResults[j].Failure = whKey.String()
 				} else {
-					whLogger.Debug("refreshed Warehouse")
-					results[i].WarehouseRefreshResults[j].Message = fmt.Sprintf(
-						"successfully refreshed Warehouse %s/%s",
-						whKey.Namespace, whKey.Name,
-					)
+					whLogger.Debug("successfully refreshed Warehouse")
+					results[i].WarehouseRefreshResults[j].Success = whKey.String()
 				}
 			}
 		default:

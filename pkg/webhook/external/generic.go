@@ -101,7 +101,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 					"satisfied", satisfied,
 					"evalError", err,
 				)
-				results[i].Condition = conditionResult{
+				results[i].Condition = &conditionResult{
 					Expression: action.MatchExpression,
 					Satisfied:  satisfied,
 					EvalError:  fmt.Sprintf("%v", err),
@@ -125,23 +125,9 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 	})
 }
 
-func shouldReportAsError(results []actionResult) bool {
-	for _, result := range results {
-		if result.Condition.EvalError != "<nil>" {
-			return true
-		}
-		for _, refreshResult := range result.RefreshResults {
-			if refreshResult.Err != nil {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 type actionResult struct {
 	ActionName     kargoapi.GenericWebhookActionName `json:"actionName"`
-	Condition      conditionResult                   `json:"conditionFailure,omitempty"`
+	Condition      *conditionResult                  `json:"conditionFailure,omitempty"`
 	RefreshResults []refreshTargetResult             `json:"refreshResults,omitempty"`
 }
 
@@ -181,9 +167,11 @@ func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 
 func newActionEnv(action kargoapi.GenericWebhookAction, globalEnv map[string]any) map[string]any {
 	actionEnv := maps.Clone(globalEnv)
+	m := make(map[string]any, len(action.Parameters))
 	for paramKey, paramValue := range action.Parameters {
-		actionEnv[paramKey] = paramValue
+		m[paramKey] = paramValue
 	}
+	actionEnv["params"] = m
 	return actionEnv
 }
 
@@ -197,4 +185,26 @@ func conditionSatisfied(expression string, env map[string]any) (bool, error) {
 		return false, fmt.Errorf("match expression result %q is of type %T; expected bool", result, result)
 	}
 	return satisfied, nil
+}
+
+func shouldReportAsError(results []actionResult) bool {
+	for _, result := range results {
+		// eval errors should be treated as 500s
+		if result.Condition != nil && result.Condition.EvalError != "<nil>" {
+			return true
+		}
+		for _, refreshResult := range result.RefreshResults {
+			// building list options and failing to list
+			if refreshResult.Err != nil {
+				return true
+			}
+			for _, whr := range refreshResult.WarehouseRefreshResults {
+				// refresh failures
+				if whr.Failure != "" {
+					return true
+				}
+			}
+		}
+	}
+	return false
 }

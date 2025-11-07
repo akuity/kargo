@@ -2,6 +2,8 @@ package external
 
 import (
 	"bytes"
+	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/indexer"
@@ -153,6 +156,264 @@ func TestGenericHandler(t *testing.T) {
 						}
 					]}
 				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "partial success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this warehouse will be refreshed successfully
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+				// this warehouse will fully satisfy the label selector but not the index selector
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "other-api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",
+							"tier": "backend",
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/other-repo.git", // does NOT satisfy index selector
+							},
+						}},
+					},
+				},
+				// this label will satisfy the indexSelector, labelSelector.MatchLabels,
+				// but not labelSelector.MatchExpressions
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "ui-warehouse",
+						Labels: map[string]string{
+							"foo": "bar",
+							// "tier": "frontend", // missing
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git",
+							},
+						}},
+					},
+				},
+				// this warehouse will satisfy all selectors but fail during refresh
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "failure-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Patch: func(
+						_ context.Context,
+						_ client.WithWatch,
+						obj client.Object,
+						_ client.Patch,
+						_ ...client.PatchOption,
+					) error {
+						if obj.GetName() == "failure-warehouse" {
+							return errors.New("something went wrong")
+						}
+						return nil
+					},
+				},
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						Name: kargoapi.GenericWebhookActionNameRefresh,
+						// lets use a param here to make sure those are working too
+						Parameters:      map[string]string{"event": "push"},
+						MatchExpression: `${{ request.header('X-Event-Type') == params.event }}`,
+						// use complex combination of both label and index selectors
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"foo": "bar"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"backend", "frontend"},
+										},
+									},
+								},
+								IndexSelector: kargoapi.IndexSelector{
+									MatchExpressions: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.WarehousesBySubscribedURLsField,
+											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Value:    `${{ normalize("git", request.body.repository.url) }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				// not normalized so the index selector can only work if 'normalize' function is used
+				b := []byte(`{"repository": {"url": "http://github.com/example/repo.git"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "push")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				t.Logf("response body: %s", w.Body.String())
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `
+				{
+					"results":[
+						{
+							"actionName":"Refresh",
+							"refreshResults":[
+								{
+									"kind":"Warehouse",
+									"warehouseRefreshResults":[
+										{"success":"test-project/api-warehouse"},
+										{"failure":"test-project/failure-warehouse"}
+									]
+								}
+							]
+						}
+					]
+				}`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this warehouse will be refreshed successfully
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						Name: kargoapi.GenericWebhookActionNameRefresh,
+						// lets use a param here to make sure those are working too
+						Parameters:      map[string]string{"event": "push"},
+						MatchExpression: `${{ request.header('X-Event-Type') == params.event }}`,
+						// use complex combination of both label and index selectors
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"foo": "bar"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"backend", "frontend"},
+										},
+									},
+								},
+								IndexSelector: kargoapi.IndexSelector{
+									MatchExpressions: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.WarehousesBySubscribedURLsField,
+											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Value:    `${{ normalize("git", request.body.repository.url) }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				// not normalized so the index selector can only work if 'normalize' function is used
+				b := []byte(`{"repository": {"url": "http://github.com/example/repo.git"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "push")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				expected := `
+				{
+					"results":[
+						{
+							"actionName":"Refresh",
+							"refreshResults":[
+								{
+									"kind":"Warehouse",
+									"warehouseRefreshResults":[
+										{"success":"test-project/api-warehouse"}
+									]
+								}
+							]
+						}
+					]
+				}`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
