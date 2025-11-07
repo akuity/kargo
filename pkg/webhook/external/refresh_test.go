@@ -231,14 +231,13 @@ func TestHandleRefreshAction(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			results := handleRefreshAction(
+			tt.assertions(t, refreshTargets(
 				t.Context(),
 				tt.client,
 				tt.project,
 				tt.actionEnv,
 				tt.targets,
-			)
-			tt.assertions(t, results)
+			))
 		})
 	}
 }

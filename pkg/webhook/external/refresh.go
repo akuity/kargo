@@ -30,7 +30,7 @@ type refreshResult struct {
 	Failure string `json:"failure,omitempty"`
 }
 
-func handleRefreshAction(
+func refreshTargets(
 	ctx context.Context,
 	c client.Client,
 	project string,

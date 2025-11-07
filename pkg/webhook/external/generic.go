@@ -112,7 +112,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
-				actionResults[i].TargetResults = handleRefreshAction(
+				actionResults[i].TargetResults = refreshTargets(
 					ctx, g.client, g.project, actionEnv, action.Targets,
 				)
 			}
