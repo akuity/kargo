@@ -499,11 +499,12 @@ func (r *reconciler) promote(
 	logger = logger.WithValues("targetFreight", targetFreight.Name)
 
 	targetFreightRef := kargoapi.FreightReference{
-		Name:    targetFreight.Name,
-		Commits: targetFreight.Commits,
-		Images:  targetFreight.Images,
-		Charts:  targetFreight.Charts,
-		Origin:  targetFreight.Origin,
+		Name:           targetFreight.Name,
+		Commits:        targetFreight.Commits,
+		Images:         targetFreight.Images,
+		Charts:         targetFreight.Charts,
+		OtherArtifacts: targetFreight.OtherArtifacts,
+		Origin:         targetFreight.Origin,
 	}
 
 	// Make a deep copy of the Promotion to pass to the promotion steps execution
