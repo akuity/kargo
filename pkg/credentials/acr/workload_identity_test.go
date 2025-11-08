@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/pkg/credentials"
 )
@@ -59,10 +60,17 @@ func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 
 	p := &WorkloadIdentityProvider{credential: &mockCredential{}}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := p.Supports(tt.credType, tt.repoURL, nil, nil)
-			assert.Equal(t, tt.expected, result)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			supports, err := p.Supports(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, supports)
 		})
 	}
 }
@@ -190,22 +198,21 @@ func TestWorkloadIdentityProvider_GetCredentials(t *testing.T) {
 			},
 		},
 	}
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			tt.provider.credential = &mockCredential{}
-			tt.provider.tokenCache = cache.New(10*time.Hour, time.Hour)
-			if tt.setupCache != nil {
-				tt.setupCache(tt.provider.tokenCache)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.provider.credential = &mockCredential{}
+			testCase.provider.tokenCache = cache.New(10*time.Hour, time.Hour)
+			if testCase.setupCache != nil {
+				testCase.setupCache(testCase.provider.tokenCache)
 			}
-			creds, err := tt.provider.GetCredentials(
-				context.Background(),
-				"",
-				tt.credType,
-				tt.repoURL,
-				nil,
-				nil,
+			creds, err := testCase.provider.GetCredentials(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+				},
 			)
-			tt.assertions(t, tt.provider.tokenCache, creds, err)
+			testCase.assertions(t, testCase.provider.tokenCache, creds, err)
 		})
 	}
 }
@@ -246,12 +253,12 @@ func TestACRURLRegex(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			matches := acrURLRegex.FindStringSubmatch(tt.url)
-			if tt.expected {
-				assert.Len(t, matches, 2, "Expected regex to match and capture registry name")
-				assert.Equal(t, tt.registry, matches[1], "Registry name should be captured correctly")
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			matches := acrURLRegex.FindStringSubmatch(testCase.url)
+			if testCase.expected {
+				assert.Len(t, matches, 2)
+				assert.Equal(t, testCase.registry, matches[1])
 			} else {
 				assert.Nil(t, matches, "Expected regex not to match")
 			}

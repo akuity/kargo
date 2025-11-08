@@ -1,7 +1,6 @@
 package kubernetes
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,18 +11,20 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/credentials/basic"
 )
 
 func TestNewKubernetesDatabase(t *testing.T) {
 	testControlPlaneClient := fake.NewClientBuilder().Build()
 	testLocalClusterClient := fake.NewClientBuilder().Build()
+	testCredentialProviderRegistry := credentials.MustNewProviderRegistry()
 	testCfg := DatabaseConfig{
 		GlobalCredentialsNamespaces: []string{"fake-namespace"},
 	}
 	d := NewDatabase(
-		context.Background(),
 		testControlPlaneClient,
 		testLocalClusterClient,
+		testCredentialProviderRegistry,
 		testCfg,
 	)
 	require.NotNil(t, d)
@@ -31,6 +32,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	require.True(t, ok)
 	require.Same(t, testControlPlaneClient, k.controlPlaneClient)
 	require.Same(t, testLocalClusterClient, k.localClusterClient)
+	require.Same(t, testCredentialProviderRegistry, k.credentialProvidersRegistry)
 	require.Equal(t, testCfg, k.cfg)
 }
 
@@ -361,13 +363,17 @@ func TestGet(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			provider := &basic.CredentialProvider{}
 			creds, err := NewDatabase(
-				context.Background(),
 				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
 				nil,
+				credentials.MustNewProviderRegistry(credentials.ProviderRegistration{
+					Predicate: provider.Supports,
+					Value:     provider,
+				}),
 				testCase.cfg,
 			).Get(
-				context.Background(),
+				t.Context(),
 				testProjectNamespace,
 				testCase.credType,
 				testCase.repoURL,

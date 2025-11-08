@@ -29,11 +29,11 @@ func Test_tokenCacheKey(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			for i := 0; i < 100000; i++ {
-				result := tokenCacheKey(tt.parts...)
-				assert.Equal(t, tt.want, result)
+				result := tokenCacheKey(testCase.parts...)
+				assert.Equal(t, testCase.want, result)
 			}
 		})
 	}

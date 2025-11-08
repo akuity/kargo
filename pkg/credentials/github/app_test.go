@@ -1,7 +1,6 @@
 package github
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -35,10 +34,16 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 		installationIDKey: []byte("456"),
 		privateKeyKey:     []byte("private-key"),
 	}
-	require.True(
-		t,
-		p.Supports(credentials.TypeGit, testRepoURL, supportedDataMap, nil),
+	supports, err := p.Supports(
+		t.Context(),
+		credentials.Request{
+			Type:    credentials.TypeGit,
+			RepoURL: testRepoURL,
+			Data:    supportedDataMap,
+		},
 	)
+	require.NoError(t, err)
+	require.True(t, supports)
 
 	testCases := []struct {
 		name       string
@@ -96,13 +101,13 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "client ID and app ID are empty(ish)",
+			name:     "client ID and app ID are empty",
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
-				dm[appIDKey] = []byte(" ")
-				dm[clientIDKey] = []byte(" ")
+				dm[appIDKey] = []byte("")
+				dm[clientIDKey] = []byte("")
 				return dm
 			},
 			expected: false,
@@ -119,12 +124,12 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "installation ID is empty(ish)",
+			name:     "installation ID is empty",
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
-				dm[installationIDKey] = []byte(" ")
+				dm[installationIDKey] = []byte("")
 				return dm
 			},
 			expected: false,
@@ -141,12 +146,12 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:     "private key is empty(ish)",
+			name:     "private key is empty",
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			getDataMap: func() map[string][]byte {
 				dm := maps.Clone(supportedDataMap)
-				dm[privateKeyKey] = []byte(" ")
+				dm[privateKeyKey] = []byte("")
 				return dm
 			},
 			expected: false,
@@ -176,15 +181,21 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := p.Supports(testCase.credType, testCase.repoURL, testCase.getDataMap(), nil)
-			assert.Equal(t, testCase.expected, result)
+			supports, err := p.Supports(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+					Data:    testCase.getDataMap(),
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, supports)
 		})
 	}
 }
 
 func TestAppCredentialProvider_GetCredentials(t *testing.T) {
-	ctx := context.Background()
-
 	const testProject = "fake-project"
 	const testRepoName = "repo"
 	testRepoURL := fmt.Sprintf("https://github.com/example/%s", testRepoName)
@@ -208,16 +219,6 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 		) (string, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
-		{
-			name:     "provider does not support input",
-			credType: credentials.Type("other"),
-			repoURL:  testRepoURL,
-			data:     testData,
-			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, creds)
-			},
-		},
 		{
 			name:     "cannot extract repo name from URL",
 			credType: credentials.TypeGit,
@@ -343,12 +344,14 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			}
 
 			creds, err := provider.GetCredentials(
-				ctx,
-				testProject,
-				testCase.credType,
-				testCase.repoURL,
-				testCase.data,
-				testCase.metadata,
+				t.Context(),
+				credentials.Request{
+					Type:     testCase.credType,
+					Project:  testProject,
+					RepoURL:  testCase.repoURL,
+					Data:     testCase.data,
+					Metadata: testCase.metadata,
+				},
 			)
 			testCase.assertions(t, creds, err)
 		})

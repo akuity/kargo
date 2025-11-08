@@ -14,14 +14,27 @@ import (
 
 const (
 	serviceAccountKeyKey = "gcpServiceAccountKey"
-
-	scopeStorageRead = "https://www.googleapis.com/auth/devstorage.read_only"
+	scopeStorageRead     = "https://www.googleapis.com/auth/devstorage.read_only"
 )
+
+func init() {
+	if provider := NewServiceAccountKeyProvider(); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
 
 type ServiceAccountKeyProvider struct {
 	tokenCache *cache.Cache
 
-	getAccessTokenFn func(ctx context.Context, encodedServiceAccountKey string) (string, error)
+	getAccessTokenFn func(
+		ctx context.Context,
+		encodedServiceAccountKey string,
+	) (string, error)
 }
 
 func NewServiceAccountKeyProvider() credentials.Provider {
@@ -37,40 +50,27 @@ func NewServiceAccountKeyProvider() credentials.Provider {
 }
 
 func (p *ServiceAccountKeyProvider) Supports(
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	_ map[string]string,
-) bool {
-	if credType != credentials.TypeImage && credType != credentials.TypeHelm ||
-		data == nil ||
-		data[serviceAccountKeyKey] == nil {
-		return false
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
+	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm ||
+		req.Data == nil ||
+		req.Data[serviceAccountKeyKey] == nil {
+		return false, nil
 	}
-
-	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
-		return false
+	if !garURLRegex.MatchString(req.RepoURL) &&
+		!gcrURLRegex.MatchString(req.RepoURL) {
+		return false, nil
 	}
-
-	return true
+	return true, nil
 }
 
 func (p *ServiceAccountKeyProvider) GetCredentials(
 	ctx context.Context,
-	_ string,
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	metadata map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data, metadata) {
-		return nil, nil
-	}
-
-	var (
-		encodedServiceAccountKey = string(data[serviceAccountKeyKey])
-		cacheKey                 = tokenCacheKey(encodedServiceAccountKey)
-	)
+	encodedServiceAccountKey := string(req.Data[serviceAccountKeyKey])
+	cacheKey := tokenCacheKey(encodedServiceAccountKey)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {

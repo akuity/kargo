@@ -35,6 +35,17 @@ const (
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
 
+func init() {
+	if provider := NewAppCredentialProvider(); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
+
 type AppCredentialProvider struct {
 	tokenCache *cache.Cache
 
@@ -60,18 +71,16 @@ func NewAppCredentialProvider() credentials.Provider {
 }
 
 func (p *AppCredentialProvider) Supports(
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	_ map[string]string,
-) bool {
-	if credType != credentials.TypeGit || len(data) == 0 {
-		return false
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
+	if req.Type != credentials.TypeGit || len(req.Data) == 0 {
+		return false, nil
 	}
-
-	return (strings.HasPrefix(repoURL, "http://") || strings.HasPrefix(repoURL, "https://")) &&
-		(strings.TrimSpace(string(data[clientIDKey])) != "" || strings.TrimSpace(string(data[appIDKey])) != "") &&
-		strings.TrimSpace(string(data[installationIDKey])) != "" && strings.TrimSpace(string(data[privateKeyKey])) != ""
+	return (strings.HasPrefix(req.RepoURL, "http://") || strings.HasPrefix(req.RepoURL, "https://")) &&
+		(string(req.Data[clientIDKey]) != "" || string(req.Data[appIDKey]) != "") &&
+		string(req.Data[installationIDKey]) != "" &&
+		string(req.Data[privateKeyKey]) != "", nil
 }
 
 // GetCredentials implements the credentials.Provider interface for GitHub Apps.
@@ -81,29 +90,21 @@ func (p *AppCredentialProvider) Supports(
 // specified by repoURL.
 func (p *AppCredentialProvider) GetCredentials(
 	_ context.Context,
-	project string,
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	metadata map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data, metadata) {
-		return nil, nil
-	}
-
-	repoName := p.extractRepoName(repoURL)
+	repoName := p.extractRepoName(req.RepoURL)
 	if repoName == "" {
 		// Doesn't look like a URL we can do anything with.
 		return nil, nil
 	}
 
 	// If there's a scope map in the metadata, take it into consideration...
-	if scopeMapStr := metadata[kargoapi.AnnotationKeyGitHubTokenScope]; scopeMapStr != "" {
+	if scopeMapStr := req.Metadata[kargoapi.AnnotationKeyGitHubTokenScope]; scopeMapStr != "" {
 		var scopeMap map[string][]string
 		if err := json.Unmarshal([]byte(scopeMapStr), &scopeMap); err != nil {
 			return nil, fmt.Errorf("error unmarshaling scope map: %w", err)
 		}
-		if !slices.Contains(scopeMap[project], repoName) {
+		if !slices.Contains(scopeMap[req.Project], repoName) {
 			// repoName is NOT one of the scopes the Project is allowed to use.
 			return nil, nil
 		}
@@ -112,12 +113,12 @@ func (p *AppCredentialProvider) GetCredentials(
 	// Client ID is the newer unique identifier for GitHub Apps. GitHub recommends
 	// using this when possible. If no client ID is found in the data map, we will
 	// fall back on the old/deprecated unique identifier, App ID.
-	appOrClientID := string(data[clientIDKey])
+	appOrClientID := string(req.Data[clientIDKey])
 	if appOrClientID == "" {
-		appOrClientID = string(data[appIDKey])
+		appOrClientID = string(req.Data[appIDKey])
 	}
 
-	installID, err := strconv.ParseInt(string(data[installationIDKey]), 10, 64)
+	installID, err := strconv.ParseInt(string(req.Data[installationIDKey]), 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing installation ID: %w", err)
 	}
@@ -125,8 +126,8 @@ func (p *AppCredentialProvider) GetCredentials(
 	return p.getUsernameAndPassword(
 		appOrClientID,
 		installID,
-		string(data[privateKeyKey]),
-		repoURL,
+		string(req.Data[privateKeyKey]),
+		req.RepoURL,
 	)
 }
 

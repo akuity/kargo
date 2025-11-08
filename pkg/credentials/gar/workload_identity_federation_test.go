@@ -8,6 +8,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/pkg/credentials"
@@ -125,10 +126,17 @@ func TestWorkloadIdentityFederationProvider_Supports(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
-			tt.assert(t, result)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			supports, err := testCase.provider.Supports(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+				},
+			)
+			require.NoError(t, err)
+			testCase.assert(t, supports)
 		})
 	}
 }
@@ -157,19 +165,6 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 			err error,
 		)
 	}{
-		{
-			name: "returns nil when not supported",
-			provider: &WorkloadIdentityFederationProvider{
-				projectID: fakeProjectID,
-			},
-			project:  fakeProject,
-			credType: credentials.TypeGit, // Not supported
-			repoURL:  fakeGCRRepoURL,
-			assert: func(t *testing.T, _, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.NoError(t, err)
-				assert.Nil(t, creds)
-			},
-		},
 		{
 			name: "token cache hit",
 			provider: &WorkloadIdentityFederationProvider{
@@ -287,16 +282,29 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupTokenCache != nil {
-				tt.setupTokenCache(tt.provider.tokenCache)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.setupTokenCache != nil {
+				testCase.setupTokenCache(testCase.provider.tokenCache)
 			}
-			if tt.setupTokenSourceCache != nil {
-				tt.setupTokenSourceCache(tt.provider.tokenSourceCache)
+			if testCase.setupTokenSourceCache != nil {
+				testCase.setupTokenSourceCache(testCase.provider.tokenSourceCache)
 			}
-			creds, err := tt.provider.GetCredentials(context.Background(), tt.project, tt.credType, tt.repoURL, nil, nil)
-			tt.assert(t, tt.provider.tokenCache, tt.provider.tokenSourceCache, creds, err)
+			creds, err := testCase.provider.GetCredentials(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					Project: testCase.project,
+					RepoURL: testCase.repoURL,
+				},
+			)
+			testCase.assert(
+				t,
+				testCase.provider.tokenCache,
+				testCase.provider.tokenSourceCache,
+				creds,
+				err,
+			)
 		})
 	}
 }
