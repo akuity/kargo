@@ -10,7 +10,7 @@ require (
 	connectrpc.com/connect v1.19.1
 	connectrpc.com/grpchealth v1.4.0
 	github.com/AlecAivazis/survey/v2 v2.3.7
-	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.19.1
+	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.20.0
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.13.0
 	github.com/Azure/azure-sdk-for-go/sdk/containers/azcontainerregistry v0.2.3
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -24,7 +24,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.16.0
-	github.com/cyphar/filepath-securejoin v0.5.1
+	github.com/cyphar/filepath-securejoin v0.6.0
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/expr-lang/expr v1.17.6
 	github.com/fatih/structtag v1.2.0
@@ -57,16 +57,16 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
-	gitlab.com/gitlab-org/api/client-go v0.157.1
+	gitlab.com/gitlab-org/api/client-go v0.159.0
 	go.uber.org/ratelimit v0.3.1
 	go.uber.org/zap v1.27.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.43.0
 	golang.org/x/net v0.46.0
-	golang.org/x/oauth2 v0.32.0
-	golang.org/x/sync v0.17.0
+	golang.org/x/oauth2 v0.33.0
+	golang.org/x/sync v0.18.0
 	golang.org/x/text v0.30.0
-	google.golang.org/api v0.254.0
+	google.golang.org/api v0.255.0
 	google.golang.org/grpc v1.76.0
 	google.golang.org/protobuf v1.36.10
 	gopkg.in/yaml.v3 v3.0.1
@@ -224,7 +224,7 @@ require (
 	golang.org/x/term v0.36.0 // indirect
 	golang.org/x/time v0.14.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20251029180050-ab9386a59fda // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
