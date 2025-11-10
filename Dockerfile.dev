@@ -1,4 +1,4 @@
-FROM golang:1.25.3-trixie
+FROM golang:1.25.4-trixie
 
 ARG TARGETARCH
 
