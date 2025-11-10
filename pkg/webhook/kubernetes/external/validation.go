@@ -104,8 +104,8 @@ func validateGenericConfig(
 	cfg *kargoapi.GenericWebhookReceiverConfig,
 ) field.ErrorList {
 	var errs field.ErrorList
-	for i, action := range cfg.Actions {
-		errs = append(errs, validateGenericTargets(cfgIndex, i, action.Targets)...)
+	for aIndex, action := range cfg.Actions {
+		errs = append(errs, validateGenericTargets(cfgIndex, aIndex, action.Targets)...)
 	}
 	return errs
 }
