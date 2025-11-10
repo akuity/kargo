@@ -81,6 +81,9 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOptio
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
 		}
+
+		// TODO(Faris): eval expressions in e.Values
+		
 		req, err := labels.NewRequirement(e.Key, op, e.Values)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
