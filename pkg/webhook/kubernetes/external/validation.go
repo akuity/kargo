@@ -20,7 +20,6 @@ func ValidateWebhookReceivers(
 	)
 	for i, r := range webhookReceivers {
 		if r.Generic != nil {
-			println("validating generic config")
 			errs = append(errs,
 				validateGenericConfig(i, r.Generic)...,
 			)
