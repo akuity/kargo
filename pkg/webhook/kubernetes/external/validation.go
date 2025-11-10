@@ -15,9 +15,18 @@ func ValidateWebhookReceivers(
 	errs := append(field.ErrorList{},
 		validateUniqueNames(f, webhookReceivers)...,
 	)
-	return append(errs,
+	errs = append(errs,
 		validateMutuallyExclusive(f, webhookReceivers)...,
 	)
+	for i, r := range webhookReceivers {
+		if r.Generic != nil {
+			println("validating generic config")
+			errs = append(errs,
+				validateGenericConfig(i, r.Generic)...,
+			)
+		}
+	}
+	return errs
 }
 
 func validateMutuallyExclusive(
@@ -50,6 +59,9 @@ func validateMutuallyExclusive(
 		}
 		if r.Gitea != nil {
 			receivers = append(receivers, "Gitea")
+		}
+		if r.Generic != nil {
+			receivers = append(receivers, "Generic")
 		}
 		if len(receivers) > 1 {
 			errs = append(errs, field.Forbidden(
@@ -86,4 +98,41 @@ func validateUniqueNames(
 		dupes[r.Name] = i
 	}
 	return errs
+}
+
+func validateGenericConfig(
+	cfgIndex int,
+	cfg *kargoapi.GenericWebhookReceiverConfig,
+) field.ErrorList {
+	var errs field.ErrorList
+	for i, action := range cfg.Actions {
+		errs = append(errs, validateGenericTargets(cfgIndex, i, action.Targets)...)
+	}
+	return errs
+}
+
+func validateGenericTargets(cfgIndex, actionIndex int, targets []kargoapi.GenericWebhookTarget) []*field.Error {
+	var errs field.ErrorList
+	for tIndex, target := range targets {
+		if targetMisconfigured(&target) {
+			targetPath := fmt.Sprintf(
+				"spec.webhookReceivers[%d].generic.actions[%d].targets[%d]",
+				cfgIndex, actionIndex, tIndex,
+			)
+			errs = append(errs, field.Invalid(
+				field.NewPath(targetPath),
+				target,
+				"at least one of name, labelSelector, or indexSelector must be specified for target",
+			))
+		}
+	}
+	return errs
+}
+
+func targetMisconfigured(t *kargoapi.GenericWebhookTarget) bool {
+	// these are all optional but at least one must be set
+	return t.Name == "" &&
+		len(t.LabelSelector.MatchLabels) == 0 &&
+		len(t.LabelSelector.MatchExpressions) == 0 &&
+		len(t.IndexSelector.MatchExpressions) == 0
 }
