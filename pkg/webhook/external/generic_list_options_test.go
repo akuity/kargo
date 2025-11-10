@@ -163,6 +163,46 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			err:      errors.New("Invalid value: []: for 'in', 'notin' operators, values set can't be empty"),
 		},
 		{
+			name:    "label selector match expressions with invalid expression result",
+			project: "example-project",
+			target: kargoapi.GenericWebhookTarget{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				LabelSelector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "env",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"${{ undefined() }}"},
+						},
+					},
+				},
+			},
+			env:      map[string]any{},
+			expected: nil,
+			err:      errors.New("failed to evaluate expression"),
+		},
+		{
+			name:    "label selector match expressions with non-string result",
+			project: "example-project",
+			target: kargoapi.GenericWebhookTarget{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				LabelSelector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{
+						{
+							Key:      "env",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"${{ 12345 }}"},
+						},
+					},
+				},
+			},
+			env:      map[string]any{},
+			expected: nil,
+			err: errors.New(
+				"failed to parse matchExpression values: failed to evaluate value \"${{ 12345 }}\" as string",
+			),
+		},
+		{
 			name:    "label selector match labels invalid requirement (empty key)",
 			project: "sample-project",
 			target: kargoapi.GenericWebhookTarget{

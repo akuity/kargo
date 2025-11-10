@@ -30,7 +30,7 @@ func buildListOptionsForTarget(
 		listOpts = append(listOpts, indexSelectorListOpts...)
 	}
 	if len(t.LabelSelector.MatchLabels) > 0 || len(t.LabelSelector.MatchExpressions) > 0 {
-		labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector)
+		labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label selector: %w", err)
 		}
@@ -47,17 +47,10 @@ func newListOptionsForIndexSelector(
 ) ([]client.ListOption, error) {
 	var listOpts []client.ListOption
 	for _, expr := range is.MatchExpressions {
-		// If '${{' is not included, expressions.EvaluateTemplate will return 'value' as is.
-		result, err := expressions.EvaluateTemplate(expr.Value, env)
+		resultStr, err := evalAsString(expr.Value, env)
 		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate values expression: %w", err)
+			return nil, fmt.Errorf("failed to evaluate values expression as string: %w", err)
 		}
-
-		resultStr, ok := result.(string)
-		if !ok {
-			return nil, fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
-		}
-
 		var s fields.Selector
 		switch expr.Operator {
 		case kargoapi.IndexSelectorRequirementOperatorEqual:
@@ -74,17 +67,18 @@ func newListOptionsForIndexSelector(
 
 // newListOptionsForLabelSelector creates a list of client.ListOption based on
 // the provided LabelSelector.
-func newListOptionsForLabelSelector(ls metav1.LabelSelector) ([]client.ListOption, error) {
+func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any) ([]client.ListOption, error) {
 	var requirements []labels.Requirement
 	for _, e := range ls.MatchExpressions {
 		op, err := labelOpToSelectionOp(e.Operator)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
 		}
-
-		// TODO(Faris): eval expressions in e.Values
-		
-		req, err := labels.NewRequirement(e.Key, op, e.Values)
+		values, err := parseAsValues(e.Values, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse matchExpression values: %w", err)
+		}
+		req, err := labels.NewRequirement(e.Key, op, values)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
 		}
@@ -124,4 +118,28 @@ func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, 
 		// they're not supported.
 		return "", fmt.Errorf("unsupported LabelSelectorOperator: %q", op)
 	}
+}
+
+func parseAsValues(vals []string, env map[string]any) ([]string, error) {
+	values := make([]string, len(vals))
+	for i, v := range vals {
+		s, err := evalAsString(v, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate value %q as string: %w", v, err)
+		}
+		values[i] = s
+	}
+	return values, nil
+}
+
+func evalAsString(expr string, env map[string]any) (string, error) {
+	result, err := expressions.EvaluateTemplate(expr, env)
+	if err != nil {
+		return "", fmt.Errorf("failed to evaluate expression: %w", err)
+	}
+	s, ok := result.(string)
+	if !ok {
+		return "", fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
+	}
+	return s, nil
 }
