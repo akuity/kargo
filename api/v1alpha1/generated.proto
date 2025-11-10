@@ -753,17 +753,22 @@ message GenericWebhookTarget {
   // +kubebuilder:validation:Enum=Warehouse;
   optional string kind = 1;
 
+  // Name is the name of the target resource.
+  //
+  // +optional
+  optional string name = 2;
+
   // LabelSelector is a label selector to identify the target resources.
   // If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
   //
   // +optional
-  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 2;
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 3;
 
   // IndexSelector is a selector used to identify cached target resources by cache key.
   // If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
   //
   // +optional
-  optional IndexSelector indexSelector = 3;
+  optional IndexSelector indexSelector = 4;
 }
 
 // GitCommit describes a specific commit from a specific Git repository.

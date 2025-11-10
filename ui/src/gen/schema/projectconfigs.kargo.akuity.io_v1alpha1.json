@@ -303,6 +303,10 @@
                                 },
                                 "type": "object",
                                 "x-kubernetes-map-type": "atomic"
+                              },
+                              "name": {
+                                "description": "Name is the name of the target resource.",
+                                "type": "string"
                               }
                             },
                             "required": [

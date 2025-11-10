@@ -51,7 +51,7 @@ func refreshTargets(
 				continue
 			}
 
-			// TODO(Faris): get by resource name if provided
+			// TODO(Faris): get by resource name if provided			
 
 			var whList kargoapi.WarehouseList
 			if err := c.List(ctx, &whList, listOpts...); err != nil {
