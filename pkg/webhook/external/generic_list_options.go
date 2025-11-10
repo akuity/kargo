@@ -36,6 +36,11 @@ func buildListOptionsForTarget(
 		}
 		listOpts = append(listOpts, labelSelectorListOpts...)
 	}
+	if len(listOpts) == 1 {
+		listOpts = append(listOpts, client.MatchingLabelsSelector{
+			Selector: labels.Everything(),
+		})
+	}
 	return listOpts, nil
 }
 

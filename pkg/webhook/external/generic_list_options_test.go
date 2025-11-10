@@ -24,14 +24,18 @@ func Test_buildListOptionsTarget(t *testing.T) {
 		err      error
 	}{
 		{
-			name:    "no selectors",
+			name:    "no selectors defined",
 			project: "demo-project",
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 			},
 			env: map[string]any{},
 			expected: []client.ListOption{
+				// only the default selectors should be present
 				client.InNamespace("demo-project"),
+				client.MatchingLabelsSelector{
+					Selector: labels.Everything(),
+				},
 			},
 			err: nil,
 		},

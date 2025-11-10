@@ -56,7 +56,7 @@ func TestHandleRefreshAction(t *testing.T) {
 			},
 		},
 		{
-			name: "list warehouses with complex mixed index and label selector combo",
+			name: "full success refreshing warehouses with complex mixed index and label selector combo",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
 				WithIndex(
 					&kargoapi.Warehouse{},
@@ -162,6 +162,7 @@ func TestHandleRefreshAction(t *testing.T) {
 						}},
 					},
 				},
+				// this one will fail to refresh per the interceptor logic below
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test-namespace",
@@ -213,6 +214,96 @@ func TestHandleRefreshAction(t *testing.T) {
 				secondResult := results[0].RefreshResults[1]
 				require.NotEmpty(t, secondResult.Failure)
 				require.Contains(t, secondResult.Failure, "test-namespace/frontend-warehouse")
+			},
+		},
+		{
+			name: "successful refresh using static name only",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// does not have the specified name
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-namespace",
+						Name:      "frontend-warehouse",
+					},
+				},
+				// has the specified name
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-namespace",
+						Name:      "backend-warehouse",
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			targets: []kargoapi.GenericWebhookTarget{{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				Name: "backend-warehouse",
+			}},
+			assertions: func(t *testing.T, results []targetResult) {
+				require.Len(t, results, 1)
+				require.Len(t, results[0].RefreshResults, 1)
+				firstWhResult := results[0].RefreshResults[0]
+				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
+			},
+		},
+		{
+			name: "successful refresh using static name with label selector",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this warehouse satisfies the label selector
+				// but does not have the specified name
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-namespace",
+						Name:      "frontend-warehouse",
+						Labels:    map[string]string{"tier": "frontend"},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/example/frontend-repo.git",
+							},
+						}},
+					},
+				},
+				// this warehouse has the specified name and satisfies the label selector
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-namespace",
+						Name:      "backend-warehouse",
+						Labels:    map[string]string{"tier": "backend"},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://github.com/example/backend-repo.git",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			targets: []kargoapi.GenericWebhookTarget{{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				Name: "backend-warehouse",
+				LabelSelector: metav1.LabelSelector{
+					MatchExpressions: []metav1.LabelSelectorRequirement{{
+						Key:      "tier",
+						Operator: metav1.LabelSelectorOpIn,
+						Values:   []string{"frontend", "backend"},
+					}},
+				},
+			}},
+			assertions: func(t *testing.T, results []targetResult) {
+				require.Len(t, results, 1)
+				require.Len(t, results[0].RefreshResults, 1)
+				firstWhResult := results[0].RefreshResults[0]
+				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 			},
 		},
 		{

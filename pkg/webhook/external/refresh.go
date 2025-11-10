@@ -51,8 +51,6 @@ func refreshTargets(
 				continue
 			}
 
-			// TODO(Faris): get by resource name if provided			
-
 			var whList kargoapi.WarehouseList
 			if err := c.List(ctx, &whList, listOpts...); err != nil {
 				tLogger.Error(err, "error listing warehouse targets")
@@ -62,21 +60,28 @@ func refreshTargets(
 
 			tLogger.Info("found Warehouses to refresh", "count", len(whList.Items))
 
-			targetResults[i].RefreshResults = make([]refreshResult, len(whList.Items))
-			for j, wh := range whList.Items {
+			var refreshResults []refreshResult
+			for _, wh := range whList.Items {
 				whKey := client.ObjectKeyFromObject(&wh)
 				whLogger := tLogger.WithValues(
 					"namespace", whKey.Namespace,
 					"name", whKey.Name,
 				)
+				if target.Name != "" && whKey.Name != target.Name {
+					whLogger.Debug("skipping warehouse due to name mismatch")
+					continue
+				}
+				var rr refreshResult
 				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
 					whLogger.Error(err, "error refreshing")
-					targetResults[i].RefreshResults[j].Failure = whKey.String()
+					rr.Failure = whKey.String()
 				} else {
 					whLogger.Debug("successfully refreshed Warehouse")
-					targetResults[i].RefreshResults[j].Success = whKey.String()
+					rr.Success = whKey.String()
 				}
+				refreshResults = append(refreshResults, rr)
 			}
+			targetResults[i].RefreshResults = refreshResults
 		default:
 			targetResults[i].ListError = fmt.Errorf("skipped listing of unsupported target type: %q", target.Kind)
 		}
