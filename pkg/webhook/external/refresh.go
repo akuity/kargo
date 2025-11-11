@@ -154,7 +154,7 @@ func shouldRefresh(
 			}
 			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
-			selector, err := image.NewSelector(*s.Image, nil)
+			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
 					s.Image.RepoURL, err,

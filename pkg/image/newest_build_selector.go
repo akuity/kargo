@@ -12,13 +12,12 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.ImageSelectionStrategyNewestBuild,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.ImageSubscription) bool {
-				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategyNewestBuild
+			Predicate: func(_ context.Context, sub kargoapi.ImageSubscription) (bool, error) {
+				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategyNewestBuild, nil
 			},
-			factory: newNewestBuildSelector,
+			Value: newNewestBuildSelector,
 		},
 	)
 }

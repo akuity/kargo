@@ -24,6 +24,7 @@ type (
 		*git.RepoCredentials,
 	) (Selector, error)
 
+	// selectorRegistration associates a selectorPredicate with a selectorFactory.
 	selectorRegistration = component.PredicateBasedRegistration[
 		kargoapi.GitSubscription, // Arg to the predicate function
 		selectorPredicate,        // Predicate function
@@ -32,7 +33,6 @@ type (
 	]
 )
 
-// selectorRegistration associates a selectorPredicate with a selectorFactory.
 var defaultSelectorRegistry = component.MustNewPredicateBasedRegistry[
 	kargoapi.GitSubscription,
 	selectorPredicate,
