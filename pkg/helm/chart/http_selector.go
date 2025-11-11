@@ -12,6 +12,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/helm"
+	libSemver "github.com/akuity/kargo/pkg/controller/semver"
 )
 
 // httpSelector is an implementation of Selector that interacts with classic
@@ -87,8 +88,12 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 	}
 	semvers := make(semver.Collection, 0, len(entries))
 	for _, entry := range entries {
-		sv, err := semver.NewVersion(entry.Version)
-		if err == nil {
+		if sv := libSemver.Parse(entry.Version, h.strictSemvers); sv != nil {
+			// When strictSemvers is enabled, also filter out versions with
+			// pre-release or build metadata
+			if h.strictSemvers && (sv.Prerelease() != "" || sv.Metadata() != "") {
+				continue
+			}
 			semvers = append(semvers, sv)
 		}
 	}

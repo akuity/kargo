@@ -8,6 +8,7 @@ import (
 	"github.com/Masterminds/semver/v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libSemver "github.com/akuity/kargo/pkg/controller/semver"
 )
 
 // baseSelector is a base implementation of Selector that provides common
@@ -17,6 +18,7 @@ type baseSelector struct {
 	repoURL        string
 	constraint     *semver.Constraints
 	discoveryLimit int
+	strictSemvers  bool
 }
 
 func newBaseSelector(
@@ -25,6 +27,7 @@ func newBaseSelector(
 	s := &baseSelector{
 		repoURL:        sub.RepoURL,
 		discoveryLimit: int(sub.DiscoveryLimit),
+		strictSemvers:  sub.StrictSemvers,
 	}
 	if sub.SemverConstraint != "" {
 		var err error
@@ -40,8 +43,16 @@ func newBaseSelector(
 
 // MatchesVersion implements Selector.
 func (b *baseSelector) MatchesVersion(version string) bool {
-	sv, err := semver.NewVersion(version)
-	return err == nil && b.matchesSemver(sv)
+	sv := libSemver.Parse(version, b.strictSemvers)
+	if sv == nil {
+		return false
+	}
+	// When strictSemvers is enabled, also filter out versions with
+	// pre-release or build metadata
+	if b.strictSemvers && (sv.Prerelease() != "" || sv.Metadata() != "") {
+		return false
+	}
+	return b.matchesSemver(sv)
 }
 
 func (b *baseSelector) matchesSemver(sv *semver.Version) bool {

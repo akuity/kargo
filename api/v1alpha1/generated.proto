@@ -290,6 +290,15 @@ message ChartSubscription {
   // +kubebuilder:validation:Optional
   optional string semverConstraint = 3;
 
+  // StrictSemvers specifies whether only "strict" semver versions should be
+  // considered. A "strict" semver version is one containing ALL of major, minor,
+  // and patch version components, and no pre-release or build metadata. This is
+  // enabled by default. When enabled, versions like "v1.2.0-07a8aad8bb" will be
+  // excluded, while "v1.2.0" will be included.
+  //
+  // +kubebuilder:default=true
+  optional bool strictSemvers = 5;
+
   // DiscoveryLimit is an optional limit on the number of chart versions that
   // can be discovered for this subscription. The limit is applied after
   // filtering charts based on the SemverConstraint field.

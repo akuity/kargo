@@ -90,6 +90,17 @@ func Test_httpSelector_Select(t *testing.T) {
     - version: 1.2.0
 `))
 					require.NoError(t, err)
+				case "/strict-repo/index.yaml":
+					w.WriteHeader(http.StatusOK)
+					_, err := w.Write([]byte(`entries:
+  fake-chart:
+    - version: 1.0.0
+    - version: 1.1.0
+    - version: 1.2.0
+    - version: 1.2.0-07a8aad8bb
+    - version: 1.3.0-alpha.1
+`))
+					require.NoError(t, err)
 				default:
 					w.WriteHeader(http.StatusNotFound)
 				}
@@ -98,10 +109,11 @@ func Test_httpSelector_Select(t *testing.T) {
 	)
 	defer testServer.Close()
 	testCases := []struct {
-		name       string
-		repoURL    string
-		chart      string
-		assertions func(t *testing.T, versions []string, err error)
+		name          string
+		repoURL       string
+		chart         string
+		strictSemvers bool
+		assertions    func(t *testing.T, versions []string, err error)
 	}{
 		{
 			name:    "request for repo index returns non-200 status",
@@ -136,11 +148,39 @@ func Test_httpSelector_Select(t *testing.T) {
 				require.Equal(t, []string{"1.2.0", "1.1.0", "1.0.0"}, versions)
 			},
 		},
+		{
+			name:          "strictSemvers enabled filters pre-release versions",
+			repoURL:       fmt.Sprintf("%s/strict-repo", testServer.URL),
+			chart:         "fake-chart",
+			strictSemvers: true,
+			assertions: func(t *testing.T, versions []string, err error) {
+				require.NoError(t, err)
+				// Should only include strict semver versions, excluding pre-release and build metadata
+				require.Equal(t, []string{"1.2.0", "1.1.0", "1.0.0"}, versions)
+				require.NotContains(t, versions, "1.2.0-07a8aad8bb")
+				require.NotContains(t, versions, "1.3.0-alpha.1")
+			},
+		},
+		{
+			name:          "strictSemvers disabled includes pre-release versions",
+			repoURL:       fmt.Sprintf("%s/strict-repo", testServer.URL),
+			chart:         "fake-chart",
+			strictSemvers: false,
+			assertions: func(t *testing.T, versions []string, err error) {
+				require.NoError(t, err)
+				// Should include all versions including pre-release
+				require.Contains(t, versions, "1.2.0-07a8aad8bb")
+				require.Contains(t, versions, "1.3.0-alpha.1")
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			s := &httpSelector{
-				baseSelector: &baseSelector{repoURL: testCase.repoURL},
+				baseSelector: &baseSelector{
+					repoURL:       testCase.repoURL,
+					strictSemvers: testCase.strictSemvers,
+				},
 				indexURL: fmt.Sprintf(
 					"%s/index.yaml",
 					strings.TrimSuffix(testCase.repoURL, "/"),

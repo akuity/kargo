@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/helm"
+	libSemver "github.com/akuity/kargo/pkg/controller/semver"
 )
 
 // ociSelector is an implementation of Selector that interacts with OCI Helm
@@ -63,7 +64,13 @@ func (o *ociSelector) Select(ctx context.Context) ([]string, error) {
 			// OCI artifact tags are not allowed to contain the "+" character, which is
 			// used by SemVer to separate the version from the build metadata. To work
 			// around this, Helm uses "_" instead of "+".
-			if sv, err := semver.StrictNewVersion(strings.ReplaceAll(tag, "_", "+")); err == nil {
+			normalizedTag := strings.ReplaceAll(tag, "_", "+")
+			if sv := libSemver.Parse(normalizedTag, o.strictSemvers); sv != nil {
+				// When strictSemvers is enabled, also filter out versions with
+				// pre-release or build metadata
+				if o.strictSemvers && (sv.Prerelease() != "" || sv.Metadata() != "") {
+					continue
+				}
 				semvers = append(semvers, sv)
 			}
 		}
