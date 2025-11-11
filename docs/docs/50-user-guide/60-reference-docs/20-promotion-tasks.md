@@ -116,7 +116,7 @@ spec:
 
 The `steps` section in a Promotion Task defines the sequence of actions to
 perform when the task is used. Each step can reference a
-[built-in promotion step](./promotion-steps) using the `uses` key:
+[built-in promotion step](30-promotion-steps/index.md) using the `uses` key:
 
 ```yaml
 steps:
