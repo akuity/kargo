@@ -124,7 +124,7 @@ steps:
 
 :::info
 For a list of built-in promotion steps and configuration options, see the
-[Promotion Steps Reference](./promotion-steps).
+[Promotion Steps Reference](30-promotion-steps/index.md).
 :::
 
 #### Promotion Task Steps
@@ -204,14 +204,14 @@ steps:
 ```
 
 The configuration options available for a step are specific to the step itself
-and are documented in the [Promotion Steps Reference](./promotion-steps).
+and are documented in the [Promotion Steps Reference](30-promotion-steps/index.md).
 
 #### Step Outputs
 
 A promotion step may produce output that can be referenced by subsequent steps,
 allowing the output of one step to be used as input to another. The output of a
 step is defined by the step itself and is typically documented in the step's
-[reference documentation](./promotion-steps).
+[reference documentation](30-promotion-steps/index.md).
 
 ```yaml
 steps:

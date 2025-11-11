@@ -9,7 +9,7 @@ Kargo using Argo CD.
 :::note
 This section assumes that you have already installed any dependencies or
 prerequisites required for running Kargo on a Kubernetes cluster. Please refer
-to [Basic Installation](../../operator-guide/basic-installation#prerequisites)
+to [Basic Installation](../10-basic-installation.md#prerequisites)
 for more details.
 :::
 
@@ -42,8 +42,8 @@ echo "Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32)"
 ```
 
 :::note
-Methods of securing the admin account are explored in greater detail
-[here](../40-security/10-secure-configuration.md#securing-the-admin-account).
+Methods of securing the admin account are explored in greater detail in
+[Secure Configuration — Securing the admin account](../40-security/10-secure-configuration.md#securing-the-admin-account).
 :::
 
 ## `spec.source.helm.parameters`

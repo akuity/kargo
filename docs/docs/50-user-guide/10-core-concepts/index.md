@@ -105,4 +105,4 @@ project using standard Kubernetes RBAC.
 ## What next?
 
 For more technical coverage of the concepts presented here, please refer to the
-corresponding [How-to Guides](../how-to-guides).
+corresponding [How-to Guides](/user-guide/how-to-guides).
