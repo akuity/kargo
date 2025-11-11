@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -91,11 +92,15 @@ func NewReceiver(
 ) (WebhookReceiver, error) {
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
-	receiverFactory, err := registry.getReceiverFactory(cfg)
+	reg, found, err := defaultWebhookReceiverRegistry.Get(ctx, cfg)
+	if !found { // This shouldn't happen
+		return nil, errors.New("found no suitable webhook receiver")
+	}
 	if err != nil {
 		return nil, err
 	}
-	receiver := receiverFactory(c, project, cfg)
+	factory := reg.Value
+	receiver := factory(c, project, cfg)
 	secretName := receiver.getSecretName()
 	secret := &corev1.Secret{}
 	if err = c.Get(

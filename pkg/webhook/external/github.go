@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -38,13 +39,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		github,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.GitHub != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.GitHub != nil, nil
 			},
-			factory: newGitHubWebhookReceiver,
+			Value: newGitHubWebhookReceiver,
 		},
 	)
 }

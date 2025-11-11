@@ -32,11 +32,7 @@ func TestNewReceiver(t *testing.T) {
 		{
 			name: "no configuration for a known receiver type",
 			assertions: func(t *testing.T, _ WebhookReceiver, err error) {
-				require.EqualError(
-					t,
-					err,
-					"WebhookReceiverConfig has no configuration for a known receiver type",
-				)
+				require.EqualError(t, err, "found no suitable webhook receiver")
 			},
 		},
 		{
