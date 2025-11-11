@@ -42,8 +42,8 @@ echo "Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32)"
 ```
 
 :::note
-Methods of securing the admin account are explored in greater detail in
-[Secure Configuration — Securing the admin account](../40-security/10-secure-configuration.md#securing-the-admin-account).
+Methods of securing the admin account are explored in greater detail
+[here](../40-security/10-secure-configuration.md#securing-the-admin-account).
 :::
 
 ## `spec.source.helm.parameters`
