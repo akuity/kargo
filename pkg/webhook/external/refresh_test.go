@@ -335,7 +335,12 @@ func TestShouldRefresh(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result, err := shouldRefresh(tc.wh, tc.repoURL, tc.qualifiers...)
+			result, err := shouldRefresh(
+				t.Context(),
+				tc.wh,
+				tc.repoURL,
+				tc.qualifiers...,
+			)
 			require.NoError(t, err)
 			require.Equal(t, tc.expect, result)
 		})
