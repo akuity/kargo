@@ -104,8 +104,25 @@ function main() {
     --proto-import="${tmp_dir}/vendor" \
     --output-dir="${tmp_dir}/src"
 
+  { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
+  find "$build_src_dir/api" \( \
+    -name '*.proto' -o \
+    -name '*.pb.go' \
+  \) -type f | while read -r file; do
+    rel_path="${file#"$build_src_dir"/}"
+    dest_file="$proj_dir/$rel_path"
+    dest_dir=$(dirname "$dest_file")
+    mkdir -p "$dest_dir"
+    cp "$file" "$dest_file"
+  done
 
-{ msg "Generating API docs"; } 2> /dev/null
+  # At this point, .proto and .pb.go files generated from Kubebuilder structs
+  # are all where they belong.
+
+  { msg "Returning to the project root..."; } 2> /dev/null
+  cd "${proj_dir}"
+
+  { msg "Generating API docs"; } 2> /dev/null
 
 # Protoc-gen-doc plugin is used to generate API documentation.
 # Kube and Kargo API definitions are consolidated into a single directory
@@ -139,24 +156,6 @@ protoc -I $temp_doc_dir \
   { msg "Cleaning up temporary API docs directory..."; } 2> /dev/null
 
   rm -rf $temp_doc_dir
-
-  { msg "Copying generated .proto and .pb.go files back to the project root..."; } 2> /dev/null
-  find "$build_src_dir/api" \( \
-    -name '*.proto' -o \
-    -name '*.pb.go' \
-  \) -type f | while read -r file; do
-    rel_path="${file#"$build_src_dir"/}"
-    dest_file="$proj_dir/$rel_path"
-    dest_dir=$(dirname "$dest_file")
-    mkdir -p "$dest_dir"
-    cp "$file" "$dest_file"
-  done
-
-  # At this point, .proto and .pb.go files generated from Kubebuilder structs
-  # are all where they belong.
-
-  { msg "Returning to the project root..."; } 2> /dev/null
-  cd "${proj_dir}"
 
   # Next, we'll use buf to generate Go and TypeScript bindings from the .proto
   # files.
