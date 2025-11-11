@@ -18,9 +18,11 @@ import (
 const stepKindYAMLParse = "yaml-parse"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindYAMLParse,
-		promotion.StepRunnerRegistration{Factory: newYAMLParser},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindYAMLParse,
+			Value: newYAMLParser,
+		},
 	)
 }
 

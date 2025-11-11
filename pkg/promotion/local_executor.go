@@ -43,15 +43,15 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
-	registration := e.registry.GetStepRunnerRegistration(req.Step.Kind)
-	if registration == nil {
+	reg, found := e.registry.Get(req.Step.Kind)
+	if !found {
 		return StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
 		}, fmt.Errorf("no runner registered for step %q", req.Step.Kind)
 	}
 
 	capabilities := StepRunnerCapabilities{}
-	for _, capability := range registration.Metadata.RequiredCapabilities {
+	for _, capability := range reg.Metadata.RequiredCapabilities {
 		switch capability {
 		case StepCapabilityAccessControlPlane:
 			capabilities.KargoClient = e.kargoClient
@@ -62,7 +62,8 @@ func (e *LocalStepExecutor) ExecuteStep(
 		}
 	}
 
-	runner := registration.Factory(capabilities)
+	factory := reg.Value
+	runner := factory(capabilities)
 
 	func() {
 		defer func() {

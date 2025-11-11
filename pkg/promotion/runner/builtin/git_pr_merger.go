@@ -24,15 +24,15 @@ import (
 const stepKindGitMergePR = "git-merge-pr"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitMergePR,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindGitMergePR,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newGitPRMerger,
+			Value: newGitPRMerger,
 		},
 	)
 }

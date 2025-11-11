@@ -17,11 +17,11 @@ import (
 
 func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 	tests := []struct {
-		name       string
-		registry   StepRunnerRegistry
-		promoCtx   Context
-		steps      []Step
-		assertions func(*testing.T, Result)
+		name          string
+		registrations []StepRunnerRegistration
+		promoCtx      Context
+		steps         []Step
+		assertions    func(*testing.T, Result)
 	}{
 		{
 			name:  "runner not found",
@@ -377,23 +377,22 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "output propagation to task namespace",
-			registry: StepRunnerRegistry{
-				"task-level-output-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
-						return &MockStepRunner{
-							RunResult: StepResult{
-								Status: kargoapi.PromotionStepStatusSucceeded,
-								Output: map[string]any{"test": "value"},
-							},
-						}
-					},
-					Metadata: StepRunnerMetadata{
-						RequiredCapabilities: []StepRunnerCapability{
-							StepCapabilityTaskOutputPropagation,
+			registrations: []StepRunnerRegistration{{
+				Name: "task-level-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
 						},
+					}
+				},
+				Metadata: StepRunnerMetadata{
+					RequiredCapabilities: []StepRunnerCapability{
+						StepCapabilityTaskOutputPropagation,
 					},
 				},
-			},
+			}},
 			steps: []Step{{
 				Kind:  "task-level-output-step",
 				Alias: "task-1::custom-output",
@@ -422,23 +421,22 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "stand alone output composition step",
-			registry: StepRunnerRegistry{
-				"task-level-output-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
-						return &MockStepRunner{
-							RunResult: StepResult{
-								Status: kargoapi.PromotionStepStatusSucceeded,
-								Output: map[string]any{"test": "value"},
-							},
-						}
-					},
-					Metadata: StepRunnerMetadata{
-						RequiredCapabilities: []StepRunnerCapability{
-							StepCapabilityTaskOutputPropagation,
+			registrations: []StepRunnerRegistration{{
+				Name: "task-level-output-step",
+				Value: func(_ StepRunnerCapabilities) StepRunner {
+					return &MockStepRunner{
+						RunResult: StepResult{
+							Status: kargoapi.PromotionStepStatusSucceeded,
+							Output: map[string]any{"test": "value"},
 						},
+					}
+				},
+				Metadata: StepRunnerMetadata{
+					RequiredCapabilities: []StepRunnerCapability{
+						StepCapabilityTaskOutputPropagation,
 					},
 				},
-			},
+			}},
 			steps: []Step{{
 				Kind:  "task-level-output-step",
 				Alias: "custom-output",
@@ -462,9 +460,10 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		},
 		{
 			name: "panic during step execution",
-			registry: StepRunnerRegistry{
-				"success-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+			registrations: []StepRunnerRegistration{
+				{
+					Name: "success-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusSucceeded,
@@ -472,8 +471,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"panic-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				{
+					Name: "panic-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunFunc: func(_ context.Context, _ *StepContext) (StepResult, error) {
 								panic("something went wrong")
@@ -515,9 +515,10 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			t.Cleanup(cancel)
 
-			defaultSteps := StepRunnerRegistry{
-				"success-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+			registry := MustNewStepRunnerRegistry(
+				StepRunnerRegistration{
+					Name: "success-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusSucceeded,
@@ -526,8 +527,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"skipped-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				StepRunnerRegistration{
+					Name: "skipped-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusSkipped,
@@ -536,8 +538,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"running-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				StepRunnerRegistration{
+					Name: "running-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusRunning,
@@ -545,8 +548,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"error-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				StepRunnerRegistration{
+					Name: "error-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusErrored,
@@ -555,8 +559,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"terminal-error-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				StepRunnerRegistration{
+					Name: "terminal-error-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusErrored,
@@ -565,8 +570,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-				"context-waiter": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+				StepRunnerRegistration{
+					Name: "context-waiter",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunFunc: func(ctx context.Context, _ *StepContext) (StepResult, error) {
 								cancel()
@@ -576,16 +582,10 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						}
 					},
 				},
-			}
+			)
 
-			registry := StepRunnerRegistry{}
-
-			for k, v := range defaultSteps {
-				registry.Register(k, v)
-			}
-
-			for k, v := range tt.registry {
-				registry.Register(k, v)
+			for _, reg := range tt.registrations {
+				registry.MustRegister(reg)
 			}
 
 			orchestrator := NewLocalOrchestrator(

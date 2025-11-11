@@ -533,10 +533,10 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 func Test_calculateRequeueInterval(t *testing.T) {
 	testStepKindWithoutTimeout := "fake-step-without-timeout"
-	promotion.RegisterStepRunner(
-		testStepKindWithoutTimeout,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
-			Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
+			Name: testStepKindWithoutTimeout,
+			Value: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
 				return &promotion.MockStepRunner{}
 			},
 		},
@@ -544,11 +544,11 @@ func Test_calculateRequeueInterval(t *testing.T) {
 
 	testStepKindWithTimeout := "fake-step-with-timeout"
 	testTimeout := 10 * time.Minute
-	promotion.RegisterStepRunner(
-		testStepKindWithTimeout,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name:     testStepKindWithTimeout,
 			Metadata: promotion.StepRunnerMetadata{DefaultTimeout: testTimeout},
-			Factory: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
+			Value: func(promotion.StepRunnerCapabilities) promotion.StepRunner {
 				return &promotion.MockStepRunner{}
 			},
 		},

@@ -17,15 +17,15 @@ import (
 const stepKindHelmUpdateChart = "helm-update-chart"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindHelmUpdateChart,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindHelmUpdateChart,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newHelmChartUpdater,
+			Value: newHelmChartUpdater,
 		},
 	)
 }

@@ -20,9 +20,11 @@ import (
 const stepKindDelete = "delete"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindDelete,
-		promotion.StepRunnerRegistration{Factory: newFileDeleter},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindDelete,
+			Value: newFileDeleter,
+		},
 	)
 }
 

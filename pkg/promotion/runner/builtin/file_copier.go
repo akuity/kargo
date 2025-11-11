@@ -24,9 +24,11 @@ import (
 const stepKindCopy = "copy"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindCopy,
-		promotion.StepRunnerRegistration{Factory: newFileCopier},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindCopy,
+			Value: newFileCopier,
+		},
 	)
 }
 

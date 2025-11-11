@@ -706,8 +706,11 @@ func calculateRequeueInterval(
 	}
 
 	step := p.Spec.Steps[p.Status.CurrentStep]
-	registration := promotion.GetStepRunnerRegistration(step.Uses)
-	timeout := step.Retry.GetTimeout(registration.Metadata.DefaultTimeout)
+	reg, found := promotion.DefaultStepRunnerRegistry.Get(step.Uses)
+	if !found {
+		return requeueInterval
+	}
+	timeout := step.Retry.GetTimeout(reg.Metadata.DefaultTimeout)
 
 	// If the timeout is 0 (no timeout), we should requeue at the full interval.
 	if timeout == 0 {

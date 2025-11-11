@@ -23,15 +23,15 @@ import (
 const stepKindGitWaitForPR = "git-wait-for-pr"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitWaitForPR,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindGitWaitForPR,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newGitPRWaiter,
+			Value: newGitPRWaiter,
 		},
 	)
 }

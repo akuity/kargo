@@ -17,9 +17,11 @@ import (
 const stepKindYAMLUpdate = "yaml-update"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindYAMLUpdate,
-		promotion.StepRunnerRegistration{Factory: newYAMLUpdater},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindYAMLUpdate,
+			Value: newYAMLUpdater,
+		},
 	)
 }
 
