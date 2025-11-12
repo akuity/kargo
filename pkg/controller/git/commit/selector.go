@@ -31,7 +31,9 @@ func NewSelector(
 	if err != nil {
 		return nil, err
 	}
-	if !found { // This shouldn't happen
+	if !found {
+		// This shouldn't happen because the API doesn't allow opting for any
+		// selector for which for which we've not registered an implementation.
 		return nil, errors.New("no selector found for subscription")
 	}
 	factory := reg.Value

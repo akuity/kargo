@@ -93,11 +93,13 @@ func NewReceiver(
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
 	reg, found, err := defaultWebhookReceiverRegistry.Get(ctx, cfg)
-	if !found { // This shouldn't happen
-		return nil, errors.New("found no suitable webhook receiver")
-	}
 	if err != nil {
 		return nil, err
+	}
+	if !found {
+		// This shouldn't happen because the API doesn't allow defining a webhook
+		// receiver for which we've not registered an implementation.
+		return nil, errors.New("found no suitable webhook receiver")
 	}
 	factory := reg.Value
 	receiver := factory(c, project, cfg)

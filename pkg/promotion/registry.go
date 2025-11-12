@@ -20,13 +20,40 @@ type (
 	]
 )
 
+type stepRunnerRegistry struct {
+	StepRunnerRegistry
+}
+
+// Register decorates the internalRegistry's Register() method with metadata
+// defaulting.
+func (s *stepRunnerRegistry) Register(registration StepRunnerRegistration) error {
+	if registration.Metadata.DefaultErrorThreshold == 0 {
+		registration.Metadata.DefaultErrorThreshold = 1
+	}
+	return s.StepRunnerRegistry.Register(registration)
+}
+
+func (s *stepRunnerRegistry) MustRegister(registration StepRunnerRegistration) {
+	if err := s.Register(registration); err != nil {
+		panic(err)
+	}
+}
+
+// MustNewStepRunnerRegistry overrides the internalRegistry's MustRegister()
+// method to call the implementation-specific Register() method.
 func MustNewStepRunnerRegistry(
 	registrations ...StepRunnerRegistration,
 ) StepRunnerRegistry {
-	return component.MustNewNameBasedRegistry(
-		&component.NameBasedRegistryOptions{AllowOverwriting: true},
-		registrations...,
-	)
+	r := &stepRunnerRegistry{
+		StepRunnerRegistry: component.MustNewNameBasedRegistry(
+			&component.NameBasedRegistryOptions{AllowOverwriting: true},
+			registrations...,
+		),
+	}
+	for _, reg := range registrations {
+		r.MustRegister(reg)
+	}
+	return r
 }
 
 var DefaultStepRunnerRegistry = MustNewStepRunnerRegistry()
