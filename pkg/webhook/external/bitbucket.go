@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -36,13 +37,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		bitbucket,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Bitbucket != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Bitbucket != nil, nil
 			},
-			factory: newBitbucketWebhookReceiver,
+			Value: newBitbucketWebhookReceiver,
 		},
 	)
 }

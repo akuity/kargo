@@ -18,14 +18,13 @@ import (
 const branchPrefix = "refs/heads/"
 
 func init() {
-	selectorReg.register(
-		kargoapi.CommitSelectionStrategyNewestFromBranch,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.GitSubscription) bool {
+			Predicate: func(_ context.Context, sub kargoapi.GitSubscription) (bool, error) {
 				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestFromBranch ||
-					sub.CommitSelectionStrategy == ""
+					sub.CommitSelectionStrategy == "", nil
 			},
-			factory: newNewestFromBranchSelector,
+			Value: newNewestFromBranchSelector,
 		},
 	)
 }

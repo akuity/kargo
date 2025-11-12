@@ -21,9 +21,11 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitCommit,
-		promotion.StepRunnerRegistration{Factory: newGitCommitter},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindGitCommit,
+			Value: newGitCommitter,
+		},
 	)
 }
 

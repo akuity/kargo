@@ -29,13 +29,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		azure,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Azure != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Azure != nil, nil
 			},
-			factory: newAzureWebhookReceiver,
+			Value: newAzureWebhookReceiver,
 		},
 	)
 }

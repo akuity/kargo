@@ -25,9 +25,11 @@ import (
 const stepKindKustomizeBuild = "kustomize-build"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindKustomizeBuild,
-		promotion.StepRunnerRegistration{Factory: newKustomizeBuilder},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindKustomizeBuild,
+			Value: newKustomizeBuilder,
+		},
 	)
 }
 

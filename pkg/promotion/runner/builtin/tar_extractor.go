@@ -46,9 +46,11 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindUntar,
-		promotion.StepRunnerRegistration{Factory: newTarExtractor},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindUntar,
+			Value: newTarExtractor,
+		},
 	)
 }
 

@@ -10,13 +10,12 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.ImageSelectionStrategyLexical,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.ImageSubscription) bool {
-				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategyLexical
+			Predicate: func(_ context.Context, sub kargoapi.ImageSubscription) (bool, error) {
+				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategyLexical, nil
 			},
-			factory: newLexicalSelector,
+			Value: newLexicalSelector,
 		},
 	)
 }

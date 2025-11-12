@@ -34,15 +34,15 @@ import (
 const stepKindHelmTemplate = "helm-template"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindHelmTemplate,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindHelmTemplate,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newHelmTemplateRunner,
+			Value: newHelmTemplateRunner,
 		},
 	)
 }

@@ -33,15 +33,15 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitPush,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindGitPush,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newGitPusher,
+			Value: newGitPusher,
 		},
 	)
 }

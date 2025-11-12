@@ -18,9 +18,11 @@ import (
 const stepKindJSONParse = "json-parse"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindJSONParse,
-		promotion.StepRunnerRegistration{Factory: newJSONParser},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindJSONParse,
+			Value: newJSONParser,
+		},
 	)
 }
 

@@ -15,13 +15,12 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.CommitSelectionStrategySemVer,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.GitSubscription) bool {
-				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategySemVer
+			Predicate: func(_ context.Context, sub kargoapi.GitSubscription) (bool, error) {
+				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategySemVer, nil
 			},
-			factory: newSemverSelector,
+			Value: newSemverSelector,
 		},
 	)
 }

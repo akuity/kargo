@@ -10,13 +10,12 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.CommitSelectionStrategyNewestTag,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.GitSubscription) bool {
-				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestTag
+			Predicate: func(_ context.Context, sub kargoapi.GitSubscription) (bool, error) {
+				return sub.CommitSelectionStrategy == kargoapi.CommitSelectionStrategyNewestTag, nil
 			},
-			factory: newNewestTagSelector,
+			Value: newNewestTagSelector,
 		},
 	)
 }

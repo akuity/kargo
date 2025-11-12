@@ -34,15 +34,15 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindKustomizeSetImage,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindKustomizeSetImage,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessControlPlane,
 				},
 			},
-			Factory: newKustomizeImageSetter,
+			Value: newKustomizeImageSetter,
 		},
 	)
 }

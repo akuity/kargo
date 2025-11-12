@@ -48,7 +48,7 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		selector, err := image.NewSelector(sub, regCreds)
+		selector, err := image.NewSelector(ctx, sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining selector for image %q: %w",

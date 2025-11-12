@@ -14,14 +14,13 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.ImageSelectionStrategySemVer,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.ImageSubscription) bool {
+			Predicate: func(_ context.Context, sub kargoapi.ImageSubscription) (bool, error) {
 				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer ||
-					sub.ImageSelectionStrategy == ""
+					sub.ImageSelectionStrategy == "", nil
 			},
-			factory: newSemverSelector,
+			Value: newSemverSelector,
 		},
 	)
 }

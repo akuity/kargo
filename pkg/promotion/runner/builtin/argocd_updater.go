@@ -34,16 +34,16 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindArgoCDUpdate,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindArgoCDUpdate,
 			Metadata: promotion.StepRunnerMetadata{
 				DefaultTimeout: 5 * time.Minute,
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessArgoCD,
 				},
 			},
-			Factory: newArgocdUpdater,
+			Value: newArgocdUpdater,
 		},
 	)
 }

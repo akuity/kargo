@@ -9,17 +9,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
 func TestNewLocalStepExecutor(t *testing.T) {
-	registry := StepRunnerRegistry{
-		"fake-step": StepRunnerRegistration{
-			Factory: func(_ StepRunnerCapabilities) StepRunner {
+	registry := MustNewStepRunnerRegistry(
+		StepRunnerRegistration{
+			Name: "fake-step",
+			Value: func(_ StepRunnerCapabilities) StepRunner {
 				return &MockStepRunner{}
 			},
 		},
-	}
+	)
 
 	kargoClient := fake.NewClientBuilder().Build()
 	argoCDClient := fake.NewClientBuilder().Build()
@@ -49,7 +51,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 	}{
 		{
 			name:     "no runner registered for step kind",
-			registry: StepRunnerRegistry{},
+			registry: MustNewStepRunnerRegistry(),
 			request: StepExecutionRequest{
 				Context: StepContext{},
 				Step: Step{
@@ -57,17 +59,19 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, result StepResult, err error) {
+				require.Error(t, err)
+				require.True(t, component.IsNotFoundError(err))
 				require.Equal(t, StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, result)
-				require.ErrorContains(t, err, `no runner registered for step "unknown-step"`)
 			},
 		},
 		{
 			name: "successful step execution",
-			registry: StepRunnerRegistry{
-				"test-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+			registry: MustNewStepRunnerRegistry(
+				StepRunnerRegistration{
+					Name: "test-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusSucceeded,
@@ -75,7 +79,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 						}
 					},
 				},
-			},
+			),
 			request: StepExecutionRequest{
 				Context: StepContext{},
 				Step: Step{
@@ -91,9 +95,10 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 		},
 		{
 			name: "step execution returns error",
-			registry: StepRunnerRegistry{
-				"test-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+			registry: MustNewStepRunnerRegistry(
+				StepRunnerRegistration{
+					Name: "test-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusErrored,
@@ -102,7 +107,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 						}
 					},
 				},
-			},
+			),
 			request: StepExecutionRequest{
 				Context: StepContext{},
 				Step: Step{
@@ -118,9 +123,10 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 		},
 		{
 			name: "step execution panics",
-			registry: StepRunnerRegistry{
-				"test-step": StepRunnerRegistration{
-					Factory: func(_ StepRunnerCapabilities) StepRunner {
+			registry: MustNewStepRunnerRegistry(
+				StepRunnerRegistration{
+					Name: "test-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunFunc: func(context.Context, *StepContext) (StepResult, error) {
 								panic("step runner panicked")
@@ -128,7 +134,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 						}
 					},
 				},
-			},
+			),
 			request: StepExecutionRequest{
 				Context: StepContext{},
 				Step: Step{
@@ -149,13 +155,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			registry := StepRunnerRegistry{}
-
-			for k, v := range tt.registry {
-				registry.Register(k, v)
-			}
-
-			executor := NewLocalStepExecutor(registry, nil, nil, nil)
+			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil)
 			result, err := executor.ExecuteStep(context.Background(), tt.request)
 			tt.assertions(t, result, err)
 		})

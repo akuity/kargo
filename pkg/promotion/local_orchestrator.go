@@ -106,17 +106,17 @@ func (o *LocalOrchestrator) ExecuteSteps(
 			continue
 		}
 
-		// Get the registration for the step (for validation purposes).
+		// Get the reg for the step (for validation purposes).
 		//
 		// NOTE(hidde): We primarily do this to ensure we do not mark the step
 		// as started if we cannot find a runner for it. In the future, we
 		// should consider validating the steps existence during the creation
 		// of the Promotion, or e.g. work with a typed within the executor to
 		// identify the lack of a registered runner.
-		registration := o.registry.GetStepRunnerRegistration(step.Kind)
-		if registration == nil {
+		reg, err := o.registry.Get(step.Kind)
+		if err != nil {
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-				"no promotion step runner found for kind %q", step.Kind,
+				"error getting runner for step kind %q", step.Kind,
 			)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.
@@ -146,7 +146,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		})
 
 		// Propagate the step output to the state.
-		o.propagateStepOutput(promoCtx, step, registration.Metadata, result)
+		o.propagateStepOutput(promoCtx, step, reg.Metadata, result)
 
 		// Confirm the step has a valid status.
 		if !result.Status.Valid() {
@@ -160,7 +160,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		err = o.reconcileResultWithMetadata(promoCtx, step, result, err)
 
 		// Determine the completion of the step based on the metadata.
-		if !o.determineStepCompletion(promoCtx, step, registration.Metadata, err) {
+		if !o.determineStepCompletion(promoCtx, step, reg.Metadata, err) {
 			// The step is still running, so we need to wait
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,

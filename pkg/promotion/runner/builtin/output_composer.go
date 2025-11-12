@@ -14,15 +14,15 @@ import (
 const stepKindComposeOutput = "compose-output"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindComposeOutput,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindComposeOutput,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityTaskOutputPropagation,
 				},
 			},
-			Factory: newOutputComposer,
+			Value: newOutputComposer,
 		},
 	)
 }

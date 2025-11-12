@@ -18,9 +18,11 @@ import (
 const stepKindYAMLMerge = "yaml-merge"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindYAMLMerge,
-		promotion.StepRunnerRegistration{Factory: newYAMLMerger},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindYAMLMerge,
+			Value: newYAMLMerger,
+		},
 	)
 }
 

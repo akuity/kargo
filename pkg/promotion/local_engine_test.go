@@ -72,11 +72,10 @@ func TestSimpleEngine_Promote(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			testRegistry := StepRunnerRegistry{}
-			testRegistry.Register(
-				"success-step",
+			testRegistry := MustNewStepRunnerRegistry(
 				StepRunnerRegistration{
-					Factory: func(StepRunnerCapabilities) StepRunner {
+					Name: "success-step",
+					Value: func(StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusSucceeded,
@@ -84,11 +83,9 @@ func TestSimpleEngine_Promote(t *testing.T) {
 						}
 					},
 				},
-			)
-			testRegistry.Register(
-				"error-step",
 				StepRunnerRegistration{
-					Factory: func(StepRunnerCapabilities) StepRunner {
+					Name: "error-step",
+					Value: func(StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunResult: StepResult{
 								Status: kargoapi.PromotionStepStatusErrored,
@@ -97,11 +94,9 @@ func TestSimpleEngine_Promote(t *testing.T) {
 						}
 					},
 				},
-			)
-			testRegistry.Register(
-				"context-waiter",
 				StepRunnerRegistration{
-					Factory: func(StepRunnerCapabilities) StepRunner {
+					Name: "context-waiter",
+					Value: func(StepRunnerCapabilities) StepRunner {
 						return &MockStepRunner{
 							RunFunc: func(
 								ctx context.Context,

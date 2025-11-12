@@ -79,7 +79,7 @@ func refreshWarehouses(
 				continue
 			}
 			if len(qualifiers) > 0 {
-				shouldRefresh, err := shouldRefresh(wh, repoURL, qualifiers...)
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -136,12 +136,17 @@ func refreshWarehouses(
 	)
 }
 
-func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) (bool, error) {
+func shouldRefresh(
+	ctx context.Context,
+	wh kargoapi.Warehouse,
+	repoURL string,
+	qualifiers ...string,
+) (bool, error) {
 	var shouldRefresh bool
 	for _, s := range wh.Spec.Subscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
-			selector, err := commit.NewSelector(*s.Git, nil)
+			selector, err := commit.NewSelector(ctx, *s.Git, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
 					s.Git.RepoURL, err,
@@ -149,7 +154,7 @@ func shouldRefresh(wh kargoapi.Warehouse, repoURL string, qualifiers ...string) 
 			}
 			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
-			selector, err := image.NewSelector(*s.Image, nil)
+			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating image selector for Image subscription %q: %w",
 					s.Image.RepoURL, err,

@@ -28,6 +28,7 @@ func TestSelectImageGHCR(t *testing.T) {
 	t.Run("digest strategy", func(t *testing.T) {
 		const constraint = "v0.1.0"
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -51,6 +52,7 @@ func TestSelectImageGHCR(t *testing.T) {
 	t.Run("digest strategy with platform constraint", func(t *testing.T) {
 		const constraint = "v0.1.0"
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -74,6 +76,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("lexical strategy", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -94,6 +97,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("lexical strategy with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -115,6 +119,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("newest build strategy", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -137,6 +142,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("newest build strategy with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -160,6 +166,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("semver strategy", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -185,6 +192,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("semver strategy with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -215,6 +223,7 @@ func TestSelectImageGHCR(t *testing.T) {
 		// references to avoid parsing errors.
 		const tag = "unknown"
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                "ghcr.io/akuity/kargo-test",
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -237,6 +246,7 @@ func TestSelectImageGHCR(t *testing.T) {
 
 	t.Run("nothing found", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                kargoRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
