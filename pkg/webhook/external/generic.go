@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,13 +24,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		generic,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Generic != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Generic != nil, nil
 			},
-			factory: newGenericWebhookReceiver,
+			Value: newGenericWebhookReceiver,
 		},
 	)
 }
