@@ -20,6 +20,7 @@ type baseSelector struct {
 func newBaseSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
+	useCachedTags bool,
 ) (*baseSelector, error) {
 	var err error
 	s := &baseSelector{}
@@ -36,6 +37,7 @@ func newBaseSelector(
 		repoURL,
 		sub.InsecureSkipTLSVerify,
 		creds,
+		useCachedTags,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error creating repository client for image %q: %w",
@@ -62,7 +64,7 @@ func (b *baseSelector) getLoggerContext() []any {
 // selector's discovery limit, the slice returned will be truncated so as not to
 // exceed that limit.
 func (b *baseSelector) imagesToAPIImages(
-	images []image,
+	images []Image,
 	limit int,
 ) []kargoapi.DiscoveredImageReference {
 	if limit <= 0 || limit > len(images) {
