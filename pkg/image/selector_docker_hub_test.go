@@ -1,5 +1,4 @@
 //go:build dockerhub
-// +build dockerhub
 
 package image
 
@@ -33,6 +32,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -50,6 +50,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy success", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -73,6 +74,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -91,6 +93,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("digest strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
@@ -114,6 +117,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -131,6 +135,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy success", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -153,6 +158,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -175,6 +181,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("lexical strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
@@ -198,6 +205,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -215,6 +223,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy success", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -237,6 +246,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -255,6 +265,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("newest build strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
@@ -278,6 +289,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy miss", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -295,6 +307,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy success", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -321,6 +334,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy miss with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -339,6 +353,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	t.Run("semver strategy success with platform constraint", func(t *testing.T) {
 		s, err := NewSelector(
+			t.Context(),
 			kargoapi.ImageSubscription{
 				RepoURL:                debianRepo,
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,

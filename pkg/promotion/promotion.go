@@ -128,26 +128,36 @@ func WithActor(actor string) ContextOption {
 }
 
 // NewContext creates a new Context for a user-defined promotion process
-// executed by the Engine. It initializes the Context with the provided
-// Promotion, Stage, and TargetFreightRef, and applies any additional options
-// provided.
+// executed by the Engine. It initializes the Context with the data from the
+// provided Promotion and Stage, applying any additional options provided.
 func NewContext(
 	promo *kargoapi.Promotion,
 	stage *kargoapi.Stage,
-	targetFreightRef kargoapi.FreightReference,
 	opts ...ContextOption,
 ) Context {
 	ctx := Context{
 		Project:               promo.Namespace,
-		Stage:                 stage.Name,
+		Stage:                 promo.Spec.Stage,
 		Promotion:             promo.Name,
-		FreightRequests:       stage.Spec.RequestedFreight,
-		Freight:               *promo.Status.FreightCollection.DeepCopy(),
-		TargetFreightRef:      targetFreightRef,
 		StartFromStep:         promo.Status.CurrentStep,
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
+	}
+
+	if stage != nil && len(stage.Spec.RequestedFreight) > 0 {
+		ctx.FreightRequests = make([]kargoapi.FreightRequest, len(stage.Spec.RequestedFreight))
+		for i, fr := range stage.Spec.RequestedFreight {
+			ctx.FreightRequests[i] = *fr.DeepCopy()
+		}
+	}
+
+	if promo.Status.Freight != nil {
+		ctx.TargetFreightRef = *promo.Status.Freight.DeepCopy()
+	}
+
+	if promo.Status.FreightCollection != nil {
+		ctx.Freight = *promo.Status.FreightCollection.DeepCopy()
 	}
 
 	for _, opt := range opts {

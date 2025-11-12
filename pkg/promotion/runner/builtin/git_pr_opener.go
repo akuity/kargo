@@ -26,15 +26,15 @@ import (
 const stepKindGitOpenPR = "git-open-pr"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitOpenPR,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindGitOpenPR,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newGitPROpener,
+			Value: newGitPROpener,
 		},
 	)
 }

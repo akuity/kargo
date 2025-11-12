@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -19,13 +20,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		dockerhub,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.DockerHub != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.DockerHub != nil, nil
 			},
-			factory: newDockerHubWebhookReceiver,
+			Value: newDockerHubWebhookReceiver,
 		},
 	)
 }

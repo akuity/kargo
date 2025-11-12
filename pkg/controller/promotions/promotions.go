@@ -462,7 +462,7 @@ func (r *reconciler) Reconcile(
 	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
 		return ctrl.Result{
-			RequeueAfter: calculateRequeueInterval(promo, suggestedRequeueInterval),
+			RequeueAfter: calculateRequeueInterval(ctx, promo, suggestedRequeueInterval),
 		}, nil
 	}
 	return ctrl.Result{}, nil
@@ -521,7 +521,6 @@ func (r *reconciler) promote(
 	promoCtx := promotion.NewContext(
 		workingPromo,
 		stage,
-		targetFreightRef,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
 		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
@@ -693,6 +692,7 @@ func (r *reconciler) terminatePromotion(
 var defaultRequeueInterval = 5 * time.Minute
 
 func calculateRequeueInterval(
+	ctx context.Context,
 	p *kargoapi.Promotion,
 	suggestedRequeueInterval *time.Duration,
 ) time.Duration {
@@ -707,8 +707,12 @@ func calculateRequeueInterval(
 	}
 
 	step := p.Spec.Steps[p.Status.CurrentStep]
-	registration := promotion.GetStepRunnerRegistration(step.Uses)
-	timeout := step.Retry.GetTimeout(registration.Metadata.DefaultTimeout)
+	reg, err := promotion.DefaultStepRunnerRegistry.Get(step.Uses)
+	if err != nil {
+		logging.LoggerFromContext(ctx).Error(err, err.Error())
+		return requeueInterval
+	}
+	timeout := step.Retry.GetTimeout(reg.Metadata.DefaultTimeout)
 
 	// If the timeout is 0 (no timeout), we should requeue at the full interval.
 	if timeout == 0 {

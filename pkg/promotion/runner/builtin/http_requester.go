@@ -31,9 +31,11 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindHTTP,
-		promotion.StepRunnerRegistration{Factory: newHTTPRequester},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindHTTP,
+			Value: newHTTPRequester,
+		},
 	)
 }
 

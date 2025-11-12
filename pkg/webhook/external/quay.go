@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,13 +21,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		quay,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Quay != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Quay != nil, nil
 			},
-			factory: newQuayWebhookReceiver,
+			Value: newQuayWebhookReceiver,
 		},
 	)
 }

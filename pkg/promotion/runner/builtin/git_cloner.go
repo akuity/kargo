@@ -19,15 +19,15 @@ import (
 const stepKindGitClone = "git-clone"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitClone,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindGitClone,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newGitCloner,
+			Value: newGitCloner,
 		},
 	)
 }

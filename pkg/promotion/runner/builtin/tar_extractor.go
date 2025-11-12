@@ -46,9 +46,11 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindUntar,
-		promotion.StepRunnerRegistration{Factory: newTarExtractor},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindUntar,
+			Value: newTarExtractor,
+		},
 	)
 }
 
@@ -172,6 +174,8 @@ func (t *tarExtractor) extractToDir(
 	}
 
 	// Check for gzip magic numbers
+	// nolint:gosec
+	// False positive likely related to https://github.com/securego/gosec/issues/1406
 	if header[0] == gzipID1 && header[1] == gzipID2 {
 		// File is gzipped
 		gzr, err := gzip.NewReader(file)

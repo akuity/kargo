@@ -18,9 +18,11 @@ import (
 const stepKindJSONUpdate = "json-update"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindJSONUpdate,
-		promotion.StepRunnerRegistration{Factory: newJSONUpdater},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindJSONUpdate,
+			Value: newJSONUpdater,
+		},
 	)
 }
 

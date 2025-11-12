@@ -9,7 +9,7 @@ Kargo using Argo CD.
 :::note
 This section assumes that you have already installed any dependencies or
 prerequisites required for running Kargo on a Kubernetes cluster. Please refer
-to [Basic Installation](../../operator-guide/basic-installation#prerequisites)
+to [Basic Installation](../10-basic-installation.md#prerequisites)
 for more details.
 :::
 

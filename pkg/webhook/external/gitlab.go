@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -24,13 +25,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		gitlab,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.GitLab != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.GitLab != nil, nil
 			},
-			factory: newGitLabWebhookReceiver,
+			Value: newGitLabWebhookReceiver,
 		},
 	)
 }

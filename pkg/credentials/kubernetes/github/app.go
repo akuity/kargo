@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/go-github/v74/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
@@ -198,7 +197,7 @@ func (p *AppCredentialProvider) getAccessToken(
 		// In all cases, the access token is scoped only to the repo specified by
 		// repoURL.
 		githubauth.WithInstallationTokenOptions(
-			&github.InstallationTokenOptions{
+			&githubauth.InstallationTokenOptions{
 				Repositories: []string{p.extractRepoName(repoURL)},
 			},
 		),
@@ -209,7 +208,7 @@ func (p *AppCredentialProvider) getAccessToken(
 	}
 	if baseURL != githubBaseURL {
 		// This looks like a GitHub Enterprise URL
-		installationOpts = append(installationOpts, githubauth.WithEnterpriseURLs(baseURL, baseURL))
+		installationOpts = append(installationOpts, githubauth.WithEnterpriseURL(baseURL))
 	}
 
 	installationTokenSource := githubauth.NewInstallationTokenSource(

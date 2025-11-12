@@ -34,7 +34,7 @@ export const UpsertConfigMapsModal = (props: Props) => {
 
   const configMapYaml = decodeRawData(getConfigMapQuery.data);
 
-  const [yaml, setYaml] = useState(stringify(configMapYAMLExample));
+  const [yaml, setYaml] = useState(stringify(configMapYAMLExample(props.project)));
 
   useEffect(() => {
     if (configMapYaml) {

@@ -97,6 +97,12 @@ func Test_kustomizeImageSetter_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "valid config with only path (images optional)",
+			config: promotion.Config{
+				"path": "fake-path",
+			},
+		},
+		{
 			name: "valid kitchen sink",
 			config: promotion.Config{
 				"path": "fake-path",

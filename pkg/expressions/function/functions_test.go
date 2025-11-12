@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver/v3"
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1866,6 +1867,64 @@ func Test_semverDiff(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result, err := semverDiff(tt.args...)
 			tt.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_semverParse(t *testing.T) {
+	testCases := []struct {
+		name       string
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"1.0.0", "2.0.0"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid semver",
+			args: []any{"invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "invalid semantic version")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "success",
+			args: []any{"1.2.3"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				parsed, ok := result.(*semver.Version)
+				require.True(t, ok)
+				assert.NotNil(t, parsed)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := semverParse(testCase.args...)
+			testCase.assertions(t, result, err)
 		})
 	}
 }

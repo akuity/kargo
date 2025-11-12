@@ -2,6 +2,7 @@ package image
 
 import (
 	"context"
+	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -20,14 +21,16 @@ type Selector interface {
 // selects images from a container image repository based on the provided
 // subscription.
 func NewSelector(
+	ctx context.Context,
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
 ) (Selector, error) {
 	// Pick an appropriate Selector implementation based on the subscription
 	// provided.
-	selectorFactory, err := selectorReg.getSelectorFactory(sub)
+	reg, err := defaultSelectorRegistry.Get(ctx, sub)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting selector factory")
 	}
-	return selectorFactory(sub, creds)
+	factory := reg.Value
+	return factory(sub, creds)
 }

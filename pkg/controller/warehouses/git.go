@@ -51,7 +51,7 @@ func (r *reconciler) discoverCommits(
 			logger.Debug("found no credentials for git repo")
 		}
 
-		selector, err := commit.NewSelector(*s.Git, repoCreds)
+		selector, err := commit.NewSelector(ctx, *s.Git, repoCreds)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error obtaining selector for commits from git repo %q: %w",

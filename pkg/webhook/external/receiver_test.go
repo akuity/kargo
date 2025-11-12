@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 )
 
 func TestNewReceiver(t *testing.T) {
@@ -32,11 +33,8 @@ func TestNewReceiver(t *testing.T) {
 		{
 			name: "no configuration for a known receiver type",
 			assertions: func(t *testing.T, _ WebhookReceiver, err error) {
-				require.EqualError(
-					t,
-					err,
-					"WebhookReceiverConfig has no configuration for a known receiver type",
-				)
+				require.Error(t, err)
+				require.True(t, component.IsNotFoundError(err))
 			},
 		},
 		{

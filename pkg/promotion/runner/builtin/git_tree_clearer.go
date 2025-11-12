@@ -16,9 +16,11 @@ import (
 const stepKindGitClear = "git-clear"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindGitClear,
-		promotion.StepRunnerRegistration{Factory: newGitTreeClearer},
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name:  stepKindGitClear,
+			Value: newGitTreeClearer,
+		},
 	)
 }
 

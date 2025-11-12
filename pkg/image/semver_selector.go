@@ -14,14 +14,13 @@ import (
 )
 
 func init() {
-	selectorReg.register(
-		kargoapi.ImageSelectionStrategySemVer,
+	defaultSelectorRegistry.MustRegister(
 		selectorRegistration{
-			predicate: func(sub kargoapi.ImageSubscription) bool {
+			Predicate: func(_ context.Context, sub kargoapi.ImageSubscription) (bool, error) {
 				return sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer ||
-					sub.ImageSelectionStrategy == ""
+					sub.ImageSelectionStrategy == "", nil
 			},
-			factory: newSemverSelector,
+			Value: newSemverSelector,
 		},
 	)
 }
@@ -42,18 +41,18 @@ func newSemverSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building tag based selector: %w", err)
 	}
-	constraintStr, err := semver.NewConstraint(sub.Constraint)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error parsing semver constraint %q: %w",
-			constraintStr, err,
-		)
-	}
-
 	s := &semverSelector{
 		tagBasedSelector: tagBased,
 		strictSemvers:    sub.StrictSemvers,
-		constraint:       constraintStr,
+	}
+	if sub.Constraint != "" {
+		s.constraint, err = semver.NewConstraint(sub.Constraint)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error parsing semver constraint %q: %w",
+				s.constraint, err,
+			)
+		}
 	}
 
 	return s, nil

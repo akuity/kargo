@@ -17,15 +17,15 @@ import (
 const stepKindSetMetadata = "set-metadata"
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindSetMetadata,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindSetMetadata,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessControlPlane,
 				},
 			},
-			Factory: newMetadataSetter,
+			Value: newMetadataSetter,
 		},
 	)
 }

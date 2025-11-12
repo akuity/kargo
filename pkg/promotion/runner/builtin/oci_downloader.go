@@ -33,15 +33,15 @@ const (
 )
 
 func init() {
-	promotion.RegisterStepRunner(
-		stepKindOCIDownload,
+	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
+			Name: stepKindOCIDownload,
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Factory: newOCIDownloader,
+			Value: newOCIDownloader,
 		},
 	)
 }

@@ -91,11 +91,12 @@ func NewReceiver(
 ) (WebhookReceiver, error) {
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
-	receiverFactory, err := registry.getReceiverFactory(cfg)
+	reg, err := defaultWebhookReceiverRegistry.Get(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting receiver factory: %w", err)
 	}
-	receiver := receiverFactory(c, project, cfg)
+	factory := reg.Value
+	receiver := factory(c, project, cfg)
 	secretName := receiver.getSecretName()
 	secret := &corev1.Secret{}
 	if err = c.Get(

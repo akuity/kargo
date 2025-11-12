@@ -2,119 +2,53 @@ package promotion
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 )
 
-func TestStepRunnerRegistry_Register(t *testing.T) {
-	const testStepKind = "fake-step"
-	testRegistration := StepRunnerRegistration{
-		Metadata: StepRunnerMetadata{
-			DefaultTimeout:        time.Duration(0),
-			DefaultErrorThreshold: uint32(1),
-		},
-		Factory: func(StepRunnerCapabilities) StepRunner { return nil },
-	}
-	testCases := []struct {
-		name                 string
-		stepKind             string
-		registration         StepRunnerRegistration
-		expectedRegistration StepRunnerRegistration
-		expectedPanic        string
-	}{
-		{
-			name:          "empty step kind panics",
-			stepKind:      "",
-			expectedPanic: "step kind must be specified",
-		},
-		{
-			name:          "nil Factory function panics",
-			stepKind:      testStepKind,
-			registration:  StepRunnerRegistration{Factory: nil},
-			expectedPanic: "step registration must specify a factory function",
-		},
-		{
-			name:                 "defaults not needed",
-			stepKind:             testStepKind,
-			registration:         testRegistration,
-			expectedRegistration: testRegistration,
-		},
-		{
-			name:     "defaults are applied",
-			stepKind: testStepKind,
-			registration: StepRunnerRegistration{
-				Metadata: StepRunnerMetadata{},
-				Factory:  func(StepRunnerCapabilities) StepRunner { return nil },
-			},
-			expectedRegistration: testRegistration,
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			registry := StepRunnerRegistry{}
-			if testCase.expectedPanic != "" {
-				require.PanicsWithValue(
-					t,
-					testCase.expectedPanic,
-					func() { registry.Register(testCase.stepKind, testCase.registration) },
-				)
-				return
-			}
-			registry.Register(testCase.stepKind, testCase.registration)
-			registration := registry[testCase.stepKind]
-			require.Equal(t, testCase.expectedRegistration.Metadata, registration.Metadata)
-			require.NotNil(t, registration.Factory)
-		})
-	}
-}
+func Test_stepRunnerRegistry(t *testing.T) {
+	// Generic name-based registries are well-tested in the component package, but
+	// stepRunnerRegistry decorates a generic registry with specific behavior we'd
+	// like to validate.
 
-func TestStepRunnerRegistry_GetStepRunnerRegistration(t *testing.T) {
-	const testStepKind = "fake-step"
-	testRegistration := StepRunnerRegistration{
-		Metadata: StepRunnerMetadata{
-			DefaultTimeout:        5 * time.Minute,
-			DefaultErrorThreshold: uint32(3),
-			RequiredCapabilities: []StepRunnerCapability{
-				StepCapabilityAccessCredentials,
-			},
-		},
-		Factory: func(StepRunnerCapabilities) StepRunner { return nil },
-	}
+	const testStepKindName = "test"
+
 	testCases := []struct {
-		name                 string
-		setupRegistry        func() StepRunnerRegistry
-		expectedRegistration *StepRunnerRegistration
+		name  string
+		setup func(*testing.T) StepRunnerRegistry
 	}{
 		{
-			name:                 "registration not found",
-			setupRegistry:        func() StepRunnerRegistry { return StepRunnerRegistry{} },
-			expectedRegistration: nil,
+			name: "MustNewStepRunnerRegistry defaults error threshold",
+			setup: func(*testing.T) StepRunnerRegistry {
+				return MustNewStepRunnerRegistry(
+					StepRunnerRegistration{Name: testStepKindName},
+				)
+			},
 		},
 		{
-			name: "registration found",
-			setupRegistry: func() StepRunnerRegistry {
-				registry := StepRunnerRegistry{}
-				registry[testStepKind] = testRegistration
-				return registry
+			name: "Register defaults error threshold",
+			setup: func(*testing.T) StepRunnerRegistry {
+				r := MustNewStepRunnerRegistry()
+				err := r.Register(StepRunnerRegistration{Name: testStepKindName})
+				require.NoError(t, err)
+				return r
 			},
-			expectedRegistration: &testRegistration,
+		},
+		{
+			name: "MustRegister defaults error threshold",
+			setup: func(*testing.T) StepRunnerRegistry {
+				r := MustNewStepRunnerRegistry()
+				r.MustRegister(StepRunnerRegistration{Name: testStepKindName})
+				return r
+			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			registry := testCase.setupRegistry()
-			registration := registry.GetStepRunnerRegistration(testStepKind)
-			if testCase.expectedRegistration == nil {
-				require.Nil(t, registration)
-				return
-			}
-			require.Equal(
-				t,
-				testCase.expectedRegistration.Metadata,
-				registration.Metadata,
-			)
-			require.NotNil(t, registration.Factory)
+			r := testCase.setup(t)
+			reg, err := r.Get(testStepKindName)
+			require.NoError(t, err)
+			require.Equal(t, uint32(1), reg.Metadata.DefaultErrorThreshold)
 		})
 	}
 }

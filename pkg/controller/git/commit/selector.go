@@ -2,6 +2,7 @@ package commit
 
 import (
 	"context"
+	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
@@ -20,14 +21,16 @@ type Selector interface {
 // NewSelector returns some implementation of the Selector interface that
 // selects commits from a Git repository based on the provided subscription.
 func NewSelector(
+	ctx context.Context,
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
 ) (Selector, error) {
 	// Pick an appropriate Selector implementation based on the subscription
 	// provided.
-	selectorFactory, err := selectorReg.getSelectorFactory(sub)
+	reg, err := defaultSelectorRegistry.Get(ctx, sub)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error getting selector factory")
 	}
-	return selectorFactory(sub, creds)
+	factory := reg.Value
+	return factory(sub, creds)
 }

@@ -1,6 +1,7 @@
 package external
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -35,13 +36,12 @@ var artifactoryValidImageTypes = []string{
 }
 
 func init() {
-	registry.register(
-		artifactory,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Artifactory != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Artifactory != nil, nil
 			},
-			factory: newArtifactoryWebhookReceiver,
+			Value: newArtifactoryWebhookReceiver,
 		},
 	)
 }

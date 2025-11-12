@@ -1,12 +1,13 @@
 package external
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
 
-	gh "github.com/google/go-github/v71/github"
+	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -26,13 +27,12 @@ const (
 )
 
 func init() {
-	registry.register(
-		gitea,
+	defaultWebhookReceiverRegistry.MustRegister(
 		webhookReceiverRegistration{
-			predicate: func(cfg kargoapi.WebhookReceiverConfig) bool {
-				return cfg.Gitea != nil
+			Predicate: func(_ context.Context, cfg kargoapi.WebhookReceiverConfig) (bool, error) {
+				return cfg.Gitea != nil, nil
 			},
-			factory: newGiteaWebhookReceiver,
+			Value: newGiteaWebhookReceiver,
 		},
 	)
 }
@@ -114,7 +114,7 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		// Note: github.com/google/go-github/v71/github has a great implementation
+		// Note: github.com/google/go-github/v76/github has a great implementation
 		// of HMAC signature validation that isn't GitHub-specific, so we've opted
 		// to use it here for Gitea as well.
 		if err := gh.ValidateSignature(sig, requestBody, signingKey); err != nil {
