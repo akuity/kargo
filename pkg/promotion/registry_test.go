@@ -46,8 +46,8 @@ func Test_stepRunnerRegistry(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := testCase.setup(t)
-			reg, found := r.Get(testStepKindName)
-			require.True(t, found)
+			reg, err := r.Get(testStepKindName)
+			require.NoError(t, err)
 			require.Equal(t, uint32(1), reg.Metadata.DefaultErrorThreshold)
 		})
 	}

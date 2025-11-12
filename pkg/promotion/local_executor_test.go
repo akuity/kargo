@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -58,10 +59,11 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 				},
 			},
 			assertions: func(t *testing.T, result StepResult, err error) {
+				require.Error(t, err)
+				require.True(t, component.IsNotFoundError(err))
 				require.Equal(t, StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, result)
-				require.ErrorContains(t, err, `no runner registered for step "unknown-step"`)
 			},
 		},
 		{

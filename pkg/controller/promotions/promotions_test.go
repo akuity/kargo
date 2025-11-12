@@ -757,6 +757,7 @@ func Test_calculateRequeueInterval(t *testing.T) {
 			testCase.assertions(
 				t,
 				calculateRequeueInterval(
+					t.Context(),
 					testCase.promo,
 					testCase.suggestedRequeueInterval,
 				),

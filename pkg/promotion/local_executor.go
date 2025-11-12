@@ -43,11 +43,11 @@ func (e *LocalStepExecutor) ExecuteStep(
 	ctx context.Context,
 	req StepExecutionRequest,
 ) (result StepResult, err error) {
-	reg, found := e.registry.Get(req.Step.Kind)
-	if !found {
+	reg, err := e.registry.Get(req.Step.Kind)
+	if err != nil {
 		return StepResult{
 			Status: kargoapi.PromotionStepStatusErrored,
-		}, fmt.Errorf("no runner registered for step %q", req.Step.Kind)
+		}, fmt.Errorf("error getting runner for step kind %q: %w", req.Step.Kind, err)
 	}
 
 	capabilities := StepRunnerCapabilities{}

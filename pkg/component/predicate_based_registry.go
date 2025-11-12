@@ -36,13 +36,10 @@ type PredicateBasedRegistry[PA any, P Predicate[PA], V, MD any] interface {
 	MustRegister(PredicateBasedRegistration[PA, P, V, MD])
 	// Get searches for a matching registration by evaluating each registration's
 	// predicate against the provided input. Returns the first matching
-	// registration, or a zero value if no match is found, as well as a boolean
-	// indicating whether a match was found, which callers may use that to
-	// distinguish between a true zero return value and a zero value resulting
-	// from no match having been found.
+	// registration, or if none is found, an empty registration and a
+	// RegistrationNotFoundError.
 	Get(context.Context, PA) (
 		PredicateBasedRegistration[PA, P, V, MD],
-		bool,
 		error,
 	)
 }

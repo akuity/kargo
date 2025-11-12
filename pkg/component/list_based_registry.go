@@ -62,18 +62,18 @@ func (r *listBasedRegistry[PA, P, V, MD]) MustRegister(
 func (r *listBasedRegistry[PA, P, V, MD]) Get(
 	ctx context.Context,
 	arg PA,
-) (PredicateBasedRegistration[PA, P, V, MD], bool, error) {
+) (PredicateBasedRegistration[PA, P, V, MD], error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	var zeroReg PredicateBasedRegistration[PA, P, V, MD]
 	for _, reg := range r.registrations {
 		res, err := reg.Predicate(ctx, arg)
 		if err != nil {
-			return zeroReg, false, err
+			return zeroReg, err
 		}
 		if res {
-			return reg, true, nil
+			return reg, nil
 		}
 	}
-	return zeroReg, false, nil
+	return zeroReg, RegistrationNotFoundError{}
 }

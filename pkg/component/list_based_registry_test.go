@@ -131,7 +131,7 @@ func TestListBasedRegistry_Get(t *testing.T) {
 	testCases := []struct {
 		name       string
 		registry   *predicateRegistry
-		assertions func(*testing.T, predicateRegistration, bool, error)
+		assertions func(*testing.T, predicateRegistration, error)
 	}{
 		{
 			name: "error evaluating predicate",
@@ -142,28 +142,17 @@ func TestListBasedRegistry_Get(t *testing.T) {
 					},
 				}},
 			},
-			assertions: func(
-				t *testing.T,
-				reg predicateRegistration,
-				found bool,
-				err error,
-			) {
+			assertions: func(t *testing.T, reg predicateRegistration, err error) {
 				require.ErrorContains(t, err, "something went wrong")
-				require.False(t, found)
 				require.Empty(t, reg)
 			},
 		},
 		{
 			name:     "no match",
 			registry: &predicateRegistry{},
-			assertions: func(
-				t *testing.T,
-				reg predicateRegistration,
-				found bool,
-				err error,
-			) {
-				require.NoError(t, err)
-				require.False(t, found)
+			assertions: func(t *testing.T, reg predicateRegistration, err error) {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &RegistrationNotFoundError{})
 				require.Empty(t, reg)
 			},
 		},
@@ -178,14 +167,8 @@ func TestListBasedRegistry_Get(t *testing.T) {
 					Metadata: "meta",
 				}},
 			},
-			assertions: func(
-				t *testing.T,
-				reg predicateRegistration,
-				found bool,
-				err error,
-			) {
+			assertions: func(t *testing.T, reg predicateRegistration, err error) {
 				require.NoError(t, err)
-				require.True(t, found)
 				require.Equal(t, "output", reg.Value)
 				require.Equal(t, "meta", reg.Metadata)
 			},
@@ -193,8 +176,8 @@ func TestListBasedRegistry_Get(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			val, found, err := testCase.registry.Get(t.Context(), "test")
-			testCase.assertions(t, val, found, err)
+			val, err := testCase.registry.Get(t.Context(), "test")
+			testCase.assertions(t, val, err)
 		})
 	}
 }
@@ -230,9 +213,8 @@ func TestListBasedRegistry_WithFunctionValues(t *testing.T) {
 	}
 
 	// Test matching predicate
-	reg, found, err := registry.Get(context.Background(), "match")
+	reg, err := registry.Get(context.Background(), "match")
 	require.NoError(t, err)
-	require.True(t, found)
 
 	// Verify the factory function works
 	result, err := reg.Value(context.Background(), "test")

@@ -31,11 +31,9 @@ type NameBasedRegistry[V, MD any] interface {
 	// MustRegister adds a new registration to the registry and panics if any
 	// error is encountered.
 	MustRegister(NameBasedRegistration[V, MD])
-	// Get returns the registration matching the provided name (key) or a zero
-	// value if no match is found, as well as a boolean indicating whether a match
-	// was found, which callers may use that to distinguish between a true zero
-	// return value and a zero value resulting from no match having been found.
-	Get(string) (NameBasedRegistration[V, MD], bool)
+	// Get returns the registration matching the provided name (key) or, if none
+	// is found, an empty registration and a NamedRegistrationNotFoundError.
+	Get(string) (NameBasedRegistration[V, MD], error)
 }
 
 // NewNameBasedRegistry returns a default implementation of the

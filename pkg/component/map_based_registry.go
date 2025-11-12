@@ -65,9 +65,12 @@ func (r *mapBasedRegistry[V, MD]) MustRegister(
 // Get implements NameBasedRegistry.
 func (r *mapBasedRegistry[V, MD]) Get(
 	name string,
-) (NameBasedRegistration[V, MD], bool) {
+) (NameBasedRegistration[V, MD], error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	reg, found := r.registrations[name]
-	return reg, found
+	if !found {
+		return reg, NamedRegistrationNotFoundError{}
+	}
+	return reg, nil
 }

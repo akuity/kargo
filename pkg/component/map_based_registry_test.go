@@ -214,13 +214,14 @@ func TestMapBasedRegistry_Get(t *testing.T) {
 	testCases := []struct {
 		name       string
 		registry   *namedRegistry
-		assertions func(*testing.T, namedRegistration, bool)
+		assertions func(*testing.T, namedRegistration, error)
 	}{
 		{
 			name:     "key not found",
 			registry: &namedRegistry{registrations: map[string]namedRegistration{}},
-			assertions: func(t *testing.T, reg namedRegistration, found bool) {
-				require.False(t, found)
+			assertions: func(t *testing.T, reg namedRegistration, err error) {
+				require.Error(t, err)
+				require.ErrorAs(t, err, &NamedRegistrationNotFoundError{})
 				require.Empty(t, reg)
 			},
 		},
@@ -231,16 +232,16 @@ func TestMapBasedRegistry_Get(t *testing.T) {
 					testReg.Name: testReg,
 				},
 			},
-			assertions: func(t *testing.T, reg namedRegistration, found bool) {
-				require.True(t, found)
+			assertions: func(t *testing.T, reg namedRegistration, err error) {
+				require.NoError(t, err)
 				require.Equal(t, testReg, reg)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			reg, found := testCase.registry.Get(testReg.Name)
-			testCase.assertions(t, reg, found)
+			reg, err := testCase.registry.Get(testReg.Name)
+			testCase.assertions(t, reg, err)
 		})
 	}
 }
@@ -265,8 +266,8 @@ func TestMapBasedRegistry_WithFunctionValues(t *testing.T) {
 		},
 	}
 
-	reg, found := registry.Get("test-factory")
-	require.True(t, found)
+	reg, err := registry.Get("test-factory")
+	require.NoError(t, err)
 
 	// Verify the factory function works
 	result, err := reg.Value(context.Background(), "test")

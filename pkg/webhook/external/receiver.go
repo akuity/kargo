@@ -3,7 +3,6 @@ package external
 import (
 	"context"
 	"crypto/sha256"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -92,14 +91,9 @@ func NewReceiver(
 ) (WebhookReceiver, error) {
 	// Pick an appropriate WebhookReceiver implementation based on the
 	// configuration provided.
-	reg, found, err := defaultWebhookReceiverRegistry.Get(ctx, cfg)
+	reg, err := defaultWebhookReceiverRegistry.Get(ctx, cfg)
 	if err != nil {
-		return nil, err
-	}
-	if !found {
-		// This shouldn't happen because the API doesn't allow defining a webhook
-		// receiver for which we've not registered an implementation.
-		return nil, errors.New("found no suitable webhook receiver")
+		return nil, fmt.Errorf("error getting receiver factory: %w", err)
 	}
 	factory := reg.Value
 	receiver := factory(c, project, cfg)

@@ -462,7 +462,7 @@ func (r *reconciler) Reconcile(
 	// it.
 	if newStatus.Phase == kargoapi.PromotionPhaseRunning {
 		return ctrl.Result{
-			RequeueAfter: calculateRequeueInterval(promo, suggestedRequeueInterval),
+			RequeueAfter: calculateRequeueInterval(ctx, promo, suggestedRequeueInterval),
 		}, nil
 	}
 	return ctrl.Result{}, nil
@@ -692,6 +692,7 @@ func (r *reconciler) terminatePromotion(
 var defaultRequeueInterval = 5 * time.Minute
 
 func calculateRequeueInterval(
+	ctx context.Context,
 	p *kargoapi.Promotion,
 	suggestedRequeueInterval *time.Duration,
 ) time.Duration {
@@ -706,8 +707,9 @@ func calculateRequeueInterval(
 	}
 
 	step := p.Spec.Steps[p.Status.CurrentStep]
-	reg, found := promotion.DefaultStepRunnerRegistry.Get(step.Uses)
-	if !found {
+	reg, err := promotion.DefaultStepRunnerRegistry.Get(step.Uses)
+	if err != nil {
+		logging.LoggerFromContext(ctx).Error(err, err.Error())
 		return requeueInterval
 	}
 	timeout := step.Retry.GetTimeout(reg.Metadata.DefaultTimeout)

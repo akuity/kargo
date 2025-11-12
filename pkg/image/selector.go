@@ -2,7 +2,7 @@ package image
 
 import (
 	"context"
-	"errors"
+	"fmt"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
@@ -27,14 +27,9 @@ func NewSelector(
 ) (Selector, error) {
 	// Pick an appropriate Selector implementation based on the subscription
 	// provided.
-	reg, found, err := defaultSelectorRegistry.Get(ctx, sub)
+	reg, err := defaultSelectorRegistry.Get(ctx, sub)
 	if err != nil {
-		return nil, err
-	}
-	if !found {
-		// This shouldn't happen because the API doesn't allow opting for any
-		// selector for which for which we've not registered an implementation.
-		return nil, errors.New("no selector found for subscription")
+		return nil, fmt.Errorf("error getting selector factory")
 	}
 	factory := reg.Value
 	return factory(sub, creds)

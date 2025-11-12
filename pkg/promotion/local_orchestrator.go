@@ -113,10 +113,10 @@ func (o *LocalOrchestrator) ExecuteSteps(
 		// should consider validating the steps existence during the creation
 		// of the Promotion, or e.g. work with a typed within the executor to
 		// identify the lack of a registered runner.
-		reg, found := o.registry.Get(step.Kind)
-		if !found {
+		reg, err := o.registry.Get(step.Kind)
+		if err != nil {
 			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-				"no promotion step runner found for kind %q", step.Kind,
+				"error getting runner for step kind %q", step.Kind,
 			)
 			// Continue, because despite this failure, some steps' "if" conditions may
 			// still allow them to run.

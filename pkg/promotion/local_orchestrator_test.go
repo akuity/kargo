@@ -28,13 +28,13 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			steps: []Step{{Kind: "unknown-step"}},
 			assertions: func(t *testing.T, result Result) {
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Contains(t, result.Message, "no promotion step runner found for kind")
+				assert.Contains(t, result.Message, "error getting runner for step kind")
 				assert.Equal(t, int64(0), result.CurrentStep)
 
 				require.Len(t, result.StepExecutionMetadata, 1)
 
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
-				assert.Contains(t, result.StepExecutionMetadata[0].Message, "no promotion step runner found for kind")
+				assert.Contains(t, result.StepExecutionMetadata[0].Message, "error getting runner for step kind")
 				assert.Nil(t, result.StepExecutionMetadata[0].StartedAt)
 				assert.Nil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
