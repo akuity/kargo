@@ -36,14 +36,17 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
   const showManualApproveModal = useManualApprovalModal();
 
-  const ensureEligibilityBeforeAction = async (
-    freight: string | undefined,
-    onEligible: (eligibleFreight: string) => void,
-    options?: { runAfterApproval?: (eligibleFreight: string) => void }
-  ) => {
+  const ensureEligibilityBeforeAction = async ({
+    freight,
+    onSuccess
+  }: {
+    freight: string | undefined;
+    onSuccess: (eligibleFreight: string) => void;
+  }) => {
     if (!freight) {
       return;
     }
+
     const freightResponse = await queryFreightMutation.mutateAsync({
       project: projectName,
       stage: stageName
@@ -53,42 +56,33 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       freightResponse?.groups?.['']?.freight?.find((item) => item?.metadata?.name === freight)
     );
 
-    if (!isEligible) {
+    if (isEligible) {
+      onSuccess(freight);
+    } else {
       showManualApproveModal({
         freight,
         projectName,
         stage: stageName,
-        onApprove: () => {
-          if (options?.runAfterApproval) {
-            options?.runAfterApproval?.(freight);
-            return;
-          }
-
-          navigate(
-            generatePath(paths.promote, {
-              name: projectName,
-              freight: freight,
-              stage
-            })
-          );
-        }
+        onApprove: () => onSuccess(freight)
       });
-      return;
     }
-
-    onEligible(freight);
   };
 
-  const navigateToPromote = (freight: string) =>
-    navigate(
-      generatePath(paths.promote, {
-        name: projectName,
-        freight,
-        stage: stageName
-      })
-    );
+  const handlePromoteFromUpstream = (freight?: string) => {
+    ensureEligibilityBeforeAction({
+      freight,
+      onSuccess: (eligibleFreight) =>
+        navigate(
+          generatePath(paths.promote, {
+            name: projectName,
+            freight: eligibleFreight,
+            stage: stageName
+          })
+        )
+    });
+  };
 
-  const promoteActionMutation = useMutation(promoteToStage, {
+  const promoteMutation = useMutation(promoteToStage, {
     onSuccess: (response) => {
       navigate(
         generatePath(paths.promotion, {
@@ -99,17 +93,17 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
     }
   });
 
-  const promoteFreight = (freight: string) =>
-    promoteActionMutation.mutate({
-      stage: stageName,
-      project: projectName,
-      freight
+  const handleInstantPromoteFromUpstream = (freight?: string) => {
+    ensureEligibilityBeforeAction({
+      freight,
+      onSuccess: (eligibleFreight) =>
+        promoteMutation.mutate({
+          stage: stageName,
+          project: projectName,
+          freight: eligibleFreight
+        })
     });
-
-  const handleInstantPromoteWithEligibility = (freight?: string) =>
-    ensureEligibilityBeforeAction(freight, (eligibleFreight) => promoteFreight(eligibleFreight), {
-      runAfterApproval: (eligibleFreight) => promoteFreight(eligibleFreight)
-    });
+  };
 
   const dropdownItems: ItemType[] = [];
 
@@ -142,19 +136,13 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
         const freight = upstreamFreights?.[0]?.name;
 
-        ensureEligibilityBeforeAction(freight, (eligibleFreight) =>
-          navigateToPromote(eligibleFreight)
-        );
+        handlePromoteFromUpstream(freight);
       },
       children: hasMultipleUpstreamFreights
         ? upstreamFreights?.map((upstreamFreight) => ({
             key: upstreamFreight?.name,
             label: upstreamFreight?.origin?.name,
-            onClick: () => {
-              ensureEligibilityBeforeAction(upstreamFreight?.name, (eligibleFreight) =>
-                navigateToPromote(eligibleFreight)
-              );
-            }
+            onClick: () => handlePromoteFromUpstream(upstreamFreight?.name)
           }))
         : undefined
     });
@@ -163,7 +151,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
       key: 'quick-promote-upstream-freight-promo',
       label: (
         <>
-          {promoteActionMutation.isPending ? (
+          {promoteMutation.isPending ? (
             <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
           ) : (
             <Typography.Text type='danger' className='mr-2'>
@@ -180,15 +168,13 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
 
         const freight = upstreamFreights?.[0]?.name;
 
-        handleInstantPromoteWithEligibility(freight);
+        handleInstantPromoteFromUpstream(freight);
       },
       children: hasMultipleUpstreamFreights
         ? upstreamFreights?.map((upstreamFreight) => ({
             key: upstreamFreight?.name,
             label: upstreamFreight?.origin?.name,
-            onClick: () => {
-              handleInstantPromoteWithEligibility(upstreamFreight?.name);
-            }
+            onClick: () => handleInstantPromoteFromUpstream(upstreamFreight?.name)
           }))
         : undefined
     });
