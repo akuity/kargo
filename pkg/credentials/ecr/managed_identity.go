@@ -23,6 +23,17 @@ import (
 
 const roleARNFormat = "arn:aws:iam::%s:role/kargo-project-%s"
 
+func init() {
+	if provider := NewManagedIdentityProvider(context.Background()); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
+
 type ManagedIdentityProvider struct {
 	tokenCache *cache.Cache
 
@@ -80,44 +91,30 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 }
 
 func (p *ManagedIdentityProvider) Supports(
-	credType credentials.Type,
-	_ string,
-	_ map[string][]byte,
-	_ map[string]string,
-) bool {
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
 	if p.accountID == "" {
-		return false
+		return false, nil
 	}
-
-	if credType != credentials.TypeImage && credType != credentials.TypeHelm {
-		return false
+	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
+		return false, nil
 	}
-
-	return true
+	return true, nil
 }
 
 func (p *ManagedIdentityProvider) GetCredentials(
 	ctx context.Context,
-	project string,
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	metadata map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data, metadata) {
-		return nil, nil
-	}
-
 	// Extract the region from the ECR URL
-	matches := ecrURLRegex.FindStringSubmatch(repoURL)
+	matches := ecrURLRegex.FindStringSubmatch(req.RepoURL)
 	if len(matches) != 2 { // This doesn't look like an ECR URL
 		return nil, nil
 	}
 
-	var (
-		region   = matches[1]
-		cacheKey = tokenCacheKey(region, project)
-	)
+	region := matches[1]
+	cacheKey := tokenCacheKey(region, req.Project)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -125,7 +122,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	}
 
 	// Cache miss, get a new token
-	encodedToken, err := p.getAuthTokenFn(ctx, region, project)
+	encodedToken, err := p.getAuthTokenFn(ctx, region, req.Project)
 	if err != nil {
 		// This might mean the controller's IAM role isn't authorized to assume the
 		// project-specific IAM role, or that the project-specific IAM role doesn't
@@ -149,7 +146,11 @@ func (p *ManagedIdentityProvider) GetCredentials(
 // getAuthToken returns an ECR authorization token obtained by assuming a
 // project-specific IAM role and using that to obtain a short-lived ECR access
 // token.
-func (p *ManagedIdentityProvider) getAuthToken(ctx context.Context, region, project string) (string, error) {
+func (p *ManagedIdentityProvider) getAuthToken(
+	ctx context.Context,
+	region string,
+	project string,
+) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -174,7 +175,10 @@ func (p *ManagedIdentityProvider) getAuthToken(ctx context.Context, region, proj
 		"project", project,
 	)
 
-	output, err := ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
+	output, err := ecrSvc.GetAuthorizationToken(
+		ctx,
+		&ecr.GetAuthorizationTokenInput{},
+	)
 	if err != nil {
 		var re *awshttp.ResponseError
 		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {

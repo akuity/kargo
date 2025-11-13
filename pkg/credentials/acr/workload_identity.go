@@ -32,6 +32,17 @@ const (
 // Pattern matches: <registry-name>.azurecr.io
 var acrURLRegex = regexp.MustCompile(`^([a-zA-Z0-9-]+)\.azurecr\.io/`)
 
+func init() {
+	if provider := NewWorkloadIdentityProvider(context.Background()); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
+
 // WorkloadIdentityProvider implements credentials.Provider for Azure Container
 // Registry Workload Identity.
 type WorkloadIdentityProvider struct {
@@ -69,33 +80,22 @@ func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 }
 
 func (p *WorkloadIdentityProvider) Supports(
-	credType credentials.Type,
-	repoURL string,
-	_ map[string][]byte,
-	_ map[string]string,
-) bool {
-	if credType != credentials.TypeImage && credType != credentials.TypeHelm {
-		return false
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
+	if req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
+		return false, nil
 	}
-
 	// Check if this is an ACR URL
-	return acrURLRegex.MatchString(repoURL)
+	return acrURLRegex.MatchString(req.RepoURL), nil
 }
 
 func (p *WorkloadIdentityProvider) GetCredentials(
 	ctx context.Context,
-	_ string,
-	credType credentials.Type,
-	repoURL string,
-	_ map[string][]byte,
-	_ map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, nil, nil) {
-		return nil, nil
-	}
-
 	// Extract the registry name from the ACR URL
-	matches := acrURLRegex.FindStringSubmatch(repoURL)
+	matches := acrURLRegex.FindStringSubmatch(req.RepoURL)
 	if len(matches) != 2 { // This doesn't look like an ACR URL
 		return nil, nil
 	}

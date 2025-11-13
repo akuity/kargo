@@ -18,9 +18,18 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-const (
-	gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
-)
+const gcpResourceNameFormat = "projects/-/serviceAccounts/kargo-project-%s@%s.iam.gserviceaccount.com"
+
+func init() {
+	if provider := NewWorkloadIdentityFederationProvider(context.Background()); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
 
 type WorkloadIdentityFederationProvider struct {
 	tokenCache       *cache.Cache // For short-lived Project-specific tokens
@@ -33,7 +42,9 @@ type WorkloadIdentityFederationProvider struct {
 	tokenSource oauth2.TokenSource
 }
 
-func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Provider {
+func NewWorkloadIdentityFederationProvider(
+	ctx context.Context,
+) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
 	if !metadata.OnGCE() {
@@ -81,35 +92,24 @@ func NewWorkloadIdentityFederationProvider(ctx context.Context) credentials.Prov
 }
 
 func (p *WorkloadIdentityFederationProvider) Supports(
-	credType credentials.Type,
-	repoURL string,
-	_ map[string][]byte,
-	_ map[string]string,
-) bool {
-	if p.projectID == "" || credType != credentials.TypeImage && credType != credentials.TypeHelm {
-		return false
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
+	if p.projectID == "" || req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm {
+		return false, nil
 	}
-
-	if !garURLRegex.MatchString(repoURL) && !gcrURLRegex.MatchString(repoURL) {
-		return false
+	if !garURLRegex.MatchString(req.RepoURL) &&
+		!gcrURLRegex.MatchString(req.RepoURL) {
+		return false, nil
 	}
-
-	return true
+	return true, nil
 }
 
 func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	ctx context.Context,
-	project string,
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	meta map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data, meta) {
-		return nil, nil
-	}
-
-	cacheKey := tokenCacheKey(project)
+	cacheKey := tokenCacheKey(req.Project)
 
 	// Check the token cache for a Project-specific token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -134,7 +134,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 
 	// We had a miss in both caches, so we'll try to get a new Project-specific
 	// token.
-	accessToken, err := p.getAccessTokenFn(ctx, project)
+	accessToken, err := p.getAccessTokenFn(ctx, req.Project)
 	if err != nil {
 		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
