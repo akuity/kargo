@@ -286,15 +286,31 @@ export const FreightCard = (props: FreightCardProps) => {
               className={classNames('w-full', { 'opacity-70': !props.promotionEligible })}
               type='primary'
               size='small'
-              onClick={() =>
-                props.promotionEligible
-                  ? props.onReviewAndPromote?.()
-                  : showManualApproveModal({
-                      freight: props.freight?.metadata?.name || '',
-                      stage: actionContext?.action?.stage?.metadata?.name || '',
-                      projectName: props.freight?.metadata?.namespace || ''
-                    })
-              }
+              onClick={() => {
+                const freight = props.freight?.metadata?.name || '';
+                const stage = actionContext?.action?.stage?.metadata?.name || '';
+                const projectName = props.freight?.metadata?.namespace || '';
+
+                if (props.promotionEligible) {
+                  props.onReviewAndPromote?.();
+                  return;
+                }
+
+                showManualApproveModal({
+                  freight,
+                  stage,
+                  projectName,
+                  onApprove: () => {
+                    navigate(
+                      generatePath(paths.promote, {
+                        name: projectName,
+                        freight: freight,
+                        stage
+                      })
+                    );
+                  }
+                });
+              }}
               loading={props.isPromotionEligibleLoading}
               icon={
                 !props.promotionEligible && !props.isPromotionEligibleLoading ? (

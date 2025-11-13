@@ -60,6 +60,15 @@ export const DndPromotionContext = ({ children, projectName }: Props) => {
           onClose: () => {
             setStage(undefined);
             setFreight(undefined);
+          },
+          onApprove: () => {
+            navigate(
+              generatePath(paths.promote, {
+                name: projectName,
+                freight: freight,
+                stage
+              })
+            );
           }
         });
       }
