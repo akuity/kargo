@@ -90,6 +90,40 @@ func UtilityOperations() []expr.Option {
 	}
 }
 
+// Normalize returns an expr.Option that provides a `normalize()` function for
+// use in expressions.
+func NormalizeURL() expr.Option {
+	return expr.Function(
+		"normalize",
+		normalizeURL,
+		new(func(urlType string, url string) string),
+	)
+}
+
+func normalizeURL(a ...any) (any, error) {
+	if len(a) != 2 {
+		return nil, fmt.Errorf("expected 2 arguments, got %d", len(a))
+	}
+	urlType, ok := a[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+	}
+	urlStr, ok := a[1].(string)
+	if !ok {
+		return nil, fmt.Errorf("second argument must be string, got %T", a[1])
+	}
+	switch strings.ToLower(urlType) {
+	case "git":
+		return urls.NormalizeGit(urlStr), nil
+	case "image":
+		return urls.NormalizeImage(urlStr), nil
+	case "chart":
+		return urls.NormalizeChart(urlStr), nil
+	default:
+		return urlStr, nil
+	}
+}
+
 // StatusOperations returns a slice of expr.Option containing functions for
 // assessing the status of all preceding steps.
 func StatusOperations(

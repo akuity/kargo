@@ -11,6 +11,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
+	"github.com/akuity/kargo/pkg/expressions/function"
 )
 
 // buildListOptionsForTarget builds a list of client.ListOption based on the
@@ -138,7 +139,7 @@ func parseAsValues(vals []string, env map[string]any) ([]string, error) {
 }
 
 func evalAsString(expr string, env map[string]any) (string, error) {
-	result, err := expressions.EvaluateTemplate(expr, env)
+	result, err := expressions.EvaluateTemplate(expr, env, function.NormalizeURL())
 	if err != nil {
 		return "", fmt.Errorf("failed to evaluate expression: %w", err)
 	}
