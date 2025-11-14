@@ -212,7 +212,7 @@ const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
     }
 
     return (
-      <Flex vertical gap={2}>
+      <Flex vertical gap={2} align='center'>
         {TagComponent}
         <Typography.Text
           className='text-[10px] text-center'
