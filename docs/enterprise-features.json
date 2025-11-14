@@ -1,0 +1,17 @@
+{
+    "beta": [
+        "jira",
+        "jfrog-evidence",
+        "git-merge-pr",
+        "gha-dispatch-workflow",
+        "gha-wait-for-workflow",
+        "send-message"
+    ],
+    "pro": [
+        "jira",
+        "jfrog-evidence",
+        "gha-dispatch-workflow",
+        "gha-wait-for-workflow",
+        "send-message"
+    ]
+}

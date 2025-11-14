@@ -2,9 +2,9 @@
 
 set -x
 
-argo_cd_chart_version=7.7.0
-argo_rollouts_chart_version=2.37.7
-cert_manager_chart_version=1.16.1
+argo_cd_chart_version=8.1.4
+argo_rollouts_chart_version=2.40.1
+cert_manager_chart_version=1.18.2
 
 helm install cert-manager cert-manager \
   --repo https://charts.jetstack.io \
@@ -45,4 +45,6 @@ helm install kargo \
   --set api.service.nodePort=31444 \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
+  --set externalWebhooksServer.service.type=NodePort \
+  --set externalWebhooksServer.service.nodePort=31445 \
   --wait

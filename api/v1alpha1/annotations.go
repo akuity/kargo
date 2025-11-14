@@ -1,7 +1,5 @@
 package v1alpha1
 
-import "encoding/json"
-
 const (
 	// AnnotationKeyCreateActor is an annotation key that can be injected to a
 	// resource by the Kargo control plane to indicate the actor that created
@@ -37,97 +35,64 @@ const (
 	// of the annotation should be in the format of "<project>:<stage>".
 	AnnotationKeyAuthorizedStage = "kargo.akuity.io/authorized-stage"
 
-	// AnnotationValueTrue is a value that can be set on an annotation to
-	// indicate that it applies.
+	// AnnotationKeyStage is an annotation key that can be set on a resource to
+	// indicate that it is associated with a specific Stage. It compliments
+	// LabelKeyStage, which may contain the same value but in a (hash-)shortened
+	// form to fit within the Kubernetes label value length. The value of this
+	// annotation is expected to be the full name of the Stage.
+	AnnotationKeyStage = "kargo.akuity.io/stage"
+
+	// AnnotationKeyPromotion is an annotation key that can be set on a
+	// resource to indicate that it is related to a specific promotion.
+	AnnotationKeyPromotion = "kargo.akuity.io/promotion"
+
+	// AnnotationKeyArgoCDContext is an annotation key that is set on a Stage
+	// to reference the last ArgoCD Applications that were part of a Promotion.
+	AnnotationKeyArgoCDContext = "kargo.akuity.io/argocd-context"
+
+	// AnnotationKeyMigrated is an annotation set on a resource that has
+	// successfully undergone a migration to a new resource type or other
+	// configuration change. This annotation is used to indicate that the
+	// resource has been successfully migrated and that the controller should
+	// not attempt to perform the migration again.
+	//
+	// The value of the annotation is a JSON object that maps migration types to
+	// booleans indicating whether the migration has been performed.
+	AnnotationKeyMigrated = "kargo.akuity.io/migrated"
+
+	// AnnotationKeyKeepNamespace is an annotation key that can be set on Project
+	// or Namespace to disable the automatic deletion of the namespace when
+	// the Project is deleted. This is useful for cases where the namespace
+	// contains resources that should not be deleted.
+	AnnotationKeyKeepNamespace = "kargo.akuity.io/keep-namespace"
+
+	// AnnotationValueTrue is the value used to indicate that an annotation
+	// is set to true.
 	AnnotationValueTrue = "true"
+
+	// AnnotationKeyGitHubTokenScope is the key for an annotation that can
+	// optionally be added to any Secret resources that represents a GitHub App
+	// installation in order to limit the scope of the installation access tokens
+	// that are issued as-needed to specific Kargo Projects.
+	//
+	// If present, the annotation's value must be a string representation of a
+	// JSON object mapping Project names to lists of allowed scopes (repository
+	// names).
+	//
+	// For example to limit tokens issued to Project kargo-demo-1 to scopes repo-a
+	// and repo-b only and limit tokens issued to kargo-demo-2 to scope repo-c
+	// only:
+	//
+	//   `{"kargo-demo-1": ["repo-a", "repo-b"], "kargo-demo-2": ["repo-c"]}`
+	//
+	// ALL OTHER PROJECTS WOULD EFFECTIVELY BE UNABLE TO OBTAIN AN INSTALLATION
+	// TOKEN AT ALL.
+	//
+	// This annotation has an effect only when present. i.e. If not present, the
+	// scopes available to every Project are unconstrained. If the annotation is
+	// present, with an invalid value (not well-formed JSON), NO Project will be
+	// able to obtain an installation token.
+	//
+	// #nosec G101 -- This is not a credential, just an annotation key name.
+	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"
 )
-
-// RefreshAnnotationValue returns the value of the AnnotationKeyRefresh
-// annotation which can be used to detect changes, and a boolean indicating
-// whether the annotation was present.
-func RefreshAnnotationValue(annotations map[string]string) (string, bool) {
-	requested, ok := annotations[AnnotationKeyRefresh]
-	return requested, ok
-}
-
-// ReverifyAnnotationValue returns the value of the AnnotationKeyReverify
-// annotation, which can be used to determine whether the verification of a
-// Freight should be rerun, and a boolean indicating whether the annotation was
-// present.
-//
-// If the value of the annotation is a valid JSON object, it is unmarshalled
-// into a VerificationRequest struct. Otherwise, the value is treated as the ID
-// of the verification to be reverified and set as the ID field of the returned
-// VerificationRequest.
-func ReverifyAnnotationValue(annotations map[string]string) (*VerificationRequest, bool) {
-	requested, ok := annotations[AnnotationKeyReverify]
-	if !ok {
-		return nil, ok
-	}
-	var vr VerificationRequest
-	if b := []byte(requested); json.Valid(b) {
-		if err := json.Unmarshal(b, &vr); err != nil {
-			return nil, false
-		}
-	} else {
-		vr.ID = requested
-	}
-	if !vr.HasID() {
-		return nil, false
-	}
-	return &vr, ok
-}
-
-// AbortVerificationAnnotationValue returns the value of the AnnotationKeyAbort annotation
-// which can be used to abort the verification of a Freight, and a boolean
-// indicating whether the annotation was present.
-//
-// If the value of the annotation is a valid JSON object, it is unmarshalled
-// into a VerificationRequest struct. Otherwise, the value is treated as the ID
-// of the verification to be aborted and set as the ID field of the returned
-// VerificationRequest.
-func AbortVerificationAnnotationValue(annotations map[string]string) (*VerificationRequest, bool) {
-	requested, ok := annotations[AnnotationKeyAbort]
-	if !ok {
-		return nil, ok
-	}
-	var vr VerificationRequest
-	if b := []byte(requested); json.Valid(b) {
-		if err := json.Unmarshal(b, &vr); err != nil {
-			return nil, false
-		}
-	} else {
-		vr.ID = requested
-	}
-	if !vr.HasID() {
-		return nil, false
-	}
-	return &vr, ok
-}
-
-// AbortPromotionAnnotationValue returns the value of the AnnotationKeyAbort
-// annotation which can be used to abort the promotion of a Freight, and a
-// boolean indicating whether the annotation was present.
-//
-// If the value of the annotation is a valid JSON object, it is unmarshalled
-// into an AbortPromotionRequest struct. Otherwise, the value is treated as the
-// action to be taken on the Promotion and set as the Action field of the
-// returned AbortPromotionRequest.
-func AbortPromotionAnnotationValue(annotations map[string]string) (*AbortPromotionRequest, bool) {
-	requested, ok := annotations[AnnotationKeyAbort]
-	if !ok {
-		return nil, ok
-	}
-	var apr AbortPromotionRequest
-	if b := []byte(requested); json.Valid(b) {
-		if err := json.Unmarshal(b, &apr); err != nil {
-			return nil, false
-		}
-	} else {
-		apr.Action = AbortAction(requested)
-	}
-	if apr.Action == "" {
-		return nil, false
-	}
-	return &apr, ok
-}

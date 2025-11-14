@@ -71,3 +71,35 @@ main.landing-page {
     text-decoration: none !important;
   }
 }
+
+.tag::after {
+  display: inline-block;
+  padding: 0.1em 0.5em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: small;
+}
+
+.professional::after {
+  content: "Pro";
+  margin-bottom: 0.5em;
+  background: #1976d2;
+  color: #fff;
+}
+
+.beta::after {
+  content: "Beta";
+  margin-bottom: 0.5em;
+  background: #FBCFA8;
+  color: #000;
+}
+
+.tag-small::after {
+  display: inline-block;
+  padding: 0.05em 0.25em;
+  border-radius: 0.3em;
+  vertical-align: middle;
+  font-weight: normal;
+  font-size: x-small;
+}

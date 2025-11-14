@@ -1,5 +1,5 @@
 
-{{- if or (and .Values.api.enabled .Values.api.ingress.enabled .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert) (and .Values.webhooksServer.enabled .Values.webhooksServer.tls.selfSignedCert) (and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled .Values.api.oidc.dex.tls.selfSignedCert) }}
+{{- if or (and .Values.api.enabled .Values.api.tls.enabled .Values.api.tls.selfSignedCert) (and .Values.api.enabled .Values.api.ingress.enabled .Values.api.ingress.tls.enabled .Values.api.ingress.tls.selfSignedCert) (and .Values.api.enabled .Values.api.oidc.enabled .Values.api.oidc.dex.enabled .Values.api.oidc.dex.tls.selfSignedCert) (and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.tls.enabled .Values.externalWebhooksServer.tls.selfSignedCert) (and .Values.externalWebhooksServer.enabled .Values.externalWebhooksServer.ingress.enabled .Values.externalWebhooksServer.ingress.tls.enabled .Values.externalWebhooksServer.ingress.tls.selfSignedCert) (and .Values.webhooksServer.enabled .Values.webhooksServer.tls.selfSignedCert) }}
 apiVersion: cert-manager.io/v1
 kind: Issuer
 metadata:

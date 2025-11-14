@@ -25,8 +25,16 @@
                 "type": "string"
               },
               "config": {
-                "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/references/expression-language for details.",
+                "description": "Config is opaque configuration for the PromotionStep that is understood\nonly by each PromotionStep's implementation. It is legal to utilize\nexpressions in defining values at any level of this block.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                 "x-kubernetes-preserve-unknown-fields": true
+              },
+              "continueOnError": {
+                "description": "ContinueOnError is a boolean value that, if set to true, will cause the\nPromotion to continue executing the next step even if this step fails. It\nalso will not permit this failure to impact the overall status of the\nPromotion.",
+                "type": "boolean"
+              },
+              "if": {
+                "description": "If is an optional expression that, if present, must evaluate to a boolean\nvalue. If the expression evaluates to false, the step will be skipped.\nIf the expression does not evaluate to a boolean value, the step will be\nconsidered to have failed.",
+                "type": "string"
               },
               "retry": {
                 "description": "Retry is the retry policy for this step.",
@@ -77,7 +85,7 @@
               "vars": {
                 "description": "Vars is a list of variables that can be referenced by expressions in\nthe step's Config. The values override the values specified in the\nPromotionSpec.",
                 "items": {
-                  "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+                  "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
                   "properties": {
                     "name": {
                       "description": "Name is the name of the variable.",
@@ -86,7 +94,7 @@
                       "type": "string"
                     },
                     "value": {
-                      "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                      "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                       "type": "string"
                     }
                   },
@@ -112,7 +120,7 @@
         "vars": {
           "description": "Vars specifies the variables available to the PromotionTask. The\nvalues of these variables are the default values that can be\noverridden by the step referencing the task.",
           "items": {
-            "description": "PromotionVariable describes a single variable that may be referenced by\nexpressions in promotion steps.",
+            "description": "ExpressionVariable describes a single variable that may be referenced by\nexpressions in the context of a ClusterPromotionTask, PromotionTask,\nPromotion, AnalysisRun arguments, or other objects that support expressions.\n\nIt is used to pass information to the expression evaluation engine, and to\nallow for dynamic evaluation of expressions based on the variable values.",
             "properties": {
               "name": {
                 "description": "Name is the name of the variable.",
@@ -121,7 +129,7 @@
                 "type": "string"
               },
               "value": {
-                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/references/expression-language for details.",
+                "description": "Value is the value of the variable. It is allowed to utilize expressions\nin the value.\nSee https://docs.kargo.io/user-guide/reference-docs/expressions for details.",
                 "type": "string"
               }
             },

@@ -5,12 +5,12 @@ sidebar_label: Managing Credentials
 
 # Managing Credentials
 
-To orchestrate the promotion of `Freight` from `Stage` to `Stage`, Kargo will
-often require read/write permissions on private Git repositories and read-only
-permissions on private container image or Helm chart repositories.
+Kargo `Warehouse`s frequently require read-only access to private repositories.
+Promotion processes often require this as well, and may also require read/write
+access to Git repositories.
 
 This section presents an overview of how users can manage and use such
-credentials within their Kargo projects.
+credentials within their Kargo Projects.
 
 :::info
 __Not what you were looking for?__
@@ -104,12 +104,12 @@ __Precedence__
 
 When Kargo searches for repository credentials in a project's namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_
-`repoIsRegex` set to `true` looking for a `repoURL` value matching the
+`repoURLIsRegex` set to `true` looking for a `repoURL` value matching the
 repository URL exactly.
 
 Only if no exact match is found does it iterate over all
-appropriately labeled `Secret`s with `repoIsRegex` set to `true` looking for a
-regular expression matching the repository URL.
+appropriately labeled `Secret`s with `repoURLIsRegex` set to `true` looking for
+a regular expression matching the repository URL.
 
 When searching for an exact match, and then again when searching for a pattern
 match, appropriately labeled `Secret`s are considered in lexical order by name.
@@ -312,7 +312,7 @@ create or install a GitHub App.
     1. Under <Hlt>Where can this GitHub App be installed?</Hlt>,
        leave <Hlt>Only on this account</Hlt> selected.
     1. Click <Hlt>Create GitHub App</Hlt>.
-    1. Take note of the <Hlt>App ID</Hlt>.
+    1. Take note of the <Hlt>Client ID</Hlt>.
     1. Scroll to the bottom of the page and click <Hlt>Generate a private
        key</Hlt>. The resulting key will be downloaded immediately. Store
        it securely.
@@ -340,12 +340,41 @@ create or install a GitHub App.
       labels:
         kargo.akuity.io/cred-type: git
     stringData:
+      githubAppClientID: <client id>
+      githubAppPrivateKey: <PEM-encoded private key>
+      githubAppInstallationID: <installation id>
+      repoURL: <repo url>
+      repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
+    ```
+
+    :::info
+    GitHub currently recommends using an App's alphanumeric client ID whenever
+    possible, but Kargo does support the deprecated, numeric App ID as an
+    alternative identifier for a GitHub App. The following example is thus
+    valid until such time that GitHub themselves may remove support for the
+    deprecated App ID.
+
+    ```yaml
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: <name>
+      namespace: <project namespace>
+      labels:
+        kargo.akuity.io/cred-type: git
+    stringData:
       githubAppID: <app id>
       githubAppPrivateKey: <PEM-encoded private key>
       githubAppInstallationID: <installation id>
       repoURL: <repo url>
       repoURLIsRegex: <true if repoURL is a pattern matching multiple repositories>
     ```
+
+    In the event that a `Secret`'s data map includes values for _both_ the
+    `githubAppClientID` and `githubAppID` keys, Kargo will prioritize the value
+    of the `githubAppClientID` key as its means of uniquely identifying the
+    GitHub App.
+    :::
 
     :::note
     The `kargo create/update credentials` commands do not support creating or
@@ -361,33 +390,52 @@ App is that the App's permissions are not tied to a specific GitHub user.
 
 :::caution
 It is easy to violate the principle of least privilege when authenticating using
-this method.
+GitHub Apps.
 
-For convenience sake, it may be tempting to register a single GitHub App and
-select a broad set of repositories when installing that App into your
-organization. It may also be tempting to create a single set of
-[global credentials](#global-credentials) such that all Kargo projects can use
-them to access their repositories, _however_, this will have the undesirable
-effect of granting _all_ Kargo projects access to _all_ of the repositories
-selected when the App was installed.
+For convenience’s sake, it may be tempting to register a single GitHub App,
+select a broad set of repositories when installing that App, then create a
+single set of [global credentials](#global-credentials), _however_, this will
+have the undesirable effect of granting _all_ Kargo projects access to _all_ of
+the selected repositories.
 
-It is, instead, recommended to register a separate GitHub App for
-each Kargo project. When installing each App into your organization, only those
-repositories to which each Kargo project requires access should be selected.
+Alternatively, you might consider registering a _separate_ GitHub App for each
+Kargo project, selecting a narrower set of repositories when installing each
+App, then creating corresponding Secrets in individual project namespaces.
+While this better adheres to the principle of least privilege, it can be
+onerous to manage. Worse, because GitHub organizations are limited to
+registering 100 GitHub Apps each, the approach does not scale beyond 100
+projects.
 
-GitHub organizations are limited to registering 100 GitHub Apps, however, so
-this approach may not be feasible for organizations with many Kargo projects.
-:::
+Beginning with Kargo v1.8.0, a third, experimental (stability not guaranteed)
+approach builds upon the first, by adding an optional annotation to the
+[global credentials](#global-credentials) `Secret` containing a map that
+constrains the scopes (repositories) available to each project.
 
-:::caution
-A second way in which authentication using GitHub Apps may violate the principle
-of least privilege involves the fact that the same permissions are granted to
-the App on _all_ repositories that are selected when it is installed.
+In the following example, the credentials defined by the `github` `Secret` in
+the `shared-credentials` namespace are available to all Kargo projects, however,
+the `kargo-demo-1` project is able to obtain access tokens scoped to either
+`repo-a` or `repo-b` only, while the `kargo-demo-2` project is able to obtain
+access tokens scoped to `repo-c` only. No other project is able to obtain access
+tokens scoped to _any_ repository.
 
-If a Kargo project requires read-only access to one repository and read/write
-access to another, it is not possible to grant the App different permissions on
-the two. This may then lead to granting broader permissions than are strictly
-necessary.
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github
+  namespace: shared-credentials
+  labels:
+    kargo.akuity.io/cred-type: git
+    annotations:
+      kargo.akuity.io/github-token-scopes: |
+        {
+          "kargo-demo-1": ["repo-a", "repo-b"],
+          "kargo-demo-2": ["repo-c"]
+        }
+data:
+  # ...
+```
+
 :::
 
 ### Amazon Elastic Container Registry (ECR)
@@ -414,6 +462,7 @@ metadata:
   labels:
     kargo.akuity.io/cred-type: image
 stringData:
+  awsRegion: us-west-2
   awsAccessKeyID: <access key id>
   awsSecretAccessKey: <secret access key>
   repoURL: <ecr url>
@@ -462,9 +511,9 @@ section of the Operator Guide.
 
 ### Google Artifact Registry
 
-The authentication options described in this section are applicable only to
-container image repositories whose URLs indicate they are hosted in Google
-Artifact Registry.
+The authentication options described in this section are applicable to both
+container image repositories and OCI Helm chart repositories whose URLs indicate
+they are hosted in Google Artifact Registry.
 
 #### Long-Lived Credentials {#gar-long-lived-credentials}
 
@@ -489,18 +538,35 @@ out this process and will cache the access token for a period of 40 minutes.
 
 To use this option, your `Secret` should take the following form:
 
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: <name>
-  namespace: <project namespace>
-  labels:
-    kargo.akuity.io/cred-type: image
-stringData:
-  gcpServiceAccountKey: <base64-encoded service account key>
-  repoURL: <artifact registry url>
-```
+* For a container image repository:
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: <name>
+    namespace: <project namespace>
+    labels:
+      kargo.akuity.io/cred-type: image
+  stringData:
+    gcpServiceAccountKey: <base64-encoded service account key>
+    repoURL: us-central1-docker.pkg.dev/my-project/my-images
+  ```
+
+* For an OCI Helm chart repository:
+
+  ```yaml
+  apiVersion: v1
+  kind: Secret
+  metadata:
+    name: <name>
+    namespace: <project namespace>
+    labels:
+      kargo.akuity.io/cred-type: helm
+  stringData:
+    gcpServiceAccountKey: <base64-encoded service account key>
+    repoURL: oci://us-central1-docker.pkg.dev/my-project/my-helm-charts/my-chart
+  ```
 
 :::note
 Service account keys contain structured data, so it is important that the
@@ -528,7 +594,8 @@ Federation instead.
 If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
 is deployed within a GKE cluster, it will attempt to use
 [Workload Identity Federation](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity)
-to authenticate, but this relies upon some external setup. Leveraging this
+to authenticate. This works for both container image repositories and OCI Helm
+chart repositories, and relies upon some external setup. Leveraging this
 option eliminates the need to store credentials in a `Secret` resource.
 
 :::info
@@ -541,6 +608,11 @@ section of the Operator Guide.
 
 ### Azure Container Registry (ACR)
 
+The authentication options described in this section are applicable only to
+container image repositories whose URLs indicate they are hosted in ACR.
+
+#### Long-Lived Credentials {#acr-long-lived-credentials}
+
 Azure Container Registry directly supports long-lived credentials.
 
 It is possible to
@@ -550,10 +622,33 @@ with or without an expiration date. These tokens can be stored in the
 [in the first section](#repository-credentials-as-secret-resources) of this
 document.
 
+:::caution
+Following the principle of least privilege, the ACR token should be limited only
+to read-only access to the required ACR repositories. Configuring this will
+likely require the assistance of an Azure administrator.
+:::
+
+:::caution
+This method of authentication is a "lowest common denominator" approach that
+will work regardless of where Kargo is deployed. i.e. If running Kargo outside
+of AKS, this method will still work.
+
+If running Kargo within AKS, you may wish to consider using Azure Workload
+Identity instead.
+:::
+
+#### Azure Workload Identity
+
+If Kargo locates no `Secret` resources matching a repository URL, and if Kargo
+is deployed within an AKS cluster with workload identity enabled, it will attempt
+to use [Azure Workload Identity](https://learn.microsoft.com/en-us/azure/aks/workload-identity-overview)
+to authenticate. Leveraging this option eliminates the need to store credentials
+in a `Secret` resource.
+
 :::info
-Support for authentication to ACR repositories using workload identity is not
-yet implemented. Assuming/impersonating a project-specific principal in Azure is
-notably complex. So, while a future Kargo release is very likely to add some
-form of support for ACR and workload identity, it is unlikely to match the
-capabilities Kargo provides for ECR or GAR.
+This option relies upon extensive external configuration that likely requires
+the assistance of Kargo's operator and an Azure administrator, and as such,
+further coverage is delegated to the
+[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+section of the Operator Guide.
 :::

@@ -1,0 +1,62 @@
+# API Documentation
+<a name="top"></a>
+
+{{- range .Files}}
+{{$file_name := .Name}}
+<a name="{{.Name | anchor}}"></a>
+<p align="right"><a href="#top">Top</a></p>
+
+## {{ .Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" }}
+
+{{- range .Services}}
+<a name="{{.FullName | anchor}}"></a>
+
+:::warning
+Stability is not guaranteed.
+:::
+
+| Method Name | Request Type | Response Type |
+| ----------- | ------------ | ------------- |
+{{range .Methods -}}
+  | {{.Name}} | [{{.RequestLongType}}](#{{.RequestFullType | anchor}}){{if .RequestStreaming}}(stream){{end}} | [{{.ResponseLongType}}](#{{.ResponseFullType | anchor}}){{if .ResponseStreaming}}(stream){{end}} |
+{{end}}
+{{- end}}
+
+{{- .Description}}
+{{- range .Messages}}
+<a name="{{.FullName | anchor}}"></a>
+
+### {{.LongName}}
+{{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{.}}{{end}}{{end}}
+
+{{- if .HasFields}}
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+{{range .Fields -}}
+  | {{.Name}} | {{ if not (contains "k8s.io" .FullType )}}[{{.LongType}}](#{{.FullType | anchor}}){{ else }}{{.FullType}}{{ end }} | {{range (.Description | splitList "\n" )  }} {{if not (contains "kubebuilder" .)}}{{. | replace "<" "&lt;" | replace ">" "&gt;" }}{{end}}{{end}} |
+{{end}}
+{{- end}}
+{{- end}}
+<!-- end messages -->
+
+{{- range .Enums}}
+<a name="{{.FullName | anchor}}"></a>
+
+### {{.LongName}}
+{{.Description}}
+
+| Name | Number | Description |
+| ---- | ------ | ----------- |
+{{range .Values -}}
+  | {{.Name}} | {{.Number}} | {{nobr .Description}} |
+{{end}}
+{{end}} <!-- end enums -->
+{{- end}}
+
+## Scalar Value Types
+
+| .proto Type | Notes | C++ | Java | Python | Go | C# | PHP | Ruby |
+| ----------- | ----- | --- | ---- | ------ | -- | -- | --- | ---- |
+{{range .Scalars -}}
+  | <a name="{{.ProtoType | anchor}}" /> {{.ProtoType}} | {{.Notes}} | {{.CppType}} | {{.JavaType}} | {{.PythonType}} | {{.GoType}} | {{.CSharp}} | {{.PhpType}} | {{.RubyType}} |
+{{end}}

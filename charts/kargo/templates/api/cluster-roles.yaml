@@ -1,0 +1,139 @@
+{{- if and .Values.api.enabled .Values.rbac.installClusterRoles }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-api
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - secrets
+    verbs:
+      - list
+      - get
+      - create
+      - watch
+      - delete
+      - update
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - freights
+    verbs:
+      - create
+      - get
+      - list
+      - patch
+      - watch
+      - delete
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - freights/status
+    verbs:
+      - update
+      - patch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - clusterconfigs
+      - clusterpromotiontasks
+      - projects
+      - promotiontasks
+      - stages
+      - warehouses
+      - projectconfigs
+    verbs:
+      - "*"
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      - promotions
+    verbs:
+      - create
+      - get
+      - list
+      - watch
+      - patch
+  - apiGroups:
+      - kargo.akuity.io
+    resources:
+      # Needed for OpenShift
+      - stages/finalizers
+    verbs:
+      - patch
+      - update
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - rolebindings
+      - roles
+    verbs:
+      - get
+      - list
+      - watch
+{{- if .Values.api.rollouts.integrationEnabled }}
+  - apiGroups:
+      - argoproj.io
+    resources:
+      - analysistemplates
+      - clusteranalysistemplates
+    verbs:
+      - "*"
+{{- end }}
+{{- if .Values.api.rollouts.integrationEnabled }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kargo-api-rollouts
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - argoproj.io
+  resources:
+  - analysisruns
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}
+{{- end }}

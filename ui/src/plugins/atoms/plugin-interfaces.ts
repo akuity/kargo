@@ -12,7 +12,7 @@
 import { ReactNode } from 'react';
 
 import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-directive-step-status/utils';
-import { Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { Promotion, PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
 
 interface DeepLinksPluginProps {
   PromotionStep: {

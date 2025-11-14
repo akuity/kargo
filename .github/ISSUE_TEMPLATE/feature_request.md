@@ -8,6 +8,8 @@ labels:
 assignees: ''
 ---
 
+__Note:__ If you're requesting a Helm chart option that may be very niche and not useful to the community at large, please consider using Kustomize to apply "last mile" tweaks to the output of `helm template` to suit your needs instead.
+
 # Checklist
 
 * [ ] I've searched the issue queue to verify this is not a duplicate feature request.
@@ -21,7 +23,3 @@ assignees: ''
 # Motivation
 
 <!-- Please give examples of your use case. i.e. When would someone use this? -->
-
-# Suggested Implementation
-
-<!-- Do you have thoughts about how this should be implemented? -->

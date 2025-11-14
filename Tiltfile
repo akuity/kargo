@@ -44,8 +44,11 @@ docker_build(
 
 namespace_create('kargo')
 k8s_resource(
-  new_name = 'namespace',
-  objects = ['kargo:namespace'],
+  new_name = 'namespaces',
+  objects = [
+    'kargo:namespace',
+    'kargo-cluster-secrets:namespace'
+  ],
   labels = ['kargo']
 )
 
@@ -54,12 +57,19 @@ k8s_yaml(
     './charts/kargo',
     name = 'kargo',
     namespace = 'kargo',
-    values = 'hack/tilt/values.dev.yaml'
+    values = 'hack/tilt/values.dev.yaml',
+    set = [
+      'externalWebhooksServer.host=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME', 'localhost:30083'),
+      'externalWebhooksServer.tls.terminatedUpstream=' + os.environ.get('KARGO_EXTERNAL_WEBHOOKS_SERVER_TLS_TERMINATED_UPSTREAM', 'false')
+    ]
   )
 )
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 k8s_yaml('hack/tilt/ui.yaml')
+
+# Setup a namespace and controller permissions for shared credentials.
+k8s_yaml('hack/tilt/shared-creds.yaml')
 
 k8s_resource(
   new_name = 'common',
@@ -68,10 +78,29 @@ k8s_resource(
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-project-admin:clusterrole',
+    'kargo-project-creator:clusterrole',
+    'kargo-project-creator:clusterrolebinding',
+    'kargo-project-creator:serviceaccount',
+    'kargo-project-secrets-reader:clusterrole',
+    'kargo-user:clusterrole',
+    'kargo-user:clusterrolebinding',
+    'kargo-user:serviceaccount',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
     'kargo-viewer:clusterrolebinding',
     'kargo-selfsigned-cert-issuer:issuer'
+  ]
+)
+
+k8s_resource(
+  new_name = 'cluster-secrets',
+  labels = ['kargo'],
+  objects = [
+    'kargo-cluster-secrets-admin:role',
+    'kargo-cluster-secrets-admin:rolebinding',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding'
   ]
 )
 
@@ -89,8 +118,7 @@ k8s_resource(
     'kargo-api:secret',
     'kargo-api:serviceaccount',
     'kargo-api-rollouts:clusterrole',
-    'kargo-api-rollouts:clusterrolebinding',
-    'kargo-project-admin:clusterrole'
+    'kargo-api-rollouts:clusterrolebinding'
   ],
   resource_deps=['back-end-compile','dex-server']
 )
@@ -108,7 +136,9 @@ k8s_resource(
     'kargo-controller-argocd:clusterrolebinding',
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
-    'kargo-controller-rollouts:clusterrolebinding'
+    'kargo-controller-rollouts:clusterrolebinding',
+    'kargo-controller-read-secrets:rolebinding',
+    'kargo-shared-credentials:namespace'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )
@@ -122,6 +152,21 @@ k8s_resource(
     'kargo-dex-server:secret',
     'kargo-dex-server:serviceaccount'
   ]
+)
+
+k8s_resource(
+  workload = 'kargo-external-webhooks-server',
+  new_name = 'external-webhooks-server',
+  port_forwards = [
+    '30083:8080'
+  ],
+  labels = ['kargo'],
+  objects = [
+    'kargo-external-webhooks-server:clusterrole',
+    'kargo-external-webhooks-server:clusterrolebinding',
+    'kargo-external-webhooks-server:configmap',
+    'kargo-external-webhooks-server:serviceaccount'
+  ],
 )
 
 k8s_resource(
@@ -162,7 +207,7 @@ k8s_resource(
 
 k8s_resource(
   workload = 'kargo-webhooks-server',
-  new_name = 'webhooks-server',
+  new_name = 'kubernetes-webhooks-server',
   labels = ['kargo'],
   objects = [
     'kargo:mutatingwebhookconfiguration',
@@ -183,9 +228,13 @@ k8s_resource(
 k8s_resource(
   new_name = 'crds',
   objects = [
+    'clusterconfigs.kargo.akuity.io:customresourcedefinition',
+    'clusterpromotiontasks.kargo.akuity.io:customresourcedefinition',
     'freights.kargo.akuity.io:customresourcedefinition',
+    'projectconfigs.kargo.akuity.io:customresourcedefinition',
     'projects.kargo.akuity.io:customresourcedefinition',
     'promotions.kargo.akuity.io:customresourcedefinition',
+    'promotiontasks.kargo.akuity.io:customresourcedefinition',
     'stages.kargo.akuity.io:customresourcedefinition',
     'warehouses.kargo.akuity.io:customresourcedefinition'
   ],

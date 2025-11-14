@@ -1,6 +1,7 @@
-import { IconDefinition } from '@fortawesome/free-solid-svg-icons';
+import { faCode, faHammer, IconDefinition } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Tooltip } from 'antd';
+import { Flex, Tooltip } from 'antd';
+import Link from 'antd/es/typography/Link';
 import classNames from 'classnames';
 import { useMemo } from 'react';
 
@@ -18,6 +19,10 @@ export const FreightContentItem = (props: {
   linkClass: string;
   // don't truncate any content
   fullContentVisibility?: boolean;
+  // source of image
+  artifactSource?: string;
+  // build date of image
+  artifactBuildDate?: string;
 }) => {
   const {
     horizontal,
@@ -54,21 +59,49 @@ export const FreightContentItem = (props: {
       overlay={overlay}
       title={title}
     >
-      <FontAwesomeIcon
-        icon={icon}
-        style={{ fontSize: '14px' }}
-        className={classNames('px-1', {
-          'mb-2': !horizontal,
-          'mr-2': horizontal
-        })}
-      />
-      {href ? (
-        <a target='_blank' className={linkClass}>
-          {_children}
-        </a>
-      ) : (
-        _children
-      )}
+      <Flex align='center' gap={8}>
+        <FontAwesomeIcon icon={icon} style={{ fontSize: '14px' }} className={classNames('px-1')} />
+        {props.artifactSource && (
+          <Link
+            href={props.artifactSource}
+            className={classNames({
+              'mr-2': horizontal
+            })}
+            style={{ fontSize: '10px' }}
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            target='_blank'
+          >
+            {horizontal && <u>image source</u>}
+            <FontAwesomeIcon
+              icon={faCode}
+              style={{ fontSize: '10px' }}
+              className={horizontal ? 'ml-1' : ''}
+            />
+          </Link>
+        )}
+      </Flex>
+      <div
+        className={classNames(
+          { 'mt-2 flex-col': !horizontal, 'gap-2': horizontal },
+          'flex items-center'
+        )}
+      >
+        {href ? (
+          <a target='_blank' className={linkClass}>
+            {_children}
+          </a>
+        ) : (
+          _children
+        )}
+        {!!props.artifactBuildDate && (
+          <span className='text-[8px] text-center'>
+            <FontAwesomeIcon icon={faHammer} />
+            {props.artifactBuildDate}
+          </span>
+        )}
+      </div>
     </Tooltip>
   );
 };

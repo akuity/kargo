@@ -10,7 +10,7 @@ import { DescriptionFieldTemplate } from '@ui/features/common/form/rjsf/descript
 import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import rjsfStylesOverride from '@ui/features/common/form/rjsf/style-overrides.module.less';
-import { WarehouseSpec } from '@ui/gen/v1alpha1/generated_pb';
+import { WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 import { SubscriptionWizard } from './subscription-wizard';

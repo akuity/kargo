@@ -3,766 +3,1580 @@ syntax = "proto3";
 package akuity.io.kargo.service.v1alpha1;
 
 import "google/protobuf/timestamp.proto";
-import "v1alpha1/generated.proto";
+import "api/v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
-import "rollouts/api/v1alpha1/generated.proto";
-import "rbac/v1alpha1/generated.proto";
+import "api/stubs/rollouts/v1alpha1/generated.proto";
+import "api/rbac/v1alpha1/generated.proto";
 
-option go_package = "github.com/akuity/kargo/pkg/api/service/v1alpha1;svcv1alpha1";
+option go_package = "github.com/akuity/kargo/api/service/v1alpha1;svcv1alpha1";
 
+// RawFormat specifies the format for raw resource representation.
 enum RawFormat {
+  // RAW_FORMAT_UNSPECIFIED indicates no specific format is requested.
   RAW_FORMAT_UNSPECIFIED = 0;
+  // RAW_FORMAT_JSON requests JSON format for raw resources.
   RAW_FORMAT_JSON = 1;
+  // RAW_FORMAT_YAML requests YAML format for raw resources.
   RAW_FORMAT_YAML = 2;
 }
 
+// KargoService provides the primary API for interacting with Kargo resources.
+// It offers comprehensive functionality for managing continuous delivery pipelines,
+// including stages, promotions, freight, warehouses, credentials, and related resources.
 service KargoService {
+  // GetVersionInfo returns version information for the Kargo server.
   rpc GetVersionInfo(GetVersionInfoRequest) returns (GetVersionInfoResponse);
+  // GetConfig retrieves the server configuration including ArgoCD shard information.
   rpc GetConfig(GetConfigRequest) returns (GetConfigResponse);
+  // GetPublicConfig returns publicly accessible configuration including OIDC settings.
   rpc GetPublicConfig(GetPublicConfigRequest) returns (GetPublicConfigResponse);
 
+  // AdminLogin authenticates an admin user and returns an access token.
   rpc AdminLogin(AdminLoginRequest) returns (AdminLoginResponse);
 
   /* Kargo-related resources management API */
   // TODO(devholic): Add ApplyResource API
   // rpc ApplyResource(ApplyResourceRequest) returns (ApplyResourceRequest);
+  // CreateResource creates new Kubernetes resources from provided manifests.
   rpc CreateResource(CreateResourceRequest) returns (CreateResourceResponse);
+  // CreateOrUpdateResource creates or updates Kubernetes resources based on provided manifests.
   rpc CreateOrUpdateResource(CreateOrUpdateResourceRequest) returns (CreateOrUpdateResourceResponse);
+  // UpdateResource updates existing Kubernetes resources with provided manifests.
   rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
+  // DeleteResource deletes Kubernetes resources specified in the provided manifests.
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
 
   /* Stage APIs */
 
+  // ListStages retrieves all stages within a project.
   rpc ListStages(ListStagesRequest) returns (ListStagesResponse);
+  // ListImages returns available images and their usage across stages.
   rpc ListImages(ListImagesRequest) returns (ListImagesResponse);
+  // GetStage retrieves details of a specific stage.
   rpc GetStage(GetStageRequest) returns (GetStageResponse);
+  // WatchStages provides a streaming interface to monitor stage changes.
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
+  // DeleteStage removes a stage from the system.
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
+  // RefreshStage triggers a refresh of stage status and health checks.
   rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
+
+  /* ClusterConfig APIs */
+
+  // GetClusterConfig retrieves cluster-level configuration settings.
+  rpc GetClusterConfig(GetClusterConfigRequest) returns (GetClusterConfigResponse);
+  // DeleteClusterConfig removes cluster-level configuration.
+  rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
+  // WatchClusterConfig provides streaming updates for cluster configuration changes.
+  rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
+  // RefreshClusterConfig triggers a refresh of cluster configuration.
+  rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
 
   /* Promotion APIs */
 
+  // ListPromotions retrieves all promotions, optionally filtered by stage.
   rpc ListPromotions(ListPromotionsRequest) returns (ListPromotionsResponse);
+  // WatchPromotions provides streaming updates for promotion changes.
   rpc WatchPromotions(WatchPromotionsRequest) returns (stream WatchPromotionsResponse);
+  // GetPromotion retrieves details of a specific promotion.
   rpc GetPromotion(GetPromotionRequest) returns (GetPromotionResponse);
+  // WatchPromotion provides streaming updates for a specific promotion.
   rpc WatchPromotion(WatchPromotionRequest) returns (stream WatchPromotionResponse);
+  // AbortPromotion cancels a running promotion process.
   rpc AbortPromotion(AbortPromotionRequest) returns (AbortPromotionResponse);
 
   /* Project APIs */
 
+  // DeleteProject removes a project and all associated resources.
   rpc DeleteProject(DeleteProjectRequest) returns (DeleteProjectResponse);
+  // GetProject retrieves details of a specific project.
   rpc GetProject(GetProjectRequest) returns (GetProjectResponse);
+  // ListProjects retrieves all projects with optional filtering and pagination.
   rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+
+  /* ProjectConfig APIs */
+  // GetProjectConfig retrieves project-level configuration settings.
+  rpc GetProjectConfig(GetProjectConfigRequest) returns (GetProjectConfigResponse);
+  // DeleteProjectConfig removes project-level configuration.
+  rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
+  // WatchProjectConfig provides streaming updates for project configuration changes.
+  rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
+  // RefreshProjectConfig triggers a refresh of project configuration.
+  rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
+  // ApproveFreight marks freight as approved for promotion to a specific stage.
   rpc ApproveFreight(ApproveFreightRequest) returns (ApproveFreightResponse);
+  // DeleteFreight removes freight from the system.
   rpc DeleteFreight(DeleteFreightRequest) returns (DeleteFreightResponse);
+  // GetFreight retrieves details of specific freight.
   rpc GetFreight(GetFreightRequest) returns (GetFreightResponse);
+  // WatchFreight provides streaming updates for freight changes.
+  rpc WatchFreight(WatchFreightRequest) returns (stream WatchFreightResponse);
+  // PromoteToStage initiates a promotion of freight to a specific stage.
   rpc PromoteToStage(PromoteToStageRequest) returns (PromoteToStageResponse);
+  // PromoteDownstream automatically promotes freight to downstream stages.
   rpc PromoteDownstream(PromoteDownstreamRequest) returns (PromoteDownstreamResponse);
+  // QueryFreight searches for freight based on specified criteria.
   rpc QueryFreight(QueryFreightRequest) returns (QueryFreightResponse);
+  // UpdateFreightAlias changes the alias associated with specific freight.
   rpc UpdateFreightAlias(UpdateFreightAliasRequest) returns (UpdateFreightAliasResponse);
 
   /* Verification APIs */
 
+  // Reverify triggers re-execution of verification processes for a stage.
   rpc Reverify(ReverifyRequest) returns (ReverifyResponse);
+  // AbortVerification cancels running verification processes for a stage.
   rpc AbortVerification(AbortVerificationRequest) returns (AbortVerificationResponse);
 
   /* Warehouse APIs */
 
+  // ListWarehouses retrieves all warehouses within a project.
   rpc ListWarehouses(ListWarehousesRequest) returns (ListWarehousesResponse);
+  // GetWarehouse retrieves details of a specific warehouse.
   rpc GetWarehouse(GetWarehouseRequest) returns (GetWarehouseResponse);
+  // WatchWarehouses provides streaming updates for warehouse changes.
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
+  // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
+  // RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
   rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
 
+  // CreateCredentials creates new credentials for accessing external resources.
   rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
+  // DeleteCredentials removes credentials from the system.
   rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
+  // GetCredentials retrieves details of specific credentials.
   rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
+  // ListCredentials retrieves all credentials within a project.
   rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
+  // UpdateCredentials modifies existing credentials.
   rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
 
   /* Project Secrets APIs */
 
+  // ListProjectSecrets retrieves all secrets within a project.
   rpc ListProjectSecrets(ListProjectSecretsRequest) returns (ListProjectSecretsResponse);
+  // CreateProjectSecret creates a new secret within a project.
   rpc CreateProjectSecret(CreateProjectSecretRequest) returns (CreateProjectSecretResponse);
+  // UpdateProjectSecret modifies an existing project secret.
   rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
+  // DeleteProjectSecret removes a secret from a project.
   rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
+
+  /* ConfigMaps APIs */
+
+  // ListConfigMaps retrieves all ConfigMaps within a project.
+  rpc ListConfigMaps(ListConfigMapsRequest) returns (ListConfigMapsResponse);
+  // GetConfigMap retrieves details of a specific ConfigMap.
+  rpc GetConfigMap(GetConfigMapRequest) returns (GetConfigMapResponse);
 
   /* Analysis APIs */
 
+  // ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
   rpc ListAnalysisTemplates(ListAnalysisTemplatesRequest) returns (ListAnalysisTemplatesResponse);
+  // GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
   rpc GetAnalysisTemplate(GetAnalysisTemplateRequest) returns (GetAnalysisTemplateResponse);
+  // DeleteAnalysisTemplate removes an AnalysisTemplate from a project.
   rpc DeleteAnalysisTemplate(DeleteAnalysisTemplateRequest) returns (DeleteAnalysisTemplateResponse);
+  // ListClusterAnalysisTemplates retrieves all cluster-scoped AnalysisTemplates.
+  rpc ListClusterAnalysisTemplates(ListClusterAnalysisTemplatesRequest) returns (ListClusterAnalysisTemplatesResponse);
+  // GetClusterAnalysisTemplate retrieves details of a specific cluster-scoped AnalysisTemplate.
+  rpc GetClusterAnalysisTemplate(GetClusterAnalysisTemplateRequest) returns (GetClusterAnalysisTemplateResponse);
+  // DeleteClusterAnalysisTemplate removes a cluster-scoped AnalysisTemplate.
+  rpc DeleteClusterAnalysisTemplate(DeleteClusterAnalysisTemplateRequest) returns (DeleteClusterAnalysisTemplateResponse);
+  // GetAnalysisRun retrieves details of a specific AnalysisRun.
   rpc GetAnalysisRun(GetAnalysisRunRequest) returns (GetAnalysisRunResponse);
+  // GetAnalysisRunLogs streams logs from an AnalysisRun.
+  rpc GetAnalysisRunLogs(GetAnalysisRunLogsRequest) returns (stream GetAnalysisRunLogsResponse);
 
   /* Event APIs */
 
+  // ListProjectEvents retrieves events associated with a project.
   rpc ListProjectEvents(ListProjectEventsRequest) returns (ListProjectEventsResponse);
+
+  /* Promotion Task APIs */
+
+  // ListPromotionTasks retrieves all PromotionTasks within a project.
+  rpc ListPromotionTasks(ListPromotionTasksRequest) returns (ListPromotionTasksResponse);
+  // ListClusterPromotionTasks retrieves all cluster-scoped PromotionTasks.
+  rpc ListClusterPromotionTasks(ListClusterPromotionTasksRequest) returns (ListClusterPromotionTasksResponse);
+  // GetPromotionTask retrieves details of a specific PromotionTask.
+  rpc GetPromotionTask(GetPromotionTaskRequest) returns (GetPromotionTaskResponse);
+  // GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
+  rpc GetClusterPromotionTask(GetClusterPromotionTaskRequest) returns (GetClusterPromotionTaskResponse);
 
   /* Role APIs */
 
+  // CreateRole creates a new RBAC role within a project.
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
+  // DeleteRole removes an RBAC role from a project.
   rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
+  // GetRole retrieves details of a specific RBAC role.
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
+  // Grant assigns permissions or binds users/services to a role.
   rpc Grant(GrantRequest) returns (GrantResponse);
+  // ListRoles retrieves all RBAC roles within a project.
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
+  // Revoke removes permissions or unbinds users/services from a role.
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
+  // UpdateRole modifies an existing RBAC role.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+
+  /* Cluster Secrets APIs */
+  // ListClusterSecrets retrieves all cluster-scoped secrets.
+  rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
+  // CreateClusterSecret creates a new cluster-scoped secret.
+  rpc CreateClusterSecret(CreateClusterSecretRequest) returns (CreateClusterSecretResponse);
+  // UpdateClusterSecret modifies an existing cluster-scoped secret.
+  rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
+  // DeleteClusterSecret removes a cluster-scoped secret.
+  rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
 }
 
+/* Version and Configuration Messages */
+
+// ComponentVersions contains version information for different Kargo components.
 message ComponentVersions {
+  // server contains version information for the Kargo server.
   optional VersionInfo server = 1;
+  // cli contains version information for the Kargo CLI.
   optional VersionInfo cli = 2;
 }
 
+// VersionInfo contains detailed version and build information for a Kargo component.
 message VersionInfo {
+  // version is the semantic version string.
   string version = 1;
+  // git_commit is the Git commit hash used for the build.
   string git_commit = 2;
+  // git_tree_dirty indicates whether the Git working tree was dirty during build.
   bool git_tree_dirty = 3;
+  // build_time is the timestamp when the build was created.
   google.protobuf.Timestamp build_time = 4;
+  // go_version is the Go version used for the build.
   string go_version = 5;
+  // compiler is the compiler used for the build.
   string compiler = 6;
+  // platform is the target platform for the build.
   string platform = 7;
 }
 
+// GetVersionInfoRequest is the request message for retrieving version information.
 message GetVersionInfoRequest {}
 
+// GetVersionInfoResponse contains the server's version information.
 message GetVersionInfoResponse {
+  // version_info contains detailed version and build information.
   VersionInfo version_info = 1;
 }
 
+// GetConfigRequest is the request message for retrieving server configuration.
 message GetConfigRequest {}
 
+// ArgoCDShard represents configuration for a specific ArgoCD shard.
 message ArgoCDShard {
+  // url is the base URL of the ArgoCD server.
   string url = 1;
+  // namespace is the Kubernetes namespace where ArgoCD is installed.
   string namespace = 2;
 }
 
+// GetConfigResponse contains server configuration information.
 message GetConfigResponse {
+  // argocd_shards maps shard names to their ArgoCD configuration.
   map<string, ArgoCDShard> argocd_shards = 1;
+  // secret_management_enabled indicates if secret management features are available.
   bool secret_management_enabled = 2;
+  // cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
+  string cluster_secrets_namespace = 3;
+  // has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
+  bool has_analysis_run_logs_url_template = 4;
 }
 
+// GetPublicConfigRequest is the request message for retrieving public configuration.
 message GetPublicConfigRequest {}
 
+// GetPublicConfigResponse contains publicly accessible configuration settings.
 message GetPublicConfigResponse {
+  // oidc_config contains OpenID Connect configuration for authentication.
   OIDCConfig oidc_config = 1;
+  // admin_account_enabled indicates if admin account authentication is available.
   bool admin_account_enabled = 2;
+  // skip_auth indicates if authentication should be bypassed.
   bool skip_auth = 3;
 }
 
+// OIDCConfig contains OpenID Connect configuration for authentication.
 message OIDCConfig {
+  // issuer_url is the OIDC provider's issuer URL.
   string issuer_url = 1;
+  // client_id is the OIDC client identifier for web applications.
   string client_id = 2;
+  // scopes are the OIDC scopes to request during authentication.
   repeated string scopes = 3;
+  // cli_client_id is the OIDC client identifier for CLI applications.
   string cli_client_id = 4;
 }
 
+// AdminLoginRequest contains credentials for admin authentication.
 message AdminLoginRequest {
+  // password is the admin password.
   string password = 1;
 }
 
+// AdminLoginResponse contains the authentication token for admin access.
 message AdminLoginResponse {
+  // id_token is the JWT token for authenticated admin access.
   string id_token = 1;
 }
 
+/* Resource Management Messages */
+
+// CreateResourceRequest contains Kubernetes resource manifests to be created.
 message CreateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// CreateResourceResult represents the result of attempting to create a single resource.
 message CreateResourceResult {
   oneof result {
+    // created_resource_manifest contains the successfully created resource manifest.
     bytes created_resource_manifest = 1;
+    // error contains the error message if resource creation failed.
     string error = 2;
   }
 }
 
+// CreateResourceResponse contains the results of creating multiple resources.
 message CreateResourceResponse {
+  // results contains the outcome for each resource creation attempt.
   repeated CreateResourceResult results = 1;
 }
 
+// CreateOrUpdateResourceRequest contains Kubernetes resource manifests to be created or updated.
 message CreateOrUpdateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// CreateOrUpdateResourceResult represents the result of attempting to create or update a single resource.
 message CreateOrUpdateResourceResult {
   oneof result {
+    // created_resource_manifest contains the newly created resource manifest.
     bytes created_resource_manifest = 1;
+    // updated_resource_manifest contains the updated existing resource manifest.
     bytes updated_resource_manifest = 2;
+    // error contains the error message if the operation failed.
     string error = 3;
   }
 }
 
+// CreateOrUpdateResourceResponse contains the results of creating or updating multiple resources.
 message CreateOrUpdateResourceResponse {
+  // results contains the outcome for each resource create or update attempt.
   repeated CreateOrUpdateResourceResult results = 1;
 }
 
+// UpdateResourceRequest contains Kubernetes resource manifests to be updated.
 message UpdateResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// UpdateResourceResult represents the result of attempting to update a single resource.
 message UpdateResourceResult {
   oneof result {
+    // updated_resource_manifest contains the successfully updated resource manifest.
     bytes updated_resource_manifest = 1;
+    // error contains the error message if resource update failed.
     string error = 2;
   }
 }
 
+// UpdateResourceResponse contains the results of updating multiple resources.
 message UpdateResourceResponse {
+  // results contains the outcome for each resource update attempt.
   repeated UpdateResourceResult results = 1;
 }
 
+// DeleteResourceRequest contains Kubernetes resource manifests to be deleted.
 message DeleteResourceRequest {
+  // manifest contains the raw Kubernetes resource manifests in YAML or JSON format.
   bytes manifest = 1;
 }
 
+// DeleteResourceResult represents the result of attempting to delete a single resource.
 message DeleteResourceResult {
   oneof result {
+    // deleted_resource_manifest contains the successfully deleted resource manifest.
     bytes deleted_resource_manifest = 1;
+    // error contains the error message if resource deletion failed.
     string error = 2;
   }
 }
 
+// DeleteResourceResponse contains the results of deleting multiple resources.
 message DeleteResourceResponse {
+  // results contains the outcome for each resource deletion attempt.
   repeated DeleteResourceResult results = 1;
 }
 
+/* Stage Messages */
+
+// ListStagesRequest is the request for listing stages within a project.
 message ListStagesRequest {
+  // project is the name of the project whose stages should be listed.
   string project = 1;
 }
 
+// ListStagesResponse contains a list of stages within a project.
 message ListStagesResponse {
+  // stages is the list of Stage resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Stage stages = 1;
 }
 
+// ListImagesRequest is the request for listing images and their usage across stages.
 message ListImagesRequest {
+  // project is the name of the project whose images should be listed.
   string project = 1;
 }
 
+// ListImagesResponse contains information about images and their usage across stages.
 message ListImagesResponse {
-  // images maps image repository names to their tags
+  // images maps image repository names to their tags and stage usage information.
   map<string, TagMap> images = 2;
 }
 
+// TagMap represents the mapping of image tags to stages that have used them.
 message TagMap {
-  // tags maps image tag names to stages which have previously used that tag
+  // tags maps image tag names to stages which have previously used that tag.
   map<string, ImageStageMap> tags = 1;
 }
 
+// ImageStageMap represents the mapping of stages to the order in which an image was promoted.
 message ImageStageMap {
-  // stages maps stage names to the order which an image was promoted to that stage
+  // stages maps stage names to the order in which an image was promoted to that stage.
   map<string, int32> stages = 1;
 }
 
+// GetStageRequest is the request for retrieving details of a specific stage.
 message GetStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to retrieve.
   string name = 2;
+  // format specifies the format for raw resource representation.
   RawFormat format = 3;
 }
 
+// GetStageResponse contains the requested stage information.
 message GetStageResponse {
   oneof result {
+    // stage contains the Stage resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+    // raw contains the Stage resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
+// WatchStagesRequest is the request for watching stage changes via streaming.
 message WatchStagesRequest {
+  // project is the name of the project whose stages should be watched.
   string project = 1;
+  // name is the name of a specific stage to watch, if empty all stages in the project are watched.
   string name = 2;
 }
 
+// WatchStagesResponse contains stage change notifications.
 message WatchStagesResponse {
+  // stage is the Stage resource that changed.
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2;
 }
 
+// DeleteStageRequest is the request for deleting a stage.
 message DeleteStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to delete.
   string name = 2;
 }
 
+// DeleteStageResponse is the response after deleting a stage.
 message DeleteStageResponse {
   /* explicitly empty */
 }
 
+// RefreshStageRequest is the request for refreshing a stage's status.
 message RefreshStageRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // name is the name of the stage to refresh.
   string name = 2;
 }
 
+// RefreshStageResponse contains the refreshed stage information.
 message RefreshStageResponse {
+  // stage is the refreshed Stage resource.
   github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
 }
 
-message ListPromotionsRequest {
-  string project = 1;
-  optional string stage = 2;
+/* ClusterConfig Messages */
+
+message GetClusterConfigRequest {
+  RawFormat format = 1;
 }
 
-message ListPromotionsResponse {
-  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
-}
-
-message WatchPromotionsRequest {
-  string project = 1;
-  optional string stage = 2;
-}
-
-message WatchPromotionsResponse {
-  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
-  string type = 2;
-}
-
-message GetPromotionRequest {
-  string project = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetPromotionResponse {
+message GetClusterConfigResponse {
   oneof result {
-    github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+    github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
     bytes raw = 2;
   }
 }
 
-message WatchPromotionRequest {
-  string project = 1;
-  string name = 2;
+message DeleteClusterConfigRequest {
+  /* explicitly empty */
 }
 
-message WatchPromotionResponse {
+message DeleteClusterConfigResponse {
+  /* explicitly empty */
+}
+
+message WatchClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message WatchClusterConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+  string type = 2; // ADDED / MODIFIED / DELETED
+}
+
+message RefreshClusterConfigRequest {
+  /* explicitly empty */
+}
+
+message RefreshClusterConfigResponse {
+  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
+}
+
+/* Promotion Messages */
+
+// ListPromotionsRequest is the request for retrieving all promotions, optionally filtered by stage.
+message ListPromotionsRequest {
+  // project is the name of the project whose promotions should be listed.
+  string project = 1;
+  // stage is an optional stage name to filter promotions by.
+  optional string stage = 2;
+}
+
+// ListPromotionsResponse contains a list of promotions within a project.
+message ListPromotionsResponse {
+  // promotions is the list of Promotion resources found in the project.
+  repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
+}
+
+// WatchPromotionsRequest is the request for watching promotion changes via streaming.
+message WatchPromotionsRequest {
+  // project is the name of the project whose promotions should be watched.
+  string project = 1;
+  // stage is an optional stage name to filter promotions by.
+  optional string stage = 2;
+}
+
+// WatchPromotionsResponse contains promotion change notifications.
+message WatchPromotionsResponse {
+  // promotion is the Promotion resource that changed.
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2;
 }
 
-message AbortPromotionRequest {
+// GetPromotionRequest is the request for retrieving details of a specific promotion.
+message GetPromotionRequest {
+  // project is the name of the project containing the promotion.
   string project = 1;
+  // name is the name of the promotion to retrieve.
+  string name = 2;
+  // format specifies the format for raw resource representation.
+  RawFormat format = 3;
+}
+
+// GetPromotionResponse contains the requested promotion information.
+message GetPromotionResponse {
+  oneof result {
+    // promotion contains the Promotion resource in structured format.
+    github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+    // raw contains the Promotion resource in the requested raw format.
+    bytes raw = 2;
+  }
+}
+
+// WatchPromotionRequest is the request for watching a specific promotion via streaming.
+message WatchPromotionRequest {
+  // project is the name of the project containing the promotion.
+  string project = 1;
+  // name is the name of the promotion to watch.
   string name = 2;
 }
 
+// WatchPromotionResponse contains specific promotion change notifications.
+message WatchPromotionResponse {
+  // promotion is the Promotion resource that changed.
+  github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
+  string type = 2;
+}
+
+// AbortPromotionRequest is the request for canceling a running promotion process.
+message AbortPromotionRequest {
+  // project is the name of the project containing the promotion.
+  string project = 1;
+  // name is the name of the promotion to abort.
+  string name = 2;
+}
+
+// AbortPromotionResponse is the response after aborting a promotion.
 message AbortPromotionResponse {
   /* explicitly empty */
 }
 
+/* Project Messages */
+
+// DeleteProjectRequest is the request for deleting a project and all associated resources.
 message DeleteProjectRequest {
+  // name is the name of the project to delete.
   string name = 1;
 }
 
+// DeleteProjectResponse is the response after deleting a project.
 message DeleteProjectResponse {
   /* explicitly empty */
 }
 
+// GetProjectRequest is the request for retrieving details of a specific project.
 message GetProjectRequest {
+  // name is the name of the project to retrieve.
   string name = 1;
+  // format specifies the format for raw resource representation.
   RawFormat format = 2;
 }
 
+// GetProjectResponse contains the requested project information.
 message GetProjectResponse {
   oneof result {
+    // project contains the Project resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Project project = 1;
+    // raw contains the Project resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
+// ListProjectsRequest is the request for listing all projects with optional filtering and pagination.
 message ListProjectsRequest {
+  // page_size specifies the maximum number of projects to return per page.
   optional int32 page_size = 1;
+  // page specifies which page of results to return.
   optional int32 page = 2;
+  // filter specifies an optional filter expression for projects.
   optional string filter = 3;
+  // ui store starred projects uids, so it needs to filter it when looking at starred projects
+  repeated string uid = 4;
 }
 
+// ListProjectsResponse contains the list of projects and pagination information.
 message ListProjectsResponse {
+  // projects is the list of Project resources matching the request criteria.
   repeated github.com.akuity.kargo.api.v1alpha1.Project projects = 1;
+  // total is the total number of projects available (across all pages).
   int32 total = 2;
 }
 
-message ApproveFreightRequest {
+/* ProjectConfig Messages */
+
+// GetProjectConfigRequest is the request for retrieving project-level configuration settings.
+message GetProjectConfigRequest {
+  // project is the name of the project to retrieve configuration for.
   string project = 1;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 2;
+}
+
+// GetProjectConfigResponse contains the requested project configuration.
+message GetProjectConfigResponse {
+  oneof result {
+    // project_config is the structured ProjectConfig object.
+    github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+    // raw is the raw YAML representation of the project configuration.
+    bytes raw = 2;
+  }
+}
+
+// DeleteProjectConfigRequest is the request for removing project-level configuration.
+message DeleteProjectConfigRequest {
+  // project is the name of the project to delete configuration for.
+  string project = 1;
+}
+
+// DeleteProjectConfigResponse is the response after deleting project configuration.
+message DeleteProjectConfigResponse {
+  /* explicitly empty */
+}
+
+// WatchProjectConfigRequest is the request for streaming project configuration changes.
+message WatchProjectConfigRequest {
+  // project is the name of the project to watch for configuration changes.
+  string project = 1;
+}
+
+// WatchProjectConfigResponse provides streaming updates for project configuration changes.
+message WatchProjectConfigResponse {
+  // project_config is the updated ProjectConfig object.
+  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+  // type indicates the type of change (ADDED / MODIFIED / DELETED).
+  string type = 2;
+}
+
+// RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
+message RefreshProjectConfigRequest {
+  // project is the name of the project to refresh configuration for.
+  string project = 1;
+}
+
+// RefreshProjectConfigResponse contains the refreshed project configuration.
+message RefreshProjectConfigResponse {
+  // project_config is the refreshed ProjectConfig object.
+  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
+}
+
+/* Freight Messages */
+
+// ApproveFreightRequest is the request for approving freight for promotion to a stage.
+message ApproveFreightRequest {
+  // project is the name of the project containing the freight.
+  string project = 1;
+  // name is the name of the freight to approve.
   string name = 2;
+  // alias is the alias of the freight to approve.
   string alias = 3;
+  // stage is the name of the stage for which to approve the freight.
   string stage = 4;
 }
 
+// ApproveFreightResponse is the response after approving freight.
 message ApproveFreightResponse {
   /* explicitly empty */
 }
 
+// DeleteFreightRequest is the request for deleting freight.
 message DeleteFreightRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight to delete.
   string name = 2;
+  // alias is the alias of the freight to delete.
   string alias = 3;
 }
 
+// DeleteFreightResponse is the response after deleting freight.
 message DeleteFreightResponse {
   /* explicitly empty */
 }
 
+// GetFreightRequest is the request for retrieving details of specific freight.
 message GetFreightRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight to retrieve.
   string name = 2;
+  // alias is the alias of the freight to retrieve.
   string alias = 3;
+  // format specifies the format for raw resource representation.
   RawFormat format = 4;
 }
 
+// GetFreightResponse contains the requested freight information.
 message GetFreightResponse {
   oneof result {
+    // freight contains the Freight resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+    // raw contains the Freight resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
-message PromoteToStageRequest {
+// WatchFreightRequest is the request for watching freight changes via streaming.
+message WatchFreightRequest {
+  // project is the name of the project whose freight should be watched.
   string project = 1;
+}
+
+// WatchFreightResponse contains freight change notifications.
+message WatchFreightResponse {
+  // freight is the Freight resource that changed.
+  github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
+  string type = 2; // ADDED / MODIFIED / DELETED
+}
+
+// PromoteToStageRequest is the request for promoting freight to a specific stage.
+message PromoteToStageRequest {
+  // project is the name of the project containing the stage and freight.
+  string project = 1;
+  // stage is the name of the stage to promote freight to.
   string stage = 2;
+  // freight is the name of the freight to promote.
   string freight = 3;
+  // freight_alias is the alias of the freight to promote.
   string freight_alias = 4 [json_name = "freightAlias"];
 }
 
+// PromoteToStageResponse contains the promotion created for the freight promotion.
 message PromoteToStageResponse {
+  // promotion is the Promotion resource created for this freight promotion.
   github.com.akuity.kargo.api.v1alpha1.Promotion promotion = 1;
 }
 
+// PromoteDownstreamRequest is the request for automatically promoting freight to downstream stages.
 message PromoteDownstreamRequest {
+  // project is the name of the project containing the stage and freight.
   string project = 1;
+  // stage is the name of the source stage from which to promote downstream.
   string stage = 2;
+  // freight is the name of the freight to promote downstream.
   string freight = 3;
+  // freight_alias is the alias of the freight to promote downstream.
   string freight_alias = 4 [json_name = "freightAlias"];
 }
 
+// PromoteDownstreamResponse contains the promotions created for downstream freight promotions.
 message PromoteDownstreamResponse {
+  // promotions are the Promotion resources created for downstream freight promotions.
   repeated github.com.akuity.kargo.api.v1alpha1.Promotion promotions = 1;
 }
 
+// QueryFreightRequest is the request for searching freight based on specified criteria.
 message QueryFreightRequest {
+  // project is the name of the project to search for freight.
   string project = 1;
+  // stage is the name of the stage to filter freight by.
   string stage = 2;
+  // group_by specifies how to group the freight results.
   string group_by = 3;
+  // group specifies which group to return results for.
   string group = 4;
+  // order_by specifies how to order the freight results.
   string order_by = 5;
+  // reverse indicates whether to reverse the order of results.
   bool reverse = 6;
+  // origins filters freight by their origins (e.g., warehouse names).
   repeated string origins = 7;
 }
 
+// QueryFreightResponse contains the grouped freight search results.
 message QueryFreightResponse {
+  // groups maps group names to their corresponding freight lists.
   map<string, FreightList> groups = 1;
 }
 
+// FreightList contains a list of freight resources.
 message FreightList {
+  // freight is the list of Freight resources.
   repeated github.com.akuity.kargo.api.v1alpha1.Freight freight = 1;
 }
 
+// UpdateFreightAliasRequest is the request for updating a freight's alias.
 message UpdateFreightAliasRequest {
+  // project is the name of the project containing the freight.
   string project = 1;
+  // name is the name of the freight whose alias should be updated.
   string name = 2;
+  // old_alias is the current alias of the freight.
   string old_alias = 3 [json_name = "oldAlias"];
+  // new_alias is the new alias to assign to the freight.
   string new_alias = 4 [json_name = "newAlias"];
 }
 
+// UpdateFreightAliasResponse is the response after updating a freight's alias.
 message UpdateFreightAliasResponse {
   /* explicitly empty */
 }
 
+/* Verification Messages */
+
+// ReverifyRequest is the request for triggering re-execution of verification processes for a stage.
 message ReverifyRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // stage is the name of the stage to reverify.
   string stage = 2;
 }
 
+// ReverifyResponse is the response after triggering reverification.
 message ReverifyResponse {
   /* explicitly empty */
 }
 
+// AbortVerificationRequest is the request for canceling running verification processes for a stage.
 message AbortVerificationRequest {
+  // project is the name of the project containing the stage.
   string project = 1;
+  // stage is the name of the stage whose verification should be aborted.
   string stage = 2;
 }
 
+// AbortVerificationResponse is the response after aborting verification.
 message AbortVerificationResponse {
   /* explicitly empty */
 }
 
+/* Warehouse Messages */
+
+// ListWarehousesRequest is the request for listing warehouses within a project.
 message ListWarehousesRequest {
+  // project is the name of the project whose warehouses should be listed.
   string project = 1;
 }
 
+// ListWarehousesResponse contains a list of warehouses within a project.
 message ListWarehousesResponse {
+  // warehouses is the list of Warehouse resources found in the project.
   repeated github.com.akuity.kargo.api.v1alpha1.Warehouse warehouses = 1;
 }
 
+// GetWarehouseRequest is the request for retrieving details of a specific warehouse.
 message GetWarehouseRequest {
+  // project is the name of the project containing the warehouse.
   string project = 1;
+  // name is the name of the warehouse to retrieve.
   string name = 2;
+  // format specifies the format for raw resource representation.
   RawFormat format = 3;
 }
 
+// GetWarehouseResponse contains the requested warehouse information.
 message GetWarehouseResponse {
   oneof result {
+    // warehouse contains the Warehouse resource in structured format.
     github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+    // raw contains the Warehouse resource in the requested raw format.
     bytes raw = 2;
   }
 }
 
+// WatchWarehousesRequest is the request for watching warehouse changes via streaming.
 message WatchWarehousesRequest {
+  // project is the name of the project whose warehouses should be watched.
   string project = 1;
+  // name is the name of a specific warehouse to watch, if empty all warehouses in the project are watched.
   string name = 2;
 }
 
+// WatchWarehousesResponse contains warehouse change notifications.
 message WatchWarehousesResponse {
+  // warehouse is the Warehouse resource that changed.
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
+  // type indicates the type of change (ADDED, MODIFIED, DELETED).
   string type = 2;
 }
 
+// DeleteWarehouseRequest is the request for deleting a warehouse.
 message DeleteWarehouseRequest {
+  // project is the name of the project containing the warehouse.
   string project = 1;
+  // name is the name of the warehouse to delete.
   string name = 2;
 }
 
+// DeleteWarehouseResponse is the response after deleting a warehouse.
 message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
+// RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 message RefreshWarehouseRequest {
+  // project is the name of the project containing the warehouse.
   string project = 1;
+  // name is the name of the warehouse to refresh.
   string name = 2;
 }
 
+// RefreshWarehouseResponse contains the refreshed warehouse information.
 message RefreshWarehouseResponse {
+  // warehouse is the refreshed Warehouse resource.
   github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
-message ListProjectSecretsRequest {
+// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+message ListConfigMapsRequest {
+  // project is the name of the project to list ConfigMaps from.
   string project = 1;
 }
 
-message ListProjectSecretsResponse {
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
+// ListConfigMapsResponse contains the list of ConfigMaps in a project.
+message ListConfigMapsResponse {
+  // config_maps is the list of ConfigMaps found in the project.
+  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
 }
 
-message CreateProjectSecretRequest {
+// GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+message GetConfigMapRequest {
+  // project is the name of the project containing the ConfigMap.
   string project = 1;
+  // name is the name of the ConfigMap to retrieve.
   string name = 2;
-  string description = 3;
-  map<string, string> data = 4;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 3;
 }
 
-message CreateProjectSecretResponse {
-  k8s.io.api.core.v1.Secret secret = 1;
+// GetConfigMapResponse contains the requested ConfigMap information.
+message GetConfigMapResponse {
+  oneof result {
+    // config_map is the structured Kubernetes ConfigMap object.
+    k8s.io.api.core.v1.ConfigMap config_map = 1;
+    // raw is the raw YAML representation of the ConfigMap.
+    bytes raw = 2;
+  }
 }
 
-message UpdateProjectSecretRequest {
-  string project = 1;
-  string name = 2;
-  string description = 3;
-  map<string, string> data = 4;
-}
+/* Credential Messages */
 
-message UpdateProjectSecretResponse {
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-message DeleteProjectSecretRequest {
-  string project = 1;
-  string name = 2;
-}
-
-message DeleteProjectSecretResponse {
-  /* explicitly empty */
-}
-
+// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
 message CreateCredentialsRequest {
+  // project is the name of the project where the credentials will be stored.
   string project = 1;
+  // name is the name of the credentials.
   string name = 2;
+  // description is a human-readable description of the credentials.
   string description = 8;
-  // type is git, helm, image
+  // type specifies the credential type (git, helm, image).
   string type = 3;
+  // repo_url is the URL of the repository or registry these credentials apply to.
   string repo_url = 4 [json_name = "repoURL"];
+  // repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
+  // username is the username for authentication.
   string username = 6;
+  // password is the password or token for authentication.
   string password = 7;
 }
 
+// CreateCredentialsResponse contains the newly created credentials.
 message CreateCredentialsResponse {
+  // credentials is the created Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+// DeleteCredentialsRequest is the request for deleting existing credentials.
 message DeleteCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to delete.
   string name = 2;
 }
 
+// DeleteCredentialsResponse is the response returned after deleting credentials.
 message DeleteCredentialsResponse {
   /* explicitly empty */
 }
 
+// GetCredentialsRequest is the request for retrieving existing credentials.
 message GetCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to retrieve.
   string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetCredentialsResponse contains the requested credentials information.
 message GetCredentialsResponse {
   oneof result {
+    // credentials is the structured Kubernetes Secret containing the credentials.
     k8s.io.api.core.v1.Secret credentials = 1;
+    // raw is the raw YAML representation of the credentials.
     bytes raw = 2;
   }
 }
 
+// ListCredentialsRequest is the request for listing all credentials in a project.
 message ListCredentialsRequest {
+  // project is the name of the project whose credentials will be listed.
   string project = 1;
 }
 
+// ListCredentialsResponse contains a list of credentials for the specified project.
 message ListCredentialsResponse {
+  // credentials is the list of Kubernetes Secrets containing the credentials.
   repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
+// UpdateCredentialsRequest is the request for updating existing credentials.
 message UpdateCredentialsRequest {
+  // project is the name of the project containing the credentials.
   string project = 1;
+  // name is the name of the credentials to update.
   string name = 2;
+  // description is a human-readable description of the credentials.
   string description = 8;
+  // type specifies the credential type (git, helm, image).
   string type = 3;
+  // repo_url is the URL of the repository or registry these credentials apply to.
   string repo_url = 4 [json_name = "repoURL"];
+  // repo_url_is_regex indicates whether repo_url should be treated as a regular expression.
   bool repo_url_is_regex = 5 [json_name = "repoURLIsRegex"];
+  // username is the username for authentication.
   string username = 6;
+  // password is the password or token for authentication.
   string password = 7;
 }
 
+// UpdateCredentialsResponse contains the updated credentials information.
 message UpdateCredentialsResponse {
+  // credentials is the updated Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-message ListAnalysisTemplatesRequest {
+/* Project Secrets Messages */
+
+// ListProjectSecretsRequest is the request for listing all secrets in a project.
+message ListProjectSecretsRequest {
+  // project is the name of the project whose secrets will be listed.
   string project = 1;
 }
 
-message ListAnalysisTemplatesResponse {
-  repeated github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+// ListProjectSecretsResponse contains a list of secrets for the specified project.
+message ListProjectSecretsResponse {
+  // secrets is the list of Kubernetes Secrets within the project.
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
 }
 
-message GetAnalysisTemplateRequest {
+// CreateProjectSecretRequest is the request for creating a new secret within a project.
+message CreateProjectSecretRequest {
+  // project is the name of the project where the secret will be created.
   string project = 1;
+  // name is the name of the secret to create.
   string name = 2;
+  // description is a human-readable description of the secret.
+  string description = 3;
+  // data contains the key-value pairs that make up the secret data.
+  map<string, string> data = 4;
+}
+
+// CreateProjectSecretResponse contains the newly created project secret.
+message CreateProjectSecretResponse {
+  // secret is the created Kubernetes Secret within the project.
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+// UpdateProjectSecretRequest is the request for updating an existing project secret.
+message UpdateProjectSecretRequest {
+  // project is the name of the project containing the secret.
+  string project = 1;
+  // name is the name of the secret to update.
+  string name = 2;
+  // description is a human-readable description of the secret.
+  string description = 3;
+  // data contains the key-value pairs that make up the secret data.
+  map<string, string> data = 4;
+}
+
+// UpdateProjectSecretResponse contains the updated project secret information.
+message UpdateProjectSecretResponse {
+  // secret is the updated Kubernetes Secret within the project.
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+// DeleteProjectSecretRequest is the request for deleting a project secret.
+message DeleteProjectSecretRequest {
+  // project is the name of the project containing the secret.
+  string project = 1;
+  // name is the name of the secret to delete.
+  string name = 2;
+}
+
+// DeleteProjectSecretResponse is the response returned after deleting a project secret.
+message DeleteProjectSecretResponse {
+  /* explicitly empty */
+}
+
+/* Analysis Messages */
+
+// ListAnalysisTemplatesRequest is the request for listing all analysis templates in a project.
+message ListAnalysisTemplatesRequest {
+  // project is the name of the project whose analysis templates will be listed.
+  string project = 1;
+}
+
+// ListAnalysisTemplatesResponse contains a list of analysis templates for the specified project.
+message ListAnalysisTemplatesResponse {
+  // analysis_templates is the list of AnalysisTemplate resources within the project.
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_templates = 1 [json_name = "analysisTemplates"];
+}
+
+// GetAnalysisTemplateRequest is the request for retrieving a specific analysis template.
+message GetAnalysisTemplateRequest {
+  // project is the name of the project containing the analysis template.
+  string project = 1;
+  // name is the name of the analysis template to retrieve.
+  string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 3;
 }
 
+// GetAnalysisTemplateResponse contains the requested analysis template information.
 message GetAnalysisTemplateResponse {
   oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    // analysis_template is the structured AnalysisTemplate resource.
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate analysis_template = 1 [json_name = "analysisTemplate"];
+    // raw is the raw YAML representation of the analysis template.
     bytes raw = 2;
   }
 }
 
-message GetAnalysisRunRequest {
-  string namespace = 1;
-  string name = 2;
-  RawFormat format = 3;
-}
-
-message GetAnalysisRunResponse {
-  oneof result {
-    github.com.akuity.kargo.internal.controller.rollouts.api.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
-    bytes raw = 2;
-  }
-}
-
+// DeleteAnalysisTemplateRequest is the request for deleting an analysis template.
 message DeleteAnalysisTemplateRequest {
+  // project is the name of the project containing the analysis template.
   string project = 1;
+  // name is the name of the analysis template to delete.
   string name = 2;
 }
 
+// DeleteAnalysisTemplateResponse is the response returned after deleting an analysis template.
 message DeleteAnalysisTemplateResponse {
   /* explicitly empty */
 }
 
-message ListProjectEventsRequest {
-  string project = 1;
+// ListClusterAnalysisTemplatesRequest is the request for listing all cluster-level analysis templates.
+message ListClusterAnalysisTemplatesRequest {}
+
+// ListClusterAnalysisTemplatesResponse contains a list of cluster-level analysis templates.
+message ListClusterAnalysisTemplatesResponse {
+  // cluster_analysis_templates is the list of ClusterAnalysisTemplate resources.
+  repeated github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_templates = 1 [json_name = "clusteranalysisTemplates"];
 }
 
-message ListProjectEventsResponse {
-  repeated k8s.io.api.core.v1.Event events = 1;
+// GetClusterAnalysisTemplateRequest is the request for retrieving a specific cluster analysis template.
+message GetClusterAnalysisTemplateRequest {
+  // name is the name of the cluster analysis template to retrieve.
+  string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 3;
 }
 
-message CreateRoleRequest {
-  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+// GetClusterAnalysisTemplateResponse contains the requested cluster analysis template information.
+message GetClusterAnalysisTemplateResponse {
+  oneof result {
+    // cluster_analysis_template is the structured ClusterAnalysisTemplate resource.
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate cluster_analysis_template = 1 [json_name = "clusterAnalysisTemplate"];
+    // raw is the raw YAML representation of the cluster analysis template.
+    bytes raw = 2;
+  }
 }
 
-message CreateRoleResponse {
-  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
-}
-
-message DeleteRoleRequest {
-  string project = 1;
+// DeleteClusterAnalysisTemplateRequest is the request for deleting a cluster analysis template.
+message DeleteClusterAnalysisTemplateRequest {
+  // name is the name of the cluster analysis template to delete.
   string name = 2;
 }
 
+// DeleteClusterAnalysisTemplateResponse is the response returned after deleting a cluster analysis template.
+message DeleteClusterAnalysisTemplateResponse {
+  /* explicitly empty */
+}
+
+// GetAnalysisRunRequest is the request for retrieving a specific analysis run.
+message GetAnalysisRunRequest {
+  // namespace is the namespace containing the analysis run.
+  string namespace = 1;
+  // name is the name of the analysis run to retrieve.
+  string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 3;
+}
+
+// GetAnalysisRunResponse contains the requested analysis run information.
+message GetAnalysisRunResponse {
+  oneof result {
+    // analysis_run is the structured AnalysisRun resource.
+    github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun analysis_run = 1 [json_name = "analysisRun"];
+    // raw is the raw YAML representation of the analysis run.
+    bytes raw = 2;
+  }
+}
+
+// GetAnalysisRunLogsRequest is the request for retrieving logs from an analysis run.
+message GetAnalysisRunLogsRequest {
+  // namespace is the namespace containing the analysis run.
+  string namespace = 1;
+  // name is the name of the analysis run whose logs to retrieve.
+  string name = 2;
+  // metric_name is the specific metric whose logs to retrieve.
+  string metric_name = 3;
+  // container_name is the specific container whose logs to retrieve.
+  string container_name = 4;
+}
+
+// GetAnalysisRunLogsResponse contains a chunk of logs from the analysis run.
+message GetAnalysisRunLogsResponse {
+  // chunk is a portion of the log output from the analysis run.
+  string chunk = 1;
+}
+
+/* Event Messages */
+
+// ListProjectEventsRequest is the request for listing events in a project.
+message ListProjectEventsRequest {
+  // project is the name of the project whose events will be listed.
+  string project = 1;
+}
+
+// ListProjectEventsResponse contains a list of events for the specified project.
+message ListProjectEventsResponse {
+  // events is the list of Kubernetes Events within the project.
+  repeated k8s.io.api.core.v1.Event events = 1;
+}
+
+/* Promotion Task Messages */
+
+// ListPromotionTasksRequest is the request for listing promotion tasks in a project.
+message ListPromotionTasksRequest {
+  // project is the name of the project whose promotion tasks will be listed.
+  string project = 1;
+}
+
+// ListPromotionTasksResponse contains a list of promotion tasks for the specified project.
+message ListPromotionTasksResponse {
+  // promotion_tasks is the list of PromotionTask resources within the project.
+  repeated github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_tasks = 1;
+}
+
+// GetPromotionTaskRequest is the request for retrieving a specific promotion task.
+message GetPromotionTaskRequest {
+  // project is the name of the project containing the promotion task.
+  string project = 1;
+  // name is the name of the promotion task to retrieve.
+  string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 3;
+}
+
+// GetPromotionTaskResponse contains the requested promotion task information.
+message GetPromotionTaskResponse {
+  oneof result {
+    // promotion_task is the structured PromotionTask resource.
+    github.com.akuity.kargo.api.v1alpha1.PromotionTask promotion_task = 1 [json_name = "promotionTask"];
+    // raw is the raw YAML representation of the promotion task.
+    bytes raw = 2;
+  }
+}
+
+// ListClusterPromotionTasksRequest is the request for listing all cluster-level promotion tasks.
+message ListClusterPromotionTasksRequest {}
+
+// ListClusterPromotionTasksResponse contains a list of cluster-level promotion tasks.
+message ListClusterPromotionTasksResponse {
+  // cluster_promotion_tasks is the list of ClusterPromotionTask resources.
+  repeated github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask cluster_promotion_tasks = 1;
+}
+
+// GetClusterPromotionTaskRequest is the request for retrieving a specific cluster promotion task.
+message GetClusterPromotionTaskRequest {
+  // name is the name of the cluster promotion task to retrieve.
+  string name = 2;
+  // format specifies the desired response format (structured object or raw YAML).
+  RawFormat format = 3;
+}
+
+// GetClusterPromotionTaskResponse contains the requested cluster promotion task information.
+message GetClusterPromotionTaskResponse {
+  oneof result {
+    // promotion_task is the structured ClusterPromotionTask resource.
+    github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask promotion_task = 1 [json_name = "clusterPromotionTask"];
+    // raw is the raw YAML representation of the cluster promotion task.
+    bytes raw = 2;
+  }
+}
+
+/* Role Messages */
+
+// CreateRoleRequest is the request for creating a new RBAC role.
+message CreateRoleRequest {
+  // role is the Role resource to create.
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+// CreateRoleResponse contains the newly created role information.
+message CreateRoleResponse {
+  // role is the created Role resource.
+  github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+// DeleteRoleRequest is the request for deleting an RBAC role.
+message DeleteRoleRequest {
+  // project is the name of the project containing the role.
+  string project = 1;
+  // name is the name of the role to delete.
+  string name = 2;
+}
+
+// DeleteRoleResponse is the response returned after deleting a role.
 message DeleteRoleResponse {
   /* explicitly empty */
 }
 
+// GetRoleRequest is the request for retrieving a specific RBAC role.
 message GetRoleRequest {
+  // project is the name of the project containing the role.
   string project = 1;
+  // name is the name of the role to retrieve.
   string name = 2;
+  // as_resources indicates whether to return the role as resources or as a role object.
   bool as_resources = 3;
+  // format specifies the desired response format (structured object or raw YAML).
   RawFormat format = 4;
 }
 
+// GetRoleResponse contains the requested role information.
 message GetRoleResponse {
   oneof result {
+    // role is the structured Role resource.
     github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+    // resources is the structured RoleResources containing the role's resources.
     github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
+    // raw is the raw YAML representation of the role.
     bytes raw = 3;
   }
 }
 
+// Claims represents a collection of OIDC claims for role-based access control.
 message Claims {
   // Note: oneof and repeated do not work together
+  // claims is the list of claims associated with a user or service account.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
 }
 
+// GrantRequest is the request for granting a role to a user or resource.
 message GrantRequest {
+  // project is the name of the project where the role will be granted.
   string project = 1;
+  // role is the name of the role to grant.
   string role = 2;
   oneof request {
+    // user_claims are the OIDC claims for the user being granted the role.
     Claims user_claims = 3;
+    // resource_details are the details of the resource being granted the role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
+// GrantResponse contains information about the granted role.
 message GrantResponse {
+  // role is the Role resource that was granted.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// ListRolesRequest is the request for listing all roles in a project.
 message ListRolesRequest {
+  // project is the name of the project whose roles will be listed.
   string project = 1;
+  // as_resources indicates whether to return roles as resources or as role objects.
   bool as_resources = 2;
 }
 
+// ListRolesResponse contains a list of roles for the specified project.
 message ListRolesResponse {
   // Note: oneof and repeated do not work together
+  // roles is the list of Role resources when requested as roles.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
+  // resources is the list of RoleResources when requested as resources.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
 }
 
+// RevokeRequest is the request for revoking a role from a user or resource.
 message RevokeRequest {
+  // project is the name of the project where the role will be revoked.
   string project = 1;
+  // role is the name of the role to revoke.
   string role = 2;
   oneof request {
+    // user_claims are the OIDC claims for the user whose role is being revoked.
     Claims user_claims = 3;
+    // resource_details are the details of the resource whose role is being revoked.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
+// RevokeResponse contains information about the revoked role.
 message RevokeResponse {
+  // role is the Role resource that was revoked.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// UpdateRoleRequest is the request for updating an existing RBAC role.
 message UpdateRoleRequest {
+  // role is the updated Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
+// UpdateRoleResponse contains the updated role information.
 message UpdateRoleResponse {
+  // role is the updated Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+// ListClusterSecretsRequest is the request for listing all cluster-level secrets.
+message ListClusterSecretsRequest {
+  /* explicitly empty */
+}
+
+// ListClusterSecretsResponse contains a list of cluster-level secrets.
+message ListClusterSecretsResponse {
+  // secrets is the list of cluster-level Kubernetes Secrets.
+  repeated k8s.io.api.core.v1.Secret secrets = 1;
+}
+
+// CreateClusterSecretRequest is the request for creating a new cluster-level secret.
+message CreateClusterSecretRequest {
+  // name is the name of the cluster secret to create.
+  string name = 1;
+  // data contains the key-value pairs that make up the secret data.
+  map<string, string> data = 2;
+}
+
+// CreateClusterSecretResponse contains the newly created cluster secret.
+message CreateClusterSecretResponse {
+  // secret is the created cluster-level Kubernetes Secret.
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+// UpdateClusterSecretRequest is the request for updating an existing cluster secret.
+message UpdateClusterSecretRequest {
+  // name is the name of the cluster secret to update.
+  string name = 1;
+  // data contains the key-value pairs that make up the secret data.
+  map<string, string> data = 2;
+}
+
+// UpdateClusterSecretResponse contains the updated cluster secret information.
+message UpdateClusterSecretResponse {
+  // secret is the updated cluster-level Kubernetes Secret.
+  k8s.io.api.core.v1.Secret secret = 1;
+}
+
+// DeleteClusterSecretRequest is the request for deleting a cluster secret.
+message DeleteClusterSecretRequest {
+  // name is the name of the cluster secret to delete.
+  string name = 1;
+}
+
+// DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
+message DeleteClusterSecretResponse {
+  /* explicitly empty */
 }

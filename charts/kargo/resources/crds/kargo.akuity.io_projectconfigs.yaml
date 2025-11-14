@@ -1,0 +1,602 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: projectconfigs.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: ProjectConfig
+    listKind: ProjectConfigList
+    plural: projectconfigs
+    singular: projectconfig
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=="Ready")].message
+      name: Status
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          ProjectConfig is a resource type that describes the configuration of a
+          Project.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec describes the configuration of a Project.
+            properties:
+              promotionPolicies:
+                description: |-
+                  PromotionPolicies defines policies governing the promotion of Freight to
+                  specific Stages within the Project.
+                items:
+                  description: |-
+                    PromotionPolicy defines policies governing the promotion of Freight to a
+                    specific Stage.
+                  properties:
+                    autoPromotionEnabled:
+                      description: |-
+                        AutoPromotionEnabled indicates whether new Freight can automatically be
+                        promoted into the Stage referenced by the Stage field. Note: There are may
+                        be other conditions also required for an auto-promotion to occur. This
+                        field defaults to false, but is commonly set to true for Stages that
+                        subscribe to Warehouses instead of other, upstream Stages. This allows
+                        users to define Stages that are automatically updated as soon as new
+                        artifacts are detected.
+                      type: boolean
+                    stage:
+                      description: |-
+                        Stage is the name of the Stage to which this policy applies.
+
+                        Deprecated: Use StageSelector instead.
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    stageSelector:
+                      description: |-
+                        StageSelector is a selector that matches the Stage resource to which
+                        this policy applies.
+                      properties:
+                        matchExpressions:
+                          description: matchExpressions is a list of label selector
+                            requirements. The requirements are ANDed.
+                          items:
+                            description: |-
+                              A label selector requirement is a selector that contains values, a key, and an operator that
+                              relates the key and values.
+                            properties:
+                              key:
+                                description: key is the label key that the selector
+                                  applies to.
+                                type: string
+                              operator:
+                                description: |-
+                                  operator represents a key's relationship to a set of values.
+                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                type: string
+                              values:
+                                description: |-
+                                  values is an array of string values. If the operator is In or NotIn,
+                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                  the values array must be empty. This array is replaced during a strategic
+                                  merge patch.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                          type: object
+                        name:
+                          description: |-
+                            Name is the name of the resource to which this policy applies.
+
+                            It can be an exact name, a regex pattern (with prefix "regex:"), or a
+                            glob pattern (with prefix "glob:").
+
+                            When both Name and LabelSelector are specified, the Name is ANDed with
+                            the LabelSelector. I.e., the resource must match both the Name and
+                            LabelSelector to be selected by this policy.
+
+                            NOTE: Using a specific exact name is the most secure option. Pattern
+                            matching via regex or glob can be exploited by users with permissions to
+                            match promotion policies that weren't intended to apply to their
+                            resources. For example, a user could create a resource with a name
+                            deliberately crafted to match the pattern, potentially bypassing intended
+                            promotion controls.
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                  type: object
+                  x-kubernetes-validations:
+                  - message: PromotionPolicy must have exactly one of stage or stageSelector
+                      set
+                    rule: 'has(self.stage) ? !has(self.stageSelector) : has(self.stageSelector)'
+                type: array
+              webhookReceivers:
+                description: |-
+                  WebhookReceivers describes Project-specific webhook receivers used for
+                  processing events from various external platforms
+                items:
+                  description: |-
+                    WebhookReceiverConfig describes the configuration for a single webhook
+                    receiver.
+                  properties:
+                    artifactory:
+                      description: |-
+                        Artifactory contains the configuration for a webhook receiver that is
+                        compatible with JFrog Artifactory payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret-token` key whose
+                            value is the shared secret used to authenticate the webhook requests sent
+                            by JFrog Artifactory. For more information please refer to the JFrog
+                            Artifactory documentation:
+                              https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                        virtualRepoName:
+                          description: |-
+                            VirtualRepoName is the name of an Artifactory virtual repository.
+
+                            When unspecified, the Artifactory webhook receiver depends on the value of
+                            the webhook payload's `data.repo_key` field when inferring the URL of the
+                            repository from which the webhook originated, which will always be an
+                            Artifactory "local repository." In cases where a Warehouse subscribes to
+                            such a repository indirectly via a "virtual repository," there will be a
+                            discrepancy between the inferred (local) repository URL and the URL
+                            actually used by the subscription, which can prevent the receiver from
+                            identifying such a Warehouse as one in need of refreshing. When specified,
+                            the value of the VirtualRepoName field supersedes the value of the webhook
+                            payload's `data.repo_key` field to compensate for that discrepancy.
+
+                            In practice, when using virtual repositories, a separate Artifactory
+                            webhook receiver should be configured for each, but one such receiver can
+                            handle inbound webhooks from any number of local repositories that are
+                            aggregated by that virtual repository. For example, if a virtual repository
+                            `proj-virtual` aggregates container images from all of the `proj`
+                            Artifactory project's local image repositories, with a single webhook
+                            configured to post to a single receiver configured for the `proj-virtual`
+                            virtual repository, an image pushed to
+                            `example.frog.io/proj-<local-repo-name>/<path>/image`, will cause that
+                            receiver to refresh all Warehouses subscribed to
+                            `example.frog.io/proj-virtual/<path>/image`.
+                          type: string
+                      required:
+                      - secretRef
+                      type: object
+                    azure:
+                      description: |-
+                        Azure contains the configuration for a webhook receiver that is compatible
+                        with Azure Container Registry (ACR) and Azure DevOps payloads.
+                      properties:
+                        secretRef:
+                          description: "SecretRef contains a reference to a Secret.
+                            For Project-scoped webhook\nreceivers, the referenced
+                            Secret must be in the same namespace as the\nProjectConfig.\n\nFor
+                            cluster-scoped webhook receivers, the referenced Secret
+                            must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe
+                            Secret's data map is expected to contain a `secret` key
+                            whose value\ndoes NOT need to be shared directly with
+                            Azure when registering a webhook.\nIt is used only by
+                            Kargo to create a complex, hard-to-guess URL,\nwhich implicitly
+                            serves as a shared secret. For more information about\nAzure
+                            webhooks, please refer to the Azure documentation:\n\n
+                            Azure Container Registry:\n\thttps://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories\n\n
+                            Azure DevOps:\n\thttp://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops"
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    bitbucket:
+                      description: |-
+                        Bitbucket contains the configuration for a webhook receiver that is
+                        compatible with Bitbucket payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose
+                            value is the shared secret used to authenticate the webhook requests sent
+                            by Bitbucket. For more information please refer to the Bitbucket
+                            documentation:
+                              https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    dockerhub:
+                      description: |-
+                        DockerHub contains the configuration for a webhook receiver that is
+                        compatible with DockerHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Docker Hub when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Docker Hub webhooks, please refer to the Docker documentation:
+                              https://docs.docker.com/docker-hub/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    gitea:
+                      description: |-
+                        Gitea contains the configuration for a webhook receiver that is compatible
+                        with Gitea payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by Gitea.
+                            For more information please refer to the Gitea documentation:
+                              https://docs.gitea.io/en-us/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    github:
+                      description: |-
+                        GitHub contains the configuration for a webhook receiver that is compatible
+                        with GitHub payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by GitHub.
+                            For more information please refer to GitHub documentation:
+                              https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    gitlab:
+                      description: |-
+                        GitLab contains the configuration for a webhook receiver that is compatible
+                        with GitLab payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The secret is expected to contain a `secret-token` key containing the
+                            shared secret specified when registering the webhook in GitLab. For more
+                            information about this token, please refer to the GitLab documentation:
+                              https://docs.gitlab.com/user/project/integrations/webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    harbor:
+                      description: |-
+                        Harbor contains the configuration for a webhook receiver that is compatible
+                        with Harbor payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The secret is expected to contain an `auth-header` key containing the "auth
+                            header" specified when registering the webhook in Harbor. For more
+                            information, please refer to the Harbor documentation:
+                              https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    quay:
+                      description: |-
+                        Quay contains the configuration for a webhook receiver that is compatible
+                        with Quay payloads.
+                      properties:
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with Quay when registering a
+                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
+                            which implicitly serves as a shared secret. For more information about
+                            Quay webhooks, please refer to the Quay documentation:
+                              https://docs.quay.io/guides/notifications.html
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
+                  required:
+                  - name
+                  type: object
+                type: array
+            type: object
+          status:
+            description: Status describes the current status of a ProjectConfig.
+            properties:
+              conditions:
+                description: |-
+                  Conditions contains the last observations of the Project Config's current
+                  state.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              lastHandledRefresh:
+                description: |-
+                  LastHandledRefresh holds the value of the most recent AnnotationKeyRefresh
+                  annotation that was handled by the controller. This field can be used to
+                  determine whether the request to refresh the resource has been handled.
+                type: string
+              observedGeneration:
+                description: |-
+                  ObservedGeneration represents the .metadata.generation that this
+                  ProjectConfig was reconciled against.
+                format: int64
+                type: integer
+              webhookReceivers:
+                description: |-
+                  WebhookReceivers describes the status of Project-specific webhook
+                  receivers.
+                items:
+                  description: WebhookReceiverDetails encapsulates the details of
+                    a webhook receiver.
+                  properties:
+                    name:
+                      description: Name is the name of the webhook receiver.
+                      type: string
+                    path:
+                      description: Path is the path to the receiver's webhook endpoint.
+                      type: string
+                    url:
+                      description: URL includes the full address of the receiver's
+                        webhook endpoint.
+                      type: string
+                  type: object
+                type: array
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

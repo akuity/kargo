@@ -64,6 +64,15 @@ provide a comprehensive overview of the language's syntax and capabilities, so
 this reference will continue to focus only on Kargo-specific extensions and
 usage.
 
+:::tip
+You can test your expressions using the
+[expr-lang playground](https://expr-lang.org/playground).
+
+The playground allows you to evaluate expressions against sample data and
+see the results in real-time. This is especially useful for debugging and
+validating your expressions before using them in your Kargo configuration.
+:::
+
 ## Structure and Behavior
 
 ### Config Blocks
@@ -143,11 +152,28 @@ Expect other useful variables to be added in the future.
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ctx` | `object` | `string` fields `project`, `stage`, and `promotion` provide convenient access to details of a `Promotion`. |
+| `ctx` | `object` | Contains contextual information about the promotion. See detailed structure below. |
 | `outputs` | `object` | A map of output from previous promotion steps indexed by step aliases. |
-| `secrets` | `object` | A map of maps indexed by the names of all Kubernetes `Secret`s in the `Promotion`'s `Project` and the keys within the `Data` block of each. |
-| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from a `Promotion`'s `spec.promotionTemplate.spec.vars` field. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from both the `Stage`'s `spec.vars` field and the `Promotion`'s `spec.promotionTemplate.spec.vars` field, with promotion template variables taking precedence over Stage-level variables for any conflicting names. Variable names must observe standard Go variable-naming rules. Variables values may, themselves, be defined using an expression. `vars` (contains previously defined variables) and `ctx` are available to expressions defining the values of variables, however, `outputs` and `secrets` are not. |
 | `task` | `object` | A map containing output from previous steps within the same PromotionTask under the `outputs` field, indexed by step aliases. Only available within `(Cluster)PromotionTask` steps. |
+
+#### Context (`ctx`) Object Structure
+
+The `ctx` object has the following structure:
+
+```console
+ctx
+├── project: string           # The name of the Project
+├── stage: string             # The name of the Stage
+├── promotion: string         # The name of the Promotion
+├── targetFreight
+│   ├── name: string          # The name of the Freight that is initiated this Promotion
+│   └── origin
+│       └── name: string      # The name of the Warehouse that contains the Freight
+└── meta
+    └── promotion
+        └── actor: string     # The creator of the Promotion
+```
 
 The following example promotion process clones a repository and checks out
 two branches to different directories, uses Kustomize with source from one
@@ -194,8 +220,7 @@ promotionTemplate:
       as: commit
       config:
         path: ${{ vars.outPath }}
-        messageFromSteps:
-        - update-image
+        message: ${{ outputs['update-image'].commitMessage }}
     - uses: git-push
       config:
         path: ${{ vars.outPath }}
@@ -220,12 +245,40 @@ definition of the static variables).
 
 | Name | Type | Description |
 |------|------|-------------|
-| `ctx` | `object` | `string` fields `project` and `stage` provide convenient access to details of a `Stage`. |
+| `ctx` | `object` | Contains contextual information about the stage. See structure below. |
+| `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
+
+:::note
+Verification processes evaluate a `Stage`'s current state and, while frequently
+executed immediately following a promotion, are not intrinsically part of the
+promotion process itself. Therefore, promotion-level variables (such as those defined
+in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` from
+promotion steps) are not accessible during verification. Only Stage-level variables
+and context are available.
+:::
+
+#### Context (`ctx`) Object Structure for Verification
+
+The `ctx` object for verification has the following structure:
+
+```console
+ctx
+├── project: string  # The name of the Project
+└── stage: string    # The name of the Stage
+```
 
 ## Functions
 
-Several functions are built-in to Kargo's expression language. This section
-describes each of them.
+Besides the [built-in functions](https://expr-lang.org/docs/language-definition)
+provided by expr-lang itself, Kargo provides a number of additional functions
+that can be used within expressions in promotion steps and verification
+arguments.
+
+These functions allow you to access Kubernetes resources, manipulate strings,
+and retrieve information about the current promotion context, among other things.
+They are designed to be used in conjunction with the
+[pre-defined variables](#pre-defined-variables) to create dynamic and flexible
+promotion processes and verification steps.
 
 ### `quote(value)`
 
@@ -235,14 +288,64 @@ one required argument:
 - `value` (Required): A value of any type to be converted to a string.
 
 This is useful for scenarios where an expression evaluates to a non-`string`
-JSON type, but you wish to treat it as a `string` regardless.
+JSON type, but you wish to treat it as a `string` regardless. For string inputs,
+it produces clean output without visible quotation marks.
 
 Example:
 
 ```yaml
 config:
-  numField: ${{ 40 + 2 }} # Will be treated as a number
-  strField: ${{ quote(40 + 2) }} # Will be treated as a string
+  numField: ${{ 40 + 2 }} # Will be treated as a number (42)
+  strField: ${{ quote(40 + 2) }} # Will be treated as a string ("42")
+  rawField: ${{ quote("string") }} # Will result in "string"
+```
+
+### `unsafeQuote(value)`
+
+The `unsafeQuote()` function converts any value to its string representation. It
+has one required argument:
+
+- `value` (Required): A value of any type to be converted to a string.
+
+Compared to [`quote()`](#quotevalue) this function is considered "unsafe"
+because it adds escaped quotes around input values that are already considered
+strings. For non-string values, it behaves similarly to `quote()`.
+
+Example:
+
+```yaml
+config:
+  numField: ${{ 40 + 2 }} # Will be treated as a number (42)
+  strField: ${{ unsafeQuote(40 + 2) }} # Will result in "42"
+  rawField: ${{ unsafeQuote("string") }} # Will result in "\"string\""
+```
+
+### `configMap(name)`
+
+The `configMap()` function returns the `Data` field (a `map[string]string`) of a
+Kubernetes `ConfigMap` with the specified name from the `Project`'s namespace.
+If no such `ConfigMap` exists, an empty map is returned.
+
+Example:
+
+```yaml
+config:
+  repoURL: ${{ configMap('my-config').repoURL }}
+```
+
+### `secret(name)`
+
+The `secret()` function returns the `Data` field of a Kubernetes `Secret` with
+the specified name from the `Project`'s namespace decoded into a
+`map[string]string`. If no such `Secret` exists, an empty map is returned.
+
+Examples:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ secret('slack').token }}
 ```
 
 ### `warehouse(name)`
@@ -262,13 +365,132 @@ The returned `FreightOrigin` object has the following fields:
 
 The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
-desired source of an artifact when necessary.
+desired source of an artifact when necessary. These functions return `nil` when
+relevant `Freight` is not found from the `FreightCollection`.
 
-### `commitFrom(repoURL, [freightOrigin])`
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
 
-The `commitFrom()` function returns a corresponding `GitCommit` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and one
-optional argument:
+### `freightMetadata(freightName)`
+
+The `freightMetadata()` function retrieves the map of all metadata stored in a
+`Freight` resource. It has one required argument:
+
+- `freightName` (Required): The name of the `Freight` resource
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using dot notation
+  category: ${{ freightMetadata(ctx.targetFreight.name).category }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  settings: ${{ freightMetadata(ctx.targetFreight.name)['settings'] ?? "default-settings" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ freightMetadata(ctx.targetFreight.name)?.config?.settings?.timeoutSeconds ?? 300 }}
+```
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
+
+:::note
+An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
+but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
+form returns a single value for the specified key, the single-argument form returns
+the complete metadata map. To migrate, use either dot notation
+(`freightMetadata(freightName).keyName`) or map access syntax
+(`freightMetadata(freightName)['key-name']`) to access specific values.
+:::
+
+### `stageMetadata(stageName)`
+
+The `stageMetadata()` function retrieves metadata stored in a `Stage` resource. It
+has one required argument:
+
+- `stageName` (Required): The name of the `Stage` resource
+
+This returns a map containing all metadata key/value pairs stored in the `Stage`
+resource.
+
+Example:
+
+```yaml
+config:
+  # Access metadata values using ['key-name'] syntax
+  region: ${{ stageMetadata(ctx.stage)['aws-region'] }}
+
+  # Using nil coalescing (??) to provide default values if metadata is missing
+  tier: ${{ stageMetadata(ctx.stage)['tier'] ?? "default-tier" }}
+
+  # Using optional chaining (?.) with nil coalescing for nested values
+  nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
+```
+
+:::tip
+You can handle `nil` values gracefully in Expr using its
+[nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
+[optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
+features.
+:::
+
+### `commitFrom()`
+
+The signature and return value of the `commitFrom()` function vary slightly
+with the context in which it's used.
+
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`commitFrom(repoURL)`
+
+It has one required argument:
+
+- `repoURL` (Required): The URL of a Git repository.
+
+The returned `DiscoveredCommit` object has the following fields:
+
+| Field | Description |
+|-------|-------------|
+| `ID`      | The ID of the Git commit. |
+| `Branch`  | Branch is the branch in which the commit was found. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
+| `Tag`     | Tag is the tag that resolved to this commit. This field is optional, and populated based on the CommitSelectionStrategy of the GitSubscription. |
+| `Subject` | The first line of the commit message. |
+| `Author` | Author is the author of the commit. |
+| `Committer` | Committer is the person who committed the commit. |
+| `CreatorDate` | The creation date of the commit as specified by the commit. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - git:
+      repoURL: https://github.com/example/frontend.git
+  - git:
+      repoURL: https://github.com/example/backend.git
+  freightCreationCriteria:
+    expression: |
+      commitFrom('https://github.com/example/frontend.git').Tag == comitFrom('https://github.com/example/backend.git').Tag
+```
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`commitFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
 
 - `repoURL` (Required): The URL of a Git repository.
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
@@ -291,6 +513,8 @@ The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `GitCommit` object from the specified repository.
 
+If a commit is not found from the `FreightCollection`, returns `nil`.
+
 Examples:
 
 ```yaml
@@ -303,29 +527,62 @@ config:
   commitID: ${{ commitFrom("https://github.com/example/repo.git", warehouse("my-warehouse")).ID }}
 ```
 
-### `imageFrom(repoURL, [freightOrigin])`
+### `imageFrom()`
 
-The `imageFrom()` function returns a corresponding `Image` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and
-one optional argument:
+The signature of the `imageFrom()` function varies slightly with the context in
+which it's used.
 
-- `repoURL` (Required): The URL of a container image repository.
-- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
-  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
-  the image information.
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`imageFrom(repoURL)`
+
+It has one required argument:
+
+- `repoURL` (Required): The URL of an image repository.
 
 The returned `Image` object has the following fields:
 
 | Field | Description |
 |-------|-------------|
 | `RepoURL` | The URL of the container image repository the image originates from. |
-| `GitRepoURL` | The URL of the Git repository which contains the source code for the image. Only present if Kargo was able to infer it from the URL. |
 | `Tag` | The tag of the image. |
 | `Digest` | The digest of the image. |
+| `Annotations` | A map of [annotations](https://specs.opencontainers.org/image-spec/annotations/) discovered for the image. |
 
-The optional `freightOrigin` argument should be used when a `Stage` requests
-`Freight` from multiple origins (`Warehouse`s) and more than one can provide a
-`Image` object from the specified repository.
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/frontend
+  - image:
+      repoURL: ghcr.io/example/backend
+  freightCreationCriteria:
+    expression: |
+      imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
+```
+
+:::info
+The returned `Image` object is the same in all contexts.
+:::
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`imageFrom(repoURL, [freightOrigin])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a container image repository.
+- `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
+  [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
+  the image information.
+
+If an image is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
@@ -339,11 +596,56 @@ config:
   imageTag: ${{ imageFrom("public.ecr.aws/nginx/nginx", warehouse("my-warehouse")).Tag }}
 ```
 
-### `chartFrom(repoURL, [chartName], [freightOrigin])`
+### `chartFrom()`
 
-The `chartFrom()` function returns a corresponding `Chart` object from the
-`Promotion` or `Stage` their `FreightCollection`. It has one required and two
-optional arguments:
+The signature of the `chartFrom()` function varies slightly with the context in
+which it's used.
+
+In the context of an optional expression evaluated to determine whether criteria
+have been met for automatic creation of a `Freight` resource following a
+`Warehouse`'s artifact discovery process, the function signature is:
+
+`chartFrom(repoURL, [chartName])`
+
+It has one required and one optional argument:
+
+- `repoURL` (Required): The URL of a Helm chart repository.
+- `chartName` (Optional): The name of the chart (required for HTTP/S
+  repositories, not needed for OCI registries).
+
+The `chartFrom()` function returns a corresponding `Chart` object.
+
+| Field | Description |
+|-------|-------------|
+| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
+| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
+| `Version` | The version of the Helm chart. |
+
+Example:
+
+```yaml
+spec:
+  freightCreationPolicy: Automatic
+  subscriptions:
+  - chart:
+      repoURL: oci://example.com/my-chart
+  - chart:
+      repoURL: oci://example.com/my-other-chart
+  freightCreationCriteria:
+    expression: |
+      chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Tag
+```
+
+:::info
+The returned `Chart` object is the same in all contexts.
+:::
+
+In all other contexts, such as promotion and verification processes, the
+function signature is:
+
+`chartFrom(repoURL, [chartName], [freightOrigin])`
+
+It has one required and two optional arguments:
 
 - `repoURL` (Required): The URL of a Helm chart repository.
 - `chartName` (Optional): The name of the chart (required for HTTP/S
@@ -351,14 +653,6 @@ optional arguments:
 - `freightOrigin` (Optional): A `FreightOrigin` object (obtained from
   [`warehouse()`](#warehousename)) to specify which `Warehouse` should provide
   the chart information.
-
-The returned `Chart` object has the following fields:
-
-| Field | Description |
-|-------|-------------|
-| `RepoURL` | The URL of the Helm chart repository the chart originates from. For HTTP/S repositories, this is the URL of the repository. For OCI repositories, this is the URL of the container image repository including the chart's name. |
-| `Name` | The name of the Helm chart. Only present for HTTP/S repositories. |
-| `Version` | The version of the Helm chart. |
 
 For Helm charts stored in OCI registries, the URL should be the full path to
 the repository within that registry.
@@ -370,6 +664,8 @@ must be provided to specify the name of the chart within the repository.
 The optional `freightOrigin` argument should be used when a `Stage` requests
 `Freight` from multiple origins (`Warehouse`s) and more than one can provide a
 `Chart` object from the specified repository.
+
+If a chart is not found from the `FreightCollection`, returns `nil`.
 
 Examples:
 
@@ -395,4 +691,159 @@ config:
 # HTTP/S repository with specific warehouse
 config:
   chartVersion: ${{ chartFrom("https://example.com/charts", "my-chart", warehouse("my-warehouse")).Version }}
+```
+
+### `success()`
+
+The `success()` function checks the status of all preceding steps and returns
+true if none of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasSuccessful: ${{ success() }}
+```
+
+### `failure()`
+
+The `failure()` function checks the status of all preceding steps and returns
+true if any of them have failed or errored and false otherwise.
+
+Examples:
+
+```yaml
+config:
+  wasFailure: ${{ failure() }}
+```
+
+### `always()`
+
+The `always()` function unconditionally returns true.
+
+Examples:
+
+```yaml
+config:
+  alwaysTrue: ${{ always() }}
+```
+
+### `status(stepAlias)`
+
+The `status(stepAlias)` function retrieves the status of a specific step by its
+alias within the current promotion context; returning its value as a string.
+
+Examples:
+
+```yaml
+config:
+  status: ${{ status("my-step-alias") }}
+```
+
+### `semverParse(version)`
+
+The `semverParse()` function parses a semantic version string and returns a
+struct that provides access to its individual components through method calls.
+This is useful for scenarios where you need to inspect or manipulate specific
+version components, such as bumping the major, minor, or patch version.
+
+The returned struct provides the following methods:
+
+| Method | Return Type | Description |
+|--------|-------------|-------------|
+| `Major()` | `number` | Returns the major version component. |
+| `Minor()` | `number` | Returns the minor version component. |
+| `Patch()` | `number` | Returns the patch version component. |
+| `Prerelease()` | `string` | Returns the prerelease identifier (empty string if none). |
+| `Metadata()` | `string` | Returns the build metadata (empty string if none). |
+| `IncMajor()` | `Version` | Returns a new version with the major version incremented and minor/patch reset to 0. |
+| `IncMinor()` | `Version` | Returns a new version with the minor version incremented and patch reset to 0. |
+| `IncPatch()` | `Version` | Returns a new version with the patch version incremented. |
+| `String()` | `string` | Returns the full version string. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse versions. It supports versions with or without the `v` prefix, as well
+as prerelease and build metadata components.
+:::
+
+Example:
+
+```yaml
+# Read current chart version from Chart.yaml
+
+- uses: yaml-parse
+  as: read-version
+  config:
+    path: ./src/Chart.yaml
+    outputs:
+    - name: currentVersion
+      fromExpression: version
+
+# Update Chart.yaml with bumped minor version
+
+- uses: yaml-update
+  config:
+    path: ./src/Chart.yaml
+    updates:
+    - key: version
+      value: ${{ semverParse(task.outputs['read-version'].currentVersion).IncMinor().String() }}
+```
+
+### `semverDiff(version1, version2)`
+
+The `semverDiff()` function compares two semantic version strings and returns
+a string indicating the magnitude of difference between them. Possible return
+values include, and are limited to:
+
+| Return Value | Description |
+|--------------|-------------|
+| `Major` | The major version components differ. |
+| `Minor` | The minor version components differ (major versions are the same). |
+| `Patch` | The patch version components differ (major and minor versions are the same). |
+| `Metadata` | Only the build metadata differs (major, minor, and patch versions are the same). |
+| `None` | The versions are identical. |
+| `Incomparable` | One or both arguments are not valid semantic versions. |
+
+:::info
+The function uses the [Semantic Versioning](https://semver.org/) specification
+to parse and compare versions. It supports versions with or without the `v`
+prefix, as well as prerelease and build metadata components.
+:::
+
+Example:
+
+```yaml
+# Open a pull request for major version changes of an image; push directly
+# otherwise...
+
+# Presume steps not shown have read and updated the version number of the image
+# referenced by some manifest.
+
+- uses: git-push
+  as: direct-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) != 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    targetBranch: stage/${{ ctx.stage }}
+    message: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) }} update of ${{ vars.imageRepo }}
+
+- uses: git-push
+  as: indirect-push
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    generateTargetBranch: true
+    message: Major update of ${{ vars.imageRepo }}
+
+- uses: git-open-pr
+  if: ${{ semverDiff(imageFrom(vars.imageRepo).Tag, outputs['read-version'].currentVersion) == 'Major' }}
+  config:
+    repoURL: https://github.com/example/config-repo.git
+    sourceBranch: ${{ outputs['indirect-push'].branch }}
+    targetBranch: stage/${{ ctx.stage }}
+    title: Major update of ${{ vars.imageRepo }}
+    labels:
+    - breaking-change
+    - needs-review
 ```

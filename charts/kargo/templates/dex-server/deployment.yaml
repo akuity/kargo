@@ -54,7 +54,7 @@ spec:
             resourceFieldRef:
               containerName: dex-server
               divisor: "1"
-              resource: limits.cpu
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.api.oidc.dex.resources) }}
         {{- with (concat .Values.global.env .Values.api.oidc.dex.env) }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -100,7 +100,7 @@ spec:
         projected:
           sources:
           - secret:
-              name: kargo-dex-server-cert
+              name: {{ .Values.api.oidc.dex.tls.secretName }}
               items:
               - key: tls.crt
                 path: tls.crt

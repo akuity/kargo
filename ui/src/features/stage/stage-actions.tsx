@@ -1,33 +1,28 @@
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import {
   faExclamationCircle,
-  faPen,
+  faExternalLink,
   faRedo,
-  faRefresh,
-  faTrash
+  faRefresh
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Space } from 'antd';
 import React from 'react';
-import { generatePath, useNavigate, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { transportWithAuth } from '@ui/config/transport';
 import {
   abortVerification,
-  deleteStage,
   queryFreight,
   refreshStage,
   reverify
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Stage } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { useConfirmModal } from '../common/confirm-modal/use-confirm-modal';
-import { useModal } from '../common/modal/use-modal';
 import { currentFreightHasVerification } from '../common/utils';
-
-import { EditStageModal } from './edit-stage-modal';
+import { ArgoCDLink } from '../project/pipelines/nodes/argocd-link';
 
 export const StageActions = ({
   stage,
@@ -35,36 +30,15 @@ export const StageActions = ({
 }: {
   stage: Stage;
   verificationRunning?: boolean;
+  argocdShard?: ArgoCDShard;
 }) => {
   const { name: projectName, stageName } = useParams();
-  const navigate = useNavigate();
-  const confirm = useConfirmModal();
   const queryClient = useQueryClient();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
-  const { mutate, isPending: isLoadingDelete } = useMutation(deleteStage);
   const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshStage);
 
-  const onClose = () => navigate(generatePath(paths.project, { name: projectName }));
-
-  const onDelete = () => {
-    confirm({
-      onOk: () => {
-        mutate({ name: stage.metadata?.name, project: projectName });
-        onClose();
-      },
-      title: 'Are you sure you want to delete Stage?',
-      hide: () => {}
-    });
-  };
-
   const onRefresh = () => refresh({ name: stageName, project: projectName });
-
-  const { show: showEditStageModal } = useModal((p) =>
-    stageName && projectName ? (
-      <EditStageModal {...p} stageName={stageName} projectName={projectName} />
-    ) : null
-  );
 
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {
@@ -92,61 +66,60 @@ export const StageActions = ({
   const verificationEnabled = stage?.spec?.verification;
 
   return (
-    <Space size={16}>
-      {currentFreightHasVerification(stage) && (
-        <>
-          {verificationEnabled && (
+    <>
+      <Space size={16}>
+        <ArgoCDLink
+          stage={stage}
+          externalLinksOnly
+          buttonProps={{
+            type: 'link',
+            iconPosition: 'end',
+            icon: <FontAwesomeIcon icon={faExternalLink} size='sm' />
+          }}
+        >
+          <Space size={8}>
+            <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '28px', marginTop: '-2px' }} />
+            ArgoCD
+          </Space>
+        </ArgoCDLink>
+        {currentFreightHasVerification(stage) && (
+          <>
+            {verificationEnabled && (
+              <Button
+                icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
+                disabled={isPending || verificationRunning}
+                onClick={() => {
+                  reverifyStage({ project: projectName, stage: stageName });
+                }}
+              >
+                Reverify
+              </Button>
+            )}
             <Button
-              icon={<FontAwesomeIcon icon={faRedo} spin={isPending} />}
-              disabled={isPending || verificationRunning}
-              onClick={() => {
-                reverifyStage({ project: projectName, stage: stageName });
-              }}
+              type='default'
+              disabled={!verificationRunning}
+              icon={<FontAwesomeIcon icon={faExclamationCircle} size='1x' />}
+              onClick={() => abortVerificationAction({ project: projectName, stage: stageName })}
             >
-              Reverify
+              Abort Verification
             </Button>
-          )}
-          <Button
-            type='default'
-            disabled={!verificationRunning}
-            icon={<FontAwesomeIcon icon={faExclamationCircle} size='1x' />}
-            onClick={() => abortVerificationAction({ project: projectName, stage: stageName })}
-          >
-            Abort Verification
-          </Button>
-        </>
-      )}
+          </>
+        )}
 
-      <Button
-        type='default'
-        icon={<FontAwesomeIcon icon={faPen} size='1x' />}
-        onClick={() => showEditStageModal()}
-      >
-        Edit
-      </Button>
-      <Button
-        type='default'
-        icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
-        onClick={onRefresh}
-        loading={
-          isRefreshLoading ||
-          (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] &&
-            stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
-              stage?.status?.lastHandledRefresh)
-        }
-      >
-        Refresh
-      </Button>
-      <Button
-        danger
-        type='text'
-        icon={<FontAwesomeIcon icon={faTrash} size='1x' />}
-        onClick={onDelete}
-        loading={isLoadingDelete}
-        size='small'
-      >
-        Delete
-      </Button>
-    </Space>
+        <Button
+          type='default'
+          icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
+          onClick={onRefresh}
+          loading={
+            isRefreshLoading ||
+            (!!stage?.metadata?.annotations['kargo.akuity.io/refresh'] &&
+              stage?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
+                stage?.status?.lastHandledRefresh)
+          }
+        >
+          Refresh
+        </Button>
+      </Space>
+    </>
   );
 };

@@ -43,37 +43,258 @@ creation. This includes things such as project-level RBAC resources and
 `ServiceAccount` resources.
 :::
 
-## Promotion Policies
+## Project Configuration
 
-A `Project` resource can additionally define project-level configuration. At
-present, this only includes **promotion policies** that describe which `Stage`s
-are eligible for automatic promotion of newly available `Freight`.
+A `ProjectConfig` resource defines project-level configuration for an associated
+`Project`. At present, this only includes
+[promotion policies](#promotion-policies)
+that describe which `Stage`s are eligible for automatic promotion of newly
+available `Freight`.
 
-:::note
-Promotion policies are defined at the project-level because users with
-permission to update `Stage` resources in a given project `Namespace` may _not_
-have permission to create `Promotion` resources. Defining promotion policies at
-the project-level therefore restricts such users from enabling automatic
-promotions for a `Stage` to which they may lack permission to promote to
-manually. It leaves decisions about eligibility for auto-promotion squarely in
-the hands of someone like a "project admin."
+The `ProjectConfig` resource must have the same name as its associated `Project`
+and be created in the `Namespace` of the `Project`. This separation of
+configuration from the `Project` resource enables more granular RBAC control.
+Users can be granted permission to modify project configurations via
+`ProjectConfig` resources without necessarily having broader access to `Project`
+resources themselves.
+
+### Promotion Policies
+
+A `ProjectConfig` resource can contain multiple promotion policies. Each policy
+is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
+`stageSelector` specifies which `Stage`s the policy applies to, and the
+`autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
+those `Stage`s.
+
+:::info
+__Not what you were looking for?__
+
+This section focuses only on _enabling or disabling_ auto-promotion for specific
+`Stage`s through Project-level configuration. For `Stage`-level controls over
+_which_ `Freight` are eligible for auto-promotion when enabled, refer to the
+[Auto-Promotion](./40-working-with-stages.md#auto-promotion) section of our
+Working with Stages guide.
 :::
+
+#### Basic Promotion Policy
 
 In the example below, the `test` and `uat` `Stage`s are eligible for automatic
 promotion of newly available `Freight`, but any other `Stage`s in the `Project`
 are not:
 
 ```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+   name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: test
+    autoPromotionEnabled: true
+  - stageSelector:
+      name: uat
+    autoPromotionEnabled: true
+```
+
+#### Advanced Promotion Policies with Selectors
+
+Kargo supports more flexible ways to specify which `Stage`s a promotion policy
+applies to, using either pattern matching or label selectors.
+
+:::warning
+Pattern and label matching introduce security considerations. Users with
+appropriate permissions could potentially create resources with names or labels
+deliberately crafted to match patterns, bypassing intended promotion controls.
+Using [exact names](#basic-promotion-policy) provides the most secure option.
+:::
+
+##### Using Stage Selectors with Patterns
+
+You can use the `stageSelector` field with pattern matching to apply a promotion
+policy to multiple `Stage`s that match a specific pattern:
+
+```yaml
+---
 apiVersion: kargo.akuity.io/v1alpha1
 kind: Project
 metadata:
   name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
 spec:
   promotionPolicies:
-  - stage: test
+  - stageSelector:
+      # Apply to a specific stage by exact name
+      name: prod-east
+    autoPromotionEnabled: false
+  - stageSelector:
+      # Apply to all stages matching a regex pattern
+      name: "regex:test-.*"
     autoPromotionEnabled: true
-  - stage: uat
+  - stageSelector:
+      # Apply to all stages matching a glob pattern
+      name: "glob:dev-*"
     autoPromotionEnabled: true
+```
+
+The pattern matching supports:
+
+- Exact name matching (when no prefix is used)
+- Regex patterns with prefix `regex:` or `regexp:`
+- Glob patterns with prefix `glob:`
+
+##### Using Stage Selectors with Labels
+
+You can also use
+[Kubernetes-style label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#resources-that-support-set-based-requirements)
+to apply a promotion policy to `Stage`s with specific labels:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      matchLabels:
+        environment: development
+    autoPromotionEnabled: true
+  - stageSelector:
+      matchExpressions:
+      - key: environment
+        operator: In
+        values: ["development", "staging"]
+    autoPromotionEnabled: true
+```
+
+#### Using Stage Selectors with Patterns and Labels
+
+The [name](#using-stage-selectors-with-patterns) and
+[label](#using-stage-selectors-with-labels) selectors can be combined, in which
+case a `Stage` must match both the name and label selectors to be eligible for
+automatic promotion:
+
+```yaml
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Project
+metadata:
+  name: example
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: example
+  namespace: example
+spec:
+  promotionPolicies:
+  - stageSelector:
+      name: glob:prod-*
+      matchLabels:
+        example.org/allow-auto-promotion: "true"
+```
+
+In the example above, the promotion policy applies to all `Stage`s with the
+`example.org/allow-auto-promotion: "true"` label and names matching the
+`glob:prod-*` pattern.
+
+### Message Channels
+
+<span class="tag professional"></span>
+<span class="tag beta"></span>
+
+Projects can define message channels to facilitate notifications and message sending as part of
+their workflows. Message channels can be configured for various platforms, such as Slack or SMTP.
+Channels are defined using the `MessageChannel` custom resource. This can be done either by applying
+YAML manifests or in the Kargo UI (also via YAML, though this will be made more user-friendly in
+future releases).
+
+Any message channel specification must include only a single channel type (e.g., Slack or SMTP, not
+both) and an optional `secretRef` to a Kubernetes `Secret` containing any necessary credentials.
+
+#### Examples
+
+##### Slack
+
+This is an example `MessageChannel` configuration for Slack showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: test-env-slack
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the Slack token. This is required for Slack. The Secret must
+  # contain the following key:
+  # - `apiKey`: The Slack token with permissions to post messages to the desired channel
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: slack-token
+  # Configuration specific to Slack
+  slack:
+    # The channel ID to send messages to. This field is required
+    channelID: C1234567890
+```
+
+##### SMTP
+
+This is an example `MessageChannel` configuration for SMTP showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: engineering-team-smtp
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing the SMTP credentials. This is required for SMTP. The Secret
+  # must contain the following keys:
+  # - `username`: The SMTP username
+  # - `password`: The SMTP password
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: smtp-credentials
+  smtp:
+    # The email address to use in the "From" field. This field is required
+    from: no-reply@example.com
+    # The default recipient email addresses. This field is optional and can be overridden. The first
+    # address in the list will be the primary recipient, and any additional addresses will be CC'd.
+    to: [you@example.com]
+    # The SMTP server host. This field is required
+    host: smtp.gmail.com
+    # The SMTP server port. This field is required
+    port: 587
+    # Whether to use TLS when connecting to the SMTP server. This field is optional and defaults to
+    # true
+    useTLS: true
+    # Whether to skip TLS certificate verification. This field is optional and defaults to false.
+    # In most cases this should only be set to true for testing with self-signed certificates.
+    insecureSkipVerify: false
 ```
 
 ## Namespace Adoption
@@ -86,11 +307,13 @@ This enables pre-configuring such `Namespace`s according to your
 own requirements.
 
 :::info
-Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to be eligible for adoption by a new `Project` is intended to prevent accidental or willful hijacking of an existing `Namespace`.
+Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to
+be eligible for adoption by a new `Project` is intended to prevent accidental or
+willful hijacking of an existing `Namespace`.
 :::
 
 The following example demonstrates adoption of a `Namespace` that's been
-pre-configured with with a label unrelated to Kargo:
+pre-configured with a label unrelated to Kargo:
 
 ```yaml
 apiVersion: v1
@@ -109,18 +332,28 @@ spec:
   # ...
 ```
 
+## Preventing Namespace Deletion
+
+By default, when a Project is deleted, Kargo will attempt to delete the
+corresponding Namespace. However, there are scenarios where you may want to
+retain the namespace after the associated Project is removed whether it was
+created by Kargo or adopted from an existing setup.
+
+To achieve this, you can apply the following annotation to the `Namespace` or
+the corresponding `Project` resource with
+`kargo.akuity.io/keep-namespace: "true"`.
+
 ## Interacting with Projects
 
 Kargo provides tools to manage `Project`s using either its UI or
 CLI. This section explains how to handle `Project`s effectively through both interfaces.
-
 
 ### Creating a Project
 
 <Tabs groupId="create-project">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Navigate to the Kargo UI and select <Hlt>Create</Hlt> in the top right corner.
+1. Navigate to the Kargo UI and select <Hlt>New Project</Hlt> in the top right corner.
 
    A <Hlt>Form</Hlt> tab will appear where you can enter the name of your `Project`:
 
@@ -176,9 +409,11 @@ CLI. This section explains how to handle `Project`s effectively through both int
 
 1. Select the `Project` you want to remove.
 
-1. Click the dropdown next to the `Project`'s name in the upper left corner of the `Project` dashboard and click <Hlt>Delete</Hlt>:
+1. Go to the <Hlt>Settings</Hlt> in the top right corner of the `Project` view.
 
    ![delete-project](img/delete-project.png)
+
+1. In the <Hlt>General</Hlt> tab, scroll down to the <Hlt>Delete Project</Hlt> section.
 
 1. To confirm deletion, enter the `Project`'s name and click <Hlt>Delete</Hlt> to permanently remove it:
 

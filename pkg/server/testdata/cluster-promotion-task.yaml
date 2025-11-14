@@ -1,0 +1,18 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ClusterPromotionTask
+metadata:
+  name: global-task
+spec:
+  vars:
+  - name: repoURL
+  - name: sourceBranch
+  - name: targetBranch
+    value: main
+  steps:
+  - uses: git-open-pr
+    as: open-pr
+    config:
+      repoURL: ${{ vars.repoURL }}
+      createTargetBranch: true
+      sourceBranch: ${{ vars.sourceBranch }}
+      targetBranch: ${{ vars.targetBranch }}

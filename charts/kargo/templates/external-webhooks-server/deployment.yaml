@@ -1,0 +1,149 @@
+{{- if .Values.externalWebhooksServer.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kargo-external-webhooks-server
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.labels) .Values.externalWebhooksServer.labels) }}
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.externalWebhooksServer.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  replicas: {{ .Values.externalWebhooksServer.replicas | default 1 }}
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      {{- include "kargo.selectorLabels" . | nindent 6 }}
+      {{- include "kargo.externalWebhooksServer.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "kargo.labels" . | nindent 8 }}
+        {{- include "kargo.externalWebhooksServer.labels" . | nindent 8 }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podLabels) .Values.externalWebhooksServer.podLabels) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+      annotations:
+        configmap/checksum: {{ pick ( include (print $.Template.BasePath "/external-webhooks-server/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
+      {{- with (mergeOverwrite (deepCopy .Values.global.podAnnotations) .Values.externalWebhooksServer.podAnnotations) }}
+        {{- range $key, $value := . }}
+        {{ $key }}: {{ $value | quote }}
+        {{- end }}
+      {{- end }}
+    spec:
+      serviceAccount: kargo-external-webhooks-server
+      {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: webhooks-server
+        image: {{ include "kargo.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        command: ["/sbin/tini", "--", "/usr/local/bin/kargo"]
+        args: ["external-webhooks-server"]
+        env:
+        - name: GOMEMLIMIT
+          valueFrom:
+            resourceFieldRef:
+              containerName: webhooks-server
+              divisor: "1"
+              resource: limits.memory
+        - name: GOMAXPROCS
+          valueFrom:
+            resourceFieldRef:
+              containerName: webhooks-server
+              divisor: "1"
+              resource: {{ include "kargo.selectCpuResourceField" (dict "resources" .Values.externalWebhooksServer.resources) }}
+        {{- with (concat .Values.global.env .Values.externalWebhooksServer.env) }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        envFrom:
+        - configMapRef:
+            name: kargo-external-webhooks-server
+        {{- with (concat .Values.global.envFrom .Values.externalWebhooksServer.envFrom) }}
+          {{- toYaml . | nindent 8 }}
+        {{- end }}
+        ports:
+        - containerPort: 8080
+          name: {{ if .Values.externalWebhooksServer.tls.enabled }}"https"{{ else }}"http"{{ end }}
+          protocol: TCP
+        {{- if .Values.externalWebhooksServer.probes.enabled }}
+        livenessProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          initialDelaySeconds: 10
+        readinessProbe:
+          httpGet:
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            scheme: HTTPS
+            {{- end }}
+            port: 8080
+            path: /healthz
+          initialDelaySeconds: 5
+        {{- end }}
+        {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
+        volumeMounts:
+        - mountPath: /etc/kargo
+          name: config
+          readOnly: true
+        {{- end }}
+        {{- with .Values.externalWebhooksServer.securityContext | default .Values.global.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.externalWebhooksServer.resources | nindent 10 }}
+      {{- if or .Values.kubeconfigSecrets.kargo .Values.externalWebhooksServer.tls.enabled }}
+      volumes:
+      - name: config
+        projected:
+          sources:
+            {{- if .Values.kubeconfigSecrets.kargo }}
+            - secret:
+                name: {{ .Values.kubeconfigSecrets.kargo }}
+                items:
+                - key: kubeconfig.yaml
+                  path: kubeconfig.yaml
+                  mode: 0644
+            {{- end }}
+            {{- if .Values.externalWebhooksServer.tls.enabled }}
+            - secret:
+                name: {{ .Values.externalWebhooksServer.tls.secretName }}
+                items:
+                - key: tls.crt
+                  path: tls.crt
+                - key: tls.key
+                  path: tls.key
+            {{- end }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.nodeSelector | default .Values.global.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.externalWebhooksServer.tolerations | default .Values.global.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

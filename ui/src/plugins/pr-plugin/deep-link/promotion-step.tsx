@@ -8,7 +8,7 @@ import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-dire
 import { getPromotionStepConfig } from '@ui/plugins/atoms/plugin-helper';
 import { DeepLinkPluginsInstallation } from '@ui/plugins/atoms/plugin-interfaces';
 
-import { getPullRequestLink } from '../get-pr-link';
+import { getGitProviderLink, getPullRequestLink } from '../get-pr-link';
 
 const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
   shouldRender({ step, result }) {
@@ -20,7 +20,7 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
     // plugins responsibility to keep up to date with actual promotion step config
     const provider = (stepConfig?.provider as 'github' | 'gitlab') || 'github';
 
-    const repoURL = stepConfig?.repoURL as string;
+    const repoURL = getGitProviderLink(props.output || {});
 
     const nodes: ReactNode[] = [];
 
@@ -38,7 +38,7 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
       );
     }
 
-    const url = getPullRequestLink(props.step, props.output || {});
+    const url = getPullRequestLink(props.output || {});
 
     nodes.push(
       <a href={url} target='_blank'>

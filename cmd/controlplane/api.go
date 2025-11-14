@@ -8,30 +8,35 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/akuity/kargo/internal/api"
-	"github.com/akuity/kargo/internal/api/config"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	"github.com/akuity/kargo/internal/api/rbac"
-	"github.com/akuity/kargo/internal/kubernetes/event"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	"github.com/akuity/kargo/pkg/kubernetes/event"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/config"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/server/rbac"
+	"github.com/akuity/kargo/pkg/types"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
 type apiOptions struct {
 	KubeConfig string
+	QPS        float32
+	Burst      int
 
-	Host string
-	Port string
+	BindAddress string
+	Port        string
 
 	Logger *logging.Logger
 }
 
 func newAPICommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &apiOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -40,6 +45,14 @@ func newAPICommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			cmdOpts.Logger.Info(
+				"Starting Kargo API Server",
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", runtime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+			)
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -51,27 +64,26 @@ func newAPICommand() *cobra.Command {
 
 func (o *apiOptions) complete() {
 	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
-	o.Host = os.GetEnv("HOST", "0.0.0.0")
+	o.BindAddress = os.GetEnv("BIND_ADDRESS", "0.0.0.0")
 	o.Port = os.GetEnv("PORT", "8080")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *apiOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-	o.Logger.Info(
-		"Starting Kargo API Server",
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", runtime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-	)
-
 	serverCfg := config.ServerConfigFromEnv()
 
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+
 	kubeClientOptions := kubernetes.ClientOptions{}
 	if serverCfg.OIDCConfig != nil {
 		kubeClientOptions.GlobalServiceAccountNamespaces = serverCfg.OIDCConfig.GlobalServiceAccountNamespaces
@@ -117,18 +129,20 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
-	srv := api.NewServer(
+	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(kubeClient),
-		event.NewRecorder(
-			ctx,
-			kubeClient.InternalClient().Scheme(),
-			kubeClient.InternalClient(),
-			"api",
+		k8sevent.NewEventSender(
+			event.NewRecorder(
+				ctx,
+				kubeClient.InternalClient().Scheme(),
+				kubeClient.InternalClient(),
+				"api",
+			),
 		),
 	)
-	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.Host, o.Port))
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)
 	}

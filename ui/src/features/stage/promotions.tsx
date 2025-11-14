@@ -1,7 +1,9 @@
 import { createClient } from '@connectrpc/connect';
-import { createConnectQueryKey, useQuery } from '@connectrpc/connect-query';
+import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
+import { faUndo } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useQueryClient } from '@tanstack/react-query';
-import { Spin, Table, Tooltip } from 'antd';
+import { Flex, Spin, Table, Tooltip } from 'antd';
 import { ColumnsType } from 'antd/es/table';
 import { format } from 'date-fns';
 import React, { useEffect, useState } from 'react';
@@ -12,21 +14,24 @@ import { transportWithAuth } from '@ui/config/transport';
 import { PromotionStatusIcon } from '@ui/features/common/promotion-status/promotion-status-icon';
 import {
   getPromotionStatusPhase,
-  isPromotionPhaseTerminal
+  isPromotionPhaseTerminal,
+  isPromotionRetryable
 } from '@ui/features/common/promotion-status/utils';
 import {
   getFreight,
-  listPromotions
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { ListPromotionsResponse } from '@ui/gen/service/v1alpha1/service_pb';
-import { KargoService } from '@ui/gen/service/v1alpha1/service_pb';
-import { ArgoCDShard } from '@ui/gen/service/v1alpha1/service_pb';
-import { Freight, Promotion } from '@ui/gen/v1alpha1/generated_pb';
+  listPromotions,
+  promoteToStage
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { ListPromotionsResponse } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Freight, Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 import uiPlugins from '@ui/plugins';
 import { UiPluginHoles } from '@ui/plugins/atoms/ui-plugin-hole/ui-plugin-holes';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
-import { PromotionDetailsModal } from './promotion-details-modal';
+import { Promotion as PromotionComponent } from '../project/pipelines/promotion/promotion';
+
 import { hasAbortRequest, promotionCompareFn } from './utils/promotion';
 
 export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
@@ -48,6 +53,20 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       enabled: !!curFreight
     }
   );
+
+  const promotionMutation = useMutation(promoteToStage);
+
+  const onRetryPromotion = (promotion: Promotion) => {
+    const stage = stageName;
+    const project = promotion?.metadata?.namespace;
+    const freight = promotion?.spec?.freight;
+
+    promotionMutation.mutate({
+      stage,
+      project,
+      freight
+    });
+  };
 
   // modal kept in the same component for live view
   const [selectedPromotion, setSelectedPromotion] = useState<Promotion | undefined>();
@@ -97,7 +116,10 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
           },
           transport: transportWithAuth
         });
-        client.setQueryData(listPromotionsQueryKey, { promotions });
+        client.setQueryData(listPromotionsQueryKey, {
+          promotions,
+          $typeName: 'akuity.io.kargo.service.v1alpha1.ListPromotionsResponse'
+        });
       }
     };
     watchPromotions();
@@ -115,9 +137,10 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       title: '',
       width: 24,
       render: (_, promotion) => {
+        const promotionStatusPhase = getPromotionStatusPhase(promotion);
         const isAbortRequestPending =
-          hasAbortRequest(promotion) &&
-          !isPromotionPhaseTerminal(getPromotionStatusPhase(promotion));
+          hasAbortRequest(promotion) && !isPromotionPhaseTerminal(promotionStatusPhase);
+        const canRetry = isPromotionRetryable(promotionStatusPhase);
 
         // generally controller quickly Abort promotion
         // but incase if controller is off for some reason, this messaging ensures accurate information
@@ -126,10 +149,22 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
         }
 
         return (
-          <PromotionStatusIcon
-            status={promotion.status}
-            color={isAbortRequestPending ? 'red' : ''}
-          />
+          <Flex gap={8} align='center'>
+            <PromotionStatusIcon
+              status={promotion.status}
+              color={isAbortRequestPending ? 'red' : ''}
+            />
+
+            {canRetry && (
+              <Tooltip title='Retry promotion'>
+                <FontAwesomeIcon
+                  className='text-xs cursor-pointer'
+                  icon={faUndo}
+                  onClick={() => !promotionMutation.isPending && onRetryPromotion(promotion)}
+                />
+              </Tooltip>
+            )}
+          </Flex>
         );
       }
     },
@@ -228,14 +263,10 @@ export const Promotions = ({ argocdShard }: { argocdShard?: ArgoCDShard }) => {
       />
 
       {selectedPromotion && (
-        <PromotionDetailsModal
-          // @ts-expect-error // know that there will always be value available of this promotion
-          // IMPORTANT: the reason why selectedPromotion is not used is because promotions are live while selectedPromotion snapshot at particular point
-          promotion={promotions?.find(
-            (p) => p?.metadata?.name === selectedPromotion?.metadata?.name
-          )}
+        <PromotionComponent
           visible={!!selectedPromotion}
           hide={() => setSelectedPromotion(undefined)}
+          promotionId={selectedPromotion?.metadata?.name || ''}
           project={projectName || ''}
         />
       )}

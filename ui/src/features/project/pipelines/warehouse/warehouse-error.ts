@@ -1,4 +1,4 @@
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const getWarehouseError = (warehouse: Warehouse): string | null => {
   let message: string | null = null;

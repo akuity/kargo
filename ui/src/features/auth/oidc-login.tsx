@@ -4,6 +4,7 @@ import {
   discoveryRequest,
   processDiscoveryResponse,
   generateRandomCodeVerifier,
+  generateRandomState,
   calculatePKCECodeChallenge,
   validateAuthResponse,
   authorizationCodeGrantRequest,
@@ -15,7 +16,7 @@ import {
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
+import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { useAuthContext } from './context/use-auth-context';
 import {
@@ -25,6 +26,8 @@ import {
 } from './oidc-utils';
 
 const codeVerifierKey = 'PKCE_code_verifier';
+const stateKey = 'PKCE_state';
+const platformRedirectKey = 'platform_redirect';
 
 type Props = {
   oidcConfig: OIDCConfig;
@@ -62,18 +65,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
       issuerUrl &&
       discoveryRequest(issuerUrl, {
         [allowInsecureRequests]: shouldAllowHttpRequest()
-      })
-        .then((response) => processDiscoveryResponse(issuerUrl, response))
-        .then((response) => {
-          if (
-            response.code_challenge_methods_supported?.includes('S256') !== true &&
-            !issuerUrl.toString().startsWith('https://login.microsoftonline.com')
-          ) {
-            throw new Error('OIDC config fetch error');
-          }
-
-          return response;
-        }),
+      }).then((response) => processDiscoveryResponse(issuerUrl, response)),
     enabled: !!issuerUrl
   });
 
@@ -91,6 +83,9 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
 
     const code_verifier = generateRandomCodeVerifier();
     sessionStorage.setItem(codeVerifierKey, code_verifier);
+    const state = generateRandomState();
+    sessionStorage.setItem(stateKey, state);
+    sessionStorage.setItem(platformRedirectKey, window.location.search);
 
     const code_challenge = await calculatePKCECodeChallenge(code_verifier);
     const url = new URL(as.authorization_endpoint);
@@ -100,6 +95,7 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
     url.searchParams.set('redirect_uri', redirectURI);
     url.searchParams.set('response_type', 'code');
     url.searchParams.set('scope', getOIDCScopes(oidcConfig, as).join(' '));
+    url.searchParams.set('state', state);
 
     window.location.replace(url.toString());
   };
@@ -108,19 +104,22 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
   React.useEffect(() => {
     (async () => {
       const code_verifier = sessionStorage.getItem(codeVerifierKey);
+      const state = sessionStorage.getItem(stateKey);
+      const platformRedirect = sessionStorage.getItem(platformRedirectKey);
       const searchParams = new URLSearchParams(location.search);
 
-      if (!as || !code_verifier || !searchParams.get('code') || !searchParams.get('code')) {
+      if (
+        !as ||
+        !code_verifier ||
+        !searchParams.get('code') ||
+        !state ||
+        !searchParams.get('state')
+      ) {
         return;
       }
 
-      // Delete empty state
-      if (searchParams.get('state') === '') {
-        searchParams.delete('state');
-      }
-
       try {
-        const params = validateAuthResponse(as, client, searchParams);
+        const params = validateAuthResponse(as, client, searchParams, state);
 
         const response = await authorizationCodeGrantRequest(
           as,
@@ -148,6 +147,14 @@ export const OIDCLogin = ({ oidcConfig }: Props) => {
         }
 
         onLogin(result.id_token, result.refresh_token);
+
+        if (platformRedirect) {
+          const redirectTo = new URLSearchParams(platformRedirect).get('redirectTo');
+
+          if (redirectTo) {
+            window.location.replace(window.location.origin + redirectTo);
+          }
+        }
       } catch (err) {
         if (err instanceof AuthorizationResponseError) {
           notification.error({

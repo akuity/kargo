@@ -3,13 +3,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { useContext } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { Freight } from '@ui/gen/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 
 const StageIndicator = ({ stageName, icon }: { stageName: string; icon?: IconDefinition }) => {
   const { stageColorMap } = useContext(ColorContext);
   return (
     <div
-      className='rounded-md px-3 py-1 mr-2 text-white font-medium text-base'
+      className='rounded-md px-3 py-1 mr-2 text-white font-medium text-sm'
       style={{ backgroundColor: stageColorMap[stageName] }}
     >
       {icon && <FontAwesomeIcon icon={icon} className='mr-2' />}
@@ -31,7 +31,7 @@ const StageStatusList = ({
     <div className='mb-6'>
       <div className='text-xs font-semibold mb-2 uppercase'>{title}</div>
       {stageNames.length > 0 ? (
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-2 flex-wrap'>
           {stageNames.map((stageName) => (
             <StageIndicator stageName={stageName} key={stageName} icon={icon} />
           ))}

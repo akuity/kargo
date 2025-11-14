@@ -13,34 +13,6 @@
     "metadata": {
       "type": "object"
     },
-    "spec": {
-      "description": "Spec describes a Project.",
-      "properties": {
-        "promotionPolicies": {
-          "description": "PromotionPolicies defines policies governing the promotion of Freight to\nspecific Stages within this Project.",
-          "items": {
-            "description": "PromotionPolicy defines policies governing the promotion of Freight to a\nspecific Stage.",
-            "properties": {
-              "autoPromotionEnabled": {
-                "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
-                "type": "boolean"
-              },
-              "stage": {
-                "minLength": 1,
-                "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
-                "type": "string"
-              }
-            },
-            "required": [
-              "stage"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "type": "object"
-    },
     "status": {
       "description": "Status describes the Project's current status.",
       "properties": {
@@ -104,13 +76,63 @@
           ],
           "x-kubernetes-list-type": "map"
         },
-        "message": {
-          "description": "Message is a display message about the Project, including any errors\npreventing the Project from being reconciled. i.e. If the Phase field has a\nvalue of CreationFailed, this field can be expected to explain why.\n\nDeprecated: Use the Conditions field instead.",
-          "type": "string"
-        },
-        "phase": {
-          "description": "Phase describes the Project's current phase.\n\nDeprecated: Use the Conditions field instead.",
-          "type": "string"
+        "stats": {
+          "description": "Stats contains a summary of the collective state of a Project's\nconstituent resources.",
+          "properties": {
+            "stages": {
+              "description": "Stages contains a summary of the collective state of the Project's Stages.",
+              "properties": {
+                "count": {
+                  "description": "Count contains the total number of Stages in the Project.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "health": {
+                  "description": "Health contains a summary of the collective health of a Project's Stages.",
+                  "properties": {
+                    "healthy": {
+                      "description": "Healthy contains the number of resources that are explicitly healthy.",
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
+            "warehouses": {
+              "description": "Warehouses contains a summary of the collective state of the Project's\nWarehouses.",
+              "properties": {
+                "count": {
+                  "description": "Count contains the total number of Warehouses in the Project.",
+                  "format": "int64",
+                  "maximum": 9223372036854776000,
+                  "minimum": -9223372036854776000,
+                  "type": "integer"
+                },
+                "health": {
+                  "description": "Health contains a summary of the collective health of a Project's\nWarehouses.",
+                  "properties": {
+                    "healthy": {
+                      "description": "Healthy contains the number of resources that are explicitly healthy.",
+                      "format": "int64",
+                      "maximum": 9223372036854776000,
+                      "minimum": -9223372036854776000,
+                      "type": "integer"
+                    }
+                  },
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"

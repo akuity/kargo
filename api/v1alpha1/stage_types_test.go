@@ -2,9 +2,287 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func TestStage_IsFreightAvailable(t *testing.T) {
+	const testNamespace = "fake-namespace"
+	const testWarehouse = "fake-warehouse"
+	const testStage = "fake-stage"
+	const testFreight = "fake-freight"
+	testStageMeta := metav1.ObjectMeta{
+		Namespace: testNamespace,
+		Name:      testStage,
+	}
+	testFreightMeta := metav1.ObjectMeta{
+		Namespace: testNamespace,
+		Name:      testFreight,
+	}
+	testOrigin := FreightOrigin{
+		Kind: FreightOriginKindWarehouse,
+		Name: testWarehouse,
+	}
+
+	testCases := []struct {
+		name     string
+		stage    *Stage
+		freight  *Freight
+		expected bool
+	}{
+		{
+			name:     "stage is nil",
+			freight:  &Freight{ObjectMeta: testFreightMeta},
+			expected: false,
+		},
+		{
+			name:     "freight is nil",
+			stage:    &Stage{ObjectMeta: testStageMeta},
+			expected: false,
+		},
+		{
+			name:  "stage and freight are in different namespaces",
+			stage: &Stage{ObjectMeta: testStageMeta},
+			freight: &Freight{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "wrong-namespace"},
+			},
+			expected: false,
+		},
+		{
+			name:  "freight is approved for stage",
+			stage: &Stage{ObjectMeta: testStageMeta},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Status: FreightStatus{
+					ApprovedFor: map[string]ApprovedStage{
+						testStage: {},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "stage accepts freight direct from origin",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Direct: true,
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+			},
+			expected: true,
+		},
+		{
+			name: "freight is verified in an upstream; soak not required",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "freight is verified in an upstream stage with no longestCompletedSoak; soak required",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required but not elapsed",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "freight is verified in an upstream stage with longestCompletedSoak; soak required and is elapsed",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages:           []string{"upstream-stage"},
+							RequiredSoakTime: &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {
+							LongestCompletedSoak: &metav1.Duration{Duration: time.Hour},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "availability strategy all + freight is verified and soaked in one upstream stage, but not all",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							AvailabilityStrategy: FreightAvailabilityStrategyAll,
+							Stages:               []string{"upstream-stage-1", "upstream-stage-2"},
+							RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage-1": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					},
+				},
+			},
+			expected: false,
+		},
+		{
+			name: "availability strategy all + freight is verified and soaked in all upstream stages",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							AvailabilityStrategy: FreightAvailabilityStrategyAll,
+							Stages:               []string{"upstream-stage-1", "upstream-stage-2"},
+							RequiredSoakTime:     &metav1.Duration{Duration: time.Hour},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin:     testOrigin,
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage-1": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+						"upstream-stage-2": {
+							LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour},
+						},
+					},
+				},
+			},
+			expected: true,
+		},
+		{
+			name: "freight from origin not requested",
+			stage: &Stage{
+				ObjectMeta: testStageMeta,
+				Spec: StageSpec{
+					RequestedFreight: []FreightRequest{{
+						Origin: testOrigin,
+						Sources: FreightSources{
+							Stages: []string{"upstream-stage"},
+						},
+					}},
+				},
+			},
+			freight: &Freight{
+				ObjectMeta: testFreightMeta,
+				Origin: FreightOrigin{
+					Kind: FreightOriginKindWarehouse,
+					Name: "wrong-warehouse",
+				},
+				Status: FreightStatus{
+					VerifiedIn: map[string]VerifiedStage{
+						"upstream-stage": {},
+					},
+				},
+			},
+			expected: false,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(
+				t,
+				testCase.expected,
+				testCase.stage.IsFreightAvailable(testCase.freight),
+			)
+		})
+	}
+}
 
 func TestVerificationInfo_HasAnalysisRun(t *testing.T) {
 	testCases := []struct {
@@ -568,18 +846,6 @@ func TestImageDeepEquals(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "git repo URLs differ",
-			a: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "foo",
-			},
-			b: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "bar",
-			},
-			expectedResult: false,
-		},
-		{
 			name: "image tags differ",
 			a: &Image{
 				RepoURL: "fake-url",
@@ -606,16 +872,14 @@ func TestImageDeepEquals(t *testing.T) {
 		{
 			name: "perfect match",
 			a: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "fake-repo-url",
-				Tag:        "fake-tag",
-				Digest:     "fake-digest",
+				RepoURL: "fake-url",
+				Tag:     "fake-tag",
+				Digest:  "fake-digest",
 			},
 			b: &Image{
-				RepoURL:    "fake-url",
-				GitRepoURL: "fake-repo-url",
-				Tag:        "fake-tag",
-				Digest:     "fake-digest",
+				RepoURL: "fake-url",
+				Tag:     "fake-tag",
+				Digest:  "fake-digest",
 			},
 			expectedResult: true,
 		},
@@ -708,4 +972,195 @@ func TestChartDeepEquals(t *testing.T) {
 			require.Equal(t, testCase.expectedResult, testCase.b.DeepEquals(testCase.a))
 		})
 	}
+}
+
+func TestStageStatus_UpsertMetadata(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialState map[string]apiextensionsv1.JSON
+		key          string
+		data         any
+		expectError  bool
+		expectedJSON string
+	}{
+		{
+			name:         "upsert string into empty metadata",
+			key:          "test-key",
+			data:         "test-string",
+			expectedJSON: `"test-string"`,
+		},
+		{
+			name:         "upsert int into empty metadata",
+			key:          "test-key",
+			data:         42,
+			expectedJSON: `42`,
+		},
+		{
+			name:         "upsert bool into empty metadata",
+			key:          "test-key",
+			data:         true,
+			expectedJSON: `true`,
+		},
+		{
+			name:         "upsert slice into empty metadata",
+			key:          "test-key",
+			data:         []int{1, 2, 3},
+			expectedJSON: `[1,2,3]`,
+		},
+		{
+			name: "upsert complex struct into empty metadata",
+			key:  "test-key",
+			data: struct {
+				Name   string   `json:"name"`
+				Age    int      `json:"age"`
+				Active bool     `json:"active"`
+				Tags   []string `json:"tags"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "dev"},
+			},
+			expectedJSON: `{"name":"test-user","age":30,"active":true,"tags":["admin","dev"]}`,
+		},
+		{
+			name: "update existing metadata",
+			initialState: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"old-value"`)},
+			},
+			key:          "test-key",
+			data:         "new-value",
+			expectedJSON: `"new-value"`,
+		},
+		{
+			name:        "empty key",
+			key:         "",
+			data:        "value",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := StageStatus{
+				Metadata: tc.initialState,
+			}
+
+			err := status.UpsertMetadata(tc.key, tc.data)
+
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, tc.key)
+			if tc.expectedJSON != "" {
+				require.JSONEq(t, tc.expectedJSON, string(status.Metadata[tc.key].Raw))
+			}
+		})
+	}
+}
+
+func TestStageStatus_GetMetadata(t *testing.T) {
+	status := StageStatus{
+		Metadata: map[string]apiextensionsv1.JSON{
+			"string-key": {Raw: []byte(`"test-value"`)},
+			"int-key":    {Raw: []byte(`42`)},
+			"bool-key":   {Raw: []byte(`true`)},
+			"slice-key":  {Raw: []byte(`[1,2,3]`)},
+			"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
+		},
+	}
+
+	t.Run("get string value", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get int value", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("int-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, 42, value)
+	})
+
+	t.Run("get bool value", func(t *testing.T) {
+		var value bool
+		found, err := status.GetMetadata("bool-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, true, value)
+	})
+
+	t.Run("get slice value", func(t *testing.T) {
+		var value []int
+		found, err := status.GetMetadata("slice-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, []int{1, 2, 3}, value)
+	})
+
+	t.Run("get struct value", func(t *testing.T) {
+		var value struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
+		}
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-user", value.Name)
+		require.Equal(t, 30, value.Age)
+		require.Equal(t, true, value.Active)
+	})
+
+	t.Run("get any value -- string", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get any value -- map", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(
+			t,
+			map[string]any{
+				"name":   "test-user",
+				"age":    float64(30),
+				"active": true,
+			},
+			value,
+		)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("nonexistent-key", &value)
+		require.NoError(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("nil target", func(t *testing.T) {
+		found, err := status.GetMetadata("string-key", nil)
+		require.Error(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("wrong target type", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("string-key", &value)
+		require.Error(t, err)
+		require.False(t, found)
+	})
 }

@@ -1,12 +1,12 @@
 import { AuthorizationServer, ClientAuth } from 'oauth4webapi';
 
-import { OIDCConfig } from '@ui/gen/service/v1alpha1/service_pb';
+import { OIDCConfig } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 export const oidcClientAuth: ClientAuth = () => {
   // equivalent function for token_endpoint_auth_method: 'none'
 };
 
-export const shouldAllowIdpHttpRequest = () => __UI_VERSION__ === 'development';
+export const shouldAllowIdpHttpRequest = () => true;
 
 export const getOIDCScopes = (userOIDCConfig: OIDCConfig, idp: AuthorizationServer) => {
   const scopes = [...userOIDCConfig.scopes];

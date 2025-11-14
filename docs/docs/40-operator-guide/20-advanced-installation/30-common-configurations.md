@@ -328,14 +328,17 @@ namespace specified by `controller.argocd.namespace`.
 ### Disabling the Argo Rollouts Integration
 
 By default, Kargo will enable the Argo Rollouts integration, which configures
-Kargo to work with `Rollout` resources created by Argo Rollouts as part of the
+Kargo to work with `AnalysisRun` resources created as part of the
 [verification feature](../../50-user-guide/20-how-to-guides/40-working-with-stages.md#verification).
 
 This can be disabled as follows:
 
 ```yaml
+api:
+  rollouts:
+    integrationEnabled: false
 controller:
-  argoRollouts:
+  rollouts:
     integrationEnabled: false
 ```
 
@@ -349,7 +352,96 @@ is preferred if this integration is not desired, as it will grant fewer
 permissions to the controller.
 :::
 
+### Logs from Job Metrics
+
+For those utilizing Argo Rollouts integration for verifications,
+[job metrics](https://argoproj.github.io/argo-rollouts/analysis/job/) stand out
+as an especially useful feature because they are implemented as Kubernetes
+[`Job`s](https://kubernetes.io/docs/concepts/workloads/controllers/job/), which
+give users the flexibility to define any arbitrary post-promotion tests they'd
+like to run against a `Stage` by simply providing appropriate `Job` specs
+[as described here](../../50-user-guide/20-how-to-guides/60-verification.md#configuring-analysistemplates).
+In cases such as these, access to logs produced by the `Job`'s underlying `Pod`
+is helpful for debugging purposes and for understanding results.
+
+Since it's common for multiple Kargo controllers to be deployed to many
+different clusters, such logs need to be aggregated in a centralized location
+for the API server to access them and, in-turn, stream them to the Kargo UI or
+CLI. Rather than build support for many different logging stacks, Kargo has
+settled on a "lowest common denominator" approach: The API server can stream
+any logs that it can access via an HTTP GET request.
+
+To facilitate this, operators may, at the time of installation, provide a URL
+template that the API server can use to construct the URL for any job metric logs
+as a function of `project` (name), `namespace` (always equal to the `Project`'s
+name), `shard`, `stage` (name), `analysisRun` (name), `metricName`,
+`jobNamespace`, `jobName`, and `container` (name).
+
+A token can be specified by referencing a Kubernetes `Secret` that is managed
+"out of band." HTTP headers may also be specified, and may reference the token
+if one is provided.
+
+Example:
+
+```yaml
+api:
+  rollouts:
+    integrationEnabled: true
+    logs:
+      enabled: true
+      urlTemplate: https://logs.kargo.example.com/${{project}}/${{analysisRun}}/${{jobName}}/${{container}}
+      tokenSecret:
+        name: kargo-logs-token
+        key: token
+      httpHeaders:
+        Authentication: "Bearer ${{ token }}"
+```
+
+:::note
+This "lowest common denominator" approach to streaming job metric logs does
+leave it as an exercise for the Kargo administrator to arrange for the
+forwarding and storage of applicable logs.
+
+Users of Kargo via the [Akuity Platform](https://akuity.io/akuity-platform),
+however, will have this seamlessly handled for them.
+:::
+
+:::note
+For more information, refer to the
+[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+:::
+
 ## Resource Management
+
+### Tuning Warehouse Reconciliation Intervals
+
+If your cluster contains many `Warehouse` resources, which periodically poll
+artifact repositories, or if developers have
+[configured any of those `Warehouse`s poorly](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#performance-considerations),
+you may wish to reduce the frequency with which all `Warehouse`s execute their
+artifact discovery processes (i.e. You may wish to _increase_ the minimum
+polling interval.)
+
+:::info
+Developers can tune this interval on individual `Warehouse` resources, but the
+effective interval for any `Warehouse` will be the _greater_ of any specified
+there and the minimum specified here. i.e. Developers cannot configure a
+`Warehouse`'s artifact discovery process to run more frequently than you permit.
+:::
+
+:::note
+If you do this, you will increase the average time required for every
+`Warehouse` to notice new artifacts. You can compensate for this by configuring
+`Warehouse` artifact discovery processes to be
+[triggered by webhooks](../35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks).
+:::
+
+```yaml
+controller:
+  reconcilers:
+    warehouses:
+      minReconciliationInterval: 15m
+```
 
 ### Tuning Concurrent Reconciliation Limits
 

@@ -5,20 +5,22 @@ description: Commits all changes in a working tree to its checked out branch.
 
 # `git-commit`
 
-`git-commit` commits all changes in a working tree to its checked out branch.
-This step is often used after previous steps have put the working tree into the
-desired state and is commonly followed by a [`git-push` step](git-push.md).
+`git-commit` commits all changes in a working tree to its checked out branch. If
+there are no differences from the current `HEAD`, this step is skipped and no
+new commit is created. This step is often used after previous steps have put the
+working tree into the desired state and is commonly followed by a [`git-push`
+step](git-push.md).
 
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing changes to be committed. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `message` | `string` | N | The commit message. Mutually exclusive with `messageFromSteps`. |
-| `messageFromSteps` | `[]string` | N | References the `commitMessage` output of previous steps. When one or more are specified, the commit message will be constructed by concatenating the messages from individual steps. Mutually exclusive with `message`. |
-| `author` | `[]object` | N | Optionally provider authorship information for the commit. |
-| `author.name` | `string` | N | The committer's name. |
-| `author.email` | `string` | N | The committer's email address. |
+| `message` | `string` | Y | The commit message. |
+| `author` | `[]object` | N | Optional authorship information for the commit. If provided, this takes precedence over both system-level defaults and any default authorship information configured in the [`git-clone`](./git-clone.md) step. |
+| `author.name` | `string` | Y | The committer's name. |
+| `author.email` | `string` | Y | The committer's email address. |
+| `author.signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 
 ## Output
 

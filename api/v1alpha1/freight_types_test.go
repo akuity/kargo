@@ -2,8 +2,11 @@ package v1alpha1
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGitCommitDeepEquals(t *testing.T) {
@@ -220,39 +223,438 @@ func TestGitCommitEquals(t *testing.T) {
 	}
 }
 
-func TestFreightGenerateID(t *testing.T) {
-	freight := Freight{
-		Origin: FreightOrigin{
-			Kind: "fake-kind",
-			Name: "fake-name",
-		},
-		Commits: []GitCommit{
-			{
-				RepoURL: "fake-git-repo",
-				ID:      "fake-commit-id",
+func TestFreight_IsCurrentlyIn(t *testing.T) {
+	const testStage = "fake-stage"
+	freight := &Freight{}
+	require.False(t, freight.IsCurrentlyIn(testStage))
+	freight.Status.CurrentlyIn = map[string]CurrentStage{testStage: {}}
+	require.True(t, freight.IsCurrentlyIn(testStage))
+}
+
+func TestFreight_IsVerifiedIn(t *testing.T) {
+	const testStage = "fake-stage"
+	freight := &Freight{}
+	require.False(t, freight.IsVerifiedIn(testStage))
+	freight.Status.VerifiedIn = map[string]VerifiedStage{testStage: {}}
+	require.True(t, freight.IsVerifiedIn(testStage))
+}
+
+func TestFreight_IsApprovedFor(t *testing.T) {
+	const testStage = "fake-stage"
+	freight := &Freight{}
+	require.False(t, freight.IsApprovedFor(testStage))
+	freight.Status.ApprovedFor = map[string]ApprovedStage{testStage: {}}
+	require.True(t, freight.IsApprovedFor(testStage))
+}
+
+func TestFreight_GetLongestSoak(t *testing.T) {
+	testStage := "fake-stage"
+	testCases := []struct {
+		name       string
+		status     FreightStatus
+		assertions func(t *testing.T, status FreightStatus, longestSoak time.Duration)
+	}{
+		{
+			name: "Freight is not currently in the Stage and was never verified there",
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				require.Zero(t, longestSoak)
 			},
 		},
-		Images: []Image{
-			{
-				RepoURL: "fake-image-repo",
-				Tag:     "fake-image-tag",
+		{
+			name: "Freight is not currently in the Stage but was verified there",
+			status: FreightStatus{
+				VerifiedIn: map[string]VerifiedStage{
+					testStage: {LongestCompletedSoak: &metav1.Duration{Duration: time.Hour}},
+				},
+			},
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				require.Equal(t, time.Hour, longestSoak)
 			},
 		},
-		Charts: []Chart{
-			{
-				RepoURL: "fake-chart-repo",
-				Name:    "fake-chart",
-				Version: "fake-chart-version",
+		{
+			name: "Freight is currently in the Stage but was never verified there",
+			status: FreightStatus{
+				CurrentlyIn: map[string]CurrentStage{
+					testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+				},
+			},
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				require.Zero(t, longestSoak)
+			},
+		},
+		{
+			name: "Freight is currently in the Stage and has been verified there; current soak is longer",
+			status: FreightStatus{
+				CurrentlyIn: map[string]CurrentStage{
+					testStage: {Since: &metav1.Time{Time: time.Now().Add(-2 * time.Hour)}},
+				},
+				VerifiedIn: map[string]VerifiedStage{
+					testStage: {LongestCompletedSoak: &metav1.Duration{Duration: time.Hour}},
+				},
+			},
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				// Expect these to be equal within a second. TODO(krancour): There's probably a
+				// more elegant way to do this, but I consider good enough.
+				require.GreaterOrEqual(t, longestSoak, 2*time.Hour)
+				require.LessOrEqual(t, longestSoak, 2*time.Hour+time.Second)
+			},
+		},
+		{
+			name: "Freight is currently in the Stage and has been verified there; a previous soak was longer",
+			status: FreightStatus{
+				CurrentlyIn: map[string]CurrentStage{
+					testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+				},
+				VerifiedIn: map[string]VerifiedStage{
+					testStage: {LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour}},
+				},
+			},
+			assertions: func(t *testing.T, _ FreightStatus, longestSoak time.Duration) {
+				// Expect these to be equal within a second. TODO(krancour): There's probably a
+				// more elegant way to do this, but I consider good enough.
+				require.GreaterOrEqual(t, longestSoak, 2*time.Hour)
+				require.LessOrEqual(t, longestSoak, 2*time.Hour+time.Second)
 			},
 		},
 	}
-	id := freight.GenerateID()
-	expected := id
-	// Doing this any number of times should yield the same ID
-	for i := 0; i < 100; i++ {
-		require.Equal(t, expected, freight.GenerateID())
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			freight := &Freight{
+				Status: testCase.status,
+			}
+			testCase.assertions(t, freight.Status, freight.GetLongestSoak(testStage))
+		})
 	}
-	// Changing anything should change the result
-	freight.Commits[0].ID = "a-different-fake-commit"
-	require.NotEqual(t, expected, freight.GenerateID())
+}
+
+func TestFreightStatus_AddCurrentStage(t *testing.T) {
+	const testStage = "fake-stage"
+	now := time.Now()
+	t.Run("already in current", func(t *testing.T) {
+		oldTime := now.Add(-time.Hour)
+		newTime := now
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: oldTime}},
+			},
+		}
+		status.AddCurrentStage(testStage, newTime)
+		record, in := status.CurrentlyIn[testStage]
+		require.True(t, in)
+		require.Equal(t, oldTime, record.Since.Time)
+	})
+	t.Run("not already in current", func(t *testing.T) {
+		status := FreightStatus{}
+		status.AddCurrentStage(testStage, now)
+		require.NotNil(t, status.CurrentlyIn)
+		record, in := status.CurrentlyIn[testStage]
+		require.True(t, in)
+		require.Equal(t, now, record.Since.Time)
+	})
+}
+
+func TestFreightStatus_RemoveCurrentStage(t *testing.T) {
+	const testStage = "fake-stage"
+	t.Run("not verified", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+	})
+	t.Run("verified; old soak is longer", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+			},
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {LongestCompletedSoak: &metav1.Duration{Duration: 2 * time.Hour}},
+			},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.Equal(t, 2*time.Hour, record.LongestCompletedSoak.Duration)
+	})
+	t.Run("verified; new soak is longer", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: time.Now().Add(-2 * time.Hour)}},
+			},
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {LongestCompletedSoak: &metav1.Duration{Duration: time.Hour}},
+			},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		// Expect these to be equal within a second. TODO(krancour): There's probably a
+		// more elegant way to do this, but I consider good enough.
+		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour)
+		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, 2*time.Hour+time.Second)
+	})
+	t.Run("verified; no previous longest soak", func(t *testing.T) {
+		status := FreightStatus{
+			CurrentlyIn: map[string]CurrentStage{
+				testStage: {Since: &metav1.Time{Time: time.Now().Add(-time.Hour)}},
+			},
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {LongestCompletedSoak: nil}, // No previous soak time
+			},
+		}
+		status.RemoveCurrentStage(testStage)
+		require.NotContains(t, status.CurrentlyIn, testStage)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.NotNil(t, record.LongestCompletedSoak)
+		// Expect the soak time to be approximately 1 hour
+		require.GreaterOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour)
+		require.LessOrEqual(t, record.LongestCompletedSoak.Duration, time.Hour+time.Second)
+	})
+}
+
+func TestFreightStatus_AddVerifiedStage(t *testing.T) {
+	const testStage = "fake-stage"
+	now := time.Now()
+	t.Run("already verified", func(t *testing.T) {
+		oldTime := now.Add(-time.Hour)
+		newTime := now
+		status := FreightStatus{
+			VerifiedIn: map[string]VerifiedStage{
+				testStage: {VerifiedAt: &metav1.Time{Time: oldTime}},
+			},
+		}
+		status.AddVerifiedStage(testStage, newTime)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.Equal(t, oldTime, record.VerifiedAt.Time)
+	})
+	t.Run("not already verified", func(t *testing.T) {
+		status := FreightStatus{}
+		testTime := time.Now()
+		status.AddVerifiedStage(testStage, testTime)
+		require.NotNil(t, status.VerifiedIn)
+		record, verified := status.VerifiedIn[testStage]
+		require.True(t, verified)
+		require.Equal(t, testTime, record.VerifiedAt.Time)
+	})
+}
+
+func TestFreightStatus_AddApprovedStage(t *testing.T) {
+	const testStage = "fake-stage"
+	now := time.Now()
+	t.Run("already approved", func(t *testing.T) {
+		oldTime := now.Add(-time.Hour)
+		newTime := now
+		status := FreightStatus{
+			ApprovedFor: map[string]ApprovedStage{
+				testStage: {ApprovedAt: &metav1.Time{Time: oldTime}},
+			},
+		}
+		status.AddApprovedStage(testStage, newTime)
+		record, approved := status.ApprovedFor[testStage]
+		require.True(t, approved)
+		require.Equal(t, oldTime, record.ApprovedAt.Time)
+	})
+	t.Run("not already approved", func(t *testing.T) {
+		status := FreightStatus{}
+		status.AddApprovedStage(testStage, now)
+		require.NotNil(t, status.ApprovedFor)
+		record, approved := status.ApprovedFor[testStage]
+		require.True(t, approved)
+		require.Equal(t, now, record.ApprovedAt.Time)
+	})
+}
+
+func TestFreightStatus_UpsertMetadata(t *testing.T) {
+	testCases := []struct {
+		name         string
+		initialState map[string]apiextensionsv1.JSON
+		key          string
+		data         any
+		expectError  bool
+		expectedJSON string
+	}{
+		{
+			name:         "upsert string into empty metadata",
+			key:          "test-key",
+			data:         "test-string",
+			expectedJSON: `"test-string"`,
+		},
+		{
+			name:         "upsert int into empty metadata",
+			key:          "test-key",
+			data:         42,
+			expectedJSON: `42`,
+		},
+		{
+			name:         "upsert bool into empty metadata",
+			key:          "test-key",
+			data:         true,
+			expectedJSON: `true`,
+		},
+		{
+			name:         "upsert slice into empty metadata",
+			key:          "test-key",
+			data:         []int{1, 2, 3},
+			expectedJSON: `[1,2,3]`,
+		},
+		{
+			name: "upsert complex struct into empty metadata",
+			key:  "test-key",
+			data: struct {
+				Name   string   `json:"name"`
+				Age    int      `json:"age"`
+				Active bool     `json:"active"`
+				Tags   []string `json:"tags"`
+			}{
+				Name:   "test-user",
+				Age:    30,
+				Active: true,
+				Tags:   []string{"admin", "dev"},
+			},
+			expectedJSON: `{"name":"test-user","age":30,"active":true,"tags":["admin","dev"]}`,
+		},
+		{
+			name: "update existing metadata",
+			initialState: map[string]apiextensionsv1.JSON{
+				"test-key": {Raw: []byte(`"old-value"`)},
+			},
+			key:          "test-key",
+			data:         "new-value",
+			expectedJSON: `"new-value"`,
+		},
+		{
+			name:        "empty key",
+			key:         "",
+			data:        "value",
+			expectError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := FreightStatus{
+				Metadata: tc.initialState,
+			}
+
+			err := status.UpsertMetadata(tc.key, tc.data)
+
+			if tc.expectError {
+				require.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			require.NotNil(t, status.Metadata)
+			require.Contains(t, status.Metadata, tc.key)
+			if tc.expectedJSON != "" {
+				require.JSONEq(t, tc.expectedJSON, string(status.Metadata[tc.key].Raw))
+			}
+		})
+	}
+}
+
+func TestFreightStatus_GetMetadata(t *testing.T) {
+	status := FreightStatus{
+		Metadata: map[string]apiextensionsv1.JSON{
+			"string-key": {Raw: []byte(`"test-value"`)},
+			"int-key":    {Raw: []byte(`42`)},
+			"bool-key":   {Raw: []byte(`true`)},
+			"slice-key":  {Raw: []byte(`[1,2,3]`)},
+			"struct-key": {Raw: []byte(`{"name":"test-user","age":30,"active":true}`)},
+		},
+	}
+
+	t.Run("get string value", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get int value", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("int-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, 42, value)
+	})
+
+	t.Run("get bool value", func(t *testing.T) {
+		var value bool
+		found, err := status.GetMetadata("bool-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, true, value)
+	})
+
+	t.Run("get slice value", func(t *testing.T) {
+		var value []int
+		found, err := status.GetMetadata("slice-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, []int{1, 2, 3}, value)
+	})
+
+	t.Run("get struct value", func(t *testing.T) {
+		var value struct {
+			Name   string `json:"name"`
+			Age    int    `json:"age"`
+			Active bool   `json:"active"`
+		}
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-user", value.Name)
+		require.Equal(t, 30, value.Age)
+		require.Equal(t, true, value.Active)
+	})
+
+	t.Run("get any value -- string", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("string-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(t, "test-value", value)
+	})
+
+	t.Run("get any value -- map", func(t *testing.T) {
+		var value any
+		found, err := status.GetMetadata("struct-key", &value)
+		require.NoError(t, err)
+		require.True(t, found)
+		require.Equal(
+			t,
+			map[string]any{
+				"name":   "test-user",
+				"age":    float64(30),
+				"active": true,
+			},
+			value,
+		)
+	})
+
+	t.Run("key not found", func(t *testing.T) {
+		var value string
+		found, err := status.GetMetadata("nonexistent-key", &value)
+		require.NoError(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("nil target", func(t *testing.T) {
+		found, err := status.GetMetadata("string-key", nil)
+		require.Error(t, err)
+		require.False(t, found)
+	})
+
+	t.Run("wrong target type", func(t *testing.T) {
+		var value int
+		found, err := status.GetMetadata("string-key", &value)
+		require.Error(t, err)
+		require.False(t, found)
+	})
 }

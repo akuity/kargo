@@ -2,9 +2,9 @@ import { create } from '@bufbuild/protobuf';
 import { createConnectQueryKey, createProtobufSafeUpdater } from '@connectrpc/connect-query';
 
 import { queryClient } from '@ui/config/query-client';
-import { listProjects } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { ListProjectsResponseSchema } from '@ui/gen/service/v1alpha1/service_pb';
-import { Project } from '@ui/gen/v1alpha1/generated_pb';
+import { listProjects } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { ListProjectsResponseSchema } from '@ui/gen/api/service/v1alpha1/service_pb';
+import { Project } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export default {
   add: (projects: Project[]) => {

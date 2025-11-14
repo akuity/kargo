@@ -38,24 +38,25 @@ vars:
 - name: repoURL
   value: https://github.com/example/repo
 steps:
+# Clone, prepare the contents of ./out, commit, push as part of a `push` step etc...
 - uses: git-open-pr
   as: open-pr
   config:
     repoURL: ${{ vars.repoURL }}
     createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
+    sourceBranch: ${{ task.outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 - uses: compose-output
   as: pr-link
   config:
-    url: ${{ vars.repoURL }}/pull/${{ outputs['open-pr'].prNumber }}
+    url: ${{ vars.repoURL }}/pull/${{ task.outputs['open-pr'].pr.id }}
 - uses: http
   config:
     method: POST
     url: https://slack.com/api/chat.postMessage
     headers:
     - name: Authorization
-      value: Bearer ${{ secrets.slack.token }}
+      value: Bearer ${{ secret('slack').token }}
     - name: Content-Type
       value: application/json
     body: |
@@ -66,9 +67,21 @@ steps:
             "type": "section",
             "text": {
               "type": "mrkdwn",
-              "text": "A new PR has been opened: ${{ outputs['pr-link'].url }}"
+              "text": "A new PR has been opened: " + task.outputs['pr-link'].url
             }
           }
         ]
       }) }}
 ```
+
+:::note
+In the above example, it is assumed that the steps are part of a
+[`PromotionTask`](../20-promotion-tasks.md). Because of this, it uses the
+[`task.outputs` syntax](../20-promotion-tasks.md#task-outputs) to reference the
+outputs of the `git-open-pr` step.
+
+If you are using the `compose-output` step in a regular
+[Promotion template](../15-promotion-templates.md), you can omit the `task`
+prefix and use `outputs` instead. For example, `outputs['open-pr'].pr.url`
+instead of `task.outputs['open-pr'].pr.url`.
+:::

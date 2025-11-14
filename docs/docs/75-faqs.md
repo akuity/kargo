@@ -153,8 +153,8 @@ to approach it depending on your needs and our
 ### _How do I integrate with multiple Argo CD control planes?_
 
 To get an overview of how this can be achieved, head on over to our
-[Architecture](./40-operator-guide/30-architecture.md) section to learn about the topology of
-a large-scale Kargo deployment.
+[Architecture](./40-operator-guide/30-architecture/index.md) section to learn
+about the topology of a large-scale Kargo deployment.
 
 ### _How do I integrate Kargo into my CI pipelines?_
 
@@ -198,5 +198,5 @@ can also integrate with a variety of identity providers that either don't
 support PKCE or don't support OpenID Connect at all (GitHub, for example).
 
 Refer to our
-[OpenID Connect integration docs](./40-operator-guide/40-security/20-openid-connect.md)
+[OpenID Connect integration docs](./40-operator-guide/40-security/20-openid-connect/index.md)
 for comprehensive coverage of this topic.

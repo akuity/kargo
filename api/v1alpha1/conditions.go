@@ -82,4 +82,23 @@ const (
 	// the Freight has been verified, and the absence of the condition or a
 	// status of "False" indicates that the Freight has not been verified.
 	ConditionTypeVerified = "Verified"
+
+	// ConditionTypeFreightCreationCriteriaSatisfied denotes that the criteria for
+	// creating Freight from discovered artifacts in a Warehouse have been
+	// satisfied.
+	//
+	// This is a "normal-true" or "positive polarity" condition, meaning that
+	// the presence of the condition with a status of "True" indicates that
+	// the criteria have been satisfied, and the absence of the condition or
+	// a status of "False" indicates that the criteria have not been satisfied.
+	ConditionTypeFreightCreationCriteriaSatisfied = "FreightCreationCriteriaSatisfied"
+
+	// ConditionTypeFreightCreated denotes that new Freight has been automatically
+	// created from discovered artifacts.
+	//
+	// This is a "normal-true" or "positive polarity" condition, meaning that
+	// the presence of the condition with a status of "True" indicates that
+	// the criteria have been satisfied, and the absence of the condition or
+	// a status of "False" indicates that no new Freight was created.
+	ConditionTypeFreightCreated = "FreightCreated"
 )

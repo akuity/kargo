@@ -1,146 +1,179 @@
 import { useMutation } from '@connectrpc/connect-query';
 import {
-  faBuilding,
+  faBarsStaggered,
   faCircleNotch,
-  faExclamationCircle,
-  faFilter,
-  faRefresh
+  faMinus,
+  faPlus,
+  faRefresh,
+  faWarehouse
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, message } from 'antd';
+import { Badge, Button, Card, Flex, message, Tooltip } from 'antd';
 import classNames from 'classnames';
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
-import { refreshWarehouse } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Warehouse } from '@ui/gen/v1alpha1/generated_pb';
+import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
+import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { usePipelineContext } from '../context/use-pipeline-context';
-import { onError } from '../utils/util';
+import styles from './node-size-source-of-truth.module.less';
 
-import styles from './custom-node.module.less';
-
-type WarehouseNodeProps = {
-  warehouse: Warehouse;
-  warehouses?: number;
-};
-
-export const WarehouseNode = (props: WarehouseNodeProps) => {
-  const { warehouseColorMap } = useContext(ColorContext);
-
-  const pipelineContext = usePipelineContext();
-
+export const WarehouseNode = (props: { warehouse: Warehouse }) => {
+  const colorContext = useContext(ColorContext);
   const navigate = useNavigate();
 
-  const refeshWarehouseMutation = useMutation(refreshWarehouse, {
-    onError,
+  const freightTimelineControllerContext = useFreightTimelineControllerContext();
+
+  const warehouseState = useWarehouseState(props.warehouse);
+
+  const refreshWarehouseMutation = useMutation(refreshWarehouse, {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
-      pipelineContext?.state.clear();
-      // TODO: refetchFreightData
     }
   });
 
-  const warehouseName = props.warehouse?.metadata?.name || '';
+  const color = colorContext?.warehouseColorMap?.[props.warehouse?.metadata?.name || ''];
 
-  let refreshing = false;
+  const isSubscriptionHidden =
+    freightTimelineControllerContext?.preferredFilter?.hideSubscriptions?.[
+      props.warehouse?.metadata?.name || ''
+    ];
 
-  for (const condition of props.warehouse?.status?.conditions || []) {
-    if (condition.type === 'Reconciling' && condition.status === 'True') {
-      refreshing = true;
+  const isWarehouseNameLong = (props.warehouse?.metadata?.name?.length || 0) > 17;
+  const warehouseNameHeader = `${props.warehouse?.metadata?.name?.slice(0, 17)}${isWarehouseNameLong ? '...' : ''}`;
+  const WarehouseNameHeader = <span className='text-xs'>{warehouseNameHeader}</span>;
+
+  return (
+    <Card
+      size='small'
+      title={
+        <Flex justify='space-between'>
+          <Flex
+            align='center'
+            gap={16}
+            className={classNames(warehouseState.hasError && 'text-red-500')}
+          >
+            {!warehouseState.reconciling && <FontAwesomeIcon icon={faWarehouse} />}
+
+            {warehouseState.reconciling && (
+              <FontAwesomeIcon icon={faCircleNotch} title='Reconciling' spin />
+            )}
+
+            {isWarehouseNameLong ? (
+              <Tooltip title={props.warehouse?.metadata?.name}>{WarehouseNameHeader}</Tooltip>
+            ) : (
+              WarehouseNameHeader
+            )}
+
+            {warehouseState.hasError && <Badge status='error' />}
+          </Flex>
+          <Button
+            icon={<FontAwesomeIcon icon={faBarsStaggered} />}
+            size='small'
+            onClick={() =>
+              navigate(
+                generatePath(paths.warehouse, {
+                  name: props.warehouse?.metadata?.namespace,
+                  warehouseName: props.warehouse?.metadata?.name
+                })
+              )
+            }
+          />
+        </Flex>
+      }
+      className={styles['warehouse-node-size']}
+      style={{
+        border: color && `1px solid ${color}`
+      }}
+    >
+      <Button
+        size='small'
+        icon={<FontAwesomeIcon icon={isSubscriptionHidden ? faPlus : faMinus} />}
+        className='absolute -left-2 top-[50%] translate-y-[-50%] text-[10px]'
+        onClick={(e) => {
+          e.stopPropagation();
+
+          const warehouseName = props.warehouse?.metadata?.name || '';
+          const hiddenSubscriptions = {
+            ...freightTimelineControllerContext?.preferredFilter.hideSubscriptions
+          };
+
+          if (isSubscriptionHidden) {
+            delete hiddenSubscriptions[warehouseName];
+          } else {
+            hiddenSubscriptions[warehouseName] = true;
+          }
+
+          freightTimelineControllerContext?.setPreferredFilter({
+            ...freightTimelineControllerContext?.preferredFilter,
+            hideSubscriptions: hiddenSubscriptions
+          });
+        }}
+      />
+      <center>
+        <Button
+          size='small'
+          icon={<FontAwesomeIcon icon={faRefresh} />}
+          onClick={(e) => {
+            e.stopPropagation();
+            refreshWarehouseMutation.mutate({
+              project: props.warehouse?.metadata?.namespace,
+              name: props.warehouse?.metadata?.name
+            });
+          }}
+          loading={warehouseState.refreshing}
+        >
+          Refresh{warehouseState.refreshing && 'ing'}
+        </Button>
+      </center>
+    </Card>
+  );
+};
+
+const useWarehouseState = (warehouse: Warehouse) =>
+  useMemo(() => {
+    let reconciling = false;
+
+    for (const condition of warehouse?.status?.conditions || []) {
+      if (condition.type === 'Reconciling' && condition.status === 'True') {
+        reconciling = true;
+      }
     }
-  }
 
-  let hasError = false;
-  let notReady = false;
-  let hasReconcilingCondition = false;
+    let hasError = false;
+    let notReady = false;
+    let hasReconcilingCondition = false;
 
-  for (const condition of props.warehouse?.status?.conditions || []) {
-    if (condition.type === 'Healthy' && condition.status === 'False') {
+    for (const condition of warehouse?.status?.conditions || []) {
+      if (condition.type === 'Healthy' && condition.status === 'False') {
+        hasError = true;
+      }
+
+      if (condition.type === 'Reconciling') {
+        hasReconcilingCondition = true;
+      }
+
+      if (condition.type === 'Ready' && condition.status === 'False') {
+        notReady = true;
+      }
+    }
+
+    if (notReady && !hasReconcilingCondition) {
       hasError = true;
     }
 
-    if (condition.type === 'Reconciling') {
-      hasReconcilingCondition = true;
-    }
+    const refreshAnnotation = warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'];
+    const refreshing =
+      typeof refreshAnnotation === 'string' &&
+      warehouse?.metadata?.annotations?.['kargo.akuity.io/refresh'] !==
+        warehouse?.status?.lastHandledRefresh;
 
-    if (condition.type === 'Ready' && condition.status === 'False') {
-      notReady = true;
-    }
-  }
-
-  if (notReady && !hasReconcilingCondition) {
-    hasError = true;
-  }
-
-  return (
-    <div
-      className={classNames(styles.warehouseNode)}
-      onClick={() =>
-        navigate(
-          generatePath(paths.warehouse, {
-            name: pipelineContext?.project,
-            warehouseName: props.warehouse?.metadata?.name
-          })
-        )
-      }
-    >
-      <div className={classNames(styles.header)}>
-        <h3>{warehouseName}</h3>
-
-        <div className='ml-auto space-x-2'>
-          {refreshing && <FontAwesomeIcon icon={faCircleNotch} spin />}
-          {hasError && <FontAwesomeIcon icon={faExclamationCircle} />}
-          <FontAwesomeIcon
-            icon={faBuilding}
-            className='text-base'
-            style={{
-              color: warehouseColorMap[warehouseName]
-            }}
-          />
-        </div>
-      </div>
-
-      <div className={classNames(styles.body, 'flex')}>
-        {(props.warehouses || 0) > 1 && (
-          <Button
-            icon={<FontAwesomeIcon icon={faFilter} />}
-            size='small'
-            type={
-              pipelineContext?.selectedWarehouse === props.warehouse?.metadata?.name
-                ? 'primary'
-                : 'default'
-            }
-            onClick={(e) => {
-              e.stopPropagation();
-
-              const newSelectedWarehouse =
-                pipelineContext?.selectedWarehouse === props.warehouse?.metadata?.name
-                  ? ''
-                  : props.warehouse?.metadata?.name;
-
-              pipelineContext?.setSelectedWarehouse(newSelectedWarehouse || '');
-            }}
-          />
-        )}
-        <Button
-          icon={<FontAwesomeIcon icon={faRefresh} />}
-          size='small'
-          className='mx-auto'
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            refeshWarehouseMutation.mutate({
-              name: props.warehouse?.metadata?.name,
-              project: pipelineContext?.project
-            });
-          }}
-        >
-          Refresh
-        </Button>
-      </div>
-    </div>
-  );
-};
+    return {
+      refreshing,
+      reconciling,
+      hasError
+    };
+  }, [warehouse]);

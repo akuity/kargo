@@ -11,8 +11,8 @@ import { getAlias } from '@ui/features/common/utils';
 import {
   getFreight,
   getPromotion
-} from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
-import { Freight, FreightReference, Promotion, Stage } from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { Freight, FreightReference, Promotion, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 export const StagePopover = ({ project, stage }: { project?: string; stage?: Stage }) => {

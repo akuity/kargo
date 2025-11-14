@@ -10,6 +10,7 @@ metadata:
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   LOG_LEVEL: {{ quote .Values.api.logLevel }}
+  LOG_FORMAT: {{ quote .Values.api.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfig.yaml
   {{- end }}
@@ -21,6 +22,7 @@ data:
   {{- if .Values.api.secretManagementEnabled }}
   SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
+  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
@@ -50,10 +52,14 @@ data:
   OIDC_CLI_CLIENT_ID: {{ quote .Values.api.oidc.cliClientID }}
   {{- end }}
   {{- end }}
+  OIDC_USERNAME_CLAIM: {{ quote .Values.api.oidc.usernameClaim | default "email" }}
   {{- end }}
   {{- if .Values.api.argocd.urls }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
   ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
+  {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}
+  ANALYSIS_RUN_LOG_URL_TEMPLATE: {{ quote .Values.api.rollouts.logs.urlTemplate }}
+  {{- end }}
 {{- end }}

@@ -124,7 +124,7 @@ steps:
 
 :::info
 For a list of built-in promotion steps and configuration options, see the
-[Promotion Steps Reference](./promotion-steps).
+[Promotion Steps Reference](30-promotion-steps/index.md).
 :::
 
 #### Promotion Task Steps
@@ -143,9 +143,9 @@ steps:
 ```
 
 :::note
-Steps referencing `PromotionTask` or `ClusterPromotionTask` do not support
-configuration or retry options like built-in step, as the steps within the
-task define their own configuration. For more information, see the
+Steps referencing `PromotionTask` or `ClusterPromotionTask` __do not__ support
+any configuration option other than an `alias` and `vars`, as the steps within
+the task define their own configuration. For more information, see the
 [Promotion Tasks Reference](20-promotion-tasks.md).
 :::
 
@@ -204,14 +204,14 @@ steps:
 ```
 
 The configuration options available for a step are specific to the step itself
-and are documented in the [Promotion Steps Reference](./promotion-steps).
+and are documented in the [Promotion Steps Reference](30-promotion-steps/index.md).
 
 #### Step Outputs
 
 A promotion step may produce output that can be referenced by subsequent steps,
 allowing the output of one step to be used as input to another. The output of a
 step is defined by the step itself and is typically documented in the step's
-[reference documentation](./promotion-steps).
+[reference documentation](30-promotion-steps/index.md).
 
 ```yaml
 steps:
@@ -221,6 +221,127 @@ steps:
     config:
       input: ${{ outputs.alias.someOutput }}
 ```
+
+#### Conditional Steps
+
+You can conditionally execute a step based on the results of previous steps by
+using the `if` key in the step definition. The value of the `if` key must be a
+valid [expression](40-expressions.md) that evaluates to a boolean value. If the
+expression evaluates to `true`, the step is executed as normal. If the
+expression evaluates to `false`, the step is skipped and the next step in the
+sequence is executed.
+
+These conditionals may make use of special functions whose returned values
+depend on the outcome of all previous steps:
+
+- `always()`: Unconditionally evaluates to `true`.
+- `failure()`: Evaluates to `true` only if _any_ previous step has errored or
+  failed.
+- `success()`: Evaluates to `true` only if _all_ previous steps have completed
+  successfully or been skipped.
+
+Examples:
+
+```yaml
+steps:
+- uses: some-step # Assume this step succeeds
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute; assume it succeeds
+- uses: and-another-step
+  if: ${{ failure() }} # This step will be skipped
+- uses: yet-another-step
+  if: ${{ success() }} # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+```yaml
+steps:
+- uses: some-step # Assume this step fails
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute
+- uses: and-another-step
+  if: ${{ failure() }} # This step will execute  
+- uses: yet-another-step
+  if: ${{ success() }} # This step will be skipped
+
+# This Promotion will fail
+```
+
+It is also possible to directly access the status of a specific step using the
+`status()` function with a step alias as an argument:
+
+```yaml
+steps:
+- uses: some-step # Assume this step encounters an error
+  as: my-step
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute
+- uses: and-another-step
+  if: ${{ failure() }} # This step will execute
+- uses: yet-another-step
+  if: ${{ status('my-step') == 'Errored' }} # This step will execute
+
+# This Promotion will fail
+```
+
+A step's `continueOnError` field can be set to `true` to indicate that an error
+or failure should _both_:
+
+- Not be counted as an error or failure when evaluating the `failure()` or
+  `success()` functions.
+- Not affect the overall outcome of the `Promotion`.
+
+Example:
+
+```yaml
+steps:
+- uses: some-step # Assume this step fails
+  continueOnError: true
+- uses: some-other-step
+  if: ${{ always() }} # This step will execute; assume it succeeds
+- uses: and-another-step
+  if: ${{ failure() }} # This step will be skipped
+- uses: yet-another-step
+  if: ${{ success() }} # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+Last, when a step's `if` field is empty, the default behavior is to execute the
+step only if _all_ previous steps have either completed successfully, been
+skipped, or completed with some other status, but had `continueOnError` set to
+`true`.
+
+Examples:
+
+```yaml
+steps:
+- uses: some-step # Assume this step succeeds
+- uses: some-other-step # This step will execute; assume it fails
+  continueOnError: true
+- uses: and-another-step # This step will execute; assume it succeeds
+- uses: yet-another-step # This step will execute; assume it succeeds
+
+# This Promotion will succeed
+```
+
+:::tip
+Using the primitives described above, it is possible to create robust error-handling
+logic in your promotion templates.
+:::
+
+:::tip
+Conditional steps can be used in [Promotion Tasks](20-promotion-tasks.md) to
+conditionally execute a task step based on provided
+[task variables](20-promotion-tasks.md#task-variables).
+
+An `if` condition specified on the [task step](#promotion-task-steps) itself
+does not affect the execution of the task, as the steps of the `PromotionTask`
+are inflated into the `Promotion` at creation time. Because of this, the `if`
+condition would be evaluated at creation time rather than execution time,
+preventing it from accessing the status or outputs of previous steps.
+:::
 
 #### Step Retries
 
@@ -254,7 +375,7 @@ steps:
     errorThreshold: 3
     timeout: 48h
   config:
-    prNumber: ${{ outputs['open-pr'].prNumber }}
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 :::info

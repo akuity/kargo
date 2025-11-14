@@ -10,27 +10,30 @@ specified source and target branches. This step is often used after a
 [`git-push` step](git-push.md) and is commonly followed by a
 [`git-wait-for-pr` step](git-wait-for-pr.md).
 
-At present, this feature only supports GitHub pull requests and GitLab merge
-requests.
+At present, this feature only supports GitHub, Gitea, Azure DevOps, and
+GitLab pull/merge requests.
 
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `repoURL` | `string` | Y | The URL of a remote Git repository. |
-| `provider` | `string` | N | The name of the Git provider to use. Currently only `github` and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.  |
+| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | Y | Specifies the source branch for the pull request. |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
 | `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
+| `description` | `string` | N | The description for the pull request. |
 | `labels` | `[]string` | N | Labels to add to the pull request. |
 
 ## Output
 
 | Name | Type | Description |
 |------|------|-------------|
-| `prNumber` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
+| `pr` | `object` | An object containing details about the pull request. |
+| `pr.id` | `number` | The numeric identifier of the pull request opened by this step. Typically, a subsequent [`git-wait-for-pr` step](git-wait-for-pr.md) will reference this output to learn what pull request to monitor. |
+| `pr.url` | `string` | The URL of the pull request. |
 
 ## Examples
 
@@ -93,21 +96,4 @@ steps:
     title: Deploy to ${{ ctx.stage }}
     labels: ["infra", "needs-review"]
 # Wait for the PR to be merged or closed...
-```
-
-### Custom Git Provider
-
-The following example demonstrates how to specify a custom Git provider for
-`git-open-pr`. This is useful when the provider cannot be inferred from the
-`repoURL`. For example, if the repository is hosted on a self-hosted GitLab
-instance, the provider must be specified as `gitlab`.
-
-```yaml
-steps:
-# Clone, push, prepare the contents of ./out, commit, etc...
-- uses: git-open-pr
-  config:
-    repoURL: https://gitlab.example.com/example/repo.git
-    provider: gitlab
-    # Additional configuration...
 ```

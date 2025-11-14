@@ -434,8 +434,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * When the field is specified, it must be immutable and works only for the Indexed Jobs.
    * Once the Job meets the SuccessPolicy, the lingering pods are terminated.
    *
-   * This field is beta-level. To use this field, you must enable the
-   * `JobSuccessPolicy` feature gate (enabled by default).
    * +optional
    *
    * @generated from field: optional k8s.io.api.batch.v1.SuccessPolicy successPolicy = 16;
@@ -444,7 +442,8 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
 
   /**
    * Specifies the number of retries before marking this job failed.
-   * Defaults to 6
+   * Defaults to 6, unless backoffLimitPerIndex (only Indexed Job) is specified.
+   * When backoffLimitPerIndex is specified, backoffLimit defaults to 2147483647.
    * +optional
    *
    * @generated from field: optional int32 backoffLimit = 7;
@@ -458,8 +457,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * batch.kubernetes.io/job-index-failure-count annotation. It can only
    * be set when Job's completionMode=Indexed, and the Pod's restart
    * policy is Never. The field is immutable.
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional int32 backoffLimitPerIndex = 12;
@@ -475,8 +472,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    * It can only be specified when backoffLimitPerIndex is set.
    * It can be null or up to completions. It is required and must be
    * less than or equal to 10^4 when is completions greater than 10^5.
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional int32 maxFailedIndexes = 13;
@@ -587,8 +582,6 @@ export type JobSpec = Message<"k8s.io.api.batch.v1.JobSpec"> & {
    *
    * When using podFailurePolicy, Failed is the the only allowed value.
    * TerminatingOrFailed and Failed are allowed values when podFailurePolicy is not in use.
-   * This is an beta field. To use this, enable the JobPodReplacementPolicy feature toggle.
-   * This is on by default.
    * +optional
    *
    * @generated from field: optional string podReplacementPolicy = 14;
@@ -745,8 +738,6 @@ export type JobStatus = Message<"k8s.io.api.batch.v1.JobStatus"> & {
    * represented as "1,3-5,7".
    * The set of failed indexes cannot overlap with the set of completed indexes.
    *
-   * This field is beta-level. It can be used when the `JobBackoffLimitPerIndex`
-   * feature gate is enabled (enabled by default).
    * +optional
    *
    * @generated from field: optional string failedIndexes = 10;
@@ -956,8 +947,6 @@ export type PodFailurePolicyRule = Message<"k8s.io.api.batch.v1.PodFailurePolicy
    *   running pods are terminated.
    * - FailIndex: indicates that the pod's index is marked as Failed and will
    *   not be restarted.
-   *   This value is beta-level. It can be used when the
-   *   `JobBackoffLimitPerIndex` feature gate is enabled (enabled by default).
    * - Ignore: indicates that the counter towards the .backoffLimit is not
    *   incremented and a replacement pod is created.
    * - Count: indicates that the pod is handled in the default way - the
@@ -1005,7 +994,7 @@ export type SuccessPolicy = Message<"k8s.io.api.batch.v1.SuccessPolicy"> & {
   /**
    * rules represents the list of alternative rules for the declaring the Jobs
    * as successful before `.status.succeeded >= .spec.completions`. Once any of the rules are met,
-   * the "SucceededCriteriaMet" condition is added, and the lingering pods are removed.
+   * the "SuccessCriteriaMet" condition is added, and the lingering pods are removed.
    * The terminal state for such a Job has the "Complete" condition.
    * Additionally, these rules are evaluated in order; Once the Job meets one of the rules,
    * other rules are ignored. At most 20 elements are allowed.

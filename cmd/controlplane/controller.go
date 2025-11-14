@@ -13,46 +13,63 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	libCluster "sigs.k8s.io/controller-runtime/pkg/cluster"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/internal/api/kubernetes"
-	libargocd "github.com/akuity/kargo/internal/argocd"
-	"github.com/akuity/kargo/internal/controller"
-	argocd "github.com/akuity/kargo/internal/controller/argocd/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/promotions"
-	rollouts "github.com/akuity/kargo/internal/controller/rollouts/api/v1alpha1"
-	"github.com/akuity/kargo/internal/controller/stages"
-	"github.com/akuity/kargo/internal/controller/warehouses"
-	"github.com/akuity/kargo/internal/credentials"
-	credsdb "github.com/akuity/kargo/internal/credentials/kubernetes"
-	"github.com/akuity/kargo/internal/directives"
-	"github.com/akuity/kargo/internal/indexer"
-	"github.com/akuity/kargo/internal/logging"
-	"github.com/akuity/kargo/internal/os"
-	"github.com/akuity/kargo/internal/types"
-	versionpkg "github.com/akuity/kargo/internal/version"
+	libargocd "github.com/akuity/kargo/pkg/argocd"
+	"github.com/akuity/kargo/pkg/controller"
+	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/promotions"
+	"github.com/akuity/kargo/pkg/controller/stages"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
+	"github.com/akuity/kargo/pkg/credentials"
+	credsdb "github.com/akuity/kargo/pkg/credentials/kubernetes"
+	"github.com/akuity/kargo/pkg/health"
+	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
+	"github.com/akuity/kargo/pkg/indexer"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/types"
+	versionpkg "github.com/akuity/kargo/pkg/x/version"
+
+	_ "github.com/akuity/kargo/pkg/credentials/acr"
+	_ "github.com/akuity/kargo/pkg/credentials/basic"
+	_ "github.com/akuity/kargo/pkg/credentials/ecr"
+	_ "github.com/akuity/kargo/pkg/credentials/gar"
+	_ "github.com/akuity/kargo/pkg/credentials/github"
+	_ "github.com/akuity/kargo/pkg/credentials/ssh"
+	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
 type controllerOptions struct {
-	ShardName  string
-	KubeConfig string
+	IsDefaultController bool
+	ShardName           string
+
+	ControlPlaneKubeConfig string
+	QPS                    float32
+	Burst                  int
 
 	ArgoCDEnabled       bool
 	ArgoCDKubeConfig    string
 	ArgoCDNamespaceOnly bool
 
-	PprofBindAddress string
+	MetricsBindAddress string
+	PprofBindAddress   string
 
 	Logger *logging.Logger
 }
 
 func newControllerCommand() *cobra.Command {
+	_, format := getLogVars()
 	cmdOpts := &controllerOptions{
 		// During startup, we enforce use of an info-level logger to ensure that
 		// no important startup messages are missed.
-		Logger: logging.NewLogger(logging.InfoLevel),
+		Logger: logging.NewLoggerOrDie(logging.InfoLevel, format),
 	}
 
 	cmd := &cobra.Command{
@@ -61,6 +78,18 @@ func newControllerCommand() *cobra.Command {
 		SilenceErrors:     true,
 		SilenceUsage:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			version := versionpkg.GetVersion()
+			startupLogger := cmdOpts.Logger.WithValues(
+				"version", version.Version,
+				"commit", version.GitCommit,
+				"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
+				"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
+				"defaultController", cmdOpts.IsDefaultController,
+			)
+			if cmdOpts.ShardName != "" {
+				startupLogger = startupLogger.WithValues("shard", cmdOpts.ShardName)
+			}
+			startupLogger.Info("Starting Kargo Controller")
 			cmdOpts.complete()
 
 			return cmdOpts.run(cmd.Context())
@@ -71,29 +100,27 @@ func newControllerCommand() *cobra.Command {
 }
 
 func (o *controllerOptions) complete() {
+	o.IsDefaultController = types.MustParseBool(os.GetEnv("IS_DEFAULT_CONTROLLER", "false"))
 	o.ShardName = os.GetEnv("SHARD_NAME", "")
-	o.KubeConfig = os.GetEnv("KUBECONFIG", "")
+
+	o.ControlPlaneKubeConfig = os.GetEnv("KUBECONFIG", "")
+	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
+	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
+
 	o.ArgoCDEnabled = types.MustParseBool(os.GetEnv("ARGOCD_INTEGRATION_ENABLED", "true"))
 	o.ArgoCDKubeConfig = os.GetEnv("ARGOCD_KUBECONFIG", "")
 	o.ArgoCDNamespaceOnly = types.MustParseBool(os.GetEnv("ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY", "false"))
+
+	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
+
+	logLevel, logFormat := getLogVars()
+
+	o.Logger = logging.NewLoggerOrDie(logLevel, logFormat)
 }
 
 func (o *controllerOptions) run(ctx context.Context) error {
-	version := versionpkg.GetVersion()
-
-	startupLogger := o.Logger.WithValues(
-		"version", version.Version,
-		"commit", version.GitCommit,
-		"GOMAXPROCS", stdruntime.GOMAXPROCS(0),
-		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
-	)
-	if o.ShardName != "" {
-		startupLogger = startupLogger.WithValues("shard", o.ShardName)
-	}
-	startupLogger.Info("Starting Kargo Controller")
-
-	kargoMgr, stagesReconcilerCfg, err := o.setupKargoManager(
+	kargoMgr, localClusterClient, stagesReconcilerCfg, err := o.setupKargoManager(
 		ctx,
 		stages.ReconcilerConfigFromEnv(),
 	)
@@ -107,8 +134,9 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 
 	credentialsDB := credsdb.NewDatabase(
-		ctx,
 		kargoMgr.GetClient(),
+		localClusterClient,
+		credentials.DefaultProviderRegistry,
 		credsdb.DatabaseConfigFromEnv(),
 	)
 
@@ -128,31 +156,30 @@ func (o *controllerOptions) run(ctx context.Context) error {
 func (o *controllerOptions) setupKargoManager(
 	ctx context.Context,
 	stagesReconcilerCfg stages.ReconcilerConfig,
-) (manager.Manager, stages.ReconcilerConfig, error) {
-	// If the env var is undefined, this will resolve to kubeconfig for the
-	// cluster the controller is running in.
+) (manager.Manager, client.Client, stages.ReconcilerConfig, error) {
+	// If o.ControlPlaneKubeConfig is empty, this will resolve to kubeconfig for
+	// the cluster the controller is running in.
 	//
-	// It is typically defined if this controller is running somewhere other
-	// than where the Kargo resources live. One example of this would be a
-	// sharded topology wherein Kargo controllers run on application
-	// clusters, with Kargo resources hosted in a centralized management
-	// cluster.
-	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
+	// It is typically non-empty only when this controller is running somewhere
+	// other than the Kargo control plane's cluster. i.e. Running in an
+	// application cluster, as part of a sharded topology.
+	restCfg, err := kubernetes.GetRestConfig(ctx, o.ControlPlaneKubeConfig)
 	if err != nil {
-		return nil, stagesReconcilerCfg,
+		return nil, nil, stagesReconcilerCfg,
 			fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	scheme := runtime.NewScheme()
 	if err = corev1.AddToScheme(scheme); err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf(
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kubernetes core API to Kargo controller manager scheme: %w",
 			err,
 		)
 	}
 	if err = kargoapi.AddToScheme(scheme); err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf(
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 			"error adding Kargo API to Kargo controller manager scheme: %w",
 			err,
 		)
@@ -162,7 +189,7 @@ func (o *controllerOptions) setupKargoManager(
 		if exists, err = argoRolloutsExists(ctx, restCfg); exists {
 			o.Logger.Info("Argo Rollouts integration is enabled")
 			if err = rollouts.AddToScheme(scheme); err != nil {
-				return nil, stagesReconcilerCfg, fmt.Errorf(
+				return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 					"error adding Argo Rollouts API to Kargo controller manager scheme: %w",
 					err,
 				)
@@ -174,7 +201,7 @@ func (o *controllerOptions) setupKargoManager(
 			// server (e.g. due to network issues), and not if Argo Rollouts is
 			// not installed.
 			if err != nil {
-				return nil, stagesReconcilerCfg, fmt.Errorf(
+				return nil, nil, stagesReconcilerCfg, fmt.Errorf(
 					"unable to determine if Argo Rollouts is installed: %w",
 					err,
 				)
@@ -189,44 +216,118 @@ func (o *controllerOptions) setupKargoManager(
 		}
 	}
 
-	shardReq, err := controller.GetShardRequirement(stagesReconcilerCfg.ShardName)
+	// We may or may not be able to distill stagesReconcilerCfg.ShardName and
+	// stagesReconcilerCfg.IsDefaultController down to a labels.Requirement. If
+	// we're able to do so, we'll build a labels.Selector from that requirement
+	// and use it to narrow the set of Stages and Promotions our client's internal
+	// cache needs to be concerned with watching. If we're unable to distill
+	// stagesReconcilerCfg.ShardName and stagesReconcilerCfg.IsDefaultController
+	// down to a labels.Requirement, then we have no choice but to let our
+	// client's internal cache watch all Stages and Promotions and the respective
+	// reconcilers for those types will, instead, need to apply a predicate to
+	// filter out resources for which they are not responsible.
+	cacheOpts := cache.Options{}
+	shardReq, err := controller.GetShardRequirement(
+		stagesReconcilerCfg.ShardName,
+		stagesReconcilerCfg.IsDefaultController,
+	)
 	if err != nil {
-		return nil, stagesReconcilerCfg, fmt.Errorf("error getting shard requirement: %w", err)
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error getting shard requirement: %w", err)
 	}
-	shardSelector := labels.NewSelector().Add(*shardReq)
+	if shardReq != nil {
+		shardSelector := labels.NewSelector().Add(*shardReq)
+		cacheOpts.ByObject = map[client.Object]cache.ByObject{
+			&kargoapi.Stage{}:     {Label: shardSelector},
+			&kargoapi.Promotion{}: {Label: shardSelector},
+		}
+	}
 
 	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
 			Scheme: scheme,
 			Metrics: server.Options{
-				BindAddress: "0",
+				BindAddress: o.MetricsBindAddress,
 			},
 			PprofBindAddress: o.PprofBindAddress,
 			Client: client.Options{
 				Cache: &client.CacheOptions{
-					// The controller does not have cluster-wide permissions, to
-					// get/list/watch Secrets. Its access to Secrets grows and shrinks
-					// dynamically as Projects are created and deleted. We disable caching
-					// here since the underlying informer will not be able to watch
-					// Secrets in all namespaces.
-					DisableFor: []client.Object{&corev1.Secret{}},
+					DisableFor: []client.Object{
+						// The controller does not have cluster-wide permissions, to
+						// get/list/watch Secrets. Its access to Secrets grows and shrinks
+						// dynamically as Projects are created and deleted. We disable
+						// caching here since the underlying informer will not be able to
+						// watch Secrets in all namespaces.
+						&corev1.Secret{},
+						// The controller has cluster-wide permissions to get/list/watch
+						// ConfigMaps, but ConfigMaps have the potential to be quite large,
+						// so we prefer to not cache them.
+						&corev1.ConfigMap{},
+					},
 				},
 			},
-			Cache: cache.Options{
-				// When Kargo is sharded, we expect the controller to only handle
-				// resources in the shard it is responsible for. This is enforced
-				// by the following label selectors on the informers, EXCEPT for
-				// Warehouses — which should be accessible by all controllers in
-				// a sharded setup, but handled by only one controller at a time.
-				ByObject: map[client.Object]cache.ByObject{
-					&kargoapi.Stage{}:     {Label: shardSelector},
-					&kargoapi.Promotion{}: {Label: shardSelector},
-				},
-			},
+			Cache: cacheOpts,
 		},
 	)
-	return mgr, stagesReconcilerCfg, err
+
+	// If the mgr happens to be for the local cluster, or falling back to the
+	// local cluster when searching for credentials is not explicitly enabled,
+	// we're all done.
+	if o.ControlPlaneKubeConfig == "" ||
+		os.GetEnv("LOCAL_CLUSTER_CREDS_FALLBACK", "false") != "true" {
+		return mgr, nil, stagesReconcilerCfg, err
+	}
+
+	// Build a separate client for the local cluster...
+	if restCfg, err = kubernetes.GetRestConfig(ctx, ""); err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error loading REST config for local cluster client: %w", err)
+	}
+
+	scheme = runtime.NewScheme()
+	if err = corev1.AddToScheme(scheme); err != nil {
+		return nil, nil, stagesReconcilerCfg, fmt.Errorf(
+			"error adding Kubernetes core API to local client scheme: %w",
+			err,
+		)
+	}
+	localCluster, err := libCluster.New(
+		restCfg,
+		func(clusterOptions *libCluster.Options) {
+			clusterOptions.Scheme = scheme
+			clusterOptions.Client = client.Options{
+				Cache: &client.CacheOptions{
+					DisableFor: []client.Object{
+						// The controller does not have cluster-wide permissions, to
+						// get/list/watch Secrets. Its access to Secrets grows and shrinks
+						// dynamically as Projects are created and deleted. We disable
+						// caching here since the underlying informer will not be able to
+						// watch Secrets in all namespaces.
+						&corev1.Secret{},
+					},
+				},
+			}
+		},
+	)
+	if err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error creating Kubernetes client for local cluster: %w", err)
+	}
+
+	go func() {
+		err = localCluster.Start(ctx)
+	}()
+	if !localCluster.GetCache().WaitForCacheSync(ctx) {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error waiting for cache to sync: %w", err)
+	}
+	if err != nil {
+		return nil, nil, stagesReconcilerCfg,
+			fmt.Errorf("error starting cluster: %w", err)
+	}
+
+	return mgr, localCluster.GetClient(), stagesReconcilerCfg, nil
 }
 
 func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Manager, error) {
@@ -247,6 +348,7 @@ func (o *controllerOptions) setupArgoCDManager(ctx context.Context) (manager.Man
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Argo CD controller manager: %w", err)
 	}
+	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
 	restCfg.ContentType = runtime.ContentTypeJSON
 
 	argocdNamespace := libargocd.Namespace()
@@ -315,21 +417,32 @@ func (o *controllerOptions) setupReconcilers(
 	if argocdMgr != nil {
 		argoCDClient = argocdMgr.GetClient()
 	}
+
+	healthCheckers.Initialize(argoCDClient)
+
 	sharedIndexer := indexer.NewSharedFieldIndexer(kargoMgr.GetFieldIndexer())
 
-	directivesEngine := directives.NewSimpleEngine(credentialsDB, kargoMgr.GetClient(), argoCDClient)
-
-	if err := promotions.SetupReconcilerWithManager(
-		ctx,
-		kargoMgr,
-		argocdMgr,
-		directivesEngine,
-		promotions.ReconcilerConfigFromEnv(),
-	); err != nil {
-		return fmt.Errorf("error setting up Promotions reconciler: %w", err)
+	if promotionsReconcilerCfg := promotions.ReconcilerConfigFromEnv(); promotionsReconcilerCfg.Enable {
+		if err := promotions.SetupReconcilerWithManager(
+			ctx,
+			kargoMgr,
+			argocdMgr,
+			promotion.NewLocalEngine(
+				kargoMgr.GetClient(),
+				argoCDClient,
+				credentialsDB,
+				promotion.DefaultExprDataCacheFn,
+			),
+			promotionsReconcilerCfg,
+		); err != nil {
+			return fmt.Errorf("error setting up Promotions reconciler: %w", err)
+		}
 	}
 
-	if err := stages.NewRegularStageReconciler(stagesReconcilerCfg, directivesEngine).SetupWithManager(
+	if err := stages.NewRegularStageReconciler(
+		stagesReconcilerCfg,
+		health.NewAggregatingChecker(),
+	).SetupWithManager(
 		ctx,
 		kargoMgr,
 		argocdMgr,
@@ -369,8 +482,16 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 		go func() {
 			defer wg.Done()
 			if err := argocdMgr.Start(ctx); err != nil {
-				errChan <- fmt.Errorf("error starting argo cd manager: %w", err)
+				errChan <- fmt.Errorf("error starting Argo CD manager: %w", err)
+				return
 			}
+			o.Logger.Debug("Argo CD manager started successfully")
+
+			if !argocdMgr.GetCache().WaitForCacheSync(ctx) {
+				errChan <- fmt.Errorf("failed to wait for Argo CD cache to sync")
+				return
+			}
+			o.Logger.Debug("Argo CD cache synced successfully")
 		}()
 	}
 
@@ -378,8 +499,16 @@ func (o *controllerOptions) startManagers(ctx context.Context, kargoMgr, argocdM
 	go func() {
 		defer wg.Done()
 		if err := kargoMgr.Start(ctx); err != nil {
-			errChan <- fmt.Errorf("error starting kargo manager: %w", err)
+			errChan <- fmt.Errorf("error starting Kargo manager: %w", err)
+			return
 		}
+		o.Logger.Debug("Kargo manager started successfully")
+
+		if !kargoMgr.GetCache().WaitForCacheSync(ctx) {
+			errChan <- fmt.Errorf("failed to wait for Kargo cache to sync")
+			return
+		}
+		o.Logger.Debug("Kargo cache synced successfully")
 	}()
 
 	// Adapt wg to a channel that can be used in a select

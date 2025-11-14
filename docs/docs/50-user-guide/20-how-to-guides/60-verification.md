@@ -40,6 +40,25 @@ spec:
     - name: integration-test
 ```
 
+In addition to referencing `AnalysisTemplate`s, a `kind` field can be specified
+to reference [`ClusterAnalysisTemplate`s](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#clusteranalysistemplates),
+which are cluster-scoped resources that behave similarly to `AnalysisTemplate`s
+but are not namespaced:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: dev
+  namespace: guestbook
+spec:
+  # ...
+  verification:
+    analysisTemplates:
+      - name: integration-test
+        kind: ClusterAnalysisTemplate
+```
+
 ## Configuring AnalysisTemplates
 
 An [AnalysisTemplate](../60-reference-docs/50-analysis-templates.md)
@@ -81,7 +100,7 @@ For further documentation and examples of `AnalysisTemplate`s, refer to the
 ## How Verification Works
 
 After a successful `Promotion`, a `Stage` enters the `Verifying` phase. Any
-`AnalysisTemplate`s which were referenced by the `Stage` are are used to spawn
+`AnalysisTemplate`s which were referenced by the `Stage` are used to spawn
 a resource called an `AnalysisRun`, which represents a single execution of
 those templates.
 
@@ -93,7 +112,7 @@ CLI). `Freight` which have not passed verification in a `Stage` are blocked
 from continuing further downstream.
 
 :::tip
-It is sometimes desired to skip the verification process entirely (e.g. a 
+It is sometimes desired to skip the verification process entirely (e.g. a
 hotfix needs to be fast-tracked to production). Verification (and the entire
 Pipeline for that matter) can be bypassed by
 [manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
@@ -126,8 +145,9 @@ metadata:
   generation: 3
   labels:
     kargo.akuity.io/freight-collection: 55d452301040a73e9fd05289b1f8ddbec1791222
-    kargo.akuity.io/promotion: dev.01jjpfgfwkzk18k7cyq61jehf4.319ddec
     kargo.akuity.io/stage: dev
+  annotations:
+    kargo.akuity.io/promotion: dev.01jjpfgfwkzk18k7cyq61jehf4.319ddec
   name: dev.01jjqaq7qacfn766tcp1nqz2zv.55d4523
   namespace: guestbook
   ownerReferences:
@@ -181,7 +201,7 @@ An `AnalysisTemplate` _defines_ a verification process, while an `AnalysisRun`
 tracks the _progress and result_ of an execution of that process.
 :::
 
-##  Arguments and Metadata
+## Arguments and Metadata
 
 It is also possible to specify additional labels, annotations, and arguments
 that should be applied to `AnalysisRun` resources spawned from the referenced
@@ -242,6 +262,36 @@ type of resource you are working with, recognizable by the `apiVersion` and
 `kind` fields.
 :::
 
+:::caution
+If specifying arguments for use in the creation of an `AnalysisRun` via a
+`Stage`'s `spec.verification.args` field, each `AnalysisTemplate` referenced in
+`spec.verification.analysisTemplates` _must_ declare those arguments in its
+own `spec.args` field.
+
+The following example `AnalysisTemplate` complements the example `Stage` shown
+above:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: integration-test
+  namespace: guestbook
+spec:
+  args:
+  - name: commit
+  metrics:
+    # ...
+```
+
+Failure to declare arguments will cause `AnalysisRun`s (and therefore,
+verification) to fail.
+
+Refer directly to the
+[Rollouts Docs](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments)
+for further details.
+:::
+
 ## Implicit Argo CD Verification
 
 It is usually desirable for changes to be fully rolled out before performing
@@ -275,7 +325,7 @@ before proceeding with promotion. This practice is commonly known as
 
 `Stage`s may optionally specify a "soak time" when requesting `Freight` from
 upstream `Stage`s. To configure this, a duration can be specified using the
-`spec.requestedFreight[].requiredSoakTime` field. Valid durations are expressed
+`spec.requestedFreight[].sources.requiredSoakTime` field. Valid durations are expressed
 in seconds, minutes or hours (e.g. `180s`, `30m`, `48h`). This duration is the
 minimum duration (following a successful promotion), for which the requested
 `Freight` must have continuously occupied ("soaked in") in an upstream `Stage`
@@ -296,7 +346,7 @@ spec:
     sources:
       stages:
       - uat
-    requiredSoakTime: 1h
+      requiredSoakTime: 1h
  # Omitted for brevity...
 ```
 
@@ -312,8 +362,3 @@ conjunction with one another.
 for a `Stage` makes it immediately available to that `Stage` _regardless_ of
 whether any required soak time has elapsed.
 :::
-
-## ClusterAnalysisTemplates
-
-Referencing `ClusterAnalysisTemplate`s is currently unsupported but is expected
-to be possible in a future release.

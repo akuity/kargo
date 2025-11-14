@@ -17,15 +17,20 @@ commonly preceded by a [`git-clear` step](git-clear.md) and followed by
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Helm chart (i.e. to a directory containing a `Chart.yaml` file). This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the file or directory where rendered manifests are to be written. If the path ends with `.yaml` or `.yml` it is presumed to indicate a file and is otherwise presumed to indicate a directory. |
-| `releaseName` | `string` | N | Optional release name to use when rendering the manifests. This is commonly omitted. |
+| `outLayout` | `string` | N | OutLayout to use for the rendered manifest. This can be either `helm` or `flat`. The `helm` layout will create a directory with the chart name and place the rendered manifests in that directory. The `flat` layout will place all rendered manifests in the outPath directory without any subdirectories. This is `helm` by default. |
+| `releaseName` | `string` | Y | Release name to use when rendering the manifests. |
 | `useReleaseName` | `boolean` | N | Whether to use the release name in the output path (instead of the chart name). This is `false` by default, and only has an effect when `outPath` is set to a directory. |
 | `namespace` | `string` | N | Optional namespace to use when rendering the manifests. This is commonly omitted. GitOps agents such as Argo CD will generally ensure the installation of manifests into the namespace specified by their own configuration. |
 | `valuesFiles` | `[]string` | N | Helm values files (apart from the chart's default `values.yaml`) to be used when rendering the manifests.  |
+| `buildDependencies` | `bool` | N | Whether to build dependencies before rendering the manifests. If no Chart.lock file is present, the dependencies will be built from the Chart.yaml file (and may be updated). This is `false` by default. |
 | `includeCRDs` | `boolean` | N | Whether to include CRDs in the rendered manifests. This is `false` by default. |
 | `disableHooks` | `boolean` | N | Whether to disable hooks in the rendered manifests. This is `false` by default. |
 | `skipTests` | `boolean` | N | Whether to skip tests when rendering the manifests. This is `false` by default. |
 | `kubeVersion` | `string` | N | Optionally specifies a Kubernetes version to be assumed when rendering manifests. This is useful for charts that may contain logic specific to different Kubernetes versions. |
 | `apiVersions` | `[]string` | N | Allows a manual set of supported API versions to be specified. |
+| `setValues` | `[]object` | N | Allows for amending chart configuration inline as one would with the `helm template` command's `--set` flag. |
+| `setValues[].key` | `string` | N | The key whose value should be set. For nested values, use dots to delimit key parts. e.g. `image.tag`. |
+| `setValues[].value` | `string` | N | The new value for the key. |
 
 ## Examples
 
@@ -105,5 +110,6 @@ steps:
     valuesFiles:
     - ./src/charts/my-chart/${{ ctx.stage }}-values.yaml
     outPath: ./out
+    releaseName: my-chart
 # Commit, push, etc...
 ```

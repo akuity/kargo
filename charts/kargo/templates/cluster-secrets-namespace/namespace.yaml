@@ -1,0 +1,8 @@
+{{- if .Values.global.createClusterSecretsNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.clusterSecretsNamespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+{{- end }}

@@ -9,8 +9,6 @@ import (
 	"sigs.k8s.io/yaml"
 )
 
-type PromotionPhase string
-
 const (
 	// PromotionPhasePending denotes a Promotion that has not been executed yet.
 	// i.e. It is currently waiting in a queue. Queues are stage-specific and
@@ -25,7 +23,8 @@ const (
 	// PromotionPhaseSucceeded denotes a Promotion that has been successfully
 	// executed.
 	PromotionPhaseSucceeded PromotionPhase = "Succeeded"
-	// PromotionPhaseFailed denotes a Promotion that has failed
+	// PromotionPhaseFailed denotes a Promotion that has failed, usually for
+	// non-technical reasons.
 	PromotionPhaseFailed PromotionPhase = "Failed"
 	// PromotionPhaseErrored denotes a Promotion that has failed for technical
 	// reasons. Further information about the failure can be found in the
@@ -36,6 +35,9 @@ const (
 	PromotionPhaseAborted PromotionPhase = "Aborted"
 )
 
+// PromotionPhase is a high-level summary of the current state of a Promotion.
+type PromotionPhase string
+
 // IsTerminal returns true if the PromotionPhase is a terminal one.
 func (p *PromotionPhase) IsTerminal() bool {
 	switch *p {
@@ -43,6 +45,86 @@ func (p *PromotionPhase) IsTerminal() bool {
 		return true
 	default:
 		return false
+	}
+}
+
+// PromotionStepStatus is a high-level summary of the current state of a
+// PromotionStep.
+type PromotionStepStatus string
+
+// Valid returns true if the PromotionStepStatus is valid. It checks against
+// the known PromotionStepStatus constants.
+func (s PromotionStepStatus) Valid() bool {
+	switch s {
+	case PromotionStepStatusSucceeded,
+		PromotionStepStatusSkipped,
+		PromotionStepStatusAborted,
+		PromotionStepStatusFailed,
+		PromotionStepStatusErrored,
+		PromotionStepStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+const (
+	// PromotionStepStatusRunning denotes a PromotionStep that is currently
+	// "running." This does not necessarily indicate that the step is ACTIVELY
+	// running, but rather that it has not yet completed. It may, for instance, be
+	// waiting on some external event to occur and will check again on the next
+	// reconciliation attempt.
+	PromotionStepStatusRunning PromotionStepStatus = "Running"
+	// PromotionStepStatusSucceeded denotes a PromotionStep that has completed
+	// successfully.
+	PromotionStepStatusSucceeded PromotionStepStatus = "Succeeded"
+	// PromotionStepStatusFailed denotes a PromotionStep that has failed, usually
+	// for non-technical reasons.
+	PromotionStepStatusFailed PromotionStepStatus = "Failed"
+	// PromotionStepStatusErrored denotes a Promotion that has failed for technical
+	// reasons. Further information about the failure can be found in the
+	// Promotion's status.
+	PromotionStepStatusErrored PromotionStepStatus = "Errored"
+	// PromotionStepStatusAborted denotes a PromotionStep that was aborted because
+	// the Promotion to which it belongs was aborted.
+	PromotionStepStatusAborted PromotionStepStatus = "Aborted"
+	// PromotionStepStatusSkipped denotes a PromotionStep that was skipped for any
+	// reason and immediately yielded execution to the next PromotionStep.
+	PromotionStepStatusSkipped PromotionStepStatus = "Skipped"
+)
+
+// severityByStatus defines relative severity levels for each
+// PromotionStepStatus.
+var severityByStatus = map[PromotionStepStatus]int{
+	PromotionStepStatusSucceeded: 0,
+	PromotionStepStatusSkipped:   1,
+	PromotionStepStatusRunning:   2,
+	PromotionStepStatusAborted:   3,
+	PromotionStepStatusFailed:    4,
+	PromotionStepStatusErrored:   5,
+}
+
+// Compare compares the severity of the current PromotionStepStatus with
+// another. It returns -1 if the current status is less severe than the other, 0
+// if the two statuses are equally severe, or 1 if the current status is more
+// severe than the other.
+func (s PromotionStepStatus) Compare(other PromotionStepStatus) int {
+	// Get the severity levels of the current and other statuses
+	thisSeverity, lhsOK := severityByStatus[s]
+	otherSeverity, rhsOK := severityByStatus[other]
+
+	if !lhsOK || !rhsOK {
+		panic(fmt.Sprintf("unknown PromotionStepStatus: %s or %s", s, other))
+	}
+
+	// Compare the severity levels
+	switch {
+	case thisSeverity < otherSeverity:
+		return -1
+	case thisSeverity > otherSeverity:
+		return 1
+	default:
+		return 0
 	}
 }
 
@@ -84,7 +166,8 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Stage string `json:"stage" protobuf:"bytes,1,opt,name=stage"`
 	// Freight specifies the piece of Freight to be promoted into the Stage
 	// referenced by the Stage field.
@@ -92,11 +175,12 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Freight string `json:"freight" protobuf:"bytes,2,opt,name=freight"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// promotion steps.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,4,rep,name=vars"`
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
 	// are listed in this field.
@@ -107,20 +191,6 @@ type PromotionSpec struct {
 	Steps []PromotionStep `json:"steps" protobuf:"bytes,3,rep,name=steps"`
 }
 
-// PromotionVariable describes a single variable that may be referenced by
-// expressions in promotion steps.
-type PromotionVariable struct {
-	// Name is the name of the variable.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=^[a-zA-Z_]\w*$
-	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
-	// Value is the value of the variable. It is allowed to utilize expressions
-	// in the value.
-	// See https://docs.kargo.io/references/expression-language for details.
-	Value string `json:"value,omitempty" protobuf:"bytes,2,opt,name=value"`
-}
-
 // PromotionTaskReference describes a reference to a PromotionTask.
 type PromotionTaskReference struct {
 	// Name is the name of the (Cluster)PromotionTask.
@@ -128,7 +198,8 @@ type PromotionTaskReference struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Pattern=^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
+	// +akuity:test-kubebuilder-pattern=KubernetesName
 	Name string `json:"name" protobuf:"bytes,1,opt,name=name"`
 
 	// Kind is the type of the PromotionTask. Can be either PromotionTask or
@@ -179,11 +250,11 @@ type PromotionStepRetry struct {
 }
 
 // GetTimeout returns the Timeout field with the given fallback value.
-func (r *PromotionStepRetry) GetTimeout(fallback *time.Duration) *time.Duration {
+func (r *PromotionStepRetry) GetTimeout(fallback time.Duration) time.Duration {
 	if r == nil || r.Timeout == nil {
 		return fallback
 	}
-	return &r.Timeout.Duration
+	return r.Timeout.Duration
 }
 
 // GetErrorThreshold returns the ErrorThreshold field with the given fallback
@@ -207,16 +278,26 @@ type PromotionStep struct {
 	Task *PromotionTaskReference `json:"task,omitempty" protobuf:"bytes,5,opt,name=task"`
 	// As is the alias this step can be referred to as.
 	As string `json:"as,omitempty" protobuf:"bytes,2,opt,name=as"`
+	// If is an optional expression that, if present, must evaluate to a boolean
+	// value. If the expression evaluates to false, the step will be skipped.
+	// If the expression does not evaluate to a boolean value, the step will be
+	// considered to have failed.
+	If string `json:"if,omitempty" protobuf:"bytes,7,opt,name=if"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,8,opt,name=continueOnError"`
 	// Retry is the retry policy for this step.
 	Retry *PromotionStepRetry `json:"retry,omitempty" protobuf:"bytes,4,opt,name=retry"`
 	// Vars is a list of variables that can be referenced by expressions in
 	// the step's Config. The values override the values specified in the
 	// PromotionSpec.
-	Vars []PromotionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
+	Vars []ExpressionVariable `json:"vars,omitempty" protobuf:"bytes,6,rep,name=vars"`
 	// Config is opaque configuration for the PromotionStep that is understood
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
-	// See https://docs.kargo.io/references/expression-language for details.
+	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
 }
 
@@ -229,9 +310,9 @@ func (s *PromotionStep) GetAlias(i int) string {
 	case s.As != "":
 		return s.As
 	case s.Task != nil:
-		return fmt.Sprintf("task-%d", i)
+		return fmt.Sprintf("task-%d", i+1)
 	default:
-		return fmt.Sprintf("step-%d", i)
+		return fmt.Sprintf("step-%d", i+1)
 	}
 }
 
@@ -259,6 +340,8 @@ type PromotionStatus struct {
 	// HealthChecks contains the health check directives to be executed after
 	// the Promotion has completed.
 	HealthChecks []HealthCheckStep `json:"healthChecks,omitempty" protobuf:"bytes,8,rep,name=healthChecks"`
+	// StartedAt is the time when the promotion started.
+	StartedAt *metav1.Time `json:"startedAt,omitempty" protobuf:"bytes,12,opt,name=startedAt"`
 	// FinishedAt is the time when the promotion was completed.
 	FinishedAt *metav1.Time `json:"finishedAt,omitempty" protobuf:"bytes,6,opt,name=finishedAt"`
 	// CurrentStep is the index of the current promotion step being executed. This
@@ -330,6 +413,22 @@ type PromotionList struct {
 // StepExecutionMetadataList is a list of StepExecutionMetadata.
 type StepExecutionMetadataList []StepExecutionMetadata
 
+// HasFailures returns true if any of the StepExecutionMetadata in the list
+// have a status of PromotionStepStatusErrored or PromotionStepStatusFailed.
+func (s StepExecutionMetadataList) HasFailures() bool {
+	for _, stepExecMeta := range s {
+		if stepExecMeta.ContinueOnError {
+			continue
+		}
+		switch stepExecMeta.Status {
+		case PromotionStepStatusErrored, PromotionStepStatusFailed:
+			return true
+		}
+		// Other statuses have no effect on the failure check.
+	}
+	return false
+}
+
 // StepExecutionMetadata tracks metadata pertaining to the execution of
 // a promotion step.
 type StepExecutionMetadata struct {
@@ -344,7 +443,12 @@ type StepExecutionMetadata struct {
 	// ErrorCount tracks consecutive failed attempts to execute the step.
 	ErrorCount uint32 `json:"errorCount,omitempty" protobuf:"varint,4,opt,name=errorCount"`
 	// Status is the high-level outcome of the step.
-	Status PromotionPhase `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
+	Status PromotionStepStatus `json:"status,omitempty" protobuf:"bytes,5,opt,name=status"`
 	// Message is a display message about the step, including any errors.
 	Message string `json:"message,omitempty" protobuf:"bytes,6,opt,name=message"`
+	// ContinueOnError is a boolean value that, if set to true, will cause the
+	// Promotion to continue executing the next step even if this step fails. It
+	// also will not permit this failure to impact the overall status of the
+	// Promotion.
+	ContinueOnError bool `json:"continueOnError,omitempty" protobuf:"varint,7,opt,name=continueOnError"`
 }

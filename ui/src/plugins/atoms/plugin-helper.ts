@@ -1,4 +1,4 @@
-import { HealthCheckStep, Promotion, PromotionStep } from '@ui/gen/v1alpha1/generated_pb';
+import { HealthCheckStep, Promotion, PromotionStep } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 export const getPromotionStepConfig = (step: PromotionStep): Record<string, unknown> =>
@@ -31,5 +31,5 @@ export const getPromotionHealthCheckConfig = (hc: HealthCheckStep): Record<strin
     })
   );
 
-export const getPromotionStepAlias = (promotionStep: PromotionStep, stepIndex: string) =>
+export const getPromotionStepAlias = (promotionStep: PromotionStep, stepIndex: string | number) =>
   promotionStep?.as || `step-${stepIndex}`;

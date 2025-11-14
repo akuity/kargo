@@ -8,7 +8,7 @@ import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
 import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
-import { createResource } from '@ui/gen/service/v1alpha1/service-KargoService_connectquery';
+import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
   ChartDiscoveryResult,
@@ -20,15 +20,19 @@ import {
   Image,
   ImageDiscoveryResult,
   Warehouse
-} from '@ui/gen/v1alpha1/generated_pb';
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
 
 import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';
+import { CloneFreightNote } from './clone-freight-note';
 import { CommitTable } from './commit-table';
 import { ImageTable } from './image-table';
+import { mergeWithClonedFreight } from './merge-with-cloned-freight';
+import { missingArtifactsToClonedFreight } from './missing-artifacts-to-cloned-freight';
 import { DiscoveryResult, FreightInfo } from './types';
+import { getSubscriptionKey } from './unique-subscription-key';
 
 const constructFreight = (
   chosenItems: {
@@ -60,7 +64,7 @@ const constructFreight = (
         repoURL: artifact.repoURL,
         tag: imageRef.tag,
         digest: imageRef.digest,
-        gitRepoURL: imageRef.gitRepoURL
+        annotations: imageRef.annotations
       } as Image);
     } else if ('versions' in artifact) {
       freight.charts.push({
@@ -87,13 +91,14 @@ const constructFreight = (
 
 export const AssembleFreight = ({
   warehouse,
+  cloneFreight,
   onSuccess
 }: {
   warehouse?: Warehouse;
+  cloneFreight?: Freight;
   onSuccess: () => void;
 }) => {
   const { name: project } = useParams();
-  const [selected, setSelected] = useState<DiscoveryResult>();
 
   const errorHandler = newErrorHandler((err) => {
     const errorMessage = err instanceof ConnectError ? err.rawMessage : 'Unexpected API error';
@@ -117,65 +122,73 @@ export const AssembleFreight = ({
 
   // a map of artifact identifiers to freight info
   // contains freight info for all artifacts selected to be included in the new freight
-  const [images, charts, git, init] = useMemo(() => {
-    let images: ImageDiscoveryResult[] = [];
-    let charts: ChartDiscoveryResult[] = [];
-    let git: GitDiscoveryResult[] = [];
-    const init = {} as { [key: string]: { artifact: DiscoveryResult; info: FreightInfo } };
+  const [images, charts, git] = useMemo(() => {
+    const images: ImageDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.images || [];
+    const charts: ChartDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.charts || [];
+    const git: GitDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.git || [];
 
-    if (!warehouse) {
-      return [images, charts, git];
-    }
-
-    const discoveredArtifacts = warehouse?.status?.discoveredArtifacts;
-    if (!discoveredArtifacts) {
-      return [images, charts, git];
-    }
-
-    images = discoveredArtifacts.images;
-    charts = discoveredArtifacts.charts;
-    git = discoveredArtifacts.git;
-
-    if (!selected) {
-      if (images?.length > 0) {
-        setSelected(images[0]);
-      } else if (charts?.length > 0) {
-        setSelected(charts[0]);
-      } else if (git?.length > 0) {
-        setSelected(git[0]);
-      }
-    }
-
-    for (const image of images) {
-      init[image.repoURL as string] = {
-        artifact: image,
-        info: image.references[0]
-      };
-    }
-
-    for (const chart of charts) {
-      init[chart.repoURL as string] = {
-        artifact: chart,
-        info: chart.versions[0]
-      };
-    }
-
-    for (const commit of git) {
-      init[commit.repoURL as string] = {
-        artifact: commit,
-        info: commit.commits[0]
-      };
-    }
-
-    return [images, charts, git, init];
+    return [images, charts, git];
   }, [warehouse]);
+
+  const [selected, setSelected] = useState<DiscoveryResult | undefined>(() => {
+    if (images?.length > 0) {
+      return images[0];
+    }
+
+    if (charts?.length > 0) {
+      return charts[0];
+    }
+
+    if (git?.length > 0) {
+      return git[0];
+    }
+  });
 
   const [chosenItems, setChosenItems] = useState<{
     [key: string]: {
       artifact: DiscoveryResult;
       info: FreightInfo;
     };
-  }>(init || {});
+  }>(() => {
+    const items: Record<string, { artifact: DiscoveryResult; info: FreightInfo }> = {};
+
+    const discoveredArtifacts = warehouse?.status?.discoveredArtifacts;
+
+    for (const image of discoveredArtifacts?.images || []) {
+      items[getSubscriptionKey(image)] = {
+        artifact: image,
+        info: image.references[0]
+      };
+    }
+
+    for (const chart of discoveredArtifacts?.charts || []) {
+      items[getSubscriptionKey(chart)] = {
+        artifact: chart,
+        info: chart.versions[0]
+      };
+    }
+
+    for (const commit of discoveredArtifacts?.git || []) {
+      items[getSubscriptionKey(commit)] = {
+        artifact: commit,
+        info: commit.commits[0]
+      };
+    }
+
+    if (cloneFreight) {
+      mergeWithClonedFreight(items, discoveredArtifacts, cloneFreight);
+    }
+
+    return items;
+  });
+
+  const missingArtifacts = useMemo(() => {
+    if (!cloneFreight) {
+      return [];
+    }
+
+    return missingArtifactsToClonedFreight(warehouse?.status?.discoveredArtifacts, cloneFreight);
+  }, [cloneFreight, warehouse?.status?.discoveredArtifacts]);
 
   function select<T extends FreightInfo>(item?: T) {
     if (!selected) {
@@ -184,47 +197,13 @@ export const AssembleFreight = ({
     if (item) {
       setChosenItems({
         ...chosenItems,
-        [selected.repoURL as string]: {
+        [getSubscriptionKey(selected)]: {
           artifact: selected,
           info: item
         }
       });
     }
   }
-
-  const DiscoveryTable = () => {
-    if (!selected) {
-      return null;
-    }
-
-    const selectedItem = chosenItems[selected?.repoURL as string]?.info;
-
-    if ('references' in selected) {
-      return (
-        <ImageTable
-          references={(selected as ImageDiscoveryResult).references}
-          select={select}
-          selected={selectedItem as DiscoveredImageReference}
-        />
-      );
-    } else if ('commits' in selected) {
-      return (
-        <CommitTable
-          commits={(selected as GitDiscoveryResult).commits}
-          select={select}
-          selected={selectedItem as DiscoveredCommit}
-        />
-      );
-    } else if ('versions' in selected) {
-      return (
-        <ChartTable
-          versions={(selected as ChartDiscoveryResult).versions}
-          select={select}
-          selected={selectedItem as string}
-        />
-      );
-    }
-  };
 
   const commonProps = {
     onClick: setSelected,
@@ -233,14 +212,20 @@ export const AssembleFreight = ({
 
   return (
     <div>
+      <CloneFreightNote
+        missingArtifacts={missingArtifacts}
+        cloneFreight={cloneFreight}
+        className='mb-5'
+      />
       <div className='text-xs font-medium text-gray-500 mb-2'>FREIGHT CONTENTS</div>
-      <div className='mb-4 h-12 flex items-center'>
+      <div className='mt-3 mb-5 flex items-center'>
         {Object.keys(chosenItems)?.length > 0 ? (
           <>
             <FreightContents
               freight={constructFreight(chosenItems, warehouse?.metadata?.name || '')}
               highlighted
               horizontal
+              fullContentVisibility
             />
             <Button
               className='ml-auto'
@@ -276,12 +261,58 @@ export const AssembleFreight = ({
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
-            <DiscoveryTable />
+            <DiscoveryTable selected={selected} chosenItems={chosenItems} select={select} />
           </div>
         </div>
       ) : (
         <div className='text-gray-500 text-sm mt-2'>Please select a warehouse to continue.</div>
       )}
     </div>
+  );
+};
+
+const DiscoveryTable = ({
+  selected,
+  chosenItems,
+  select
+}: {
+  selected?: DiscoveryResult;
+  chosenItems: {
+    [key: string]: {
+      artifact: DiscoveryResult;
+      info: FreightInfo;
+    };
+  };
+  select: (item?: FreightInfo) => void;
+}) => {
+  const selectedItem = selected ? chosenItems[getSubscriptionKey(selected)]?.info : undefined;
+
+  if (!selected) {
+    return null;
+  }
+
+  return (
+    <>
+      <ImageTable
+        references={(selected as ImageDiscoveryResult).references || []}
+        select={select}
+        selected={selectedItem as DiscoveredImageReference}
+        show={'references' in selected}
+      />
+
+      <CommitTable
+        commits={(selected as GitDiscoveryResult).commits || []}
+        select={select}
+        selected={selectedItem as DiscoveredCommit}
+        show={'commits' in selected}
+      />
+
+      <ChartTable
+        versions={(selected as ChartDiscoveryResult).versions || []}
+        select={select}
+        selected={selectedItem as string}
+        show={'versions' in selected}
+      />
+    </>
   );
 };

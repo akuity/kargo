@@ -48,7 +48,8 @@ step to honor sync windows, you must use Argo CD v2.11.0 or later.
 _Additionally, it is recommended that if a promotion process is expected to
 sometimes encounter an active deny window, the `argocd-update` step should be
 configured with a timeout that is at least as long as the longest expected deny
-window. (The step's default timeout is five minutes.)_
+window. The step's default timeout of five minutes can be overridden using the
+[`retry.timeout`](../15-promotion-templates.md#step-retries) field.
 :::
 
 ## Configuration
@@ -106,8 +107,7 @@ steps:
   as: commit
   config:
     path: ./out
-    messageFromSteps:
-    - update-image
+    message: ${{ outputs['update-image'].commitMessage }}
 - uses: git-push
   config:
     path: ./out
@@ -146,7 +146,8 @@ steps:
       sources:
       - repoURL: ${{ chartRepo }}
         chart: my-chart
-        targetRevision: ${{ chartFrom(chartRepo, "my-chart").Version }}
+        desiredRevision: ${{ chartFrom(chartRepo, "my-chart").Version }}
+        updateTargetRevision: true
 ```
 
 ### Updating an Image with Kustomize

@@ -9,10 +9,13 @@ Each Kargo Stage is represented by a Kubernetes resource of type `Stage`.
 
 ## The `Stage` Resource Type
 
-Like most Kubernetes resources, a `Stage` is composed of a user-defined `spec` field
-and a system-populated `status` field.
+Like most Kubernetes resources, a `Stage` is composed of a user-defined `spec`
+field and a system-populated `status` field.
 
-A `Stage` resource's `spec` field is itself composed of three main areas of concern:
+A `Stage` resource's `spec` field is itself composed of four main areas of
+concern:
+
+* Variables
 
 * Requested Freight
 
@@ -20,7 +23,43 @@ A `Stage` resource's `spec` field is itself composed of three main areas of conc
 
 * Verification
 
-The following sections will explore each of these `spec` sections as well as `status` in greater detail.
+The following sections will explore each of these as well as `status` in
+greater detail.
+
+### Variables
+
+The `spec.vars` field allows you to define variables that can be referenced
+anywhere in the `Stage` specification that supports expressions, including the
+[promotion template](#promotion-templates) and
+[verification configuration](#verification).
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: test
+  namespace: kargo-demo
+spec:
+  vars:
+    - name: gitopsRepo
+      value: https://github.com/example/kargo-demo.git
+    - name: targetBranch
+      value: stage/test
+    - name: imageRepo
+      value: public.ecr.aws/nginx/nginx
+  # ...
+```
+
+Stage-level variables are merged with promotion template-level variables, with
+promotion template variables taking precedence for any conflicting names. This
+allows you to define common variables at the `Stage` level while still being
+able to override or supplement them at the promotion level as needed.
+
+:::info
+Variables defined at the Stage level can be referenced using
+`${{ vars.<variable-name> }}` syntax throughout the `Stage` specification,
+including in promotion templates and verification arguments.
+:::
 
 ### Requested Freight
 
@@ -38,27 +77,77 @@ future versions of Kargo will introduce additional origin types. This is why
 subfields instead of being described only by the name of a `Warehouse`.
 :::
 
-For each `Stage`, the Kargo controller will periodically check for `Freight`
-resources that are newly available for promotion to that `Stage`.
+#### Freight Availability
 
 When a `Stage` accepts `Freight` directly from its origin, _all_ new `Freight`
 created by that origin (e.g. a `Warehouse` ) are immediately available for
 promotion to that `Stage`.
 
-When a `Stage` accepts `Freight` from one or more "upstream" `Stage` resources,
-`Freight` is considered available for promotion to that `Stage` only after being
-_verified_ in at least one of the upstream `Stage`s. Alternatively, users with
-adequate permissions may manually _approve_ `Freight` for promotion to any given
-`Stage` without requiring upstream verification.
+When a `Stage` accepts `Freight` from one or more "upstream" `Stage`s, `Freight`
+is considered available for promotion to that `Stage` only after being
+_verified_ in the upstream `Stage`(s). A `requestedFreight`'s
+`sources.availabilityStrategy` field specifies whether `Freight` must be
+verified in _any_ upstream `Stage` or _all_ upstream `Stage`s before becoming
+available.
+
+Valid strategies are:
+
+* `OneOf` (default): `Freight` is available for promotion after being verified
+  in at least one of the upstream `Stage`s.
+* `All`: `Freight` is available for promotion only after being verified in all
+  upstream `Stage`s listed in the `sources`.
+
+Last, any `Freight` that has been explicitly _approved_ for promotion to the
+`Stage` is available, without requiring upstream verification.
 
 :::tip
 Explicit approvals are a useful method for applying the occasional "hotfix"
 without waiting for a `Freight` resource to traverse the entirety of a pipeline.
 :::
 
+#### Auto-Promotion
+
+When [auto-promotion](./20-working-with-projects.md#promotion-policies) is
+enabled for a `Stage` through the project's `ProjectConfig`, `Stage`s will
+periodically search for available `Freight` according to the rules defined in
+the previous section and automatically initiate a promotion when suitable
+`Freight` are found to be available.
+
+:::info
+Auto-promotion being enabled through Project-level configuration is a security
+measure.
+
+If it were possible to enabled auto-promotion at the `Stage`-level, users with
+the requisite permissions to update a `Stage` resource, but _without_ the
+permissions to promote to that same `Stage` could effect a promotion regardless
+by enabling auto-promotion.
+
+Keeping enablement of auto-promotion defined at the Project-level ensures that
+(in practice) only a Project's administrator has the authority to enable or
+disable auto-promotion for any `Stage`.
+:::
+
+The definition of "suitable" `Freight` is dependent on the `requestedFreight`'s
+`sources.autoPromotionOptions.selectionPolicy`.
+
+Valid policies are:
+
+* `NewestFreight`: (default): The _newest_ `Freight` that's been suitably
+  verified or approved will be auto-promoted to the `Stage` on a continuous
+  basis.
+
+* `MatchUpstream`: The `Freight` currently in use _immediately upstream_, if
+  suitably verified or approved, will be be auto-promoted to the `Stage` on a
+  continuous basis. This option is valid only when the `Stage` accepts `Freight`
+  from _exactly one_ upstream `Stage`.
+
+#### Examples
+
 In the following example, the `test` `Stage` requests `Freight` that has
 originated from the `my-warehouse` `Warehouse` and indicates that it will accept
-new `Freight` _directly_ from that origin:
+new `Freight` _directly_ from that origin. If auto-promotion has been enabled
+(at the Project-level), the newest `Freight` will be auto-promoted to this
+`Stage` on a continuous basis:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -73,12 +162,41 @@ spec:
       name: my-warehouse
     sources:
       direct: true
+      # These are the default options and could be omitted
+      autoPromotionOptions:
+        selectionPolicy: NewestFreight
   # ...
 # ...
 ```
 
+In this example, the `qa` `Stage` requests `Freight` that has originated from
+the `my-warehouse` `Warehouse`, and indicates that it will accept such `Freight`
+only after it has been _verified_ in the `test` `Stage`. It additionally
+specifies that (if enabled at the Project-level), `Freight` currently in use by
+the `test` `Stage`, if suitably verified or approved, will continuously be
+auto-promoted:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: qa
+  namespace: kargo-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      stages:
+      - test
+      autoPromotionOptions:
+        selectionPolicy: MatchUpstream
+  # ...
+```
+
 In this example, the `uat` `Stage` requests `Freight` that has originated from
-the `my-warehouse` `Warehouse`, but indicates that it will accept such `Freight`
+the `my-warehouse` `Warehouse`, and indicates that it will accept such `Freight`
 only after it has been _verified_ in the `test` `Stage`:
 
 ```yaml
@@ -95,6 +213,30 @@ spec:
     sources:
       stages:
       - test
+  # ...
+```
+
+In the next example, the `prod` `Stage` requests `Freight` that has originated
+from the `my-warehouse` `Warehouse`, and indicates that it will accept such
+`Freight` only after it has been verified in _both_ the `qa` and `uat`
+`Stage`s:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+   name: prod
+   namespace: kargo-demo
+spec:
+  requestedFreight:
+  - origin:
+      kind: Warehouse
+      name: my-warehouse
+    sources:
+      availabilityStrategy: All
+      stages:
+      - qa
+      - uat
   # ...
 ```
 
@@ -202,8 +344,7 @@ promotionTemplate:
       as: commit
       config:
         path: ${{ vars.outPath }}
-        messageFromSteps:
-        - update-image
+        message: ${{ outputs['update-image'].commitMessage }}
     - uses: git-push
       config:
         path: ${{ vars.outPath }}
@@ -365,11 +506,10 @@ Users with credentials for and sufficient permissions within the Kargo control p
 <Tabs groupId="create-stage">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Navigate to your Project in the Kargo UI and locate the action menu in the upper right corner of the pipeline:
+1. In the `Project` view, click <Hlt>Create</Hlt> in the upper right corner of
+   the pipeline section to open a dropdown, then select <Hlt>Stage</Hlt>:
 
    ![create-stage](img/create-stage.png)
-
-1. Click the magic wand icon to open the dropdown, then select <Hlt>Create Stage</Hlt>.
 
    A form will appear to input details for a new `Stage`:
 
@@ -418,13 +558,32 @@ Users with credentials for and sufficient permissions within the Kargo control p
 <Tabs groupId="promoting">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Click on the target icon to the left of the `Stage`:
+1. To promote `Freight` to a `Stage`, click the truck icon in the
+   header of that node and then select <Hlt>Promote</Hlt>:
 
-    ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage.png)
 
-2. Select the desired `Freight` from the <Hlt>Freight Timeline</Hlt>, and click <Hlt>Yes</Hlt> to promote:
+1. From the timeline at the top of the screen, select the `Freight` you'd like
+   to promote into the `Stage` by clicking <Hlt>Select</Hlt>:
 
-    ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+   ![Promote Freight to a Stage](img/promote-freight-to-a-stage-2.png)
+
+1. Confirm the action by clicking <Hlt>Promote</Hlt>:
+
+   ![Kargo Promotion Confirmation](img/promote-freight-to-a-stage-3.png)
+
+   A summary of the `Promotion` will pop up and will be updated in real-time as
+   the steps of the promotion process complete. Once they have all completed,
+   the `Promotion`'s status will change to <Hlt>Succeeded</Hlt>:
+
+   ![Kargo Promotion View](img/kargo-promotion-view.png)
+
+   You will also notice the freight timeline has been automatically updated.
+   Every piece of `Freight` in the timeline is color-coded to indicate which
+   `Stage`s (if any) are actively using it. You will see the one piece of
+   `Freight` currently in the timeline is marked with the same color as the
+   `Stage`'s node you recently promoted in the pipeline. This indicates this
+   piece of `Freight` is currently used by that `Stage`.
 
 </TabItem>
 <TabItem value="cli" label="Using the CLI">
@@ -455,11 +614,19 @@ kargo promote \
 <Tabs groupId="delete-stage">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Select the `Stage` you want to remove.
+1. Open the `Stage` view by clicking the staggered bars icon in the header of 
+   the `Stage` node within the pipeline.
 
-1. Click <Hlt>Delete</Hlt> in the upper right corner of the pop-up window:
+   ![delete-stage](img/kargo-stage-staggered-bars-button.png)
 
-   ![delete-stage](img/delete-stage.png)
+1. In the `Stage` view, click <Hlt>Settings</Hlt>, scroll to the bottom, and
+   click <Hlt>Delete</Hlt>.
+
+   ![delete-stage](img/stage-delete.png)
+
+1. A confirmation popup will appear, click <Hlt>Confirm</Hlt> to proceed.
+
+   ![delete-stage](img/stage-delete-3.png)
 
 </TabItem>
 
@@ -484,9 +651,8 @@ any applicable health check processes.
 <Tabs groupId="refresh-stage">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Select the `Stage` you want to refresh.
-
-1. Click <Hlt>Refresh</Hlt> in the top-right corner of the pop-up window:
+1. Open the `Stage` view by clicking the staggered bars icon in the header of 
+   the `Stage` node that you want to refresh and click <Hlt>Refresh</Hlt> in the top-right corner of the pop-up window:
 
    ![refresh-stage](img/refresh-stage.png)
 
@@ -513,16 +679,17 @@ as desired.
 <Tabs groupId="verify-stage">
 <TabItem value="ui" label="Using the UI" default>
 
-1. Select the `Stage` you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
+1. Open the `Stage` view by clicking the staggered bars icon in the header of 
+   the `Stage` node that you want to reverify and click <Hlt>Reverify</Hlt> at the top of the menu:
 
-    ![verify-stage](img/reverify-freight.png)
+   ![verify-stage](img/reverify-freight.png)
 
     :::note
     If you wish to stop the in-progress verification, you can click <Hlt>Abort Verification</Hlt>.
     :::
 
 1. To check the `Stage`s where the `Freight` has been successfully verified, return to 
-    the <Hlt>Freight Timeline</Hlt> and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
+    the `Freight` timeline and select the `Freight`. Verified `Stage` names will appear under <Hlt>VERIFIED IN</Hlt>:
 
     ![verify-stage](img/verified-in.png)
 
@@ -533,7 +700,7 @@ as desired.
 1. To rerun verification using the CLI, run:
 
     ```shell
-    kargo verify stage <stage> --project <project> 
+    kargo verify stage <stage> --project <project>
     ```
 
     If you want to *stop* this ongoing verification process, use:

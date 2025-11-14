@@ -25,7 +25,7 @@ provider (IDP) that implements the
 [OpenID Connect](https://openid.net/developers/how-connect-works/) (OIDC)
 protocol. Configuring this is the responsibility of the operator and is
 discussed in-depth in the dedicated
-[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect.md)
+[OpenID Connect](../../../40-operator-guide/40-security/20-openid-connect/index.md)
 section of the Operator Guide.
 
 Kargo also implements access controls through _pure Kubernetes
@@ -72,9 +72,10 @@ mapped. This search is mostly limited to `ServiceAccount` resources in Kargo
 project namespaces only (i.e. only those labeled with
 `kargo.akuity.io/project: "true"`).
 
-ServiceAccount resources may be mapped to users through the use of annotations
-whose key begins with `rbac.kargo.akuity.io/claim.`. The value of the annotation
-may be a single value, or a comma-delimited list of values.
+ServiceAccount resources may be mapped to users via the
+`rbac.kargo.akuity.io/claims` annotation, whose value is a string representation
+of a JSON or YAML object with claim names as its keys and lists of claim values
+as its values.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
 
@@ -90,10 +91,22 @@ metadata:
   name: admin
   namespace: kargo-demo
   annotations:
-    rbac.kargo.akuity.io/claim.sub: alice,bob
-    rbac.kargo.akuity.io/claim.email: carl@example.com
-    rbac.kargo.akuity.io/claim.groups: devops,kargo-admin
+    rbac.kargo.akuity.io/claims: |
+      {
+        "sub": ["alice", "bob" ],
+        "email": "carl@example.com",
+        "groups": ["devops", "kargo-admin"]
+      }
 ```
+
+:::info
+Mappings specified using annotations with keys of the form
+`rbac.kargo.akuity.io/claim.<name>` with comma-delimited values are also
+supported for reasons of backwards compatibility. The effective mapping is
+therefore the union of mappings defined using such annotations with any
+mappings defined using the newer, recommended `rbac.kargo.akuity.io/claims`
+annotation.
+:::
 
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
 permissions are therefore the _union_ of the permissions associated with all
@@ -137,19 +150,18 @@ Three such "Kargo roles" are pre-defined in a project's namespace when a new
 
 #### Managing Kargo Roles with the UI
 
-To see all Kargo roles in a project, navigate to your project and click the
-"people" icon in the upper right corner of the screen:
+To see all Kargo roles in a `Project` click <Hlt>Settings</Hlt> in the upper right corner of the `Project` view:
 
-![Project](img/project.png)
+![Project](img/roles-manage.png)
 
-Kargo will display a list of all Kargo roles in the project:
+Then, go to the <Hlt>Roles</Hlt> tab. This will display a list of all Kargo roles associated with the Project:
 
-![Roles](img/roles.png)
+![Roles](img/roles-manage-2.png)
 
 This interface also permits users with appropriate permissions to create,
 modify, or delete Kargo roles:
 
-![Edit Role](img/edit-role.png)
+![Edit Role](img/roles-manage-3.png)
 
 :::info
 The Kargo API server translates all such creations, modifications, and deletions
@@ -268,6 +280,126 @@ With the exception of the claim-mapping annotations on `ServiceAccount`
 resources, these resources do not need to be labeled or annotated in any special
 way.
 
+##### `promote` Verb
+
+Kargo introduces custom verbs to extend Kubernetes'
+[standard RBAC verbs](https://kubernetes.io/docs/reference/access-authn-authz/authorization/#request-verb-resource) 
+(such as get, create, list) to support more granular authorization.
+
+One such verb is `promote`, which applies to the `stages` resource.
+Kargo uses this verb to determine whether a user or `ServiceAccount`
+is authorized to initiate a promotion into a specific Stage.
+
+##### Example: Custom Promoter Role
+
+The following example demonstrates how to create a custom role named
+`promoter`, which grants members of the `devops` OIDC group permission
+to `promote` into the `dev` and `staging` `Stages` in the `guestbook` 
+`Project`.
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: promoter
+  namespace: guestbook
+  annotations:
+    kargo.akuity.io/description: Permissions to promote into pre-prod Stages
+    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: promoter
+  namespace: guestbook
+rules:
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - promotions
+  verbs:
+  - create
+  - patch
+  - update
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - stages
+  verbs:
+  - promote
+  # Limit promotions to a subset of Stages
+  resourceNames:
+  - dev
+  - staging
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: promoter
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: promoter
+subjects:
+- kind: ServiceAccount
+  name: promoter
+  namespace: guestbook
+---
+# This RoleBinding allows the promoter ServiceAccount to view project
+# resources (without redefining read rules), by binding it to the
+# built-in kargo-viewer Role.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: promoter-viewer
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-viewer
+subjects:
+- kind: ServiceAccount
+  name: promoter
+  namespace: guestbook
+```
+
+##### Example: Declarative OIDC Claim Mapping to Built-in Roles
+
+To declaratively assign OIDC claims to Kargo’s built-in roles, such
+as `kargo-admin` or `kargo-viewer`, you can create a `ServiceAccount`
+annotated with the appropriate claims, then bind it to the desired 
+role using a `RoleBinding`.
+
+In the example below, users in the `devops` OIDC group are granted 
+admin-level permissions within the `guestbook` `Project`:
+
+```yaml
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin
+  namespace: guestbook
+  annotations:
+    rbac.kargo.akuity.io/claims: '{"groups":["devops"]}'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: admin
+  namespace: guestbook
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-admin
+subjects:
+- kind: ServiceAccount
+  name: admin
+  namespace: guestbook
+```
+
 #### Global Mappings
 
 As previously mentioned, _most_ access controls are managed at the project level
@@ -304,3 +436,32 @@ control in the hands of the operator, and you should be aware of them.
     are not truly global because they are still mapped to users according to the
     rules described in the previous sections.
     :::
+
+    Example custom `RoleBinding` to a local `Project` role using a "global"
+    `ServiceAccount` in a separate namespace:
+
+    ```yaml
+    apiVersion: rbac.authorization.k8s.io/v1
+    kind: RoleBinding
+    metadata:
+      name: kargo-demo-developer
+      namespace: kargo-demo
+    roleRef:
+      apiGroup: rbac.authorization.k8s.io
+      kind: Role
+      name: kargo-admin
+    subjects:
+    - kind: ServiceAccount
+      name: team-x-developers
+      namespace: kargo-global-service-accounts
+    ```
+
+    Which can also be created with:
+
+    ```shell
+    kubectl create rolebinding \
+    --serviceaccount kargo-global-service-account:team-x-developers \
+    --role kargo-admin \
+    -n kargo-demo \
+    kargo-demo-developer
+    ```

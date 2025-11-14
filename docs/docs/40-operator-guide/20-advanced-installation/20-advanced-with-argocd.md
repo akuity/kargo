@@ -9,7 +9,7 @@ Kargo using Argo CD.
 :::note
 This section assumes that you have already installed any dependencies or
 prerequisites required for running Kargo on a Kubernetes cluster. Please refer
-to [Basic Installation](../../operator-guide/basic-installation#prerequisites)
+to [Basic Installation](../10-basic-installation.md#prerequisites)
 for more details.
 :::
 
@@ -65,7 +65,7 @@ spec:
   source:
     repoURL: ghcr.io/akuity/kargo-charts
     chart: kargo
-    targetRevision: 1.2.0
+    targetRevision: <desired version of Kargo>
     helm:
       parameters:
         - name: api.adminAccount.passwordHash
@@ -102,7 +102,7 @@ spec:
   source:
     repoURL: ghcr.io/akuity/kargo-charts
     chart: kargo
-    targetRevision: 1.2.0
+    targetRevision: <desired version of Kargo>
     helm:
       valuesObject:
         api:
@@ -123,7 +123,7 @@ spec:
 ## Multi-Source Argo CD Application
 
 The most advanced method covered here __is nevertheless our recommendation
-because it aligns best with with GitOps principles.__ Use an `Application`
+because it aligns best with GitOps principles.__ Use an `Application`
 with
 [multiple sources](https://argo-cd.readthedocs.io/en/stable/user-guide/multiple_sources)
 to reference _both_ the Kargo Helm chart repository and a `values.yaml` file of
@@ -158,7 +158,7 @@ spec:
   sources:
     - repoURL: ghcr.io/akuity/kargo-charts
       chart: kargo
-      targetRevision: 1.2.0
+      targetRevision: <desired version of Kargo>
       helm:
         valueFiles:
           - $values/kargo/values.yaml

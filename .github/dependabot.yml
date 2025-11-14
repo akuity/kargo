@@ -23,8 +23,7 @@ updates:
     directory: "/ui"
     versioning-strategy: increase
     schedule:
-      interval: "weekly"
-      day: "sunday"
+      interval: "monthly"
     commit-message:
       prefix: "chore(deps):"
     groups:
@@ -57,6 +56,24 @@ updates:
         - "major"
 
   - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/api):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"
+
+  - package-ecosystem: "gomod"
     directory: "/hack/tools"
     schedule:
       interval: "weekly"
@@ -75,3 +92,21 @@ updates:
       go-major:
         update-types:
           - "major"
+
+  - package-ecosystem: "gomod"
+    directory: "/pkg"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+    commit-message:
+      prefix: "chore(deps/pkg):"
+    groups:
+      go-patch:
+        update-types:
+        - "patch"
+      go-minor:
+        update-types:
+        - "minor"
+      go-major:
+        update-types:
+        - "major"

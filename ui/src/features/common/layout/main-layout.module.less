@@ -15,18 +15,8 @@
 .contentWrapper {
   position: relative;
   flex: 1;
-  background-color: rgb(29, 50, 82);
+  background-color: @colorBgLayout;
   overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    background-color: @colorBgBase;
-  }
 }
 
 .content {
@@ -45,7 +35,8 @@
   text-overflow: ellipsis;
   width: 80px;
   text-align: center;
-  @apply text-gray-500 font-mono;
+  @apply text-gray-500;
+  @apply font-mono;
 }
 
 .icon {
