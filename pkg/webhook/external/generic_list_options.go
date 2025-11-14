@@ -67,35 +67,35 @@ func newListOptionsForIndexSelector(
 // newListOptionsForLabelSelector creates a list of client.ListOption based on
 // the provided LabelSelector.
 func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any) ([]client.ListOption, error) {
-	var requirements []labels.Requirement
-	for _, e := range ls.MatchExpressions {
-		op, err := labelOpToSelectionOp(e.Operator)
+	var labelReqs []labels.Requirement
+	for _, expr := range ls.MatchExpressions {
+		op, err := labelOpToSelectionOp(expr.Operator)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
 		}
-		values, err := parseAsValues(e.Values, env)
+		values, err := evalValues(expr.Values, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse matchExpression values: %w", err)
 		}
-		req, err := labels.NewRequirement(e.Key, op, values)
+		labelReq, err := labels.NewRequirement(expr.Key, op, values)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
 		}
-		requirements = append(requirements, *req)
+		labelReqs = append(labelReqs, *labelReq)
 	}
 	for k, v := range ls.MatchLabels {
 		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
 		}
-		requirements = append(requirements, *req)
+		labelReqs = append(labelReqs, *req)
 	}
-	if len(requirements) == 0 {
+	if len(labelReqs) == 0 {
 		return nil, nil
 	}
 	return []client.ListOption{
 		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(requirements...),
+			Selector: labels.NewSelector().Add(labelReqs...),
 		},
 	}, nil
 }
@@ -122,7 +122,7 @@ func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, 
 	}
 }
 
-func parseAsValues(vals []string, env map[string]any) ([]string, error) {
+func evalValues(vals []string, env map[string]any) ([]string, error) {
 	values := make([]string, len(vals))
 	for i, v := range vals {
 		s, err := evalAsString(v, env)
