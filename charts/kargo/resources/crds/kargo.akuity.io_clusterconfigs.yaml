@@ -237,15 +237,16 @@ spec:
                               and the conditions under which it should be performed.
                             properties:
                               action:
-                                description: Name is the name of the action to be
-                                  performed.
+                                description: |-
+                                  Name is the name of the action to be performed. `Refresh` is the only
+                                  action currently supported.
                                 enum:
                                 - Refresh
                                 type: string
                               matchExpression:
                                 description: |-
-                                  MatchExpression is the validation criteria that must be met for the action to
-                                  be performed.
+                                  MatchExpression defines criteria that a request must meet to trigger this
+                                  action.
                                 type: string
                               parameters:
                                 additionalProperties:

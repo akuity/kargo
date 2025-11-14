@@ -346,11 +346,11 @@ type AzureWebhookReceiverConfig struct {
 
 // GenericWebhookReceiverConfig describes a generic webhook receiver that can be
 // configured to respond to any arbitrary POST by applying user-defined actions
-// user-defined sets of resources selected by labels and/or pre-built indices.
+// on user-defined sets of resources selected by name, labels and/or values in pre-built indices.
 // Both types of selectors support using values extracted from the request by
-// means of expressions. Currently refreshing resources is the only supported
+// means of expressions. Currently, refreshing resources is the only supported
 // action and Warehouse is the only supported kind. "Refreshing" means
-// immediately enqueuing the target resource for immediate reconciliation by its
+// immediately enqueuing the target resource for reconciliation by its
 // controller. The practical effect of refreshing a Warehouses is triggering its
 // artifact discovery process.
 type GenericWebhookReceiverConfig struct {
@@ -378,13 +378,14 @@ type GenericWebhookReceiverConfig struct {
 // GenericWebhookAction describes an action to be performed on a resource
 // and the conditions under which it should be performed.
 type GenericWebhookAction struct {
-	// Name is the name of the action to be performed.
+	// Name is the name of the action to be performed. `Refresh` is the only
+	// action currently supported.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
 	Name GenericWebhookActionName `json:"action" protobuf:"bytes,1,opt,name=action"`
 
-	// MatchExpression is the validation criteria that must be met for the action to
-	// be performed.
+	// MatchExpression defines criteria that a request must meet to trigger this
+	// action.
 	//
 	// +optional
 	MatchExpression string `json:"matchExpression,omitempty" protobuf:"bytes,2,opt,name=matchExpression"`

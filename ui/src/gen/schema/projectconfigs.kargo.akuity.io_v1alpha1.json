@@ -192,14 +192,14 @@
                       "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
                       "properties": {
                         "action": {
-                          "description": "Name is the name of the action to be performed.",
+                          "description": "Name is the name of the action to be performed. `Refresh` is the only\naction currently supported.",
                           "enum": [
                             "Refresh"
                           ],
                           "type": "string"
                         },
                         "matchExpression": {
-                          "description": "MatchExpression is the validation criteria that must be met for the action to\nbe performed.",
+                          "description": "MatchExpression defines criteria that a request must meet to trigger this\naction.",
                           "type": "string"
                         },
                         "parameters": {
