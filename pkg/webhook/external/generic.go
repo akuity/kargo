@@ -97,7 +97,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 			satisfied, err := conditionSatisfied(action.MatchExpression, sharedEnv)
 			if err != nil {
-				aLogger.Error(err, "failed to evaluate match expression; skipping action")
+				aLogger.Error(err, "failed to evaluate criteria; skipping action")
 				actionResults[i].ConditionResult.EvalError = fmt.Sprintf("%v", err)
 				continue
 			}
