@@ -11,7 +11,7 @@ export const urlForImage = (image: string | undefined | null): string => {
     return '';
   }
 
-  let parts = image.split('/').filter((part) => part && part.length > 0);
+  const parts = image.split('/').filter((part) => part && part.length > 0);
 
   if (parts.length === 0) {
     return '';
