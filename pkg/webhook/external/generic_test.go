@@ -256,10 +256,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						Name: kargoapi.GenericWebhookActionNameRefresh,
-						// lets use a param here to make sure those are working too
-						Parameters:      map[string]string{"event": "push"},
-						MatchExpression: `${{ request.header('X-Event-Type') == params.event }}`,
+						Name:            kargoapi.GenericWebhookActionNameRefresh,
+						MatchExpression: `${{ request.header('X-Event-Type') == 'push' }}`,
 						// use complex combination of both label and index selectors
 						Targets: []kargoapi.GenericWebhookTarget{
 							{
@@ -308,7 +306,7 @@ func TestGenericHandler(t *testing.T) {
 						{
 							"actionName":"Refresh",
 							"conditionResult":{
-								"expression":"${{ request.header('X-Event-Type') == params.event }}",
+								"expression":"${{ request.header('X-Event-Type') == 'push' }}",
 								"satisfied":true
 							},
 							"targetResults":[
@@ -355,10 +353,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						Name: kargoapi.GenericWebhookActionNameRefresh,
-						// lets use a param here to make sure those are working too
-						Parameters:      map[string]string{"event": "push"},
-						MatchExpression: `${{ request.header('X-Event-Type') == params.event }}`,
+						Name:            kargoapi.GenericWebhookActionNameRefresh,
+						MatchExpression: `${{ request.header('X-Event-Type') == 'push' }}`,
 						// use complex combination of both label and index selectors
 						Targets: []kargoapi.GenericWebhookTarget{
 							{
@@ -406,7 +402,7 @@ func TestGenericHandler(t *testing.T) {
 						{
 							"actionName":"Refresh",
 							"conditionResult":{
-								"expression":"${{ request.header('X-Event-Type') == params.event }}",
+								"expression":"${{ request.header('X-Event-Type') == 'push' }}",
 								"satisfied":true
 							},
 							"targetResults":[

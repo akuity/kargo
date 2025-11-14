@@ -81,8 +81,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		logger := logging.LoggerFromContext(ctx)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		// Shared environment for all actions.
-		globalEnv, err := newGlobalEnv(requestBody, r)
+		sharedEnv, err := newSharedEnv(requestBody, r)
 		if err != nil {
 			logger.Error(err, "error creating global environment")
 			// this can only fail if the request body is invalid json
@@ -96,7 +95,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			actionResults[i].ActionName = action.Name
 			actionResults[i].ConditionResult = conditionResult{Expression: action.MatchExpression}
 
-			satisfied, err := conditionSatisfied(action.MatchExpression, globalEnv)
+			satisfied, err := conditionSatisfied(action.MatchExpression, sharedEnv)
 			if err != nil {
 				aLogger.Error(err, "failed to evaluate match expression; skipping action")
 				actionResults[i].ConditionResult.EvalError = fmt.Sprintf("%v", err)
@@ -110,7 +109,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			}
 
 			ctx = logging.ContextWithLogger(ctx, aLogger)
-			actionEnv := newActionEnv(action.Parameters, globalEnv)
+			actionEnv := newActionEnv(action.Parameters, sharedEnv)
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
 				actionResults[i].TargetResults = refreshTargets(
@@ -140,7 +139,7 @@ type conditionResult struct {
 	EvalError  string `json:"evalError,omitempty"`
 }
 
-func newGlobalEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
+func newSharedEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 	var body any
 	if err := json.Unmarshal(requestBody, &body); err != nil {
 		return nil, fmt.Errorf("invalid request body: %w", err)
