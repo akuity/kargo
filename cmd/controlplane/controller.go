@@ -34,6 +34,7 @@ import (
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
+	"github.com/akuity/kargo/pkg/subscription"
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
@@ -43,6 +44,7 @@ import (
 	_ "github.com/akuity/kargo/pkg/credentials/gar"
 	_ "github.com/akuity/kargo/pkg/credentials/github"
 	_ "github.com/akuity/kargo/pkg/credentials/ssh"
+	_ "github.com/akuity/kargo/pkg/demo"
 	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
@@ -463,6 +465,7 @@ func (o *controllerOptions) setupReconcilers(
 		ctx,
 		kargoMgr,
 		credentialsDB,
+		subscription.DefaultSubscriberRegistry,
 		warehouses.ReconcilerConfigFromEnv(),
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)

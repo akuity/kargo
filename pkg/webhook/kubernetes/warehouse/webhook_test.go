@@ -260,8 +260,8 @@ func TestValidateSpec(t *testing.T) {
 							Field:    "spec.subscriptions[0]",
 							BadValue: spec.Subscriptions[0],
 							Detail: "exactly one of spec.subscriptions[0].git, " +
-								"spec.subscriptions[0].image, or spec.subscriptions[0].chart " +
-								"must be non-empty",
+								"spec.subscriptions[0].image, spec.subscriptions[0].chart, " +
+								"or spec.subscriptions[0].other must be non-empty",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -357,8 +357,8 @@ func TestValidateSubs(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "subs[0]",
 							BadValue: subs[0],
-							Detail: "exactly one of subs[0].git, subs[0].image, or " +
-								"subs[0].chart must be non-empty",
+							Detail: "exactly one of subs[0].git, subs[0].image, " +
+								"subs[0].chart, or subs[0].other must be non-empty",
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
@@ -473,7 +473,8 @@ func TestValidateSub(t *testing.T) {
 							Type:     field.ErrorTypeInvalid,
 							Field:    "sub",
 							BadValue: sub,
-							Detail:   "exactly one of sub.git, sub.image, or sub.chart must be non-empty",
+							Detail: "exactly one of sub.git, sub.image, sub.chart, or " +
+								"sub.other must be non-empty",
 						},
 					},
 					errs,
@@ -764,6 +765,59 @@ func TestValidateChartSub(t *testing.T) {
 				t,
 				w.validateChartSub(
 					field.NewPath("chart"),
+					testCase.sub,
+					testCase.seen,
+				),
+			)
+		})
+	}
+}
+
+func TestValidateOtherSub(t *testing.T) {
+	testCases := []struct {
+		name       string
+		sub        kargoapi.GenericSubscription
+		seen       uniqueSubSet
+		assertions func(*testing.T, field.ErrorList)
+	}{
+		{
+			name: "invalid",
+			sub:  kargoapi.GenericSubscription{Name: "fake-sub"},
+			seen: uniqueSubSet{
+				subscriptionKey{
+					kind: "other",
+					id:   "fake-sub",
+				}: field.NewPath("spec.subscriptions[0].other"),
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Equal(
+					t,
+					field.ErrorList{{
+						Type:     field.ErrorTypeInvalid,
+						Field:    "other",
+						BadValue: "fake-sub",
+						Detail:   `subscription "fake-sub" already exists at "spec.subscriptions[0].other"`,
+					}},
+					errs,
+				)
+			},
+		},
+		{
+			name: "valid",
+			sub:  kargoapi.GenericSubscription{Name: "fake-sub"},
+			seen: uniqueSubSet{},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.Nil(t, errs)
+			},
+		},
+	}
+	w := &webhook{}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			testCase.assertions(
+				t,
+				w.validateOtherSub(
+					field.NewPath("other"),
 					testCase.sub,
 					testCase.seen,
 				),

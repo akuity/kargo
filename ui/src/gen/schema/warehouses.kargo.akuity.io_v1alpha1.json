@@ -261,6 +261,38 @@
                     "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
                   }
                 ]
+              },
+              "other": {
+                "description": "Other describes a subscription to something that is not a Git, container\nimage, or Helm chart repository.",
+                "properties": {
+                  "artifactKind": {
+                    "description": "ArtifactKind specifies the kind of artifact this subscription is for.",
+                    "minLength": 1,
+                    "type": "string"
+                  },
+                  "config": {
+                    "description": "Config is opaque configuration for this subscription. This is only\nunderstood by a corresponding Subscriber implementation for the\nArtifactKind.",
+                    "x-kubernetes-preserve-unknown-fields": true
+                  },
+                  "discoveryLimit": {
+                    "default": 20,
+                    "description": "DiscoveryLimit is an optional limit on the number of artifacts that can\nbe discovered for this subscription.",
+                    "format": "int32",
+                    "maximum": 100,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "name": {
+                    "description": "Name is a unique (with respect to a Warehouse) name used for identifying\nthis subscription.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "artifactKind",
+                  "name"
+                ],
+                "type": "object"
               }
             },
             "type": "object"
@@ -494,6 +526,52 @@
                 },
                 "required": [
                   "repoURL"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "otherResults": {
+              "description": "OtherResults holds the artifact references discovered by the Warehouse\nfor all subscriptions that are not to a Git, container image, or Helm\nchart repository.",
+              "items": {
+                "description": "GenericDiscoveryResult represents the result of an artifact discovery\noperation for a subscription to something other than a Git, container image,\nor Helm chart repository.",
+                "properties": {
+                  "artifactReferences": {
+                    "description": "ArtifactReferences is a list of references to specific versions of an\nartifact.",
+                    "items": {
+                      "description": "GenericArtifactReference is a reference to a specific version of an artifact\nother than a Git repository commit, container image, or Helm. chart.",
+                      "properties": {
+                        "details": {
+                          "description": "Details is an opaque collection of artifact attributes. These are only\nunderstood by a corresponding Subscriber implementation that created them.",
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "subscriptionName": {
+                          "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "version": {
+                          "description": "Version identifies a specific revision of this artifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "subscriptionName",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "name": {
+                    "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthese results.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
                 ],
                 "type": "object"
               },
