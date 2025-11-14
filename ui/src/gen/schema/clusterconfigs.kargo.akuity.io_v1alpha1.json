@@ -138,13 +138,13 @@
                         "targets": {
                           "description": "Targets is a list of selection criteria for the resources on which the\naction should be performed.",
                           "items": {
-                            "description": "GenericWebhookTarget describes selection criteria for resources to which some\naction is to be applied.",
+                            "description": "GenericWebhookTarget describes selection criteria for resources to which some\naction is to be applied. Name, LabelSelector, and IndexSelector are all optional\nhowever, at least one must be specified. When multiple criteria are specified, the\nresults are the combined (logical AND) of the criteria.",
                             "properties": {
                               "indexSelector": {
-                                "description": "IndexSelector is a selector used to identify cached target resources by cache key.\nIf used with LabelSelector, the results are the combined (logical AND) of the two criteria.",
+                                "description": "IndexSelector is a selector used to identify cached target resources by cache key.\nIf used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.",
                                 "properties": {
-                                  "matchExpressions": {
-                                    "description": "MatchExpressions is a list of index selector requirements.",
+                                  "matchIndicies": {
+                                    "description": "MatchIndices is a list of index selector requirements.",
                                     "items": {
                                       "description": "IndexSelectorRequirement encapsulates a requirement used to select indexes\nbased on specific criteria.",
                                       "properties": {
@@ -161,7 +161,7 @@
                                           "type": "string"
                                         },
                                         "value": {
-                                          "description": "Values is a list of values or a single value returned from an expression.\n\nkubebuilder:validation:Required",
+                                          "description": "Value can be a static string or an expression that will be evaluated.\n\nkubebuilder:validation:Required",
                                           "type": "string"
                                         }
                                       },
@@ -186,7 +186,7 @@
                                 "type": "string"
                               },
                               "labelSelector": {
-                                "description": "LabelSelector is a label selector to identify the target resources.\nIf used with IndexSelector, the results are the combined (logical AND) of the two criteria.",
+                                "description": "LabelSelector is a label selector to identify the target resources.\nIf used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.",
                                 "properties": {
                                   "matchExpressions": {
                                     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
@@ -231,7 +231,7 @@
                                 "x-kubernetes-map-type": "atomic"
                               },
                               "name": {
-                                "description": "Name is the name of the target resource.",
+                                "description": "Name is the name of the target resource. If LabelSelector and/or IndexSelectors\nare also specified, the results are the combined (logical AND) of the criteria.",
                                 "type": "string"
                               }
                             },

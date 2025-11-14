@@ -746,26 +746,29 @@ message GenericWebhookReceiverConfig {
 }
 
 // GenericWebhookTarget describes selection criteria for resources to which some
-// action is to be applied.
+// action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+// however, at least one must be specified. When multiple criteria are specified, the
+// results are the combined (logical AND) of the criteria.
 message GenericWebhookTarget {
   // Kind is the kind of the target resource.
   //
   // +kubebuilder:validation:Enum=Warehouse;
   optional string kind = 1;
 
-  // Name is the name of the target resource.
+  // Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+  // are also specified, the results are the combined (logical AND) of the criteria.
   //
   // +optional
   optional string name = 2;
 
   // LabelSelector is a label selector to identify the target resources.
-  // If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
+  // If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
   //
   // +optional
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 3;
 
   // IndexSelector is a selector used to identify cached target resources by cache key.
-  // If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
+  // If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
   //
   // +optional
   optional IndexSelector indexSelector = 4;
@@ -1315,10 +1318,10 @@ message ImageSubscription {
 // IndexSelector encapsulates a selector used to derive index keys
 // based on expressions.
 message IndexSelector {
-  // MatchExpressions is a list of index selector requirements.
+  // MatchIndices is a list of index selector requirements.
   //
   // +kubebuilder:validation:MinItems=1
-  repeated IndexSelectorRequirement matchExpressions = 1;
+  repeated IndexSelectorRequirement matchIndices = 1;
 }
 
 // IndexSelectorRequirement encapsulates a requirement used to select indexes
@@ -1335,7 +1338,7 @@ message IndexSelectorRequirement {
   // kubebuilder:validation:Enum=Equal;NotEqual;
   optional string operator = 2;
 
-  // Values is a list of values or a single value returned from an expression.
+  // Value can be a static string or an expression that will be evaluated.
   //
   // kubebuilder:validation:Required
   optional string value = 3;

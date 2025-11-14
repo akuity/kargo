@@ -2110,13 +2110,13 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget"></a>
 
 ### GenericWebhookTarget
- GenericWebhookTarget describes selection criteria for resources to which some action is to be applied.
+ GenericWebhookTarget describes selection criteria for resources to which some action is to be applied. Name, LabelSelector, and IndexSelector are all optional however, at least one must be specified. When multiple criteria are specified, the results are the combined (logical AND) of the criteria.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of the target resource.   |
-| name | [string](#string) |  Name is the name of the target resource.  +optional |
-| labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector, the results are the combined (logical AND) of the two criteria.  +optional |
-| indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector, the results are the combined (logical AND) of the two criteria.  +optional |
+| name | [string](#string) |  Name is the name of the target resource. If LabelSelector and/or IndexSelectors are also specified, the results are the combined (logical AND) of the criteria.  +optional |
+| labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
+| indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
@@ -2276,7 +2276,7 @@ RawFormat specifies the format for raw resource representation.
  IndexSelector encapsulates a selector used to derive index keys based on expressions.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| matchExpressions | [IndexSelectorRequirement](#github-com-akuity-kargo-api-v1alpha1-IndexSelectorRequirement) |  MatchExpressions is a list of index selector requirements.   |
+| matchIndices | [IndexSelectorRequirement](#github-com-akuity-kargo-api-v1alpha1-IndexSelectorRequirement) |  MatchIndices is a list of index selector requirements.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-IndexSelectorRequirement"></a>
 
@@ -2286,7 +2286,7 @@ RawFormat specifies the format for raw resource representation.
 | ----- | ---- | ----------- |
 | key | [string](#string) |  Key is the key of the index.   |
 | operator | [string](#string) |  Operator indicates the operation that should be used to evaluate whether the selection requirement is satisfied.   |
-| value | [string](#string) |  Values is a list of values or a single value returned from an expression.   |
+| value | [string](#string) |  Value can be a static string or an expression that will be evaluated.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Project"></a>
 

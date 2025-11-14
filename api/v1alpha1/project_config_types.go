@@ -448,10 +448,10 @@ const (
 // IndexSelector encapsulates a selector used to derive index keys
 // based on expressions.
 type IndexSelector struct {
-	// MatchExpressions is a list of index selector requirements.
+	// MatchIndices is a list of index selector requirements.
 	//
 	// +kubebuilder:validation:MinItems=1
-	MatchExpressions []IndexSelectorRequirement `json:"matchExpressions,omitempty" protobuf:"bytes,1,rep,name=matchExpressions"`
+	MatchIndices []IndexSelectorRequirement `json:"matchIndicies,omitempty" protobuf:"bytes,1,rep,name=matchIndices"`
 }
 
 // IndexSelectorRequirement encapsulates a requirement used to select indexes
@@ -468,7 +468,7 @@ type IndexSelectorRequirement struct {
 	// kubebuilder:validation:Enum=Equal;NotEqual;
 	Operator IndexSelectorRequirementOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
-	// Values is a list of values or a single value returned from an expression.
+	// Value can be a static string or an expression that will be evaluated.
 	//
 	// kubebuilder:validation:Required
 	Value string `json:"value" protobuf:"bytes,3,opt,name=value"`

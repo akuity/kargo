@@ -260,16 +260,18 @@ spec:
                                 items:
                                   description: |-
                                     GenericWebhookTarget describes selection criteria for resources to which some
-                                    action is to be applied.
+                                    action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+                                    however, at least one must be specified. When multiple criteria are specified, the
+                                    results are the combined (logical AND) of the criteria.
                                   properties:
                                     indexSelector:
                                       description: |-
                                         IndexSelector is a selector used to identify cached target resources by cache key.
-                                        If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
+                                        If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
                                       properties:
-                                        matchExpressions:
-                                          description: MatchExpressions is a list
-                                            of index selector requirements.
+                                        matchIndicies:
+                                          description: MatchIndices is a list of index
+                                            selector requirements.
                                           items:
                                             description: |-
                                               IndexSelectorRequirement encapsulates a requirement used to select indexes
@@ -291,7 +293,7 @@ spec:
                                                 type: string
                                               value:
                                                 description: |-
-                                                  Values is a list of values or a single value returned from an expression.
+                                                  Value can be a static string or an expression that will be evaluated.
 
                                                   kubebuilder:validation:Required
                                                 type: string
@@ -312,7 +314,7 @@ spec:
                                     labelSelector:
                                       description: |-
                                         LabelSelector is a label selector to identify the target resources.
-                                        If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
+                                        If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
                                       properties:
                                         matchExpressions:
                                           description: matchExpressions is a list
@@ -359,8 +361,9 @@ spec:
                                       type: object
                                       x-kubernetes-map-type: atomic
                                     name:
-                                      description: Name is the name of the target
-                                        resource.
+                                      description: |-
+                                        Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+                                        are also specified, the results are the combined (logical AND) of the criteria.
                                       type: string
                                   required:
                                   - kind

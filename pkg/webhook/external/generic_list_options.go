@@ -23,7 +23,7 @@ func buildListOptionsForTarget(
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(project)}
-	if len(t.IndexSelector.MatchExpressions) > 0 {
+	if len(t.IndexSelector.MatchIndices) > 0 {
 		indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create field selector: %w", err)
@@ -52,7 +52,7 @@ func newListOptionsForIndexSelector(
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	var listOpts []client.ListOption
-	for _, expr := range is.MatchExpressions {
+	for _, expr := range is.MatchIndices {
 		resultStr, err := evalAsString(expr.Value, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate values expression as string: %w", err)
