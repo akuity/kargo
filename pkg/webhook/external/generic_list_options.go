@@ -23,25 +23,18 @@ func buildListOptionsForTarget(
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(project)}
-	if len(t.IndexSelector.MatchIndices) > 0 {
-		indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create field selector: %w", err)
-		}
-		listOpts = append(listOpts, indexSelectorListOpts...)
+
+	indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create field selector: %w", err)
 	}
-	if len(t.LabelSelector.MatchLabels) > 0 || len(t.LabelSelector.MatchExpressions) > 0 {
-		labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create label selector: %w", err)
-		}
-		listOpts = append(listOpts, labelSelectorListOpts...)
+	listOpts = append(listOpts, indexSelectorListOpts...)
+
+	labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector, env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create label selector: %w", err)
 	}
-	if len(listOpts) == 1 {
-		listOpts = append(listOpts, client.MatchingLabelsSelector{
-			Selector: labels.Everything(),
-		})
-	}
+	listOpts = append(listOpts, labelSelectorListOpts...)
 	return listOpts, nil
 }
 
@@ -96,6 +89,9 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any)
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
 		}
 		requirements = append(requirements, *req)
+	}
+	if len(requirements) == 0 {
+		return nil, nil
 	}
 	return []client.ListOption{
 		client.MatchingLabelsSelector{

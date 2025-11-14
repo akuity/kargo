@@ -31,11 +31,8 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			},
 			env: map[string]any{},
 			expected: []client.ListOption{
-				// only the default selectors should be present
+				// only the default selector should be present
 				client.InNamespace("demo-project"),
-				client.MatchingLabelsSelector{
-					Selector: labels.Everything(),
-				},
 			},
 			err: nil,
 		},
