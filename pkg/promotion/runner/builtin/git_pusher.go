@@ -134,13 +134,30 @@ func (g *gitPushPusher) run(
 		// Attempt to rebase on top of the state of the remote branch to help
 		// avoid conflicts.
 		PullRebase: true,
+		// Allow force push if explicitly requested in config
+		Force: cfg.Force,
 	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
 		// TargetBranch and GenerateTargetBranch are mutually exclusive, so we're
 		// never overwriting a user-specified target branch here.
 		pushOpts.TargetBranch = fmt.Sprintf("kargo/promotion/%s", stepCtx.Promotion)
+		// Since the name of the generated branch incorporates the Promotion's
+		// name, which itself incorporates a UUID, we assume this branch did not exist
+		// in the remote repository prior to this Promotion. If it somehow does, the
+		// only practical explanation for that would be that, for some reason, the
+		// entire promotion process has restarted from step zero AFTER having
+		// executed this step successfully on a prior attempt. (This can happen,
+		// for instance, if the controller were restarted mid-promotion.) Enabling
+		// the force push option here prevents this step from failing under those
+		// circumstances, and as long as the reasonable assumption that this
+		// branch is specific to this Promotion only holds, it is also safe to do this.
 		pushOpts.Force = true
+	}
+
+	// Disable pull/rebase when force pushing to allow overwriting remote history
+	if pushOpts.Force {
+		pushOpts.PullRebase = false
 	}
 	if pushOpts.TargetBranch == "" {
 		// If targetBranch is still empty, we want to set it to the current branch

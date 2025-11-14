@@ -33,6 +33,11 @@
     "github",
     "gitlab"
    ]
+  },
+  "force": {
+   "type": "boolean",
+   "description": "Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). Use with caution as this will overwrite any commits that exist on the remote branch but not in your local branch.",
+   "default": false
   }
  }
 }
