@@ -275,7 +275,7 @@ func TestGenericHandler(t *testing.T) {
 									},
 								},
 								IndexSelector: kargoapi.IndexSelector{
-									MatchExpressions: []kargoapi.IndexSelectorRequirement{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
 											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
@@ -374,7 +374,7 @@ func TestGenericHandler(t *testing.T) {
 									},
 								},
 								IndexSelector: kargoapi.IndexSelector{
-									MatchExpressions: []kargoapi.IndexSelectorRequirement{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
 											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,

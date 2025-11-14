@@ -96,8 +96,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			actionResults[i].ActionName = action.Name
 			actionResults[i].ConditionResult = conditionResult{Expression: action.MatchExpression}
 
-			actionEnv := newActionEnv(action.Parameters, globalEnv)
-			satisfied, err := conditionSatisfied(action.MatchExpression, actionEnv)
+			satisfied, err := conditionSatisfied(action.MatchExpression, globalEnv)
 			if err != nil {
 				aLogger.Error(err, "failed to evaluate match expression; skipping action")
 				actionResults[i].ConditionResult.EvalError = fmt.Sprintf("%v", err)
@@ -111,6 +110,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			}
 
 			ctx = logging.ContextWithLogger(ctx, aLogger)
+			actionEnv := newActionEnv(action.Parameters, globalEnv)
 			switch action.Name {
 			case kargoapi.GenericWebhookActionNameRefresh:
 				actionResults[i].TargetResults = refreshTargets(

@@ -45,7 +45,7 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "env",
 							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
@@ -64,7 +64,7 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "env",
 							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
@@ -83,7 +83,7 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "env",
 							Operator: "UnsupportedOperator",
@@ -102,7 +102,7 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "region",
 							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
@@ -263,7 +263,7 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			target: kargoapi.GenericWebhookTarget{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "region",
 							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,

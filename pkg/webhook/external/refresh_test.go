@@ -119,7 +119,7 @@ func TestHandleRefreshAction(t *testing.T) {
 			targets: []kargoapi.GenericWebhookTarget{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
-					MatchExpressions: []kargoapi.IndexSelectorRequirement{{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{{
 						Key:      indexer.WarehousesBySubscribedURLsField,
 						Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
 						Value:    "https://github.com/example/repo",

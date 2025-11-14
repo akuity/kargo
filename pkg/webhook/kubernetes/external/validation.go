@@ -133,5 +133,5 @@ func targetMisconfigured(t *kargoapi.GenericWebhookTarget) bool {
 	return t.Name == "" &&
 		len(t.LabelSelector.MatchLabels) == 0 &&
 		len(t.LabelSelector.MatchExpressions) == 0 &&
-		len(t.IndexSelector.MatchExpressions) == 0
+		len(t.IndexSelector.MatchIndices) == 0
 }
