@@ -16,6 +16,7 @@ import { timestampDate } from '@ui/utils/connectrpc-utils';
 
 import { timerangeToDate } from './filter-timerange-utils';
 import { FreightCard } from './freight-card';
+import { FreightExpandTile } from './freight-expand-tile';
 import { FreightTimelineFilters } from './freight-timeline-filters';
 import { PromotionModeHeader } from './promotion-mode-header';
 import { filterFreightBySource, filterFreightByTimerange } from './source-catalogue-utils';
@@ -206,10 +207,18 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                 promotionEligibleFreight?.find((f) => f?.metadata?.name === freight?.metadata?.name)
               );
 
+              if (freight.count && freight.count > 0) {
+                return (
+                  <FreightExpandTile
+                    key={`expand-tile-${freight?.metadata?.uid}-${freight?.count}`}
+                    count={freight.count}
+                  />
+                );
+              }
+
               return (
                 <FreightCard
                   key={`${freight?.metadata?.uid}-${freight?.count}`}
-                  count={freight?.count}
                   className='h-full'
                   stagesInFreight={
                     dictionaryContext?.freightInStages?.[freight?.metadata?.name || ''] || []
@@ -237,12 +246,6 @@ export const FreightTimeline = (props: { freights: Freight[]; project: string })
                       })
                     );
                   }}
-                  onExpand={() =>
-                    freightTimelineControllerContext?.setPreferredFilter({
-                      ...freightTimelineControllerContext?.preferredFilter,
-                      hideUnusedFreights: false
-                    })
-                  }
                   soakTime={freightSoakTime}
                 />
               );
