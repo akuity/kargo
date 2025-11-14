@@ -410,26 +410,29 @@ const (
 )
 
 // GenericWebhookTarget describes selection criteria for resources to which some
-// action is to be applied.
+// action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+// however, at least one must be specified. When multiple criteria are specified, the
+// results are the combined (logical AND) of the criteria.
 type GenericWebhookTarget struct {
 	// Kind is the kind of the target resource.
 	//
 	// +kubebuilder:validation:Enum=Warehouse;
 	Kind GenericWebhookTargetKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
 
-	// Name is the name of the target resource.
+	// Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+	// are also specified, the results are the combined (logical AND) of the criteria.
 	//
 	// +optional
 	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
 
 	// LabelSelector is a label selector to identify the target resources.
-	// If used with IndexSelector, the results are the combined (logical AND) of the two criteria.
+	// If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
 	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty" protobuf:"bytes,3,opt,name=labelSelector"`
 
 	// IndexSelector is a selector used to identify cached target resources by cache key.
-	// If used with LabelSelector, the results are the combined (logical AND) of the two criteria.
+	// If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 	//
 	// +optional
 	IndexSelector IndexSelector `json:"indexSelector,omitempty" protobuf:"bytes,4,opt,name=indexSelector"`
