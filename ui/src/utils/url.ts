@@ -11,9 +11,13 @@ export const urlForImage = (image: string | undefined | null): string => {
     return '';
   }
 
-  const parts = image.split('/');
+  let parts = image.split('/').filter((part) => part && part.length > 0);
 
-  if (parts.length > 0 && parts[0] === 'docker.io') {
+  if (parts.length === 0) {
+    return '';
+  }
+
+  if (parts[0] === 'docker.io') {
     parts.shift();
   }
 
@@ -31,24 +35,25 @@ export const urlForImage = (image: string | undefined | null): string => {
     return `${protocol}${dockerHub}/${officialPath}/${image}`;
   }
 
-  if (!parts[0] || typeof parts[0] !== 'string') {
+  const firstPart = parts[0];
+  if (!firstPart || typeof firstPart !== 'string' || firstPart.length === 0) {
     return `${protocol}${image}`;
   }
 
   if (
-    !(parts[0].includes('.') || parts[0].includes(':')) &&
-    parts[0] !== 'localhost' &&
-    parts[0].toLowerCase() === parts[0]
+    !(firstPart.includes('.') || firstPart.includes(':')) &&
+    firstPart !== 'localhost' &&
+    firstPart.toLowerCase() === firstPart
   ) {
     return `${protocol}${dockerHub}/${userPath}/${image}`;
   }
 
-  if (parts[0] === 'public.ecr.aws') {
+  if (firstPart === 'public.ecr.aws') {
     return `${protocol}gallery.ecr.aws/${parts.slice(1).join('/')}`;
   }
 
-  if (parts[0].endsWith('amazonaws.com')) {
-    const domainParts = parts[0].split('.');
+  if (firstPart.endsWith('amazonaws.com')) {
+    const domainParts = firstPart.split('.');
     const region = domainParts[3];
     const id = domainParts[0];
 

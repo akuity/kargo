@@ -21,10 +21,18 @@ export const getImageSource = (annotation: Annotation) => {
     return url;
   }
 
+  if (!url) {
+    return url;
+  }
+
   return getGitCommitURL(url, revision);
 };
 
-export const getGitCommitURL = (url: string, revision: string) => {
+export const getGitCommitURL = (url: string | undefined | null, revision: string) => {
+  if (!url || typeof url !== 'string') {
+    return url || '';
+  }
+
   let baseUrl;
 
   if (url.includes('github.com')) {
