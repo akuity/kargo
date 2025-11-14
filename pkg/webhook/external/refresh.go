@@ -19,6 +19,76 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+type targetResult struct {
+	Kind           kargoapi.GenericWebhookTargetKind `json:"kind"`
+	ListError      error                             `json:"listError,omitempty"`
+	RefreshResults []refreshResult                   `json:"refreshResults,omitempty"`
+}
+
+type refreshResult struct {
+	Success string `json:"success,omitempty"`
+	Failure string `json:"failure,omitempty"`
+}
+
+func refreshTargets(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	actionEnv map[string]any,
+	targets []kargoapi.GenericWebhookTarget,
+) []targetResult {
+	logger := logging.LoggerFromContext(ctx)
+	targetResults := make([]targetResult, len(targets))
+	for i, target := range targets {
+		tLogger := logger.WithValues("targetKind", target.Kind)
+		targetResults[i] = targetResult{Kind: target.Kind}
+		switch target.Kind {
+		case kargoapi.GenericWebhookTargetKindWarehouse:
+			listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
+			if err != nil {
+				tLogger.Error(err, "failed to build list options for warehouse target")
+				targetResults[i].ListError = fmt.Errorf("failed to build list options for warehouse target: %w", err)
+				continue
+			}
+
+			var whList kargoapi.WarehouseList
+			if err := c.List(ctx, &whList, listOpts...); err != nil {
+				tLogger.Error(err, "error listing warehouse targets")
+				targetResults[i].ListError = fmt.Errorf("error listing warehouse targets: %w", err)
+				continue
+			}
+
+			tLogger.Info("found Warehouses to refresh", "count", len(whList.Items))
+
+			var refreshResults []refreshResult
+			for _, wh := range whList.Items {
+				whKey := client.ObjectKeyFromObject(&wh)
+				whLogger := tLogger.WithValues(
+					"namespace", whKey.Namespace,
+					"name", whKey.Name,
+				)
+				if target.Name != "" && whKey.Name != target.Name {
+					whLogger.Debug("skipping warehouse due to name mismatch")
+					continue
+				}
+				var rr refreshResult
+				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
+					whLogger.Error(err, "error refreshing")
+					rr.Failure = whKey.String()
+				} else {
+					whLogger.Debug("successfully refreshed Warehouse")
+					rr.Success = whKey.String()
+				}
+				refreshResults = append(refreshResults, rr)
+			}
+			targetResults[i].RefreshResults = refreshResults
+		default:
+			targetResults[i].ListError = fmt.Errorf("skipped listing of unsupported target type: %q", target.Kind)
+		}
+	}
+	return targetResults
+}
+
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are
