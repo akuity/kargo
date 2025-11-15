@@ -98,10 +98,11 @@ func CloneBare(
 	}
 	b := &bareRepo{
 		baseRepo: &baseRepo{
-			creds:   clientOpts.Credentials,
-			dir:     filepath.Join(homeDir, "repo"),
-			homeDir: homeDir,
-			url:     repoURL,
+			creds:       clientOpts.Credentials,
+			dir:         filepath.Join(homeDir, "repo"),
+			homeDir:     homeDir,
+			internalURL: repoURL,
+			externalURL: repoURL,
 		},
 	}
 	if err = b.setupClient(homeDir, clientOpts); err != nil {
@@ -117,10 +118,10 @@ func CloneBare(
 }
 
 func (b *bareRepo) clone() error {
-	cmd := b.buildGitCommand("clone", "--bare", b.url, b.dir)
+	cmd := b.buildGitCommand("clone", "--bare", b.internalURL, b.dir)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", b.url, b.dir, err)
+		return fmt.Errorf("error cloning repo %q into %q: %w", b.externalURL, b.dir, err)
 	}
 	return nil
 }
@@ -192,10 +193,11 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	}
 	return &workTree{
 		baseRepo: &baseRepo{
-			creds:   b.creds,
-			dir:     path,
-			homeDir: b.homeDir,
-			url:     b.url,
+			creds:       b.creds,
+			dir:         path,
+			homeDir:     b.homeDir,
+			internalURL: b.internalURL,
+			externalURL: b.externalURL,
 		},
 		bareRepo: b,
 	}, nil
@@ -242,10 +244,11 @@ func (b *bareRepo) WorkTrees() ([]WorkTree, error) {
 	for i, workTreePath := range workTreePaths {
 		workTrees[i] = &workTree{
 			baseRepo: &baseRepo{
-				creds:   b.creds,
-				dir:     workTreePath,
-				homeDir: b.homeDir,
-				url:     b.url,
+				creds:       b.creds,
+				dir:         workTreePath,
+				homeDir:     b.homeDir,
+				internalURL: b.internalURL,
+				externalURL: b.externalURL,
 			},
 			bareRepo: b,
 		}

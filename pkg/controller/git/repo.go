@@ -86,10 +86,11 @@ func Clone(
 			fmt.Errorf("error resolving symlinks in path %s: %w", homeDir, err)
 	}
 	baseRepo := &baseRepo{
-		creds:   clientOpts.Credentials,
-		dir:     filepath.Join(homeDir, "repo"),
-		homeDir: homeDir,
-		url:     repoURL,
+		creds:       clientOpts.Credentials,
+		dir:         filepath.Join(homeDir, "repo"),
+		homeDir:     homeDir,
+		internalURL: repoURL,
+		externalURL: repoURL,
 	}
 	r := &repo{
 		baseRepo: baseRepo,
@@ -123,11 +124,11 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	args = append(args, r.url, r.dir)
+	args = append(args, r.internalURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
+		return fmt.Errorf("error cloning repo %q into %q: %w", r.externalURL, r.dir, err)
 	}
 	return nil
 }

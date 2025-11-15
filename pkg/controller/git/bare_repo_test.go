@@ -80,7 +80,7 @@ func TestBareRepo(t *testing.T) {
 
 	t.Run("can clone", func(t *testing.T) {
 		var repoURL *url.URL
-		repoURL, err = url.Parse(r.url)
+		repoURL, err = url.Parse(r.internalURL)
 		require.NoError(t, err)
 		repoURL.User = nil
 		require.Equal(t, testRepoURL, repoURL.String())
@@ -96,7 +96,7 @@ func TestBareRepo(t *testing.T) {
 	})
 
 	t.Run("can get the repo url", func(t *testing.T) {
-		require.Equal(t, r.url, r.URL())
+		require.Equal(t, r.externalURL, r.URL())
 	})
 
 	t.Run("can get the home dir", func(t *testing.T) {
