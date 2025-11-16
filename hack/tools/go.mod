@@ -4,10 +4,10 @@ go 1.25.0
 
 require (
 	github.com/bufbuild/buf v1.59.0
-	github.com/golangci/golangci-lint/v2 v2.6.1
+	github.com/golangci/golangci-lint/v2 v2.6.2
 	golang.org/x/tools v0.38.0
-	helm.sh/helm/v3 v3.19.0
-	k8s.io/code-generator v0.34.1
+	helm.sh/helm/v3 v3.19.2
+	k8s.io/code-generator v0.34.2
 	sigs.k8s.io/controller-tools v0.19.0
 )
 
@@ -98,7 +98,7 @@ require (
 	github.com/containerd/stargz-snapshotter/estargz v0.17.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/curioswitch/go-reassign v0.3.0 // indirect
-	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/daixiang0/gci v0.13.7 // indirect
 	github.com/dave/dst v0.27.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -211,8 +211,8 @@ require (
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/manuelarte/embeddedstructfieldcheck v0.4.0 // indirect
 	github.com/manuelarte/funcorder v0.5.0 // indirect
-	github.com/maratori/testableexamples v1.0.0 // indirect
-	github.com/maratori/testpackage v1.1.1 // indirect
+	github.com/maratori/testableexamples v1.0.1 // indirect
+	github.com/maratori/testpackage v1.1.2 // indirect
 	github.com/matoous/godox v1.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -336,7 +336,7 @@ require (
 	golang.org/x/mod v0.29.0 // indirect
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
 	golang.org/x/telemetry v0.0.0-20251008203120-078029d740a8 // indirect
 	golang.org/x/term v0.36.0 // indirect
@@ -355,7 +355,7 @@ require (
 	honnef.co/go/tools v0.6.1 // indirect
 	k8s.io/api v0.34.0 // indirect
 	k8s.io/apiextensions-apiserver v0.34.0 // indirect
-	k8s.io/apimachinery v0.34.1 // indirect
+	k8s.io/apimachinery v0.34.2 // indirect
 	k8s.io/apiserver v0.34.0 // indirect
 	k8s.io/cli-runtime v0.34.0 // indirect
 	k8s.io/client-go v0.34.0 // indirect
