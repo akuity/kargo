@@ -106,6 +106,52 @@ characters:
 				)
 			},
 		},
+		{
+			name: "is able to add new item to leaf mapping key",
+			inBytes: []byte(`
+characters:
+- name: Anakin
+  affiliation: Light side
+`),
+			updates: []Update{
+				{
+					Key:   "characters.0.master",
+					Value: "Obi-Wan Kenobi",
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]byte(`
+characters:
+- name: Anakin
+  affiliation: Light side
+  master: Obi-Wan Kenobi
+`),
+					bytes,
+				)
+			},
+		},
+		{
+			name: "won't break on empty leaf mapping key",
+			inBytes: []byte(`
+characters:
+- name: Anakin
+  affiliation: Light side
+  relations: {}
+`),
+			updates: []Update{
+				{
+					Key:   "characters.0.relations.master",
+					Value: "Obi-Wan Kenobi",
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.ErrorContains(t, err, "key path not found")
+				require.Nil(t, bytes)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -128,9 +174,18 @@ characters:
 	}{
 		{
 			name:    "node not found",
-			keyPath: "characters.imperials",
+			keyPath: "planets.imperial",
 			assertions: func(t *testing.T, _, _ int, err error) {
 				require.ErrorContains(t, err, "key path not found")
+			},
+		},
+		{
+			name:    "new node found",
+			keyPath: "characters.imperials",
+			assertions: func(t *testing.T, line, col int, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 2, line)
+				require.Equal(t, 2, col)
 			},
 		},
 		{
@@ -164,7 +219,7 @@ characters:
 	require.NoError(t, err)
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			line, col, err := findScalarNode(doc, strings.Split(testCase.keyPath, "."))
+			line, col, _, err := findScalarNode(doc, strings.Split(testCase.keyPath, "."))
 			testCase.assertions(t, line, col, err)
 		})
 	}
