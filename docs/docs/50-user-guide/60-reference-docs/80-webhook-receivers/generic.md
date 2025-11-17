@@ -95,7 +95,7 @@ spec:
                 matchExpressions:
                   - key: subscribedURL
                     operator: In
-                    value: "${{ normalize("git", request.body.repository.url) }}"
+                    value: "${{ normalizeGit(request.body.repository.url) }}"
 ```
 
 :::note
@@ -125,16 +125,32 @@ be used to help users derive `Target` information from incoming requests.
 
 The following expression functions are available:
 
-`normalize(urlType, url)`
+`normalizeGit(url)`
 
-Function that normalizes `url` based on `urlType`.
+Function that normalizes a git `url`.
 
 It has two arguments:
-- `urlType` (Required): One of either `git`, `image`, or `chart`.
-- `url` (Required): The URL of a git, image, or chart repository.
+- `url` (Required): The URL of a git repository.
 
-The returned value is a `string`. If `urlType` is not one of `git`, `image`, or
-`chart`, `url` will be returned as is.
+The returned value is a `string`.
+
+`normalizeImage(url)`
+
+Function that normalizes a image `url`.
+
+It has two arguments:
+- `url` (Required): The URL of an image repository.
+
+The returned value is a `string`.
+
+`normalizeChart(url)`
+
+Function that normalizes a chart `url`.
+
+It has two arguments:
+- `url` (Required): The URL of a chart repository.
+
+The returned value is a `string`.
 
 `request.header(headerKey)`
 
