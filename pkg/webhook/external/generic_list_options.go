@@ -1,7 +1,9 @@
 package external
 
 import (
+	"context"
 	"fmt"
+	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -12,6 +14,30 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
 )
+
+func listTargetObjects(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	target kargoapi.GenericWebhookTarget,
+	actionEnv map[string]any,
+) ([]client.Object, error) {
+	var list client.ObjectList
+	switch target.Kind {
+	case kargoapi.GenericWebhookTargetKindWarehouse:
+		list = &kargoapi.WarehouseList{}
+	default:
+		return nil, fmt.Errorf("unsupported target kind: %q", target.Kind)
+	}
+	listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build list options: %w", err)
+	}
+	if err := c.List(ctx, list, listOpts...); err != nil {
+		return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
+	}
+	return listToObjects(list), nil
+}
 
 // buildListOptionsForTarget builds a list of client.ListOption based on the
 // provided GenericWebhookTarget's selectors. The returned ListOptions can be
@@ -119,6 +145,25 @@ func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, 
 		// they're not supported.
 		return "", fmt.Errorf("unsupported LabelSelectorOperator: %q", op)
 	}
+}
+
+// K8s doesn't provide an intuitive way to do this.
+func listToObjects(list client.ObjectList) []client.Object {
+	val := reflect.ValueOf(list).Elem()
+	// Every k8s List type has an `Items` field
+	itemsField := val.FieldByName("Items")
+	if !itemsField.IsValid() {
+		return nil
+	}
+	objs := make([]client.Object, 0, itemsField.Len())
+	for i := range itemsField.Len() {
+		// this type assertion can't fail but if we omit the check linter will complain
+		item, ok := itemsField.Index(i).Addr().Interface().(client.Object)
+		if ok {
+			objs = append(objs, item)
+		}
+	}
+	return objs
 }
 
 func evalValues(vals []string, env map[string]any) ([]string, error) {

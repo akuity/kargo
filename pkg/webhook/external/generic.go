@@ -91,14 +91,19 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 		actionResults := make([]actionResult, len(g.config.Actions))
 		for i, action := range g.config.Actions {
-			aLogger := logger.WithValues("action", action.Name, "expression", action.MatchExpression)
+			aLogger := logger.WithValues(
+				"action", action.Name,
+				"expression", action.MatchExpression,
+			)
 			actionResults[i].ActionName = action.Name
-			actionResults[i].ConditionResult = conditionResult{Expression: action.MatchExpression}
+			actionResults[i].ConditionResult = conditionResult{
+				Expression: action.MatchExpression,
+			}
 
 			satisfied, err := conditionSatisfied(action.MatchExpression, baseEnv)
 			if err != nil {
 				aLogger.Error(err, "failed to evaluate criteria; skipping action")
-				actionResults[i].ConditionResult.EvalError = fmt.Sprintf("%v", err)
+				actionResults[i].ConditionResult.EvalError = err.Error()
 				continue
 			}
 
@@ -107,16 +112,9 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				aLogger.Info("condition not satisfied; skipping action")
 				continue
 			}
-
 			ctx = logging.ContextWithLogger(ctx, aLogger)
 			actionEnv := newActionEnv(action.Parameters, baseEnv)
-			switch action.Name {
-			case kargoapi.GenericWebhookActionNameRefresh:
-				actionResults[i].TargetResults = refreshTargets(
-					ctx, g.client, g.project, actionEnv, action.Targets,
-				)
-			}
-			// add new action handlers here
+			actionResults[i].TargetResults = handleAction(ctx, g.client, g.project, actionEnv, action)
 		}
 		resp := map[string]any{"actionResults": actionResults}
 		if shouldReportAsError(actionResults) {

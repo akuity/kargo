@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"reflect"
 	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -19,64 +18,6 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/urls"
 )
-
-type targetResult struct {
-	Kind           kargoapi.GenericWebhookTargetKind `json:"kind"`
-	ListError      error                             `json:"listError,omitempty"`
-	RefreshResults []refreshResult                   `json:"refreshResults,omitempty"`
-}
-
-type refreshResult struct {
-	Success string `json:"success,omitempty"`
-	Failure string `json:"failure,omitempty"`
-}
-
-func refreshTargets(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	actionEnv map[string]any,
-	targets []kargoapi.GenericWebhookTarget,
-) []targetResult {
-	logger := logging.LoggerFromContext(ctx)
-	targetResults := make([]targetResult, len(targets))
-	for i, target := range targets {
-		tLogger := logger.WithValues("targetKind", target.Kind)
-		targetResults[i] = targetResult{Kind: target.Kind}
-		objects, err := listTargetObjects(ctx, c, project, target, actionEnv)
-		if err != nil {
-			tLogger.Error(err, "failed to list objects for target")
-			targetResults[i].ListError = fmt.Errorf("failed to list target objects: %w", err)
-			continue
-		}
-		targetResults[i].RefreshResults = refreshObjects(ctx, c, target.Name, objects)
-	}
-	return targetResults
-}
-
-func listTargetObjects(
-	ctx context.Context,
-	c client.Client,
-	project string,
-	target kargoapi.GenericWebhookTarget,
-	actionEnv map[string]any,
-) ([]client.Object, error) {
-	var list client.ObjectList
-	switch target.Kind {
-	case kargoapi.GenericWebhookTargetKindWarehouse:
-		list = &kargoapi.WarehouseList{}
-	default:
-		return nil, fmt.Errorf("unsupported target kind: %q", target.Kind)
-	}
-	listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
-	if err != nil {
-		return nil, fmt.Errorf("failed to build list options: %w", err)
-	}
-	if err := c.List(ctx, list, listOpts...); err != nil {
-		return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
-	}
-	return listToObjects(list), nil
-}
 
 func refreshObjects(
 	ctx context.Context,
@@ -266,22 +207,4 @@ func shouldRefresh(
 		}
 	}
 	return false, nil
-}
-
-func listToObjects(list client.ObjectList) []client.Object {
-	val := reflect.ValueOf(list).Elem()
-	// Every k8s List type has an `Items` field
-	itemsField := val.FieldByName("Items")
-	if !itemsField.IsValid() {
-		return nil
-	}
-	objs := make([]client.Object, 0, itemsField.Len())
-	for i := range itemsField.Len() {
-		// this type assertion can't fail but if we omit the check linter will complain
-		item, ok := itemsField.Index(i).Addr().Interface().(client.Object)
-		if ok {
-			objs = append(objs, item)
-		}
-	}
-	return objs
 }
