@@ -277,7 +277,7 @@ func TestGenericHandler(t *testing.T) {
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
 											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
-											Value:    `${{ normalize("git", request.body.repository.url) }}`,
+											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
 										},
 									},
 								},
@@ -374,7 +374,7 @@ func TestGenericHandler(t *testing.T) {
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
 											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
-											Value:    `${{ normalize("git", request.body.repository.url) }}`,
+											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
 										},
 									},
 								},
@@ -384,7 +384,7 @@ func TestGenericHandler(t *testing.T) {
 				},
 			},
 			req: func() *http.Request {
-				// not normalized so the index selector can only work if 'normalize' function is used
+				// not normalized so the index selector can only work if 'normalizeGit' function is used
 				b := []byte(`{"repository": {"url": "http://github.com/example/repo.git"}}`)
 				req := httptest.NewRequest(
 					http.MethodPost,

@@ -2,7 +2,6 @@ package function
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -18,7 +17,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/expressions"
 )
 
 func Test_warehouse(t *testing.T) {
@@ -1927,66 +1925,6 @@ func Test_semverParse(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			result, err := semverParse(testCase.args...)
 			testCase.assertions(t, result, err)
-		})
-	}
-}
-
-func TestNormalizeURL(t *testing.T) {
-	testCases := []struct {
-		name       string
-		expression string
-		expected   string
-		err        error
-	}{
-		{
-			name:       "wrong number of arguments",
-			expression: "${{ normalize('git') }}",
-			err:        errors.New("not enough arguments to call normalize"),
-		},
-		{
-			name:       "urlType not a string",
-			expression: "${{ normalize(123, 'doesntmatter') }}",
-			err:        errors.New("cannot use int as argument (type string) to call normalize"),
-		},
-		{
-			name:       "url not a string",
-			expression: "${{ normalize('git', 456) }}",
-			err:        errors.New("cannot use int as argument (type string) to call normalize"),
-		},
-		{
-			name:       "normalize git",
-			expression: "${{ normalize('git', 'https://github.com/user/repo.git' ) }}",
-			expected:   "https://github.com/user/repo",
-		},
-		{
-			name:       "normalize image",
-			expression: "${{ normalize('image', 'docker.io/library/nginx:latest' )}}",
-			expected:   "nginx",
-		},
-		{
-			name:       "normalize chart",
-			expression: "${{ normalize('chart', 'oci://ghcr.io/user/chart:1.0.0') }}",
-			expected:   "ghcr.io/user/chart",
-		},
-		{
-			name:       "unsupported urlType should return url as is",
-			expression: "${{ normalize('unsupported', 'https://fakeurl') }}",
-			expected:   "https://fakeurl",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := expressions.EvaluateTemplate(tc.expression, nil, NormalizeURL())
-			if tc.err != nil {
-				require.Error(t, err)
-				require.ErrorContains(t, err, tc.err.Error())
-				return
-			}
-			require.NoError(t, err)
-			resultStr, ok := result.(string)
-			require.True(t, ok)
-			require.Equal(t, tc.expected, resultStr)
 		})
 	}
 }

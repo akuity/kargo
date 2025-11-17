@@ -13,9 +13,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
-	"github.com/akuity/kargo/pkg/expressions/function"
 	xhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/urls"
 )
 
 const (
@@ -145,6 +145,9 @@ func newSharedEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 		return nil, fmt.Errorf("invalid request body: %w", err)
 	}
 	return map[string]any{
+		"normalizeGit":   urls.NormalizeGit,
+		"normalizeImage": urls.NormalizeImage,
+		"normalizeChart": urls.NormalizeChart,
 		"request": map[string]any{
 			"header":  r.Header.Get,
 			"headers": r.Header.Values,
@@ -166,7 +169,7 @@ func newActionEnv(params map[string]string, globalEnv map[string]any) map[string
 }
 
 func conditionSatisfied(expression string, env map[string]any) (bool, error) {
-	result, err := expressions.EvaluateTemplate(expression, env, function.NormalizeURL())
+	result, err := expressions.EvaluateTemplate(expression, env)
 	if err != nil {
 		return false, err
 	}
