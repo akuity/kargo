@@ -3,7 +3,7 @@ ARG BASE_IMAGE=kargo-base
 ####################################################################################################
 # ui-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.10.0 AS ui-builder
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.11.1 AS ui-builder
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
@@ -100,7 +100,7 @@ CMD ["/usr/local/bin/kargo"]
 # - supports development
 # - not used for official image builds
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM docker.io/library/node:24.10.0 AS ui-dev
+FROM --platform=$BUILDPLATFORM docker.io/library/node:24.11.1 AS ui-dev
 
 ARG PNPM_VERSION=9.0.3
 RUN npm install --global pnpm@${PNPM_VERSION}
