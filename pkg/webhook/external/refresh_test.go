@@ -316,7 +316,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Len(t, results, 1)
 				require.Equal(t, "UnsupportedKind", string(results[0].Kind))
 				require.Error(t, results[0].ListError)
-				require.ErrorContains(t, results[0].ListError, "skipped listing of unsupported target type")
+				require.ErrorContains(t, results[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
 			},
 		},
 	}
