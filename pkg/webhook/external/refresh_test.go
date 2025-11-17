@@ -52,7 +52,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Len(t, results, 1)
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
 				require.Error(t, results[0].ListError)
-				require.Contains(t, results[0].ListError.Error(), "error listing warehouse targets")
+				require.Contains(t, results[0].ListError.Error(), "something went wrong")
 			},
 		},
 		{

@@ -44,49 +44,69 @@ func refreshTargets(
 		targetResults[i] = targetResult{Kind: target.Kind}
 		switch target.Kind {
 		case kargoapi.GenericWebhookTargetKindWarehouse:
-			listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
-			if err != nil {
-				tLogger.Error(err, "failed to build list options for warehouse target")
-				targetResults[i].ListError = fmt.Errorf("failed to build list options for warehouse target: %w", err)
-				continue
-			}
-
 			var whList kargoapi.WarehouseList
-			if err := c.List(ctx, &whList, listOpts...); err != nil {
-				tLogger.Error(err, "error listing warehouse targets")
-				targetResults[i].ListError = fmt.Errorf("error listing warehouse targets: %w", err)
+			if err := listTargetObjects(ctx, c, project, target, actionEnv, &whList); err != nil {
+				tLogger.Error(err, "failed to list objects for target")
+				targetResults[i].ListError = fmt.Errorf("failed to list warehouses: %w", err)
 				continue
 			}
-
 			tLogger.Info("found Warehouses to refresh", "count", len(whList.Items))
-
-			var refreshResults []refreshResult
-			for _, wh := range whList.Items {
-				whKey := client.ObjectKeyFromObject(&wh)
-				whLogger := tLogger.WithValues(
-					"namespace", whKey.Namespace,
-					"name", whKey.Name,
-				)
-				if target.Name != "" && whKey.Name != target.Name {
-					whLogger.Debug("skipping warehouse due to name mismatch")
-					continue
-				}
-				var rr refreshResult
-				if _, err := api.RefreshWarehouse(ctx, c, whKey); err != nil {
-					whLogger.Error(err, "error refreshing")
-					rr.Failure = whKey.String()
-				} else {
-					whLogger.Debug("successfully refreshed Warehouse")
-					rr.Success = whKey.String()
-				}
-				refreshResults = append(refreshResults, rr)
-			}
-			targetResults[i].RefreshResults = refreshResults
+			list := convertElementsToPointers(whList.Items)
+			targetResults[i].RefreshResults = refreshObjects(ctx, c, target.Name, list)
 		default:
 			targetResults[i].ListError = fmt.Errorf("skipped listing of unsupported target type: %q", target.Kind)
 		}
 	}
 	return targetResults
+}
+
+func listTargetObjects(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	target kargoapi.GenericWebhookTarget,
+	actionEnv map[string]any,
+	list client.ObjectList,
+) error {
+	listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
+	if err != nil {
+		return fmt.Errorf("failed to build list options for warehouse target: %w", err)
+	}
+	return c.List(ctx, list, listOpts...)
+}
+
+type supportedRefreshTarget interface{ client.Object }
+
+func refreshObjects[T supportedRefreshTarget](
+	ctx context.Context,
+	c client.Client,
+	targetName string,
+	objList []T,
+) []refreshResult {
+	logger := logging.LoggerFromContext(ctx)
+	var refreshResults []refreshResult
+	for _, obj := range objList {
+		objKey := client.ObjectKeyFromObject(obj)
+		objLogger := logger.WithValues(
+			"namespace", objKey.Namespace,
+			"name", objKey.Name,
+			"kind", obj.GetObjectKind(),
+		)
+		if targetName != "" && objKey.Name != targetName {
+			objLogger.Info("skipping object due to name mismatch")
+			continue
+		}
+		var rr refreshResult
+		if err := api.RefreshObject(ctx, c, obj); err != nil {
+			objLogger.Error(err, "error refreshing")
+			rr.Failure = objKey.String()
+		} else {
+			objLogger.Info("successfully refreshed object")
+			rr.Success = objKey.String()
+		}
+		refreshResults = append(refreshResults, rr)
+	}
+	return refreshResults
 }
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
@@ -245,4 +265,12 @@ func shouldRefresh(
 		}
 	}
 	return false, nil
+}
+
+func convertElementsToPointers[T any](list []T) []*T {
+	ptrList := make([]*T, 0, len(list))
+	for i := range list {
+		ptrList = append(ptrList, &list[i])
+	}
+	return ptrList
 }
