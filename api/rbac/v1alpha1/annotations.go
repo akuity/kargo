@@ -51,6 +51,26 @@ func OIDCClaimNameFromAnnotationKey(key string) (string, bool) {
 	return strings.TrimPrefix(key, AnnotationKeyOIDCClaimNamePrefix), true
 }
 
+// stringOrArray is a helper type that can unmarshal from either a scalar string
+// or an array of strings.
+type stringOrArray []string
+
+func (s *stringOrArray) UnmarshalJSON(data []byte) error {
+	// Try unmarshaling as array first
+	var arr []string
+	if err := json.Unmarshal(data, &arr); err == nil {
+		*s = arr
+		return nil
+	}
+	// Fall back to scalar string
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+	*s = []string{str}
+	return nil
+}
+
 // OIDCClaimsFromAnnotationValue parses the values of the newer, preferred
 // rbac.kargo.akuity.io/claims annotation as well as the values of older
 // annotations with keys of the form rbac.kargo.akuity.io/claim.<name> and
@@ -60,8 +80,12 @@ func OIDCClaimsFromAnnotationValues(annotations map[string]string) (map[string][
 	claims := make(map[string][]string)
 	// hydrate with new style claims
 	if _, ok := annotations[AnnotationKeyOIDCClaims]; ok {
-		if err := json.Unmarshal([]byte(annotations[AnnotationKeyOIDCClaims]), &claims); err != nil {
+		flexClaims := map[string]stringOrArray{}
+		if err := json.Unmarshal([]byte(annotations[AnnotationKeyOIDCClaims]), &flexClaims); err != nil {
 			return nil, fmt.Errorf("unmarshaling OIDC claims from annotation value: %w", err)
+		}
+		for key, val := range flexClaims {
+			claims[key] = []string(val)
 		}
 	}
 	// hydrate with old style claims
