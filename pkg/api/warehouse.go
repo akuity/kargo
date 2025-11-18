@@ -70,11 +70,7 @@ func RefreshWarehouse(
 // annotation on the object, causing the controller to reconcile it. Currently,
 // the annotation value is the timestamp of the request, but might in the future
 // include additional metadata/context necessary for the request.
-func RefreshObject(
-	ctx context.Context,
-	c client.Client,
-	obj client.Object,
-) error {
+func RefreshObject(ctx context.Context, c client.Client, obj client.Object) error {
 	return patchAnnotation(
 		ctx,
 		c,

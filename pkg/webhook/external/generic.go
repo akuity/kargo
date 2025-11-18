@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"maps"
 	"net/http"
 	"slices"
 
@@ -83,7 +82,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 		baseEnv, err := newBaseEnv(requestBody, r)
 		if err != nil {
-			logger.Error(err, "error creating global environment")
+			logger.Error(err, "error creating base environment")
 			// this can only fail if the request body is invalid json
 			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusBadRequest))
 			return
@@ -95,11 +94,8 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				"action", action.Name,
 				"expression", action.MatchExpression,
 			)
-			actionResults[i].ActionName = action.Name
-			actionResults[i].ConditionResult = conditionResult{
-				Expression: action.MatchExpression,
-			}
 
+			actionResults[i] = newActionResult(action)
 			satisfied, err := conditionSatisfied(action.MatchExpression, baseEnv)
 			if err != nil {
 				aLogger.Error(err, "failed to evaluate criteria; skipping action")
@@ -112,9 +108,14 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				aLogger.Info("condition not satisfied; skipping action")
 				continue
 			}
-			ctx = logging.ContextWithLogger(ctx, aLogger)
-			actionEnv := newActionEnv(action.Parameters, baseEnv)
-			actionResults[i].TargetResults = handleAction(ctx, g.client, g.project, actionEnv, action)
+
+			actionResults[i].TargetResults = handleAction(
+				logging.ContextWithLogger(ctx, aLogger),
+				g.client,
+				g.project,
+				newActionEnv(action.Parameters, baseEnv),
+				action,
+			)
 		}
 		resp := map[string]any{"actionResults": actionResults}
 		if shouldReportAsError(actionResults) {
@@ -123,18 +124,6 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		}
 		xhttp.WriteResponseJSON(w, http.StatusOK, resp)
 	})
-}
-
-type actionResult struct {
-	ActionName      kargoapi.GenericWebhookActionName `json:"actionName"`
-	ConditionResult conditionResult                   `json:"conditionResult"`
-	TargetResults   []targetResult                    `json:"targetResults,omitempty"`
-}
-
-type conditionResult struct {
-	Expression string `json:"expression"`
-	Satisfied  bool   `json:"satisfied"`
-	EvalError  string `json:"evalError,omitempty"`
 }
 
 func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
@@ -154,16 +143,6 @@ func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 			"url":     r.URL.String(),
 		},
 	}, nil
-}
-
-func newActionEnv(params map[string]string, globalEnv map[string]any) map[string]any {
-	actionEnv := maps.Clone(globalEnv)
-	m := make(map[string]any, len(params))
-	for paramKey, paramValue := range params {
-		m[paramKey] = paramValue
-	}
-	actionEnv["params"] = m
-	return actionEnv
 }
 
 func conditionSatisfied(expression string, env map[string]any) (bool, error) {

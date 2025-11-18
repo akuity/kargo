@@ -19,6 +19,11 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+type refreshResult struct {
+	Success string `json:"success,omitempty"`
+	Failure string `json:"failure,omitempty"`
+}
+
 func refreshObjects(
 	ctx context.Context,
 	c client.Client,
