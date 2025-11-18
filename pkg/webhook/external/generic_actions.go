@@ -38,8 +38,8 @@ type targetResult struct {
 	RefreshResults []refreshResult                   `json:"refreshResults,omitempty"`
 }
 
-func newActionEnv(params map[string]string, globalEnv map[string]any) map[string]any {
-	actionEnv := maps.Clone(globalEnv)
+func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]any {
+	actionEnv := maps.Clone(baseEnv)
 	m := make(map[string]any, len(params))
 	for paramKey, paramValue := range params {
 		m[paramKey] = paramValue
