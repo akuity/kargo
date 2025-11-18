@@ -9,7 +9,7 @@ import (
 )
 
 func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
-	for _, test := range []struct {
+	testCases := []struct {
 		name           string
 		annotations    map[string]string
 		expected       map[string][]string
@@ -20,6 +20,18 @@ func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
 			name: "new style",
 			annotations: map[string]string{
 				AnnotationKeyOIDCClaims: `{"groups": ["foo", "bar"], "email": ["foo@bar.com"]}`,
+			},
+			expected: map[string][]string{
+				"groups": {"bar", "foo"},
+				"email":  {"foo@bar.com"},
+			},
+		},
+		{
+			name: "new style with bug",
+			// Some versions incorrectly set the default claim annotations upon
+			// programmatic Project creation.
+			annotations: map[string]string{
+				AnnotationKeyOIDCClaims: `{"groups": ["foo", "bar"], "email": "foo@bar.com"}`,
 			},
 			expected: map[string][]string{
 				"groups": {"bar", "foo"},
@@ -90,16 +102,17 @@ func TestOIDCClaimsFromAnnotationValues(t *testing.T) {
 			shouldErrOut:   true,
 			expectedErrMsg: "unmarshaling OIDC claims from annotation value",
 		},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			got, err := OIDCClaimsFromAnnotationValues(test.annotations)
-			if test.shouldErrOut {
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			got, err := OIDCClaimsFromAnnotationValues(testCase.annotations)
+			if testCase.shouldErrOut {
 				require.Error(t, err)
-				require.ErrorContains(t, err, test.expectedErrMsg)
+				require.ErrorContains(t, err, testCase.expectedErrMsg)
 				return
 			}
 			require.NoError(t, err)
-			require.Equal(t, test.expected, got)
+			require.Equal(t, testCase.expected, got)
 		})
 	}
 }
