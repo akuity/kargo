@@ -864,7 +864,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 	}
 	if creator, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 		if parts := strings.SplitN(creator, ":", 2); len(parts) == 2 {
-			saAnnotations[rbacapi.AnnotationKeyOIDCClaims] = fmt.Sprintf("{%q:%q}", parts[0], parts[1])
+			saAnnotations[rbacapi.AnnotationKeyOIDCClaims] = fmt.Sprintf("{%q:[%q]}", parts[0], parts[1])
 		}
 	}
 	for _, saName := range allRoles {
