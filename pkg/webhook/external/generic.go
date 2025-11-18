@@ -117,12 +117,13 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 				action,
 			)
 		}
-		resp := map[string]any{"actionResults": actionResults}
+		statusCode := http.StatusOK
 		if shouldReportAsError(actionResults) {
-			xhttp.WriteResponseJSON(w, http.StatusInternalServerError, resp)
-			return
+			statusCode = http.StatusInternalServerError
 		}
-		xhttp.WriteResponseJSON(w, http.StatusOK, resp)
+		xhttp.WriteResponseJSON(w, statusCode,
+			map[string]any{"actionResults": actionResults},
+		)
 	})
 }
 
