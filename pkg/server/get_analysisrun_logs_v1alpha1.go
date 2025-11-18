@@ -77,17 +77,6 @@ func (s *server) GetAnalysisRunLogs(
 		)
 	}
 
-	// Don't stream logs for an AnalysisRun that is not complete.
-	if !analysisRun.Status.Phase.Completed() {
-		return connect.NewError(
-			connect.CodeFailedPrecondition,
-			fmt.Errorf(
-				"AnalysisRun %q in namespace %q is not complete; cannot retrieve logs",
-				name, namespace,
-			),
-		)
-	}
-
 	jobMetricName, jobMetric, err := s.getJobMetric(analysisRun, req.Msg.MetricName)
 	if err != nil {
 		return err
@@ -140,7 +129,8 @@ func (s *server) GetAnalysisRunLogs(
 
 	const bufferSize = 4096 // 4 KB
 
-	peekedBytes, err := reader.Peek(bufferSize)
+	// just need to peek at the first two bytes to help detect encoding
+	peekedBytes, err := reader.Peek(2)
 	if err != nil && err != io.EOF {
 		return fmt.Errorf("error peeking at log stream: %w", err)
 	}
