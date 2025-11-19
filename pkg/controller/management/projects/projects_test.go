@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/conditions"
 )
@@ -1937,10 +1938,17 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					return nil
 				},
 				createServiceAccountFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
 				) error {
+					sa, ok := obj.(*corev1.ServiceAccount)
+					require.True(t, ok)
+					require.Equal(
+						t,
+						`{"email":["tony@stark.io"]}`,
+						sa.Annotations[rbacapi.AnnotationKeyOIDCClaims],
+					)
 					return nil
 				},
 				createRoleFn: func(
@@ -1965,12 +1973,16 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			p := &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: "email:tony@stark.io",
+					},
+				},
+			}
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureDefaultUserRoles(
-					context.Background(),
-					&kargoapi.Project{},
-				),
+				testCase.reconciler.ensureDefaultUserRoles(context.Background(), p),
 			)
 		})
 	}
