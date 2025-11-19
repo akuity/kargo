@@ -13,8 +13,6 @@ import { transportWithAuth } from '@ui/config/transport';
 import { KargoService } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { AnalysisRun } from '@ui/gen/api/stubs/rollouts/v1alpha1/generated_pb';
 
-import { verificationPhaseIsTerminal } from '../../stage/utils/verification-phase';
-
 import { extractFilters } from './extract-analysis-run';
 import {
   monacoEditorLogLanguage,
@@ -79,18 +77,17 @@ export const AnalysisRunLogs = (props: {
   };
 
   const [logs, setLogs] = useState('');
-  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsInitLoading, setLogsInitiLoading] = useState(false);
   const [logsError, setLogsError] = useState('');
+
+  const logsLoading = logsInitLoading && !logs;
 
   const project = props.analysisRun?.metadata?.namespace;
   const analysisRunId = props.analysisRun?.metadata?.name;
   const stage = props.analysisRun?.metadata?.labels['kargo.akuity.io/stage'];
 
   useEffect(() => {
-    if (
-      !verificationPhaseIsTerminal(props.analysisRun?.status?.phase || '') ||
-      !filterableItems?.jobNames?.length
-    ) {
+    if (!filterableItems?.jobNames?.length) {
       return;
     }
 
@@ -112,7 +109,8 @@ export const AnalysisRunLogs = (props: {
 
     (async () => {
       let logLine = '';
-      setLogsLoading(true);
+      setLogs('');
+      setLogsInitiLoading(true);
       setLogsError('');
       try {
         for await (const e of stream) {
@@ -125,7 +123,7 @@ export const AnalysisRunLogs = (props: {
           setLogs('');
         }
       } finally {
-        setLogsLoading(false);
+        setLogsInitiLoading(false);
       }
     })();
   }, [filters, filterableItems, props.analysisRun]);
@@ -223,11 +221,8 @@ export const AnalysisRunLogs = (props: {
           }}
         />
       )}
-      {!logsLoading && !logs && !logsError && (
-        <Empty
-          description={`No logs found.${!verificationPhaseIsTerminal(props.analysisRun?.status?.phase || '') ? ' They are available only when verification is in terminal state' : ''}`}
-          className='p-10'
-        />
+      {!logs && !logsLoading && !logsError && (
+        <Empty description={`No logs found.`} className='p-10' />
       )}
       {logsError && <Alert type='error' description={logsError} />}
       {logsLoading && <Skeleton />}
