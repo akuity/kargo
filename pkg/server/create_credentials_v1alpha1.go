@@ -23,6 +23,7 @@ type credentials struct {
 	username       string
 	password       string
 	description    string
+	sshPrivateKey  string
 }
 
 func (s *server) CreateCredentials(
@@ -43,6 +44,7 @@ func (s *server) CreateCredentials(
 		repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
 		username:       req.Msg.GetUsername(),
 		password:       req.Msg.GetPassword(),
+		sshPrivateKey:  req.Msg.GetSshPrivateKey(),
 	}
 
 	if err := s.validateCredentials(creds); err != nil {
@@ -87,10 +89,28 @@ func (s *server) validateCredentials(creds credentials) error {
 			errors.New("repoURL should not be empty"),
 		)
 	}
-	if err := validateFieldNotEmpty("username", creds.username); err != nil {
-		return err
+
+	emptyUsernameErr := validateFieldNotEmpty("username", creds.username)
+	emptyPasswordErr := validateFieldNotEmpty("password", creds.password)
+	emptySshPrivateKeyErr := validateFieldNotEmpty("sshPrivateKey", creds.sshPrivateKey)
+
+	if creds.credType != kargoapi.LabelValueCredentialTypeGit {
+		if emptyUsernameErr != nil {
+			return emptyUsernameErr
+		}
+
+		return emptyPasswordErr
 	}
-	return validateFieldNotEmpty("password", creds.password)
+
+	if emptySshPrivateKeyErr == nil {
+		return nil
+	}
+
+	if emptyUsernameErr != nil {
+		return emptyUsernameErr
+	}
+
+	return emptyPasswordErr
 }
 
 func credentialsToK8sSecret(creds credentials) *corev1.Secret {
@@ -103,9 +123,10 @@ func credentialsToK8sSecret(creds credentials) *corev1.Secret {
 			},
 		},
 		Data: map[string][]byte{
-			libCreds.FieldRepoURL:  []byte(creds.repoURL),
-			libCreds.FieldUsername: []byte(creds.username),
-			libCreds.FieldPassword: []byte(creds.password),
+			libCreds.FieldRepoURL:       []byte(creds.repoURL),
+			libCreds.FieldUsername:      []byte(creds.username),
+			libCreds.FieldPassword:      []byte(creds.password),
+			libCreds.FieldSshPrivateKey: []byte(creds.sshPrivateKey),
 		},
 	}
 	if creds.description != "" {

@@ -1064,6 +1064,7 @@ message CreateCredentialsRequest {
   string username = 6;
   // password is the password or token for authentication.
   string password = 7;
+  string ssh_private_key = 9;
 }
 
 // CreateCredentialsResponse contains the newly created credentials.
@@ -1135,6 +1136,7 @@ message UpdateCredentialsRequest {
   string username = 6;
   // password is the password or token for authentication.
   string password = 7;
+  string ssh_private_key = 9;
 }
 
 // UpdateCredentialsResponse contains the updated credentials information.

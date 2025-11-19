@@ -9,6 +9,7 @@ const (
 	FieldRepoURLIsRegex = "repoURLIsRegex"
 	FieldUsername       = "username"
 	FieldPassword       = "password"
+	FieldSshPrivateKey  = "sshPrivateKey"
 )
 
 // Type is a string type used to represent a type of Credentials.

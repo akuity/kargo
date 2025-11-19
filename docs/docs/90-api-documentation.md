@@ -217,6 +217,7 @@ Stability is not guaranteed.
 | repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
 | username | [string](#string) |  username is the username for authentication. |
 | password | [string](#string) |  password is the password or token for authentication. |
+| ssh_private_key | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
 
@@ -1364,6 +1365,7 @@ Stability is not guaranteed.
 | repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
 | username | [string](#string) |  username is the username for authentication. |
 | password | [string](#string) |  password is the password or token for authentication. |
+| ssh_private_key | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
 
