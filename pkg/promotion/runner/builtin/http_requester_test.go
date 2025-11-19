@@ -248,6 +248,8 @@ func Test_httpRequester_run(t *testing.T) {
 		{
 			name: "success and not failed; non-json body",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
+				// Set content type to something other than text/plain to avoid text handling
+				w.Header().Set("Content-Type", "text/html")
 				// This is a non-JSON body
 				_, err := w.Write([]byte(`this is just a regular string`))
 				require.NoError(t, err)
@@ -409,6 +411,62 @@ func Test_httpRequester_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err) // Not terminal, should be retried
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+			},
+		},
+		{
+			name: "text/plain response with numeric content",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				_, err := w.Write([]byte(`1`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: `response.body == "1"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "numeric_response",
+						FromExpression: "response.body",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"numeric_response": "1",
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "text/plain response with word content",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				_, err := w.Write([]byte(`one`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: `response.body == "one"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "word_response",
+						FromExpression: "response.body",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"word_response": "one",
+					},
+					res.Output,
+				)
 			},
 		},
 	}
@@ -596,7 +654,7 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 		},
 		{
-			name: "JSON content-type but unexpected string body",
+			name: "JSON string response should fail",
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
@@ -604,7 +662,19 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ map[string]any, err error) {
 				require.Error(t, err)
-				require.ErrorContains(t, err, "unexpected type when unmarshaling")
+				require.ErrorContains(t, err, "unexpected type when unmarshaling response")
+			},
+		},
+		{
+			name: "JSON number response should fail",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`1`)),
+			},
+			assertions: func(t *testing.T, _ map[string]any, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "unexpected type when unmarshaling response")
 			},
 		},
 		{
@@ -622,6 +692,70 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				body, ok := bodyAny.(map[string]any)
 				require.True(t, ok)
 				require.Equal(t, map[string]any{"foo": "bar"}, body)
+			},
+		},
+		{
+			name: "text/plain with numeric content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`1`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "1", body)
+			},
+		},
+		{
+			name: "text/plain with float content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`3.14`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "3.14", body)
+			},
+		},
+		{
+			name: "text/plain with word content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`one`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "one", body)
+			},
+		},
+		{
+			name: "text/plain with sentence content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`this is not json`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "this is not json", body)
 			},
 		},
 	}
