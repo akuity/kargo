@@ -74,7 +74,7 @@ type Props = ModalComponentProps & {
 };
 
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
-  const [isSSHRepoUrl, setIsSSHRepoUrl] = useState(init?.stringData['sshPrivateKey'] !== undefined);
+  const [isSSHRepoUrl, setIsSSHRepoUrl] = useState(init?.stringData['username'] === '');
 
   const { control, handleSubmit, watch } = useForm({
     defaultValues: { ...constructDefaults(init, props.type === 'generic' ? props.type : 'git') },

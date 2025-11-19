@@ -63,7 +63,7 @@ export const constructDefaults = (init?: Secret, type?: string) => {
 };
 
 export const redactSecretStringData = (secret: Secret) => {
-  const data = secret?.stringData;
+  const data = { ...secret?.stringData };
 
   for (const key of Object.keys(data)) {
     data[key] = '';
