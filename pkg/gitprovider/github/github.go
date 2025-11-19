@@ -355,7 +355,7 @@ func (p *provider) MergePullRequest(
 	// If the merge call returned an HTTP 202 Accepted, GitHub has enqueued the
 	// PR for asynchronous merging (merge queue). Mark it as queued so callers
 	// can make better decisions about whether to wait or re-request.
-	if resp != nil && resp.Response != nil && resp.Response.StatusCode == 202 {
+	if resp != nil && resp.StatusCode == 202 {
 		pr.Queued = true
 	}
 

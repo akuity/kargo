@@ -135,7 +135,12 @@ func (g *gitPRMerger) run(
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
 		}
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf("pull request %d is queued for merge and wait is disabled", cfg.PRNumber)}
+			&promotion.TerminalError{
+				Err: fmt.Errorf(
+					"pull request %d is queued for merge and wait is disabled",
+					cfg.PRNumber,
+				),
+			}
 	}
 
 	// If provider indicates PR is not mergeable (or draft), don't attempt
@@ -193,7 +198,10 @@ func (g *gitPRMerger) run(
 			}
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 				&promotion.TerminalError{
-					Err: fmt.Errorf("pull request %d is queued for merge and wait is disabled", cfg.PRNumber),
+					Err: fmt.Errorf(
+						"pull request %d is queued for merge and wait is disabled",
+						cfg.PRNumber,
+					),
 				}
 		}
 
