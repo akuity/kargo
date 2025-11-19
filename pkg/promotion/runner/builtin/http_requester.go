@@ -304,9 +304,9 @@ func (h *httpRequester) buildExprEnv(
 			return nil, fmt.Errorf("failed to parse response: %w", err)
 		}
 
-		// Unmarshal into map[string]any or []any
+		// Accept all valid JSON types: objects, arrays, strings, numbers, booleans, and null
 		switch parsedBody.(type) {
-		case map[string]any, []any:
+		case map[string]any, []any, string, float64, bool, nil:
 			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
 		default:
 			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
