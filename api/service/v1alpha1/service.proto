@@ -226,6 +226,41 @@ service KargoService {
   // UpdateRole modifies an existing RBAC role.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
 
+  /* Kargo ServiceAccount APIs */
+
+  // Note: A "Kargo ServiceAccount" is a specially labeled Kubernetes
+  // ServiceAccount with a token, managed through the Kargo API. It is a
+  // SEPARATE THING from the Kubernetes ServiceAccount that makes up part of a
+  // "Kargo Role's" underlying trio of Kubernetes ServiceAccount, Role, and
+  // RoleBinding resources. If you create a Kargo Role X and wish to grant that
+  // Kargo Role to a Kargo ServiceAccount Y, there are actually TWO Kubernetes
+  // ServiceAccounts involved -- X and Y. Role X will be bound to BOTH
+  // ServiceAccount X and ServiceAccount Y through RoleBinding X. ServiceAccount
+  // X may potentially be unused UNLESS it is also annotated in a way that
+  // indicates users having specific OIDC claims may assume its identity.
+
+  // CreateServiceAccount creates a new Kargo ServiceAccount.
+  rpc CreateServiceAccount(CreateServiceAccountRequest) returns (CreateServiceAccountResponse);
+  // DeleteServiceAccount removes a Kargo ServiceAccount.
+  rpc DeleteServiceAccount(DeleteServiceAccountRequest) returns (DeleteServiceAccountResponse);
+  // GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
+  rpc GetServiceAccount(GetServiceAccountRequest) returns (GetServiceAccountResponse);
+  // ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
+  rpc ListServiceAccounts(ListServiceAccountsRequest) returns (ListServiceAccountsResponse);
+
+  // CreateServiceAccountToken generates and returns a new bearer token
+  // associated with a Kargo ServiceAccount.
+  rpc CreateServiceAccountToken(CreateServiceAccountTokenRequest) returns (CreateServiceAccountTokenResponse);
+  // DeleteServiceAccountToken deletes a bearer token associated with a
+  // Kargo ServiceAccount.
+  rpc DeleteServiceAccountToken(DeleteServiceAccountTokenRequest) returns (DeleteServiceAccountTokenResponse);
+  // GetServiceAccountToken retrieves details of a specific bearer token
+  // associated with a Kargo ServiceAccount.
+  rpc GetServiceAccountToken(GetServiceAccountTokenRequest) returns (GetServiceAccountTokenResponse);
+  // ListServiceAccountTokens lists bearer tokens associated with
+  // with a specified Kargo ServiceAccount.
+  rpc ListServiceAccountTokens(ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
+
   /* Cluster Secrets APIs */
   // ListClusterSecrets retrieves all cluster-scoped secrets.
   rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
@@ -1529,6 +1564,177 @@ message UpdateRoleRequest {
 message UpdateRoleResponse {
   // role is the updated Role resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+/* Kargo ServiceAccount Messages */
+
+// CreateServiceAccountRequest is a request to create a new Kargo
+// ServiceAccount resource.
+message CreateServiceAccountRequest {
+  // serviceAccount is the Kargo ServiceAccount to create.
+  k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+}
+
+// CreateServiceAccountResponse contains the details of a newly created Kargo
+// ServiceAccount resource.
+message CreateServiceAccountResponse {
+  // serviceAccount is the newly created Kargo ServiceAccount resource.
+  k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+}
+
+// DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount
+// resource.
+message DeleteServiceAccountRequest {
+  // project is the name of the project containing the Kargo ServiceAccount
+  // resource.
+  string project = 1;
+  // name is the name of the Kargo ServiceAccount resource to delete.
+  string name = 2;
+}
+
+// DeleteServiceAccountResponse is the response returned after deleting a Kargo
+// ServiceAccount resource.
+message DeleteServiceAccountResponse {
+  /* explicitly empty */
+}
+
+// GetServiceAccountRequest is a request for the details of specific Kargo
+// ServiceAccount resource.
+message GetServiceAccountRequest {
+  // system_level indicates whether the request is for a system-level Kargo
+  // Service Account instead of one at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the requested Kargo
+  // ServiceAccount resource. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of a Kargo ServiceAccount to retrieve.
+  string name = 3;
+  // format specifies the desired response format (structured object or raw
+  // YAML or JSON).
+  RawFormat format = 4;
+}
+
+// GetServiceAccountResponse contains the details of the requested Kargo
+// ServiceAccount resource.
+message GetServiceAccountResponse {
+  oneof result {
+    // serviceAccount is a structured ServiceAccount.
+    k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+    // raw is a raw YAML or JSON representation of the requested resource.
+    bytes raw = 2;
+  }
+}
+
+// ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount
+// resources.
+message ListServiceAccountsRequest {
+  // system_level indicates whether the request is to list Kargo ServiceAccounts
+  // at the system-level instead of the project-level. This value is ignored if
+  // system_level is true.
+  bool system_level = 1;
+  // project is the name of the project for which to list all Kargo
+  // ServiceAccount resources.
+  string project = 2;
+}
+
+// ListServiceAccountsResponse contains a list of Kargo ServiceAccount
+// resources.
+message ListServiceAccountsResponse {
+  // serviceAccounts is the list of Kargo ServiceAccount resources.
+  repeated k8s.io.api.core.v1.ServiceAccount serviceAccounts = 1;
+}
+
+// CreateServiceAccountTokenRequest is a request to generate a new bearer token
+// associated with a specified Kargo ServiceAccount.
+message CreateServiceAccountTokenRequest {
+  // system_level indicates whether the request is to create a token associated
+  // with a system-level Kargo Service Account instead of one at the
+  // project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the Kargo ServiceAccount
+  // resource for which a new token is being created. This value is ignored if
+  // system_level is true.
+  string project = 2;
+  // service_account_name is the name of the Kargo ServiceAccount for which to
+  // generate a new bearer token.
+  string service_account_name = 3;
+  // name is the name for the bearer token to be created.
+  string name = 4;
+}
+
+// CreateServiceAccountTokenResponse contains a newly generated bearer
+// token in the form of a Kubernetes Secret.
+message CreateServiceAccountTokenResponse {
+  // token_secret is a Kubernetes Secret containing the token.
+  k8s.io.api.core.v1.Secret token_secret = 1;
+}
+
+// DeleteServiceAccountTokenRequest is a request to delete a bearer token
+// associated with a Kargo ServiceAccount.
+message DeleteServiceAccountTokenRequest {
+  // system_level indicates whether the request is to delete a token associated
+  // with a system-level Kargo Service Account instead of one at the
+  // project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the token that is to be
+  // deleted. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the token to delete.
+  string name = 3;
+}
+
+// DeleteServiceAccountTokenResponse is the response returned after deleting a
+// bearer token associated with a Kargo ServiceAccount.
+message DeleteServiceAccountTokenResponse {
+  /* explicitly empty */
+}
+
+// GetServiceAccountTokenRequest is a request to retrieve details of a bearer
+// token associated with a Kargo ServiceAccount.
+message GetServiceAccountTokenRequest {
+  // system_level indicates whether the request is for a token associated with a
+  // system-level Kargo Service Account instead of one at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the requested token. This
+  // value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the token to retrieve.
+  string name = 3;
+  // format specifies the format for raw resource representation.
+  RawFormat format = 4;
+}
+
+// GetServiceAccountTokenResponse contains contains the details of a bearer
+// token associated with a Kargo ServiceAccount.
+message GetServiceAccountTokenResponse {
+  oneof result {
+    // token_secret is a Kubernetes Secrets containing a redacted token
+    // associated with a Kargo ServiceAccount.
+    k8s.io.api.core.v1.Secret token_secret = 1;
+    // raw is a raw YAML or JSON representation of the requested resource.
+    bytes raw = 2;
+  }
+}
+
+// ListServiceAccountTokensRequest is a request to list bearer tokens associated
+// with a specified Kargo ServiceAccount.
+message ListServiceAccountTokensRequest {
+  // system_level indicates whether to list tokens associated with system-level
+  // Kargo Service Accounts instead of ones at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the tokens.
+  string project = 2;
+  // service_account_name is the name of the Kargo ServiceAccount for which
+  // to list associated tokens.
+  string service_account_name = 3;
+}
+
+// ListServiceAccountTokensResponse contains a list of bearer tokens associated
+// with a specified Kargo ServiceAccount.
+message ListServiceAccountTokensResponse {
+  // token_secrets is the list of Kubernetes Secrets containing redacted tokens
+  // associated with a Kargo ServiceAccount.
+  repeated k8s.io.api.core.v1.Secret token_secrets = 1;
 }
 
 // ListClusterSecretsRequest is the request for listing all cluster-level secrets.
