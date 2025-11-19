@@ -26,6 +26,7 @@ const (
 
 	contentTypeHeader     = "Content-Type"
 	contentTypeJSON       = "application/json"
+	contentTypeTextPlain  = "text/plain"
 	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 )
@@ -298,19 +299,27 @@ func (h *httpRequester) buildExprEnv(
 		},
 	}
 	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
-	if len(bodyBytes) > 0 && (contentType == contentTypeJSON || json.Valid(bodyBytes)) {
-		var parsedBody any
-		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
-			return nil, fmt.Errorf("failed to parse response: %w", err)
-		}
 
-		// Accept all valid JSON types: objects, arrays, strings, numbers, booleans, and null
-		switch parsedBody.(type) {
-		case map[string]any, []any, string, float64, bool, nil:
-			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
-		default:
-			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
+	if len(bodyBytes) > 0 {
+		// Handle text/plain responses by storing the raw text
+		if contentType == contentTypeTextPlain {
+			env["response"].(map[string]any)["body"] = string(bodyBytes) // nolint: forcetypeassert
+		} else if contentType == contentTypeJSON || json.Valid(bodyBytes) {
+			// Handle JSON responses (either explicit content-type or valid JSON)
+			var parsedBody any
+			if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
+				return nil, fmt.Errorf("failed to parse response: %w", err)
+			}
+
+			// Unmarshal into map[string]any or []any
+			switch parsedBody.(type) {
+			case map[string]any, []any:
+				env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
+			default:
+				return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
+			}
 		}
+		// For other content types or non-JSON content, body remains as empty map # do I need this??
 	}
 
 	return env, nil
