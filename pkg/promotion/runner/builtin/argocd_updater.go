@@ -182,7 +182,16 @@ func (a *argocdUpdater) run(
 			)
 		}
 
-		// Process each matched application
+		// Log the number of applications matched when using selectors.
+		if update.Selector != nil && len(apps) > 0 {
+			logger.Info(
+				"found Applications matching selector",
+				"count", len(apps),
+				"namespace", update.Namespace,
+			)
+		}
+
+		// Process each matched application.
 		for _, app := range apps {
 			desiredRevisions := a.getDesiredRevisions(update, app)
 			appHealthChecks = append(appHealthChecks, checkers.ArgoCDAppHealthCheck{
@@ -191,86 +200,21 @@ func (a *argocdUpdater) run(
 				DesiredRevisions: desiredRevisions,
 			})
 
-			appLogger := logger.WithValues("app", app.Name, "namespace", app.Namespace)
+			// Process the application and get its phase.
+			phase, err := a.processApplication(ctx, stepCtx, update, app)
+			if err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+			}
 
-			// Check if the update needs to be performed and retrieve its phase.
-			phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, stepCtx, update, app)
-			if mustUpdate {
-				appLogger.Info("Argo CD Application requires update")
-			} else {
-				appLogger.Info("Argo CD Application does not require update")
+			// If the phase indicates failure, fail-fast.
+			if phase.Failed() {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, nil
 			}
 
 			// If we have a phase, append it to the results.
 			if phase != "" {
 				updateResults = append(updateResults, phase)
 			}
-
-			// If we don't need to perform an update, further processing depends on
-			// the phase and whether an error occurred.
-			if !mustUpdate {
-				if err != nil {
-					if phase == "" {
-						// If we do not have a phase, we cannot continue processing
-						// this update by waiting.
-						return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
-					}
-					// Log the error for observability but continue processing other
-					// updates.
-					appLogger.Info("Argo CD Application update cannot be performed", "reason", err.Error())
-				}
-				if phase.Failed() {
-					// Record the reason for the failure if available.
-					if app.Status.OperationState != nil {
-						// nolint:staticcheck
-						return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-							"Argo CD Application %q in namespace %q failed with: %s",
-							app.Name,
-							app.Namespace,
-							app.Status.OperationState.Message,
-						)
-					}
-					// If the update failed, we can short-circuit. This is
-					// effectively "fail fast" behavior.
-					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, nil
-				}
-				// If we get here, we can continue to the next update.
-				continue
-			}
-
-			// Log the error, as it contains information about why we need to
-			// perform an update.
-			if err != nil {
-				appLogger.Info("performing update of Argo CD Application", "reason", err.Error())
-			}
-
-			// Build the desired source(s) for the Argo CD Application.
-			desiredSources, err := a.buildDesiredSourcesFn(
-				update,
-				desiredRevisions,
-				app,
-			)
-			if err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-					"error building desired sources for Argo CD Application %q in namespace %q: %w",
-					app.Name, app.Namespace, err,
-				)
-			}
-
-			// Perform the update.
-			if err = a.syncApplicationFn(
-				ctx,
-				stepCtx,
-				app,
-				desiredSources,
-			); err != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-					"error syncing Argo CD Application %q in namespace %q: %w",
-					app.Name, app.Namespace, err,
-				)
-			}
-			// As we have initiated an update, we should wait for it to complete.
-			updateResults = append(updateResults, argocd.OperationRunning)
 		}
 	}
 
@@ -310,6 +254,93 @@ func (a *argocdUpdater) run(
 	}, nil
 }
 
+// processApplication handles the update logic for a single Argo CD Application.
+// It returns the operation phase (if any) and an error if processing failed.
+func (a *argocdUpdater) processApplication(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	update *builtin.ArgoCDAppUpdate,
+	app *argocd.Application,
+) (argocd.OperationPhase, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("app", app.Name, "namespace", app.Namespace)
+
+	// Check if the update needs to be performed and retrieve its phase.
+	phase, mustUpdate, err := a.mustPerformUpdateFn(ctx, stepCtx, update, app)
+	if mustUpdate {
+		logger.Info("Argo CD Application requires update")
+	} else {
+		logger.Info("Argo CD Application does not require update")
+	}
+
+	// If we don't need to perform an update, further processing depends on
+	// the phase and whether an error occurred.
+	if !mustUpdate {
+		if err != nil {
+			if phase == "" {
+				// If we do not have a phase, we cannot continue processing
+				// this update by waiting.
+				return "", err
+			}
+			// Log the error for observability but continue processing other
+			// updates.
+			logger.Info("Argo CD Application update cannot be performed", "reason", err.Error())
+		}
+		if phase.Failed() {
+			// Record the reason for the failure if available.
+			if app.Status.OperationState != nil {
+				// nolint:staticcheck
+				return "", fmt.Errorf(
+					"Argo CD Application %q in namespace %q failed with: %s",
+					app.Name,
+					app.Namespace,
+					app.Status.OperationState.Message,
+				)
+			}
+			// If the update failed, we can short-circuit. This is
+			// effectively "fail fast" behavior.
+			return phase, nil
+		}
+		// Return the phase without error to indicate we should continue
+		return phase, nil
+	}
+
+	// Log the error, as it contains information about why we need to
+	// perform an update.
+	if err != nil {
+		logger.Info("performing update of Argo CD Application", "reason", err.Error())
+	}
+
+	// Build the desired source(s) for the Argo CD Application.
+	desiredRevisions := a.getDesiredRevisions(update, app)
+	desiredSources, err := a.buildDesiredSourcesFn(
+		update,
+		desiredRevisions,
+		app,
+	)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error building desired sources for Argo CD Application %q in namespace %q: %w",
+			app.Name, app.Namespace, err,
+		)
+	}
+
+	// Perform the update.
+	if err = a.syncApplicationFn(
+		ctx,
+		stepCtx,
+		app,
+		desiredSources,
+	); err != nil {
+		return "", fmt.Errorf(
+			"error syncing Argo CD Application %q in namespace %q: %w",
+			app.Name, app.Namespace, err,
+		)
+	}
+
+	// As we have initiated an update, we should wait for it to complete.
+	return argocd.OperationRunning, nil
+}
+
 // buildDesiredSources returns the desired source(s) for an Argo CD Application,
 // by updating the current source(s) with the given source updates.
 func (a *argocdUpdater) buildDesiredSources(
@@ -344,6 +375,7 @@ updateLoop:
 			}
 		}
 
+		// If we get here, the update was not applied to any source
 		if srcUpdate.Chart == "" {
 			return nil, fmt.Errorf(
 				"no source of Argo CD Application %q in namespace %q matched update "+
@@ -727,7 +759,7 @@ func (a *argocdUpdater) getAuthorizedApplications(
 			client.MatchingLabelsSelector{Selector: labelSelector},
 		}
 
-		if err := a.argocdClient.List(ctx, appList, listOpts...); err != nil {
+		if err = a.argocdClient.List(ctx, appList, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing Argo CD Applications: %w", err)
 		}
 
@@ -759,7 +791,7 @@ func (a *argocdUpdater) getAuthorizedApplications(
 	for _, app := range apps {
 		if err := a.authorizeArgoCDAppUpdate(stepCtx, app.ObjectMeta); err != nil {
 			// Log warning but continue with other apps
-			logger.Debug(
+			logger.Info(
 				"skipping unauthorized Application",
 				"app", app.Name,
 				"namespace", app.Namespace,
@@ -772,7 +804,17 @@ func (a *argocdUpdater) getAuthorizedApplications(
 
 	if len(authorizedApps) == 0 {
 		if update.Selector != nil {
-			return nil, fmt.Errorf("no authorized Argo CD Applications found matching selector in namespace %q", namespace)
+			totalAppsFound := len(apps)
+			if totalAppsFound == 0 {
+				return nil, fmt.Errorf(
+					"no Argo CD Applications found matching selector in namespace %q",
+					namespace,
+				)
+			}
+			return nil, fmt.Errorf(
+				"found %d Application(s) matching selector in namespace %q, but none are authorized for Stage %s:%s",
+				totalAppsFound, namespace, stepCtx.Project, stepCtx.Stage,
+			)
 		}
 		// nolint:staticcheck
 		return nil, fmt.Errorf(
@@ -872,9 +914,12 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 func (a *argocdUpdater) buildLabelSelector(
 	selector *builtin.ArgoCDAppSelector,
 ) (labels.Selector, error) {
+	if len(selector.MatchLabels) == 0 && len(selector.MatchExpressions) == 0 {
+		return nil, fmt.Errorf("selector must have at least one match criterion")
+	}
+
 	labelSelector := labels.NewSelector()
 
-	// Add matchLabels
 	for key, value := range selector.MatchLabels {
 		req, err := labels.NewRequirement(key, selection.Equals, []string{value})
 		if err != nil {
@@ -883,7 +928,6 @@ func (a *argocdUpdater) buildLabelSelector(
 		labelSelector = labelSelector.Add(*req)
 	}
 
-	// Add matchExpressions
 	for _, expr := range selector.MatchExpressions {
 		var op selection.Operator
 		switch expr.Operator {
