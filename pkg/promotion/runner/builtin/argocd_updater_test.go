@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,7 +30,8 @@ func Test_newArgocdUpdater(t *testing.T) {
 	require.True(t, ok)
 	require.NotNil(t, runner.argocdClient)
 	require.NotNil(t, runner.schemaLoader)
-	require.NotNil(t, runner.getAuthorizedApplicationFn)
+	require.NotNil(t, runner.getAuthorizedApplicationsFn)
+	require.NotNil(t, runner.buildLabelSelectorFn)
 	require.NotNil(t, runner.buildDesiredSourcesFn)
 	require.NotNil(t, runner.mustPerformUpdateFn)
 	require.NotNil(t, runner.syncApplicationFn)
@@ -188,7 +190,7 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 				}},
 			},
 			expectedProblems: []string{
-				"apps.0.selector.matchExpressions.0.operator: apps.0.selector.matchExpressions.0.operator must be one of the following:",
+				"apps.0.selector.matchExpressions.0.operator must be one of the following",
 			},
 		},
 		{
@@ -204,7 +206,7 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 				}},
 			},
 			expectedProblems: []string{
-				"apps.0.selector.matchExpressions.0.operator: apps.0.selector.matchExpressions.0.operator must be one of the following:",
+				"apps.0.selector.matchExpressions.0.operator must be one of the following",
 			},
 		},
 		{
@@ -520,11 +522,11 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "error retrieving authorized application",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -542,12 +544,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "error determining if update is necessary",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -571,12 +573,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "determination error can be solved by applying update",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				buildDesiredSourcesFn: func(
 					*builtin.ArgoCDAppUpdate,
@@ -615,12 +617,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "must wait for update to complete",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -644,12 +646,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "must wait for operation from different user to complete",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -673,12 +675,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "error building desired sources",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -710,12 +712,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "error applying update",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -755,12 +757,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "failed and pending update",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func() func(
 					context.Context,
@@ -811,12 +813,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			name: "operation phase aggregation error",
 			runner: &argocdUpdater{
 				argocdClient: fake.NewFakeClient(),
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -839,12 +841,12 @@ func Test_argoCDUpdater_run(t *testing.T) {
 		{
 			name: "completed",
 			runner: &argocdUpdater{
-				getAuthorizedApplicationFn: func(
+				getAuthorizedApplicationsFn: func(
 					context.Context,
 					*promotion.StepContext,
-					client.ObjectKey,
-				) (*argocd.Application, error) {
-					return &argocd.Application{}, nil
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{}}, nil
 				},
 				mustPerformUpdateFn: func(
 					context.Context,
@@ -863,6 +865,294 @@ func Test_argoCDUpdater_run(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 				require.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
+			},
+		},
+		{
+			name: "selector returns multiple apps - all succeed",
+			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationsFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{
+						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app3", Namespace: "argocd"}},
+					}, nil
+				},
+				mustPerformUpdateFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					return argocd.OperationSucceeded, false, nil
+				},
+			},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Nil(t, res.RetryAfter)
+				require.NoError(t, err)
+				// Verify health checks include all 3 apps
+				require.NotNil(t, res.HealthCheck)
+				apps, ok := res.HealthCheck.Input["apps"]
+				require.True(t, ok)
+				require.Len(t, apps, 3)
+			},
+		},
+		{
+			name: "selector returns multiple apps - one fails during sync",
+			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationsFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{
+						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app3", Namespace: "argocd"}},
+					}, nil
+				},
+				mustPerformUpdateFn: func() func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					var count int
+					return func(
+						_ context.Context,
+						_ *promotion.StepContext,
+						_ *builtin.ArgoCDAppUpdate,
+						_ *argocd.Application,
+					) (argocd.OperationPhase, bool, error) {
+						count++
+						if count == 1 {
+							// App1: already synced, no update needed
+							return argocd.OperationSucceeded, false, nil
+						}
+						// App2: needs update
+						return "", true, nil
+					}
+				}(),
+				buildDesiredSourcesFn: func(
+					*builtin.ArgoCDAppUpdate,
+					[]string,
+					*argocd.Application,
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
+				},
+				syncApplicationFn: func(
+					_ context.Context,
+					_ *promotion.StepContext,
+					app *argocd.Application,
+					_ argocd.ApplicationSources,
+				) error {
+					if app.Name == "app2" {
+						return errors.New("sync failed for app2")
+					}
+					return nil
+				},
+			},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
+				require.ErrorContains(t, err, "error syncing Argo CD Application")
+				require.ErrorContains(t, err, "app2")
+				require.ErrorContains(t, err, "sync failed for app2")
+			},
+		},
+		{
+			name: "selector returns multiple apps - mixed phases",
+			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationsFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{
+						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
+						{ObjectMeta: metav1.ObjectMeta{Name: "app3", Namespace: "argocd"}},
+					}, nil
+				},
+				mustPerformUpdateFn: func() func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					var count int
+					return func(
+						_ context.Context,
+						_ *promotion.StepContext,
+						_ *builtin.ArgoCDAppUpdate,
+						_ *argocd.Application,
+					) (argocd.OperationPhase, bool, error) {
+						count++
+						switch count {
+						case 1:
+							// App1: completed
+							return argocd.OperationSucceeded, false, nil
+						case 2:
+							// App2: still running
+							return argocd.OperationRunning, false, nil
+						case 3:
+							// App3: needs update
+							return "", true, nil
+						default:
+							return "", false, nil
+						}
+					}
+				}(),
+				buildDesiredSourcesFn: func(
+					*builtin.ArgoCDAppUpdate,
+					[]string,
+					*argocd.Application,
+				) (argocd.ApplicationSources, error) {
+					return []argocd.ApplicationSource{{}}, nil
+				},
+				syncApplicationFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*argocd.Application,
+					argocd.ApplicationSources,
+				) error {
+					return nil
+				},
+			},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				require.NotNil(t, res.RetryAfter)
+				require.NoError(t, err)
+				// Verify health checks include all 3 apps
+				require.NotNil(t, res.HealthCheck)
+				apps, ok := res.HealthCheck.Input["apps"]
+				require.True(t, ok)
+				require.Len(t, apps, 3)
+			},
+		},
+		{
+			name: "selector returns multiple apps - one operation failed",
+			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationsFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{
+						{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
+						{
+							ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"},
+							Status: argocd.ApplicationStatus{
+								OperationState: &argocd.OperationState{
+									Message: "deployment failed: timeout",
+								},
+							},
+						},
+					}, nil
+				},
+				mustPerformUpdateFn: func() func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					var count int
+					return func(
+						_ context.Context,
+						_ *promotion.StepContext,
+						_ *builtin.ArgoCDAppUpdate,
+						_ *argocd.Application,
+					) (argocd.OperationPhase, bool, error) {
+						count++
+						if count == 1 {
+							// App1: succeeded
+							return argocd.OperationSucceeded, false, nil
+						}
+						// App2: failed
+						return argocd.OperationFailed, false, nil
+					}
+				}(),
+			},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{{}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.Nil(t, res.RetryAfter)
+				require.ErrorContains(t, err, "app2")
+				require.ErrorContains(t, err, "deployment failed: timeout")
+			},
+		},
+		{
+			name: "mixed name and selector updates",
+			runner: &argocdUpdater{
+				argocdClient: fake.NewFakeClient(),
+				getAuthorizedApplicationsFn: func() func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+				) ([]*argocd.Application, error) {
+					var count int
+					return func(
+						_ context.Context,
+						_ *promotion.StepContext,
+						_ *builtin.ArgoCDAppUpdate,
+					) ([]*argocd.Application, error) {
+						count++
+						if count == 1 {
+							// First update config: name-based (returns 1 app)
+							return []*argocd.Application{
+								{ObjectMeta: metav1.ObjectMeta{Name: "app-by-name", Namespace: "argocd"}},
+							}, nil
+						}
+						// Second update config: selector-based (returns 2 apps)
+						return []*argocd.Application{
+							{ObjectMeta: metav1.ObjectMeta{Name: "app1", Namespace: "argocd"}},
+							{ObjectMeta: metav1.ObjectMeta{Name: "app2", Namespace: "argocd"}},
+						}, nil
+					}
+				}(),
+				mustPerformUpdateFn: func(
+					context.Context,
+					*promotion.StepContext,
+					*builtin.ArgoCDAppUpdate,
+					*argocd.Application,
+				) (argocd.OperationPhase, bool, error) {
+					return argocd.OperationSucceeded, false, nil
+				},
+			},
+			stepCfg: builtin.ArgoCDUpdateConfig{
+				Apps: []builtin.ArgoCDAppUpdate{
+					{Name: "app-by-name"}, // Name-based
+					{},                    // Selector-based (empty for simplicity)
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Nil(t, res.RetryAfter)
+				require.NoError(t, err)
+				// Verify health checks include all 3 apps (1 from name + 2 from selector)
+				require.NotNil(t, res.HealthCheck)
+				apps, ok := res.HealthCheck.Input["apps"]
+				require.True(t, ok)
+				require.Len(t, apps, 3)
 			},
 		},
 	}
@@ -1572,7 +1862,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-				...client.GetOption,
+					...client.GetOption,
 				) error {
 					return errors.New("something went wrong")
 				},
@@ -2094,6 +2384,371 @@ func Test_argoCDUpdater_recursiveMerge(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			result := runner.recursiveMerge(tc.src, tc.dst)
 			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
+func Test_argoCDUpdater_buildLabelSelector(t *testing.T) {
+	testCases := []struct {
+		name       string
+		selector   *builtin.ArgoCDAppSelector
+		assertions func(*testing.T, labels.Selector, error)
+	}{
+		{
+			name: "selector with matchLabels only",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchLabels: map[string]string{
+					"env":  "prod",
+					"team": "platform",
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"env": "prod", "team": "platform"}))
+				require.False(t, sel.Matches(labels.Set{"env": "dev", "team": "platform"}))
+			},
+		},
+		{
+			name: "selector with matchExpressions only",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchExpressions: []builtin.MatchExpression{
+					{
+						Key:      "env",
+						Operator: builtin.In,
+						Values:   []string{"prod", "staging"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"env": "prod"}))
+				require.True(t, sel.Matches(labels.Set{"env": "staging"}))
+				require.False(t, sel.Matches(labels.Set{"env": "dev"}))
+			},
+		},
+		{
+			name: "selector with both matchLabels and matchExpressions",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchLabels: map[string]string{
+					"team": "platform",
+				},
+				MatchExpressions: []builtin.MatchExpression{
+					{
+						Key:      "env",
+						Operator: builtin.In,
+						Values:   []string{"prod", "staging"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"env": "prod", "team": "platform"}))
+				require.False(t, sel.Matches(labels.Set{"env": "prod", "team": "other"}))
+				require.False(t, sel.Matches(labels.Set{"env": "dev", "team": "platform"}))
+			},
+		},
+		{
+			name: "selector with NotIn operator",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchExpressions: []builtin.MatchExpression{
+					{
+						Key:      "env",
+						Operator: builtin.NotIn,
+						Values:   []string{"dev", "test"},
+					},
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"env": "prod"}))
+				require.False(t, sel.Matches(labels.Set{"env": "dev"}))
+			},
+		},
+		{
+			name: "selector with Exists operator",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchExpressions: []builtin.MatchExpression{
+					{
+						Key:      "environment",
+						Operator: builtin.Exists,
+					},
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"environment": "prod"}))
+				require.False(t, sel.Matches(labels.Set{"env": "prod"}))
+			},
+		},
+		{
+			name: "selector with DoesNotExist operator",
+			selector: &builtin.ArgoCDAppSelector{
+				MatchExpressions: []builtin.MatchExpression{
+					{
+						Key:      "deprecated",
+						Operator: builtin.DoesNotExist,
+					},
+				},
+			},
+			assertions: func(t *testing.T, sel labels.Selector, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, sel)
+				require.True(t, sel.Matches(labels.Set{"env": "prod"}))
+				require.False(t, sel.Matches(labels.Set{"deprecated": "true"}))
+			},
+		},
+	}
+
+	runner := &argocdUpdater{}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			sel, err := runner.buildLabelSelector(testCase.selector)
+			testCase.assertions(t, sel, err)
+		})
+	}
+}
+
+func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, argocd.AddToScheme(scheme))
+
+	testCases := []struct {
+		name        string
+		apps        []*argocd.Application
+		update      *builtin.ArgoCDAppUpdate
+		interceptor interceptor.Funcs
+		assertions  func(*testing.T, []*argocd.Application, error)
+	}{
+		{
+			name: "selector returns multiple authorized apps",
+			apps: []*argocd.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app1",
+						Namespace: "argocd",
+						Labels: map[string]string{
+							"env": "prod",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-project:fake-stage",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app2",
+						Namespace: "argocd",
+						Labels: map[string]string{
+							"env": "prod",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-project:fake-stage",
+						},
+					},
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{
+				Namespace: "argocd",
+				Selector: &builtin.ArgoCDAppSelector{
+					MatchLabels: map[string]string{
+						"env": "prod",
+					},
+				},
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.NoError(t, err)
+				require.Len(t, apps, 2)
+				require.Equal(t, "app1", apps[0].Name)
+				require.Equal(t, "app2", apps[1].Name)
+			},
+		},
+		{
+			name: "selector filters out unauthorized apps",
+			apps: []*argocd.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app1",
+						Namespace: "argocd",
+						Labels: map[string]string{
+							"env": "prod",
+						},
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-project:fake-stage",
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app2",
+						Namespace: "argocd",
+						Labels: map[string]string{
+							"env": "prod",
+						},
+						// No authorization annotation
+					},
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{
+				Namespace: "argocd",
+				Selector: &builtin.ArgoCDAppSelector{
+					MatchLabels: map[string]string{
+						"env": "prod",
+					},
+				},
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.NoError(t, err)
+				require.Len(t, apps, 1)
+				require.Equal(t, "app1", apps[0].Name)
+			},
+		},
+		{
+			name: "selector returns no apps",
+			apps: []*argocd.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "app1",
+						Namespace: "argocd",
+						Labels: map[string]string{
+							"env": "dev",
+						},
+					},
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{
+				Namespace: "argocd",
+				Selector: &builtin.ArgoCDAppSelector{
+					MatchLabels: map[string]string{
+						"env": "prod",
+					},
+				},
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "no authorized Argo CD Applications found")
+				require.Nil(t, apps)
+			},
+		},
+		{
+			name: "name-based selection returns single app",
+			apps: []*argocd.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-app",
+						Namespace: "argocd",
+						Annotations: map[string]string{
+							kargoapi.AnnotationKeyAuthorizedStage: "fake-project:fake-stage",
+						},
+					},
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{
+				Name:      "my-app",
+				Namespace: "argocd",
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.NoError(t, err)
+				require.Len(t, apps, 1)
+				require.Equal(t, "my-app", apps[0].Name)
+			},
+		},
+		{
+			name: "name-based selection app not found",
+			apps: []*argocd.Application{},
+			update: &builtin.ArgoCDAppUpdate{
+				Name:      "nonexistent-app",
+				Namespace: "argocd",
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "unable to find Argo CD Application")
+				require.Nil(t, apps)
+			},
+		},
+		{
+			name: "name-based selection app not authorized",
+			apps: []*argocd.Application{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "my-app",
+						Namespace: "argocd",
+						// No authorization annotation
+					},
+				},
+			},
+			update: &builtin.ArgoCDAppUpdate{
+				Name:      "my-app",
+				Namespace: "argocd",
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "is not authorized")
+				require.Nil(t, apps)
+			},
+		},
+		{
+			name: "error listing applications",
+			update: &builtin.ArgoCDAppUpdate{
+				Namespace: "argocd",
+				Selector: &builtin.ArgoCDAppSelector{
+					MatchLabels: map[string]string{
+						"env": "prod",
+					},
+				},
+			},
+			interceptor: interceptor.Funcs{
+				List: func(
+					context.Context,
+					client.WithWatch,
+					client.ObjectList,
+					...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, apps []*argocd.Application, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "error listing Argo CD Applications")
+				require.ErrorContains(t, err, "something went wrong")
+				require.Nil(t, apps)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithInterceptorFuncs(testCase.interceptor)
+
+			if len(testCase.apps) > 0 {
+				objects := make([]client.Object, len(testCase.apps))
+				for i, app := range testCase.apps {
+					objects[i] = app
+				}
+				c.WithObjects(objects...)
+			}
+
+			runner := &argocdUpdater{
+				argocdClient: c.Build(),
+			}
+			runner.buildLabelSelectorFn = runner.buildLabelSelector
+
+			apps, err := runner.getAuthorizedApplications(
+				context.Background(),
+				&promotion.StepContext{
+					Project: "fake-project",
+					Stage:   "fake-stage",
+				},
+				testCase.update,
+			)
+			testCase.assertions(t, apps, err)
 		})
 	}
 }
