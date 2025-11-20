@@ -6,7 +6,7 @@ import { zodValidators } from '@ui/utils/validators';
 const imageNameRegex =
   /^(?![a-zA-Z][a-zA-Z0-9+.-]*:\/\/)(\w+([.-]\w+)*(:\d+)?\/)?(\w+([.-]\w+)*)(\/\w+([.-]\w+)*)*$/;
 
-export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
+export const createFormSchema = (genericCreds: boolean, editing?: boolean, isSSH?: boolean) => {
   let schema = z
     .object({
       name: zodValidators.requiredString.regex(
@@ -17,8 +17,14 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
       type: zodValidators.requiredString,
       repoUrl: zodValidators.requiredString,
       repoUrlIsRegex: z.boolean().optional(),
-      username: zodValidators.requiredString,
-      password: editing ? z.string().optional() : zodValidators.requiredString
+      ...(isSSH
+        ? {
+            sshPrivateKey: zodValidators.requiredString
+          }
+        : {
+            username: zodValidators.requiredString,
+            password: editing ? z.string().optional() : zodValidators.requiredString
+          })
     })
     .check(
       z.refine(
@@ -27,7 +33,7 @@ export const createFormSchema = (genericCreds: boolean, editing?: boolean) => {
             try {
               new URL(data.repoUrl);
             } catch {
-              return false;
+              return true;
             }
           }
 

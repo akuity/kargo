@@ -46,14 +46,7 @@ export const CredentialsSettings = () => {
   const specificCredentials: Secret[] = listCredentialsQuery.data?.credentials || [];
   const genericCredentials: Secret[] = listSecretsQuery.data?.secrets || [];
 
-  const { show: showCreate } = useModal((p) => (
-    <CreateCredentialsModal
-      type='repo'
-      project={name || ''}
-      onSuccess={listCredentialsQuery.refetch}
-      {...p}
-    />
-  ));
+  const { show: showCreate } = useModal();
 
   const { show: showCreateGeneric } = useModal((p) => (
     <CreateCredentialsModal
@@ -133,7 +126,7 @@ export const CredentialsSettings = () => {
             {
               key: 'actions',
               fixed: 'right',
-              render: (record) => (
+              render: (_, record) => (
                 <Space>
                   <Button
                     icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
