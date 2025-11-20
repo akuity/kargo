@@ -9692,6 +9692,1012 @@ func (x *UpdateRoleResponse) GetRole() *v1alpha12.Role {
 	return nil
 }
 
+// CreateServiceAccountRequest is a request to create a new Kargo
+// ServiceAccount resource.
+type CreateServiceAccountRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// serviceAccount is the Kargo ServiceAccount to create.
+	ServiceAccount *v1.ServiceAccount `protobuf:"bytes,1,opt,name=serviceAccount,proto3" json:"serviceAccount,omitempty"`
+}
+
+func (x *CreateServiceAccountRequest) Reset() {
+	*x = CreateServiceAccountRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[164]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateServiceAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServiceAccountRequest) ProtoMessage() {}
+
+func (x *CreateServiceAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[164]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServiceAccountRequest.ProtoReflect.Descriptor instead.
+func (*CreateServiceAccountRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{164}
+}
+
+func (x *CreateServiceAccountRequest) GetServiceAccount() *v1.ServiceAccount {
+	if x != nil {
+		return x.ServiceAccount
+	}
+	return nil
+}
+
+// CreateServiceAccountResponse contains the details of a newly created Kargo
+// ServiceAccount resource.
+type CreateServiceAccountResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// serviceAccount is the newly created Kargo ServiceAccount resource.
+	ServiceAccount *v1.ServiceAccount `protobuf:"bytes,1,opt,name=serviceAccount,proto3" json:"serviceAccount,omitempty"`
+}
+
+func (x *CreateServiceAccountResponse) Reset() {
+	*x = CreateServiceAccountResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[165]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateServiceAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServiceAccountResponse) ProtoMessage() {}
+
+func (x *CreateServiceAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[165]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServiceAccountResponse.ProtoReflect.Descriptor instead.
+func (*CreateServiceAccountResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{165}
+}
+
+func (x *CreateServiceAccountResponse) GetServiceAccount() *v1.ServiceAccount {
+	if x != nil {
+		return x.ServiceAccount
+	}
+	return nil
+}
+
+// DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount
+// resource.
+type DeleteServiceAccountRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// project is the name of the project containing the Kargo ServiceAccount
+	// resource.
+	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the Kargo ServiceAccount resource to delete.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *DeleteServiceAccountRequest) Reset() {
+	*x = DeleteServiceAccountRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[166]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteServiceAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceAccountRequest) ProtoMessage() {}
+
+func (x *DeleteServiceAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[166]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceAccountRequest.ProtoReflect.Descriptor instead.
+func (*DeleteServiceAccountRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{166}
+}
+
+func (x *DeleteServiceAccountRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *DeleteServiceAccountRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// DeleteServiceAccountResponse is the response returned after deleting a Kargo
+// ServiceAccount resource.
+type DeleteServiceAccountResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *DeleteServiceAccountResponse) Reset() {
+	*x = DeleteServiceAccountResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[167]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteServiceAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceAccountResponse) ProtoMessage() {}
+
+func (x *DeleteServiceAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[167]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceAccountResponse.ProtoReflect.Descriptor instead.
+func (*DeleteServiceAccountResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{167}
+}
+
+// GetServiceAccountRequest is a request for the details of specific Kargo
+// ServiceAccount resource.
+type GetServiceAccountRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether the request is for a system-level Kargo
+	// Service Account instead of one at the project-level.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project containing the requested Kargo
+	// ServiceAccount resource. This value is ignored if system_level is true.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of a Kargo ServiceAccount to retrieve.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the desired response format (structured object or raw
+	// YAML or JSON).
+	Format RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+}
+
+func (x *GetServiceAccountRequest) Reset() {
+	*x = GetServiceAccountRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[168]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetServiceAccountRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServiceAccountRequest) ProtoMessage() {}
+
+func (x *GetServiceAccountRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[168]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServiceAccountRequest.ProtoReflect.Descriptor instead.
+func (*GetServiceAccountRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{168}
+}
+
+func (x *GetServiceAccountRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *GetServiceAccountRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *GetServiceAccountRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetServiceAccountRequest) GetFormat() RawFormat {
+	if x != nil {
+		return x.Format
+	}
+	return RawFormat_RAW_FORMAT_UNSPECIFIED
+}
+
+// GetServiceAccountResponse contains the details of the requested Kargo
+// ServiceAccount resource.
+type GetServiceAccountResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Result:
+	//
+	//	*GetServiceAccountResponse_ServiceAccount
+	//	*GetServiceAccountResponse_Raw
+	Result isGetServiceAccountResponse_Result `protobuf_oneof:"result"`
+}
+
+func (x *GetServiceAccountResponse) Reset() {
+	*x = GetServiceAccountResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[169]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetServiceAccountResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServiceAccountResponse) ProtoMessage() {}
+
+func (x *GetServiceAccountResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[169]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServiceAccountResponse.ProtoReflect.Descriptor instead.
+func (*GetServiceAccountResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{169}
+}
+
+func (m *GetServiceAccountResponse) GetResult() isGetServiceAccountResponse_Result {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
+func (x *GetServiceAccountResponse) GetServiceAccount() *v1.ServiceAccount {
+	if x, ok := x.GetResult().(*GetServiceAccountResponse_ServiceAccount); ok {
+		return x.ServiceAccount
+	}
+	return nil
+}
+
+func (x *GetServiceAccountResponse) GetRaw() []byte {
+	if x, ok := x.GetResult().(*GetServiceAccountResponse_Raw); ok {
+		return x.Raw
+	}
+	return nil
+}
+
+type isGetServiceAccountResponse_Result interface {
+	isGetServiceAccountResponse_Result()
+}
+
+type GetServiceAccountResponse_ServiceAccount struct {
+	// serviceAccount is a structured ServiceAccount.
+	ServiceAccount *v1.ServiceAccount `protobuf:"bytes,1,opt,name=serviceAccount,proto3,oneof"`
+}
+
+type GetServiceAccountResponse_Raw struct {
+	// raw is a raw YAML or JSON representation of the requested resource.
+	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
+}
+
+func (*GetServiceAccountResponse_ServiceAccount) isGetServiceAccountResponse_Result() {}
+
+func (*GetServiceAccountResponse_Raw) isGetServiceAccountResponse_Result() {}
+
+// ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount
+// resources.
+type ListServiceAccountsRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether the request is to list Kargo ServiceAccounts
+	// at the system-level instead of the project-level. This value is ignored if
+	// system_level is true.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project for which to list all Kargo
+	// ServiceAccount resources.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+}
+
+func (x *ListServiceAccountsRequest) Reset() {
+	*x = ListServiceAccountsRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[170]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListServiceAccountsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceAccountsRequest) ProtoMessage() {}
+
+func (x *ListServiceAccountsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[170]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceAccountsRequest.ProtoReflect.Descriptor instead.
+func (*ListServiceAccountsRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{170}
+}
+
+func (x *ListServiceAccountsRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *ListServiceAccountsRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+// ListServiceAccountsResponse contains a list of Kargo ServiceAccount
+// resources.
+type ListServiceAccountsResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// serviceAccounts is the list of Kargo ServiceAccount resources.
+	ServiceAccounts []*v1.ServiceAccount `protobuf:"bytes,1,rep,name=serviceAccounts,proto3" json:"serviceAccounts,omitempty"`
+}
+
+func (x *ListServiceAccountsResponse) Reset() {
+	*x = ListServiceAccountsResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[171]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListServiceAccountsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceAccountsResponse) ProtoMessage() {}
+
+func (x *ListServiceAccountsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[171]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceAccountsResponse.ProtoReflect.Descriptor instead.
+func (*ListServiceAccountsResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{171}
+}
+
+func (x *ListServiceAccountsResponse) GetServiceAccounts() []*v1.ServiceAccount {
+	if x != nil {
+		return x.ServiceAccounts
+	}
+	return nil
+}
+
+// CreateServiceAccountTokenRequest is a request to generate a new bearer token
+// associated with a specified Kargo ServiceAccount.
+type CreateServiceAccountTokenRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether the request is to create a token associated
+	// with a system-level Kargo Service Account instead of one at the
+	// project-level.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project containing the Kargo ServiceAccount
+	// resource for which a new token is being created. This value is ignored if
+	// system_level is true.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	// service_account_name is the name of the Kargo ServiceAccount for which to
+	// generate a new bearer token.
+	ServiceAccountName string `protobuf:"bytes,3,opt,name=service_account_name,json=serviceAccountName,proto3" json:"service_account_name,omitempty"`
+	// name is the name for the bearer token to be created.
+	Name string `protobuf:"bytes,4,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *CreateServiceAccountTokenRequest) Reset() {
+	*x = CreateServiceAccountTokenRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[172]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateServiceAccountTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServiceAccountTokenRequest) ProtoMessage() {}
+
+func (x *CreateServiceAccountTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[172]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServiceAccountTokenRequest.ProtoReflect.Descriptor instead.
+func (*CreateServiceAccountTokenRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{172}
+}
+
+func (x *CreateServiceAccountTokenRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *CreateServiceAccountTokenRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *CreateServiceAccountTokenRequest) GetServiceAccountName() string {
+	if x != nil {
+		return x.ServiceAccountName
+	}
+	return ""
+}
+
+func (x *CreateServiceAccountTokenRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// CreateServiceAccountTokenResponse contains a newly generated bearer
+// token in the form of a Kubernetes Secret.
+type CreateServiceAccountTokenResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// token_secret is a Kubernetes Secret containing the token.
+	TokenSecret *v1.Secret `protobuf:"bytes,1,opt,name=token_secret,json=tokenSecret,proto3" json:"token_secret,omitempty"`
+}
+
+func (x *CreateServiceAccountTokenResponse) Reset() {
+	*x = CreateServiceAccountTokenResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[173]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *CreateServiceAccountTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateServiceAccountTokenResponse) ProtoMessage() {}
+
+func (x *CreateServiceAccountTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[173]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateServiceAccountTokenResponse.ProtoReflect.Descriptor instead.
+func (*CreateServiceAccountTokenResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{173}
+}
+
+func (x *CreateServiceAccountTokenResponse) GetTokenSecret() *v1.Secret {
+	if x != nil {
+		return x.TokenSecret
+	}
+	return nil
+}
+
+// DeleteServiceAccountTokenRequest is a request to delete a bearer token
+// associated with a Kargo ServiceAccount.
+type DeleteServiceAccountTokenRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether the request is to delete a token associated
+	// with a system-level Kargo Service Account instead of one at the
+	// project-level.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project containing the token that is to be
+	// deleted. This value is ignored if system_level is true.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the token to delete.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+}
+
+func (x *DeleteServiceAccountTokenRequest) Reset() {
+	*x = DeleteServiceAccountTokenRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[174]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteServiceAccountTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceAccountTokenRequest) ProtoMessage() {}
+
+func (x *DeleteServiceAccountTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[174]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceAccountTokenRequest.ProtoReflect.Descriptor instead.
+func (*DeleteServiceAccountTokenRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{174}
+}
+
+func (x *DeleteServiceAccountTokenRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *DeleteServiceAccountTokenRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *DeleteServiceAccountTokenRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+// DeleteServiceAccountTokenResponse is the response returned after deleting a
+// bearer token associated with a Kargo ServiceAccount.
+type DeleteServiceAccountTokenResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+}
+
+func (x *DeleteServiceAccountTokenResponse) Reset() {
+	*x = DeleteServiceAccountTokenResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[175]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *DeleteServiceAccountTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DeleteServiceAccountTokenResponse) ProtoMessage() {}
+
+func (x *DeleteServiceAccountTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[175]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DeleteServiceAccountTokenResponse.ProtoReflect.Descriptor instead.
+func (*DeleteServiceAccountTokenResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{175}
+}
+
+// GetServiceAccountTokenRequest is a request to retrieve details of a bearer
+// token associated with a Kargo ServiceAccount.
+type GetServiceAccountTokenRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether the request is for a token associated with a
+	// system-level Kargo Service Account instead of one at the project-level.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project containing the requested token. This
+	// value is ignored if system_level is true.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	// name is the name of the token to retrieve.
+	Name string `protobuf:"bytes,3,opt,name=name,proto3" json:"name,omitempty"`
+	// format specifies the format for raw resource representation.
+	Format RawFormat `protobuf:"varint,4,opt,name=format,proto3,enum=akuity.io.kargo.service.v1alpha1.RawFormat" json:"format,omitempty"`
+}
+
+func (x *GetServiceAccountTokenRequest) Reset() {
+	*x = GetServiceAccountTokenRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[176]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetServiceAccountTokenRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServiceAccountTokenRequest) ProtoMessage() {}
+
+func (x *GetServiceAccountTokenRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[176]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServiceAccountTokenRequest.ProtoReflect.Descriptor instead.
+func (*GetServiceAccountTokenRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{176}
+}
+
+func (x *GetServiceAccountTokenRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *GetServiceAccountTokenRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *GetServiceAccountTokenRequest) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *GetServiceAccountTokenRequest) GetFormat() RawFormat {
+	if x != nil {
+		return x.Format
+	}
+	return RawFormat_RAW_FORMAT_UNSPECIFIED
+}
+
+// GetServiceAccountTokenResponse contains contains the details of a bearer
+// token associated with a Kargo ServiceAccount.
+type GetServiceAccountTokenResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// Types that are assignable to Result:
+	//
+	//	*GetServiceAccountTokenResponse_TokenSecret
+	//	*GetServiceAccountTokenResponse_Raw
+	Result isGetServiceAccountTokenResponse_Result `protobuf_oneof:"result"`
+}
+
+func (x *GetServiceAccountTokenResponse) Reset() {
+	*x = GetServiceAccountTokenResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[177]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *GetServiceAccountTokenResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetServiceAccountTokenResponse) ProtoMessage() {}
+
+func (x *GetServiceAccountTokenResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[177]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetServiceAccountTokenResponse.ProtoReflect.Descriptor instead.
+func (*GetServiceAccountTokenResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{177}
+}
+
+func (m *GetServiceAccountTokenResponse) GetResult() isGetServiceAccountTokenResponse_Result {
+	if m != nil {
+		return m.Result
+	}
+	return nil
+}
+
+func (x *GetServiceAccountTokenResponse) GetTokenSecret() *v1.Secret {
+	if x, ok := x.GetResult().(*GetServiceAccountTokenResponse_TokenSecret); ok {
+		return x.TokenSecret
+	}
+	return nil
+}
+
+func (x *GetServiceAccountTokenResponse) GetRaw() []byte {
+	if x, ok := x.GetResult().(*GetServiceAccountTokenResponse_Raw); ok {
+		return x.Raw
+	}
+	return nil
+}
+
+type isGetServiceAccountTokenResponse_Result interface {
+	isGetServiceAccountTokenResponse_Result()
+}
+
+type GetServiceAccountTokenResponse_TokenSecret struct {
+	// token_secret is a Kubernetes Secrets containing a redacted token
+	// associated with a Kargo ServiceAccount.
+	TokenSecret *v1.Secret `protobuf:"bytes,1,opt,name=token_secret,json=tokenSecret,proto3,oneof"`
+}
+
+type GetServiceAccountTokenResponse_Raw struct {
+	// raw is a raw YAML or JSON representation of the requested resource.
+	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3,oneof"`
+}
+
+func (*GetServiceAccountTokenResponse_TokenSecret) isGetServiceAccountTokenResponse_Result() {}
+
+func (*GetServiceAccountTokenResponse_Raw) isGetServiceAccountTokenResponse_Result() {}
+
+// ListServiceAccountTokensRequest is a request to list bearer tokens associated
+// with a specified Kargo ServiceAccount.
+type ListServiceAccountTokensRequest struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// system_level indicates whether to list tokens associated with system-level
+	// Kargo Service Accounts instead of ones at the project-level.
+	SystemLevel bool `protobuf:"varint,1,opt,name=system_level,json=systemLevel,proto3" json:"system_level,omitempty"`
+	// project is the name of the project containing the tokens.
+	Project string `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
+	// service_account_name is the name of the Kargo ServiceAccount for which
+	// to list associated tokens.
+	ServiceAccountName string `protobuf:"bytes,3,opt,name=service_account_name,json=serviceAccountName,proto3" json:"service_account_name,omitempty"`
+}
+
+func (x *ListServiceAccountTokensRequest) Reset() {
+	*x = ListServiceAccountTokensRequest{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[178]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListServiceAccountTokensRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceAccountTokensRequest) ProtoMessage() {}
+
+func (x *ListServiceAccountTokensRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[178]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceAccountTokensRequest.ProtoReflect.Descriptor instead.
+func (*ListServiceAccountTokensRequest) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{178}
+}
+
+func (x *ListServiceAccountTokensRequest) GetSystemLevel() bool {
+	if x != nil {
+		return x.SystemLevel
+	}
+	return false
+}
+
+func (x *ListServiceAccountTokensRequest) GetProject() string {
+	if x != nil {
+		return x.Project
+	}
+	return ""
+}
+
+func (x *ListServiceAccountTokensRequest) GetServiceAccountName() string {
+	if x != nil {
+		return x.ServiceAccountName
+	}
+	return ""
+}
+
+// ListServiceAccountTokensResponse contains a list of bearer tokens associated
+// with a specified Kargo ServiceAccount.
+type ListServiceAccountTokensResponse struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	// token_secrets is the list of Kubernetes Secrets containing redacted tokens
+	// associated with a Kargo ServiceAccount.
+	TokenSecrets []*v1.Secret `protobuf:"bytes,1,rep,name=token_secrets,json=tokenSecrets,proto3" json:"token_secrets,omitempty"`
+}
+
+func (x *ListServiceAccountTokensResponse) Reset() {
+	*x = ListServiceAccountTokensResponse{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[179]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *ListServiceAccountTokensResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListServiceAccountTokensResponse) ProtoMessage() {}
+
+func (x *ListServiceAccountTokensResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[179]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListServiceAccountTokensResponse.ProtoReflect.Descriptor instead.
+func (*ListServiceAccountTokensResponse) Descriptor() ([]byte, []int) {
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{179}
+}
+
+func (x *ListServiceAccountTokensResponse) GetTokenSecrets() []*v1.Secret {
+	if x != nil {
+		return x.TokenSecrets
+	}
+	return nil
+}
+
 // ListClusterSecretsRequest is the request for listing all cluster-level secrets.
 type ListClusterSecretsRequest struct {
 	state         protoimpl.MessageState
@@ -9702,7 +10708,7 @@ type ListClusterSecretsRequest struct {
 func (x *ListClusterSecretsRequest) Reset() {
 	*x = ListClusterSecretsRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[164]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[180]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9715,7 +10721,7 @@ func (x *ListClusterSecretsRequest) String() string {
 func (*ListClusterSecretsRequest) ProtoMessage() {}
 
 func (x *ListClusterSecretsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[164]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[180]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9728,7 +10734,7 @@ func (x *ListClusterSecretsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClusterSecretsRequest.ProtoReflect.Descriptor instead.
 func (*ListClusterSecretsRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{164}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{180}
 }
 
 // ListClusterSecretsResponse contains a list of cluster-level secrets.
@@ -9744,7 +10750,7 @@ type ListClusterSecretsResponse struct {
 func (x *ListClusterSecretsResponse) Reset() {
 	*x = ListClusterSecretsResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[165]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[181]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9757,7 +10763,7 @@ func (x *ListClusterSecretsResponse) String() string {
 func (*ListClusterSecretsResponse) ProtoMessage() {}
 
 func (x *ListClusterSecretsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[165]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[181]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9770,7 +10776,7 @@ func (x *ListClusterSecretsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListClusterSecretsResponse.ProtoReflect.Descriptor instead.
 func (*ListClusterSecretsResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{165}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{181}
 }
 
 func (x *ListClusterSecretsResponse) GetSecrets() []*v1.Secret {
@@ -9795,7 +10801,7 @@ type CreateClusterSecretRequest struct {
 func (x *CreateClusterSecretRequest) Reset() {
 	*x = CreateClusterSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[166]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[182]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9808,7 +10814,7 @@ func (x *CreateClusterSecretRequest) String() string {
 func (*CreateClusterSecretRequest) ProtoMessage() {}
 
 func (x *CreateClusterSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[166]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[182]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9821,7 +10827,7 @@ func (x *CreateClusterSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateClusterSecretRequest.ProtoReflect.Descriptor instead.
 func (*CreateClusterSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{166}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{182}
 }
 
 func (x *CreateClusterSecretRequest) GetName() string {
@@ -9851,7 +10857,7 @@ type CreateClusterSecretResponse struct {
 func (x *CreateClusterSecretResponse) Reset() {
 	*x = CreateClusterSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[167]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[183]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9864,7 +10870,7 @@ func (x *CreateClusterSecretResponse) String() string {
 func (*CreateClusterSecretResponse) ProtoMessage() {}
 
 func (x *CreateClusterSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[167]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[183]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9877,7 +10883,7 @@ func (x *CreateClusterSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateClusterSecretResponse.ProtoReflect.Descriptor instead.
 func (*CreateClusterSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{167}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{183}
 }
 
 func (x *CreateClusterSecretResponse) GetSecret() *v1.Secret {
@@ -9902,7 +10908,7 @@ type UpdateClusterSecretRequest struct {
 func (x *UpdateClusterSecretRequest) Reset() {
 	*x = UpdateClusterSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[168]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[184]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9915,7 +10921,7 @@ func (x *UpdateClusterSecretRequest) String() string {
 func (*UpdateClusterSecretRequest) ProtoMessage() {}
 
 func (x *UpdateClusterSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[168]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[184]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9928,7 +10934,7 @@ func (x *UpdateClusterSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateClusterSecretRequest.ProtoReflect.Descriptor instead.
 func (*UpdateClusterSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{168}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{184}
 }
 
 func (x *UpdateClusterSecretRequest) GetName() string {
@@ -9958,7 +10964,7 @@ type UpdateClusterSecretResponse struct {
 func (x *UpdateClusterSecretResponse) Reset() {
 	*x = UpdateClusterSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[169]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[185]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -9971,7 +10977,7 @@ func (x *UpdateClusterSecretResponse) String() string {
 func (*UpdateClusterSecretResponse) ProtoMessage() {}
 
 func (x *UpdateClusterSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[169]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[185]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -9984,7 +10990,7 @@ func (x *UpdateClusterSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateClusterSecretResponse.ProtoReflect.Descriptor instead.
 func (*UpdateClusterSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{169}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{185}
 }
 
 func (x *UpdateClusterSecretResponse) GetSecret() *v1.Secret {
@@ -10007,7 +11013,7 @@ type DeleteClusterSecretRequest struct {
 func (x *DeleteClusterSecretRequest) Reset() {
 	*x = DeleteClusterSecretRequest{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[170]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[186]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -10020,7 +11026,7 @@ func (x *DeleteClusterSecretRequest) String() string {
 func (*DeleteClusterSecretRequest) ProtoMessage() {}
 
 func (x *DeleteClusterSecretRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[170]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[186]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10033,7 +11039,7 @@ func (x *DeleteClusterSecretRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteClusterSecretRequest.ProtoReflect.Descriptor instead.
 func (*DeleteClusterSecretRequest) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{170}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{186}
 }
 
 func (x *DeleteClusterSecretRequest) GetName() string {
@@ -10053,7 +11059,7 @@ type DeleteClusterSecretResponse struct {
 func (x *DeleteClusterSecretResponse) Reset() {
 	*x = DeleteClusterSecretResponse{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_api_service_v1alpha1_service_proto_msgTypes[171]
+		mi := &file_api_service_v1alpha1_service_proto_msgTypes[187]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -10066,7 +11072,7 @@ func (x *DeleteClusterSecretResponse) String() string {
 func (*DeleteClusterSecretResponse) ProtoMessage() {}
 
 func (x *DeleteClusterSecretResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_service_v1alpha1_service_proto_msgTypes[171]
+	mi := &file_api_service_v1alpha1_service_proto_msgTypes[187]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -10079,7 +11085,7 @@ func (x *DeleteClusterSecretResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteClusterSecretResponse.ProtoReflect.Descriptor instead.
 func (*DeleteClusterSecretResponse) Descriptor() ([]byte, []int) {
-	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{171}
+	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{187}
 }
 
 var File_api_service_v1alpha1_service_proto protoreflect.FileDescriptor
@@ -11189,7 +12195,121 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x28, 0x0b, 0x32, 0x2f, 0x2e, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2e,
 	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x61, 0x70, 0x69,
 	0x2e, 0x72, 0x62, 0x61, 0x63, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52,
-	0x6f, 0x6c, 0x65, 0x52, 0x04, 0x72, 0x6f, 0x6c, 0x65, 0x22, 0x1b, 0x0a, 0x19, 0x4c, 0x69, 0x73,
+	0x6f, 0x6c, 0x65, 0x52, 0x04, 0x72, 0x6f, 0x6c, 0x65, 0x22, 0x69, 0x0a, 0x1b, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x4a, 0x0a, 0x0e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x22, 0x2e, 0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f,
+	0x72, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63,
+	0x6f, 0x75, 0x6e, 0x74, 0x52, 0x0e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63,
+	0x6f, 0x75, 0x6e, 0x74, 0x22, 0x6a, 0x0a, 0x1c, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4a, 0x0a, 0x0e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x6b,
+	0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e, 0x76,
+	0x31, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x52, 0x0e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x22, 0x4b, 0x0a, 0x1b, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12,
+	0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d,
+	0x65, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x1e, 0x0a,
+	0x1c, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0xb0, 0x01,
+	0x0a, 0x18, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79,
+	0x73, 0x74, 0x65, 0x6d, 0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x0b, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
+	0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66,
+	0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52,
+	0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74,
+	0x22, 0x87, 0x01, 0x0a, 0x19, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4c,
+	0x0a, 0x0e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x22, 0x2e, 0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e,
+	0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x48, 0x00, 0x52, 0x0e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x12, 0x0a, 0x03,
+	0x72, 0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c, 0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77,
+	0x42, 0x08, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x59, 0x0a, 0x1a, 0x4c, 0x69,
+	0x73, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79, 0x73, 0x74,
+	0x65, 0x6d, 0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b,
+	0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a, 0x07, 0x70,
+	0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72,
+	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x22, 0x6b, 0x0a, 0x1b, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70,
+	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x4c, 0x0a, 0x0f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x22, 0x2e,
+	0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e,
+	0x76, 0x31, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x52, 0x0f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x73, 0x22, 0xa5, 0x01, 0x0a, 0x20, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
+	0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79, 0x73, 0x74, 0x65,
+	0x6d, 0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x73,
+	0x79, 0x73, 0x74, 0x65, 0x6d, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72,
+	0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f,
+	0x6a, 0x65, 0x63, 0x74, 0x12, 0x30, 0x0a, 0x14, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5f,
+	0x61, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x03, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x12, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x4e, 0x61, 0x6d, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x04,
+	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x22, 0x62, 0x0a, 0x21, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
+	0x3d, 0x0a, 0x0c, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x18,
+	0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e, 0x61,
+	0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65,
+	0x74, 0x52, 0x0b, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x22, 0x73,
+	0x0a, 0x20, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65,
+	0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x5f, 0x6c, 0x65, 0x76,
+	0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d,
+	0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12,
+	0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e,
+	0x61, 0x6d, 0x65, 0x22, 0x23, 0x0a, 0x21, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x22, 0xb5, 0x01, 0x0a, 0x1d, 0x47, 0x65, 0x74,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f,
+	0x6b, 0x65, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79,
+	0x73, 0x74, 0x65, 0x6d, 0x5f, 0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08,
+	0x52, 0x0b, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a,
+	0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07,
+	0x70, 0x72, 0x6f, 0x6a, 0x65, 0x63, 0x74, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18,
+	0x03, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x12, 0x43, 0x0a, 0x06, 0x66,
+	0x6f, 0x72, 0x6d, 0x61, 0x74, 0x18, 0x04, 0x20, 0x01, 0x28, 0x0e, 0x32, 0x2b, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x52,
+	0x61, 0x77, 0x46, 0x6f, 0x72, 0x6d, 0x61, 0x74, 0x52, 0x06, 0x66, 0x6f, 0x72, 0x6d, 0x61, 0x74,
+	0x22, 0x7f, 0x0a, 0x1e, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e,
+	0x73, 0x65, 0x12, 0x3f, 0x0a, 0x0c, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x5f, 0x73, 0x65, 0x63, 0x72,
+	0x65, 0x74, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e, 0x6b, 0x38, 0x73, 0x2e, 0x69,
+	0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72, 0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65,
+	0x63, 0x72, 0x65, 0x74, 0x48, 0x00, 0x52, 0x0b, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x53, 0x65, 0x63,
+	0x72, 0x65, 0x74, 0x12, 0x12, 0x0a, 0x03, 0x72, 0x61, 0x77, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0c,
+	0x48, 0x00, 0x52, 0x03, 0x72, 0x61, 0x77, 0x42, 0x08, 0x0a, 0x06, 0x72, 0x65, 0x73, 0x75, 0x6c,
+	0x74, 0x22, 0x90, 0x01, 0x0a, 0x1f, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x12, 0x21, 0x0a, 0x0c, 0x73, 0x79, 0x73, 0x74, 0x65, 0x6d, 0x5f,
+	0x6c, 0x65, 0x76, 0x65, 0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x08, 0x52, 0x0b, 0x73, 0x79, 0x73,
+	0x74, 0x65, 0x6d, 0x4c, 0x65, 0x76, 0x65, 0x6c, 0x12, 0x18, 0x0a, 0x07, 0x70, 0x72, 0x6f, 0x6a,
+	0x65, 0x63, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x70, 0x72, 0x6f, 0x6a, 0x65,
+	0x63, 0x74, 0x12, 0x30, 0x0a, 0x14, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5f, 0x61, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x03, 0x20, 0x01, 0x28, 0x09,
+	0x52, 0x12, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x4e, 0x61, 0x6d, 0x65, 0x22, 0x63, 0x0a, 0x20, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x73,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x3f, 0x0a, 0x0d, 0x74, 0x6f, 0x6b, 0x65,
+	0x6e, 0x5f, 0x73, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32,
+	0x1a, 0x2e, 0x6b, 0x38, 0x73, 0x2e, 0x69, 0x6f, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x63, 0x6f, 0x72,
+	0x65, 0x2e, 0x76, 0x31, 0x2e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x0c, 0x74, 0x6f, 0x6b,
+	0x65, 0x6e, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x22, 0x1b, 0x0a, 0x19, 0x4c, 0x69, 0x73,
 	0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52,
 	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x52, 0x0a, 0x1a, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c,
 	0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70,
@@ -11242,7 +12362,7 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x50, 0x45, 0x43, 0x49, 0x46, 0x49, 0x45, 0x44, 0x10, 0x00, 0x12, 0x13, 0x0a, 0x0f, 0x52, 0x41,
 	0x57, 0x5f, 0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x5f, 0x4a, 0x53, 0x4f, 0x4e, 0x10, 0x01, 0x12,
 	0x13, 0x0a, 0x0f, 0x52, 0x41, 0x57, 0x5f, 0x46, 0x4f, 0x52, 0x4d, 0x41, 0x54, 0x5f, 0x59, 0x41,
-	0x4d, 0x4c, 0x10, 0x02, 0x32, 0x92, 0x56, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53, 0x65,
+	0x4d, 0x4c, 0x10, 0x02, 0x32, 0xf6, 0x5f, 0x0a, 0x0c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x53, 0x65,
 	0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x83, 0x01, 0x0a, 0x0e, 0x47, 0x65, 0x74, 0x56, 0x65, 0x72,
 	0x73, 0x69, 0x6f, 0x6e, 0x49, 0x6e, 0x66, 0x6f, 0x12, 0x37, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
 	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
@@ -11894,62 +13014,140 @@ var file_api_service_v1alpha1_service_proto_rawDesc = []byte{
 	0x73, 0x74, 0x1a, 0x34, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
 	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
 	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x52, 0x6f, 0x6c, 0x65,
-	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8f, 0x01, 0x0a, 0x12, 0x4c, 0x69, 0x73,
-	0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x12,
-	0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
-	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65,
-	0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3c, 0x2e, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65,
-	0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x43,
-	0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72,
-	0x65, 0x74, 0x12, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b,
-	0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61,
-	0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73,
-	0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
-	0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x95, 0x01, 0x0a, 0x14, 0x43, 0x72, 0x65,
+	0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x12, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
+	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
 	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
-	0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65,
-	0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12,
-	0x92, 0x01, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65,
-	0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79,
-	0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63,
-	0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74,
-	0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65,
-	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
-	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
-	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43,
-	0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43,
-	0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x3c, 0x2e, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73,
-	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e,
-	0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63,
-	0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75,
+	0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65,
+	0x12, 0x95, 0x01, 0x0a, 0x14, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c,
+	0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e,
+	0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3e, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65,
+	0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8c, 0x01, 0x0a, 0x11, 0x47, 0x65, 0x74,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x12, 0x3a,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3b, 0x2e, 0x61, 0x6b, 0x75,
 	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
-	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65,
-	0x6c, 0x65, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65,
-	0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x93, 0x02, 0x0a, 0x24, 0x63, 0x6f,
-	0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65,
+	0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x52,
+	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x4c, 0x69, 0x73, 0x74,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x12,
+	0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67,
 	0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68,
-	0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50, 0x72, 0x6f, 0x74, 0x6f,
-	0x50, 0x01, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f, 0x61,
-	0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x2f,
-	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
-	0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xa2, 0x02, 0x04, 0x41,
-	0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x49, 0x6f, 0x2e,
-	0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x56, 0x31,
-	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c,
-	0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
-	0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c, 0x41, 0x6b, 0x75, 0x69,
-	0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72, 0x76,
-	0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x5c, 0x47, 0x50, 0x42,
-	0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41, 0x6b, 0x75, 0x69, 0x74,
-	0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x3a, 0x3a, 0x53, 0x65,
-	0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e,
+	0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e,
+	0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f,
+	0x75, 0x6e, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0xa4, 0x01, 0x0a,
+	0x19, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63,
+	0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x42, 0x2e, 0x61, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72,
+	0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75,
+	0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x43,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41,
+	0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0xa4, 0x01, 0x0a, 0x19, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65,
+	0x6e, 0x12, 0x42, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61,
+	0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52, 0x65,
+	0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x43, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x53,
+	0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b,
+	0x65, 0x6e, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x9b, 0x01, 0x0a, 0x16, 0x47,
+	0x65, 0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74,
+	0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x3f, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x52,
+	0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x40, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x47, 0x65, 0x74, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0xa1, 0x01, 0x0a, 0x18, 0x4c, 0x69, 0x73,
+	0x74, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54,
+	0x6f, 0x6b, 0x65, 0x6e, 0x73, 0x12, 0x41, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69,
+	0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e,
+	0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
+	0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x42, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74,
+	0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69,
+	0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x41, 0x63, 0x63, 0x6f, 0x75, 0x6e, 0x74, 0x54, 0x6f,
+	0x6b, 0x65, 0x6e, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x8f, 0x01, 0x0a,
+	0x12, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72,
+	0x65, 0x74, 0x73, 0x12, 0x3b, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c, 0x75, 0x73, 0x74,
+	0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74,
+	0x1a, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x4c, 0x69, 0x73, 0x74, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53,
+	0x65, 0x63, 0x72, 0x65, 0x74, 0x73, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92,
+	0x01, 0x0a, 0x13, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72,
+	0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e,
+	0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65,
+	0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71,
+	0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f,
+	0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76,
+	0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x43, 0x72, 0x65, 0x61, 0x74, 0x65, 0x43, 0x6c,
+	0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f,
+	0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x55, 0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6c,
+	0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x12, 0x3c, 0x2e, 0x61, 0x6b,
+	0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65,
+	0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55,
+	0x70, 0x64, 0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72,
+	0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d, 0x2e, 0x61, 0x6b, 0x75, 0x69,
+	0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76,
+	0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x2e, 0x55, 0x70, 0x64,
+	0x61, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
+	0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x92, 0x01, 0x0a, 0x13, 0x44, 0x65, 0x6c,
+	0x65, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74,
+	0x12, 0x3c, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72,
+	0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65,
+	0x72, 0x53, 0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x3d,
+	0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e, 0x6b, 0x61, 0x72, 0x67, 0x6f,
+	0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61,
+	0x31, 0x2e, 0x44, 0x65, 0x6c, 0x65, 0x74, 0x65, 0x43, 0x6c, 0x75, 0x73, 0x74, 0x65, 0x72, 0x53,
+	0x65, 0x63, 0x72, 0x65, 0x74, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x42, 0x93, 0x02,
+	0x0a, 0x24, 0x63, 0x6f, 0x6d, 0x2e, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2e, 0x69, 0x6f, 0x2e,
+	0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2e, 0x76, 0x31,
+	0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0x42, 0x0c, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x50,
+	0x72, 0x6f, 0x74, 0x6f, 0x50, 0x01, 0x5a, 0x38, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63,
+	0x6f, 0x6d, 0x2f, 0x61, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x2f, 0x6b, 0x61, 0x72, 0x67, 0x6f, 0x2f,
+	0x61, 0x70, 0x69, 0x2f, 0x73, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x2f, 0x76, 0x31, 0x61, 0x6c,
+	0x70, 0x68, 0x61, 0x31, 0x3b, 0x73, 0x76, 0x63, 0x76, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0xa2, 0x02, 0x04, 0x41, 0x49, 0x4b, 0x53, 0xaa, 0x02, 0x20, 0x41, 0x6b, 0x75, 0x69, 0x74, 0x79,
+	0x2e, 0x49, 0x6f, 0x2e, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x2e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63,
+	0x65, 0x2e, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xca, 0x02, 0x20, 0x41, 0x6b, 0x75,
+	0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c, 0x53, 0x65, 0x72,
+	0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31, 0xe2, 0x02, 0x2c,
+	0x41, 0x6b, 0x75, 0x69, 0x74, 0x79, 0x5c, 0x49, 0x6f, 0x5c, 0x4b, 0x61, 0x72, 0x67, 0x6f, 0x5c,
+	0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x5c, 0x56, 0x31, 0x61, 0x6c, 0x70, 0x68, 0x61, 0x31,
+	0x5c, 0x47, 0x50, 0x42, 0x4d, 0x65, 0x74, 0x61, 0x64, 0x61, 0x74, 0x61, 0xea, 0x02, 0x24, 0x41,
+	0x6b, 0x75, 0x69, 0x74, 0x79, 0x3a, 0x3a, 0x49, 0x6f, 0x3a, 0x3a, 0x4b, 0x61, 0x72, 0x67, 0x6f,
+	0x3a, 0x3a, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x3a, 0x3a, 0x56, 0x31, 0x61, 0x6c, 0x70,
+	0x68, 0x61, 0x31, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -11965,7 +13163,7 @@ func file_api_service_v1alpha1_service_proto_rawDescGZIP() []byte {
 }
 
 var file_api_service_v1alpha1_service_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_api_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 181)
+var file_api_service_v1alpha1_service_proto_msgTypes = make([]protoimpl.MessageInfo, 197)
 var file_api_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(RawFormat)(0),                                // 0: akuity.io.kargo.service.v1alpha1.RawFormat
 	(*ComponentVersions)(nil),                     // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions
@@ -12132,309 +13330,351 @@ var file_api_service_v1alpha1_service_proto_goTypes = []interface{}{
 	(*RevokeResponse)(nil),                        // 162: akuity.io.kargo.service.v1alpha1.RevokeResponse
 	(*UpdateRoleRequest)(nil),                     // 163: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
 	(*UpdateRoleResponse)(nil),                    // 164: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
-	(*ListClusterSecretsRequest)(nil),             // 165: akuity.io.kargo.service.v1alpha1.ListClusterSecretsRequest
-	(*ListClusterSecretsResponse)(nil),            // 166: akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse
-	(*CreateClusterSecretRequest)(nil),            // 167: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest
-	(*CreateClusterSecretResponse)(nil),           // 168: akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse
-	(*UpdateClusterSecretRequest)(nil),            // 169: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest
-	(*UpdateClusterSecretResponse)(nil),           // 170: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse
-	(*DeleteClusterSecretRequest)(nil),            // 171: akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest
-	(*DeleteClusterSecretResponse)(nil),           // 172: akuity.io.kargo.service.v1alpha1.DeleteClusterSecretResponse
-	nil,                                           // 173: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
-	nil,                                           // 174: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
-	nil,                                           // 175: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
-	nil,                                           // 176: akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
-	nil,                                           // 177: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	nil,                                           // 178: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
-	nil,                                           // 179: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
-	nil,                                           // 180: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.DataEntry
-	nil,                                           // 181: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.DataEntry
-	(*timestamppb.Timestamp)(nil),                 // 182: google.protobuf.Timestamp
-	(*v1alpha1.Stage)(nil),                        // 183: github.com.akuity.kargo.api.v1alpha1.Stage
-	(*v1alpha1.ClusterConfig)(nil),                // 184: github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	(*v1alpha1.Promotion)(nil),                    // 185: github.com.akuity.kargo.api.v1alpha1.Promotion
-	(*v1alpha1.Project)(nil),                      // 186: github.com.akuity.kargo.api.v1alpha1.Project
-	(*v1alpha1.ProjectConfig)(nil),                // 187: github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	(*v1alpha1.Freight)(nil),                      // 188: github.com.akuity.kargo.api.v1alpha1.Freight
-	(*v1alpha1.Warehouse)(nil),                    // 189: github.com.akuity.kargo.api.v1alpha1.Warehouse
-	(*v1.ConfigMap)(nil),                          // 190: k8s.io.api.core.v1.ConfigMap
-	(*v1.Secret)(nil),                             // 191: k8s.io.api.core.v1.Secret
-	(*v1alpha11.AnalysisTemplate)(nil),            // 192: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
-	(*v1alpha11.ClusterAnalysisTemplate)(nil),     // 193: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
-	(*v1alpha11.AnalysisRun)(nil),                 // 194: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
-	(*v1.Event)(nil),                              // 195: k8s.io.api.core.v1.Event
-	(*v1alpha1.PromotionTask)(nil),                // 196: github.com.akuity.kargo.api.v1alpha1.PromotionTask
-	(*v1alpha1.ClusterPromotionTask)(nil),         // 197: github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
-	(*v1alpha12.Role)(nil),                        // 198: github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	(*v1alpha12.RoleResources)(nil),               // 199: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
-	(*v1alpha12.Claim)(nil),                       // 200: github.com.akuity.kargo.api.rbac.v1alpha1.Claim
-	(*v1alpha12.ResourceDetails)(nil),             // 201: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	(*CreateServiceAccountRequest)(nil),           // 165: akuity.io.kargo.service.v1alpha1.CreateServiceAccountRequest
+	(*CreateServiceAccountResponse)(nil),          // 166: akuity.io.kargo.service.v1alpha1.CreateServiceAccountResponse
+	(*DeleteServiceAccountRequest)(nil),           // 167: akuity.io.kargo.service.v1alpha1.DeleteServiceAccountRequest
+	(*DeleteServiceAccountResponse)(nil),          // 168: akuity.io.kargo.service.v1alpha1.DeleteServiceAccountResponse
+	(*GetServiceAccountRequest)(nil),              // 169: akuity.io.kargo.service.v1alpha1.GetServiceAccountRequest
+	(*GetServiceAccountResponse)(nil),             // 170: akuity.io.kargo.service.v1alpha1.GetServiceAccountResponse
+	(*ListServiceAccountsRequest)(nil),            // 171: akuity.io.kargo.service.v1alpha1.ListServiceAccountsRequest
+	(*ListServiceAccountsResponse)(nil),           // 172: akuity.io.kargo.service.v1alpha1.ListServiceAccountsResponse
+	(*CreateServiceAccountTokenRequest)(nil),      // 173: akuity.io.kargo.service.v1alpha1.CreateServiceAccountTokenRequest
+	(*CreateServiceAccountTokenResponse)(nil),     // 174: akuity.io.kargo.service.v1alpha1.CreateServiceAccountTokenResponse
+	(*DeleteServiceAccountTokenRequest)(nil),      // 175: akuity.io.kargo.service.v1alpha1.DeleteServiceAccountTokenRequest
+	(*DeleteServiceAccountTokenResponse)(nil),     // 176: akuity.io.kargo.service.v1alpha1.DeleteServiceAccountTokenResponse
+	(*GetServiceAccountTokenRequest)(nil),         // 177: akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenRequest
+	(*GetServiceAccountTokenResponse)(nil),        // 178: akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenResponse
+	(*ListServiceAccountTokensRequest)(nil),       // 179: akuity.io.kargo.service.v1alpha1.ListServiceAccountTokensRequest
+	(*ListServiceAccountTokensResponse)(nil),      // 180: akuity.io.kargo.service.v1alpha1.ListServiceAccountTokensResponse
+	(*ListClusterSecretsRequest)(nil),             // 181: akuity.io.kargo.service.v1alpha1.ListClusterSecretsRequest
+	(*ListClusterSecretsResponse)(nil),            // 182: akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse
+	(*CreateClusterSecretRequest)(nil),            // 183: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest
+	(*CreateClusterSecretResponse)(nil),           // 184: akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse
+	(*UpdateClusterSecretRequest)(nil),            // 185: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest
+	(*UpdateClusterSecretResponse)(nil),           // 186: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse
+	(*DeleteClusterSecretRequest)(nil),            // 187: akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest
+	(*DeleteClusterSecretResponse)(nil),           // 188: akuity.io.kargo.service.v1alpha1.DeleteClusterSecretResponse
+	nil,                                           // 189: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	nil,                                           // 190: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
+	nil,                                           // 191: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
+	nil,                                           // 192: akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
+	nil,                                           // 193: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	nil,                                           // 194: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
+	nil,                                           // 195: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
+	nil,                                           // 196: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.DataEntry
+	nil,                                           // 197: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.DataEntry
+	(*timestamppb.Timestamp)(nil),                 // 198: google.protobuf.Timestamp
+	(*v1alpha1.Stage)(nil),                        // 199: github.com.akuity.kargo.api.v1alpha1.Stage
+	(*v1alpha1.ClusterConfig)(nil),                // 200: github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	(*v1alpha1.Promotion)(nil),                    // 201: github.com.akuity.kargo.api.v1alpha1.Promotion
+	(*v1alpha1.Project)(nil),                      // 202: github.com.akuity.kargo.api.v1alpha1.Project
+	(*v1alpha1.ProjectConfig)(nil),                // 203: github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	(*v1alpha1.Freight)(nil),                      // 204: github.com.akuity.kargo.api.v1alpha1.Freight
+	(*v1alpha1.Warehouse)(nil),                    // 205: github.com.akuity.kargo.api.v1alpha1.Warehouse
+	(*v1.ConfigMap)(nil),                          // 206: k8s.io.api.core.v1.ConfigMap
+	(*v1.Secret)(nil),                             // 207: k8s.io.api.core.v1.Secret
+	(*v1alpha11.AnalysisTemplate)(nil),            // 208: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	(*v1alpha11.ClusterAnalysisTemplate)(nil),     // 209: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	(*v1alpha11.AnalysisRun)(nil),                 // 210: github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
+	(*v1.Event)(nil),                              // 211: k8s.io.api.core.v1.Event
+	(*v1alpha1.PromotionTask)(nil),                // 212: github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	(*v1alpha1.ClusterPromotionTask)(nil),         // 213: github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	(*v1alpha12.Role)(nil),                        // 214: github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	(*v1alpha12.RoleResources)(nil),               // 215: github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	(*v1alpha12.Claim)(nil),                       // 216: github.com.akuity.kargo.api.rbac.v1alpha1.Claim
+	(*v1alpha12.ResourceDetails)(nil),             // 217: github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	(*v1.ServiceAccount)(nil),                     // 218: k8s.io.api.core.v1.ServiceAccount
 }
 var file_api_service_v1alpha1_service_proto_depIdxs = []int32{
 	2,   // 0: akuity.io.kargo.service.v1alpha1.ComponentVersions.server:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
 	2,   // 1: akuity.io.kargo.service.v1alpha1.ComponentVersions.cli:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	182, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
+	198, // 2: akuity.io.kargo.service.v1alpha1.VersionInfo.build_time:type_name -> google.protobuf.Timestamp
 	2,   // 3: akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse.version_info:type_name -> akuity.io.kargo.service.v1alpha1.VersionInfo
-	173, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
+	189, // 4: akuity.io.kargo.service.v1alpha1.GetConfigResponse.argocd_shards:type_name -> akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry
 	10,  // 5: akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse.oidc_config:type_name -> akuity.io.kargo.service.v1alpha1.OIDCConfig
 	14,  // 6: akuity.io.kargo.service.v1alpha1.CreateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateResourceResult
 	17,  // 7: akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResult
 	20,  // 8: akuity.io.kargo.service.v1alpha1.UpdateResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.UpdateResourceResult
 	23,  // 9: akuity.io.kargo.service.v1alpha1.DeleteResourceResponse.results:type_name -> akuity.io.kargo.service.v1alpha1.DeleteResourceResult
-	183, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	174, // 11: akuity.io.kargo.service.v1alpha1.ListImagesResponse.images:type_name -> akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
-	175, // 12: akuity.io.kargo.service.v1alpha1.TagMap.tags:type_name -> akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
-	176, // 13: akuity.io.kargo.service.v1alpha1.ImageStageMap.stages:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
+	199, // 10: akuity.io.kargo.service.v1alpha1.ListStagesResponse.stages:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	190, // 11: akuity.io.kargo.service.v1alpha1.ListImagesResponse.images:type_name -> akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry
+	191, // 12: akuity.io.kargo.service.v1alpha1.TagMap.tags:type_name -> akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry
+	192, // 13: akuity.io.kargo.service.v1alpha1.ImageStageMap.stages:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap.StagesEntry
 	0,   // 14: akuity.io.kargo.service.v1alpha1.GetStageRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	183, // 15: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	183, // 16: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
-	183, // 17: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	199, // 15: akuity.io.kargo.service.v1alpha1.GetStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	199, // 16: akuity.io.kargo.service.v1alpha1.WatchStagesResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
+	199, // 17: akuity.io.kargo.service.v1alpha1.RefreshStageResponse.stage:type_name -> github.com.akuity.kargo.api.v1alpha1.Stage
 	0,   // 18: akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	184, // 19: akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	184, // 20: akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	184, // 21: akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
-	185, // 22: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	185, // 23: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	200, // 19: akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	200, // 20: akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	200, // 21: akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse.cluster_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterConfig
+	201, // 22: akuity.io.kargo.service.v1alpha1.ListPromotionsResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	201, // 23: akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
 	0,   // 24: akuity.io.kargo.service.v1alpha1.GetPromotionRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	185, // 25: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	185, // 26: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	201, // 25: akuity.io.kargo.service.v1alpha1.GetPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	201, // 26: akuity.io.kargo.service.v1alpha1.WatchPromotionResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
 	0,   // 27: akuity.io.kargo.service.v1alpha1.GetProjectRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	186, // 28: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
-	186, // 29: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	202, // 28: akuity.io.kargo.service.v1alpha1.GetProjectResponse.project:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
+	202, // 29: akuity.io.kargo.service.v1alpha1.ListProjectsResponse.projects:type_name -> github.com.akuity.kargo.api.v1alpha1.Project
 	0,   // 30: akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	187, // 31: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	187, // 32: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
-	187, // 33: akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	203, // 31: akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	203, // 32: akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
+	203, // 33: akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse.project_config:type_name -> github.com.akuity.kargo.api.v1alpha1.ProjectConfig
 	0,   // 34: akuity.io.kargo.service.v1alpha1.GetFreightRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	188, // 35: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	188, // 36: akuity.io.kargo.service.v1alpha1.WatchFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	185, // 37: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	185, // 38: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
-	177, // 39: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
-	188, // 40: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
-	189, // 41: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	204, // 35: akuity.io.kargo.service.v1alpha1.GetFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	204, // 36: akuity.io.kargo.service.v1alpha1.WatchFreightResponse.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	201, // 37: akuity.io.kargo.service.v1alpha1.PromoteToStageResponse.promotion:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	201, // 38: akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse.promotions:type_name -> github.com.akuity.kargo.api.v1alpha1.Promotion
+	193, // 39: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.groups:type_name -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry
+	204, // 40: akuity.io.kargo.service.v1alpha1.FreightList.freight:type_name -> github.com.akuity.kargo.api.v1alpha1.Freight
+	205, // 41: akuity.io.kargo.service.v1alpha1.ListWarehousesResponse.warehouses:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
 	0,   // 42: akuity.io.kargo.service.v1alpha1.GetWarehouseRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	189, // 43: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	189, // 44: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	189, // 45: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
-	190, // 46: akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse.config_maps:type_name -> k8s.io.api.core.v1.ConfigMap
+	205, // 43: akuity.io.kargo.service.v1alpha1.GetWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	205, // 44: akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	205, // 45: akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse.warehouse:type_name -> github.com.akuity.kargo.api.v1alpha1.Warehouse
+	206, // 46: akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse.config_maps:type_name -> k8s.io.api.core.v1.ConfigMap
 	0,   // 47: akuity.io.kargo.service.v1alpha1.GetConfigMapRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	190, // 48: akuity.io.kargo.service.v1alpha1.GetConfigMapResponse.config_map:type_name -> k8s.io.api.core.v1.ConfigMap
-	191, // 49: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	206, // 48: akuity.io.kargo.service.v1alpha1.GetConfigMapResponse.config_map:type_name -> k8s.io.api.core.v1.ConfigMap
+	207, // 49: akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
 	0,   // 50: akuity.io.kargo.service.v1alpha1.GetCredentialsRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	191, // 51: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	191, // 52: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	191, // 53: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
-	191, // 54: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
-	178, // 55: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
-	191, // 56: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	179, // 57: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
-	191, // 58: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	192, // 59: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse.analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	207, // 51: akuity.io.kargo.service.v1alpha1.GetCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	207, // 52: akuity.io.kargo.service.v1alpha1.ListCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	207, // 53: akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse.credentials:type_name -> k8s.io.api.core.v1.Secret
+	207, // 54: akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
+	194, // 55: akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest.DataEntry
+	207, // 56: akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	195, // 57: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest.DataEntry
+	207, // 58: akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	208, // 59: akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse.analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
 	0,   // 60: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	192, // 61: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
-	193, // 62: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse.cluster_analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	208, // 61: akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse.analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisTemplate
+	209, // 62: akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse.cluster_analysis_templates:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
 	0,   // 63: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	193, // 64: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse.cluster_analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
+	209, // 64: akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse.cluster_analysis_template:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.ClusterAnalysisTemplate
 	0,   // 65: akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	194, // 66: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
-	195, // 67: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse.events:type_name -> k8s.io.api.core.v1.Event
-	196, // 68: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse.promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	210, // 66: akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse.analysis_run:type_name -> github.com.akuity.kargo.api.stubs.rollouts.v1alpha1.AnalysisRun
+	211, // 67: akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse.events:type_name -> k8s.io.api.core.v1.Event
+	212, // 68: akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse.promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
 	0,   // 69: akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	196, // 70: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
-	197, // 71: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse.cluster_promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	212, // 70: akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.PromotionTask
+	213, // 71: akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse.cluster_promotion_tasks:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
 	0,   // 72: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	197, // 73: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
-	198, // 74: akuity.io.kargo.service.v1alpha1.CreateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	198, // 75: akuity.io.kargo.service.v1alpha1.CreateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	213, // 73: akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse.promotion_task:type_name -> github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask
+	214, // 74: akuity.io.kargo.service.v1alpha1.CreateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	214, // 75: akuity.io.kargo.service.v1alpha1.CreateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
 	0,   // 76: akuity.io.kargo.service.v1alpha1.GetRoleRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
-	198, // 77: akuity.io.kargo.service.v1alpha1.GetRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	199, // 78: akuity.io.kargo.service.v1alpha1.GetRoleResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
-	200, // 79: akuity.io.kargo.service.v1alpha1.Claims.claims:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Claim
+	214, // 77: akuity.io.kargo.service.v1alpha1.GetRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	215, // 78: akuity.io.kargo.service.v1alpha1.GetRoleResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	216, // 79: akuity.io.kargo.service.v1alpha1.Claims.claims:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Claim
 	156, // 80: akuity.io.kargo.service.v1alpha1.GrantRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
-	201, // 81: akuity.io.kargo.service.v1alpha1.GrantRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
-	198, // 82: akuity.io.kargo.service.v1alpha1.GrantResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	198, // 83: akuity.io.kargo.service.v1alpha1.ListRolesResponse.roles:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	199, // 84: akuity.io.kargo.service.v1alpha1.ListRolesResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
+	217, // 81: akuity.io.kargo.service.v1alpha1.GrantRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	214, // 82: akuity.io.kargo.service.v1alpha1.GrantResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	214, // 83: akuity.io.kargo.service.v1alpha1.ListRolesResponse.roles:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	215, // 84: akuity.io.kargo.service.v1alpha1.ListRolesResponse.resources:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources
 	156, // 85: akuity.io.kargo.service.v1alpha1.RevokeRequest.user_claims:type_name -> akuity.io.kargo.service.v1alpha1.Claims
-	201, // 86: akuity.io.kargo.service.v1alpha1.RevokeRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
-	198, // 87: akuity.io.kargo.service.v1alpha1.RevokeResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	198, // 88: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	198, // 89: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
-	191, // 90: akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
-	180, // 91: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.DataEntry
-	191, // 92: akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	181, // 93: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.DataEntry
-	191, // 94: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
-	6,   // 95: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
-	29,  // 96: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.TagMap
-	30,  // 97: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap
-	85,  // 98: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
-	3,   // 99: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
-	5,   // 100: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
-	8,   // 101: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
-	11,  // 102: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
-	13,  // 103: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
-	16,  // 104: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
-	19,  // 105: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
-	22,  // 106: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
-	25,  // 107: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
-	27,  // 108: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:input_type -> akuity.io.kargo.service.v1alpha1.ListImagesRequest
-	31,  // 109: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
-	33,  // 110: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
-	35,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
-	37,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
-	39,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest
-	41,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigRequest
-	43,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigRequest
-	45,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigRequest
-	47,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
-	49,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
-	51,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
-	53,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
-	55,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:input_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
-	57,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
-	59,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
-	61,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
-	63,  // 125: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
-	65,  // 126: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
-	67,  // 127: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
-	69,  // 128: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
-	71,  // 129: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
-	73,  // 130: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
-	75,  // 131: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
-	77,  // 132: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:input_type -> akuity.io.kargo.service.v1alpha1.WatchFreightRequest
-	79,  // 133: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
-	81,  // 134: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:input_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
-	83,  // 135: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
-	86,  // 136: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
-	88,  // 137: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
-	90,  // 138: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
-	92,  // 139: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
-	94,  // 140: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
-	96,  // 141: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
-	98,  // 142: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
-	100, // 143: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
-	106, // 144: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
-	108, // 145: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
-	110, // 146: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
-	112, // 147: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
-	114, // 148: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
-	116, // 149: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
-	118, // 150: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
-	120, // 151: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
-	122, // 152: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
-	102, // 153: akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps:input_type -> akuity.io.kargo.service.v1alpha1.ListConfigMapsRequest
-	104, // 154: akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigMapRequest
-	124, // 155: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
-	126, // 156: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
-	128, // 157: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
-	130, // 158: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
-	132, // 159: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
-	134, // 160: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
-	136, // 161: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
-	138, // 162: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
-	140, // 163: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
-	142, // 164: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
-	146, // 165: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
-	144, // 166: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
-	148, // 167: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
-	150, // 168: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:input_type -> akuity.io.kargo.service.v1alpha1.CreateRoleRequest
-	152, // 169: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:input_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
-	154, // 170: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:input_type -> akuity.io.kargo.service.v1alpha1.GetRoleRequest
-	157, // 171: akuity.io.kargo.service.v1alpha1.KargoService.Grant:input_type -> akuity.io.kargo.service.v1alpha1.GrantRequest
-	159, // 172: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:input_type -> akuity.io.kargo.service.v1alpha1.ListRolesRequest
-	161, // 173: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:input_type -> akuity.io.kargo.service.v1alpha1.RevokeRequest
-	163, // 174: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:input_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
-	165, // 175: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterSecretsRequest
-	167, // 176: akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest
-	169, // 177: akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest
-	171, // 178: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest
-	4,   // 179: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
-	7,   // 180: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
-	9,   // 181: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
-	12,  // 182: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
-	15,  // 183: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
-	18,  // 184: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
-	21,  // 185: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
-	24,  // 186: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
-	26,  // 187: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
-	28,  // 188: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:output_type -> akuity.io.kargo.service.v1alpha1.ListImagesResponse
-	32,  // 189: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
-	34,  // 190: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
-	36,  // 191: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
-	38,  // 192: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
-	40,  // 193: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse
-	42,  // 194: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigResponse
-	44,  // 195: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse
-	46,  // 196: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse
-	48,  // 197: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
-	50,  // 198: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
-	52,  // 199: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
-	54,  // 200: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
-	56,  // 201: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:output_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
-	58,  // 202: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
-	60,  // 203: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
-	62,  // 204: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
-	64,  // 205: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
-	66,  // 206: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
-	68,  // 207: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
-	70,  // 208: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
-	72,  // 209: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
-	74,  // 210: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
-	76,  // 211: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
-	78,  // 212: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:output_type -> akuity.io.kargo.service.v1alpha1.WatchFreightResponse
-	80,  // 213: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
-	82,  // 214: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:output_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
-	84,  // 215: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
-	87,  // 216: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
-	89,  // 217: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
-	91,  // 218: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
-	93,  // 219: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
-	95,  // 220: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
-	97,  // 221: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
-	99,  // 222: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
-	101, // 223: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
-	107, // 224: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
-	109, // 225: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
-	111, // 226: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
-	113, // 227: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
-	115, // 228: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
-	117, // 229: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
-	119, // 230: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
-	121, // 231: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
-	123, // 232: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
-	103, // 233: akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps:output_type -> akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse
-	105, // 234: akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigMapResponse
-	125, // 235: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
-	127, // 236: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
-	129, // 237: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
-	131, // 238: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
-	133, // 239: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
-	135, // 240: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
-	137, // 241: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
-	139, // 242: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
-	141, // 243: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
-	143, // 244: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
-	147, // 245: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
-	145, // 246: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
-	149, // 247: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
-	151, // 248: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:output_type -> akuity.io.kargo.service.v1alpha1.CreateRoleResponse
-	153, // 249: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:output_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
-	155, // 250: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:output_type -> akuity.io.kargo.service.v1alpha1.GetRoleResponse
-	158, // 251: akuity.io.kargo.service.v1alpha1.KargoService.Grant:output_type -> akuity.io.kargo.service.v1alpha1.GrantResponse
-	160, // 252: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:output_type -> akuity.io.kargo.service.v1alpha1.ListRolesResponse
-	162, // 253: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:output_type -> akuity.io.kargo.service.v1alpha1.RevokeResponse
-	164, // 254: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:output_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
-	166, // 255: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse
-	168, // 256: akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse
-	170, // 257: akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse
-	172, // 258: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterSecretResponse
-	179, // [179:259] is the sub-list for method output_type
-	99,  // [99:179] is the sub-list for method input_type
-	99,  // [99:99] is the sub-list for extension type_name
-	99,  // [99:99] is the sub-list for extension extendee
-	0,   // [0:99] is the sub-list for field type_name
+	217, // 86: akuity.io.kargo.service.v1alpha1.RevokeRequest.resource_details:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails
+	214, // 87: akuity.io.kargo.service.v1alpha1.RevokeResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	214, // 88: akuity.io.kargo.service.v1alpha1.UpdateRoleRequest.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	214, // 89: akuity.io.kargo.service.v1alpha1.UpdateRoleResponse.role:type_name -> github.com.akuity.kargo.api.rbac.v1alpha1.Role
+	218, // 90: akuity.io.kargo.service.v1alpha1.CreateServiceAccountRequest.serviceAccount:type_name -> k8s.io.api.core.v1.ServiceAccount
+	218, // 91: akuity.io.kargo.service.v1alpha1.CreateServiceAccountResponse.serviceAccount:type_name -> k8s.io.api.core.v1.ServiceAccount
+	0,   // 92: akuity.io.kargo.service.v1alpha1.GetServiceAccountRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	218, // 93: akuity.io.kargo.service.v1alpha1.GetServiceAccountResponse.serviceAccount:type_name -> k8s.io.api.core.v1.ServiceAccount
+	218, // 94: akuity.io.kargo.service.v1alpha1.ListServiceAccountsResponse.serviceAccounts:type_name -> k8s.io.api.core.v1.ServiceAccount
+	207, // 95: akuity.io.kargo.service.v1alpha1.CreateServiceAccountTokenResponse.token_secret:type_name -> k8s.io.api.core.v1.Secret
+	0,   // 96: akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenRequest.format:type_name -> akuity.io.kargo.service.v1alpha1.RawFormat
+	207, // 97: akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenResponse.token_secret:type_name -> k8s.io.api.core.v1.Secret
+	207, // 98: akuity.io.kargo.service.v1alpha1.ListServiceAccountTokensResponse.token_secrets:type_name -> k8s.io.api.core.v1.Secret
+	207, // 99: akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse.secrets:type_name -> k8s.io.api.core.v1.Secret
+	196, // 100: akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest.DataEntry
+	207, // 101: akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	197, // 102: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.data:type_name -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest.DataEntry
+	207, // 103: akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse.secret:type_name -> k8s.io.api.core.v1.Secret
+	6,   // 104: akuity.io.kargo.service.v1alpha1.GetConfigResponse.ArgocdShardsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ArgoCDShard
+	29,  // 105: akuity.io.kargo.service.v1alpha1.ListImagesResponse.ImagesEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.TagMap
+	30,  // 106: akuity.io.kargo.service.v1alpha1.TagMap.TagsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.ImageStageMap
+	85,  // 107: akuity.io.kargo.service.v1alpha1.QueryFreightResponse.GroupsEntry.value:type_name -> akuity.io.kargo.service.v1alpha1.FreightList
+	3,   // 108: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:input_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoRequest
+	5,   // 109: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigRequest
+	8,   // 110: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigRequest
+	11,  // 111: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:input_type -> akuity.io.kargo.service.v1alpha1.AdminLoginRequest
+	13,  // 112: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateResourceRequest
+	16,  // 113: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceRequest
+	19,  // 114: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:input_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceRequest
+	22,  // 115: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:input_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceRequest
+	25,  // 116: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:input_type -> akuity.io.kargo.service.v1alpha1.ListStagesRequest
+	27,  // 117: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:input_type -> akuity.io.kargo.service.v1alpha1.ListImagesRequest
+	31,  // 118: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:input_type -> akuity.io.kargo.service.v1alpha1.GetStageRequest
+	33,  // 119: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:input_type -> akuity.io.kargo.service.v1alpha1.WatchStagesRequest
+	35,  // 120: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:input_type -> akuity.io.kargo.service.v1alpha1.DeleteStageRequest
+	37,  // 121: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:input_type -> akuity.io.kargo.service.v1alpha1.RefreshStageRequest
+	39,  // 122: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigRequest
+	41,  // 123: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigRequest
+	43,  // 124: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigRequest
+	45,  // 125: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigRequest
+	47,  // 126: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsRequest
+	49,  // 127: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsRequest
+	51,  // 128: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionRequest
+	53,  // 129: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:input_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionRequest
+	55,  // 130: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:input_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionRequest
+	57,  // 131: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectRequest
+	59,  // 132: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectRequest
+	61,  // 133: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectsRequest
+	63,  // 134: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigRequest
+	65,  // 135: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigRequest
+	67,  // 136: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigRequest
+	69,  // 137: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:input_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
+	71,  // 138: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:input_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightRequest
+	73,  // 139: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:input_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightRequest
+	75,  // 140: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:input_type -> akuity.io.kargo.service.v1alpha1.GetFreightRequest
+	77,  // 141: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:input_type -> akuity.io.kargo.service.v1alpha1.WatchFreightRequest
+	79,  // 142: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:input_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageRequest
+	81,  // 143: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:input_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamRequest
+	83,  // 144: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:input_type -> akuity.io.kargo.service.v1alpha1.QueryFreightRequest
+	86,  // 145: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:input_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasRequest
+	88,  // 146: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:input_type -> akuity.io.kargo.service.v1alpha1.ReverifyRequest
+	90,  // 147: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:input_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationRequest
+	92,  // 148: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesRequest
+	94,  // 149: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseRequest
+	96,  // 150: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:input_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesRequest
+	98,  // 151: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseRequest
+	100, // 152: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:input_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
+	106, // 153: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsRequest
+	108, // 154: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:input_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsRequest
+	110, // 155: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:input_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsRequest
+	112, // 156: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:input_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsRequest
+	114, // 157: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:input_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsRequest
+	116, // 158: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsRequest
+	118, // 159: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretRequest
+	120, // 160: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretRequest
+	122, // 161: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretRequest
+	102, // 162: akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps:input_type -> akuity.io.kargo.service.v1alpha1.ListConfigMapsRequest
+	104, // 163: akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap:input_type -> akuity.io.kargo.service.v1alpha1.GetConfigMapRequest
+	124, // 164: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesRequest
+	126, // 165: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateRequest
+	128, // 166: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateRequest
+	130, // 167: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesRequest
+	132, // 168: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateRequest
+	134, // 169: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateRequest
+	136, // 170: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunRequest
+	138, // 171: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:input_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsRequest
+	140, // 172: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:input_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsRequest
+	142, // 173: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksRequest
+	146, // 174: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksRequest
+	144, // 175: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskRequest
+	148, // 176: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:input_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskRequest
+	150, // 177: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:input_type -> akuity.io.kargo.service.v1alpha1.CreateRoleRequest
+	152, // 178: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:input_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleRequest
+	154, // 179: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:input_type -> akuity.io.kargo.service.v1alpha1.GetRoleRequest
+	157, // 180: akuity.io.kargo.service.v1alpha1.KargoService.Grant:input_type -> akuity.io.kargo.service.v1alpha1.GrantRequest
+	159, // 181: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:input_type -> akuity.io.kargo.service.v1alpha1.ListRolesRequest
+	161, // 182: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:input_type -> akuity.io.kargo.service.v1alpha1.RevokeRequest
+	163, // 183: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:input_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleRequest
+	165, // 184: akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccount:input_type -> akuity.io.kargo.service.v1alpha1.CreateServiceAccountRequest
+	167, // 185: akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccount:input_type -> akuity.io.kargo.service.v1alpha1.DeleteServiceAccountRequest
+	169, // 186: akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccount:input_type -> akuity.io.kargo.service.v1alpha1.GetServiceAccountRequest
+	171, // 187: akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccounts:input_type -> akuity.io.kargo.service.v1alpha1.ListServiceAccountsRequest
+	173, // 188: akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccountToken:input_type -> akuity.io.kargo.service.v1alpha1.CreateServiceAccountTokenRequest
+	175, // 189: akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccountToken:input_type -> akuity.io.kargo.service.v1alpha1.DeleteServiceAccountTokenRequest
+	177, // 190: akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccountToken:input_type -> akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenRequest
+	179, // 191: akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens:input_type -> akuity.io.kargo.service.v1alpha1.ListServiceAccountTokensRequest
+	181, // 192: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets:input_type -> akuity.io.kargo.service.v1alpha1.ListClusterSecretsRequest
+	183, // 193: akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretRequest
+	185, // 194: akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretRequest
+	187, // 195: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret:input_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterSecretRequest
+	4,   // 196: akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo:output_type -> akuity.io.kargo.service.v1alpha1.GetVersionInfoResponse
+	7,   // 197: akuity.io.kargo.service.v1alpha1.KargoService.GetConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigResponse
+	9,   // 198: akuity.io.kargo.service.v1alpha1.KargoService.GetPublicConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetPublicConfigResponse
+	12,  // 199: akuity.io.kargo.service.v1alpha1.KargoService.AdminLogin:output_type -> akuity.io.kargo.service.v1alpha1.AdminLoginResponse
+	15,  // 200: akuity.io.kargo.service.v1alpha1.KargoService.CreateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateResourceResponse
+	18,  // 201: akuity.io.kargo.service.v1alpha1.KargoService.CreateOrUpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.CreateOrUpdateResourceResponse
+	21,  // 202: akuity.io.kargo.service.v1alpha1.KargoService.UpdateResource:output_type -> akuity.io.kargo.service.v1alpha1.UpdateResourceResponse
+	24,  // 203: akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource:output_type -> akuity.io.kargo.service.v1alpha1.DeleteResourceResponse
+	26,  // 204: akuity.io.kargo.service.v1alpha1.KargoService.ListStages:output_type -> akuity.io.kargo.service.v1alpha1.ListStagesResponse
+	28,  // 205: akuity.io.kargo.service.v1alpha1.KargoService.ListImages:output_type -> akuity.io.kargo.service.v1alpha1.ListImagesResponse
+	32,  // 206: akuity.io.kargo.service.v1alpha1.KargoService.GetStage:output_type -> akuity.io.kargo.service.v1alpha1.GetStageResponse
+	34,  // 207: akuity.io.kargo.service.v1alpha1.KargoService.WatchStages:output_type -> akuity.io.kargo.service.v1alpha1.WatchStagesResponse
+	36,  // 208: akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage:output_type -> akuity.io.kargo.service.v1alpha1.DeleteStageResponse
+	38,  // 209: akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage:output_type -> akuity.io.kargo.service.v1alpha1.RefreshStageResponse
+	40,  // 210: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterConfigResponse
+	42,  // 211: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterConfigResponse
+	44,  // 212: akuity.io.kargo.service.v1alpha1.KargoService.WatchClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchClusterConfigResponse
+	46,  // 213: akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshClusterConfigResponse
+	48,  // 214: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionsResponse
+	50,  // 215: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotions:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionsResponse
+	52,  // 216: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotion:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionResponse
+	54,  // 217: akuity.io.kargo.service.v1alpha1.KargoService.WatchPromotion:output_type -> akuity.io.kargo.service.v1alpha1.WatchPromotionResponse
+	56,  // 218: akuity.io.kargo.service.v1alpha1.KargoService.AbortPromotion:output_type -> akuity.io.kargo.service.v1alpha1.AbortPromotionResponse
+	58,  // 219: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProject:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectResponse
+	60,  // 220: akuity.io.kargo.service.v1alpha1.KargoService.GetProject:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectResponse
+	62,  // 221: akuity.io.kargo.service.v1alpha1.KargoService.ListProjects:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectsResponse
+	64,  // 222: akuity.io.kargo.service.v1alpha1.KargoService.GetProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.GetProjectConfigResponse
+	66,  // 223: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectConfigResponse
+	68,  // 224: akuity.io.kargo.service.v1alpha1.KargoService.WatchProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.WatchProjectConfigResponse
+	70,  // 225: akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig:output_type -> akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
+	72,  // 226: akuity.io.kargo.service.v1alpha1.KargoService.ApproveFreight:output_type -> akuity.io.kargo.service.v1alpha1.ApproveFreightResponse
+	74,  // 227: akuity.io.kargo.service.v1alpha1.KargoService.DeleteFreight:output_type -> akuity.io.kargo.service.v1alpha1.DeleteFreightResponse
+	76,  // 228: akuity.io.kargo.service.v1alpha1.KargoService.GetFreight:output_type -> akuity.io.kargo.service.v1alpha1.GetFreightResponse
+	78,  // 229: akuity.io.kargo.service.v1alpha1.KargoService.WatchFreight:output_type -> akuity.io.kargo.service.v1alpha1.WatchFreightResponse
+	80,  // 230: akuity.io.kargo.service.v1alpha1.KargoService.PromoteToStage:output_type -> akuity.io.kargo.service.v1alpha1.PromoteToStageResponse
+	82,  // 231: akuity.io.kargo.service.v1alpha1.KargoService.PromoteDownstream:output_type -> akuity.io.kargo.service.v1alpha1.PromoteDownstreamResponse
+	84,  // 232: akuity.io.kargo.service.v1alpha1.KargoService.QueryFreight:output_type -> akuity.io.kargo.service.v1alpha1.QueryFreightResponse
+	87,  // 233: akuity.io.kargo.service.v1alpha1.KargoService.UpdateFreightAlias:output_type -> akuity.io.kargo.service.v1alpha1.UpdateFreightAliasResponse
+	89,  // 234: akuity.io.kargo.service.v1alpha1.KargoService.Reverify:output_type -> akuity.io.kargo.service.v1alpha1.ReverifyResponse
+	91,  // 235: akuity.io.kargo.service.v1alpha1.KargoService.AbortVerification:output_type -> akuity.io.kargo.service.v1alpha1.AbortVerificationResponse
+	93,  // 236: akuity.io.kargo.service.v1alpha1.KargoService.ListWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.ListWarehousesResponse
+	95,  // 237: akuity.io.kargo.service.v1alpha1.KargoService.GetWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.GetWarehouseResponse
+	97,  // 238: akuity.io.kargo.service.v1alpha1.KargoService.WatchWarehouses:output_type -> akuity.io.kargo.service.v1alpha1.WatchWarehousesResponse
+	99,  // 239: akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.DeleteWarehouseResponse
+	101, // 240: akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse:output_type -> akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse
+	107, // 241: akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.CreateCredentialsResponse
+	109, // 242: akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials:output_type -> akuity.io.kargo.service.v1alpha1.DeleteCredentialsResponse
+	111, // 243: akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials:output_type -> akuity.io.kargo.service.v1alpha1.GetCredentialsResponse
+	113, // 244: akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials:output_type -> akuity.io.kargo.service.v1alpha1.ListCredentialsResponse
+	115, // 245: akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials:output_type -> akuity.io.kargo.service.v1alpha1.UpdateCredentialsResponse
+	117, // 246: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectSecretsResponse
+	119, // 247: akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateProjectSecretResponse
+	121, // 248: akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateProjectSecretResponse
+	123, // 249: akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteProjectSecretResponse
+	103, // 250: akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps:output_type -> akuity.io.kargo.service.v1alpha1.ListConfigMapsResponse
+	105, // 251: akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap:output_type -> akuity.io.kargo.service.v1alpha1.GetConfigMapResponse
+	125, // 252: akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListAnalysisTemplatesResponse
+	127, // 253: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisTemplateResponse
+	129, // 254: akuity.io.kargo.service.v1alpha1.KargoService.DeleteAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteAnalysisTemplateResponse
+	131, // 255: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterAnalysisTemplates:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterAnalysisTemplatesResponse
+	133, // 256: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterAnalysisTemplateResponse
+	135, // 257: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterAnalysisTemplate:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterAnalysisTemplateResponse
+	137, // 258: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRun:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunResponse
+	139, // 259: akuity.io.kargo.service.v1alpha1.KargoService.GetAnalysisRunLogs:output_type -> akuity.io.kargo.service.v1alpha1.GetAnalysisRunLogsResponse
+	141, // 260: akuity.io.kargo.service.v1alpha1.KargoService.ListProjectEvents:output_type -> akuity.io.kargo.service.v1alpha1.ListProjectEventsResponse
+	143, // 261: akuity.io.kargo.service.v1alpha1.KargoService.ListPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListPromotionTasksResponse
+	147, // 262: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterPromotionTasks:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterPromotionTasksResponse
+	145, // 263: akuity.io.kargo.service.v1alpha1.KargoService.GetPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetPromotionTaskResponse
+	149, // 264: akuity.io.kargo.service.v1alpha1.KargoService.GetClusterPromotionTask:output_type -> akuity.io.kargo.service.v1alpha1.GetClusterPromotionTaskResponse
+	151, // 265: akuity.io.kargo.service.v1alpha1.KargoService.CreateRole:output_type -> akuity.io.kargo.service.v1alpha1.CreateRoleResponse
+	153, // 266: akuity.io.kargo.service.v1alpha1.KargoService.DeleteRole:output_type -> akuity.io.kargo.service.v1alpha1.DeleteRoleResponse
+	155, // 267: akuity.io.kargo.service.v1alpha1.KargoService.GetRole:output_type -> akuity.io.kargo.service.v1alpha1.GetRoleResponse
+	158, // 268: akuity.io.kargo.service.v1alpha1.KargoService.Grant:output_type -> akuity.io.kargo.service.v1alpha1.GrantResponse
+	160, // 269: akuity.io.kargo.service.v1alpha1.KargoService.ListRoles:output_type -> akuity.io.kargo.service.v1alpha1.ListRolesResponse
+	162, // 270: akuity.io.kargo.service.v1alpha1.KargoService.Revoke:output_type -> akuity.io.kargo.service.v1alpha1.RevokeResponse
+	164, // 271: akuity.io.kargo.service.v1alpha1.KargoService.UpdateRole:output_type -> akuity.io.kargo.service.v1alpha1.UpdateRoleResponse
+	166, // 272: akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccount:output_type -> akuity.io.kargo.service.v1alpha1.CreateServiceAccountResponse
+	168, // 273: akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccount:output_type -> akuity.io.kargo.service.v1alpha1.DeleteServiceAccountResponse
+	170, // 274: akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccount:output_type -> akuity.io.kargo.service.v1alpha1.GetServiceAccountResponse
+	172, // 275: akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccounts:output_type -> akuity.io.kargo.service.v1alpha1.ListServiceAccountsResponse
+	174, // 276: akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccountToken:output_type -> akuity.io.kargo.service.v1alpha1.CreateServiceAccountTokenResponse
+	176, // 277: akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccountToken:output_type -> akuity.io.kargo.service.v1alpha1.DeleteServiceAccountTokenResponse
+	178, // 278: akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccountToken:output_type -> akuity.io.kargo.service.v1alpha1.GetServiceAccountTokenResponse
+	180, // 279: akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens:output_type -> akuity.io.kargo.service.v1alpha1.ListServiceAccountTokensResponse
+	182, // 280: akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets:output_type -> akuity.io.kargo.service.v1alpha1.ListClusterSecretsResponse
+	184, // 281: akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.CreateClusterSecretResponse
+	186, // 282: akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.UpdateClusterSecretResponse
+	188, // 283: akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret:output_type -> akuity.io.kargo.service.v1alpha1.DeleteClusterSecretResponse
+	196, // [196:284] is the sub-list for method output_type
+	108, // [108:196] is the sub-list for method input_type
+	108, // [108:108] is the sub-list for extension type_name
+	108, // [108:108] is the sub-list for extension extendee
+	0,   // [0:108] is the sub-list for field type_name
 }
 
 func init() { file_api_service_v1alpha1_service_proto_init() }
@@ -14412,7 +15652,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[164].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterSecretsRequest); i {
+			switch v := v.(*CreateServiceAccountRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14424,7 +15664,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[165].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*ListClusterSecretsResponse); i {
+			switch v := v.(*CreateServiceAccountResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14436,7 +15676,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[166].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateClusterSecretRequest); i {
+			switch v := v.(*DeleteServiceAccountRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14448,7 +15688,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[167].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*CreateClusterSecretResponse); i {
+			switch v := v.(*DeleteServiceAccountResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14460,7 +15700,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[168].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateClusterSecretRequest); i {
+			switch v := v.(*GetServiceAccountRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14472,7 +15712,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[169].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*UpdateClusterSecretResponse); i {
+			switch v := v.(*GetServiceAccountResponse); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14484,7 +15724,7 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[170].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*DeleteClusterSecretRequest); i {
+			switch v := v.(*ListServiceAccountsRequest); i {
 			case 0:
 				return &v.state
 			case 1:
@@ -14496,6 +15736,198 @@ func file_api_service_v1alpha1_service_proto_init() {
 			}
 		}
 		file_api_service_v1alpha1_service_proto_msgTypes[171].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListServiceAccountsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[172].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateServiceAccountTokenRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[173].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateServiceAccountTokenResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[174].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteServiceAccountTokenRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[175].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteServiceAccountTokenResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[176].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetServiceAccountTokenRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[177].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*GetServiceAccountTokenResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[178].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListServiceAccountTokensRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[179].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListServiceAccountTokensResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[180].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListClusterSecretsRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[181].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*ListClusterSecretsResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[182].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateClusterSecretRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[183].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*CreateClusterSecretResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[184].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateClusterSecretRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[185].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*UpdateClusterSecretResponse); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[186].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*DeleteClusterSecretRequest); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_api_service_v1alpha1_service_proto_msgTypes[187].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*DeleteClusterSecretResponse); i {
 			case 0:
 				return &v.state
@@ -14598,13 +16030,21 @@ func file_api_service_v1alpha1_service_proto_init() {
 		(*RevokeRequest_UserClaims)(nil),
 		(*RevokeRequest_ResourceDetails)(nil),
 	}
+	file_api_service_v1alpha1_service_proto_msgTypes[169].OneofWrappers = []interface{}{
+		(*GetServiceAccountResponse_ServiceAccount)(nil),
+		(*GetServiceAccountResponse_Raw)(nil),
+	}
+	file_api_service_v1alpha1_service_proto_msgTypes[177].OneofWrappers = []interface{}{
+		(*GetServiceAccountTokenResponse_TokenSecret)(nil),
+		(*GetServiceAccountTokenResponse_Raw)(nil),
+	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_api_service_v1alpha1_service_proto_rawDesc,
 			NumEnums:      1,
-			NumMessages:   181,
+			NumMessages:   197,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

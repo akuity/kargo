@@ -483,6 +483,66 @@ export const revoke = KargoService.method.revoke;
 export const updateRole = KargoService.method.updateRole;
 
 /**
+ * CreateServiceAccount creates a new Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccount
+ */
+export const createServiceAccount = KargoService.method.createServiceAccount;
+
+/**
+ * DeleteServiceAccount removes a Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccount
+ */
+export const deleteServiceAccount = KargoService.method.deleteServiceAccount;
+
+/**
+ * GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccount
+ */
+export const getServiceAccount = KargoService.method.getServiceAccount;
+
+/**
+ * ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccounts
+ */
+export const listServiceAccounts = KargoService.method.listServiceAccounts;
+
+/**
+ * CreateServiceAccountToken generates and returns a new bearer token
+ * associated with a Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccountToken
+ */
+export const createServiceAccountToken = KargoService.method.createServiceAccountToken;
+
+/**
+ * DeleteServiceAccountToken deletes a bearer token associated with a
+ * Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccountToken
+ */
+export const deleteServiceAccountToken = KargoService.method.deleteServiceAccountToken;
+
+/**
+ * GetServiceAccountToken retrieves details of a specific bearer token
+ * associated with a Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccountToken
+ */
+export const getServiceAccountToken = KargoService.method.getServiceAccountToken;
+
+/**
+ * ListServiceAccountTokens lists bearer tokens associated with
+ * with a specified Kargo ServiceAccount.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens
+ */
+export const listServiceAccountTokens = KargoService.method.listServiceAccountTokens;
+
+/**
  * ListClusterSecrets retrieves all cluster-scoped secrets.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets

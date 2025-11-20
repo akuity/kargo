@@ -89,6 +89,14 @@ Stability is not guaranteed.
 | ListRoles | [ListRolesRequest](#akuity-io-kargo-service-v1alpha1-ListRolesRequest) | [ListRolesResponse](#akuity-io-kargo-service-v1alpha1-ListRolesResponse) |
 | Revoke | [RevokeRequest](#akuity-io-kargo-service-v1alpha1-RevokeRequest) | [RevokeResponse](#akuity-io-kargo-service-v1alpha1-RevokeResponse) |
 | UpdateRole | [UpdateRoleRequest](#akuity-io-kargo-service-v1alpha1-UpdateRoleRequest) | [UpdateRoleResponse](#akuity-io-kargo-service-v1alpha1-UpdateRoleResponse) |
+| CreateServiceAccount | [CreateServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountRequest) | [CreateServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountResponse) |
+| DeleteServiceAccount | [DeleteServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountRequest) | [DeleteServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountResponse) |
+| GetServiceAccount | [GetServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-GetServiceAccountRequest) | [GetServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-GetServiceAccountResponse) |
+| ListServiceAccounts | [ListServiceAccountsRequest](#akuity-io-kargo-service-v1alpha1-ListServiceAccountsRequest) | [ListServiceAccountsResponse](#akuity-io-kargo-service-v1alpha1-ListServiceAccountsResponse) |
+| CreateServiceAccountToken | [CreateServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenRequest) | [CreateServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenResponse) |
+| DeleteServiceAccountToken | [DeleteServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenRequest) | [DeleteServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenResponse) |
+| GetServiceAccountToken | [GetServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest) | [GetServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenResponse) |
+| ListServiceAccountTokens | [ListServiceAccountTokensRequest](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensRequest) | [ListServiceAccountTokensResponse](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensResponse) |
 | ListClusterSecrets | [ListClusterSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest) | [ListClusterSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse) |
 | CreateClusterSecret | [CreateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest) | [CreateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse) |
 | UpdateClusterSecret | [UpdateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest) | [UpdateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse) |
@@ -321,6 +329,41 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the created Role resource. |
 
+<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountRequest"></a>
+
+### CreateServiceAccountRequest
+ CreateServiceAccountRequest is a request to create a new Kargo ServiceAccount resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is the Kargo ServiceAccount to create. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountResponse"></a>
+
+### CreateServiceAccountResponse
+ CreateServiceAccountResponse contains the details of a newly created Kargo ServiceAccount resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is the newly created Kargo ServiceAccount resource. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenRequest"></a>
+
+### CreateServiceAccountTokenRequest
+ CreateServiceAccountTokenRequest is a request to generate a new bearer token associated with a specified Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create a token associated with a system-level Kargo Service Account instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the Kargo ServiceAccount resource for which a new token is being created. This value is ignored if system_level is true. |
+| service_account_name | [string](#string) |  service_account_name is the name of the Kargo ServiceAccount for which to generate a new bearer token. |
+| name | [string](#string) |  name is the name for the bearer token to be created. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenResponse"></a>
+
+### CreateServiceAccountTokenResponse
+ CreateServiceAccountTokenResponse contains a newly generated bearer token in the form of a Kubernetes Secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
+
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest"></a>
 
 ### DeleteAnalysisTemplateRequest
@@ -468,6 +511,33 @@ Stability is not guaranteed.
 
 ### DeleteRoleResponse
  DeleteRoleResponse is the response returned after deleting a role.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountRequest"></a>
+
+### DeleteServiceAccountRequest
+ DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the Kargo ServiceAccount resource. |
+| name | [string](#string) |  name is the name of the Kargo ServiceAccount resource to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountResponse"></a>
+
+### DeleteServiceAccountResponse
+ DeleteServiceAccountResponse is the response returned after deleting a Kargo ServiceAccount resource.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenRequest"></a>
+
+### DeleteServiceAccountTokenRequest
+ DeleteServiceAccountTokenRequest is a request to delete a bearer token associated with a Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete a token associated with a system-level Kargo Service Account instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the token that is to be deleted. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the token to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenResponse"></a>
+
+### DeleteServiceAccountTokenResponse
+ DeleteServiceAccountTokenResponse is the response returned after deleting a bearer token associated with a Kargo ServiceAccount.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
 
 ### DeleteStageRequest
@@ -803,6 +873,46 @@ Stability is not guaranteed.
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is the structured RoleResources containing the role's resources. |
 | raw | [bytes](#bytes) |  raw is the raw YAML representation of the role. |
 
+<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountRequest"></a>
+
+### GetServiceAccountRequest
+ GetServiceAccountRequest is a request for the details of specific Kargo ServiceAccount resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is for a system-level Kargo Service Account instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the requested Kargo ServiceAccount resource. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of a Kargo ServiceAccount to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML or JSON). |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountResponse"></a>
+
+### GetServiceAccountResponse
+ GetServiceAccountResponse contains the details of the requested Kargo ServiceAccount resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is a structured ServiceAccount. |
+| raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest"></a>
+
+### GetServiceAccountTokenRequest
+ GetServiceAccountTokenRequest is a request to retrieve details of a bearer token associated with a Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is for a token associated with a system-level Kargo Service Account instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the requested token. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the token to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenResponse"></a>
+
+### GetServiceAccountTokenResponse
+ GetServiceAccountTokenResponse contains contains the details of a bearer token associated with a Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secrets containing a redacted token associated with a Kargo ServiceAccount. |
+| raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
+
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 
 ### GetStageRequest
@@ -1100,6 +1210,41 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together roles is the list of Role resources when requested as roles. |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is the list of RoleResources when requested as resources. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensRequest"></a>
+
+### ListServiceAccountTokensRequest
+ ListServiceAccountTokensRequest is a request to list bearer tokens associated with a specified Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether to list tokens associated with system-level Kargo Service Accounts instead of ones at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the tokens. |
+| service_account_name | [string](#string) |  service_account_name is the name of the Kargo ServiceAccount for which to list associated tokens. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensResponse"></a>
+
+### ListServiceAccountTokensResponse
+ ListServiceAccountTokensResponse contains a list of bearer tokens associated with a specified Kargo ServiceAccount.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secrets | k8s.io.api.core.v1.Secret |  token_secrets is the list of Kubernetes Secrets containing redacted tokens associated with a Kargo ServiceAccount. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountsRequest"></a>
+
+### ListServiceAccountsRequest
+ ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount resources.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list Kargo ServiceAccounts at the system-level instead of the project-level. This value is ignored if system_level is true. |
+| project | [string](#string) |  project is the name of the project for which to list all Kargo ServiceAccount resources. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountsResponse"></a>
+
+### ListServiceAccountsResponse
+ ListServiceAccountsResponse contains a list of Kargo ServiceAccount resources.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| serviceAccounts | k8s.io.api.core.v1.ServiceAccount |  serviceAccounts is the list of Kargo ServiceAccount resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
