@@ -11,13 +11,43 @@ type ArgoCDUpdateConfig struct {
 }
 
 type ArgoCDAppUpdate struct {
-	// Specifies the name of an Argo CD Application resource to be updated.
-	Name string `json:"name"`
+	// Specifies the exact name of an Argo CD Application resource to be updated. Mutually
+	// exclusive with 'selector'.
+	Name string `json:"name,omitempty"`
 	// Specifies the namespace of an Argo CD Application resource to be updated. If left
 	// unspecified, the namespace will be the controller's configured default.
 	Namespace string `json:"namespace,omitempty"`
+	// Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+	// exclusive with 'name'.
+	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
 	// Describes updates to be applied to various sources of an Argo CD Application resource.
 	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
+}
+
+// Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+// exclusive with 'name'.
+//
+// Selector to match Argo CD Application resources by labels. Must contain at least one
+// selection criterion.
+type ArgoCDAppSelector struct {
+	// matchExpressions is a list of label selector requirements. The requirements are ANDed.
+	MatchExpressions []MatchExpression `json:"matchExpressions,omitempty"`
+	// matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is
+	// equivalent to an element of matchExpressions, whose key field is 'key', the operator is
+	// 'In', and the values array contains only 'value'. The requirements are ANDed.
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+}
+
+type MatchExpression struct {
+	// key is the label key that the selector applies to.
+	Key string `json:"key"`
+	// operator represents a key's relationship to a set of values. Valid operators are In,
+	// NotIn, Exists and DoesNotExist.
+	Operator Operator `json:"operator"`
+	// values is an array of string values. If the operator is In or NotIn, the values array
+	// must be non-empty. If the operator is Exists or DoesNotExist, the values array must be
+	// empty. This array is replaced during a strategic merge patch.
+	Values []string `json:"values,omitempty"`
 }
 
 type ArgoCDAppSourceUpdate struct {
@@ -555,6 +585,17 @@ type YAMLUpdate struct {
 	// The new value for the specified key.
 	Value interface{} `json:"value"`
 }
+
+// operator represents a key's relationship to a set of values. Valid operators are In,
+// NotIn, Exists and DoesNotExist.
+type Operator string
+
+const (
+	DoesNotExist Operator = "DoesNotExist"
+	Exists       Operator = "Exists"
+	In           Operator = "In"
+	NotIn        Operator = "NotIn"
+)
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 // and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
