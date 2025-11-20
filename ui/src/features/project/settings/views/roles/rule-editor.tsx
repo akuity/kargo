@@ -11,6 +11,7 @@ import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
 
 const availableResources = [
   // core
+  'configmaps',
   'events',
   'secrets',
   'serviceaccounts',
