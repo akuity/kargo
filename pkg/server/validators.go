@@ -21,6 +21,19 @@ func validateFieldNotEmpty(fieldName string, fieldValue string) error {
 	return nil
 }
 
+func (s *server) validateSystemLevelOrProject(
+	systemLevel bool,
+	project string,
+) error {
+	if !systemLevel && project == "" {
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("project must be specified when system level is false"),
+		)
+	}
+	return nil
+}
+
 func (s *server) validateProjectExists(ctx context.Context, project string) error {
 	if err := s.externalValidateProjectFn(ctx, s.client, project); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
