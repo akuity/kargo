@@ -617,7 +617,15 @@ func TestGrantRoleToUsers(t *testing.T) {
 	})
 }
 
-func TestList(t *testing.T) {
+func TestListNames(t *testing.T) {
+	t.Run("no ServiceAccounts", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+		db := NewKubernetesRolesDatabase(c)
+		names, err := db.ListNames(context.Background(), testProject)
+		require.NoError(t, err)
+		require.Empty(t, names)
+	})
+
 	t.Run("with only kargo-managed roles", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
@@ -635,51 +643,9 @@ func TestList(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRoles, err := db.List(context.Background(), testProject)
+		names, err := db.ListNames(context.Background(), testProject)
 		require.NoError(t, err)
-		// Do not factor creation timestamp into the comparison
-		now := metav1.NewTime(time.Now())
-		for _, kargoRole := range kargoRoles {
-			kargoRole.CreationTimestamp = now
-		}
-		require.Equal(
-			t,
-			[]*rbacapi.Role{{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:         testProject,
-					Name:              testKargoRoleName,
-					CreationTimestamp: now,
-				},
-				KargoManaged: true,
-				Claims: []rbacapi.Claim{
-					{
-						Name:   "email",
-						Values: []string{"bar-email", "foo-email"},
-					},
-					{
-						Name:   "groups",
-						Values: []string{"bar-group", "foo-group"},
-					},
-					{
-						Name:   "sub",
-						Values: []string{"bar-sub", "foo-sub"},
-					},
-				},
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{kargoapi.GroupVersion.Group},
-						Resources: []string{"promotions"},
-						Verbs:     []string{"get", "list"},
-					},
-					{
-						APIGroups: []string{kargoapi.GroupVersion.Group},
-						Resources: []string{"stages"},
-						Verbs:     []string{"get", "list"},
-					},
-				},
-			}},
-			kargoRoles,
-		)
+		require.Equal(t, []string{testKargoRoleName}, names)
 	})
 
 	t.Run("with a non-kargo-managed role", func(t *testing.T) {
@@ -690,13 +656,6 @@ func TestList(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCClaim("groups"): "foo-group,bar-group",
 			}),
 			plainRole([]rbacv1.PolicyRule{
-				{ // This rule has groups and types that we don't recognize. Let's
-					// make sure we don't choke on them. This could happen with roles
-					// that aren't Kargo-managed.
-					APIGroups: []string{"fake-group-1", "fake-group-2"},
-					Resources: []string{"fake-type-1", "fake-type-2"},
-					Verbs:     []string{"get", "list"},
-				},
 				{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
 					Resources: []string{"stages", "promotions"},
@@ -706,52 +665,62 @@ func TestList(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRoles, err := db.List(context.Background(), testProject)
+		names, err := db.ListNames(context.Background(), testProject)
 		require.NoError(t, err)
-		// Do not factor creation timestamp into the comparison
-		now := metav1.NewTime(time.Now())
-		for _, kargoRole := range kargoRoles {
-			kargoRole.CreationTimestamp = now
-		}
-		require.Equal(
-			t,
-			[]*rbacapi.Role{{
+		require.Equal(t, []string{testKargoRoleName}, names)
+	})
+
+	t.Run("with multiple roles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace:         testProject,
-					Name:              testKargoRoleName,
-					CreationTimestamp: now,
+					Namespace: testProject,
+					Name:      "role-a",
 				},
-				KargoManaged: false,
-				Claims: []rbacapi.Claim{
-					{
-						Name:   "email",
-						Values: []string{"bar-email", "foo-email"},
-					},
-					{
-						Name:   "groups",
-						Values: []string{"bar-group", "foo-group"},
-					},
-					{
-						Name:   "sub",
-						Values: []string{"bar-sub", "foo-sub"},
+			},
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      "role-c",
+				},
+			},
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      "role-b",
+				},
+			},
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		names, err := db.ListNames(context.Background(), testProject)
+		require.NoError(t, err)
+		// Should be sorted
+		require.Equal(t, []string{"role-a", "role-b", "role-c"}, names)
+	})
+
+	t.Run("excludes Kargo ServiceAccounts", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      "regular-role",
+				},
+			},
+			&corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      "kargo-sa",
+					Labels: map[string]string{
+						rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
 					},
 				},
-				// There should have been no attempt to normalize these rules
-				Rules: []rbacv1.PolicyRule{
-					{
-						APIGroups: []string{"fake-group-1", "fake-group-2"},
-						Resources: []string{"fake-type-1", "fake-type-2"},
-						Verbs:     []string{"get", "list"},
-					},
-					{
-						APIGroups: []string{kargoapi.GroupVersion.Group},
-						Resources: []string{"stages", "promotions"},
-						Verbs:     []string{"list", "get"},
-					},
-				},
-			}},
-			kargoRoles,
-		)
+			},
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		names, err := db.ListNames(context.Background(), testProject)
+		require.NoError(t, err)
+		require.Equal(t, []string{"regular-role"}, names)
+		require.NotContains(t, names, "kargo-sa")
 	})
 }
 

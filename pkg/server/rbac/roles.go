@@ -59,9 +59,6 @@ type RolesDatabase interface {
 		name string,
 		claims []rbacapi.Claim,
 	) (*rbacapi.Role, error)
-	// List returns Kargo Role representations of underlying ServiceAccounts and
-	// andy Roles and RoleBindings associated with them.
-	List(ctx context.Context, project string) ([]*rbacapi.Role, error)
 	// ListNames returns names of Kargo Roles..
 	ListNames(ctx context.Context, project string) ([]string, error)
 	// RevokePermissionFromRole removes select rules from the Role underlying a
@@ -428,46 +425,6 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	return ResourcesToRole(sa, []rbacv1.Role{*role}, rbs)
 }
 
-// List implements the RolesDatabase interface.
-func (r *rolesDatabase) List(
-	ctx context.Context,
-	project string,
-) ([]*rbacapi.Role, error) {
-	saList := &corev1.ServiceAccountList{}
-	if err := r.client.List(
-		ctx,
-		saList,
-		client.InNamespace(project),
-	); err != nil {
-		return nil, fmt.Errorf("error listing ServiceAccounts in namespace %q: %w", project, err)
-	}
-
-	kargoRoles := make([]*rbacapi.Role, 0, len(saList.Items))
-	for i := range saList.Items {
-		sa, roles, rbs, err := r.GetAsResources(ctx, project, saList.Items[i].Name)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting underlying resources for Kargo Role %q from namespace %q: %w",
-				saList.Items[i].Name, project, err,
-			)
-		}
-		// Note: The underlying resources we found may not be manageable, but we
-		// can still return a Kargo Role that summarizes them.
-		kargoRole, err := ResourcesToRole(sa, roles, rbs)
-		if err != nil {
-			return nil, fmt.Errorf("error converting underlying resources to Kargo Role %q: %w", sa.Name, err)
-		}
-		kargoRoles = append(kargoRoles, kargoRole)
-	}
-
-	// Sort ascending by name
-	slices.SortFunc(kargoRoles, func(lhs, rhs *rbacapi.Role) int {
-		return strings.Compare(lhs.Name, rhs.Name)
-	})
-
-	return kargoRoles, nil
-}
-
 func (r *rolesDatabase) ListNames(ctx context.Context, project string) ([]string, error) {
 	saList := &corev1.ServiceAccountList{}
 	if err := r.client.List(
@@ -478,8 +435,11 @@ func (r *rolesDatabase) ListNames(ctx context.Context, project string) ([]string
 		return nil, fmt.Errorf("error listing ServiceAccounts in namespace %q: %w", project, err)
 	}
 	names := make([]string, 0, len(saList.Items))
-	for i := range saList.Items {
-		names = append(names, saList.Items[i].Name)
+	for _, sa := range saList.Items {
+		// Skip ServiceAccounts that are Kargo Service Accounts.
+		if sa.Labels[rbacapi.LabelKeyServiceAccount] != rbacapi.LabelValueTrue {
+			names = append(names, sa.Name)
+		}
 	}
 	slices.Sort(names)
 	return names, nil
