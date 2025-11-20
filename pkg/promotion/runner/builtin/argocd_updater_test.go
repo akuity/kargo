@@ -57,12 +57,12 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 			},
 		},
 		{
-			name: "app name not specified",
+			name: "app name and selector not specified",
 			config: promotion.Config{
 				"apps": []promotion.Config{{}},
 			},
 			expectedProblems: []string{
-				"apps.0: name is required",
+				"apps.0: Must validate one and only one schema (oneOf)",
 			},
 		},
 		{
@@ -74,6 +74,137 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"apps.0.name: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "app name and selector both specified",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"name": "my-app",
+					"selector": promotion.Config{
+						"matchLabels": promotion.Config{
+							"env": "prod",
+						},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "app selector is empty",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector: Must validate at least one schema (anyOf)",
+			},
+		},
+		{
+			name: "app selector matchLabels is empty object",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchLabels": promotion.Config{},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchLabels: Must have at least 1 properties",
+			},
+		},
+		{
+			name: "app selector matchExpressions is empty array",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions: Array must have at least 1 items",
+			},
+		},
+		{
+			name: "app selector matchExpression missing key",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"operator": "In",
+						}},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions.0: key is required",
+			},
+		},
+		{
+			name: "app selector matchExpression missing operator",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"key": "env",
+						}},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions.0: operator is required",
+			},
+		},
+		{
+			name: "app selector matchExpression key is empty string",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"key":      "",
+							"operator": "In",
+						}},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions.0.key: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "app selector matchExpression operator is empty string",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"key":      "env",
+							"operator": "",
+						}},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions.0.operator: apps.0.selector.matchExpressions.0.operator must be one of the following:",
+			},
+		},
+		{
+			name: "app selector matchExpression operator is invalid",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"key":      "env",
+							"operator": "InvalidOperator",
+						}},
+					},
+				}},
+			},
+			expectedProblems: []string{
+				"apps.0.selector.matchExpressions.0.operator: apps.0.selector.matchExpressions.0.operator must be one of the following:",
 			},
 		},
 		{
@@ -278,6 +409,50 @@ func Test_argoCDUpdater_convert(t *testing.T) {
 			},
 			expectedProblems: []string{
 				"apps.0.sources.0.kustomize.images.0: Must validate one and only one schema (oneOf)",
+			},
+		},
+		{
+			name: "valid selector with matchLabels",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchLabels": promotion.Config{
+							"env":  "prod",
+							"team": "platform",
+						},
+					},
+				}},
+			},
+		},
+		{
+			name: "valid selector with matchExpressions",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchExpressions": []promotion.Config{{
+							"key":      "env",
+							"operator": "In",
+							"values":   []string{"prod"},
+						}},
+					},
+				}},
+			},
+		},
+		{
+			name: "valid selector with both matchLabels and matchExpressions",
+			config: promotion.Config{
+				"apps": []promotion.Config{{
+					"selector": promotion.Config{
+						"matchLabels": promotion.Config{
+							"team": "platform",
+						},
+						"matchExpressions": []promotion.Config{{
+							"key":      "env",
+							"operator": "In",
+							"values":   []string{"prod", "staging"},
+						}},
+					},
+				}},
 			},
 		},
 		{
@@ -1397,7 +1572,7 @@ func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
 					client.WithWatch,
 					client.ObjectKey,
 					client.Object,
-					...client.GetOption,
+				...client.GetOption,
 				) error {
 					return errors.New("something went wrong")
 				},
