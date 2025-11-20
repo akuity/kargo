@@ -86,6 +86,7 @@ func Test_argocdUpdater_check(t *testing.T) {
 							Conditions: []argocd.ApplicationCondition{
 								{Type: argocd.ApplicationConditionComparisonError},
 								{Type: argocd.ApplicationConditionInvalidSpecError},
+								{Type: argocd.ApplicationConditionSyncError},
 							},
 						},
 					},
@@ -94,11 +95,13 @@ func Test_argocdUpdater_check(t *testing.T) {
 			assertions: func(t *testing.T, res health.Result) {
 				require.Equal(t, kargoapi.HealthStateUnhealthy, res.Status)
 				require.Contains(t, res.Output, applicationStatusesKey)
-				require.Len(t, res.Issues, 2)
+				require.Len(t, res.Issues, 3)
 				require.Contains(t, res.Issues[0], testAppName1)
 				require.Contains(t, res.Issues[0], "ComparisonError")
 				require.Contains(t, res.Issues[1], testAppName1)
 				require.Contains(t, res.Issues[1], "InvalidSpecError")
+				require.Contains(t, res.Issues[2], testAppName1)
+				require.Contains(t, res.Issues[2], "SyncError")
 			},
 		},
 		{
@@ -344,6 +347,10 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 						Type:    argocd.ApplicationConditionInvalidSpecError,
 						Message: "fake-error",
 					},
+					{
+						Type:    argocd.ApplicationConditionSyncError,
+						Message: "fake-error",
+					},
 				},
 				Health: argocd.HealthStatus{
 					Status:  argocd.HealthStatusHealthy,
@@ -362,9 +369,10 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Error(t, err)
 				require.ErrorContains(t, err, `has "ComparisonError" condition`)
 				require.ErrorContains(t, err, `has "InvalidSpecError" condition`)
+				require.ErrorContains(t, err, `has "SyncError" condition`)
 				unwrappedErr, ok := err.(compositeError)
 				require.True(t, ok)
-				require.Len(t, unwrappedErr.Unwrap(), 2)
+				require.Len(t, unwrappedErr.Unwrap(), 3)
 				require.Equal(t, kargoapi.HealthStateUnhealthy, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
