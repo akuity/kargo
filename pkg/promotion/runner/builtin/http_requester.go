@@ -319,7 +319,6 @@ func (h *httpRequester) buildExprEnv(
 				return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
 			}
 		}
-		// For other content types or non-JSON content, body remains as empty map # do I need this??
 	}
 
 	return env, nil
