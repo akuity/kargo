@@ -168,6 +168,10 @@ func (w *webhook) validateSub(
 		repoTypes++
 		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart, seen)...)
 	}
+	if sub.Other != nil {
+		repoTypes++
+		errs = append(errs, w.validateOtherSub(f.Child("other"), *sub.Other, seen)...)
+	}
 	if repoTypes != 1 {
 		errs = append(
 			errs,
@@ -175,10 +179,8 @@ func (w *webhook) validateSub(
 				f,
 				sub,
 				fmt.Sprintf(
-					"exactly one of %s.git, %s.image, or %s.chart must be non-empty",
-					f.String(),
-					f.String(),
-					f.String(),
+					"exactly one of %s.git, %s.image, %s.chart, or %s.other must be non-empty",
+					f.String(), f.String(), f.String(), f.String(),
 				),
 			),
 		)
@@ -270,6 +272,18 @@ func (w *webhook) validateChartSub(
 	return errs
 }
 
+func (w *webhook) validateOtherSub(
+	f *field.Path,
+	sub kargoapi.GenericSubscription,
+	seen uniqueSubSet,
+) field.ErrorList {
+	var errs field.ErrorList
+	if err := seen.addOther(sub, f); err != nil {
+		errs = append(errs, field.Invalid(f, sub.Name, err.Error()))
+	}
+	return errs
+}
+
 func validateSemverConstraint(
 	f *field.Path,
 	semverConstraint string,
@@ -321,6 +335,21 @@ func (s uniqueSubSet) addChart(sub kargoapi.ChartSubscription, isHTTP bool, p *f
 			return fmt.Errorf("subscription for chart %q already exists at %q", sub.Name, s[k])
 		}
 		return fmt.Errorf("subscription for chart already exists at %q", s[k])
+	}
+	s[k] = p
+	return nil
+}
+
+func (s uniqueSubSet) addOther(
+	sub kargoapi.GenericSubscription,
+	p *field.Path,
+) error {
+	k := subscriptionKey{
+		kind: "other",
+		id:   strings.TrimSpace(strings.ToLower(sub.Name)),
+	}
+	if _, exists := s[k]; exists {
+		return fmt.Errorf("subscription %q already exists at %q", k.id, s[k])
 	}
 	s[k] = p
 	return nil
