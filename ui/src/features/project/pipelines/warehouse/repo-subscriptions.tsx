@@ -145,6 +145,22 @@ export const RepoSubscriptions = ({ subscriptions }: Props) => {
               )}
             </Descriptions>
           )}
+
+          {subscription.other && (
+            <Descriptions
+              title='Other'
+              bordered
+              size='small'
+              column={1}
+              style={{ width: '40%', minWidth: 500 }}
+            >
+              <Descriptions.Item label='Name'>{subscription.other.name}</Descriptions.Item>
+              <Descriptions.Item label='Kind'>{subscription.other.artifactKind}</Descriptions.Item>
+              <Descriptions.Item label='discovery limit'>
+                {subscription.other.discoveryLimit}
+              </Descriptions.Item>
+            </Descriptions>
+          )}
         </>
       ))}
     </div>
