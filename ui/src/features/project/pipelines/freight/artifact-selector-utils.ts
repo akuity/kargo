@@ -36,6 +36,10 @@ export const selectFirstArtifact = (freights: Freight[]) => {
     if (freight?.charts?.length) {
       return freight?.charts?.[0];
     }
+
+    if (freight?.otherArtifacts?.length) {
+      return freight?.otherArtifacts?.[0];
+    }
   }
 
   return '';
