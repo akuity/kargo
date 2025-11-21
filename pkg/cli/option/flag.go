@@ -303,6 +303,11 @@ func ServiceAccount(fs *pflag.FlagSet, serviceAccount *string, usage string) {
 	fs.StringVar(serviceAccount, ServiceAccountFlag, "", usage)
 }
 
+// Claims adds a multi-value ServiceAccountFlag to the provided flag set.
+func ServiceAccounts(fs *pflag.FlagSet, serviceAccounts *[]string, usage string) {
+	fs.StringSliceVar(serviceAccounts, ServiceAccountFlag, nil, usage)
+}
+
 // Stage adds the StageFlag to the provided flag set.
 func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, StageFlag, "", usage)
