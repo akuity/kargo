@@ -536,7 +536,6 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
 				require.Nil(t, res.RetryAfter)
-				require.ErrorContains(t, err, "error getting Argo CD Application")
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
@@ -1840,102 +1839,6 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 				testCase.eventMessage,
 			)
 			testCase.assertions(t, c, testCase.app)
-		})
-	}
-}
-
-func Test_argoCDUpdater_getAuthorizedApplication(t *testing.T) {
-	scheme := runtime.NewScheme()
-	require.NoError(t, argocd.AddToScheme(scheme))
-
-	testCases := []struct {
-		name        string
-		app         *argocd.Application
-		interceptor interceptor.Funcs
-		assertions  func(*testing.T, *argocd.Application, error)
-	}{
-		{
-			name: "error getting Application",
-			interceptor: interceptor.Funcs{
-				Get: func(
-					context.Context,
-					client.WithWatch,
-					client.ObjectKey,
-					client.Object,
-					...client.GetOption,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, app *argocd.Application, err error) {
-				require.ErrorContains(t, err, "error finding Argo CD Application")
-				require.ErrorContains(t, err, "something went wrong")
-				require.Nil(t, app)
-			},
-		},
-		{
-			name: "Application not found",
-			assertions: func(t *testing.T, app *argocd.Application, err error) {
-				require.ErrorContains(t, err, "unable to find Argo CD Application")
-				require.Nil(t, app)
-			},
-		},
-		{
-			name: "Application not authorized for Stage",
-			app: &argocd.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-app",
-					Namespace: "fake-namespace",
-				},
-			},
-			assertions: func(t *testing.T, app *argocd.Application, err error) {
-				require.ErrorContains(t, err, "does not permit mutation by Kargo Stage")
-				require.Nil(t, app)
-			},
-		},
-		{
-			name: "success",
-			app: &argocd.Application{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "fake-app",
-					Namespace: "fake-namespace",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyAuthorizedStage: "fake-namespace:fake-stage",
-					},
-				},
-			},
-			assertions: func(t *testing.T, app *argocd.Application, err error) {
-				require.NoError(t, err)
-				require.NotNil(t, app)
-			},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			c := fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithInterceptorFuncs(testCase.interceptor)
-
-			if testCase.app != nil {
-				c.WithObjects(testCase.app)
-			}
-
-			runner := &argocdUpdater{
-				argocdClient: c.Build(),
-			}
-			app, err := runner.getAuthorizedApplication(
-				context.Background(),
-				&promotion.StepContext{
-					Project: "fake-namespace",
-					Stage:   "fake-stage",
-				},
-				client.ObjectKey{
-					Namespace: "fake-namespace",
-					Name:      "fake-app",
-				},
-			)
-			testCase.assertions(t, app, err)
 		})
 	}
 }

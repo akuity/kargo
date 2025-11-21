@@ -170,16 +170,7 @@ func (a *argocdUpdater) run(
 		// Retrieve the Argo CD Application(s) matching the update specification.
 		apps, err := a.getAuthorizedApplicationsFn(ctx, stepCtx, update)
 		if err != nil {
-			if update.Selector != nil {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-					"error getting Argo CD Applications matching selector in namespace %q: %w",
-					update.Namespace, err,
-				)
-			}
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
-				"error getting Argo CD Application %q in namespace %q: %w",
-				update.Name, update.Namespace, err,
-			)
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 		}
 
 		// Log the number of applications matched when using selectors.
@@ -760,7 +751,7 @@ func (a *argocdUpdater) getAuthorizedApplications(
 		}
 
 		if err = a.argocdClient.List(ctx, appList, listOpts...); err != nil {
-			return nil, fmt.Errorf("error listing Argo CD Applications: %w", err)
+			return nil, fmt.Errorf("error listing Argo CD Applications matching selector: %w", err)
 		}
 
 		// Convert to pointer slice
@@ -824,40 +815,6 @@ func (a *argocdUpdater) getAuthorizedApplications(
 	}
 
 	return authorizedApps, nil
-}
-
-// getAuthorizedApplication returns an Argo CD Application in the given namespace
-// with the given name, if it is authorized for mutation by the Kargo Stage
-// represented by stageMeta.
-func (a *argocdUpdater) getAuthorizedApplication(
-	ctx context.Context,
-	stepCtx *promotion.StepContext,
-	appKey client.ObjectKey,
-) (*argocd.Application, error) {
-	app, err := argocd.GetApplication(
-		ctx,
-		a.argocdClient,
-		appKey.Namespace,
-		appKey.Name,
-	)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error finding Argo CD Application %q in namespace %q: %w",
-			appKey.Name, appKey.Namespace, err,
-		)
-	}
-	if app == nil {
-		return nil, fmt.Errorf(
-			"unable to find Argo CD Application %q in namespace %q",
-			appKey.Name, appKey.Namespace,
-		)
-	}
-
-	if err = a.authorizeArgoCDAppUpdate(stepCtx, app.ObjectMeta); err != nil {
-		return nil, err
-	}
-
-	return app, nil
 }
 
 // authorizeArgoCDAppUpdate returns an error if the Argo CD Application
