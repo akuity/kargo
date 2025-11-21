@@ -26,7 +26,11 @@ type baseRepo struct {
 	creds   *RepoCredentials
 	dir     string
 	homeDir string
-	url     string
+	// Store the URL two ways. One is for internal use and may contain username@,
+	// while the other lacks that and is suitable for use in error messages and
+	// consumption by external callers of the URL() method.
+	internalURL string
+	externalURL string
 }
 
 // ClientOptions represents options for a repository-specific Git client.
@@ -218,14 +222,15 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 		return nil
 	}
 
-	lowerURL := strings.ToLower(b.url)
+	// Add username@ to the URL that's used internally...
+	lowerURL := strings.ToLower(b.internalURL)
 	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
-		u, err := url.Parse(b.url)
+		u, err := url.Parse(b.internalURL)
 		if err != nil {
-			return fmt.Errorf("error parsing URL %q: %w", b.url, err)
+			return fmt.Errorf("error parsing URL %q: %w", b.internalURL, err)
 		}
 		u.User = url.User(b.creds.Username)
-		b.url = u.String()
+		b.internalURL = u.String()
 	}
 
 	return nil
@@ -273,7 +278,20 @@ func (b *baseRepo) loadURL() error {
 	if err != nil {
 		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
 	}
-	b.url = strings.TrimSpace(string(res))
+	b.internalURL = strings.TrimSpace(string(res))
+	b.externalURL = b.internalURL
+	lowerURL := strings.ToLower(b.internalURL)
+	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
+		// This URL very likely contains username@ and we'd like to hang on to a
+		// representation of the URL that lacks that and is suitable for use in
+		// error messages and consumption by external callers of the URL() method.
+		u, err := url.Parse(b.externalURL)
+		if err != nil {
+			return fmt.Errorf("error parsing URL %q: %w", b.externalURL, err)
+		}
+		u.User = nil
+		b.externalURL = u.String()
+	}
 	return nil
 }
 
@@ -324,7 +342,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
-		b.url,
+		b.internalURL,
 		branch,
 	))
 	var exitErr *libExec.ExitError
@@ -336,7 +354,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 		return false, fmt.Errorf(
 			"error checking for existence of branch %q in remote repo %q: %w",
 			branch,
-			b.url,
+			b.externalURL,
 			err,
 		)
 	}
@@ -344,7 +362,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 }
 
 func (b *baseRepo) URL() string {
-	return b.url
+	return b.externalURL
 }
 
 func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
