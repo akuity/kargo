@@ -519,19 +519,28 @@ type KargoServiceClient interface {
 	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
 	// GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
 	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
-	// CreateRole creates a new RBAC role within a project.
+	// CreateRole creates a new Kargo Role virtual resource by creating its
+	// underlying Kubernetes resources.
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
-	// DeleteRole removes an RBAC role from a project.
+	// DeleteRole deletes a Kargo Role virtual resource by deleting its underlying
+	// Kubernetes resources.
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
-	// GetRole retrieves details of a specific RBAC role.
+	// GetRole retrieves details of a Kargo Role virtual resource or its
+	// underlying Kubernetes resources.
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
-	// Grant assigns permissions or binds users/services to a role.
+	// Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
+	// or users having specific OIDC claims to a Kargo Role by updating its
+	// underlying Kubernetes resources.
 	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
-	// ListRoles retrieves all RBAC roles within a project.
+	// ListRoles retrieves details of all Kargo Role virtual resources or their
+	// underlying Kubernetes resources.
 	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
-	// Revoke removes permissions or unbinds users/services from a role.
+	// Revoke removes permissions from a Kargo Role; or unbinds a Kargo
+	// ServiceAccount or users having specific OIDC claims from a Kargo Role by
+	// updating its underlying Kubernetes resources.
 	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
-	// UpdateRole modifies an existing RBAC role.
+	// UpdateRole modifies an existing Kargo Role virtual resource by updating its
+	// underlying Kubernetes resources.
 	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
 	// CreateServiceAccount creates a new Kargo ServiceAccount.
 	CreateServiceAccount(context.Context, *connect.Request[v1alpha1.CreateServiceAccountRequest]) (*connect.Response[v1alpha1.CreateServiceAccountResponse], error)
@@ -1790,19 +1799,28 @@ type KargoServiceHandler interface {
 	GetPromotionTask(context.Context, *connect.Request[v1alpha1.GetPromotionTaskRequest]) (*connect.Response[v1alpha1.GetPromotionTaskResponse], error)
 	// GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
 	GetClusterPromotionTask(context.Context, *connect.Request[v1alpha1.GetClusterPromotionTaskRequest]) (*connect.Response[v1alpha1.GetClusterPromotionTaskResponse], error)
-	// CreateRole creates a new RBAC role within a project.
+	// CreateRole creates a new Kargo Role virtual resource by creating its
+	// underlying Kubernetes resources.
 	CreateRole(context.Context, *connect.Request[v1alpha1.CreateRoleRequest]) (*connect.Response[v1alpha1.CreateRoleResponse], error)
-	// DeleteRole removes an RBAC role from a project.
+	// DeleteRole deletes a Kargo Role virtual resource by deleting its underlying
+	// Kubernetes resources.
 	DeleteRole(context.Context, *connect.Request[v1alpha1.DeleteRoleRequest]) (*connect.Response[v1alpha1.DeleteRoleResponse], error)
-	// GetRole retrieves details of a specific RBAC role.
+	// GetRole retrieves details of a Kargo Role virtual resource or its
+	// underlying Kubernetes resources.
 	GetRole(context.Context, *connect.Request[v1alpha1.GetRoleRequest]) (*connect.Response[v1alpha1.GetRoleResponse], error)
-	// Grant assigns permissions or binds users/services to a role.
+	// Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
+	// or users having specific OIDC claims to a Kargo Role by updating its
+	// underlying Kubernetes resources.
 	Grant(context.Context, *connect.Request[v1alpha1.GrantRequest]) (*connect.Response[v1alpha1.GrantResponse], error)
-	// ListRoles retrieves all RBAC roles within a project.
+	// ListRoles retrieves details of all Kargo Role virtual resources or their
+	// underlying Kubernetes resources.
 	ListRoles(context.Context, *connect.Request[v1alpha1.ListRolesRequest]) (*connect.Response[v1alpha1.ListRolesResponse], error)
-	// Revoke removes permissions or unbinds users/services from a role.
+	// Revoke removes permissions from a Kargo Role; or unbinds a Kargo
+	// ServiceAccount or users having specific OIDC claims from a Kargo Role by
+	// updating its underlying Kubernetes resources.
 	Revoke(context.Context, *connect.Request[v1alpha1.RevokeRequest]) (*connect.Response[v1alpha1.RevokeResponse], error)
-	// UpdateRole modifies an existing RBAC role.
+	// UpdateRole modifies an existing Kargo Role virtual resource by updating its
+	// underlying Kubernetes resources.
 	UpdateRole(context.Context, *connect.Request[v1alpha1.UpdateRoleRequest]) (*connect.Response[v1alpha1.UpdateRoleResponse], error)
 	// CreateServiceAccount creates a new Kargo ServiceAccount.
 	CreateServiceAccount(context.Context, *connect.Request[v1alpha1.CreateServiceAccountRequest]) (*connect.Response[v1alpha1.CreateServiceAccountResponse], error)
