@@ -511,7 +511,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "nil merge result",
 			prNumber: 333,
 			setupMock: func(m *mockGithubClient) {
-				// Get PR first
+				// First Get PR
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(333)).
 					Return(&github.PullRequest{
 						Number:    github.Ptr(333),
@@ -522,13 +522,25 @@ func TestMergePullRequest(t *testing.T) {
 						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/333"),
 					}, &github.Response{}, nil).Once()
 
-				// Merge returns nil result
+				// Merge returns nil result (e.g. queued). Then the provider will re-fetch
+				// the PR and observe that it is not yet merged.
 				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(333), "",
 					mock.AnythingOfType("*github.PullRequestOptions")).
 					Return(nil, &github.Response{}, nil)
+
+				// Second Get PR after merge attempt returns still-open PR (not merged yet)
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(333)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(333),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/333"),
+					}, &github.Response{}, nil).Once()
 			},
-			expectError:   true,
-			errorContains: "unexpected nil merge result",
+			expectError:    false,
+			expectedMerged: false,
 		},
 		{
 			name:     "get PR after merge fails",

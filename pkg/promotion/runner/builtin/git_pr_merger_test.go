@@ -106,6 +106,17 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "error during merge attempt",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    42,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -126,6 +137,17 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "PR not ready to merge with wait enabled",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    42,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -146,6 +168,17 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "PR not ready to merge with wait disabled",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    42,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -166,6 +199,18 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "PR number validation",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					_ context.Context,
+					prNumber int64,
+				) (*gitprovider.PullRequest, error) {
+					require.Equal(t, int64(123), prNumber)
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    123,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					_ context.Context,
 					prNumber int64,
@@ -188,6 +233,17 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "successful merge with empty merge commit SHA",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    42,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -209,6 +265,17 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "successful PR merge",
 			provider: &gitprovider.Fake{
+				GetPullRequestFn: func(
+					context.Context,
+					int64,
+				) (*gitprovider.PullRequest, error) {
+					mergeable := true
+					return &gitprovider.PullRequest{
+						Number:    42,
+						Open:      true,
+						Mergeable: &mergeable,
+					}, nil
+				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
