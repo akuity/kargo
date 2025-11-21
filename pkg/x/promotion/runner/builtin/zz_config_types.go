@@ -219,6 +219,11 @@ type GitOpenPRConfig struct {
 }
 
 type GitPushConfig struct {
+	// Whether to force push to the target branch, overwriting any existing history. This is
+	// useful for scenarios where you want to completely replace the branch content (e.g.,
+	// pushing rendered manifests that don't depend on previous state). Use with caution as this
+	// will overwrite any commits that exist on the remote branch but not in your local branch.
+	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
 	// with 'targetBranch'. If neither of these is provided, the target branch will be the
 	// currently checked out branch.
