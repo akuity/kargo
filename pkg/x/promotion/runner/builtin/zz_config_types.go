@@ -245,6 +245,9 @@ type GitWaitForPRConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The number of the pull request to wait for.
 	PRNumber int64 `json:"prNumber"`
+	// The interval at which to poll the pull request status. If not specified, the controller's
+	// default requeue interval (5 minutes) will be used.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
@@ -332,6 +335,9 @@ type HTTPConfig struct {
 	Method string `json:"method,omitempty"`
 	// Outputs to extract from the HTTP response.
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
+	// The interval at which to poll if neither success nor failure criteria are met. If not
+	// specified, the controller's default requeue interval (5 minutes) will be used.
+	PollInterval string `json:"pollInterval,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
 	// An expression to evaluate to determine if the request was successful.

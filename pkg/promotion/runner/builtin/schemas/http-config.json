@@ -100,6 +100,12 @@
       "pattern": "(?:\\d+(ns|us|µs|ms|s|m|h))+",
       "description": "The maximum time to wait for the request to complete. If not specified, the default is 10 seconds."
     },
+    "pollInterval": {
+      "type": "string",
+      "format": "duration",
+      "description": "The interval at which to poll if neither success nor failure criteria are met. If not specified, the controller's default requeue interval (5 minutes) will be used.",
+      "pattern": "^(?:\\d+(ns|us|µs|ms|s|m|h))+$"
+    },
     "outputs": {
       "type": "array",
       "items": {
