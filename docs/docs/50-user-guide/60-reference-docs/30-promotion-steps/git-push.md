@@ -95,28 +95,3 @@ steps:
     generateTargetBranch: true
 # Open a PR and wait for it to be merged or closed...
 ```
-
-### Force Push for Rendered Manifests
-
-In this example, rendered manifests are pushed with force enabled. This is useful when the rendered output completely replaces the previous state and doesn't depend on any previous commits in the branch.
-
-This pattern is common when using tools like `helm-template` or `kustomize-build` to generate Kubernetes manifests, where each promotion generates a fresh set of manifests that should completely replace what was previously in the branch.
-
-```yaml
-steps:
-# Clone, render manifests, etc...
-- uses: helm-template
-  config:
-    chart: ./charts/my-app
-    values: ./values/staging.yaml
-    outPath: ./out
-- uses: git-commit
-  config:
-    path: ./out
-    message: rendered updated manifests for staging
-- uses: git-push
-  config:
-    path: ./out
-    targetBranch: staging
-    force: true  # Force push to completely replace branch content
-```
