@@ -167,6 +167,10 @@
                     "description": "SemverConstraint specifies constraints on what new tagged commits are\nconsidered in determining the newest commit of interest. The value in this\nfield only has any effect when the CommitSelectionStrategy is SemVer. This\nfield is optional. When left unspecified, there will be no constraints,\nwhich means the latest semantically tagged commit will always be used. Care\nshould be taken with leaving this field unspecified, as it can lead to the\nunanticipated rollout of breaking changes.",
                     "type": "string"
                   },
+                  "sinceDate": {
+                    "description": "SinceDate is an optional date that can be used to cutoff discovery of commits past this date.\nIt will immediately return any discovered commits, regardless of discovery limit upon\nreaching a commit with this age. When left unspecified, there is no date cutoff.\nThe date is in the format YYYY-MM-DD.",
+                    "type": "string"
+                  },
                   "strictSemvers": {
                     "default": true,
                     "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the CommitSelectionStrategy is SemVer. This should be disabled\ncautiously, as it creates the potential for any tag containing numeric\ncharacters only to be mistaken for a semver string containing the major\nversion number only.",
