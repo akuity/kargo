@@ -182,6 +182,19 @@ func (a *argocdUpdater) run(
 			)
 		}
 
+		// If we found multiple Applications, and we are instructed to update
+		// their sources, ensure the updates are applicable to all.
+		if len(update.Sources) > 0 {
+			logger.Info(
+				"validating source updates are applicable to all Applications",
+				"count", len(apps),
+			)
+			if err := a.validateSourceUpdatesApplicable(update, apps); err != nil {
+				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+			}
+			logger.Info("validation successful for all Applications")
+		}
+
 		// Process each matched application.
 		for _, app := range apps {
 			desiredRevisions := a.getDesiredRevisions(update, app)
@@ -243,6 +256,59 @@ func (a *argocdUpdater) run(
 		},
 		RetryAfter: retryAfter,
 	}, nil
+}
+
+// validateSourceUpdatesApplicable validates that all source updates can be
+// applied to all selected Applications before any updates are performed. This
+// prevents partial updates due to validation failures (e.g., if only some apps
+// have sources matching the update).
+func (a *argocdUpdater) validateSourceUpdatesApplicable(
+	update *builtin.ArgoCDAppUpdate,
+	apps []*argocd.Application,
+) error {
+	if len(apps) <= 1 {
+		return nil
+	}
+
+	const maxValidationErrorsToReport = 3
+	var validationErrors []error
+
+	for _, app := range apps {
+		desiredRevisions := a.getDesiredRevisions(update, app)
+		if _, err := a.buildDesiredSourcesFn(update, desiredRevisions, app); err != nil {
+			// nolint:staticcheck
+			validationErrors = append(validationErrors, fmt.Errorf(
+				"Application %q in namespace %q: %w",
+				app.Name, app.Namespace, err,
+			))
+		}
+	}
+
+	if len(validationErrors) > 0 {
+		reportedErrors := validationErrors
+		errorMessage := "selected Applications must have compatible sources; " +
+			"%d incompatible. No Applications were updated:\n%w"
+
+		if len(validationErrors) > maxValidationErrorsToReport {
+			reportedErrors = validationErrors[:maxValidationErrorsToReport]
+			errorMessage = "selected Applications must have compatible sources; " +
+				"%d incompatible (showing first %d). No Applications were updated:\n%w"
+			return fmt.Errorf(
+				errorMessage,
+				len(validationErrors),
+				maxValidationErrorsToReport,
+				errors.Join(reportedErrors...),
+			)
+		}
+
+		return fmt.Errorf(
+			errorMessage,
+			len(validationErrors),
+			errors.Join(reportedErrors...),
+		)
+	}
+
+	return nil
 }
 
 // processApplication handles the update logic for a single Argo CD Application.
