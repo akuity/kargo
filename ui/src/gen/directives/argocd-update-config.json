@@ -8,13 +8,59 @@
    "properties": {
     "name": {
      "type": "string",
-     "description": "Specifies the name of an Argo CD Application resource to be updated.",
+     "description": "Specifies the exact name of an Argo CD Application resource to be updated. Mutually exclusive with 'selector'.",
      "minLength": 1
     },
     "namespace": {
      "type": "string",
      "description": "Specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace will be the controller's configured default.",
      "minLength": 1
+    },
+    "selector": {
+     "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
+     "type": "object",
+     "additionalProperties": false,
+     "properties": {
+      "matchLabels": {
+       "type": "object",
+       "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is 'key', the operator is 'In', and the values array contains only 'value'. The requirements are ANDed.",
+       "additionalProperties": {
+        "type": "string"
+       }
+      },
+      "matchExpressions": {
+       "type": "array",
+       "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+       "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+         "key": {
+          "type": "string",
+          "description": "key is the label key that the selector applies to.",
+          "minLength": 1
+         },
+         "operator": {
+          "type": "string",
+          "description": "operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
+          "enum": [
+           "In",
+           "NotIn",
+           "Exists",
+           "DoesNotExist"
+          ]
+         },
+         "values": {
+          "type": "array",
+          "description": "values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.",
+          "items": {
+           "type": "string"
+          }
+         }
+        }
+       }
+      }
+     }
     },
     "sources": {
      "type": "array",
@@ -102,6 +148,52 @@
        "updateTargetRevision": {
         "type": "boolean",
         "description": "Indicates whether the source should be updated such that its 'targetRevision' field points directly at the desired revision. If set to true, 'desiredRevision' must be specified."
+       }
+      }
+     }
+    }
+   }
+  },
+  "argoCDAppSelector": {
+   "type": "object",
+   "description": "Selector to match Argo CD Application resources by labels. Must contain at least one selection criterion.",
+   "additionalProperties": false,
+   "properties": {
+    "matchLabels": {
+     "type": "object",
+     "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is 'key', the operator is 'In', and the values array contains only 'value'. The requirements are ANDed.",
+     "additionalProperties": {
+      "type": "string"
+     }
+    },
+    "matchExpressions": {
+     "type": "array",
+     "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "key": {
+        "type": "string",
+        "description": "key is the label key that the selector applies to.",
+        "minLength": 1
+       },
+       "operator": {
+        "type": "string",
+        "description": "operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
+        "enum": [
+         "In",
+         "NotIn",
+         "Exists",
+         "DoesNotExist"
+        ]
+       },
+       "values": {
+        "type": "array",
+        "description": "values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.",
+        "items": {
+         "type": "string"
+        }
        }
       }
      }
@@ -308,13 +400,59 @@
     "properties": {
      "name": {
       "type": "string",
-      "description": "Specifies the name of an Argo CD Application resource to be updated.",
+      "description": "Specifies the exact name of an Argo CD Application resource to be updated. Mutually exclusive with 'selector'.",
       "minLength": 1
      },
      "namespace": {
       "type": "string",
       "description": "Specifies the namespace of an Argo CD Application resource to be updated. If left unspecified, the namespace will be the controller's configured default.",
       "minLength": 1
+     },
+     "selector": {
+      "description": "Specifies a label selector to match Argo CD Application resources to be updated. Mutually exclusive with 'name'.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+       "matchLabels": {
+        "type": "object",
+        "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is equivalent to an element of matchExpressions, whose key field is 'key', the operator is 'In', and the values array contains only 'value'. The requirements are ANDed.",
+        "additionalProperties": {
+         "type": "string"
+        }
+       },
+       "matchExpressions": {
+        "type": "array",
+        "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "properties": {
+          "key": {
+           "type": "string",
+           "description": "key is the label key that the selector applies to.",
+           "minLength": 1
+          },
+          "operator": {
+           "type": "string",
+           "description": "operator represents a key's relationship to a set of values. Valid operators are In, NotIn, Exists and DoesNotExist.",
+           "enum": [
+            "In",
+            "NotIn",
+            "Exists",
+            "DoesNotExist"
+           ]
+          },
+          "values": {
+           "type": "array",
+           "description": "values is an array of string values. If the operator is In or NotIn, the values array must be non-empty. If the operator is Exists or DoesNotExist, the values array must be empty. This array is replaced during a strategic merge patch.",
+           "items": {
+            "type": "string"
+           }
+          }
+         }
+        }
+       }
+      }
      },
      "sources": {
       "type": "array",
