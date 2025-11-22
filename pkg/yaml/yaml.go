@@ -66,19 +66,24 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 
 	type change struct {
-		col   int
-		value any
+		col     int
+		value   any
+		key     string
+		newitem bool
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
 		keyPath := strings.Split(update.Key, ".")
-		line, col, err := findScalarNode(doc, keyPath)
+		line, col, newitem, err := findScalarNode(doc, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)
 		}
+
 		changesByLine[line] = change{
-			col:   col,
-			value: update.Value,
+			col:     col,
+			key:     keyPath[len(keyPath)-1],
+			value:   update.Value,
+			newitem: newitem,
 		}
 	}
 
@@ -91,14 +96,23 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 		const errMsg = "error writing to byte buffer"
 		change, found := changesByLine[line]
 		if !found {
-			if _, err := outBuf.WriteString(scanner.Text()); err != nil {
-				return nil, fmt.Errorf("%s: %w", errMsg, err)
-			}
-			if _, err := outBuf.WriteString("\n"); err != nil {
-				return nil, fmt.Errorf("%s: %w", errMsg, err)
+			if err := writeLineToBuffer(outBuf, scanner.Text(), errMsg); err != nil {
+				return nil, err
 			}
 		} else {
-			unchanged := scanner.Text()[0:change.col]
+			line := scanner.Text()
+
+			if change.newitem {
+				if err := writeLineToBuffer(outBuf, scanner.Text(), errMsg); err != nil {
+					return nil, err
+				}
+
+				// generate new line with prefilled key
+				line = line[0:change.col] + change.key + ": "
+				change.col = len(line)
+			}
+
+			unchanged := line[0:change.col]
 			if _, err := outBuf.WriteString(unchanged); err != nil {
 				return nil, fmt.Errorf("%s: %w", errMsg, err)
 			}
@@ -121,12 +135,22 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	return outBuf.Bytes(), nil
 }
 
-func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
+func writeLineToBuffer(buf *bytes.Buffer, text, errMsg string) error {
+	if _, err := buf.WriteString(text); err != nil {
+		return fmt.Errorf("%s: %w", errMsg, err)
+	}
+	if _, err := buf.WriteString("\n"); err != nil {
+		return fmt.Errorf("%s: %w", errMsg, err)
+	}
+	return nil
+}
+
+func findScalarNode(node *yaml.Node, keyPath []string) (int, int, bool, error) {
 	if len(keyPath) == 0 {
 		if node.Kind == yaml.ScalarNode {
-			return node.Line - 1, node.Column - 1, nil
+			return node.Line - 1, node.Column - 1, false, nil
 		}
-		return 0, 0, fmt.Errorf("key path does not address a scalar node")
+		return 0, 0, false, fmt.Errorf("key path does not address a scalar node")
 	}
 	switch node.Kind {
 	case yaml.DocumentNode:
@@ -137,12 +161,17 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 				return findScalarNode(node.Content[i+1], keyPath[1:])
 			}
 		}
+		// key not found. If this is a leaf mapping node, return last node position.
+		if len(keyPath) == 1 && len(node.Content) >= 2 {
+			last_node := node.Content[len(node.Content)-2]
+			return last_node.Line - 1, last_node.Column - 1, true, nil
+		}
 	case yaml.SequenceNode:
 		index, err := strconv.Atoi(keyPath[0])
 		if err != nil {
-			return 0, 0, err
+			return 0, 0, false, err
 		}
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
-	return 0, 0, fmt.Errorf("key path not found")
+	return 0, 0, false, fmt.Errorf("key path not found")
 }
