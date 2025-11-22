@@ -7,6 +7,9 @@ import (
 )
 
 const (
+	// AbortFlag is the flag name for the abort flag.
+	AbortFlag = "abort"
+
 	// AliasFlag is the flag name for the alias flag.
 	AliasFlag = "alias"
 	// AliasShortFlag is the short flag name for the alias flag.
@@ -24,6 +27,12 @@ const (
 
 	// ContainerFlag is the flag name for the container flag.
 	ContainerFlag = "container"
+
+	// DescriptionFlag is the flag name for the description flag.
+	DescriptionFlag = "description"
+
+	// DownstreamFromFlag is the flag name for the downstream-from flag.
+	DownstreamFromFlag = "downstream-from"
 
 	// FilenameFlag is the flag name for the filename flag.
 	FilenameFlag = "filename"
@@ -56,9 +65,6 @@ const (
 
 	// NameFlag is the flag name for the name flag.
 	NameFlag = "name"
-
-	// DescriptionFlag is the flag name for the description flag.
-	DescriptionFlag = "description"
 
 	// NewAliasFlag is the flag name for the new-alias flag.
 	NewAliasFlag = "new-alias"
@@ -100,11 +106,14 @@ const (
 	// RoleFlag is the flag name for the role flag.
 	RoleFlag = "role"
 
+	// ServiceAccountFlag is the flag name for the service-account flag.
+	ServiceAccountFlag = "service-account"
+
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
 
-	// DownstreamFromFlag is the flag name for the downstream-from flag.
-	DownstreamFromFlag = "downstream-from"
+	// SystemFlag is the flag name for the system flag.
+	SystemFlag = "system"
 
 	// TypeFlag is the flag name for the type flag.
 	TypeFlag = "type"
@@ -117,10 +126,12 @@ const (
 
 	// WaitFlag is the flag name for the wait flag.
 	WaitFlag = "wait"
-
-	// AbortFlag is the flag name for the abort flag.
-	AbortFlag = "abort"
 )
+
+// Abort adds the AbortFlag to the provided flag set.
+func Abort(fs *pflag.FlagSet, abort *bool, defaultAbort bool, usage string) {
+	fs.BoolVar(abort, AbortFlag, defaultAbort, usage)
+}
 
 // Alias adds the AliasFlag to the provided flag set.
 func Alias(fs *pflag.FlagSet, stage *string, usage string) {
@@ -156,6 +167,11 @@ func Container(fs *pflag.FlagSet, container *string, usage string) {
 // Description adds the DescriptionFlag to the provided flag set.
 func Description(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, DescriptionFlag, "", usage)
+}
+
+// DownstreamFrom adds the DownstreamFromFlag to the provided flag set.
+func DownstreamFrom(fs *pflag.FlagSet, downstreamFrom *string, usage string) {
+	fs.StringVar(downstreamFrom, DownstreamFromFlag, "", usage)
 }
 
 // Filenames adds the FilenameFlag and FilenameShortFlag to the provided flag set.
@@ -282,14 +298,26 @@ func Role(fs *pflag.FlagSet, role *string, usage string) {
 	fs.StringVar(role, RoleFlag, "", usage)
 }
 
+// ServiceAccount adds the ServiceAccountFlag to the provided flag set.
+func ServiceAccount(fs *pflag.FlagSet, serviceAccount *string, usage string) {
+	fs.StringVar(serviceAccount, ServiceAccountFlag, "", usage)
+}
+
+// Claims adds a multi-value ServiceAccountFlag to the provided flag set.
+func ServiceAccounts(fs *pflag.FlagSet, serviceAccounts *[]string, usage string) {
+	fs.StringSliceVar(serviceAccounts, ServiceAccountFlag, nil, usage)
+}
+
 // Stage adds the StageFlag to the provided flag set.
 func Stage(fs *pflag.FlagSet, stage *string, usage string) {
 	fs.StringVar(stage, StageFlag, "", usage)
 }
 
-// DownstreamFrom adds the DownstreamFromFlag to the provided flag set.
-func DownstreamFrom(fs *pflag.FlagSet, downstreamFrom *string, usage string) {
-	fs.StringVar(downstreamFrom, DownstreamFromFlag, "", usage)
+// System adds the SystemFlag to the provided flag set.
+
+// Wait adds the WaitFlag to the provided flag set.
+func System(fs *pflag.FlagSet, system *bool, defaultSystem bool, usage string) {
+	fs.BoolVar(system, SystemFlag, defaultSystem, usage)
 }
 
 // Type adds the TypeFlag to the provided flag set.
@@ -310,9 +338,4 @@ func Verbs(fs *pflag.FlagSet, verbs *[]string, usage string) {
 // Wait adds the WaitFlag to the provided flag set.
 func Wait(fs *pflag.FlagSet, wait *bool, defaultWait bool, usage string) {
 	fs.BoolVar(wait, WaitFlag, defaultWait, usage)
-}
-
-// Abort adds the AbortFlag to the provided flag set.
-func Abort(fs *pflag.FlagSet, abort *bool, defaultAbort bool, usage string) {
-	fs.BoolVar(abort, AbortFlag, defaultAbort, usage)
 }

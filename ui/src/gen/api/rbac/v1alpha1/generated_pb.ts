@@ -20,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/rbac/v1alpha1/generated.proto.
  */
 export const file_api_rbac_v1alpha1_generated: GenFile = /*@__PURE__*/
-  fileDesc("CiFhcGkvcmJhYy92MWFscGhhMS9nZW5lcmF0ZWQucHJvdG8SKWdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExIiUKBUNsYWltEgwKBG5hbWUYASABKAkSDgoGdmFsdWVzGAIgAygJIkwKD1Jlc291cmNlRGV0YWlscxIUCgxyZXNvdXJjZVR5cGUYASABKAkSFAoMcmVzb3VyY2VOYW1lGAIgASgJEg0KBXZlcmJzGAMgAygJItEBCgRSb2xlEkIKCG1ldGFkYXRhGAEgASgLMjAuazhzLmlvLmFwaW1hY2hpbmVyeS5wa2cuYXBpcy5tZXRhLnYxLk9iamVjdE1ldGESFAoMa2FyZ29NYW5hZ2VkGAIgASgIEkAKBmNsYWltcxgHIAMoCzIwLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExLkNsYWltEi0KBXJ1bGVzGAYgAygLMh4uazhzLmlvLmFwaS5yYmFjLnYxLlBvbGljeVJ1bGUi7wEKDVJvbGVSZXNvdXJjZXMSQgoIbWV0YWRhdGEYASABKAsyMC5rOHMuaW8uYXBpbWFjaGluZXJ5LnBrZy5hcGlzLm1ldGEudjEuT2JqZWN0TWV0YRI6Cg5zZXJ2aWNlQWNjb3VudBgCIAEoCzIiLms4cy5pby5hcGkuY29yZS52MS5TZXJ2aWNlQWNjb3VudBInCgVyb2xlcxgDIAMoCzIYLms4cy5pby5hcGkucmJhYy52MS5Sb2xlEjUKDHJvbGVCaW5kaW5ncxgEIAMoCzIfLms4cy5pby5hcGkucmJhYy52MS5Sb2xlQmluZGluZ0K3AgotY29tLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExQg5HZW5lcmF0ZWRQcm90b1ABWilnaXRodWIuY29tL2FrdWl0eS9rYXJnby9hcGkvcmJhYy92MWFscGhhMaICBkdDQUtBUqoCKUdpdGh1Yi5Db20uQWt1aXR5LkthcmdvLkFwaS5SYmFjLlYxYWxwaGExygIpR2l0aHViXENvbVxBa3VpdHlcS2FyZ29cQXBpXFJiYWNcVjFhbHBoYTHiAjVHaXRodWJcQ29tXEFrdWl0eVxLYXJnb1xBcGlcUmJhY1xWMWFscGhhMVxHUEJNZXRhZGF0YeoCL0dpdGh1Yjo6Q29tOjpBa3VpdHk6OkthcmdvOjpBcGk6OlJiYWM6OlYxYWxwaGEx", [file_k8s_io_api_core_v1_generated, file_k8s_io_api_rbac_v1_generated, file_k8s_io_apimachinery_pkg_apis_meta_v1_generated, file_k8s_io_apimachinery_pkg_runtime_generated, file_k8s_io_apimachinery_pkg_runtime_schema_generated]);
+  fileDesc("CiFhcGkvcmJhYy92MWFscGhhMS9nZW5lcmF0ZWQucHJvdG8SKWdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExIiUKBUNsYWltEgwKBG5hbWUYASABKAkSDgoGdmFsdWVzGAIgAygJIkwKD1Jlc291cmNlRGV0YWlscxIUCgxyZXNvdXJjZVR5cGUYASABKAkSFAoMcmVzb3VyY2VOYW1lGAIgASgJEg0KBXZlcmJzGAMgAygJIq4CCgRSb2xlEkIKCG1ldGFkYXRhGAEgASgLMjAuazhzLmlvLmFwaW1hY2hpbmVyeS5wa2cuYXBpcy5tZXRhLnYxLk9iamVjdE1ldGESFAoMa2FyZ29NYW5hZ2VkGAIgASgIEkAKBmNsYWltcxgHIAMoCzIwLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExLkNsYWltElsKD3NlcnZpY2VBY2NvdW50cxgIIAMoCzJCLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExLlNlcnZpY2VBY2NvdW50UmVmZXJlbmNlEi0KBXJ1bGVzGAYgAygLMh4uazhzLmlvLmFwaS5yYmFjLnYxLlBvbGljeVJ1bGUi7wEKDVJvbGVSZXNvdXJjZXMSQgoIbWV0YWRhdGEYASABKAsyMC5rOHMuaW8uYXBpbWFjaGluZXJ5LnBrZy5hcGlzLm1ldGEudjEuT2JqZWN0TWV0YRI6Cg5zZXJ2aWNlQWNjb3VudBgCIAEoCzIiLms4cy5pby5hcGkuY29yZS52MS5TZXJ2aWNlQWNjb3VudBInCgVyb2xlcxgDIAMoCzIYLms4cy5pby5hcGkucmJhYy52MS5Sb2xlEjUKDHJvbGVCaW5kaW5ncxgEIAMoCzIfLms4cy5pby5hcGkucmJhYy52MS5Sb2xlQmluZGluZyI6ChdTZXJ2aWNlQWNjb3VudFJlZmVyZW5jZRIMCgRuYW1lGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCUK3AgotY29tLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExQg5HZW5lcmF0ZWRQcm90b1ABWilnaXRodWIuY29tL2FrdWl0eS9rYXJnby9hcGkvcmJhYy92MWFscGhhMaICBkdDQUtBUqoCKUdpdGh1Yi5Db20uQWt1aXR5LkthcmdvLkFwaS5SYmFjLlYxYWxwaGExygIpR2l0aHViXENvbVxBa3VpdHlcS2FyZ29cQXBpXFJiYWNcVjFhbHBoYTHiAjVHaXRodWJcQ29tXEFrdWl0eVxLYXJnb1xBcGlcUmJhY1xWMWFscGhhMVxHUEJNZXRhZGF0YeoCL0dpdGh1Yjo6Q29tOjpBa3VpdHk6OkthcmdvOjpBcGk6OlJiYWM6OlYxYWxwaGEx", [file_k8s_io_api_core_v1_generated, file_k8s_io_api_rbac_v1_generated, file_k8s_io_apimachinery_pkg_apis_meta_v1_generated, file_k8s_io_apimachinery_pkg_runtime_generated, file_k8s_io_apimachinery_pkg_runtime_schema_generated]);
 
 /**
  * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.Claim
@@ -93,6 +93,11 @@ export type Role = Message<"github.com.akuity.kargo.api.rbac.v1alpha1.Role"> & {
   claims: Claim[];
 
   /**
+   * @generated from field: repeated github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference serviceAccounts = 8;
+   */
+  serviceAccounts: ServiceAccountReference[];
+
+  /**
    * @generated from field: repeated k8s.io.api.rbac.v1.PolicyRule rules = 6;
    */
   rules: PolicyRule[];
@@ -138,4 +143,26 @@ export type RoleResources = Message<"github.com.akuity.kargo.api.rbac.v1alpha1.R
  */
 export const RoleResourcesSchema: GenMessage<RoleResources> = /*@__PURE__*/
   messageDesc(file_api_rbac_v1alpha1_generated, 3);
+
+/**
+ * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference
+ */
+export type ServiceAccountReference = Message<"github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference"> & {
+  /**
+   * @generated from field: optional string name = 1;
+   */
+  name: string;
+
+  /**
+   * @generated from field: optional string namespace = 2;
+   */
+  namespace: string;
+};
+
+/**
+ * Describes the message github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference.
+ * Use `create(ServiceAccountReferenceSchema)` to create a new message.
+ */
+export const ServiceAccountReferenceSchema: GenMessage<ServiceAccountReference> = /*@__PURE__*/
+  messageDesc(file_api_rbac_v1alpha1_generated, 4);
 

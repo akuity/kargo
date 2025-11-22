@@ -154,7 +154,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		// We didn't specify any groupBy, so there should be one group with an
 		// empty key
 		freight := resp.Msg.GetGroups()[""]
-		return printObjects(freight.Freight, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintObjects(freight.Freight, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
@@ -192,7 +192,7 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetFreight())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print freight: %w", err)
 	}
 	return errors.Join(errs...)

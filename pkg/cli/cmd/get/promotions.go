@@ -148,7 +148,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list promotions: %w", err)
 		}
-		return printObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Promotion, 0, len(o.Names))
@@ -170,7 +170,7 @@ func (o *getPromotionsOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetPromotion())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print promotions: %w", err)
 	}
 	return errors.Join(errs...)

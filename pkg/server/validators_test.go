@@ -51,6 +51,65 @@ func TestValidateFieldNotEmpty(t *testing.T) {
 	}
 }
 
+func TestValidateSystemLevelOrProject(t *testing.T) {
+	testCases := []struct {
+		name        string
+		systemLevel bool
+		project     string
+		assertions  func(*testing.T, error)
+	}{
+		{
+			name:        "system level is true and project is empty",
+			systemLevel: true,
+			project:     "",
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:        "system level is true and project is not empty",
+			systemLevel: true,
+			project:     "fake-project",
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:        "system level is false and project is not empty",
+			systemLevel: false,
+			project:     "fake-project",
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:        "system level is false and project is empty",
+			systemLevel: false,
+			project:     "",
+			assertions: func(t *testing.T, err error) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				require.Equal(
+					t,
+					"project must be specified when system level is false",
+					connErr.Message(),
+				)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s := &server{}
+			testCase.assertions(
+				t,
+				s.validateSystemLevelOrProject(testCase.systemLevel, testCase.project),
+			)
+		})
+	}
+}
+
 func TestValidateProjectExists(t *testing.T) {
 	testCases := []struct {
 		name       string

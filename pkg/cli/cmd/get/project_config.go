@@ -108,7 +108,7 @@ func (o *getProjectConfigOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetProjectConfig())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print project configuration: %w", err)
 	}
 	return nil

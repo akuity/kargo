@@ -136,7 +136,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list stages: %w", err)
 		}
-		return printObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintObjects(resp.Msg.GetStages(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Stage, 0, len(o.Names))
@@ -158,7 +158,7 @@ func (o *getStagesOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetStage())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print stages: %w", err)
 	}
 	return errors.Join(errs...)

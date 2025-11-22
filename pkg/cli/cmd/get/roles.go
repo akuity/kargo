@@ -186,11 +186,11 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 	}
 
 	if o.AsKubernetesResources {
-		if err = printObjects(resourcesRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+		if err = PrintObjects(resourcesRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 			return fmt.Errorf("print resources: %w", err)
 		}
 	} else {
-		if err = printObjects(kargoRoleRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+		if err = PrintObjects(kargoRoleRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 			return fmt.Errorf("print roles: %w", err)
 		}
 	}

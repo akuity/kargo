@@ -94,7 +94,7 @@ func (o *getClusterConfigOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetClusterConfig())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print cluster configuration: %w", err)
 	}
 	return nil

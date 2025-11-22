@@ -136,7 +136,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list warehouses: %w", err)
 		}
-		return printObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		return PrintObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*kargoapi.Warehouse, 0, len(o.Names))
@@ -158,7 +158,7 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		res = append(res, resp.Msg.GetWarehouse())
 	}
 
-	if err = printObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print warehouses: %w", err)
 	}
 	return errors.Join(errs...)
