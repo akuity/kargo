@@ -16,7 +16,7 @@ jobs:
     if: github.repository_owner == 'akuity' && github.event.pull_request.merged && (github.event_name != 'labeled' || startsWith('backport/', github.event.label.name))
     steps:
     - name: Checkout
-      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
     - name: Create backport PRs
       uses: korthout/backport-action@d07416681cab29bf2661702f925f020aaa962997 # v3.4.1
       # xref: https://github.com/korthout/backport-action#inputs
