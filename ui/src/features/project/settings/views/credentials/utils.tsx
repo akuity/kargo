@@ -44,7 +44,8 @@ export const constructDefaults = (init?: Secret, type?: string) => {
       repoUrlIsRegex: false,
       username: '',
       password: '',
-      data: []
+      data: [],
+      sshPrivateKey: ''
     };
   }
 
@@ -56,12 +57,13 @@ export const constructDefaults = (init?: Secret, type?: string) => {
     repoUrlIsRegex: init?.stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
     username: init?.stringData[CredentialsDataKey.Username],
     password: '',
-    data: redactSecretStringData(init)
+    data: redactSecretStringData(init),
+    sshPrivateKey: ''
   };
 };
 
 export const redactSecretStringData = (secret: Secret) => {
-  const data = secret?.stringData;
+  const data = { ...secret?.stringData };
 
   for (const key of Object.keys(data)) {
     data[key] = '';

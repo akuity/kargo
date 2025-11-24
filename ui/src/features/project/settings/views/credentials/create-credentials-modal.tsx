@@ -3,6 +3,9 @@ import { faAsterisk, faCode, faExternalLink } from '@fortawesome/free-solid-svg-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Input, Modal, Segmented } from 'antd';
+import Checkbox from 'antd/es/checkbox/Checkbox';
+import TextArea from 'antd/es/input/TextArea';
+import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
@@ -21,18 +24,31 @@ import { SecretEditor } from './secret-editor';
 import { CredentialsType } from './types';
 import { constructDefaults, labelForKey, typeLabel } from './utils';
 
-const placeholders = {
+const placeholders = (isSSH?: boolean) => ({
   name: 'My Credentials',
   description: 'An optional description',
   repoUrl: 'https://github.com/myusername/myrepo.git',
-  username: 'admin',
-  password: '********'
-};
+  ...(isSSH
+    ? {
+        sshPrivateKey: `Paste your SSH private key here (e.g., id_rsa)
+-----BEGIN OPENSSH PRIVATE KEY-----
+<your-private-key>
+-----END OPENSSH PRIVATE KEY-----
+`
+      }
+    : {
+        username: 'admin',
+        password: '********'
+      })
+});
 
-const repoUrlPlaceholder = (credType: CredentialsType) => {
+const repoUrlPlaceholder = (credType: CredentialsType, isSSH?: boolean) => {
   switch (credType) {
     case 'git':
-      return placeholders.repoUrl;
+      if (isSSH) {
+        return 'git@github.com:myusername/myrepo.git';
+      }
+      return placeholders(isSSH).repoUrl;
     case 'helm':
       return 'ghcr.io/nginxinc/charts/nginx-ingress';
     case 'image':
@@ -44,7 +60,7 @@ const repoUrlPlaceholder = (credType: CredentialsType) => {
 
 const genericCredentialPlaceholders = {
   name: 'My Secret',
-  description: placeholders.description
+  description: placeholders(false).description
 };
 
 const repoUrlPatternPlaceholder = '(?:https?://)?(?:www.)?github.com/[w.-]+/[w.-]+(?:.git)?';
@@ -58,9 +74,11 @@ type Props = ModalComponentProps & {
 };
 
 export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...props }: Props) => {
+  const [isSSHRepoUrl, setIsSSHRepoUrl] = useState(init?.stringData['username'] === '');
+
   const { control, handleSubmit, watch } = useForm({
     defaultValues: { ...constructDefaults(init, props.type === 'generic' ? props.type : 'git') },
-    resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
+    resolver: zodResolver(createFormSchema(props.type === 'generic', editing, isSSHRepoUrl))
   });
 
   const createCredentialsMutation = useMutation(createCredentials, {
@@ -146,6 +164,7 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
       onCancel={props.hide}
       open={props.visible}
       width='612px'
+      destroyOnHidden
     >
       {props.type === 'repo' && (
         <div className='mb-4'>
@@ -170,60 +189,79 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
           />
         </div>
       )}
-      {Object.keys(credentialType === 'generic' ? genericCredentialPlaceholders : placeholders).map(
-        (key) => (
-          <div key={key}>
-            {key === 'repoUrl' && (
+      {Object.keys(
+        credentialType === 'generic' ? genericCredentialPlaceholders : placeholders(isSSHRepoUrl)
+      ).map((key) => (
+        <div key={key}>
+          {key === 'repoUrl' && (
+            <>
+              <label className='block mb-4'>Repo URL / Pattern</label>
+              <Controller
+                name='repoUrlIsRegex'
+                control={control}
+                render={({ field }) => (
+                  <Segmented
+                    className='w-full mb-4'
+                    block
+                    {...field}
+                    options={[
+                      {
+                        label: <SegmentLabel icon={faExternalLink}>URL</SegmentLabel>,
+                        value: 'url'
+                      },
+                      {
+                        label: <SegmentLabel icon={faCode}>Regex Pattern</SegmentLabel>,
+                        value: 'regex'
+                      }
+                    ]}
+                    onChange={(newValue) => field.onChange(newValue === 'regex')}
+                    value={field.value ? 'regex' : 'url'}
+                  />
+                )}
+              />
+            </>
+          )}
+          <FieldContainer
+            label={key !== 'repoUrl' ? labelForKey(key) : undefined}
+            name={key as 'name' | 'type' | 'repoUrl' | 'username' | 'password' | 'sshPrivateKey'}
+            control={control}
+          >
+            {({ field }) => (
               <>
-                <label className='block mb-4'>Repo URL / Pattern</label>
-                <Controller
-                  name='repoUrlIsRegex'
-                  control={control}
-                  render={({ field }) => (
-                    <Segmented
-                      className='w-full mb-4'
-                      block
-                      {...field}
-                      options={[
-                        {
-                          label: <SegmentLabel icon={faExternalLink}>URL</SegmentLabel>,
-                          value: 'url'
-                        },
-                        {
-                          label: <SegmentLabel icon={faCode}>Regex Pattern</SegmentLabel>,
-                          value: 'regex'
-                        }
-                      ]}
-                      onChange={(newValue) => field.onChange(newValue === 'regex')}
-                      value={field.value ? 'regex' : 'url'}
-                    />
-                  )}
-                />
+                {key === 'sshPrivateKey' ? (
+                  <TextArea
+                    {...field}
+                    placeholder={(placeholders(true) as { sshPrivateKey: string }).sshPrivateKey}
+                    rows={10}
+                  />
+                ) : (
+                  <Input
+                    {...field}
+                    type={key === 'password' ? 'password' : 'text'}
+                    placeholder={
+                      key === 'repoUrl' && repoUrlIsRegex
+                        ? repoUrlPatternPlaceholder
+                        : key === 'repoUrl'
+                          ? repoUrlPlaceholder(credentialType, isSSHRepoUrl)
+                          : placeholders(isSSHRepoUrl)[key as keyof typeof placeholders]
+                    }
+                    disabled={editing && key === 'name'}
+                  />
+                )}
+                {key === 'repoUrl' && (
+                  <Checkbox
+                    checked={isSSHRepoUrl}
+                    onChange={(e) => setIsSSHRepoUrl(e.target.checked)}
+                    className='mt-2'
+                  >
+                    SSH
+                  </Checkbox>
+                )}
               </>
             )}
-            <FieldContainer
-              label={key !== 'repoUrl' ? labelForKey(key) : undefined}
-              name={key as 'name' | 'type' | 'repoUrl' | 'username' | 'password'}
-              control={control}
-            >
-              {({ field }) => (
-                <Input
-                  {...field}
-                  type={key === 'password' ? 'password' : 'text'}
-                  placeholder={
-                    key === 'repoUrl' && repoUrlIsRegex
-                      ? repoUrlPatternPlaceholder
-                      : key === 'repoUrl'
-                        ? repoUrlPlaceholder(credentialType)
-                        : placeholders[key as keyof typeof placeholders]
-                  }
-                  disabled={editing && key === 'name'}
-                />
-              )}
-            </FieldContainer>
-          </div>
-        )
-      )}
+          </FieldContainer>
+        </div>
+      ))}
       {credentialType === 'generic' && (
         // @ts-expect-error expected type is there
         <FieldContainer control={control} name='data' label='Data'>

@@ -22,6 +22,7 @@ type credentialsUpdate struct {
 	repoURLISRegex bool
 	username       string
 	password       string
+	sshPrivateKey  string
 }
 
 func (s *server) UpdateCredentials(
@@ -42,6 +43,7 @@ func (s *server) UpdateCredentials(
 		repoURLISRegex: req.Msg.GetRepoUrlIsRegex(),
 		username:       req.Msg.GetUsername(),
 		password:       req.Msg.GetPassword(),
+		sshPrivateKey:  req.Msg.GetSshPrivateKey(),
 	}
 
 	if err := validateFieldNotEmpty("project", credsUpdate.project); err != nil {
@@ -119,5 +121,8 @@ func applyCredentialsUpdateToK8sSecret(
 	}
 	if credsUpdate.password != "" {
 		secret.Data["password"] = []byte(credsUpdate.password)
+	}
+	if credsUpdate.sshPrivateKey != "" {
+		secret.Data["sshPrivateKey"] = []byte(credsUpdate.sshPrivateKey)
 	}
 }
