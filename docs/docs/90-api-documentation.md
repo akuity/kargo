@@ -335,7 +335,7 @@ Stability is not guaranteed.
  CreateServiceAccountRequest is a request to create a new Kargo ServiceAccount resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is the Kargo ServiceAccount to create. |
+| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is the Kargo ServiceAccount to create. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountResponse"></a>
 
@@ -343,7 +343,7 @@ Stability is not guaranteed.
  CreateServiceAccountResponse contains the details of a newly created Kargo ServiceAccount resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is the newly created Kargo ServiceAccount resource. |
+| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is the newly created Kargo ServiceAccount resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenRequest"></a>
 
@@ -890,7 +890,7 @@ Stability is not guaranteed.
  GetServiceAccountResponse contains the details of the requested Kargo ServiceAccount resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| serviceAccount | k8s.io.api.core.v1.ServiceAccount |  serviceAccount is a structured ServiceAccount. |
+| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is a structured ServiceAccount. |
 | raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest"></a>
@@ -1245,7 +1245,7 @@ Stability is not guaranteed.
  ListServiceAccountsResponse contains a list of Kargo ServiceAccount resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| serviceAccounts | k8s.io.api.core.v1.ServiceAccount |  serviceAccounts is the list of Kargo ServiceAccount resources. |
+| service_accounts | k8s.io.api.core.v1.ServiceAccount |  service_accounts is the list of Kargo ServiceAccount resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
