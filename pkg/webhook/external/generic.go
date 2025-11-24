@@ -157,17 +157,16 @@ func conditionSatisfied(expression string, env map[string]any) (bool, error) {
 	return satisfied, nil
 }
 
-// should reportAsError determines whether the overall webhook processing should be
-// reported as an error based on the action results. Returns true if any action
-// resulted in an expression evaluation error or any of its underlying
-// targets had errors.
 func shouldReportAsError(actionResults []actionResult) bool {
 	return slices.ContainsFunc(actionResults, func(ar actionResult) bool {
-		return ar.ConditionResult.EvalError != "" || hasTargetErrors(ar)
+		return hasErrors(ar)
 	})
 }
 
-func hasTargetErrors(ar actionResult) bool {
+func hasErrors(ar actionResult) bool {
+	if ar.ConditionResult.EvalError != "" {
+		return true
+	}
 	for _, tr := range ar.TargetResults {
 		if tr.ListError != nil {
 			return true
