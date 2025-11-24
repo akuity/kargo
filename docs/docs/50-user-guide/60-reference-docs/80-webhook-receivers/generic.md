@@ -136,7 +136,7 @@ The returned value is a `string`.
 
 `normalizeImage(url)`
 
-Function that normalizes a image `url`.
+Function that normalizes an image `url`.
 
 It has one argument:
 - `url` (Required): The URL of an image repository.
@@ -174,14 +174,16 @@ will be returned.
 
 `body`
 
-Generic object derived from incoming requests whose fields can be accessed using standard bracket or dot-notation. For example, `data.address.city` would access 
-the `city` property nested within the address object, and `data.users[0]` would 
-access the first item in a users array. 
+Generic object derived from incoming requests whose fields can be accessed using
+standard bracket or dot-notation. For example, `data.address.city` would access 
+the `city` property nested within the `address` object, and `data.users[0]` 
+would access the first item in a `users` array. 
 
 ### Selector-Based
 
-Generic webhook receivers use label and index selectors. If both are defined
-targets must adhere to the logical AND of the two sets of constraints.
+Generic webhook receivers use label and index selectors. They can be used in
+combination with one another(as well as a static or dynamic `Name`). Listed 
+targets would be ones that match the logical AND of all defined constraints.
 
 #### Label Selectors
 
@@ -208,7 +210,7 @@ only supported `key` at this time is `subscribedURLs`. Expressions are supported
 for `value`.
 
 :::note
-`subscribedURLs` refers to `Warehouse`' that contain subscriptions that that
+`subscribedURLs` refers to `Warehouse`'s that contain subscriptions that 
 subscribe to the provided repository URL.
 :::
 
