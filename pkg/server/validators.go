@@ -37,7 +37,7 @@ func (s *server) validateSystemLevelOrProject(
 
 func (s *server) validateProjectExists(ctx context.Context, project string) error {
 	var cl client.Client = s.client
-	if s.client != nil && s.client.InternalClient() == nil {
+	if s.client != nil && s.client.InternalClient() != nil {
 		cl = s.client.InternalClient()
 	}
 	if err := s.externalValidateProjectFn(ctx, cl, project); err != nil {

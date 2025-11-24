@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
@@ -279,41 +279,56 @@ func (s *serviceAccountsDatabase) CreateToken(
 		},
 		Type: corev1.SecretTypeServiceAccountToken,
 	}
-	if err := s.client.Create(ctx, tokenSecret); err != nil {
+	if err = s.client.Create(ctx, tokenSecret); err != nil {
 		return nil, fmt.Errorf(
 			"error creating token Secret %q for ServiceAccount %q in namespace %q: %w",
 			tokenName, saName, namespace, err,
 		)
 	}
-	// Retrieve Secret -- this is necessary to actually get the token. We use
-	// a simple retry because token data is created asynchronously and we don't
+
+	// Retrieve Secret -- this is necessary to actually get the token. We wrap
+	// this in a retry because token data is created asynchronously and we don't
 	// want to prematurely return the Secret without its data.
-	for range 5 {
-		tokenSecret = &corev1.Secret{}
-		if err := s.client.Get(
-			ctx,
-			client.ObjectKey{
-				Namespace: namespace,
-				Name:      tokenName,
-			},
-			tokenSecret,
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error getting token Secret %q for ServiceAccount %q in namespace %q: %w",
-				tokenName, saName, namespace, err,
-			)
-		}
-		if _, ok := tokenSecret.Data["token"]; ok {
-			return tokenSecret, nil
-		}
-		time.Sleep(time.Second)
+	var gotToken bool
+	backoff := retry.DefaultBackoff
+	backoff.Steps = 5
+	if err = retry.OnError(
+		backoff,
+		func(innerErr error) bool {
+			// i.e. Stop retrying if there was an error or we got the token.
+			return innerErr == nil && !gotToken
+		},
+		func() error {
+			tokenSecret = &corev1.Secret{}
+			if innerErr := s.client.Get(
+				ctx,
+				client.ObjectKey{
+					Namespace: namespace,
+					Name:      tokenName,
+				},
+				tokenSecret,
+			); innerErr != nil {
+				return fmt.Errorf(
+					"error getting token Secret %q for ServiceAccount %q in namespace %q: %w",
+					tokenName, saName, namespace, innerErr,
+				)
+			}
+			gotToken = tokenSecret.Data["token"] != nil
+			return nil
+		},
+	); err != nil {
+		return nil, err
 	}
 
-	return nil, fmt.Errorf(
-		"timed out waiting for token Secret %q for ServiceAccount %q in namespace "+
-			"%q to be populated; please try again",
-		tokenName, saName, project,
-	)
+	if !gotToken {
+		return nil, fmt.Errorf(
+			"timed out waiting for token Secret %q for ServiceAccount %q in namespace "+
+				"%q to be populated; please try again",
+			tokenName, saName, project,
+		)
+	}
+
+	return tokenSecret, nil
 }
 
 // DeleteToken implements ServiceAccountsDatabase.
