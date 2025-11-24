@@ -78,12 +78,11 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 		logger := logging.LoggerFromContext(ctx)
-		ctx = logging.ContextWithLogger(ctx, logger)
 
 		baseEnv, err := newBaseEnv(requestBody, r)
 		if err != nil {
+			// this can only fail if we get invalid json
 			logger.Error(err, "error creating base environment")
-			// this can only fail if the request body is invalid json
 			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusBadRequest))
 			return
 		}

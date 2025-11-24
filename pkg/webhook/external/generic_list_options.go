@@ -48,13 +48,11 @@ func buildListOptionsForTarget(
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(project)}
-
 	indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create field selector: %w", err)
 	}
 	listOpts = append(listOpts, indexSelectorListOpts...)
-
 	labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create label selector: %w", err)
@@ -147,7 +145,7 @@ func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, 
 	}
 }
 
-// K8s doesn't provide an intuitive way to do this.
+// K8s doesn't provide an intuitive way to do this so we have to do it ourselves.
 func listToObjects(list client.ObjectList) []client.Object {
 	val := reflect.ValueOf(list).Elem()
 	// Every k8s List type has an `Items` field
@@ -157,7 +155,6 @@ func listToObjects(list client.ObjectList) []client.Object {
 	}
 	objs := make([]client.Object, 0, itemsField.Len())
 	for i := range itemsField.Len() {
-		// this type assertion can't fail but if we omit the check linter will complain
 		item, ok := itemsField.Index(i).Addr().Interface().(client.Object)
 		if ok {
 			objs = append(objs, item)
