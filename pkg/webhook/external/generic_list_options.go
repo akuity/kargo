@@ -125,8 +125,8 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any)
 
 // labelOpToSelectionOp converts a metav1.LabelSelectorOperator
 // into a selection.Operator, which is used to build label requirements.
-// Returns an error if the operator is not recognized. GT and LT operators
-// are not supported.
+// Returns an error if the operator is not supported. Unsupported operators are
+// GT, LT, Exists, and NotExists.
 func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, error) {
 	switch op {
 	case metav1.LabelSelectorOpIn:
@@ -138,14 +138,10 @@ func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, 
 	case metav1.LabelSelectorOpDoesNotExist:
 		return selection.DoesNotExist, nil
 	default:
-		// selection.GreaterThan, selection.LessThan, selection.Equal, and
-		// selection.NotEquals don't have a label selector operator equivalent so
-		// they're not supported.
 		return "", fmt.Errorf("unsupported LabelSelectorOperator: %q", op)
 	}
 }
 
-// K8s doesn't provide an intuitive way to do this so we have to do it ourselves.
 func listToObjects(list client.ObjectList) []client.Object {
 	val := reflect.ValueOf(list).Elem()
 	// Every k8s List type has an `Items` field
