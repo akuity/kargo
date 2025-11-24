@@ -22,7 +22,7 @@ global:
   ## @param global.createClusterSecretsNamespace Indicates whether the `clusterSecretsNamespace` should be managed by the chart.
   createClusterSecretsNamespace: true
   ## @param global.sharedResourcesNamespace Indicates a namespace where shared resources can be located.
-  sharedResourcesNamespace: ""
+  sharedResourcesNamespace: shared-resources-namespace
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
