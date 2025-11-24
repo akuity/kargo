@@ -23,8 +23,8 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
-  {{- if (len .Values.globalCredentials.namespaces) }} 
-  SHARED_RESOURCES_NAMESPACE: {{ quote ( index .Values.globalCredentials.namespaces 0 ) }}
+  {{- if ( len .Values.controller.globalCredentials.namespaces ) }} 
+  SHARED_RESOURCES_NAMESPACE: {{ quote ( index .Values.controller.globalCredentials.namespaces 0 ) }}
   {{- else }}
   SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResourcesNamespace }}
   {{- end }}
