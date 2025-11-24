@@ -231,7 +231,7 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Merge the MR
-	updatedMR, _, err := p.client.AcceptMergeRequest(
+	updatedMR, resp, err := p.client.AcceptMergeRequest(
 		p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{},
 	)
 	if err != nil {
@@ -242,7 +242,21 @@ func (p *provider) MergePullRequest(
 	}
 
 	pr := convertGitlabMR(updatedMR.BasicMergeRequest)
-	return &pr, true, nil
+	if pr.Merged {
+		return &pr, true, nil
+	}
+
+	// GitLab merge trains keep the MR in "opened" state when queued for merging.
+	// The GitLab API returns HTTP 200 (not 202) with the MR object in "opened" state.
+	// We detect queuing by checking if the MR state is still "opened" after a
+	// successful AcceptMergeRequest call when pipeline or policy checks are pending.
+	if resp != nil && updatedMR.State == "opened" {
+		pr.Queued = true
+	}
+
+	// MR is not merged yet (queued or pending checks). Return non-merged so
+	// the caller can decide to wait/retry according to its policy.
+	return &pr, false, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.

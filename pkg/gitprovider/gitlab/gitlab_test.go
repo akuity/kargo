@@ -350,6 +350,40 @@ func TestMergePullRequest(t *testing.T) {
 			expectMerged: true,
 			expectPR:     true,
 		},
+		{
+			name: "merge queued (merge train)",
+			mockClient: func() *mockGitLabClient {
+				mc := &mockGitLabClient{}
+				mc.getMRFunc = func(_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+					_ ...gitlab.RequestOptionFunc,
+				) (*gitlab.MergeRequest, *gitlab.Response, error) {
+					return &gitlab.MergeRequest{
+						BasicMergeRequest: gitlab.BasicMergeRequest{
+							IID:                 790,
+							State:               "opened",
+							DetailedMergeStatus: "mergeable",
+							WebURL:              "https://gitlab.com/group/project/-/merge_requests/790",
+						},
+					}, &gitlab.Response{}, nil
+				}
+				mc.acceptMRFunc = func(_ any, _ int, _ *gitlab.AcceptMergeRequestOptions,
+					_ ...gitlab.RequestOptionFunc,
+				) (*gitlab.MergeRequest, *gitlab.Response, error) {
+					// GitLab returns HTTP 200 with MR still in "opened" state for merge trains
+					return &gitlab.MergeRequest{
+						BasicMergeRequest: gitlab.BasicMergeRequest{
+							IID:    790,
+							State:  "opened", // Still opened, queued in merge train
+							WebURL: "https://gitlab.com/group/project/-/merge_requests/790",
+						},
+					}, &gitlab.Response{}, nil
+				}
+				return mc
+			}(),
+			id:           790,
+			expectMerged: false,
+			expectPR:     true,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -376,6 +410,9 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectPR {
 				require.NotNil(t, pr)
 				require.Equal(t, tc.id, pr.Number)
+				if tc.name == "merge queued (merge train)" {
+					require.True(t, pr.Queued, "Expected Queued to be true for merge train")
+				}
 			} else {
 				require.Nil(t, pr)
 			}
