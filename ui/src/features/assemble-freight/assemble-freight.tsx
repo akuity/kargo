@@ -279,7 +279,7 @@ export const AssembleFreight = ({
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
-            <ArtifactMenuGroup icon={null} label='Generic' items={other} {...commonProps} />
+            <ArtifactMenuGroup icon={null} label='Other' items={other} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
             <DiscoveryTable selected={selected} chosenItems={chosenItems} select={select} />

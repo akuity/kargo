@@ -92,7 +92,7 @@ export const FreightTable = (props: FreightTableProps) => {
 
       {freightSource.genericFreightSource.length > 0 && (
         <>
-          <div className='font-semibold mt-4 mb-2 text-xs'>GENERIC ARTIFACTS</div>
+          <div className='font-semibold mt-4 mb-2 text-xs'>OTHER ARTIFACTS</div>
           <Table
             pagination={{ pageSize: 5 }}
             dataSource={freightSource.genericFreightSource}
