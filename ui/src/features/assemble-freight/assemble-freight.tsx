@@ -15,6 +15,8 @@ import {
   DiscoveredCommit,
   DiscoveredImageReference,
   Freight,
+  GenericArtifactReference,
+  GenericDiscoveryResult,
   GitCommit,
   GitDiscoveryResult,
   Image,
@@ -28,6 +30,7 @@ import { ArtifactMenuGroup } from './artifact-menu-group';
 import { ChartTable } from './chart-table';
 import { CloneFreightNote } from './clone-freight-note';
 import { CommitTable } from './commit-table';
+import { GenericArtifactTable } from './generic-artifact-table';
 import { ImageTable } from './image-table';
 import { mergeWithClonedFreight } from './merge-with-cloned-freight';
 import { missingArtifactsToClonedFreight } from './missing-artifacts-to-cloned-freight';
@@ -50,7 +53,8 @@ const constructFreight = (
     },
     images: [] as Image[],
     charts: [] as Chart[],
-    commits: [] as GitCommit[]
+    commits: [] as GitCommit[],
+    otherArtifacts: [] as GenericArtifactReference[]
   } as Freight;
 
   for (const key in chosenItems) {
@@ -83,6 +87,8 @@ const constructFreight = (
         author: commitRef.author,
         committer: commitRef.committer
       } as GitCommit);
+    } else if ('artifactReferences' in artifact) {
+      freight.otherArtifacts.push(info as GenericArtifactReference);
     }
   }
 
@@ -122,12 +128,14 @@ export const AssembleFreight = ({
 
   // a map of artifact identifiers to freight info
   // contains freight info for all artifacts selected to be included in the new freight
-  const [images, charts, git] = useMemo(() => {
+  const [images, charts, git, other] = useMemo(() => {
     const images: ImageDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.images || [];
     const charts: ChartDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.charts || [];
     const git: GitDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.git || [];
+    const other: GenericDiscoveryResult[] =
+      warehouse?.status?.discoveredArtifacts?.otherResults || [];
 
-    return [images, charts, git];
+    return [images, charts, git, other];
   }, [warehouse]);
 
   const [selected, setSelected] = useState<DiscoveryResult | undefined>(() => {
@@ -141,6 +149,10 @@ export const AssembleFreight = ({
 
     if (git?.length > 0) {
       return git[0];
+    }
+
+    if (other?.length > 0) {
+      return other[0];
     }
   });
 
@@ -172,6 +184,13 @@ export const AssembleFreight = ({
       items[getSubscriptionKey(commit)] = {
         artifact: commit,
         info: commit.commits[0]
+      };
+    }
+
+    for (const other of discoveredArtifacts?.otherResults || []) {
+      items[getSubscriptionKey(other)] = {
+        artifact: other,
+        info: other.artifactReferences[0]
       };
     }
 
@@ -232,6 +251,7 @@ export const AssembleFreight = ({
               onClick={() => {
                 const textEncoder = new TextEncoder();
                 const freight = constructFreight(chosenItems, warehouse?.metadata?.name || '');
+
                 mutate({
                   manifest: textEncoder.encode(
                     yaml.stringify({
@@ -259,6 +279,7 @@ export const AssembleFreight = ({
             <ArtifactMenuGroup icon={faDocker} label='Images' items={images} {...commonProps} />
             <ArtifactMenuGroup icon={faAnchor} label='Charts' items={charts} {...commonProps} />
             <ArtifactMenuGroup icon={faGitAlt} label='Git' items={git} {...commonProps} />
+            <ArtifactMenuGroup icon={null} label='Generic' items={other} {...commonProps} />
           </div>
           <div className='w-full p-4 overflow-auto'>
             <DiscoveryTable selected={selected} chosenItems={chosenItems} select={select} />
@@ -312,6 +333,13 @@ const DiscoveryTable = ({
         select={select}
         selected={selectedItem as string}
         show={'versions' in selected}
+      />
+
+      <GenericArtifactTable
+        references={(selected as GenericDiscoveryResult).artifactReferences || []}
+        select={select}
+        selected={selectedItem as GenericArtifactReference}
+        show={'artifactReferences' in selected}
       />
     </>
   );

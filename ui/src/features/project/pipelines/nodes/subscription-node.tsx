@@ -64,7 +64,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
         </Link>
       )}
 
-      {props.subscription?.other?.artifactKind !== '' && (
+      {!!props.subscription?.other?.artifactKind && (
         <Tag color='blue' className='text-[9px] text-wrap' bordered={false}>
           kind: {props.subscription.other?.artifactKind}
         </Tag>
