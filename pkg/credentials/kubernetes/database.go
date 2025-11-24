@@ -31,7 +31,7 @@ type database struct {
 // DatabaseConfig represents configuration for a Kubernetes based implementation
 // of the credentials.Database interface.
 type DatabaseConfig struct {
-	SharedResourcesNamespace    string   `envconfig:"SHARED_RESOURCES_NAMESPACE" default:""`
+	SharedResourcesNamespace string `envconfig:"SHARED_RESOURCES_NAMESPACE" default:""`
 	// DEPRECATED: Use SharedResourcesNamespace instead.
 	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
 	AllowCredentialsOverHTTP    bool     `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
