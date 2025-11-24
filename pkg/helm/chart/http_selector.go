@@ -1,13 +1,13 @@
 package chart
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
-	"golang.org/x/net/context"
 	"gopkg.in/yaml.v3"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"

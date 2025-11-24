@@ -8,6 +8,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/pkg/credentials"
 )
@@ -63,17 +64,22 @@ func TestManagedIdentityProvider_Supports(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			result := tt.provider.Supports(tt.credType, tt.repoURL, nil, nil)
-			assert.Equal(t, tt.expected, result)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			supports, err := testCase.provider.Supports(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, supports)
 		})
 	}
 }
 
 func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
-	ctx := context.Background()
-
 	const (
 		fakeAccountID = "123456789012"
 		fakeProject   = "fake-project"
@@ -200,14 +206,20 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setupCache != nil {
-				tt.setupCache(tt.provider.tokenCache)
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.setupCache != nil {
+				testCase.setupCache(testCase.provider.tokenCache)
 			}
-
-			creds, err := tt.provider.GetCredentials(ctx, tt.project, tt.credType, tt.repoURL, nil, nil)
-			tt.assertions(t, tt.provider.tokenCache, creds, err)
+			creds, err := testCase.provider.GetCredentials(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					Project: testCase.project,
+					RepoURL: testCase.repoURL,
+				},
+			)
+			testCase.assertions(t, testCase.provider.tokenCache, creds, err)
 		})
 	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/akuity/kargo/pkg/credentials"
 )
@@ -120,18 +121,25 @@ func TestServiceAccountKeyProvider_Supports(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
-			provider := NewServiceAccountKeyProvider()
-			result := provider.Supports(tt.credType, tt.repoURL, tt.data, nil)
-			assert.Equal(t, tt.expected, result)
+	p := NewServiceAccountKeyProvider()
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			supports, err := p.Supports(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+					Data:    testCase.data,
+				},
+			)
+			require.NoError(t, err)
+			require.Equal(t, testCase.expected, supports)
 		})
 	}
 }
 
 func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
-	ctx := context.Background()
-
 	const (
 		fakeGARRepoURL        = "us-central1-docker.pkg.dev/my-project/my-repo"
 		fakeServiceAccountKey = "base64-encoded-service-account-key"
@@ -147,16 +155,6 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 		setupCache       func(c *cache.Cache)
 		assertions       func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
-		{
-			name:     "unsupported credentials",
-			credType: credentials.TypeGit,
-			repoURL:  fakeGARRepoURL,
-			data:     map[string][]byte{},
-			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
-				assert.Nil(t, creds)
-				assert.NoError(t, err)
-			},
-		},
 		{
 			name:     "cache hit",
 			credType: credentials.TypeImage,
@@ -229,17 +227,24 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 		},
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
 			provider := NewServiceAccountKeyProvider().(*ServiceAccountKeyProvider) // nolint:forcetypeassert
-			provider.getAccessTokenFn = tt.getAccessTokenFn
+			provider.getAccessTokenFn = testCase.getAccessTokenFn
 
-			if tt.setupCache != nil {
-				tt.setupCache(provider.tokenCache)
+			if testCase.setupCache != nil {
+				testCase.setupCache(provider.tokenCache)
 			}
 
-			creds, err := provider.GetCredentials(ctx, "", tt.credType, tt.repoURL, tt.data, nil)
-			tt.assertions(t, provider.tokenCache, creds, err)
+			creds, err := provider.GetCredentials(
+				t.Context(),
+				credentials.Request{
+					Type:    testCase.credType,
+					RepoURL: testCase.repoURL,
+					Data:    testCase.data,
+				},
+			)
+			testCase.assertions(t, provider.tokenCache, creds, err)
 		})
 	}
 }

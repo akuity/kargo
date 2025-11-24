@@ -20,10 +20,10 @@ func Test_tokenCacheKey(t *testing.T) {
 			want: "a8327d4a49d4631631d090a72297d8d749337a30e6eb0416bd3655b71e36481b",
 		},
 	}
-	for _, tt := range tests {
+	for _, testCase := range tests {
 		t.Run("", func(t *testing.T) {
 			for i := 0; i < 100000; i++ {
-				assert.Equal(t, tt.want, tokenCacheKey(tt.key))
+				assert.Equal(t, testCase.want, tokenCacheKey(testCase.key))
 			}
 		})
 	}

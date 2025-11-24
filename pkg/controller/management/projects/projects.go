@@ -864,7 +864,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 	}
 	if creator, ok := project.Annotations[kargoapi.AnnotationKeyCreateActor]; ok {
 		if parts := strings.SplitN(creator, ":", 2); len(parts) == 2 {
-			saAnnotations[rbacapi.AnnotationKeyOIDCClaims] = fmt.Sprintf("{%q:%q}", parts[0], parts[1])
+			saAnnotations[rbacapi.AnnotationKeyOIDCClaims] = fmt.Sprintf("{%q:[%q]}", parts[0], parts[1])
 		}
 	}
 	for _, saName := range allRoles {
@@ -910,9 +910,9 @@ func (r *reconciler) ensureDefaultUserRoles(
 					Resources: []string{"events"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
-				{ // For managing project-level access and credentials
+				{ // For managing project-level access, credentials, and other config
 					APIGroups: []string{""},
-					Resources: []string{"secrets", "serviceaccounts"},
+					Resources: []string{"configmaps", "secrets", "serviceaccounts"},
 					Verbs:     []string{"*"},
 				},
 				{ // For managing project-level access
@@ -964,7 +964,7 @@ func (r *reconciler) ensureDefaultUserRoles(
 			Rules: []rbacv1.PolicyRule{
 				{
 					APIGroups: []string{""},
-					Resources: []string{"events", "serviceaccounts"},
+					Resources: []string{"configmaps", "events", "serviceaccounts"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{
@@ -993,9 +993,9 @@ func (r *reconciler) ensureDefaultUserRoles(
 				},
 			},
 			Rules: []rbacv1.PolicyRule{
-				{ // For viewing events and serviceaccounts
+				{ // For viewing configmaps, events, and serviceaccounts
 					APIGroups: []string{""},
-					Resources: []string{"events", "serviceaccounts"},
+					Resources: []string{"configmaps", "events", "serviceaccounts"},
 					Verbs:     []string{"get", "list", "watch"},
 				},
 				{ // For viewing project-level access

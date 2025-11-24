@@ -1,8 +1,6 @@
 import { useMutation } from '@connectrpc/connect-query';
 import { Alert, Typography } from 'antd';
-import { generatePath, useNavigate } from 'react-router-dom';
 
-import { paths } from '@ui/config/paths';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { approveFreight } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -11,14 +9,14 @@ type CallbackProps = {
   stage: string;
   freight: string;
   onClose?: () => void;
+  onApprove: () => void;
 };
 
 export const useManualApprovalModal = () => {
   const confirm = useConfirmModal();
   const manualApproveActionMutation = useMutation(approveFreight);
-  const navigate = useNavigate();
 
-  return ({ freight, onClose, projectName, stage }: CallbackProps) =>
+  return ({ freight, onClose, projectName, stage, onApprove }: CallbackProps) =>
     confirm({
       title: 'Manual approval required',
       okText: 'Approve',
@@ -52,13 +50,8 @@ export const useManualApprovalModal = () => {
           {
             onSuccess: () => {
               onClose?.();
-              navigate(
-                generatePath(paths.promote, {
-                  name: projectName,
-                  freight: freight,
-                  stage
-                })
-              );
+
+              onApprove();
             }
           }
         )

@@ -129,7 +129,7 @@ The following expression functions are available:
 
 Function that normalizes a git `url`.
 
-It has two arguments:
+It has one argument:
 - `url` (Required): The URL of a git repository.
 
 The returned value is a `string`.
@@ -138,7 +138,7 @@ The returned value is a `string`.
 
 Function that normalizes a image `url`.
 
-It has two arguments:
+It has one argument:
 - `url` (Required): The URL of an image repository.
 
 The returned value is a `string`.
@@ -147,7 +147,7 @@ The returned value is a `string`.
 
 Function that normalizes a chart `url`.
 
-It has two arguments:
+It has one argument:
 - `url` (Required): The URL of a chart repository.
 
 The returned value is a `string`.

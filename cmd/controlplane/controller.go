@@ -37,6 +37,12 @@ import (
 	"github.com/akuity/kargo/pkg/types"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 
+	_ "github.com/akuity/kargo/pkg/credentials/acr"
+	_ "github.com/akuity/kargo/pkg/credentials/basic"
+	_ "github.com/akuity/kargo/pkg/credentials/ecr"
+	_ "github.com/akuity/kargo/pkg/credentials/gar"
+	_ "github.com/akuity/kargo/pkg/credentials/github"
+	_ "github.com/akuity/kargo/pkg/credentials/ssh"
 	_ "github.com/akuity/kargo/pkg/promotion/runner/builtin"
 )
 
@@ -128,9 +134,9 @@ func (o *controllerOptions) run(ctx context.Context) error {
 	}
 
 	credentialsDB := credsdb.NewDatabase(
-		ctx,
 		kargoMgr.GetClient(),
 		localClusterClient,
+		credentials.DefaultProviderRegistry,
 		credsdb.DatabaseConfigFromEnv(),
 	)
 

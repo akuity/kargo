@@ -126,6 +126,20 @@ func Test_gitPusher_convert(t *testing.T) {
 				"targetBranch": "fake-branch",
 			},
 		},
+		{
+			name: "force is true",
+			config: promotion.Config{ // Should be completely valid
+				"path":  "/fake/path",
+				"force": true,
+			},
+		},
+		{
+			name: "force is false",
+			config: promotion.Config{ // Should be completely valid
+				"path":  "/fake/path",
+				"force": false,
+			},
+		},
 	}
 
 	r := newGitPusher(promotion.StepRunnerCapabilities{})

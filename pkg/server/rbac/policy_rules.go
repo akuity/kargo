@@ -180,13 +180,13 @@ func buildRule(
 // nolint: goconst
 func validateResourceTypeName(resource string) error {
 	switch resource {
-	case "analysisruns", "analysistemplates", "events", "freights",
+	case "analysisruns", "analysistemplates", "configmaps", "events", "freights",
 		"freights/status", "projectconfigs", "promotions", "rolebindings", "roles",
 		"secrets", "serviceaccounts", "stages", "warehouses":
 		return nil
-	case "analysisrun", "analysistemplate", "event", "freight", "projectconfig",
-		"promotion", "role", "rolebinding", "secret", "serviceaccount", "stage",
-		"warehouse":
+	case "analysisrun", "analysistemplate", "configmap", "event", "freight",
+		"projectconfig", "promotion", "role", "rolebinding", "secret",
+		"serviceaccount", "stage", "warehouse":
 		return apierrors.NewBadRequest(
 			fmt.Sprintf(`unrecognized resource type %q; did you mean "%ss"?`, resource, resource),
 		)

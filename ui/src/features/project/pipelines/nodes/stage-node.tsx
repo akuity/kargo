@@ -3,15 +3,12 @@ import { useDroppable } from '@dnd-kit/core';
 import {
   faBarsStaggered,
   faBolt,
-  faBoltLightning,
-  faCircleNotch,
   faExternalLink,
   faMinus,
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
-import { ItemType } from 'antd/es/menu/interface';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
@@ -19,13 +16,11 @@ import { generatePath, Link, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
-import { StageConditionIcon } from '@ui/features/common/stage-status/stage-condition-icon';
-import { getStagePhase } from '@ui/features/common/stage-status/utils';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { ArgoCDLink } from '@ui/features/project/pipelines/nodes/argocd-link';
 import {
   approveFreight,
-  promoteToStage
+  queryFreight
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { timestampDate } from '@ui/utils/connectrpc-utils';
@@ -37,6 +32,7 @@ import { DropOverlay } from '../promotion/drag-and-drop/drop-overlay';
 
 import { AnalysisRunLogsLink } from './analysis-run-logs-link';
 import style from './node-size-source-of-truth.module.less';
+import { useGetPromotionDropdownItems } from './promotion/use-get-promotion-dropdown-items';
 import { PullRequestLink } from './pull-request-link';
 import { StageFreight } from './stage-freight';
 import {
@@ -46,11 +42,13 @@ import {
   useHideStageIfInPromotionMode,
   useStageHeaderStyle
 } from './stage-meta-utils';
-import { useGetUpstreamFreight } from './use-get-upstream-freight';
+import { StageNodePhase } from './stage-node-phase';
 
 import './stage-node.less';
 
 export const StageNode = (props: { stage: Stage }) => {
+  const stageName = props.stage?.metadata?.name || '';
+
   const navigate = useNavigate();
   const dictionaryContext = useDictionaryContext();
   const graphContext = useGraphContext();
@@ -60,31 +58,17 @@ export const StageNode = (props: { stage: Stage }) => {
 
   const headerStyle = useStageHeaderStyle(props.stage);
 
-  const autoPromotionMode =
-    dictionaryContext?.stageAutoPromotionMap?.[props.stage?.metadata?.name || ''];
+  const autoPromotionMode = dictionaryContext?.stageAutoPromotionMap?.[stageName];
 
-  const stagePhase = getStagePhase(props.stage);
   const stageHealth = getStageHealth(props.stage);
 
   const controlFlow = isStageControlFlow(props.stage);
 
   const hideStage = useHideStageIfInPromotionMode(props.stage);
 
-  const upstreamFreights = useGetUpstreamFreight(props.stage);
+  const queryFreightMutation = useMutation(queryFreight);
 
-  const promoteActionMutation = useMutation(promoteToStage, {
-    onSuccess: (response) => {
-      navigate(
-        generatePath(paths.promotion, {
-          name: props.stage?.metadata?.namespace,
-          promotionId: response.promotion?.metadata?.name
-        })
-      );
-    }
-  });
-
-  const totalSubscribersToThisStage =
-    dictionaryContext?.subscribersByStage?.[props.stage?.metadata?.name || '']?.size || 0;
+  const totalSubscribersToThisStage = dictionaryContext?.subscribersByStage?.[stageName]?.size || 0;
 
   const manualApproveActionMutation = useMutation(approveFreight, {
     onSuccess: (_, vars) => {
@@ -96,43 +80,18 @@ export const StageNode = (props: { stage: Stage }) => {
     }
   });
 
+  const dropdownItems = useGetPromotionDropdownItems(props.stage);
+
   let descriptionItems: ReactNode;
 
   const lastPromotion = getLastPromotionDate(props.stage);
   const date = timestampDate(lastPromotion) as Date;
 
   if (!controlFlow) {
-    let Phase = (
-      <Flex align='center' gap={4}>
-        {stagePhase}{' '}
-        <StageConditionIcon
-          className='text-[10px]'
-          conditions={props.stage?.status?.conditions || []}
-          noTooltip
-        />
-        {stagePhase === 'Promoting' && (
-          <FontAwesomeIcon icon={faExternalLink} className='text-[8px]' />
-        )}
-      </Flex>
-    );
-
-    if (stagePhase === 'Promoting') {
-      Phase = (
-        <Link
-          to={generatePath(paths.promotion, {
-            name: props.stage?.metadata?.namespace,
-            promotionId: props.stage?.status?.currentPromotion?.name || ''
-          })}
-        >
-          {Phase}
-        </Link>
-      );
-    }
-
     descriptionItems = (
       <Flex className='text-[10px]' gap={8} wrap vertical>
         <Flex gap={24} justify='center'>
-          {Phase}
+          <StageNodePhase stage={props.stage} />
           {stageHealth?.status && (
             <Flex align='center' gap={4}>
               {stageHealth?.status}
@@ -150,95 +109,6 @@ export const StageNode = (props: { stage: Stage }) => {
         </center>
       </Flex>
     );
-  }
-
-  const dropdownItems: ItemType[] = [];
-
-  if (!controlFlow) {
-    dropdownItems.push({
-      key: 'promote',
-      label: 'Promote',
-      onClick: () => actionContext?.actPromote(IAction.PROMOTE, props.stage)
-    });
-  }
-
-  if (controlFlow || totalSubscribersToThisStage > 1) {
-    dropdownItems.push({
-      key: 'promote-downstream',
-      label: 'Promote to downstream',
-      onClick: () => actionContext?.actPromote(IAction.PROMOTE_DOWNSTREAM, props.stage)
-    });
-  }
-
-  if ((upstreamFreights?.length || 0) > 0) {
-    dropdownItems.push({
-      key: 'upstream-freight-promo',
-      label: 'Promote from upstream',
-      onClick:
-        upstreamFreights?.length === 1
-          ? () =>
-              navigate(
-                generatePath(paths.promote, {
-                  name: props.stage?.metadata?.namespace,
-                  freight: upstreamFreights?.[0]?.name,
-                  stage: props.stage?.metadata?.name
-                })
-              )
-          : undefined,
-      children:
-        (upstreamFreights?.length || 0) > 1
-          ? upstreamFreights?.map((f) => ({
-              key: f?.name,
-              label: f?.origin?.name,
-              onClick: () =>
-                navigate(
-                  generatePath(paths.promote, {
-                    name: props.stage?.metadata?.namespace,
-                    freight: f?.name,
-                    stage: props.stage?.metadata?.name
-                  })
-                )
-            }))
-          : undefined
-    });
-
-    dropdownItems.push({
-      key: 'quick-promote-upstream-freight-promo',
-      label: (
-        <>
-          {promoteActionMutation.isPending ? (
-            <FontAwesomeIcon icon={faCircleNotch} className='mr-1' spin />
-          ) : (
-            <Typography.Text type='danger' className='mr-2'>
-              <FontAwesomeIcon icon={faBoltLightning} />
-            </Typography.Text>
-          )}
-          Instant promote from upstream
-        </>
-      ),
-      onClick:
-        upstreamFreights?.length === 1
-          ? () =>
-              promoteActionMutation.mutate({
-                stage: props.stage?.metadata?.name,
-                project: props.stage?.metadata?.namespace,
-                freight: upstreamFreights?.[0]?.name
-              })
-          : undefined,
-      children:
-        (upstreamFreights?.length || 0) > 1
-          ? upstreamFreights?.map((f) => ({
-              key: f?.name,
-              label: f?.origin?.name,
-              onClick: () =>
-                promoteActionMutation.mutate({
-                  stage: props.stage?.metadata?.name,
-                  project: props.stage?.metadata?.namespace,
-                  freight: f?.name
-                })
-            }))
-          : undefined
-    });
   }
 
   const { isOver, setNodeRef } = useDroppable({
@@ -292,7 +162,11 @@ export const StageNode = (props: { stage: Stage }) => {
                 items: dropdownItems
               }}
             >
-              <Button size='small' icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />} />
+              <Button
+                size='small'
+                loading={queryFreightMutation.isPending}
+                icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
+              />
             </Dropdown>
             <Button
               icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}

@@ -21,6 +21,17 @@ const (
 	secretKey = "awsSecretAccessKey"
 )
 
+func init() {
+	if provider := NewAccessKeyProvider(); provider != nil {
+		credentials.DefaultProviderRegistry.MustRegister(
+			credentials.ProviderRegistration{
+				Predicate: provider.Supports,
+				Value:     provider,
+			},
+		)
+	}
+}
+
 type AccessKeyProvider struct {
 	tokenCache *cache.Cache
 
@@ -40,38 +51,29 @@ func NewAccessKeyProvider() credentials.Provider {
 }
 
 func (p *AccessKeyProvider) Supports(
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	_ map[string]string,
-) bool {
-	if (credType != credentials.TypeImage && credType != credentials.TypeHelm) || len(data) == 0 {
-		return false
+	_ context.Context,
+	req credentials.Request,
+) (bool, error) {
+	if (req.Type != credentials.TypeImage && req.Type != credentials.TypeHelm) ||
+		len(req.Data) == 0 {
+		return false, nil
 	}
-
-	if matches := ecrURLRegex.FindStringSubmatch(repoURL); len(matches) != 2 {
-		return false
+	if matches := ecrURLRegex.FindStringSubmatch(req.RepoURL); len(matches) != 2 {
+		return false, nil
 	}
-
-	return data[regionKey] != nil && data[idKey] != nil && data[secretKey] != nil
+	return req.Data[regionKey] != nil &&
+		req.Data[idKey] != nil &&
+		req.Data[secretKey] != nil, nil
 }
 
 func (p *AccessKeyProvider) GetCredentials(
 	ctx context.Context,
-	_ string,
-	credType credentials.Type,
-	repoURL string,
-	data map[string][]byte,
-	metadata map[string]string,
+	req credentials.Request,
 ) (*credentials.Credentials, error) {
-	if !p.Supports(credType, repoURL, data, metadata) {
-		return nil, nil
-	}
-
-	var (
-		region, accessKeyID, secretAccessKey = string(data[regionKey]), string(data[idKey]), string(data[secretKey])
-		cacheKey                             = tokenCacheKey(region, accessKeyID, secretAccessKey)
-	)
+	region := string(req.Data[regionKey])
+	accessKeyID := string(req.Data[idKey])
+	secretAccessKey := string(req.Data[secretKey])
+	cacheKey := tokenCacheKey(region, accessKeyID, secretAccessKey)
 
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
@@ -79,7 +81,12 @@ func (p *AccessKeyProvider) GetCredentials(
 	}
 
 	// Cache miss, get a new token
-	encodedToken, err := p.getAuthTokenFn(ctx, region, accessKeyID, secretAccessKey)
+	encodedToken, err := p.getAuthTokenFn(
+		ctx,
+		region,
+		accessKeyID,
+		secretAccessKey,
+	)
 	if err != nil || encodedToken == "" {
 		if err != nil {
 			err = fmt.Errorf("error getting ECR auth token: %w", err)

@@ -12,12 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/component"
 	"github.com/akuity/kargo/pkg/credentials"
-	"github.com/akuity/kargo/pkg/credentials/kubernetes/acr"
-	"github.com/akuity/kargo/pkg/credentials/kubernetes/basic"
-	"github.com/akuity/kargo/pkg/credentials/kubernetes/ecr"
-	"github.com/akuity/kargo/pkg/credentials/kubernetes/gar"
-	"github.com/akuity/kargo/pkg/credentials/kubernetes/github"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/urls"
 )
@@ -26,10 +22,10 @@ import (
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
 type database struct {
-	controlPlaneClient  client.Client
-	localClusterClient  client.Client
-	credentialProviders []credentials.Provider
-	cfg                 DatabaseConfig
+	controlPlaneClient          client.Client
+	localClusterClient          client.Client
+	credentialProvidersRegistry credentials.ProviderRegistry
+	cfg                         DatabaseConfig
 }
 
 // DatabaseConfig represents configuration for a Kubernetes based implementation
@@ -50,34 +46,17 @@ func DatabaseConfigFromEnv() DatabaseConfig {
 // credentials.Database interface that utilizes a Kubernetes controller runtime
 // client to retrieve Credentials stored in Kubernetes Secrets.
 func NewDatabase(
-	ctx context.Context,
 	controlPlaneClient client.Client,
 	localClusterClient client.Client,
+	credentialProvidersRegistry credentials.ProviderRegistry,
 	cfg DatabaseConfig,
 ) credentials.Database {
-	credentialProviders := []credentials.Provider{
-		&basic.CredentialProvider{},
-		acr.NewWorkloadIdentityProvider(ctx),
-		ecr.NewAccessKeyProvider(),
-		ecr.NewManagedIdentityProvider(ctx),
-		gar.NewServiceAccountKeyProvider(),
-		gar.NewWorkloadIdentityFederationProvider(ctx),
-		github.NewAppCredentialProvider(),
+	return &database{
+		controlPlaneClient:          controlPlaneClient,
+		localClusterClient:          localClusterClient,
+		credentialProvidersRegistry: credentialProvidersRegistry,
+		cfg:                         cfg,
 	}
-
-	db := &database{
-		controlPlaneClient: controlPlaneClient,
-		localClusterClient: localClusterClient,
-		cfg:                cfg,
-	}
-
-	for _, p := range credentialProviders {
-		if p != nil {
-			db.credentialProviders = append(db.credentialProviders, p)
-		}
-	}
-
-	return db
 }
 
 func (k *database) Get(
@@ -144,26 +123,27 @@ clientLoop:
 		metadata = secret.Annotations
 	}
 
-	normalizedRepoURL := normalizeRepoURL(credType, repoURL)
-
-	for _, p := range k.credentialProviders {
-		creds, err := p.GetCredentials(
-			ctx,
-			namespace,
-			credType,
-			normalizedRepoURL,
-			data,
-			metadata,
-		)
-		if err != nil {
-			return nil, err
-		}
-		if creds != nil {
-			return creds, nil
-		}
+	req := credentials.Request{
+		Project:  namespace,
+		Type:     credType,
+		RepoURL:  normalizeRepoURL(credType, repoURL),
+		Data:     data,
+		Metadata: metadata,
 	}
 
-	return nil, nil
+	providerReg, err := k.credentialProvidersRegistry.Get(ctx, req)
+	if err != nil {
+		if !component.IsNotFoundError(err) {
+			return nil, err
+		}
+		// If no provider was found, treat it as no credentials found.
+		return nil, nil
+	}
+
+	// The registration's value is a Provider
+	provider := providerReg.Value
+
+	return provider.GetCredentials(ctx, req)
 }
 
 func (k *database) getCredentialsSecret(

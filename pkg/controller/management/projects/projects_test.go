@@ -2033,10 +2033,17 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					return nil
 				},
 				createServiceAccountFn: func(
-					context.Context,
-					client.Object,
-					...client.CreateOption,
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
 				) error {
+					sa, ok := obj.(*corev1.ServiceAccount)
+					require.True(t, ok)
+					require.Equal(
+						t,
+						`{"email":["tony@stark.io"]}`,
+						sa.Annotations[rbacapi.AnnotationKeyOIDCClaims],
+					)
 					return nil
 				},
 				createRoleFn: func(
@@ -2061,12 +2068,16 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			p := &kargoapi.Project{
+				ObjectMeta: metav1.ObjectMeta{
+					Annotations: map[string]string{
+						kargoapi.AnnotationKeyCreateActor: "email:tony@stark.io",
+					},
+				},
+			}
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureDefaultUserRoles(
-					context.Background(),
-					&kargoapi.Project{},
-				),
+				testCase.reconciler.ensureDefaultUserRoles(context.Background(), p),
 			)
 		})
 	}
