@@ -1625,15 +1625,15 @@ message UpdateRoleResponse {
 // CreateServiceAccountRequest is a request to create a new Kargo
 // ServiceAccount resource.
 message CreateServiceAccountRequest {
-  // serviceAccount is the Kargo ServiceAccount to create.
-  k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+  // service_account is the Kargo ServiceAccount to create.
+  k8s.io.api.core.v1.ServiceAccount service_account = 1;
 }
 
 // CreateServiceAccountResponse contains the details of a newly created Kargo
 // ServiceAccount resource.
 message CreateServiceAccountResponse {
-  // serviceAccount is the newly created Kargo ServiceAccount resource.
-  k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+  // service_account is the newly created Kargo ServiceAccount resource.
+  k8s.io.api.core.v1.ServiceAccount service_account = 1;
 }
 
 // DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount
@@ -1672,8 +1672,8 @@ message GetServiceAccountRequest {
 // ServiceAccount resource.
 message GetServiceAccountResponse {
   oneof result {
-    // serviceAccount is a structured ServiceAccount.
-    k8s.io.api.core.v1.ServiceAccount serviceAccount = 1;
+    // service_account is a structured ServiceAccount.
+    k8s.io.api.core.v1.ServiceAccount service_account = 1;
     // raw is a raw YAML or JSON representation of the requested resource.
     bytes raw = 2;
   }
@@ -1694,8 +1694,8 @@ message ListServiceAccountsRequest {
 // ListServiceAccountsResponse contains a list of Kargo ServiceAccount
 // resources.
 message ListServiceAccountsResponse {
-  // serviceAccounts is the list of Kargo ServiceAccount resources.
-  repeated k8s.io.api.core.v1.ServiceAccount serviceAccounts = 1;
+  // service_accounts is the list of Kargo ServiceAccount resources.
+  repeated k8s.io.api.core.v1.ServiceAccount service_accounts = 1;
 }
 
 // CreateServiceAccountTokenRequest is a request to generate a new bearer token
