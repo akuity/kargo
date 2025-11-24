@@ -24,7 +24,7 @@ require (
 	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/bombsimon/logrusr/v4 v4.1.0
 	github.com/coreos/go-oidc/v3 v3.16.0
-	github.com/cyphar/filepath-securejoin v0.6.0
+	github.com/cyphar/filepath-securejoin v0.6.1
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/expr-lang/expr v1.17.6
 	github.com/fatih/structtag v1.2.0
@@ -57,9 +57,9 @@ require (
 	github.com/tidwall/sjson v1.2.5
 	github.com/valyala/fasttemplate v1.2.2
 	github.com/xeipuuv/gojsonschema v1.2.0
-	gitlab.com/gitlab-org/api/client-go v0.160.0
+	gitlab.com/gitlab-org/api/client-go v0.160.1
 	go.uber.org/ratelimit v0.3.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/crypto v0.45.0
 	golang.org/x/net v0.47.0
