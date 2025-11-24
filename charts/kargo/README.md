@@ -14,23 +14,23 @@
 
 ### Global Parameters
 
-| Name                                   | Description                                                                                  | Value                        |
-| -------------------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------- |
-| `global.clusterSecretsNamespace`       | Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets`      |
-| `global.createClusterSecretsNamespace` | Indicates whether the `clusterSecretsNamespace` should be managed by the chart.              | `true`                       |
-| `global.sharedResourcesNamespace`      | Indicates a namespace where shared resources can be located.                                 | `shared-recources-namespace` |
-| `global.labels`                        | Labels to add to all resources.                                                              | `{}`                         |
-| `global.annotations`                   | Annotations to add to all resources.                                                         | `{}`                         |
-| `global.podLabels`                     | Labels to add to all pods.                                                                   | `{}`                         |
-| `global.podAnnotations`                | Annotations to add to pods.                                                                  | `{}`                         |
-| `global.serviceAccount.labels`         | Global ServiceAccount labels.                                                                | `{}`                         |
-| `global.serviceAccount.annotations`    | Global ServiceAccount annotations.                                                           | `{}`                         |
-| `global.env`                           | Environment variables to add to all Kargo pods.                                              | `[]`                         |
-| `global.envFrom`                       | Environment variables to add to all Kargo pods from ConfigMaps or Secrets.                   | `[]`                         |
-| `global.nodeSelector`                  | Default node selector for all Kargo pods.                                                    | `{}`                         |
-| `global.tolerations`                   | Default tolerations for all Kargo pods.                                                      | `[]`                         |
-| `global.affinity`                      | Default affinity for all Kargo pods.                                                         | `{}`                         |
-| `global.securityContext`               | Default security context for all Kargo pods.                                                 | `{}`                         |
+| Name                                   | Description                                                                                  | Value                   |
+| -------------------------------------- | -------------------------------------------------------------------------------------------- | ----------------------- |
+| `global.clusterSecretsNamespace`       | Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets` |
+| `global.createClusterSecretsNamespace` | Indicates whether the `clusterSecretsNamespace` should be managed by the chart.              | `true`                  |
+| `global.sharedResourcesNamespace`      | Indicates a namespace where shared resources can be located.                                 | `""`                    |
+| `global.labels`                        | Labels to add to all resources.                                                              | `{}`                    |
+| `global.annotations`                   | Annotations to add to all resources.                                                         | `{}`                    |
+| `global.podLabels`                     | Labels to add to all pods.                                                                   | `{}`                    |
+| `global.podAnnotations`                | Annotations to add to pods.                                                                  | `{}`                    |
+| `global.serviceAccount.labels`         | Global ServiceAccount labels.                                                                | `{}`                    |
+| `global.serviceAccount.annotations`    | Global ServiceAccount annotations.                                                           | `{}`                    |
+| `global.env`                           | Environment variables to add to all Kargo pods.                                              | `[]`                    |
+| `global.envFrom`                       | Environment variables to add to all Kargo pods from ConfigMaps or Secrets.                   | `[]`                    |
+| `global.nodeSelector`                  | Default node selector for all Kargo pods.                                                    | `{}`                    |
+| `global.tolerations`                   | Default tolerations for all Kargo pods.                                                      | `[]`                    |
+| `global.affinity`                      | Default affinity for all Kargo pods.                                                         | `{}`                    |
+| `global.securityContext`               | Default security context for all Kargo pods.                                                 | `{}`                    |
 
 ### CRDs
 
