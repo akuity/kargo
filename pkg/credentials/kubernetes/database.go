@@ -100,6 +100,22 @@ clientLoop:
 		if secret != nil {
 			break clientLoop
 		}
+		// Check shared resources namespace for credentials
+		if k.cfg.SharedResourcesNamespace != "" {
+			// Check shared resources namespace for credentials
+			if secret, err = k.getCredentialsSecret(
+				ctx,
+				c,
+				k.cfg.SharedResourcesNamespace,
+				credType,
+				repoURL,
+			); err != nil {
+				return nil, err
+			}
+			if secret != nil {
+				break clientLoop
+			}
+		}
 		// Check global credentials namespaces for credentials
 		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
 			if secret, err = k.getCredentialsSecret(
