@@ -4,6 +4,12 @@ go 1.25.0
 
 replace github.com/akuity/kargo/api => ./api
 
+replace (
+	// NB(hidde): required because of https://github.com/kubernetes-sigs/kustomize/issues/6014
+	sigs.k8s.io/kustomize/api => sigs.k8s.io/kustomize/api v0.20.1
+	sigs.k8s.io/kustomize/kyaml => sigs.k8s.io/kustomize/kyaml v0.20.1
+)
+
 require (
 	cloud.google.com/go/compute/metadata v0.9.0
 	code.gitea.io/sdk/gitea v0.22.1
