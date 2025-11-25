@@ -112,7 +112,7 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 	}
 	res, err := libExec.Exec(w.buildGitCommand(
 		"config",
-		"kargo.repoDir",
+		repoDirConfigKey,
 	))
 	if err != nil {
 		return nil, fmt.Errorf("error reading repo dir from config: %w", err)
@@ -121,7 +121,7 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 	if err = w.loadHomeDir(); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err = w.loadURL(); err != nil {
+	if err = w.loadURLs(); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}
@@ -187,7 +187,10 @@ func (w *workTree) Checkout(branch string) error {
 		// paths within the repo.
 		"--",
 	)); err != nil {
-		return fmt.Errorf("error checking out branch %q from repo %q: %w", branch, w.url, err)
+		return fmt.Errorf(
+			"error checking out branch %q from repo %q: %w",
+			branch, w.originalURL, err,
+		)
 	}
 	return nil
 }
@@ -268,7 +271,10 @@ func (w *workTree) CreateChildBranch(branch string) error {
 		// paths within the repo.
 		"--",
 	)); err != nil {
-		return fmt.Errorf("error creating new branch %q for repo %q: %w", branch, w.url, err)
+		return fmt.Errorf(
+			"error creating new branch %q for repo %q: %w",
+			branch, w.originalURL, err,
+		)
 	}
 	return nil
 }
@@ -280,7 +286,10 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 		branch,
 		"--discard-changes",
 	)); err != nil {
-		return fmt.Errorf("error creating orphaned branch %q for repo %q: %w", branch, w.url, err)
+		return fmt.Errorf(
+			"error creating orphaned branch %q for repo %q: %w",
+			branch, w.originalURL, err,
+		)
 	}
 	return w.Clean()
 }
@@ -288,7 +297,10 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 func (w *workTree) CurrentBranch() (string, error) {
 	res, err := libExec.Exec(w.buildGitCommand("branch", "--show-current"))
 	if err != nil {
-		return "", fmt.Errorf("error checking current branch for repo %q: %w", w.url, err)
+		return "", fmt.Errorf(
+			"error checking current branch for repo %q: %w",
+			w.originalURL, err,
+		)
 	}
 	return strings.TrimSpace(string(res)), nil
 }
@@ -300,7 +312,7 @@ func (w *workTree) DeleteBranch(branch string) error {
 		"--force",
 		branch,
 	)); err != nil {
-		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.url, err)
+		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.accessURL, err)
 	}
 	return nil
 }
@@ -413,7 +425,10 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 
 	commitsBytes, err := libExec.Exec(w.buildGitCommand(args...))
 	if err != nil {
-		return nil, fmt.Errorf("error listing commits for repo %q: %w", w.url, err)
+		return nil, fmt.Errorf(
+			"error listing commits for repo %q: %w",
+			w.originalURL, err,
+		)
 	}
 
 	var commits []CommitMetadata
@@ -497,7 +512,10 @@ func parseTagMetadataLine(line []byte) (TagMetadata, error) {
 
 func (w *workTree) ListTags() ([]TagMetadata, error) {
 	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin", "--tags")); err != nil {
-		return nil, fmt.Errorf("error fetching tags from repo %q: %w", w.url, err)
+		return nil, fmt.Errorf(
+			"error fetching tags from repo %q: %w",
+			w.originalURL, err,
+		)
 	}
 
 	// These formats are quite complex, so we break them down into smaller
@@ -533,7 +551,10 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 		"refs/tags",
 	))
 	if err != nil {
-		return nil, fmt.Errorf("error listing tags for repo %q: %w", w.url, err)
+		return nil, fmt.Errorf(
+			"error listing tags for repo %q: %w",
+			w.originalURL, err,
+		)
 	}
 
 	var tags []TagMetadata
