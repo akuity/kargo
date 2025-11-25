@@ -6,8 +6,8 @@ description: Updates one or more Argo CD `Application` resources in various ways
 # `argocd-update`
 
 `argocd-update` updates one or more Argo CD `Application` resources in various
-ways. Applications can be selected either by exact name or by using label
-selectors to match multiple Applications at once.
+ways. `Application`s can be selected either by exact name or by using label
+selectors to match multiple `Application`s at once.
 
 Among other scenarios, this step is useful for the common one of forcing an 
 Argo CD `Application` to sync after previous steps have updated a remote branch
@@ -61,7 +61,7 @@ The `argocd-update` step supports two methods for selecting Argo CD `Application
 resources:
 
 1. **By Name**: Specify an exact application name using the `name` field
-2. **By Label Selector**: Match one or more applications using the `selector`
+2. **By Label Selector**: Match one or more `Application`s using the `selector`
    field with label-based criteria
 
 These two methods are mutually exclusive — you must specify either `name` or
@@ -78,12 +78,13 @@ This is the traditional method and is useful when you need to update a specific
 Label selectors allow you to match multiple `Application` resources based on
 their labels. This is useful for:
 
-- Updating multiple Applications across different environments simultaneously.
-- Managing groups of related Applications (e.g., all applications with label
+- Updating multiple `Application`s across different environments simultaneously.
+- Managing groups of related `Application`s (e.g., all `Application`s with label
   `team: platform`).
 - Performing bulk operations like hard refreshes across a set of `Application`s.
 
-Label selectors support two types of matching criteria:
+[Label selectors](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#set-references-in-api-objects)
+support two types of matching criteria:
 
 - **`matchLabels`**: Simple key-value equality matching. All specified labels 
   must match (AND logic).
@@ -91,7 +92,7 @@ Label selectors support two types of matching criteria:
   `Exists`, `DoesNotExist`) for more complex selection logic.
 
 Both criteria types can be combined in a single selector, and all criteria must
-be satisfied for an application to be selected.
+be satisfied for an `Application` to be selected.
 
 ### Validation for Multi-Application Updates
 
@@ -119,13 +120,13 @@ refresh groups of `Application`s with heterogeneous configurations.
 |------|------|----------|-------------|
 | `apps` | `[]object` | Y | Describes Argo CD `Application` resources to update and how to update them. At least one must be specified.  |
 | `apps[].name` | `string` | N | The name of the Argo CD `Application`. Mutually exclusive with `selector`. Either `name` or `selector` must be specified. __Note:__ A small technical restriction on this field is that any [expressions](../40-expressions.md) used therein are limited to accessing `ctx` and `vars` and may not access `secrets` or any Freight. This is because templates in this field are, at times, evaluated outside the context of an actual `Promotion` for the purposes of building an index. In practice, this restriction does not prove to be especially limiting. |
+| `apps[].namespace` | `string` | N | The namespace of the Argo CD `Application` resource(s) to be updated. If left unspecified, the namespace will be the Kargo controller's configured default -- typically `argocd`. __Note:__ This field is subject to the same restrictions as the `name` field. See above. |
 | `apps[].selector` | `object` | N | Label selector for matching one or more Argo CD `Application` resources. Mutually exclusive with `name`. Either `name` or `selector` must be specified. __Note:__ This field is subject to the same restrictions as the `name` field regarding expression usage. See above. |
 | `apps[].selector.matchLabels` | `map[string]string` | N | A map of label key-value pairs. All specified labels must match for an `Application` to be selected (AND logic). At least one of `matchLabels` or `matchExpressions` must be specified. |
 | `apps[].selector.matchExpressions` | `[]object` | N | A list of label selector requirements. All expressions must be satisfied for an `Application` to be selected. At least one of `matchLabels` or `matchExpressions` must be specified. |
 | `apps[].selector.matchExpressions[].key` | `string` | Y | The label key that the selector applies to. |
 | `apps[].selector.matchExpressions[].operator` | `string` | Y | The operator to use for matching. Valid values: `In`, `NotIn`, `Exists`, `DoesNotExist`. |
 | `apps[].selector.matchExpressions[].values` | `[]string` | N | An array of string values. Required when `operator` is `In` or `NotIn`. Must be empty when `operator` is `Exists` or `DoesNotExist`. |
-| `apps[].namespace` | `string` | N | The namespace of the Argo CD `Application` resource(s) to be updated. If left unspecified, the namespace will be the Kargo controller's configured default -- typically `argocd`. __Note:__ This field is subject to the same restrictions as the `name` field. See above. |
 | `apps[].sources` | `[]object` | N | Describes Argo CD `ApplicationSource`s to update and how to update them. |
 | `apps[].sources[].repoURL` | `string` | Y | The value of the target `ApplicationSource`'s  own `repoURL` field. This must match exactly. |
 | `apps[].sources[].chart` | `string` | N | Applicable only when the target `ApplicationSource` references a Helm chart repository, the value of the target `ApplicationSource`'s  own `chart` field. This must match exactly. |
@@ -300,7 +301,7 @@ default namespace that have both the `environment: production` and
 ### Selecting Applications with matchExpressions
 
 This example demonstrates using `matchExpressions` with the `In` operator to
-select applications that match one of several possible values for a label.
+select `Application`s that match one of several possible values for a label.
 
 ```yaml
 steps:
@@ -360,8 +361,8 @@ This configuration will select all Argo CD `Application` resources that:
 ### Hard Refresh with Label Selectors
 
 This example shows how to use a label selector to perform a hard refresh of
-multiple applications without updating any sources. This is useful for forcing
-Argo CD to re-sync applications, for example after external changes have been
+multiple `Application`s without updating any sources. This is useful for forcing
+Argo CD to re-sync `Application`s, for example after external changes have been
 made to the cluster or source repositories.
 
 ```yaml
@@ -376,13 +377,13 @@ steps:
 
 This configuration will trigger a hard refresh on all Argo CD `Application`
 resources that have the label `auto-refresh: enabled`. Since no `sources` are
-specified, Kargo will simply ensure the applications are synced to their
+specified, Kargo will simply ensure the `Application`s are synced to their
 current target revisions without making any changes to the application
 specifications.
 
 ### Updating Multiple Environments Simultaneously
 
-This example demonstrates updating multiple applications across different
+This example demonstrates updating multiple `Application`s across different
 environments in a single step. This is useful for rolling out changes to
 multiple stages simultaneously, such as in a blue/green deployment scenario.
 
@@ -415,4 +416,5 @@ steps:
 This configuration will update all Argo CD `Application` resources that have
 both the `app: my-microservice` and `deployment-group: blue` labels, pointing
 them all to the same new revision. Kargo will validate that all matched
-applications have compatible source configurations before applying any updates.
+`Application`s have compatible source configurations (i.e., the source exists
+in each `Application`) before applying any updates.
