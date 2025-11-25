@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"slices"
 	"strings"
@@ -32,15 +33,12 @@ type database struct {
 // of the credentials.Database interface.
 type DatabaseConfig struct {
 	SharedResourcesNamespace string `envconfig:"SHARED_RESOURCES_NAMESPACE" default:""`
-	// DEPRECATED: Use SharedResourcesNamespace instead.
-	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
-	AllowCredentialsOverHTTP    bool     `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
+	AllowCredentialsOverHTTP bool   `envconfig:"ALLOW_CREDENTIALS_OVER_HTTP" default:"false"`
 }
 
 func DatabaseConfigFromEnv() DatabaseConfig {
 	cfg := DatabaseConfig{}
 	envconfig.MustProcess("", &cfg)
-	slices.Sort(cfg.GlobalCredentialsNamespaces)
 	return cfg
 }
 
@@ -95,31 +93,34 @@ clientLoop:
 			credType,
 			repoURL,
 		); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to get %s creds for %s in namespace %q: %w",
+				credType.String(),
+				repoURL,
+				namespace,
+				err,
+			)
 		}
 		if secret != nil {
 			break clientLoop
 		}
-        // TODO: Remove this when GlobalCredentialsNamespaces is removed.
-        sharedResourceNamespaces := k.cfg.GlobalCredentialsNamespace
-        if k.cfg.SharedResourcesNamespace != "" {
-                // Takes precedence over deprecated GlobalCredentialsNamespaces.
-                sharedResourceNamespaces = []string{k.cfg.SharedResourcesNamespace}
-        }
-        // Check global credentials namespaces for credentials
-        for _, ns := range sharedResourceNamespaces {
-			if secret, err = k.getCredentialsSecret(
-				ctx,
-				c,
-				globalCredsNamespace,
-				credType,
+
+		// check shared resources namespace for credentials
+		if secret, err = k.getCredentialsSecret(
+			ctx,
+			c,
+			k.cfg.SharedResourcesNamespace,
+			credType,
+			repoURL,
+		); err != nil {
+			return nil, fmt.Errorf("failed to get %s creds for %s in shared namespace %q: %w",
+				credType.String(),
 				repoURL,
-			); err != nil {
-				return nil, err
-			}
-			if secret != nil {
-				break clientLoop
-			}
+				k.cfg.SharedResourcesNamespace,
+				err,
+			)
+		}
+		if secret != nil {
+			break clientLoop
 		}
 	}
 
