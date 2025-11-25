@@ -3,7 +3,6 @@ package external
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -26,7 +25,6 @@ func listTargetObjects(
 	if err != nil {
 		return nil, fmt.Errorf("failed to build list options: %w", err)
 	}
-
 	switch target.Kind {
 	case kargoapi.GenericWebhookTargetKindWarehouse:
 		warehouses := &kargoapi.WarehouseList{}
