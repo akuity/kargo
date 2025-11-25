@@ -17,6 +17,10 @@ import (
 const (
 	defaultUsername = "Kargo"
 	defaultEmail    = "no-reply@kargo.io"
+
+	repoDirConfigKey         = "kargo.repoDir"
+	repoHomeDirConfigKey     = "kargo.repoHomeDir"
+	repoOriginalURLConfigKey = "kargo.repoOriginalURL"
 )
 
 // baseRepo implements the common underpinnings of a Git repository with a
@@ -26,7 +30,11 @@ type baseRepo struct {
 	creds   *RepoCredentials
 	dir     string
 	homeDir string
-	url     string
+	// Store the URL two ways:
+	// 1. Exactly as it was originally provided
+	// 2. Modified in ways required for internal use by this type's methods
+	originalURL string
+	accessURL   string
 }
 
 // ClientOptions represents options for a repository-specific Git client.
@@ -218,14 +226,15 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 		return nil
 	}
 
-	lowerURL := strings.ToLower(b.url)
+	// Add username@ to the URL that will be used internally...
+	lowerURL := strings.ToLower(b.accessURL)
 	if strings.HasPrefix(lowerURL, "http://") || strings.HasPrefix(lowerURL, "https://") {
-		u, err := url.Parse(b.url)
+		u, err := url.Parse(b.accessURL)
 		if err != nil {
-			return fmt.Errorf("error parsing URL %q: %w", b.url, err)
+			return fmt.Errorf("error parsing URL %q: %w", b.accessURL, err)
 		}
 		u.User = url.User(b.creds.Username)
-		b.url = u.String()
+		b.accessURL = u.String()
 	}
 
 	return nil
@@ -238,17 +247,31 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 func (b *baseRepo) saveDirs() error {
 	if _, err := libExec.Exec(b.buildGitCommand(
 		"config",
-		"kargo.repoDir",
+		repoDirConfigKey,
 		b.dir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo dir as config: %w", err)
 	}
 	if _, err := libExec.Exec(b.buildGitCommand(
 		"config",
-		"kargo.repoHomeDir",
+		repoHomeDirConfigKey,
 		b.homeDir,
 	)); err != nil {
 		return fmt.Errorf("error saving repo home dir as config: %w", err)
+	}
+	return nil
+}
+
+// saveOriginalURL saves the original URL of the repository to the repository's
+// configuration. This is useful for reliably determining this information when
+// an existing repository or working tree is loaded from the file system.
+func (b *baseRepo) saveOriginalURL() error {
+	if _, err := libExec.Exec(b.buildGitCommand(
+		"config",
+		repoOriginalURLConfigKey,
+		b.originalURL,
+	)); err != nil {
+		return fmt.Errorf("error saving original URL as config: %w", err)
 	}
 	return nil
 }
@@ -259,7 +282,7 @@ func (b *baseRepo) saveDirs() error {
 func (b *baseRepo) loadHomeDir() error {
 	res, err := libExec.Exec(b.buildGitCommand(
 		"config",
-		"kargo.repoHomeDir",
+		repoHomeDirConfigKey,
 	))
 	if err != nil {
 		return fmt.Errorf("error reading repo home dir from config: %w", err)
@@ -268,12 +291,23 @@ func (b *baseRepo) loadHomeDir() error {
 	return nil
 }
 
-func (b *baseRepo) loadURL() error {
-	res, err := libExec.Exec(b.buildGitCommand("config", "remote.origin.url"))
+// loadURLs restores the repository's original and access URLs from the
+// repository's configuration. This is useful for reliably determining this
+// information when an existing repository or working tree is loaded from the
+// file system.
+func (b *baseRepo) loadURLs() error {
+	res, err := libExec.Exec(b.buildGitCommand("config", repoOriginalURLConfigKey))
 	if err != nil {
+		return fmt.Errorf(`error getting original URL of remote "origin": %w`, err)
+	}
+	b.originalURL = strings.TrimSpace(string(res))
+	if res, err = libExec.Exec(b.buildGitCommand(
+		"config",
+		"remote.origin.url",
+	)); err != nil {
 		return fmt.Errorf(`error getting URL of remote "origin": %w`, err)
 	}
-	b.url = strings.TrimSpace(string(res))
+	b.accessURL = strings.TrimSpace(string(res))
 	return nil
 }
 
@@ -324,7 +358,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 		"ls-remote",
 		"--heads",
 		"--exit-code", // Return 2 if not found
-		b.url,
+		b.accessURL,
 		branch,
 	))
 	var exitErr *libExec.ExitError
@@ -336,7 +370,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 		return false, fmt.Errorf(
 			"error checking for existence of branch %q in remote repo %q: %w",
 			branch,
-			b.url,
+			b.originalURL,
 			err,
 		)
 	}
@@ -344,7 +378,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 }
 
 func (b *baseRepo) URL() string {
-	return b.url
+	return b.originalURL
 }
 
 func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
