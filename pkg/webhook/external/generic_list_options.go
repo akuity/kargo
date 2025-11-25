@@ -31,7 +31,7 @@ func listTargetObjects(
 		if err := c.List(ctx, warehouses, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
 		}
-		return itemsToObjects[kargoapi.Warehouse](warehouses.Items), nil
+		return itemsToObjects(warehouses.Items), nil
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", target.Kind)
 	}
