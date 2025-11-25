@@ -100,24 +100,14 @@ clientLoop:
 		if secret != nil {
 			break clientLoop
 		}
-		// Check shared resources namespace for credentials
-		if k.cfg.SharedResourcesNamespace != "" {
-			// Check shared resources namespace for credentials
-			if secret, err = k.getCredentialsSecret(
-				ctx,
-				c,
-				k.cfg.SharedResourcesNamespace,
-				credType,
-				repoURL,
-			); err != nil {
-				return nil, err
-			}
-			if secret != nil {
-				break clientLoop
-			}
-		}
-		// Check global credentials namespaces for credentials
-		for _, globalCredsNamespace := range k.cfg.GlobalCredentialsNamespaces {
+        // TODO: Remove this when GlobalCredentialsNamespaces is removed.
+        sharedResourceNamespaces := k.cfg.GlobalCredentialsNamespace
+        if k.cfg.SharedResourcesNamespace != "" {
+                // Takes precedence over deprecated GlobalCredentialsNamespaces.
+                sharedResourceNamespaces = []string{k.cfg.SharedResourcesNamespace}
+        }
+        // Check global credentials namespaces for credentials
+        for _, ns := range sharedResourceNamespaces {
 			if secret, err = k.getCredentialsSecret(
 				ctx,
 				c,
