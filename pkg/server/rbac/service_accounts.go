@@ -289,14 +289,51 @@ func (s *serviceAccountsDatabase) CreateToken(
 	// Retrieve Secret -- this is necessary to actually get the token. We wrap
 	// this in a retry because token data is created asynchronously and we don't
 	// want to prematurely return the Secret without its data.
-	var gotToken bool
+	tokenSecret, err = s.waitForTokenData(
+		ctx,
+		namespace,
+		tokenName,
+		5, // Up to five attempts
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenSecret, nil
+}
+
+// waitForTokenData retrieves a token Secret with retry logic. It retries when:
+//
+//  1. The Secret exists but token data hasn't been populated yet
+//  2. Transient errors occur (timeouts, rate limits, server errors, conflicts)
+//
+// It does NOT retry on permanent errors like NotFound, BadRequest, Forbidden,
+// etc.
+func (s *serviceAccountsDatabase) waitForTokenData(
+	ctx context.Context,
+	namespace string,
+	tokenName string,
+	maxAttempts int,
+) (*corev1.Secret, error) {
+	var tokenSecret *corev1.Secret
 	backoff := retry.DefaultBackoff
-	backoff.Steps = 5
-	if err = retry.OnError(
+	backoff.Steps = maxAttempts
+
+	if err := retry.OnError(
 		backoff,
 		func(innerErr error) bool {
-			// i.e. Stop retrying if there was an error or we got the token.
-			return innerErr == nil && !gotToken
+			if innerErr == nil {
+				return false // Stop retrying if no error
+			}
+			// Retry on transient errors
+			_, isTokenNotPopulatedErr := innerErr.(*errTokenNotPopulated)
+			return isTokenNotPopulatedErr ||
+				apierrors.IsServerTimeout(innerErr) ||
+				apierrors.IsTimeout(innerErr) ||
+				apierrors.IsTooManyRequests(innerErr) ||
+				apierrors.IsServiceUnavailable(innerErr) ||
+				apierrors.IsInternalError(innerErr) ||
+				apierrors.IsConflict(innerErr)
 		},
 		func() error {
 			tokenSecret = &corev1.Secret{}
@@ -308,23 +345,18 @@ func (s *serviceAccountsDatabase) CreateToken(
 				},
 				tokenSecret,
 			); innerErr != nil {
-				return fmt.Errorf(
-					"error getting token Secret %q for ServiceAccount %q in namespace %q: %w",
-					tokenName, saName, namespace, innerErr,
-				)
+				return innerErr
 			}
-			gotToken = tokenSecret.Data["token"] != nil
+			if _, gotToken := tokenSecret.Data["token"]; !gotToken {
+				return &errTokenNotPopulated{}
+			}
 			return nil
 		},
 	); err != nil {
-		return nil, err
-	}
-
-	if !gotToken {
 		return nil, fmt.Errorf(
-			"timed out waiting for token Secret %q for ServiceAccount %q in namespace "+
-				"%q to be populated; please try again",
-			tokenName, saName, project,
+			"error while waiting for token Secret %q in namespace %q to be "+
+				"populated: %w",
+			tokenName, namespace, err,
 		)
 	}
 
@@ -482,4 +514,10 @@ func redactTokenData(tokenSecret *corev1.Secret) {
 	if _, ok := tokenSecret.Data["token"]; ok {
 		tokenSecret.Data["token"] = []byte("*** REDACTED ***")
 	}
+}
+
+type errTokenNotPopulated struct{}
+
+func (e *errTokenNotPopulated) Error() string {
+	return "did not find token data"
 }

@@ -834,3 +834,162 @@ func Test_redactTokenData(t *testing.T) {
 		require.Nil(t, secret.Data)
 	})
 }
+
+func Test_serviceAccountsDatabase_waitForTokenData(t *testing.T) {
+	const testTokenName = "test-token"
+
+	testCases := []struct {
+		name       string
+		client     client.Client
+		assertions func(*testing.T, *corev1.Secret, error)
+	}{
+		{
+			name: "non-retriable error",
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						// Return a NotFound error - should not retry
+						return apierrors.NewNotFound(corev1.Resource("secrets"), "")
+					},
+				}).
+				Build(),
+			assertions: func(t *testing.T, secret *corev1.Secret, err error) {
+				require.Error(t, err)
+				require.Nil(t, secret)
+				require.Contains(t, err.Error(), "error while waiting for token Secret")
+				require.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "token data not yet populated; all attempts fail",
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithObjects(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testTokenName,
+					},
+					Type: corev1.SecretTypeServiceAccountToken,
+					// No data
+				}).Build(),
+			assertions: func(t *testing.T, secret *corev1.Secret, err error) {
+				require.Error(t, err)
+				require.Nil(t, secret)
+				require.Contains(t, err.Error(), "error while waiting for token Secret")
+			},
+		},
+		{
+			name: "other retriable error; all attempts fail",
+			client: fake.NewClientBuilder().WithScheme(scheme).
+				WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(
+						context.Context,
+						client.WithWatch,
+						client.ObjectKey,
+						client.Object,
+						...client.GetOption,
+					) error {
+						// Always return a retriable error
+						return apierrors.NewServiceUnavailable("service unavailable")
+					},
+				}).
+				Build(),
+			assertions: func(t *testing.T, secret *corev1.Secret, err error) {
+				require.Error(t, err)
+				require.Nil(t, secret)
+				require.Contains(t, err.Error(), "error while waiting for token Secret")
+				require.True(t, apierrors.IsServiceUnavailable(err))
+			},
+		},
+		{
+			name: "token data not yet populated; second attempt succeeds",
+			client: func() client.Client {
+				var attemptCount int
+				return fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							_ context.Context,
+							_ client.WithWatch,
+							_ client.ObjectKey,
+							obj client.Object,
+							_ ...client.GetOption,
+						) error {
+							attemptCount++
+							if attemptCount == 1 {
+								return nil
+							}
+							// All subsequent attempts: populate token data
+							s, ok := obj.(*corev1.Secret)
+							require.True(t, ok)
+							s.Data = map[string][]byte{"token": []byte("fake-token-value")}
+							return nil
+						},
+					}).
+					Build()
+			}(),
+			assertions: func(t *testing.T, secret *corev1.Secret, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, secret)
+				require.Equal(t, []byte("fake-token-value"), secret.Data["token"])
+			},
+		},
+		{
+			name: "other retriable error; second attempt succeeds",
+			client: func() client.Client {
+				var attemptCount int
+				return fake.NewClientBuilder().WithScheme(scheme).
+					WithInterceptorFuncs(interceptor.Funcs{
+						Get: func(
+							_ context.Context,
+							_ client.WithWatch,
+							_ client.ObjectKey,
+							obj client.Object,
+							_ ...client.GetOption,
+						) error {
+							attemptCount++
+							if attemptCount == 1 {
+								// First attempt: return retriable error
+								return apierrors.NewServerTimeout(
+									corev1.Resource("secrets"),
+									"get",
+									5,
+								)
+							}
+							// All subsequent attempts: populate token data
+							s, ok := obj.(*corev1.Secret)
+							require.True(t, ok)
+							s.Data = map[string][]byte{
+								"token": []byte("fake-token-value"),
+							}
+							return nil
+						},
+					}).
+					Build()
+			}(),
+			assertions: func(t *testing.T, secret *corev1.Secret, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, secret)
+				require.Equal(t, []byte("fake-token-value"), secret.Data["token"])
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			s := &serviceAccountsDatabase{
+				client: testCase.client,
+			}
+			secret, err := s.waitForTokenData(
+				context.Background(),
+				testProject,
+				testTokenName,
+				2, // Only two attempts so that backoffs are minimal during tests
+			)
+			testCase.assertions(t, secret, err)
+		})
+	}
+}
