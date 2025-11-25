@@ -10,9 +10,10 @@ import (
 type Role struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
-	KargoManaged      bool                `json:"kargoManaged,omitempty" protobuf:"varint,2,opt,name=kargoManaged"`
-	Claims            []Claim             `json:"claims,omitempty" protobuf:"bytes,7,rep,name=claims"`
-	Rules             []rbacv1.PolicyRule `json:"rules,omitempty" protobuf:"bytes,6,rep,name=rules"`
+	KargoManaged      bool                      `json:"kargoManaged,omitempty" protobuf:"varint,2,opt,name=kargoManaged"`
+	Claims            []Claim                   `json:"claims,omitempty" protobuf:"bytes,7,rep,name=claims"`
+	ServiceAccounts   []ServiceAccountReference `json:"serviceAccounts,omitempty" protobuf:"bytes,8,rep,name=serviceAccounts"`
+	Rules             []rbacv1.PolicyRule       `json:"rules,omitempty" protobuf:"bytes,6,rep,name=rules"`
 }
 
 // +kubebuilder:object:root=true
@@ -33,4 +34,9 @@ type ResourceDetails struct {
 type Claim struct {
 	Name   string   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	Values []string `json:"values,omitempty" protobuf:"bytes,2,rep,name=values"`
+}
+
+type ServiceAccountReference struct {
+	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
+	Namespace string `json:"namespace,omitempty" protobuf:"bytes,2,opt,name=namespace"`
 }

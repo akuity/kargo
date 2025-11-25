@@ -209,22 +209,70 @@ service KargoService {
   // GetClusterPromotionTask retrieves details of a specific cluster-scoped PromotionTask.
   rpc GetClusterPromotionTask(GetClusterPromotionTaskRequest) returns (GetClusterPromotionTaskResponse);
 
-  /* Role APIs */
+  /* Kargo Role APIs */
 
-  // CreateRole creates a new RBAC role within a project.
+  // Note: A "Kargo Role" is a virtual resource -- an abstraction over a trio of
+  // Kubernetes ServiceAccount, Role, and RoleBinding resources. It's one
+  // virtual resource that says who can do what with what.
+
+  // CreateRole creates a new Kargo Role virtual resource by creating its
+  // underlying Kubernetes resources.
   rpc CreateRole(CreateRoleRequest) returns (CreateRoleResponse);
-  // DeleteRole removes an RBAC role from a project.
+  // DeleteRole deletes a Kargo Role virtual resource by deleting its underlying
+  // Kubernetes resources.
   rpc DeleteRole(DeleteRoleRequest) returns (DeleteRoleResponse);
-  // GetRole retrieves details of a specific RBAC role.
+  // GetRole retrieves details of a Kargo Role virtual resource or its
+  // underlying Kubernetes resources.
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
-  // Grant assigns permissions or binds users/services to a role.
+  // Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
+  // or users having specific OIDC claims to a Kargo Role by updating its
+  // underlying Kubernetes resources.
   rpc Grant(GrantRequest) returns (GrantResponse);
-  // ListRoles retrieves all RBAC roles within a project.
+  // ListRoles retrieves details of all Kargo Role virtual resources or their
+  // underlying Kubernetes resources.
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
-  // Revoke removes permissions or unbinds users/services from a role.
+  // Revoke removes permissions from a Kargo Role; or unbinds a Kargo
+  // ServiceAccount or users having specific OIDC claims from a Kargo Role by
+  // updating its underlying Kubernetes resources.
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
-  // UpdateRole modifies an existing RBAC role.
+  // UpdateRole modifies an existing Kargo Role virtual resource by updating its
+  // underlying Kubernetes resources.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
+
+  /* Kargo ServiceAccount APIs */
+
+  // Note: A "Kargo ServiceAccount" is a specially labeled Kubernetes
+  // ServiceAccount with a token, managed through the Kargo API. It is a
+  // SEPARATE THING from the Kubernetes ServiceAccount that makes up part of a
+  // "Kargo Role's" underlying trio of Kubernetes ServiceAccount, Role, and
+  // RoleBinding resources. If you create a Kargo Role X and wish to grant that
+  // Kargo Role to a Kargo ServiceAccount Y, there are actually TWO Kubernetes
+  // ServiceAccounts involved -- X and Y. Role X will be bound to BOTH
+  // ServiceAccount X and ServiceAccount Y through RoleBinding X. ServiceAccount
+  // X may potentially be unused UNLESS it is also annotated in a way that
+  // indicates users having specific OIDC claims may assume its identity.
+
+  // CreateServiceAccount creates a new Kargo ServiceAccount.
+  rpc CreateServiceAccount(CreateServiceAccountRequest) returns (CreateServiceAccountResponse);
+  // DeleteServiceAccount removes a Kargo ServiceAccount.
+  rpc DeleteServiceAccount(DeleteServiceAccountRequest) returns (DeleteServiceAccountResponse);
+  // GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
+  rpc GetServiceAccount(GetServiceAccountRequest) returns (GetServiceAccountResponse);
+  // ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
+  rpc ListServiceAccounts(ListServiceAccountsRequest) returns (ListServiceAccountsResponse);
+
+  // CreateServiceAccountToken generates and returns a new bearer token
+  // associated with a Kargo ServiceAccount.
+  rpc CreateServiceAccountToken(CreateServiceAccountTokenRequest) returns (CreateServiceAccountTokenResponse);
+  // DeleteServiceAccountToken deletes a bearer token associated with a
+  // Kargo ServiceAccount.
+  rpc DeleteServiceAccountToken(DeleteServiceAccountTokenRequest) returns (DeleteServiceAccountTokenResponse);
+  // GetServiceAccountToken retrieves details of a specific bearer token
+  // associated with a Kargo ServiceAccount.
+  rpc GetServiceAccountToken(GetServiceAccountTokenRequest) returns (GetServiceAccountTokenResponse);
+  // ListServiceAccountTokens lists bearer tokens associated with
+  // with a specified Kargo ServiceAccount.
+  rpc ListServiceAccountTokens(ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
 
   /* Cluster Secrets APIs */
   // ListClusterSecrets retrieves all cluster-scoped secrets.
@@ -1404,131 +1452,343 @@ message GetClusterPromotionTaskResponse {
   }
 }
 
-/* Role Messages */
+/* Kargo Role Messages */
 
-// CreateRoleRequest is the request for creating a new RBAC role.
+// CreateRoleRequest is a request to create a new Kargo Role virtual resource by
+// creating its underlying Kubernetes resources.
 message CreateRoleRequest {
-  // role is the Role resource to create.
+  // role is the Kargo Role virtual resource to create.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-// CreateRoleResponse contains the newly created role information.
+// CreateRoleResponse contains the details of a newly created Kargo Role virtual
+// resource.
 message CreateRoleResponse {
-  // role is the created Role resource.
+  // role is the newly created Kargo Role virtual resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-// DeleteRoleRequest is the request for deleting an RBAC role.
+// DeleteRoleRequest is a request to delete a Kargo Role virtual resource by
+// deleting its underlying Kubernetes resources.
 message DeleteRoleRequest {
-  // project is the name of the project containing the role.
+  // project is the name of the project containing the Kargo Role to be deleted.
   string project = 1;
-  // name is the name of the role to delete.
+  // name is the name of the Kargo Role to deleted.
   string name = 2;
 }
 
-// DeleteRoleResponse is the response returned after deleting a role.
+// DeleteRoleResponse is the response returned after deleting a Kargo Role
+// virtual resource.
 message DeleteRoleResponse {
   /* explicitly empty */
 }
 
-// GetRoleRequest is the request for retrieving a specific RBAC role.
+// GetRoleRequest is a request to retrieve the details of a Kargo Role virtual
+// resource or its underlying Kubernetes resources.
 message GetRoleRequest {
-  // project is the name of the project containing the role.
+  // project is the name of the project containing the Kargo Role to be
+  // retrieved.
   string project = 1;
-  // name is the name of the role to retrieve.
+  // name is the name of the Kargo Role to retrieve.
   string name = 2;
-  // as_resources indicates whether to return the role as resources or as a role object.
+  // as_resources indicates whether to return the Kargo Role's underlying
+  // Kubernetes resources instead of the Kargo Role virtual resource.
   bool as_resources = 3;
-  // format specifies the desired response format (structured object or raw YAML).
+  // format specifies the desired response format (structured object or raw
+  // YAML or JSON).
   RawFormat format = 4;
 }
 
-// GetRoleResponse contains the requested role information.
+// GetRoleResponse contains the details of a Kargo Role virtual resource or its
+// underlying Kubernetes resources.
 message GetRoleResponse {
   oneof result {
-    // role is the structured Role resource.
+    // role is a structured Kargo Role virtual resource.
     github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
-    // resources is the structured RoleResources containing the role's resources.
+    // resources is a structured RoleResources object encapsulating the Kargo
+    // Role's underlying Kubernetes resources.
     github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
-    // raw is the raw YAML representation of the role.
+    // raw is a raw YAML or JSON representation of the requested resource(s).
     bytes raw = 3;
   }
 }
 
-// Claims represents a collection of OIDC claims for role-based access control.
+// Claims represents a collection of OIDC claims.
 message Claims {
   // Note: oneof and repeated do not work together
-  // claims is the list of claims associated with a user or service account.
+  // claims is a list of OIDC claims.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
 }
 
-// GrantRequest is the request for granting a role to a user or resource.
+// ServiceAccountReferences represents a collection of references to Kargo
+// ServiceAccounts.
+message ServiceAccountReferences {
+  // Note: oneof and repeated do not work together
+  // service_accounts is a list of Kargo ServiceAccounts.
+  repeated github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference service_accounts = 1;
+}
+
+// GrantRequest is a request to assign permissions to a Kargo Role; or to bind a
+// Kargo ServiceAccount or users having specific ODIC claims to a Kargo Role.
 message GrantRequest {
-  // project is the name of the project where the role will be granted.
+  // project is the name of the project containing the Kargo Role that is the
+  // subject of the grant.
   string project = 1;
-  // role is the name of the role to grant.
+  // role is the name of the Kargo Role that is the subject of the grant.
   string role = 2;
   oneof request {
-    // user_claims are the OIDC claims for the user being granted the role.
+    // user_claims are OIDC claims to which the Kargo Role should be mapped.
     Claims user_claims = 3;
-    // resource_details are the details of the resource being granted the role.
+    // service_accounts is a collection of references to Kargo ServiceAccounts
+    // to be bound to this Kargo Role.
+    ServiceAccountReferences service_accounts = 5;
+    // resource_details are the details of permissions to be granted to the
+    // Kargo Role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
-// GrantResponse contains information about the granted role.
+// GrantResponse contains the details of a Kargo Role virtual resource after a
+// new grant.
 message GrantResponse {
-  // role is the Role resource that was granted.
+  // role is the Kargo Role that was the subject of the grant.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-// ListRolesRequest is the request for listing all roles in a project.
+// ListRolesRequests is a request to retrieve the details of all Kargo Role
+// virtual resources or their underlying Kubernetes resources.
 message ListRolesRequest {
-  // project is the name of the project whose roles will be listed.
+  // project is the name of the project for which to list all Kargo Roles.
   string project = 1;
-  // as_resources indicates whether to return roles as resources or as role objects.
+  // as_resources indicates whether to return each Kargo Role's underlying
+  // Kubernetes resources instead of the Kargo Role virtual resource(s).
   bool as_resources = 2;
 }
 
-// ListRolesResponse contains a list of roles for the specified project.
+// ListRolesResponse contains a list of Kargo Role virtual resources or their
+// underlying Kubernetes resources.
 message ListRolesResponse {
   // Note: oneof and repeated do not work together
-  // roles is the list of Role resources when requested as roles.
+  // roles is a list of Kargo Role virtual resources.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Role roles = 1;
-  // resources is the list of RoleResources when requested as resources.
+  // resources is a list of RoleResource objects encapsulating the Kargo Roles'
+  // underlying Kubernetes resources.
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
 }
 
-// RevokeRequest is the request for revoking a role from a user or resource.
+// RevokeRequest is a request to remove permissions from a Kargo Role; or to
+// unbind a Kargo ServiceAccount or users having specific OIDC claims from a
+// Kargo Role.
 message RevokeRequest {
-  // project is the name of the project where the role will be revoked.
+  // project is the name of the project containing the Kargo Role that is the
+  // subject of the revocation.
   string project = 1;
-  // role is the name of the role to revoke.
+  // role is the name of the Kargo Role that is the subject of the revocation.
   string role = 2;
   oneof request {
-    // user_claims are the OIDC claims for the user whose role is being revoked.
+    // user_claims are OIDC claims from which the Kargo Role virtual resource
+    // will be unmapped.
     Claims user_claims = 3;
-    // resource_details are the details of the resource whose role is being revoked.
+    // service_accounts is a collection of references to Kargo ServiceAccounts
+    // to be unbound from this Kargo Role.
+    ServiceAccountReferences service_accounts = 5;
+    // resource_details are the details of permissions to be revoked from the
+    // Kargo Role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
   }
 }
 
-// RevokeResponse contains information about the revoked role.
+// RevokeResponse contains the details of a Kargo Role virtual resource after a
+// revocation.
 message RevokeResponse {
-  // role is the Role resource that was revoked.
+  // role is the Kargo Role virtual resource that was the subject of the
+  // revocation.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-// UpdateRoleRequest is the request for updating an existing RBAC role.
+// UpdateRoleRequest is a request to modify an existing Kargo Role virtual
+// resource by updating its underlying Kubernetes resources.
 message UpdateRoleRequest {
-  // role is the updated Role resource.
+  // role is the Kargo Role virtual resource to update.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-// UpdateRoleResponse contains the updated role information.
+// UpdateRoleResponse contains the details of the updated Kargo Role virtual
+// resource.
 message UpdateRoleResponse {
-  // role is the updated Role resource.
+  // role is the updated Kargo Role virtual resource.
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
+}
+
+/* Kargo ServiceAccount Messages */
+
+// CreateServiceAccountRequest is a request to create a new Kargo
+// ServiceAccount resource.
+message CreateServiceAccountRequest {
+  // service_account is the Kargo ServiceAccount to create.
+  k8s.io.api.core.v1.ServiceAccount service_account = 1;
+}
+
+// CreateServiceAccountResponse contains the details of a newly created Kargo
+// ServiceAccount resource.
+message CreateServiceAccountResponse {
+  // service_account is the newly created Kargo ServiceAccount resource.
+  k8s.io.api.core.v1.ServiceAccount service_account = 1;
+}
+
+// DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount
+// resource.
+message DeleteServiceAccountRequest {
+  // project is the name of the project containing the Kargo ServiceAccount
+  // resource.
+  string project = 1;
+  // name is the name of the Kargo ServiceAccount resource to delete.
+  string name = 2;
+}
+
+// DeleteServiceAccountResponse is the response returned after deleting a Kargo
+// ServiceAccount resource.
+message DeleteServiceAccountResponse {
+  /* explicitly empty */
+}
+
+// GetServiceAccountRequest is a request for the details of specific Kargo
+// ServiceAccount resource.
+message GetServiceAccountRequest {
+  // system_level indicates whether the request is for a system-level Kargo
+  // Service Account instead of one at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the requested Kargo
+  // ServiceAccount resource. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of a Kargo ServiceAccount to retrieve.
+  string name = 3;
+  // format specifies the desired response format (structured object or raw
+  // YAML or JSON).
+  RawFormat format = 4;
+}
+
+// GetServiceAccountResponse contains the details of the requested Kargo
+// ServiceAccount resource.
+message GetServiceAccountResponse {
+  oneof result {
+    // service_account is a structured ServiceAccount.
+    k8s.io.api.core.v1.ServiceAccount service_account = 1;
+    // raw is a raw YAML or JSON representation of the requested resource.
+    bytes raw = 2;
+  }
+}
+
+// ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount
+// resources.
+message ListServiceAccountsRequest {
+  // system_level indicates whether the request is to list Kargo ServiceAccounts
+  // at the system-level instead of the project-level. This value is ignored if
+  // system_level is true.
+  bool system_level = 1;
+  // project is the name of the project for which to list all Kargo
+  // ServiceAccount resources.
+  string project = 2;
+}
+
+// ListServiceAccountsResponse contains a list of Kargo ServiceAccount
+// resources.
+message ListServiceAccountsResponse {
+  // service_accounts is the list of Kargo ServiceAccount resources.
+  repeated k8s.io.api.core.v1.ServiceAccount service_accounts = 1;
+}
+
+// CreateServiceAccountTokenRequest is a request to generate a new bearer token
+// associated with a specified Kargo ServiceAccount.
+message CreateServiceAccountTokenRequest {
+  // system_level indicates whether the request is to create a token associated
+  // with a system-level Kargo Service Account instead of one at the
+  // project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the Kargo ServiceAccount
+  // resource for which a new token is being created. This value is ignored if
+  // system_level is true.
+  string project = 2;
+  // service_account_name is the name of the Kargo ServiceAccount for which to
+  // generate a new bearer token.
+  string service_account_name = 3;
+  // name is the name for the bearer token to be created.
+  string name = 4;
+}
+
+// CreateServiceAccountTokenResponse contains a newly generated bearer
+// token in the form of a Kubernetes Secret.
+message CreateServiceAccountTokenResponse {
+  // token_secret is a Kubernetes Secret containing the token.
+  k8s.io.api.core.v1.Secret token_secret = 1;
+}
+
+// DeleteServiceAccountTokenRequest is a request to delete a bearer token
+// associated with a Kargo ServiceAccount.
+message DeleteServiceAccountTokenRequest {
+  // system_level indicates whether the request is to delete a token associated
+  // with a system-level Kargo Service Account instead of one at the
+  // project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the token that is to be
+  // deleted. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the token to delete.
+  string name = 3;
+}
+
+// DeleteServiceAccountTokenResponse is the response returned after deleting a
+// bearer token associated with a Kargo ServiceAccount.
+message DeleteServiceAccountTokenResponse {
+  /* explicitly empty */
+}
+
+// GetServiceAccountTokenRequest is a request to retrieve details of a bearer
+// token associated with a Kargo ServiceAccount.
+message GetServiceAccountTokenRequest {
+  // system_level indicates whether the request is for a token associated with a
+  // system-level Kargo Service Account instead of one at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the requested token. This
+  // value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the token to retrieve.
+  string name = 3;
+  // format specifies the format for raw resource representation.
+  RawFormat format = 4;
+}
+
+// GetServiceAccountTokenResponse contains contains the details of a bearer
+// token associated with a Kargo ServiceAccount.
+message GetServiceAccountTokenResponse {
+  oneof result {
+    // token_secret is a Kubernetes Secrets containing a redacted token
+    // associated with a Kargo ServiceAccount.
+    k8s.io.api.core.v1.Secret token_secret = 1;
+    // raw is a raw YAML or JSON representation of the requested resource.
+    bytes raw = 2;
+  }
+}
+
+// ListServiceAccountTokensRequest is a request to list bearer tokens associated
+// with a specified Kargo ServiceAccount.
+message ListServiceAccountTokensRequest {
+  // system_level indicates whether to list tokens associated with system-level
+  // Kargo Service Accounts instead of ones at the project-level.
+  bool system_level = 1;
+  // project is the name of the project containing the tokens.
+  string project = 2;
+  // service_account_name is the name of the Kargo ServiceAccount for which
+  // to list associated tokens.
+  string service_account_name = 3;
+}
+
+// ListServiceAccountTokensResponse contains a list of bearer tokens associated
+// with a specified Kargo ServiceAccount.
+message ListServiceAccountTokensResponse {
+  // token_secrets is the list of Kubernetes Secrets containing redacted tokens
+  // associated with a Kargo ServiceAccount.
+  repeated k8s.io.api.core.v1.Secret token_secrets = 1;
 }
 
 // ListClusterSecretsRequest is the request for listing all cluster-level secrets.

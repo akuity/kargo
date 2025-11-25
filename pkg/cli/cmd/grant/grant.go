@@ -28,12 +28,13 @@ type grantOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project      string
-	Role         string
-	Claims       []string
-	ResourceType string
-	ResourceName string
-	Verbs        []string
+	Project         string
+	Role            string
+	Claims          []string
+	ServiceAccounts []string
+	ResourceType    string
+	ResourceName    string
+	Verbs           []string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -45,12 +46,14 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 
 	cmd := &cobra.Command{
 		Use: `grant [--project=project] --role=role [--claim=name=value]... \
+		[--service-account=service-account]... \
 		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Grant a role to a user or grant permissions to a role",
 		Args:  option.NoArgs,
 		Example: templates.Example(`
 # Grant my-role permission to update all stages
-kargo grant --project=my-project --role=my-role --verb=update --resource-type=stage
+kargo grant --project=my-project --role=my-role \
+  --verb=update --resource-type=stage
 
 # Grant my-role permission to promote to stage dev
 kargo grant --project=my-project --role=my-role \
@@ -59,6 +62,10 @@ kargo grant --project=my-project --role=my-role \
 # Grant my-role to users with specific claims
 kargo grant --project=my-project --role=my-role \
   --claim=email=alice@example.com --claim=groups=admins,power-users
+
+# Grant my-role to the ServiceAccount my-service-account
+kargo grant --project=my-project --role=my-role \
+  --service-account=my-service-account
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -87,7 +94,8 @@ func (o *grantOptions) addFlags(cmd *cobra.Command) {
 		"The project in which to manage a role. If not set, the default project will be used.",
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
-	option.Claims(cmd.Flags(), &o.Claims, "A claim name and value to be granted to the role.")
+	option.Claims(cmd.Flags(), &o.Claims, "An OIDC claim name and value.")
+	option.ServiceAccounts(cmd.Flags(), &o.ServiceAccounts, "A Kargo ServiceAccount name.")
 
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to grant permissions to.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to grant permissions to.")
@@ -100,14 +108,19 @@ func (o *grantOptions) addFlags(cmd *cobra.Command) {
 	// If none of these are specified, we're not granting anything.
 	cmd.MarkFlagsOneRequired(
 		option.ClaimFlag,
+		option.ServiceAccountFlag,
 		option.ResourceTypeFlag,
 	)
 
-	// You can't grant a role to users and grant permissions to a role at the same
-	// time.
+	// You can't grant a role to users and/or ServiceAccounts and grant
+	// permissions to a role at the same time.
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ServiceAccountFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.VerbFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceTypeFlag)
+	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
@@ -152,9 +165,21 @@ func (o *grantOptions) run(ctx context.Context) error {
 				Verbs:        o.Verbs,
 			},
 		}
+	} else if len(o.ServiceAccounts) > 0 {
+		saRefs := make([]*rbacapi.ServiceAccountReference, len(o.ServiceAccounts))
+		for i, saName := range o.ServiceAccounts {
+			saRefs[i] = &rbacapi.ServiceAccountReference{
+				Namespace: o.Project,
+				Name:      saName,
+			}
+		}
+		req.Request = &svcv1alpha1.GrantRequest_ServiceAccounts{
+			ServiceAccounts: &svcv1alpha1.ServiceAccountReferences{
+				ServiceAccounts: saRefs,
+			},
+		}
 	} else {
 		claims := svcv1alpha1.Claims{}
-
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
 			claims.Claims = append(claims.Claims, &rbacapi.Claim{
