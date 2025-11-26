@@ -378,11 +378,11 @@ type GenericWebhookReceiverConfig struct {
 // GenericWebhookAction describes an action to be performed on a resource
 // and the conditions under which it should be performed.
 type GenericWebhookAction struct {
-	// Name is the name of the action to be performed. `Refresh` is the only
-	// action currently supported.
+	// Kind indicates the type of action to be performed. `Refresh` is the only
+	// currently supported Kind.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
-	Name GenericWebhookActionName `json:"action" protobuf:"bytes,1,opt,name=action"`
+	Kind GenericWebhookActionKind `json:"action" protobuf:"bytes,1,opt,name=action"`
 
 	// MatchExpression defines criteria that a request must meet to trigger this
 	// action.
@@ -402,12 +402,12 @@ type GenericWebhookAction struct {
 	Targets []GenericWebhookTarget `json:"targets,omitempty" protobuf:"bytes,4,rep,name=targets"`
 }
 
-// GenericWebhookActionName represents the name of an action to be performed on a resource.
-type GenericWebhookActionName string
+// GenericWebhookActionKind represents the type of action to be performed on a resource.
+type GenericWebhookActionKind string
 
 const (
-	// GenericWebhookActionNameRefresh indicates a request to refresh the resource.
-	GenericWebhookActionNameRefresh GenericWebhookActionName = "Refresh"
+	// GenericWebhookActionKindRefresh indicates a request to refresh the resource.
+	GenericWebhookActionKindRefresh GenericWebhookActionKind = "Refresh"
 )
 
 // GenericWebhookTarget describes selection criteria for resources to which some
