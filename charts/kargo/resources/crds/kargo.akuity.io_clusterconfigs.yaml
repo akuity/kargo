@@ -251,8 +251,9 @@ spec:
                               parameters:
                                 additionalProperties:
                                   type: string
-                                description: Parameters contains additional parameters
-                                  for the action.
+                                description: |-
+                                  Parameters contains additional static parameters for the action.
+                                  These can be static or expression-derived.
                                 type: object
                               targets:
                                 description: |-

@@ -1500,7 +1500,8 @@ export type GenericWebhookAction = Message<"github.com.akuity.kargo.api.v1alpha1
   matchExpression: string;
 
   /**
-   * Parameters contains additional parameters for the action.
+   * Parameters contains additional static parameters for the action.
+   * These can be static or expression-derived.
    *
    * +optional
    *
@@ -2525,8 +2526,7 @@ export const ImageSubscriptionSchema: GenMessage<ImageSubscription> = /*@__PURE_
   messageDesc(file_api_v1alpha1_generated, 51);
 
 /**
- * IndexSelector encapsulates a selector used to derive index keys
- * based on expressions.
+ * IndexSelector encapsulates a selector used to derive index keys.
  *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.IndexSelector
  */

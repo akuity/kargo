@@ -703,7 +703,8 @@ message GenericWebhookAction {
   // +optional
   optional string matchExpression = 2;
 
-  // Parameters contains additional parameters for the action.
+  // Parameters contains additional static parameters for the action.
+  // These can be static or expression-derived.
   //
   // +optional
   map<string, string> parameters = 3;
@@ -1316,8 +1317,7 @@ message ImageSubscription {
   optional int32 discoveryLimit = 9;
 }
 
-// IndexSelector encapsulates a selector used to derive index keys
-// based on expressions.
+// IndexSelector encapsulates a selector used to derive index keys.
 message IndexSelector {
   // MatchIndices is a list of index selector requirements.
   //

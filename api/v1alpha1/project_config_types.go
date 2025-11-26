@@ -390,7 +390,8 @@ type GenericWebhookAction struct {
 	// +optional
 	MatchExpression string `json:"matchExpression,omitempty" protobuf:"bytes,2,opt,name=matchExpression"`
 
-	// Parameters contains additional parameters for the action.
+	// Parameters contains additional static parameters for the action.
+	// These can be static or expression-derived.
 	//
 	// +optional
 	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -446,8 +447,7 @@ const (
 	GenericWebhookTargetKindWarehouse GenericWebhookTargetKind = "Warehouse"
 )
 
-// IndexSelector encapsulates a selector used to derive index keys
-// based on expressions.
+// IndexSelector encapsulates a selector used to derive index keys.
 type IndexSelector struct {
 	// MatchIndices is a list of index selector requirements.
 	//
