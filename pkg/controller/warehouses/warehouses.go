@@ -222,7 +222,7 @@ func (r *reconciler) syncWarehouse(
 				Reason: "ScheduledDiscovery",
 				Message: fmt.Sprintf(
 					"Discovering artifacts for %d subscriptions",
-					len(warehouse.Spec.Subscriptions),
+					len(warehouse.Spec.InternalSubscriptions),
 				),
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
@@ -253,7 +253,7 @@ func (r *reconciler) syncWarehouse(
 		discoveredArtifacts, err := r.discoverArtifactsFn(
 			ctx,
 			warehouse.Namespace,
-			warehouse.Spec.Subscriptions,
+			warehouse.Spec.InternalSubscriptions,
 		)
 		if err != nil {
 			// Mark the Warehouse as unhealthy and not ready if we failed to
@@ -490,7 +490,7 @@ func (r *reconciler) syncWarehouse(
 	// Make all conditions reflect success
 	msg := fmt.Sprintf(
 		"Successfully discovered artifacts from %d subscriptions",
-		len(warehouse.Spec.Subscriptions),
+		len(warehouse.Spec.InternalSubscriptions),
 	)
 	conditions.Set(
 		&status,
@@ -522,10 +522,10 @@ func (r *reconciler) discoverArtifacts(
 	subs []kargoapi.RepoSubscription,
 ) (*kargoapi.DiscoveredArtifacts, error) {
 	discovered := &kargoapi.DiscoveredArtifacts{
-		Charts:       []kargoapi.ChartDiscoveryResult{},
-		Git:          []kargoapi.GitDiscoveryResult{},
-		Images:       []kargoapi.ImageDiscoveryResult{},
-		OtherResults: []kargoapi.GenericDiscoveryResult{},
+		Charts:  []kargoapi.ChartDiscoveryResult{},
+		Git:     []kargoapi.GitDiscoveryResult{},
+		Images:  []kargoapi.ImageDiscoveryResult{},
+		Results: []kargoapi.DiscoveryResult{},
 	}
 	for _, sub := range subs {
 		subReg, err := r.subscriberRegistry.Get(ctx, sub)
@@ -549,8 +549,8 @@ func (r *reconciler) discoverArtifacts(
 			discovered.Git = append(discovered.Git, typedRes)
 		case kargoapi.ImageDiscoveryResult:
 			discovered.Images = append(discovered.Images, typedRes)
-		case kargoapi.GenericDiscoveryResult:
-			discovered.OtherResults = append(discovered.OtherResults, typedRes)
+		case kargoapi.DiscoveryResult:
+			discovered.Results = append(discovered.Results, typedRes)
 		default:
 			return nil, fmt.Errorf(
 				"subscriber returned unrecognized result type %s",
@@ -621,12 +621,12 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		})
 	}
 
-	for _, result := range artifacts.OtherResults {
+	for _, result := range artifacts.Results {
 		if len(result.ArtifactReferences) == 0 {
 			return nil, errors.New("no versions discovered for subscription")
 		}
-		freight.OtherArtifacts = append(
-			freight.OtherArtifacts,
+		freight.Artifacts = append(
+			freight.Artifacts,
 			result.ArtifactReferences[0],
 		)
 	}
@@ -658,7 +658,7 @@ func validateDiscoveredArtifacts(
 		len(artifacts.Git)+
 			len(artifacts.Images)+
 			len(artifacts.Charts)+
-			len(artifacts.OtherResults) == 0 {
+			len(artifacts.Results) == 0 {
 		message := "No artifacts discovered"
 		conditions.Set(
 			newStatus,

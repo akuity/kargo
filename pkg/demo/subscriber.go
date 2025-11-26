@@ -38,8 +38,8 @@ func init() {
 				_ context.Context,
 				sub kargoapi.RepoSubscription,
 			) (bool, error) {
-				return sub.Other != nil &&
-					sub.Other.ArtifactKind == subscriberKindDemo, nil
+				return sub.Subscription != nil &&
+					sub.Subscription.Kind == subscriberKindDemo, nil
 			},
 			// This factory function returns a single, stateful, but concurrency-safe
 			// subscriber that's initialized just once the first time the factory
@@ -86,7 +86,7 @@ func (c *credsProvider) GetCredentials(
 // discovery is run (which is quite convenient for demo purposes).
 type subscriber struct {
 	latestVersion *semver.Version
-	artifacts     []kargoapi.GenericArtifactReference
+	artifacts     []kargoapi.ArtifactReference
 	credsDB       credentials.Database
 	mu            sync.Mutex
 }
@@ -97,7 +97,7 @@ func newSubscriber(_ context.Context,
 	credsDB credentials.Database,
 ) subscription.Subscriber {
 	return &subscriber{
-		artifacts: []kargoapi.GenericArtifactReference{},
+		artifacts: []kargoapi.ArtifactReference{},
 		credsDB:   credsDB,
 	}
 }
@@ -114,7 +114,7 @@ func (s *subscriber) DiscoverArtifacts(
 ) (any, error) {
 	// We're not actually doing anything with these dummy credentials, except
 	// proving that we can find them.
-	_, err := s.credsDB.Get(ctx, project, subscriberKindDemo, sub.Other.Name)
+	_, err := s.credsDB.Get(ctx, project, subscriberKindDemo, sub.Subscription.Name)
 	if err != nil {
 		if !component.IsNotFoundError(err) {
 			return nil, fmt.Errorf(
@@ -144,14 +144,14 @@ func (s *subscriber) DiscoverArtifacts(
 	cfg := struct {
 		Message string `json:"message,omitempty"`
 	}{}
-	if sub.Other.Config != nil {
-		if err := json.Unmarshal(sub.Other.Config.Raw, &cfg); err != nil {
+	if sub.Subscription.Config != nil {
+		if err := json.Unmarshal(sub.Subscription.Config.Raw, &cfg); err != nil {
 			return nil, err
 		}
 	}
 
 	const defaultDiscoveryLimit = 20
-	discoveryLimit := sub.Other.DiscoveryLimit
+	discoveryLimit := sub.Subscription.DiscoveryLimit
 	if discoveryLimit == 0 {
 		discoveryLimit = defaultDiscoveryLimit
 	}
@@ -166,12 +166,13 @@ func (s *subscriber) DiscoverArtifacts(
 	}
 
 	// Grow the internal collection of artifacts.
-	s.artifacts = slices.Insert(s.artifacts, 0, kargoapi.GenericArtifactReference{
-		SubscriptionName: sub.Other.Name,
+	s.artifacts = slices.Insert(s.artifacts, 0, kargoapi.ArtifactReference{
+		Kind:             subscriberKindDemo,
+		SubscriptionName: sub.Subscription.Name,
 		Version:          s.latestVersion.String(),
 		// The details are opaque to the rest of Kargo in the same way the
 		// subscription's configuration is.
-		Details: &v1.JSON{Raw: json.RawMessage(
+		Metadata: &v1.JSON{Raw: json.RawMessage(
 			fmt.Sprintf(
 				`{"discoveredAt":%q, "message":%q}`,
 				time.Now().String(), cfg.Message,
@@ -190,8 +191,8 @@ func (s *subscriber) DiscoverArtifacts(
 		artifacts = artifacts[:discoveryLimit]
 	}
 
-	return kargoapi.GenericDiscoveryResult{
-		SubscriptionName:   sub.Other.Name,
+	return kargoapi.DiscoveryResult{
+		SubscriptionName:   sub.Subscription.Name,
 		ArtifactReferences: artifacts,
 	}, nil
 }

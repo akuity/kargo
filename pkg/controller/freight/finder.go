@@ -58,7 +58,7 @@ func FindCommit(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Git != nil && urls.NormalizeGit(sub.Git.RepoURL) == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -128,7 +128,7 @@ func FindImage(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Image != nil && sub.Image.RepoURL == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -193,7 +193,7 @@ func HasAmbiguousImageRequest(
 			)
 		}
 
-		for _, sub := range warehouse.Spec.Subscriptions {
+		for _, sub := range warehouse.Spec.InternalSubscriptions {
 			if sub.Image != nil {
 				if _, ok := subscribedRepositories[sub.Image.RepoURL]; ok {
 					return true, fmt.Errorf(
@@ -244,7 +244,7 @@ func FindChart(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Chart != nil && sub.Chart.RepoURL == repoURL && sub.Chart.Name == chartName {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -293,7 +293,7 @@ func FindArtifact(
 	desiredOrigin *kargoapi.FreightOrigin,
 	freight []kargoapi.FreightReference,
 	subName string,
-) (*kargoapi.GenericArtifactReference, error) {
+) (*kargoapi.ArtifactReference, error) {
 	// If no origin was explicitly identified, we need to look at all possible
 	// origins. If there's only one that could provide the artifact we're looking
 	// for, great. If there's more than one, there's ambiguity, and we need to
@@ -322,8 +322,8 @@ func FindArtifact(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
-				if sub.Other != nil && sub.Other.Name == subName {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
+				if sub.Subscription != nil && sub.Subscription.Name == subName {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
 							"multiple requested Freight could potentially provide a "+
@@ -344,8 +344,8 @@ func FindArtifact(
 	for i := range freight {
 		f := &freight[i]
 		if f.Origin.Equals(desiredOrigin) {
-			for j := range f.OtherArtifacts {
-				a := &f.OtherArtifacts[j]
+			for j := range f.Artifacts {
+				a := &f.Artifacts[j]
 				if a.SubscriptionName == subName {
 					return a, nil
 				}

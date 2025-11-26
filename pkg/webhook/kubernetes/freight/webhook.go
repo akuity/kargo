@@ -176,7 +176,7 @@ func (w *webhook) ValidateCreate(
 	if len(freight.Commits) == 0 &&
 		len(freight.Images) == 0 &&
 		len(freight.Charts) == 0 &&
-		len(freight.OtherArtifacts) == 0 {
+		len(freight.Artifacts) == 0 {
 		errs = append(
 			errs,
 			field.Invalid(
@@ -389,11 +389,11 @@ func validateFreightArtifacts(
 	freight *kargoapi.Freight,
 	warehouse *kargoapi.Warehouse,
 ) field.ErrorList {
-	subscriptions := make(map[artifactSubscription]bool, len(warehouse.Spec.Subscriptions))
+	subscriptions := make(map[artifactSubscription]bool, len(warehouse.Spec.InternalSubscriptions))
 	counts := make(map[artifactSubscription]int)
 
 	// Collect all the subscriptions from the Warehouse.
-	for _, repo := range warehouse.Spec.Subscriptions {
+	for _, repo := range warehouse.Spec.InternalSubscriptions {
 		if repo.Git != nil {
 			subscriptions[artifactSubscription{
 				URL:  urls.NormalizeGit(repo.Git.RepoURL),
@@ -547,13 +547,13 @@ func compareFreight(existing, updated *kargoapi.Freight) (*field.Path, any, bool
 		}
 	}
 
-	if len(existing.OtherArtifacts) != len(updated.OtherArtifacts) {
-		return field.NewPath("otherArtifacts"), updated.OtherArtifacts, false
+	if len(existing.Artifacts) != len(updated.Artifacts) {
+		return field.NewPath("otherArtifacts"), updated.Artifacts, false
 	}
-	for i, artifact := range existing.OtherArtifacts {
-		if !artifact.DeepEquals(&updated.OtherArtifacts[i]) {
+	for i, artifact := range existing.Artifacts {
+		if !artifact.DeepEquals(&updated.Artifacts[i]) {
 			return field.NewPath("otherArtifacts").Index(i),
-				updated.OtherArtifacts[i],
+				updated.Artifacts[i],
 				false
 		}
 	}

@@ -101,7 +101,7 @@ func Test_getCommitFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: "https://github.com/example/repo",
@@ -339,7 +339,7 @@ func Test_getImageFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: "registry.example.com/app",
@@ -563,7 +563,7 @@ func Test_getChartFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: "oci://registry.example.com/chart",
@@ -611,7 +611,7 @@ func Test_getChartFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: "https://charts.example.com",
@@ -924,10 +924,10 @@ func Test_getArtifactFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
-							Other: &kargoapi.GenericSubscription{
-								ArtifactKind: "fake-kind",
-								Name:         "fake-sub",
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Subscription: &kargoapi.Subscription{
+								Kind: "fake-kind",
+								Name: "fake-sub",
 							},
 						}},
 					},
@@ -944,7 +944,7 @@ func Test_getArtifactFromFreight(t *testing.T) {
 					Name: "fake-warehouse",
 					Kind: "Warehouse",
 				},
-				OtherArtifacts: []kargoapi.GenericArtifactReference{{
+				Artifacts: []kargoapi.ArtifactReference{{
 					SubscriptionName: "fake-sub",
 					Version:          "fake-version",
 				}},
@@ -971,7 +971,7 @@ func Test_getArtifactFromFreight(t *testing.T) {
 					Name: "fake-warehouse",
 					Kind: "Warehouse",
 				},
-				OtherArtifacts: []kargoapi.GenericArtifactReference{{
+				Artifacts: []kargoapi.ArtifactReference{{
 					SubscriptionName: "fake-sub",
 					Version:          "fake-version",
 				}},
@@ -1074,9 +1074,9 @@ func Test_getArtifactFromDiscoveredArtifacts(t *testing.T) {
 		{
 			name: "success",
 			artifacts: &kargoapi.DiscoveredArtifacts{
-				OtherResults: []kargoapi.GenericDiscoveryResult{{
+				Results: []kargoapi.DiscoveryResult{{
 					SubscriptionName: "fake-sub",
-					ArtifactReferences: []kargoapi.GenericArtifactReference{
+					ArtifactReferences: []kargoapi.ArtifactReference{
 						{Version: "v1.0.0"},
 						{Version: "v1.1.0"},
 					},

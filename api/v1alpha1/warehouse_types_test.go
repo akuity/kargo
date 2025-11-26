@@ -122,11 +122,11 @@ func TestWarehouse_GetInterval(t *testing.T) {
 	}
 }
 
-func TestGenericArtifactReference_DeepEquals(t *testing.T) {
+func TestArtifactReference_DeepEquals(t *testing.T) {
 	testCases := []struct {
 		name           string
-		a              *GenericArtifactReference
-		b              *GenericArtifactReference
+		a              *ArtifactReference
+		b              *ArtifactReference
 		expectedResult bool
 	}{
 		{
@@ -135,21 +135,21 @@ func TestGenericArtifactReference_DeepEquals(t *testing.T) {
 		},
 		{
 			name:           "only a is nil",
-			b:              &GenericArtifactReference{},
+			b:              &ArtifactReference{},
 			expectedResult: false,
 		},
 		{
 			name:           "only b is nil",
-			a:              &GenericArtifactReference{},
+			a:              &ArtifactReference{},
 			expectedResult: false,
 		},
 		{
 			name: "subscription name differs",
-			a: &GenericArtifactReference{
+			a: &ArtifactReference{
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
 			},
-			b: &GenericArtifactReference{
+			b: &ArtifactReference{
 				SubscriptionName: "bar",
 				Version:          "v1.0.0",
 			},
@@ -157,11 +157,11 @@ func TestGenericArtifactReference_DeepEquals(t *testing.T) {
 		},
 		{
 			name: "version differs",
-			a: &GenericArtifactReference{
+			a: &ArtifactReference{
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
 			},
-			b: &GenericArtifactReference{
+			b: &ArtifactReference{
 				SubscriptionName: "foo",
 				Version:          "v1.1.0",
 			},
@@ -169,11 +169,11 @@ func TestGenericArtifactReference_DeepEquals(t *testing.T) {
 		},
 		{
 			name: "perfect match",
-			a: &GenericArtifactReference{
+			a: &ArtifactReference{
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
 			},
-			b: &GenericArtifactReference{
+			b: &ArtifactReference{
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
 			},

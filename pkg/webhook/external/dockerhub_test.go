@@ -82,7 +82,7 @@ func TestDockerHubHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "example/repo",
 								Constraint: "^v2.0.0", // Constraint won't be met
@@ -117,7 +117,7 @@ func TestDockerHubHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "example/repo",
 								Constraint: "^v1.0.0",
@@ -154,7 +154,7 @@ func TestDockerHubHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://docker.io/example/repo",
 								SemverConstraint: "^2.0.0", // Constraint won't be met
@@ -189,7 +189,7 @@ func TestDockerHubHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL: "oci://docker.io/example/repo",
 							},

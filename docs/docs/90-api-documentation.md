@@ -1748,6 +1748,17 @@ RawFormat specifies the format for raw resource representation.
 | revision | [string](#string) |   |
 | revisions | [string](#string) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-ArtifactReference"></a>
+
+### ArtifactReference
+ ArtifactReference is a reference to a specific version of an artifact.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| kind | [string](#string) |  Kind specifies the kind of artifact this is. Often it will be a media type (MIME type) string.   |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered this artifact.   |
+| version | [string](#string) |  Version identifies a specific revision of this artifact.   |
+| metadata | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Metadata is a mostly opaque collection of artifact attributes. "Mostly" because Kargo may understand how to interpret some documented, well-known top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it.  +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig"></a>
 
 ### ArtifactoryWebhookReceiverConfig
@@ -1887,7 +1898,7 @@ RawFormat specifies the format for raw resource representation.
 | git | [GitDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult) |  Git holds the commits discovered by the Warehouse for the Git subscriptions.  +optional |
 | images | [ImageDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ImageDiscoveryResult) |  Images holds the image references discovered by the Warehouse for the image subscriptions.  +optional |
 | charts | [ChartDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult) |  Charts holds the charts discovered by the Warehouse for the chart subscriptions.  +optional |
-| otherResults | [GenericDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GenericDiscoveryResult) |  OtherResults holds the artifact references discovered by the Warehouse for all subscriptions that are not to a Git, container image, or Helm chart repository.  +optional |
+| results | [DiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-DiscoveryResult) |  Results holds the artifact references discovered by the Warehouse.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit"></a>
 
@@ -1923,6 +1934,15 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-DiscoveryResult"></a>
+
+### DiscoveryResult
+ DiscoveryResult represents the result of an artifact discovery operation for some subscription.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered these results.   |
+| artifactReferences | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  ArtifactReferences is a list of references to specific versions of an artifact.  +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-DockerHubWebhookReceiverConfig"></a>
 
 ### DockerHubWebhookReceiverConfig
@@ -1952,7 +1972,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
-| otherArtifacts | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  OtherArtifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
+| artifacts | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 | status | [FreightStatus](#github-com-akuity-kargo-api-v1alpha1-FreightStatus) |  Status describes the current status of this Freight. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightCollection"></a>
@@ -2011,7 +2031,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
-| otherArtifacts | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  OtherArtifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
+| artifacts | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightRequest"></a>
 
@@ -2081,36 +2101,6 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [VerifiedStage](#github-com-akuity-kargo-api-v1alpha1-VerifiedStage) |   |
 
-<a name="github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference"></a>
-
-### GenericArtifactReference
- GenericArtifactReference is a reference to a specific version of an artifact other than a Git repository commit, container image, or Helm. chart.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| subscriptionName | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered this artifact.   |
-| version | [string](#string) |  Version identifies a specific revision of this artifact.   |
-| details | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Details is an opaque collection of artifact attributes. These are only understood by a corresponding Subscriber implementation that created them.  +optional |
-
-<a name="github-com-akuity-kargo-api-v1alpha1-GenericDiscoveryResult"></a>
-
-### GenericDiscoveryResult
- GenericDiscoveryResult represents the result of an artifact discovery operation for a subscription to something other than a Git, container image, or Helm chart repository.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered these results.   |
-| artifactReferences | [GenericArtifactReference](#github-com-akuity-kargo-api-v1alpha1-GenericArtifactReference) |  ArtifactReferences is a list of references to specific versions of an artifact.  +optional |
-
-<a name="github-com-akuity-kargo-api-v1alpha1-GenericSubscription"></a>
-
-### GenericSubscription
- GenericSubscription represents a subscription to something that is not a Git, container image, or Helm chart repository.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| artifactKind | [string](#string) |  ArtifactKind specifies the kind of artifact this subscription is for.   |
-| name | [string](#string) |  Name is a unique (with respect to a Warehouse) name used for identifying this subscription.   |
-| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Config is opaque configuration for this subscription. This is only understood by a corresponding Subscriber implementation for the ArtifactKind.  +optional |
-| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
-
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
 ### GitCommit
@@ -2161,9 +2151,9 @@ RawFormat specifies the format for raw resource representation.
 | branch | [string](#string) |  Branch references a particular branch of the repository. The value in this field only has any effect when the CommitSelectionStrategy is NewestFromBranch or left unspecified (which is implicitly the same as NewestFromBranch). This field is optional. When left unspecified, (and the CommitSelectionStrategy is NewestFromBranch or unspecified), the subscription is implicitly to the repository's default branch.      |
 | strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the CommitSelectionStrategy is SemVer. This should be disabled cautiously, as it creates the potential for any tag containing numeric characters only to be mistaken for a semver string containing the major version number only.   |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is SemVer. This field is optional. When left unspecified, there will be no constraints, which means the latest semantically tagged commit will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes.   |
-| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
+| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in apiextensionsv1.13.0.   |
 | allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The values in this field only have any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.   |
-| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. No regular expressions or glob patterns are supported yet. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
+| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. No regular expressions or glob patterns are supported yet. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in apiextensionsv1.13.0.   |
 | ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest commit of interest. The values in this field only have any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.   |
 | expressionFilter | [string](#string) |  ExpressionFilter is an expression that can optionally be used to limit the commits or tags that are considered in determining the newest commit of interest based on their metadata.  For commit-based strategies (NewestFromBranch), the filter applies to commits and has access to commit metadata variables. For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies to tags and has access to tag metadata variables. The filter is applied after AllowTagsRegexes, IgnoreTagsRegexes, and SemverConstraint fields.  The expression should be a valid expr-lang expression that evaluates to true or false. When the expression evaluates to true, the commit/tag is included in the set that is considered. When the expression evaluates to false, the commit/tag is excluded.  Available variables depend on the CommitSelectionStrategy:  For NewestFromBranch (commit filtering):   - `id`: The ID (sha) of the commit.   - `commitDate`: The commit date of the commit.   - `author`: The author of the commit message, in the format "Name &lt;email&gt;".   - `committer`: The person who committed the commit, in the format 	   "Name &lt;email&gt;".   - `subject`: The subject (first line) of the commit message.  For Lexical, NewestTag, SemVer (tag filtering):   - `tag`: The name of the tag.   - `id`: The ID (sha) of the commit associated with the tag.   - `creatorDate`: The creation date of an annotated tag, or the commit 		date of a lightweight tag.   - `author`: The author of the commit message associated with the tag, 	   in the format "Name &lt;email&gt;".   - `committer`: The person who committed the commit associated with the 	   tag, in the format "Name &lt;email&gt;".   - `subject`: The subject (first line) of the commit message associated 	   with the tag. 	 - `tagger`: The person who created the tag, in the format "Name &lt;email&gt;". 	   Only available for annotated tags. 	 - `annotation`: The subject (first line) of the tag annotation. Only 	   available for annotated tags.  Refer to the expr-lang documentation for more details on syntax and capabilities of the expression language: https://expr-lang.org.   |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
@@ -2255,9 +2245,9 @@ RawFormat specifies the format for raw resource representation.
 | imageSelectionStrategy | [string](#string) |  ImageSelectionStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were "SemVer".  Accepted values:  - "Digest": Selects the image currently referenced by the tag specified   by the Constraint field.  - "Lexical": Selects the image referenced by the lexicographically greatest   tag. This strategy is useful when tags embed a leading date or timestamp.   The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used   to narrow the set of tags eligible for selection.  - "NewestBuild": Selects the image that was most recently pushed to the   repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can   optionally be used to narrow the set of tags eligible for selection. This   is the least efficient selection strategy and is likely to cause rate   limiting affecting this Warehouse and possibly others. This strategy   should be avoided.  - "SemVer": Selects the image with the semantically greatest tag. The   Constraint field may optionally include a semver version constraint to   restrict the set of tags eligible for selection to those representing   semantic versions in a given range. The AllowTagsRegexes and   IgnoreTagsRegexes fields can optionally be used to further narrow the   set of tags eligible for selection.   See the following for for a description of semver version constraint   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints   |
 | strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the ImageSelectionStrategy is SemVer. This should be disabled cautiously, as it is not uncommon to tag container images with short Git commit hashes, which have the potential to contain numeric characters only and could be mistaken for a semver string containing the major version number only.   |
 | constraint | [string](#string) |  Constraint specifies ImageSelectionStrategy-specific constraints on what new image revisions are permissible. Acceptable values for this field vary contextually by ImageSelectionStrategy. The field is optional for some strategies. Others either require it or ignore it. For strategies that treat this field as optional, specifying no value means "no constraints." Refer to the descriptions of individual strategies to learn if or how they use this field.   |
-| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
+| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in apiextensionsv1.13.0.   |
 | allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the image tags that are considered in determining the newest revision of an image. This field is optional.   |
-| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
+| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in apiextensionsv1.13.0.   |
 | ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional.   |
 | platform | [string](#string) |  Platform is a string of the form &lt;os&gt;/&lt;arch&gt; that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image referenced by this ImageRepositorySubscription will run on a Kubernetes node with a different OS/architecture than the Kargo controller. At present this is uncommon, but not unheard of.   |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
@@ -2504,13 +2494,13 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-RepoSubscription"></a>
 
 ### RepoSubscription
- RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, or a Helm chart repository.
+ RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, a Helm chart repository, or something else.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |
-| other | [GenericSubscription](#github-com-akuity-kargo-api-v1alpha1-GenericSubscription) |  Other describes a subscription to something that is not a Git, container image, or Helm chart repository. |
+| subscription | [Subscription](#github-com-akuity-kargo-api-v1alpha1-Subscription) |  Subscription describes a subscription to something that is not a Git, container image, or Helm chart repository. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Stage"></a>
 
@@ -2592,6 +2582,17 @@ RawFormat specifies the format for raw resource representation.
 | message | [string](#string) |  Message is a display message about the step, including any errors. |
 | continueOnError | [bool](#bool) |  ContinueOnError is a boolean value that, if set to true, will cause the Promotion to continue executing the next step even if this step fails. It also will not permit this failure to impact the overall status of the Promotion. |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-Subscription"></a>
+
+### Subscription
+ Subscription represents a subscription to some kind of artifact repository.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| kind | [string](#string) |  Kind specifies the kind of subscription this is.   |
+| name | [string](#string) |  Name is a unique (with respect to a Warehouse) name used for identifying this subscription.   |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Config is opaque configuration for this subscription. This is only understood by a corresponding Subscriber implementation for the ArtifactKind.  +optional |
+| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-Verification"></a>
 
 ### Verification
@@ -2653,7 +2654,7 @@ RawFormat specifies the format for raw resource representation.
 | shard | [string](#string) |  Shard is the name of the shard that this Warehouse belongs to. This is an optional field. If not specified, the Warehouse will belong to the default shard. A defaulting webhook will sync this field with the value of the kargo.akuity.io/shard label. When the shard label is not present or differs from the value of this field, the defaulting webhook will set the label to the value of this field. If the shard label is present and this field is empty, the defaulting webhook will set the value of this field to the value of the shard label. |
 | interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".      |
 | freightCreationPolicy | [string](#string) |  FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".  Accepted values:  - "Automatic": New Freight is created automatically when any new artifact   is discovered. - "Manual": New Freight is never created automatically.    |
-| subscriptions | [RepoSubscription](#github-com-akuity-kargo-api-v1alpha1-RepoSubscription) |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
+| subscriptions | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
 | freightCreationCriteria | [FreightCreationCriteria](#github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria) |  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created automatically from new artifacts following discovery. This field has no effect when the FreightCreationPolicy is `Manual`.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>

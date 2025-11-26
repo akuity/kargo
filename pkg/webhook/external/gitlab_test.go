@@ -120,7 +120,7 @@ func TestGitLabHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://gitlab.com/example/repo",
 								Branch:  "not-main", // This constraint won't be met
@@ -161,7 +161,7 @@ func TestGitLabHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://gitlab.com/example/repo",
 								Branch:  "main",
@@ -205,7 +205,7 @@ func TestGitLabHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL:                 "https://gitlab.com/example/repo",
 								CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,
@@ -247,7 +247,7 @@ func TestGitLabHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL:                 "https://gitlab.com/example/repo",
 								CommitSelectionStrategy: kargoapi.CommitSelectionStrategySemVer,

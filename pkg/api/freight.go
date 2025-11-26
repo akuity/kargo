@@ -29,7 +29,7 @@ func GenerateFreightID(f *kargoapi.Freight) string {
 	for _, chart := range f.Charts {
 		hashParts = append(hashParts, chartHashPart(chart))
 	}
-	for _, other := range f.OtherArtifacts {
+	for _, other := range f.Artifacts {
 		hashParts = append(hashParts, genericArtifactHashPart(other))
 	}
 	slices.Sort(hashParts)
@@ -85,9 +85,8 @@ func imageHashPart(img kargoapi.Image) string {
 }
 
 // genericArtifactHashPart returns a string that uniquely identifies a specific
-// revision\ of an artifact other than a Git commit, container image, or Helm
-// chart.
-func genericArtifactHashPart(ref kargoapi.GenericArtifactReference) string {
+// revision of an artifact.
+func genericArtifactHashPart(ref kargoapi.ArtifactReference) string {
 	return fmt.Sprintf("%s:%s", ref.SubscriptionName, ref.Version)
 }
 

@@ -863,9 +863,9 @@ func getArtifactFromFreight(
 			Version:          artifact.Version,
 			Details:          map[string]any{},
 		}
-		if artifact.Details != nil {
+		if artifact.Metadata != nil {
 			if err := json.Unmarshal(
-				artifact.Details.Raw,
+				artifact.Metadata.Raw,
 				&exprArtifact.Details,
 			); err != nil {
 				return nil, fmt.Errorf(
@@ -898,8 +898,8 @@ func getArtifactFromDiscoveredArtifacts(
 			return nil, nil
 		}
 
-		var artifact *kargoapi.GenericArtifactReference
-		for _, result := range artifacts.OtherResults {
+		var artifact *kargoapi.ArtifactReference
+		for _, result := range artifacts.Results {
 			if result.SubscriptionName != subName {
 				continue
 			}
@@ -916,9 +916,9 @@ func getArtifactFromDiscoveredArtifacts(
 			Details:          map[string]any{},
 		}
 
-		if artifact.Details != nil {
+		if artifact.Metadata != nil {
 			if err := json.Unmarshal(
-				artifact.Details.Raw,
+				artifact.Metadata.Raw,
 				&exprArtifact.Details,
 			); err != nil {
 				return nil, fmt.Errorf(

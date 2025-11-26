@@ -214,7 +214,7 @@ func TestValidateSpec(t *testing.T) {
 		{
 			name: "invalid",
 			spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
 						Git: &kargoapi.GitSubscription{
 							RepoURL: "bogus",
@@ -258,7 +258,7 @@ func TestValidateSpec(t *testing.T) {
 						{
 							Type:     field.ErrorTypeInvalid,
 							Field:    "spec.subscriptions[0]",
-							BadValue: spec.Subscriptions[0],
+							BadValue: spec.InternalSubscriptions[0],
 							Detail: "exactly one of spec.subscriptions[0].git, " +
 								"spec.subscriptions[0].image, spec.subscriptions[0].chart, " +
 								"or spec.subscriptions[0].other must be non-empty",
@@ -776,13 +776,13 @@ func TestValidateChartSub(t *testing.T) {
 func TestValidateOtherSub(t *testing.T) {
 	testCases := []struct {
 		name       string
-		sub        kargoapi.GenericSubscription
+		sub        kargoapi.Subscription
 		seen       uniqueSubSet
 		assertions func(*testing.T, field.ErrorList)
 	}{
 		{
 			name: "invalid",
-			sub:  kargoapi.GenericSubscription{Name: "fake-sub"},
+			sub:  kargoapi.Subscription{Name: "fake-sub"},
 			seen: uniqueSubSet{
 				subscriptionKey{
 					kind: "other",
@@ -804,7 +804,7 @@ func TestValidateOtherSub(t *testing.T) {
 		},
 		{
 			name: "valid",
-			sub:  kargoapi.GenericSubscription{Name: "fake-sub"},
+			sub:  kargoapi.Subscription{Name: "fake-sub"},
 			seen: uniqueSubSet{},
 			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Nil(t, errs)

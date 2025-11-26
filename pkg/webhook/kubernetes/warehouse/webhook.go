@@ -131,7 +131,7 @@ func (w *webhook) validateSpec(
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	return w.validateSubs(f.Child("subscriptions"), spec.Subscriptions)
+	return w.validateSubs(f.Child("subscriptions"), spec.InternalSubscriptions)
 }
 
 func (w *webhook) validateSubs(
@@ -168,9 +168,9 @@ func (w *webhook) validateSub(
 		repoTypes++
 		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart, seen)...)
 	}
-	if sub.Other != nil {
+	if sub.Subscription != nil {
 		repoTypes++
-		errs = append(errs, w.validateOtherSub(f.Child("other"), *sub.Other, seen)...)
+		errs = append(errs, w.validateOtherSub(f.Child("other"), *sub.Subscription, seen)...)
 	}
 	if repoTypes != 1 {
 		errs = append(
@@ -274,7 +274,7 @@ func (w *webhook) validateChartSub(
 
 func (w *webhook) validateOtherSub(
 	f *field.Path,
-	sub kargoapi.GenericSubscription,
+	sub kargoapi.Subscription,
 	seen uniqueSubSet,
 ) field.ErrorList {
 	var errs field.ErrorList
@@ -341,7 +341,7 @@ func (s uniqueSubSet) addChart(sub kargoapi.ChartSubscription, isHTTP bool, p *f
 }
 
 func (s uniqueSubSet) addOther(
-	sub kargoapi.GenericSubscription,
+	sub kargoapi.Subscription,
 	p *field.Path,
 ) error {
 	k := subscriptionKey{

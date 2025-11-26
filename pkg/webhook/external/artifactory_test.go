@@ -212,7 +212,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "artifactory.example.com/test-repo/test-image",
 								Constraint: "^2.0.0", // Constraint won't be met
@@ -251,7 +251,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								// Artifactory supports nested repository structures
 								RepoURL:    "artifactory.example.com/test-repo/foo/bar/test-image",
@@ -293,7 +293,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://artifactory.example.com/test-repo/test-chart",
 								SemverConstraint: "^2.0.0", // Constraint won't be met
@@ -332,7 +332,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://artifactory.example.com/test-repo/test-chart",
 								SemverConstraint: "^1.0.0",
@@ -372,7 +372,7 @@ func TestArtifactoryHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://artifactory.example.com/virtual-test-repo/foo/bar/test-chart",
 								SemverConstraint: "^1.0.0",

@@ -112,7 +112,7 @@ func TestFindCommit(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							// This Warehouse has no subscription to the desired repo
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: "not-the-right-repo",
 								},
@@ -144,7 +144,7 @@ func TestFindCommit(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -157,7 +157,7 @@ func TestFindCommit(t *testing.T) {
 							Name:      testOrigin2.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -197,7 +197,7 @@ func TestFindCommit(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -346,7 +346,7 @@ func TestFindImage(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							// This Warehouse has no subscription to the desired repo
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: "not-the-right-repo",
 								},
@@ -378,7 +378,7 @@ func TestFindImage(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -391,7 +391,7 @@ func TestFindImage(t *testing.T) {
 							Name:      testOrigin2.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -431,7 +431,7 @@ func TestFindImage(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -517,7 +517,7 @@ func TestHasAmbiguousImageRequest(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -546,7 +546,7 @@ func TestHasAmbiguousImageRequest(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -559,7 +559,7 @@ func TestHasAmbiguousImageRequest(t *testing.T) {
 							Name:      testOrigin2.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: testRepoURL,
 								},
@@ -711,7 +711,7 @@ func TestFindChart(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							// This Warehouse has no subscription to the desired repo
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: "not-the-right-repo",
 									Name:    "not-the-right-chart",
@@ -743,7 +743,7 @@ func TestFindChart(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: testRepoURL,
 									Name:    testChartName,
@@ -757,7 +757,7 @@ func TestFindChart(t *testing.T) {
 							Name:      testOrigin2.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: testRepoURL,
 									Name:    testChartName,
@@ -798,7 +798,7 @@ func TestFindChart(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: testRepoURL,
 									Name:    testChartName,
@@ -863,6 +863,7 @@ func TestFindArtifact(t *testing.T) {
 	err := kargoapi.AddToScheme(scheme)
 	require.NoError(t, err)
 
+	const testSubKind = "fake-kind"
 	const testSubName = "fake-sub"
 
 	testOrigin1 := kargoapi.FreightOrigin{
@@ -874,8 +875,8 @@ func TestFindArtifact(t *testing.T) {
 		Name: "some-other-warehouse",
 	}
 
-	testArtifact1 := kargoapi.GenericArtifactReference{SubscriptionName: testSubName}
-	testArtifact2 := kargoapi.GenericArtifactReference{SubscriptionName: testSubName}
+	testArtifact1 := kargoapi.ArtifactReference{SubscriptionName: testSubName}
+	testArtifact2 := kargoapi.ArtifactReference{SubscriptionName: testSubName}
 
 	testCases := []struct {
 		name          string
@@ -883,19 +884,19 @@ func TestFindArtifact(t *testing.T) {
 		stage         *kargoapi.Stage
 		desiredOrigin *kargoapi.FreightOrigin
 		freight       []kargoapi.FreightReference
-		assertions    func(*testing.T, *kargoapi.GenericArtifactReference, error)
+		assertions    func(*testing.T, *kargoapi.ArtifactReference, error)
 	}{
 		{
 			name:          "desired origin specified, but artifact not found",
 			stage:         &kargoapi.Stage{},
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{{
-				Origin:         testOrigin2, // Wrong origin
-				OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+				Origin:    testOrigin2, // Wrong origin
+				Artifacts: []kargoapi.ArtifactReference{testArtifact2},
 			}},
 			assertions: func(
 				t *testing.T,
-				artifact *kargoapi.GenericArtifactReference,
+				artifact *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -908,17 +909,17 @@ func TestFindArtifact(t *testing.T) {
 			desiredOrigin: &testOrigin1,
 			freight: []kargoapi.FreightReference{
 				{
-					Origin:         testOrigin1, // Correct origin
-					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact1},
+					Origin:    testOrigin1, // Correct origin
+					Artifacts: []kargoapi.ArtifactReference{testArtifact1},
 				},
 				{
-					Origin:         testOrigin2,
-					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+					Origin:    testOrigin2,
+					Artifacts: []kargoapi.ArtifactReference{testArtifact2},
 				},
 			},
 			assertions: func(
 				t *testing.T,
-				artifact *kargoapi.GenericArtifactReference,
+				artifact *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -939,7 +940,7 @@ func TestFindArtifact(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.GenericArtifactReference,
+				_ *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.ErrorContains(t, err, "Warehouse")
@@ -957,7 +958,7 @@ func TestFindArtifact(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{
 							// This Warehouse has no subscription to the desired repo
-							Subscriptions: []kargoapi.RepoSubscription{{
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: "not-the-right-repo",
 								},
@@ -974,7 +975,7 @@ func TestFindArtifact(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				artifact *kargoapi.GenericArtifactReference,
+				artifact *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -991,8 +992,11 @@ func TestFindArtifact(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
-								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
+								Subscription: &kargoapi.Subscription{
+									Kind: testSubKind,
+									Name: testSubName,
+								},
 							}},
 						},
 					},
@@ -1002,8 +1006,11 @@ func TestFindArtifact(t *testing.T) {
 							Name:      testOrigin2.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
-								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
+								Subscription: &kargoapi.Subscription{
+									Kind: testSubKind,
+									Name: testSubName,
+								},
 							}},
 						},
 					},
@@ -1024,7 +1031,7 @@ func TestFindArtifact(t *testing.T) {
 			},
 			assertions: func(
 				t *testing.T,
-				_ *kargoapi.GenericArtifactReference,
+				_ *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.ErrorContains(
@@ -1044,8 +1051,11 @@ func TestFindArtifact(t *testing.T) {
 							Name:      testOrigin1.Name,
 						},
 						Spec: kargoapi.WarehouseSpec{
-							Subscriptions: []kargoapi.RepoSubscription{{
-								Other: &kargoapi.GenericSubscription{Name: testSubName},
+							InternalSubscriptions: []kargoapi.RepoSubscription{{
+								Subscription: &kargoapi.Subscription{
+									Kind: testSubKind,
+									Name: testSubName,
+								},
 							}},
 						},
 					},
@@ -1061,17 +1071,17 @@ func TestFindArtifact(t *testing.T) {
 			},
 			freight: []kargoapi.FreightReference{
 				{
-					Origin:         testOrigin1, // Correct origin
-					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact1},
+					Origin:    testOrigin1, // Correct origin
+					Artifacts: []kargoapi.ArtifactReference{testArtifact1},
 				},
 				{
-					Origin:         testOrigin2,
-					OtherArtifacts: []kargoapi.GenericArtifactReference{testArtifact2},
+					Origin:    testOrigin2,
+					Artifacts: []kargoapi.ArtifactReference{testArtifact2},
 				},
 			},
 			assertions: func(
 				t *testing.T,
-				artifact *kargoapi.GenericArtifactReference,
+				artifact *kargoapi.ArtifactReference,
 				err error,
 			) {
 				require.NoError(t, err)

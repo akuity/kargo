@@ -817,7 +817,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 									string,
 									kargoapi.RepoSubscription,
 								) (any, error) {
-									return kargoapi.GenericDiscoveryResult{}, nil
+									return kargoapi.DiscoveryResult{}, nil
 								},
 							}, nil
 						},
@@ -830,7 +830,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 				err error,
 			) {
 				require.NoError(t, err)
-				require.Len(t, discoveredArtifacts.OtherResults, 1)
+				require.Len(t, discoveredArtifacts.Results, 1)
 			},
 		},
 	}
@@ -926,9 +926,9 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 					RepoURL:  "fake-repo",
 					Versions: []string{"fake-version"},
 				}},
-				OtherResults: []kargoapi.GenericDiscoveryResult{{
+				Results: []kargoapi.DiscoveryResult{{
 					SubscriptionName:   "fake-sub",
-					ArtifactReferences: []kargoapi.GenericArtifactReference{},
+					ArtifactReferences: []kargoapi.ArtifactReference{},
 				}},
 			},
 			assertions: func(t *testing.T, freight *kargoapi.Freight, err error) {
@@ -951,19 +951,19 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
 					{RepoURL: "fake-repo", Versions: []string{"fake-version"}},
 				},
-				OtherResults: []kargoapi.GenericDiscoveryResult{
+				Results: []kargoapi.DiscoveryResult{
 					{
-						ArtifactReferences: []kargoapi.GenericArtifactReference{{
+						ArtifactReferences: []kargoapi.ArtifactReference{{
 							SubscriptionName: "fake-sub",
 							Version:          "v1.0.0",
-							Details:          &v1.JSON{Raw: []byte("{}")},
+							Metadata:         &v1.JSON{Raw: []byte("{}")},
 						}},
 					},
 					{
-						ArtifactReferences: []kargoapi.GenericArtifactReference{{
+						ArtifactReferences: []kargoapi.ArtifactReference{{
 							SubscriptionName: "fake-sub",
 							Version:          "v1.1.0",
-							Details:          &v1.JSON{Raw: []byte("{}")},
+							Metadata:         &v1.JSON{Raw: []byte("{}")},
 						}},
 					},
 				},
@@ -974,7 +974,7 @@ func TestBuildFreightFromLatestArtifacts(t *testing.T) {
 				require.Len(t, freight.Commits, 2)
 				require.Len(t, freight.Images, 2)
 				require.Len(t, freight.Charts, 2)
-				require.Len(t, freight.OtherArtifacts, 2)
+				require.Len(t, freight.Artifacts, 2)
 			},
 		},
 	}
