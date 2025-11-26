@@ -347,8 +347,8 @@ spec:
                                 additionalProperties:
                                   type: string
                                 description: |-
-                                  Parameters contains additional static parameters for the action.
-                                  These can be static or expression-derived.
+                                  Parameters contains additional, action-specific parameters. Values may be
+                                  static or extracted from the request using expressions.
                                 type: object
                               targets:
                                 description: |-

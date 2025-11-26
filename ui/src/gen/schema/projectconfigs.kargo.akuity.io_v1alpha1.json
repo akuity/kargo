@@ -206,7 +206,7 @@
                           "additionalProperties": {
                             "type": "string"
                           },
-                          "description": "Parameters contains additional static parameters for the action.\nThese can be static or expression-derived.",
+                          "description": "Parameters contains additional, action-specific parameters. Values may be\nstatic or extracted from the request using expressions.",
                           "type": "object"
                         },
                         "targets": {
