@@ -30,7 +30,6 @@ func TestGithubHandler(t *testing.T) {
 	validPushEvent := &gh.PushEvent{
 		Ref: gh.Ptr("refs/heads/main"),
 		Repo: &gh.PushEventRepository{
-			SSHURL:   gh.Ptr("git@github.com:user/repo.git"),
 			CloneURL: gh.Ptr("https://github.com/example/repo"),
 		},
 	}
