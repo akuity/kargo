@@ -63,7 +63,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -74,7 +74,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -111,7 +111,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -136,7 +136,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -147,7 +147,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-other-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -185,7 +185,7 @@ func TestRefreshWarehouses(t *testing.T) {
 						Name:      "some-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{RepoURL: testRepoURL},
 						}},
 					},
@@ -228,7 +228,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Git subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Git: &kargoapi.GitSubscription{
 							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							RepoURL:                 "https://github.com/username/repo",
@@ -245,7 +245,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Git subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Git: &kargoapi.GitSubscription{
 							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
 							RepoURL:                 "https://github.com/username/repo.git",
@@ -262,7 +262,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Image subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Image: &kargoapi.ImageSubscription{
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -280,7 +280,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Image subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Image: &kargoapi.ImageSubscription{
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
@@ -298,7 +298,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Chart subscription with matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Chart: &kargoapi.ChartSubscription{
 							RepoURL:          "oci://example.com/charts",
 							SemverConstraint: "^1.0.0",
@@ -314,7 +314,7 @@ func TestShouldRefresh(t *testing.T) {
 			name: "Chart subscription with non-matching qualifier",
 			wh: kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
 						Chart: &kargoapi.ChartSubscription{
 							RepoURL:          "oci://example.com/charts",
 							SemverConstraint: "^2.0.0",

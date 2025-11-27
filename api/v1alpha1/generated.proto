@@ -103,6 +103,34 @@ message ArgoCDAppSyncStatus {
   repeated string revisions = 3;
 }
 
+// ArtifactReference is a reference to a specific version of an artifact.
+message ArtifactReference {
+  // Kind specifies the kind of artifact this is. Often it will be a media
+  // type (MIME type) string.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string kind = 1;
+
+  // SubscriptionName is the name of the GenericSubscription that discovered
+  // this artifact.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string subscriptionName = 2;
+
+  // Version identifies a specific revision of this artifact.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string version = 3;
+
+  // Metadata is a mostly opaque collection of artifact attributes. "Mostly"
+  // because Kargo may understand how to interpret some documented, well-known
+  // top-level keys. Those aside, this metadata is only understood by a
+  // corresponding Subscriber implementation that created it.
+  //
+  // +optional
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON metadata = 4;
+}
+
 // ArtifactoryWebhookReceiverConfig describes a webhook receiver that is
 // compatible with JFrog Artifactory payloads.
 message ArtifactoryWebhookReceiverConfig {
@@ -403,6 +431,11 @@ message DiscoveredArtifacts {
   //
   // +optional
   repeated ChartDiscoveryResult charts = 3;
+
+  // Results holds the artifact references discovered by the Warehouse.
+  //
+  // +optional
+  repeated DiscoveryResult results = 5;
 }
 
 // DiscoveredCommit represents a commit discovered by a Warehouse for a
@@ -462,6 +495,22 @@ message DiscoveredImageReference {
   // CreatedAt is the time the image was created. This field is optional, and
   // not populated for every ImageSelectionStrategy.
   optional .k8s.io.apimachinery.pkg.apis.meta.v1.Time createdAt = 4;
+}
+
+// DiscoveryResult represents the result of an artifact discovery operation for
+// some subscription.
+message DiscoveryResult {
+  // SubscriptionName is the name of the GenericSubscription that discovered
+  // these results.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 3;
+
+  // ArtifactReferences is a list of references to specific versions of an
+  // artifact.
+  //
+  // +optional
+  repeated ArtifactReference artifactReferences = 2;
 }
 
 // DockerHubWebhookReceiverConfig describes a webhook receiver that is
@@ -529,6 +578,10 @@ message Freight {
 
   // Charts describes specific versions of specific Helm charts.
   repeated Chart charts = 5;
+
+  // Artifacts describes specific versions of artifacts other
+  // than Git repository commits, container images, and Helm charts.
+  repeated ArtifactReference artifacts = 10;
 
   // Status describes the current status of this Freight.
   optional FreightStatus status = 6;
@@ -603,6 +656,10 @@ message FreightReference {
 
   // Charts describes specific versions of specific Helm charts.
   repeated Chart charts = 4;
+
+  // Artifacts describes specific versions of artifacts other
+  // than Git repository commits, container images, and Helm charts.
+  repeated ArtifactReference artifacts = 9;
 }
 
 // FreightRequest expresses a Stage's need for Freight having originated from a
@@ -847,9 +904,9 @@ message GitSubscription {
   // value in this field only has any effect when the CommitSelectionStrategy is
   // Lexical, NewestTag, or SemVer. This field is optional.
   //
-  // Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
+  // Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
-  // in v1.13.0.
+  // in apiextensionsv1.13.0.
   //
   // +kubebuilder:validation:Optional
   optional string allowTags = 5;
@@ -869,9 +926,9 @@ message GitSubscription {
   // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
   // optional.
   //
-  // Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
+  // Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
-  // in v1.13.0.
+  // in apiextensionsv1.13.0.
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
@@ -1168,9 +1225,9 @@ message ImageSubscription {
   // image tags that are considered in determining the newest version of an
   // image. This field is optional.
   //
-  // Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
+  // Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
-  // in v1.13.0.
+  // in apiextensionsv1.13.0.
   //
   // +kubebuilder:validation:Optional
   optional string allowTags = 5;
@@ -1186,9 +1243,9 @@ message ImageSubscription {
   // newest version of an image. No regular expressions or glob patterns are
   // supported yet. This field is optional.
   //
-  // Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
+  // Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
-  // in v1.13.0.
+  // in apiextensionsv1.13.0.
   //
   // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
@@ -1698,7 +1755,7 @@ message QuayWebhookReceiverConfig {
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
-// container image repository, or a Helm chart repository.
+// container image repository, a Helm chart repository, or something else.
 message RepoSubscription {
   // Git describes a subscriptions to a Git repository.
   optional GitSubscription git = 1;
@@ -1708,6 +1765,10 @@ message RepoSubscription {
 
   // Chart describes a subscription to a Helm chart repository.
   optional ChartSubscription chart = 3;
+
+  // Subscription describes a subscription to something that is not a Git, container
+  // image, or Helm chart repository.
+  optional Subscription subscription = 4;
 }
 
 // Stage is the Kargo API's main type.
@@ -1865,6 +1926,35 @@ message StepExecutionMetadata {
   optional bool continueOnError = 7;
 }
 
+// Subscription represents a subscription to some kind of artifact repository.
+message Subscription {
+  // Kind specifies the kind of subscription this is.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string kind = 1;
+
+  // Name is a unique (with respect to a Warehouse) name used for identifying
+  // this subscription.
+  //
+  // +kubebuilder:validation:MinLength=1
+  optional string name = 2;
+
+  // Config is opaque configuration for this subscription. This is only
+  // understood by a corresponding Subscriber implementation for the
+  // ArtifactKind.
+  //
+  // +optional
+  optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;
+
+  // DiscoveryLimit is an optional limit on the number of artifacts that can
+  // be discovered for this subscription.
+  //
+  // +kubebuilder:validation:Minimum=1
+  // +kubebuilder:validation:Maximum=100
+  // +kubebuilder:default=20
+  optional int32 discoveryLimit = 4;
+}
+
 // Verification describes how to verify that a Promotion has been successful
 // using Argo Rollouts AnalysisTemplates.
 message Verification {
@@ -1987,7 +2077,7 @@ message WarehouseSpec {
   // produced by this Warehouse.
   //
   // +kubebuilder:validation:MinItems=1
-  repeated RepoSubscription subscriptions = 1;
+  repeated .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON subscriptions = 1;
 
   // FreightCreationCriteria defines criteria that must be satisfied for Freight
   // to be created automatically from new artifacts following discovery. This

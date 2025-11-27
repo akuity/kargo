@@ -1,8 +1,11 @@
 package v1alpha1
 
 import (
+	"encoding/json"
+	"fmt"
 	"time"
 
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -107,14 +110,181 @@ type WarehouseSpec struct {
 	// produced by this Warehouse.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Subscriptions []RepoSubscription `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
-
+	Subscriptions []apiextensionsv1.JSON `json:"subscriptions" protobuf:"bytes,1,rep,name=subscriptions"`
+	// InternalSubscriptions is an internal, typed representation of the
+	// Subscriptions field. When a WarehouseSpec is unmarshaled, this field is
+	// populated from the JSON in the Subscriptions field. When a WarehouseSpec is
+	// marshaled, the contents of this field are marshaled into JSON and used to
+	// populate the Subscriptions field.
+	//
+	// Note(krancour): The existence of this field is a short-term workaround that
+	// has allowed the Subscriptions field to become raw JSON without forcing us
+	// to immediately refactor all existing code that depends on typed
+	// RepoSubscription objects. THIS FIELD MAY BE REMOVED WITHOUT NOTICE IN A
+	// FUTURE RELEASE.
+	//
+	// +kubebuilder:validation:Optional
+	InternalSubscriptions []RepoSubscription `json:"-" protobuf:"-"`
 	// FreightCreationCriteria defines criteria that must be satisfied for Freight
 	// to be created automatically from new artifacts following discovery. This
 	// field has no effect when the FreightCreationPolicy is `Manual`.
 	//
 	// +kubebuilder:validation:Optional
 	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
+}
+
+// UnmarshalJSON unmarshals the JSON data into WarehouseSpec, converting the
+// JSON from the Subscriptions field into typed RepoSubscription objects in
+// InternalSubscriptions. Any JSON object with a top-level key other than "git",
+// "image", or "chart" is unpacked into a (generic) Subscription with the key as
+// the Kind.
+func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
+	type warehouseSpecAlias WarehouseSpec
+	aux := &struct {
+		Subscriptions []apiextensionsv1.JSON `json:"subscriptions"`
+		*warehouseSpecAlias
+	}{
+		warehouseSpecAlias: (*warehouseSpecAlias)(w),
+	}
+
+	if err := json.Unmarshal(data, aux); err != nil {
+		return err
+	}
+
+	// Store the JSON subscriptions
+	w.Subscriptions = aux.Subscriptions
+
+	// Convert JSON Subscriptions to typed RepoSubscription objects
+	if len(aux.Subscriptions) > 0 {
+		w.InternalSubscriptions = make([]RepoSubscription, len(aux.Subscriptions))
+		for i := range aux.Subscriptions {
+			// First, unmarshal as a map to check for keys
+			rawMap := make(map[string]json.RawMessage)
+			if err := json.Unmarshal(aux.Subscriptions[i].Raw, &rawMap); err != nil {
+				return err
+			}
+
+			// Validate that the subscription is an object with exactly one top-level
+			// key
+			if len(rawMap) != 1 {
+				return fmt.Errorf(
+					"subscription at index %d must be an object with exactly one "+
+						"top-level field, but has %d fields",
+					i, len(rawMap),
+				)
+			}
+
+			// Get the single key
+			var key string
+			for k := range rawMap {
+				key = k
+				break // This unnecessary, but it makes it clear what we're doing
+			}
+
+			// Check for known keys (git, image, chart)
+			knownKeys := map[string]bool{"git": true, "image": true, "chart": true}
+			if knownKeys[key] {
+				// Known subscription type - unmarshal normally
+				if err := json.Unmarshal(
+					aux.Subscriptions[i].Raw,
+					&w.InternalSubscriptions[i],
+				); err != nil {
+					return err
+				}
+			} else {
+				// Generic subscription - unpack with key as Kind
+				var genericSub Subscription
+				if err := json.Unmarshal(rawMap[key], &genericSub); err != nil {
+					return err
+				}
+				genericSub.Kind = key
+				w.InternalSubscriptions[i].Subscription = &genericSub
+			}
+		}
+	}
+
+	return nil
+}
+
+// MarshalJSON marshals the WarehouseSpec to JSON, converting the
+// InternalSubscriptions slice into JSON in the Subscriptions field. For
+// GenericSubscription objects, the Kind field is used as the top-level key.
+func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
+	type warehouseSpecAlias WarehouseSpec
+
+	// Create a copy to avoid modifying the original
+	spec := *w
+	aux := &struct {
+		Subscriptions []apiextensionsv1.JSON `json:"subscriptions"`
+		*warehouseSpecAlias
+	}{
+		warehouseSpecAlias: (*warehouseSpecAlias)(&spec),
+	}
+
+	// Convert InternalSubscriptions to JSON
+	if len(w.InternalSubscriptions) > 0 {
+		aux.Subscriptions = make([]apiextensionsv1.JSON, len(w.InternalSubscriptions))
+		for i := range w.InternalSubscriptions {
+			sub := w.InternalSubscriptions[i]
+
+			// Count how many subscription types are set
+			typesSet := 0
+			if sub.Git != nil {
+				typesSet++
+			}
+			if sub.Image != nil {
+				typesSet++
+			}
+			if sub.Chart != nil {
+				typesSet++
+			}
+			if sub.Subscription != nil {
+				typesSet++
+			}
+
+			// Validate that exactly one type is set
+			if typesSet != 1 {
+				return nil, fmt.Errorf(
+					"subscription at index %d must have exactly one of Git, Image, "+
+						"Chart, or Subscription set, but has %d",
+					i, typesSet,
+				)
+			}
+
+			// If this is a generic Subscription, wrap it with its Kind as the key
+			if sub.Subscription != nil {
+				kind := sub.Subscription.Kind
+				if kind == "" {
+					return nil, fmt.Errorf("subscription at index %d has empty Kind field", i)
+				}
+				genericJSON, err := json.Marshal(sub.Subscription)
+				if err != nil {
+					return nil, err
+				}
+				// Wrap in an object with the Kind as the key
+				wrapper := map[string]json.RawMessage{
+					kind: json.RawMessage(genericJSON),
+				}
+				jsonData, err := json.Marshal(wrapper)
+				if err != nil {
+					return nil, err
+				}
+				aux.Subscriptions[i] = apiextensionsv1.JSON{Raw: jsonData}
+			} else {
+				// For Git, Image, Chart subscriptions, marshal directly
+				jsonData, err := json.Marshal(sub)
+				if err != nil {
+					return nil, err
+				}
+				aux.Subscriptions[i] = apiextensionsv1.JSON{Raw: jsonData}
+			}
+		}
+	}
+
+	// Clear the internal field from the copy to avoid duplication in output
+	spec.InternalSubscriptions = nil
+
+	return json.Marshal(aux)
 }
 
 // FreightCreationPolicy defines how Freight is created by a Warehouse.
@@ -137,7 +307,7 @@ type FreightCreationCriteria struct {
 }
 
 // RepoSubscription describes a subscription to ONE OF a Git repository, a
-// container image repository, or a Helm chart repository.
+// container image repository, a Helm chart repository, or something else.
 type RepoSubscription struct {
 	// Git describes a subscriptions to a Git repository.
 	Git *GitSubscription `json:"git,omitempty" protobuf:"bytes,1,opt,name=git"`
@@ -145,6 +315,9 @@ type RepoSubscription struct {
 	Image *ImageSubscription `json:"image,omitempty" protobuf:"bytes,2,opt,name=image"`
 	// Chart describes a subscription to a Helm chart repository.
 	Chart *ChartSubscription `json:"chart,omitempty" protobuf:"bytes,3,opt,name=chart"`
+	// Subscription describes a subscription to something that is not a Git, container
+	// image, or Helm chart repository.
+	Subscription *Subscription `json:"subscription,omitempty" protobuf:"bytes,4,opt,name=subscription"`
 }
 
 // GitSubscription defines a subscription to a Git repository.
@@ -218,9 +391,9 @@ type GitSubscription struct {
 	// value in this field only has any effect when the CommitSelectionStrategy is
 	// Lexical, NewestTag, or SemVer. This field is optional.
 	//
-	// Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
+	// Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
-	// in v1.13.0.
+	// in apiextensionsv1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
@@ -238,9 +411,9 @@ type GitSubscription struct {
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
 	//
-	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
+	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
-	// in v1.13.0.
+	// in apiextensionsv1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
@@ -413,9 +586,9 @@ type ImageSubscription struct {
 	// image tags that are considered in determining the newest version of an
 	// image. This field is optional.
 	//
-	// Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
+	// Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
-	// in v1.13.0.
+	// in apiextensionsv1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
@@ -429,9 +602,9 @@ type ImageSubscription struct {
 	// newest version of an image. No regular expressions or glob patterns are
 	// supported yet. This field is optional.
 	//
-	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
+	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
-	// in v1.13.0.
+	// in apiextensionsv1.13.0.
 	//
 	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
@@ -510,6 +683,32 @@ type ChartSubscription struct {
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
 }
 
+// Subscription represents a subscription to some kind of artifact repository.
+type Subscription struct {
+	// Kind specifies the kind of subscription this is.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	// Name is a unique (with respect to a Warehouse) name used for identifying
+	// this subscription.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
+	// Config is opaque configuration for this subscription. This is only
+	// understood by a corresponding Subscriber implementation for the
+	// ArtifactKind.
+	//
+	// +optional
+	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
+	// DiscoveryLimit is an optional limit on the number of artifacts that can
+	// be discovered for this subscription.
+	//
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=100
+	// +kubebuilder:default=20
+	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
+}
+
 // WarehouseStatus describes a Warehouse's most recently observed state.
 type WarehouseStatus struct {
 	// Conditions contains the last observations of the Warehouse's current
@@ -566,6 +765,10 @@ type DiscoveredArtifacts struct {
 	//
 	// +optional
 	Charts []ChartDiscoveryResult `json:"charts,omitempty" protobuf:"bytes,3,rep,name=charts"`
+	// Results holds the artifact references discovered by the Warehouse.
+	//
+	// +optional
+	Results []DiscoveryResult `json:"results,omitempty" protobuf:"bytes,5,rep,name=results"`
 }
 
 // GitDiscoveryResult represents the result of a Git discovery operation for a
@@ -677,6 +880,61 @@ type ChartDiscoveryResult struct {
 	//
 	// +optional
 	Versions []string `json:"versions" protobuf:"bytes,4,rep,name=versions"`
+}
+
+// DiscoveryResult represents the result of an artifact discovery operation for
+// some subscription.
+type DiscoveryResult struct {
+	// SubscriptionName is the name of the GenericSubscription that discovered
+	// these results.
+	//
+	// +kubebuilder:validation:MinLength=1
+	SubscriptionName string `json:"name" protobuf:"bytes,3,opt,name=name"`
+	// ArtifactReferences is a list of references to specific versions of an
+	// artifact.
+	//
+	// +optional
+	ArtifactReferences []ArtifactReference `json:"artifactReferences" protobuf:"bytes,2,rep,name=artifactReferences"`
+}
+
+// ArtifactReference is a reference to a specific version of an artifact.
+type ArtifactReference struct {
+	// Kind specifies the kind of artifact this is. Often it will be a media
+	// type (MIME type) string.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Kind string `json:"kind,omitempty" protobuf:"bytes,1,opt,name=kind"`
+	// SubscriptionName is the name of the GenericSubscription that discovered
+	// this artifact.
+	//
+	// +kubebuilder:validation:MinLength=1
+	SubscriptionName string `json:"subscriptionName" protobuf:"bytes,2,opt,name=subscriptionName"`
+	// Version identifies a specific revision of this artifact.
+	//
+	// +kubebuilder:validation:MinLength=1
+	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
+	// Metadata is a mostly opaque collection of artifact attributes. "Mostly"
+	// because Kargo may understand how to interpret some documented, well-known
+	// top-level keys. Those aside, this metadata is only understood by a
+	// corresponding Subscriber implementation that created it.
+	//
+	// +optional
+	Metadata *apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,opt,name=metadata"`
+}
+
+// DeepEquals returns a bool indicating whether the receiver deep-equals the
+// provided GenericArtifactReference. I.e., all relevant fields must be equal.
+func (g *ArtifactReference) DeepEquals(
+	other *ArtifactReference,
+) bool {
+	if g == nil && other == nil {
+		return true
+	}
+	if g == nil || other == nil {
+		return false
+	}
+	return g.SubscriptionName == other.SubscriptionName &&
+		g.Version == other.Version
 }
 
 // +kubebuilder:object:root=true

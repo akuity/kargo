@@ -156,7 +156,7 @@ func TestBitbucketHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://bitbucket.org/example/repo",
 								Branch:  "not-main", // Constraint won't be met
@@ -195,7 +195,7 @@ func TestBitbucketHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://bitbucket.org/example/repo",
 							},
@@ -233,7 +233,7 @@ func TestBitbucketHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "ssh://git@bitbucket.example.org:7999/example/repo.git",
 							},
@@ -271,7 +271,7 @@ func TestBitbucketHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://example.org/bitbucket/scm/example/repo.git",
 							},
