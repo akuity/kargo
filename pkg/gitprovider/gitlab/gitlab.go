@@ -14,7 +14,13 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
-const ProviderName = "gitlab"
+const (
+	ProviderName = "gitlab"
+
+	mrStateOpened = "opened"
+	mrStateMerged = "merged"
+	mrStateLocked = "locked"
+)
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
@@ -219,11 +225,11 @@ func (p *provider) MergePullRequest(
 	}
 
 	switch {
-	case glMR.State == "merged":
+	case glMR.State == mrStateMerged:
 		pr := convertGitlabMR(glMR.BasicMergeRequest)
 		return &pr, true, nil
 
-	case glMR.State != "opened":
+	case glMR.State != mrStateOpened:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
 	case glMR.DetailedMergeStatus != "mergeable":
@@ -250,7 +256,7 @@ func (p *provider) MergePullRequest(
 	// The GitLab API returns HTTP 200 (not 202) with the MR object in "opened" state.
 	// We detect queuing by checking if the MR state is still "opened" after a
 	// successful AcceptMergeRequest call when pipeline or policy checks are pending.
-	if resp != nil && updatedMR.State == "opened" {
+	if resp != nil && updatedMR.State == mrStateOpened {
 		pr.Queued = true
 	}
 
@@ -278,7 +284,7 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 		Number:         int64(glMR.IID),
 		URL:            glMR.WebURL,
 		Open:           isMROpen(glMR),
-		Merged:         glMR.State == "merged",
+		Merged:         glMR.State == mrStateMerged,
 		MergeCommitSHA: glMR.MergeCommitSHA,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
@@ -287,7 +293,7 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 }
 
 func isMROpen(glMR gitlab.BasicMergeRequest) bool {
-	return glMR.State == "opened" || glMR.State == "locked"
+	return glMR.State == mrStateOpened || glMR.State == mrStateLocked
 }
 
 func parseRepoURL(repoURL string) (string, string, string, error) {
