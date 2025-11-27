@@ -33,6 +33,12 @@ func TestGithubHandler(t *testing.T) {
 			CloneURL: gh.Ptr("https://github.com/example/repo"),
 		},
 	}
+	validPushEventSshRepoURL := &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			SSHURL: gh.Ptr("git@github.com:user/repo.git"),
+		},
+	}
 	validPackageEventImage := &gh.PackageEvent{
 		Action: gh.Ptr("published"),
 		Package: &gh.Package{
@@ -502,7 +508,7 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed (push event, git)",
+			name:       "warehouse refreshed (push event, git, https)",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -526,6 +532,46 @@ func TestGithubHandler(t *testing.T) {
 			).Build(),
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(validPushEvent)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (push event, git, ssh)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "git@github.com:user/repo.git",
+								Branch:  "main",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEventSshRepoURL)
 				require.NoError(t, err)
 				req := httptest.NewRequest(
 					http.MethodPost,
