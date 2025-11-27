@@ -31,7 +31,15 @@ func listTargetObjects(
 		if err := c.List(ctx, warehouses, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
 		}
-		return itemsToObjects(warehouses.Items), nil
+		if target.Name == "" {
+			return itemsToObjects(warehouses.Items), nil
+		}
+		for _, wh := range warehouses.Items {
+			if wh.Name == target.Name {
+				return []client.Object{&wh}, nil
+			}
+		}
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", target.Kind)
 	}

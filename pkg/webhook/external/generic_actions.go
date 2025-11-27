@@ -89,7 +89,7 @@ func handleRefreshAction(
 			targetResults[i].ListError = fmt.Errorf("failed to list target objects: %w", err)
 			continue
 		}
-		targetResults[i].RefreshResults = refreshObjects(tCtx, c, target.Name, objects)
+		targetResults[i].RefreshResults = refreshObjects(tCtx, c, objects)
 	}
 	return targetResults
 }

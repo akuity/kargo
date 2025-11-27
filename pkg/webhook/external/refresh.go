@@ -27,31 +27,24 @@ type refreshResult struct {
 func refreshObjects(
 	ctx context.Context,
 	c client.Client,
-	targetName string,
 	objList []client.Object,
 ) []refreshResult {
 	logger := logging.LoggerFromContext(ctx)
-	var refreshResults []refreshResult
-	for _, obj := range objList {
+	refreshResults := make([]refreshResult, len(objList))
+	for i, obj := range objList {
 		objKey := client.ObjectKeyFromObject(obj)
 		objLogger := logger.WithValues(
 			"namespace", objKey.Namespace,
 			"name", objKey.Name,
 			"kind", obj.GetObjectKind(),
 		)
-		if targetName != "" && objKey.Name != targetName {
-			objLogger.Info("skipping object due to name mismatch")
-			continue
-		}
-		var rr refreshResult
 		if err := api.RefreshObject(ctx, c, obj); err != nil {
 			objLogger.Error(err, "error refreshing")
-			rr.Failure = objKey.String()
+			refreshResults[i].Failure = objKey.String()
 		} else {
 			objLogger.Info("successfully refreshed object")
-			rr.Success = objKey.String()
+			refreshResults[i].Success = objKey.String()
 		}
-		refreshResults = append(refreshResults, rr)
 	}
 	return refreshResults
 }
