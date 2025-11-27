@@ -2,6 +2,7 @@ package v1alpha1
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -163,29 +164,41 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				return err
 			}
 
-			// Check for known keys (git, image, chart)
-			knownKeys := map[string]bool{"git": true, "image": true, "chart": true}
-			var genericKey string
-			for key := range rawMap {
-				if !knownKeys[key] {
-					genericKey = key
-					break
-				}
+			// Validate that the subscription is an object with exactly one top-level
+			// key
+			if len(rawMap) != 1 {
+				return fmt.Errorf(
+					"subscription at index %d must be an object with exactly one "+
+						"top-level field, but has %d fields",
+					i, len(rawMap),
+				)
 			}
 
-			// If we found a generic key, unpack it as a GenericSubscription
-			if genericKey != "" {
-				var genericSub Subscription
-				if err := json.Unmarshal(rawMap[genericKey], &genericSub); err != nil {
+			// Get the single key
+			var key string
+			for k := range rawMap {
+				key = k
+				break // This unnecessary, but it makes it clear what we're doing
+			}
+
+			// Check for known keys (git, image, chart)
+			knownKeys := map[string]bool{"git": true, "image": true, "chart": true}
+			if knownKeys[key] {
+				// Known subscription type - unmarshal normally
+				if err := json.Unmarshal(
+					aux.Subscriptions[i].Raw,
+					&w.InternalSubscriptions[i],
+				); err != nil {
 					return err
 				}
-				genericSub.Kind = genericKey
-				w.InternalSubscriptions[i].Subscription = &genericSub
 			} else {
-				// Otherwise unmarshal normally
-				if err := json.Unmarshal(aux.Subscriptions[i].Raw, &w.InternalSubscriptions[i]); err != nil {
+				// Generic subscription - unpack with key as Kind
+				var genericSub Subscription
+				if err := json.Unmarshal(rawMap[key], &genericSub); err != nil {
 					return err
 				}
+				genericSub.Kind = key
+				w.InternalSubscriptions[i].Subscription = &genericSub
 			}
 		}
 	}
@@ -214,9 +227,36 @@ func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
 		for i := range w.InternalSubscriptions {
 			sub := w.InternalSubscriptions[i]
 
-			// If this is a GenericSubscription, wrap it with its Kind as the key
+			// Count how many subscription types are set
+			typesSet := 0
+			if sub.Git != nil {
+				typesSet++
+			}
+			if sub.Image != nil {
+				typesSet++
+			}
+			if sub.Chart != nil {
+				typesSet++
+			}
+			if sub.Subscription != nil {
+				typesSet++
+			}
+
+			// Validate that exactly one type is set
+			if typesSet != 1 {
+				return nil, fmt.Errorf(
+					"subscription at index %d must have exactly one of Git, Image, "+
+						"Chart, or Subscription set, but has %d",
+					i, typesSet,
+				)
+			}
+
+			// If this is a generic Subscription, wrap it with its Kind as the key
 			if sub.Subscription != nil {
 				kind := sub.Subscription.Kind
+				if kind == "" {
+					return nil, fmt.Errorf("subscription at index %d has empty Kind field", i)
+				}
 				genericJSON, err := json.Marshal(sub.Subscription)
 				if err != nil {
 					return nil, err
