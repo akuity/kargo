@@ -25,7 +25,7 @@ data:
   {{- if .Values.global.clusterResourcesNamespace }}
   CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
   {{- else }}
-  CLUSTER_RESOURCES_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
   {{- end }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
