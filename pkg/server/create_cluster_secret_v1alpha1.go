@@ -26,8 +26,8 @@ func (s *server) CreateClusterSecret(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+	if s.cfg.ClusterResourcesNamespace == "" {
+		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
 	}
 
 	clsSecret := clusterSecret{
@@ -72,7 +72,7 @@ func (s *server) clusterSecretToK8sSecret(clsSecret clusterSecret) *corev1.Secre
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: s.cfg.ClusterSecretNamespace,
+			Namespace: s.cfg.ClusterResourcesNamespace,
 			Name:      clsSecret.name,
 		},
 		Data: secretsData,

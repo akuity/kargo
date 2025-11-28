@@ -191,7 +191,7 @@ func TestServer_route(t *testing.T) {
 			name: "success with ClusterConfig",
 			server: &server{
 				cfg: ServerConfig{
-					ClusterSecretsNamespace: "fake-namespace",
+					ClusterResourcesNamespace: "fake-namespace",
 				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&kargoapi.ClusterConfig{

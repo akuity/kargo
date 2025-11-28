@@ -18,11 +18,11 @@ func (s *server) UpdateClusterSecret(
 ) (*connect.Response[svcv1alpha1.UpdateClusterSecretResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
 	}
 
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+	if s.cfg.ClusterResourcesNamespace == "" {
+		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
 	}
 
 	name := req.Msg.GetName()
@@ -35,7 +35,7 @@ func (s *server) UpdateClusterSecret(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: s.cfg.ClusterSecretNamespace,
+			Namespace: s.cfg.ClusterResourcesNamespace,
 			Name:      name,
 		},
 		&secret,
