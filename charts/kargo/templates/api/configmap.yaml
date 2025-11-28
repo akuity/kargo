@@ -22,7 +22,11 @@ data:
   {{- if .Values.api.secretManagementEnabled }}
   SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
-  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  {{- if .Values.global.clusterResourcesNamespace }}
+  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
+  {{- else }}
+  CLUSTER_RESOURCES_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  {{- end }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
