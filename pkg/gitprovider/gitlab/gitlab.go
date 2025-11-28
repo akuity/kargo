@@ -74,10 +74,19 @@ type mergeRequestClient interface {
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
+type mergeTrainClient interface {
+	GetMergeRequestOnAMergeTrain(
+		pid any,
+		mergeRequest int,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeTrain, *gitlab.Response, error)
+}
+
 // provider is a GitLab-based implementation of gitprovider.Interface.
 type provider struct { // nolint: revive
-	projectName string
-	client      mergeRequestClient
+	projectName      string
+	client           mergeRequestClient
+	mergeTrainClient mergeTrainClient
 }
 
 // NewProvider returns a GitLab-based implementation of gitprovider.Interface.
@@ -119,8 +128,9 @@ func NewProvider(
 	}
 
 	return &provider{
-		projectName: projectName,
-		client:      client.MergeRequests,
+		projectName:      projectName,
+		client:           client.MergeRequests,
+		mergeTrainClient: client.MergeTrains,
 	}, nil
 }
 
@@ -253,11 +263,27 @@ func (p *provider) MergePullRequest(
 	}
 
 	// GitLab merge trains keep the MR in "opened" state when queued for merging.
-	// The GitLab API returns HTTP 200 (not 202) with the MR object in "opened" state.
-	// We detect queuing by checking if the MR state is still "opened" after a
-	// successful AcceptMergeRequest call when pipeline or policy checks are pending.
+	// The GitLab API returns HTTP 200 with the MR object in "opened" state.
 	if resp != nil && updatedMR.State == mrStateOpened {
-		pr.Queued = true
+		// Verify the MR is actually in the merge train using the Merge Trains API.
+		// This API is only available in GitLab Premium/Ultimate tiers.
+		mergeTrain, mtResp, err := p.mergeTrainClient.GetMergeRequestOnAMergeTrain(
+			p.projectName, int(id),
+		)
+		if err == nil && mtResp != nil && mtResp.StatusCode == 200 && mergeTrain != nil {
+			// MR is confirmed to be in the merge train. Check if it's in an active state.
+			// Status can be: idle, merged, stale, fresh, merging, skip_merged
+			// We consider it queued if it's in an active state (not merged/skip_merged).
+			if mergeTrain.Status != "merged" && mergeTrain.Status != "skip_merged" {
+				pr.Queued = true
+			}
+		} else if mtResp != nil && mtResp.StatusCode == 403 {
+			// Merge Trains API is not available (Free tier or feature disabled).
+			// Fall back to the simple state check: if AcceptMergeRequest succeeded
+			// and state is still "opened", assume it's queued.
+			pr.Queued = true
+		}
+		// If we get 404, the MR is not in the merge train, so Queued remains false.
 	}
 
 	// MR is not merged yet (queued or pending checks). Return non-merged so
