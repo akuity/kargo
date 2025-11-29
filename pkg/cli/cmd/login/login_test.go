@@ -88,7 +88,7 @@ func TestRandStringFromCharset(t *testing.T) {
 			for _, c := range str {
 				require.Contains(t, chartSet, string(c))
 			}
-			// Assert that the each new random string is not a duplicate of any that
+			// Assert that the new random string is not a duplicate of any that
 			// preceded it. A duplicate would suggest inadequate randomness.
 			_, ok := set[str]
 			require.False(t, ok)
