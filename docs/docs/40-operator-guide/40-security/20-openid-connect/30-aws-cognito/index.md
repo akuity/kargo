@@ -146,7 +146,7 @@ After completing the steps from either the
           This is where users of the Kargo UI will be redirected to after
           logging in.
 
-        * `https://localhost/auth/callback`
+        * `http://localhost/auth/callback`
 
            This is where users of the `kargo` CLI will be redirected to
            redirected to after logging in. (The CLI launches a server to serve
