@@ -979,6 +979,13 @@ message GitSubscription {
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
   optional int32 discoveryLimit = 10;
+
+  // SinceDate is an optional date that can be used to cutoff discovery of commits past this date.
+  // It will immediately return any discovered commits, regardless of discovery limit upon
+  // reaching a commit with this age. When left unspecified, there is no date cutoff.
+  // The date is in the format YYYY-MM-DD.
+  // +kubebuilder:validation:optional
+  optional string sinceDate = 15;
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible

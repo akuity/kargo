@@ -342,6 +342,12 @@ type GitSubscription struct {
 	// +kubebuilder:validation:Maximum=100
 	// +kubebuilder:default=20
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,10,opt,name=discoveryLimit"`
+	// SinceDate is an optional date that can be used to cutoff discovery of commits past this date.
+	// It will immediately return any discovered commits, regardless of discovery limit upon
+	// reaching a commit with this age. When left unspecified, there is no date cutoff.
+	// The date is in the format YYYY-MM-DD.
+	// +kubebuilder:validation:optional
+	SinceDate string `json:"sinceDate,omitempty" protobuf:"bytes,15,opt,name=sinceDate"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
