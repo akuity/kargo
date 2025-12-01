@@ -188,8 +188,7 @@ func (g *gitCloner) run(
 				)
 		}
 		if cfg.RecurseSubmodules {
-			err = worktree.UpdateSubmodules()
-			if err != nil {
+			if err = worktree.UpdateSubmodules(); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("error updating submodules for worktree at %s: %w", path, err)
 			}

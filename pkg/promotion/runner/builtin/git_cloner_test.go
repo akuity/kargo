@@ -405,14 +405,16 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	)
 	require.NoError(t, service.Setup())
 	server := httptest.NewServer(service)
-	defer server.Close()
+	t.Cleanup(server.Close)
 
 	// Create submodule remote repo and push a file
 	subRepoURL := fmt.Sprintf("%s/sub.git", server.URL)
 	subRepo, err := git.Clone(subRepoURL, nil, nil)
 	require.NoError(t, err)
-	defer subRepo.Close()
-	err = os.WriteFile(filepath.Join(subRepo.Dir(), "sub.txt"), []byte("sub"), 0600)
+	t.Cleanup(func() {
+		_ = subRepo.Close()
+	})
+	err = os.WriteFile(filepath.Join(subRepo.Dir(), "sub.txt"), []byte("sub"), 0o600)
 	require.NoError(t, err)
 	err = subRepo.AddAllAndCommit("Initial commit sub", nil)
 	require.NoError(t, err)
@@ -423,10 +425,12 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	mainRepoURL := fmt.Sprintf("%s/main.git", server.URL)
 	mainRepo, err := git.Clone(mainRepoURL, nil, nil)
 	require.NoError(t, err)
-	defer mainRepo.Close()
+	t.Cleanup(func() {
+		_ = mainRepo.Close()
+	})
 
 	// Use git submodule add to create proper submodule metadata
-	cmd := exec.Command("git", "submodule", "add", subRepoURL, "sub")
+	cmd := exec.Command("git", "submodule", "add", "-b", "master", subRepoURL, "sub")
 	cmd.Dir = mainRepo.Dir()
 	out, err := cmd.CombinedOutput()
 	require.NoErrorf(t, err, "git submodule add failed: %s", string(out))
@@ -452,7 +456,7 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	}
 
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		stepCtx,
 		builtin.GitCloneConfig{
 			RepoURL:           mainRepoURL,
