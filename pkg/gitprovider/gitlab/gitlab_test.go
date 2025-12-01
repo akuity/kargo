@@ -19,10 +19,10 @@ type mockGitLabClient struct {
 	listOpts   *gitlab.ListProjectMergeRequestsOptions
 	pid        any
 	getMRFunc  func(
-		pid any, mergeRequest int, opt *gitlab.GetMergeRequestsOptions,
+		pid any, mergeRequest int64, opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
-	acceptMRFunc func(pid any, mergeRequest int, opt *gitlab.AcceptMergeRequestOptions,
+	acceptMRFunc func(pid any, mergeRequest int64, opt *gitlab.AcceptMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
@@ -49,7 +49,7 @@ func (m *mockGitLabClient) ListProjectMergeRequests(
 
 func (m *mockGitLabClient) GetMergeRequest(
 	pid any,
-	mergeRequest int,
+	mergeRequest int64,
 	opt *gitlab.GetMergeRequestsOptions,
 	options ...gitlab.RequestOptionFunc,
 ) (*gitlab.MergeRequest, *gitlab.Response, error) {
@@ -62,7 +62,7 @@ func (m *mockGitLabClient) GetMergeRequest(
 
 func (m *mockGitLabClient) AcceptMergeRequest(
 	pid any,
-	mergeRequest int,
+	mergeRequest int64,
 	opt *gitlab.AcceptMergeRequestOptions,
 	options ...gitlab.RequestOptionFunc,
 ) (*gitlab.MergeRequest, *gitlab.Response, error) {
@@ -104,7 +104,7 @@ func TestCreatePullRequest(t *testing.T) {
 	require.Equal(t, opts.Title, *mockClient.createOpts.Title)
 	require.Equal(t, opts.Description, *mockClient.createOpts.Description)
 
-	require.Equal(t, int64(mockClient.mr.IID), pr.Number)
+	require.Equal(t, mockClient.mr.IID, pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
 	require.False(t, pr.Open)
@@ -130,7 +130,7 @@ func TestGetPullRequest(t *testing.T) {
 
 	require.NoError(t, err)
 	require.Equal(t, testProjectName, mockClient.pid)
-	require.Equal(t, int64(mockClient.mr.IID), pr.Number)
+	require.Equal(t, mockClient.mr.IID, pr.Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
 	require.False(t, pr.Open)
@@ -164,7 +164,7 @@ func TestListPullRequests(t *testing.T) {
 	require.Equal(t, opts.HeadBranch, *mockClient.listOpts.SourceBranch)
 	require.Equal(t, opts.BaseBranch, *mockClient.listOpts.TargetBranch)
 
-	require.Equal(t, int64(mockClient.mr.IID), prs[0].Number)
+	require.Equal(t, mockClient.mr.IID, prs[0].Number)
 	require.Equal(t, mockClient.mr.MergeCommitSHA, prs[0].MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, prs[0].URL)
 	require.False(t, prs[0].Open)
@@ -185,7 +185,7 @@ func TestMergePullRequest(t *testing.T) {
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
 				mc.getMRFunc = func(
-					_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+					_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return nil, nil, errors.New("MR not found")
@@ -200,7 +200,7 @@ func TestMergePullRequest(t *testing.T) {
 			name: "nil MR returned from get",
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return nil, &gitlab.Response{}, nil
@@ -266,7 +266,7 @@ func TestMergePullRequest(t *testing.T) {
 			name: "error accepting MR",
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return &gitlab.MergeRequest{
@@ -278,7 +278,7 @@ func TestMergePullRequest(t *testing.T) {
 						},
 					}, &gitlab.Response{}, nil
 				}
-				mc.acceptMRFunc = func(_ any, _ int, _ *gitlab.AcceptMergeRequestOptions,
+				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return nil, nil, errors.New("merge conflicts")
@@ -293,7 +293,7 @@ func TestMergePullRequest(t *testing.T) {
 			name: "nil MR returned after merge",
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return &gitlab.MergeRequest{
@@ -305,7 +305,7 @@ func TestMergePullRequest(t *testing.T) {
 						},
 					}, &gitlab.Response{}, nil
 				}
-				mc.acceptMRFunc = func(_ any, _ int, _ *gitlab.AcceptMergeRequestOptions,
+				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return nil, &gitlab.Response{}, nil
@@ -320,7 +320,7 @@ func TestMergePullRequest(t *testing.T) {
 			name: "successful merge",
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int, _ *gitlab.GetMergeRequestsOptions,
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return &gitlab.MergeRequest{
@@ -332,7 +332,7 @@ func TestMergePullRequest(t *testing.T) {
 						},
 					}, &gitlab.Response{}, nil
 				}
-				mc.acceptMRFunc = func(_ any, _ int, _ *gitlab.AcceptMergeRequestOptions,
+				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
 					_ ...gitlab.RequestOptionFunc,
 				) (*gitlab.MergeRequest, *gitlab.Response, error) {
 					return &gitlab.MergeRequest{
