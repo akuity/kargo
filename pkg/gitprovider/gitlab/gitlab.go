@@ -55,14 +55,14 @@ type mergeRequestClient interface {
 
 	GetMergeRequest(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.GetMergeRequestsOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 
 	AcceptMergeRequest(
 		pid any,
-		mergeRequest int,
+		mergeRequest int64,
 		opt *gitlab.AcceptMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
@@ -148,7 +148,7 @@ func (p *provider) GetPullRequest(
 	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, error) {
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +210,7 @@ func (p *provider) MergePullRequest(
 	_ context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, int(id), nil)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
@@ -232,7 +232,7 @@ func (p *provider) MergePullRequest(
 
 	// Merge the MR
 	updatedMR, _, err := p.client.AcceptMergeRequest(
-		p.projectName, int(id), &gitlab.AcceptMergeRequestOptions{},
+		p.projectName, id, &gitlab.AcceptMergeRequestOptions{},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
@@ -261,7 +261,7 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 
 func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 	return gitprovider.PullRequest{
-		Number:         int64(glMR.IID),
+		Number:         glMR.IID,
 		URL:            glMR.WebURL,
 		Open:           isMROpen(glMR),
 		Merged:         glMR.State == "merged",
