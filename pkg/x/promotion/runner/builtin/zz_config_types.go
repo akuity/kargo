@@ -466,6 +466,11 @@ type JSONUpdate struct {
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`
+	// Specifies the naming convention for output files when writing to a directory. 'kargo'
+	// (default) uses '[namespace-]kind-name.yaml' format (e.g., 'deployment-myapp.yaml').
+	// 'kustomize' matches the naming convention of 'kustomize build -o dir/', using
+	// '[namespace_]group_version_kind_name.yaml' format (e.g., 'apps_v1_deployment_myapp.yaml').
+	OutputFormat *OutputFormat `json:"outputFormat,omitempty"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 	// Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
@@ -627,6 +632,17 @@ type OutLayout string
 const (
 	Flat OutLayout = "flat"
 	Helm OutLayout = "helm"
+)
+
+// Specifies the naming convention for output files when writing to a directory. 'kargo'
+// (default) uses '[namespace-]kind-name.yaml' format (e.g., 'deployment-myapp.yaml').
+// 'kustomize' matches the naming convention of 'kustomize build -o dir/', using
+// '[namespace_]group_version_kind_name.yaml' format (e.g., 'apps_v1_deployment_myapp.yaml').
+type OutputFormat string
+
+const (
+	Kargo     OutputFormat = "kargo"
+	Kustomize OutputFormat = "kustomize"
 )
 
 // Kind of resource to update metadata for
