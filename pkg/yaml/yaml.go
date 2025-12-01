@@ -11,6 +11,14 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// The maximum size of the input buffer for processing YAML files. Given that the max size of a
+// Kubernetes manifest (the most common thing we're dealing with) is 1 MB, this number is chosen to
+// assume that the max value of any given key would be just shy of that number (imagine a config map
+// with a single large value which is a config file for something in the container). Please note
+// that we do not allocate a buffer of this size up front; this is just the maximum size that we
+// will allow when processing input.
+const maxBufferSize = 1024 * 1024 // 1 MB
+
 // Update represents a discrete update to be made to a YAML document.
 type Update struct {
 	// Key is the dot-separated path to the field to update.
@@ -86,6 +94,11 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 
 	scanner := bufio.NewScanner(bytes.NewBuffer(inBytes))
 	scanner.Split(bufio.ScanLines)
+	// Create an initial buffer of 100B which should be plenty for most lines. This means we will
+	// likely avoid an allocation on the first scan. If we encounter a line that exceeds this size,
+	// the buffer will grow up to maxBufferSize.
+	var buf = make([]byte, 0, 100)
+	scanner.Buffer(buf, maxBufferSize)
 	var line int
 	for scanner.Scan() {
 		const errMsg = "error writing to byte buffer"
@@ -116,6 +129,9 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 			}
 		}
 		line++
+	}
+	if scanner.Err() != nil {
+		return nil, fmt.Errorf("error scanning input bytes: %w", scanner.Err())
 	}
 
 	return outBuf.Bytes(), nil
