@@ -64,7 +64,7 @@ supports both OIDC and PKCE:
 **With a compatible identity provider:**
 
   - `https://<hostname for api server>/login` (for the UI)
-  - `https://localhost/auth/callback` (for the CLI)
+  - `http://localhost/auth/callback` (for the CLI)
 
     <br/>
 
