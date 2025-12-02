@@ -123,10 +123,11 @@ message ArtifactReference {
   // +kubebuilder:validation:MinLength=1
   optional string version = 3;
 
-  // Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-  // because Kargo may understand how to interpret some documented, well-known
-  // top-level keys. Those aside, this metadata is only understood by a
-  // corresponding Subscriber implementation that created it.
+  // Metadata is a JSON object containing a mostly opaque collection of artifact
+  // attributes. (It must be an object. It may not be a list or a scalar value.)
+  // "Mostly" because Kargo may understand how to interpret some documented,
+  // well-known top-level keys. Those aside, this metadata is only understood by
+  // a corresponding Subscriber implementation that created it.
   //
   // +optional
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON metadata = 4;
@@ -1940,9 +1941,10 @@ message Subscription {
   // +kubebuilder:validation:MinLength=1
   optional string name = 2;
 
-  // Config is opaque configuration for this subscription. This is only
-  // understood by a corresponding Subscriber implementation for the
-  // ArtifactKind.
+  // Config is a JSON object containing opaque configuration for this
+  // subscription. (It must be an object. It may not be a list or a scalar
+  // value.) This is only understood by a corresponding Subscriber
+  // implementation for the ArtifactType.
   //
   // +optional
   optional .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON config = 3;

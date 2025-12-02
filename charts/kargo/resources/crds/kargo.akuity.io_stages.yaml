@@ -576,10 +576,11 @@ spec:
                               type: string
                             metadata:
                               description: |-
-                                Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                because Kargo may understand how to interpret some documented, well-known
-                                top-level keys. Those aside, this metadata is only understood by a
-                                corresponding Subscriber implementation that created it.
+                                Metadata is a JSON object containing a mostly opaque collection of artifact
+                                attributes. (It must be an object. It may not be a list or a scalar value.)
+                                "Mostly" because Kargo may understand how to interpret some documented,
+                                well-known top-level keys. Those aside, this metadata is only understood by
+                                a corresponding Subscriber implementation that created it.
                               x-kubernetes-preserve-unknown-fields: true
                             subscriptionName:
                               description: |-
@@ -754,10 +755,11 @@ spec:
                                   type: string
                                 metadata:
                                   description: |-
-                                    Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                    because Kargo may understand how to interpret some documented, well-known
-                                    top-level keys. Those aside, this metadata is only understood by a
-                                    corresponding Subscriber implementation that created it.
+                                    Metadata is a JSON object containing a mostly opaque collection of artifact
+                                    attributes. (It must be an object. It may not be a list or a scalar value.)
+                                    "Mostly" because Kargo may understand how to interpret some documented,
+                                    well-known top-level keys. Those aside, this metadata is only understood by
+                                    a corresponding Subscriber implementation that created it.
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
@@ -928,10 +930,11 @@ spec:
                                         type: string
                                       metadata:
                                         description: |-
-                                          Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                          because Kargo may understand how to interpret some documented, well-known
-                                          top-level keys. Those aside, this metadata is only understood by a
-                                          corresponding Subscriber implementation that created it.
+                                          Metadata is a JSON object containing a mostly opaque collection of artifact
+                                          attributes. (It must be an object. It may not be a list or a scalar value.)
+                                          "Mostly" because Kargo may understand how to interpret some documented,
+                                          well-known top-level keys. Those aside, this metadata is only understood by
+                                          a corresponding Subscriber implementation that created it.
                                         x-kubernetes-preserve-unknown-fields: true
                                       subscriptionName:
                                         description: |-
@@ -1276,10 +1279,11 @@ spec:
                                   type: string
                                 metadata:
                                   description: |-
-                                    Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                    because Kargo may understand how to interpret some documented, well-known
-                                    top-level keys. Those aside, this metadata is only understood by a
-                                    corresponding Subscriber implementation that created it.
+                                    Metadata is a JSON object containing a mostly opaque collection of artifact
+                                    attributes. (It must be an object. It may not be a list or a scalar value.)
+                                    "Mostly" because Kargo may understand how to interpret some documented,
+                                    well-known top-level keys. Those aside, this metadata is only understood by
+                                    a corresponding Subscriber implementation that created it.
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
@@ -1556,10 +1560,11 @@ spec:
                               type: string
                             metadata:
                               description: |-
-                                Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                because Kargo may understand how to interpret some documented, well-known
-                                top-level keys. Those aside, this metadata is only understood by a
-                                corresponding Subscriber implementation that created it.
+                                Metadata is a JSON object containing a mostly opaque collection of artifact
+                                attributes. (It must be an object. It may not be a list or a scalar value.)
+                                "Mostly" because Kargo may understand how to interpret some documented,
+                                well-known top-level keys. Those aside, this metadata is only understood by
+                                a corresponding Subscriber implementation that created it.
                               x-kubernetes-preserve-unknown-fields: true
                             subscriptionName:
                               description: |-
@@ -1734,10 +1739,11 @@ spec:
                                   type: string
                                 metadata:
                                   description: |-
-                                    Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                    because Kargo may understand how to interpret some documented, well-known
-                                    top-level keys. Those aside, this metadata is only understood by a
-                                    corresponding Subscriber implementation that created it.
+                                    Metadata is a JSON object containing a mostly opaque collection of artifact
+                                    attributes. (It must be an object. It may not be a list or a scalar value.)
+                                    "Mostly" because Kargo may understand how to interpret some documented,
+                                    well-known top-level keys. Those aside, this metadata is only understood by
+                                    a corresponding Subscriber implementation that created it.
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
@@ -1908,10 +1914,11 @@ spec:
                                         type: string
                                       metadata:
                                         description: |-
-                                          Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-                                          because Kargo may understand how to interpret some documented, well-known
-                                          top-level keys. Those aside, this metadata is only understood by a
-                                          corresponding Subscriber implementation that created it.
+                                          Metadata is a JSON object containing a mostly opaque collection of artifact
+                                          attributes. (It must be an object. It may not be a list or a scalar value.)
+                                          "Mostly" because Kargo may understand how to interpret some documented,
+                                          well-known top-level keys. Those aside, this metadata is only understood by
+                                          a corresponding Subscriber implementation that created it.
                                         x-kubernetes-preserve-unknown-fields: true
                                       subscriptionName:
                                         description: |-

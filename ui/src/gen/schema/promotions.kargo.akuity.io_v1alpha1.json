@@ -192,7 +192,7 @@
                     "type": "string"
                   },
                   "metadata": {
-                    "description": "Metadata is a mostly opaque collection of artifact attributes. \"Mostly\"\nbecause Kargo may understand how to interpret some documented, well-known\ntop-level keys. Those aside, this metadata is only understood by a\ncorresponding Subscriber implementation that created it.",
+                    "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known top-level keys. Those aside, this metadata is only understood by\na corresponding Subscriber implementation that created it.",
                     "x-kubernetes-preserve-unknown-fields": true
                   },
                   "subscriptionName": {
@@ -353,7 +353,7 @@
                           "type": "string"
                         },
                         "metadata": {
-                          "description": "Metadata is a mostly opaque collection of artifact attributes. \"Mostly\"\nbecause Kargo may understand how to interpret some documented, well-known\ntop-level keys. Those aside, this metadata is only understood by a\ncorresponding Subscriber implementation that created it.",
+                          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known top-level keys. Those aside, this metadata is only understood by\na corresponding Subscriber implementation that created it.",
                           "x-kubernetes-preserve-unknown-fields": true
                         },
                         "subscriptionName": {

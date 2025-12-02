@@ -307,10 +307,11 @@ export type ArtifactReference = Message<"github.com.akuity.kargo.api.v1alpha1.Ar
   version: string;
 
   /**
-   * Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-   * because Kargo may understand how to interpret some documented, well-known
-   * top-level keys. Those aside, this metadata is only understood by a
-   * corresponding Subscriber implementation that created it.
+   * Metadata is a JSON object containing a mostly opaque collection of artifact
+   * attributes. (It must be an object. It may not be a list or a scalar value.)
+   * "Mostly" because Kargo may understand how to interpret some documented,
+   * well-known top-level keys. Those aside, this metadata is only understood by
+   * a corresponding Subscriber implementation that created it.
    *
    * +optional
    *
@@ -3881,9 +3882,10 @@ export type Subscription = Message<"github.com.akuity.kargo.api.v1alpha1.Subscri
   name: string;
 
   /**
-   * Config is opaque configuration for this subscription. This is only
-   * understood by a corresponding Subscriber implementation for the
-   * ArtifactKind.
+   * Config is a JSON object containing opaque configuration for this
+   * subscription. (It must be an object. It may not be a list or a scalar
+   * value.) This is only understood by a corresponding Subscriber
+   * implementation for the ArtifactType.
    *
    * +optional
    *
