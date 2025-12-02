@@ -694,9 +694,10 @@ type Subscription struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name" protobuf:"bytes,2,opt,name=name"`
-	// Config is opaque configuration for this subscription. This is only
-	// understood by a corresponding Subscriber implementation for the
-	// ArtifactKind.
+	// Config is a JSON object containing opaque configuration for this
+	// subscription. (It must be an object. It may not be a list or a scalar
+	// value.) This is only understood by a corresponding Subscriber
+	// implementation for the ArtifactType.
 	//
 	// +optional
 	Config *apiextensionsv1.JSON `json:"config,omitempty" protobuf:"bytes,3,opt,name=config"`
@@ -914,10 +915,11 @@ type ArtifactReference struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version" protobuf:"bytes,3,opt,name=version"`
-	// Metadata is a mostly opaque collection of artifact attributes. "Mostly"
-	// because Kargo may understand how to interpret some documented, well-known
-	// top-level keys. Those aside, this metadata is only understood by a
-	// corresponding Subscriber implementation that created it.
+	// Metadata is a JSON object containing a mostly opaque collection of artifact
+	// attributes. (It must be an object. It may not be a list or a scalar value.)
+	// "Mostly" because Kargo may understand how to interpret some documented,
+	// well-known top-level keys. Those aside, this metadata is only understood by
+	// a corresponding Subscriber implementation that created it.
 	//
 	// +optional
 	Metadata *apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,opt,name=metadata"`

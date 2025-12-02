@@ -856,8 +856,8 @@ func getArtifactFromFreight(
 			return nil, nil
 		}
 
-		// Unpack details into a map[string]any so they're actually accessible from
-		// within an expression.
+		// artifact.Metadata is just JSON. Unpack it into a map[string]any so it's
+		// easily accessible from within an expression.
 		exprArtifact := expressionFriendlyArtifactReference{
 			ArtifactType:     artifact.ArtifactType,
 			SubscriptionName: artifact.SubscriptionName,
@@ -909,15 +909,14 @@ func getArtifactFromDiscoveredArtifacts(
 			}
 		}
 
-		// Unpack details into a map[string]any so they're actually accessible from
-		// within an expression.
+		// artifact.Metadata is just JSON. Unpack it into a map[string]any so it's
+		// easily accessible from within an expression.
 		exprArtifact := expressionFriendlyArtifactReference{
 			ArtifactType:     artifact.ArtifactType,
 			SubscriptionName: artifact.SubscriptionName,
 			Version:          artifact.Version,
 			Metadata:         map[string]any{},
 		}
-
 		if artifact.Metadata != nil {
 			if err := json.Unmarshal(
 				artifact.Metadata.Raw,
