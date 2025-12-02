@@ -112,8 +112,8 @@ message ArtifactReference {
   // +kubebuilder:validation:MinLength=1
   optional string artifactType = 1;
 
-  // SubscriptionName is the name of the GenericSubscription that discovered
-  // this artifact.
+  // SubscriptionName is the name of the Subscription that discovered this
+  // artifact.
   //
   // +kubebuilder:validation:MinLength=1
   optional string subscriptionName = 2;
@@ -1929,10 +1929,10 @@ message StepExecutionMetadata {
 
 // Subscription represents a subscription to some kind of artifact repository.
 message Subscription {
-  // Kind specifies the kind of subscription this is.
+  // SubscriptionType specifies the kind of subscription this is.
   //
   // +kubebuilder:validation:MinLength=1
-  optional string kind = 1;
+  optional string subscriptionType = 1;
 
   // Name is a unique (with respect to a Warehouse) name used for identifying
   // this subscription.

@@ -583,8 +583,8 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                             subscriptionName:
                               description: |-
-                                SubscriptionName is the name of the GenericSubscription that discovered
-                                this artifact.
+                                SubscriptionName is the name of the Subscription that discovered this
+                                artifact.
                               minLength: 1
                               type: string
                             version:
@@ -761,8 +761,8 @@ spec:
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
-                                    SubscriptionName is the name of the GenericSubscription that discovered
-                                    this artifact.
+                                    SubscriptionName is the name of the Subscription that discovered this
+                                    artifact.
                                   minLength: 1
                                   type: string
                                 version:
@@ -935,8 +935,8 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                       subscriptionName:
                                         description: |-
-                                          SubscriptionName is the name of the GenericSubscription that discovered
-                                          this artifact.
+                                          SubscriptionName is the name of the Subscription that discovered this
+                                          artifact.
                                         minLength: 1
                                         type: string
                                       version:
@@ -1283,8 +1283,8 @@ spec:
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
-                                    SubscriptionName is the name of the GenericSubscription that discovered
-                                    this artifact.
+                                    SubscriptionName is the name of the Subscription that discovered this
+                                    artifact.
                                   minLength: 1
                                   type: string
                                 version:
@@ -1563,8 +1563,8 @@ spec:
                               x-kubernetes-preserve-unknown-fields: true
                             subscriptionName:
                               description: |-
-                                SubscriptionName is the name of the GenericSubscription that discovered
-                                this artifact.
+                                SubscriptionName is the name of the Subscription that discovered this
+                                artifact.
                               minLength: 1
                               type: string
                             version:
@@ -1741,8 +1741,8 @@ spec:
                                   x-kubernetes-preserve-unknown-fields: true
                                 subscriptionName:
                                   description: |-
-                                    SubscriptionName is the name of the GenericSubscription that discovered
-                                    this artifact.
+                                    SubscriptionName is the name of the Subscription that discovered this
+                                    artifact.
                                   minLength: 1
                                   type: string
                                 version:
@@ -1915,8 +1915,8 @@ spec:
                                         x-kubernetes-preserve-unknown-fields: true
                                       subscriptionName:
                                         description: |-
-                                          SubscriptionName is the name of the GenericSubscription that discovered
-                                          this artifact.
+                                          SubscriptionName is the name of the Subscription that discovered this
+                                          artifact.
                                         minLength: 1
                                         type: string
                                       version:

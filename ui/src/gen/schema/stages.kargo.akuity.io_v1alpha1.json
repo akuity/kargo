@@ -444,7 +444,7 @@
                         "x-kubernetes-preserve-unknown-fields": true
                       },
                       "subscriptionName": {
-                        "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                         "minLength": 1,
                         "type": "string"
                       },
@@ -616,7 +616,7 @@
                             "x-kubernetes-preserve-unknown-fields": true
                           },
                           "subscriptionName": {
-                            "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                             "minLength": 1,
                             "type": "string"
                           },
@@ -777,7 +777,7 @@
                                   "x-kubernetes-preserve-unknown-fields": true
                                 },
                                 "subscriptionName": {
-                                  "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                                  "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                                   "minLength": 1,
                                   "type": "string"
                                 },
@@ -1103,7 +1103,7 @@
                             "x-kubernetes-preserve-unknown-fields": true
                           },
                           "subscriptionName": {
-                            "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                             "minLength": 1,
                             "type": "string"
                           },
@@ -1367,7 +1367,7 @@
                         "x-kubernetes-preserve-unknown-fields": true
                       },
                       "subscriptionName": {
-                        "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                         "minLength": 1,
                         "type": "string"
                       },
@@ -1539,7 +1539,7 @@
                             "x-kubernetes-preserve-unknown-fields": true
                           },
                           "subscriptionName": {
-                            "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                             "minLength": 1,
                             "type": "string"
                           },
@@ -1700,7 +1700,7 @@
                                   "x-kubernetes-preserve-unknown-fields": true
                                 },
                                 "subscriptionName": {
-                                  "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthis artifact.",
+                                  "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
                                   "minLength": 1,
                                   "type": "string"
                                 },
