@@ -395,8 +395,8 @@ spec:
                           type: array
                         name:
                           description: |-
-                            SubscriptionName is the name of the GenericSubscription that discovered
-                            these results.
+                            SubscriptionName is the name of the Subscription that discovered these
+                            results.
                           minLength: 1
                           type: string
                       required:

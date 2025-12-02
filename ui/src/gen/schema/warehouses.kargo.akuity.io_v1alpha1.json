@@ -323,7 +323,7 @@
                     "type": "array"
                   },
                   "name": {
-                    "description": "SubscriptionName is the name of the GenericSubscription that discovered\nthese results.",
+                    "description": "SubscriptionName is the name of the Subscription that discovered these\nresults.",
                     "minLength": 1,
                     "type": "string"
                   }

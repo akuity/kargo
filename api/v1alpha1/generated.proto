@@ -501,8 +501,8 @@ message DiscoveredImageReference {
 // DiscoveryResult represents the result of an artifact discovery operation for
 // some subscription.
 message DiscoveryResult {
-  // SubscriptionName is the name of the GenericSubscription that discovered
-  // these results.
+  // SubscriptionName is the name of the Subscription that discovered these
+  // results.
   //
   // +kubebuilder:validation:MinLength=1
   optional string name = 3;

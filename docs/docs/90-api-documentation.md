@@ -1940,7 +1940,7 @@ RawFormat specifies the format for raw resource representation.
  DiscoveryResult represents the result of an artifact discovery operation for some subscription.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered these results.   |
+| name | [string](#string) |  SubscriptionName is the name of the Subscription that discovered these results.   |
 | artifactReferences | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  ArtifactReferences is a list of references to specific versions of an artifact.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-DockerHubWebhookReceiverConfig"></a>

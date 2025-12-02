@@ -1068,8 +1068,8 @@ export const DiscoveredImageReferenceSchema: GenMessage<DiscoveredImageReference
  */
 export type DiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.DiscoveryResult"> & {
   /**
-   * SubscriptionName is the name of the GenericSubscription that discovered
-   * these results.
+   * SubscriptionName is the name of the Subscription that discovered these
+   * results.
    *
    * +kubebuilder:validation:MinLength=1
    *
