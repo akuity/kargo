@@ -567,10 +567,11 @@ spec:
                           description: ArtifactReference is a reference to a specific
                             version of an artifact.
                           properties:
-                            kind:
+                            artifactType:
                               description: |-
-                                Kind specifies the kind of artifact this is. Often it will be a media
-                                type (MIME type) string.
+                                ArtifactType specifies the type of artifact this is. Often, but not always,
+                                it will be the media type (MIME type) of the artifact referenced by this
+                                ArtifactReference.
                               minLength: 1
                               type: string
                             metadata:
@@ -744,10 +745,11 @@ spec:
                               description: ArtifactReference is a reference to a specific
                                 version of an artifact.
                               properties:
-                                kind:
+                                artifactType:
                                   description: |-
-                                    Kind specifies the kind of artifact this is. Often it will be a media
-                                    type (MIME type) string.
+                                    ArtifactType specifies the type of artifact this is. Often, but not always,
+                                    it will be the media type (MIME type) of the artifact referenced by this
+                                    ArtifactReference.
                                   minLength: 1
                                   type: string
                                 metadata:
@@ -917,10 +919,11 @@ spec:
                                     description: ArtifactReference is a reference
                                       to a specific version of an artifact.
                                     properties:
-                                      kind:
+                                      artifactType:
                                         description: |-
-                                          Kind specifies the kind of artifact this is. Often it will be a media
-                                          type (MIME type) string.
+                                          ArtifactType specifies the type of artifact this is. Often, but not always,
+                                          it will be the media type (MIME type) of the artifact referenced by this
+                                          ArtifactReference.
                                         minLength: 1
                                         type: string
                                       metadata:
@@ -1264,10 +1267,11 @@ spec:
                               description: ArtifactReference is a reference to a specific
                                 version of an artifact.
                               properties:
-                                kind:
+                                artifactType:
                                   description: |-
-                                    Kind specifies the kind of artifact this is. Often it will be a media
-                                    type (MIME type) string.
+                                    ArtifactType specifies the type of artifact this is. Often, but not always,
+                                    it will be the media type (MIME type) of the artifact referenced by this
+                                    ArtifactReference.
                                   minLength: 1
                                   type: string
                                 metadata:
@@ -1543,10 +1547,11 @@ spec:
                           description: ArtifactReference is a reference to a specific
                             version of an artifact.
                           properties:
-                            kind:
+                            artifactType:
                               description: |-
-                                Kind specifies the kind of artifact this is. Often it will be a media
-                                type (MIME type) string.
+                                ArtifactType specifies the type of artifact this is. Often, but not always,
+                                it will be the media type (MIME type) of the artifact referenced by this
+                                ArtifactReference.
                               minLength: 1
                               type: string
                             metadata:
@@ -1720,10 +1725,11 @@ spec:
                               description: ArtifactReference is a reference to a specific
                                 version of an artifact.
                               properties:
-                                kind:
+                                artifactType:
                                   description: |-
-                                    Kind specifies the kind of artifact this is. Often it will be a media
-                                    type (MIME type) string.
+                                    ArtifactType specifies the type of artifact this is. Often, but not always,
+                                    it will be the media type (MIME type) of the artifact referenced by this
+                                    ArtifactReference.
                                   minLength: 1
                                   type: string
                                 metadata:
@@ -1893,10 +1899,11 @@ spec:
                                     description: ArtifactReference is a reference
                                       to a specific version of an artifact.
                                     properties:
-                                      kind:
+                                      artifactType:
                                         description: |-
-                                          Kind specifies the kind of artifact this is. Often it will be a media
-                                          type (MIME type) string.
+                                          ArtifactType specifies the type of artifact this is. Often, but not always,
+                                          it will be the media type (MIME type) of the artifact referenced by this
+                                          ArtifactReference.
                                         minLength: 1
                                         type: string
                                       metadata:

@@ -186,8 +186,8 @@
               "items": {
                 "description": "ArtifactReference is a reference to a specific version of an artifact.",
                 "properties": {
-                  "kind": {
-                    "description": "Kind specifies the kind of artifact this is. Often it will be a media\ntype (MIME type) string.",
+                  "artifactType": {
+                    "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
                     "minLength": 1,
                     "type": "string"
                   },
@@ -347,8 +347,8 @@
                     "items": {
                       "description": "ArtifactReference is a reference to a specific version of an artifact.",
                       "properties": {
-                        "kind": {
-                          "description": "Kind specifies the kind of artifact this is. Often it will be a media\ntype (MIME type) string.",
+                        "artifactType": {
+                          "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
                           "minLength": 1,
                           "type": "string"
                         },

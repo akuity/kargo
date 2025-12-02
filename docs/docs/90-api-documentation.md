@@ -1754,7 +1754,7 @@ RawFormat specifies the format for raw resource representation.
  ArtifactReference is a reference to a specific version of an artifact.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| kind | [string](#string) |  Kind specifies the kind of artifact this is. Often it will be a media type (MIME type) string.   |
+| artifactType | [string](#string) |  ArtifactType specifies the type of artifact this is. Often, but not always, it will be the media type (MIME type) of the artifact referenced by this ArtifactReference.   |
 | subscriptionName | [string](#string) |  SubscriptionName is the name of the GenericSubscription that discovered this artifact.   |
 | version | [string](#string) |  Version identifies a specific revision of this artifact.   |
 | metadata | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Metadata is a mostly opaque collection of artifact attributes. "Mostly" because Kargo may understand how to interpret some documented, well-known top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it.  +optional |

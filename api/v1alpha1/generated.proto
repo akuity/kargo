@@ -105,11 +105,12 @@ message ArgoCDAppSyncStatus {
 
 // ArtifactReference is a reference to a specific version of an artifact.
 message ArtifactReference {
-  // Kind specifies the kind of artifact this is. Often it will be a media
-  // type (MIME type) string.
+  // ArtifactType specifies the type of artifact this is. Often, but not always,
+  // it will be the media type (MIME type) of the artifact referenced by this
+  // ArtifactReference.
   //
   // +kubebuilder:validation:MinLength=1
-  optional string kind = 1;
+  optional string artifactType = 1;
 
   // SubscriptionName is the name of the GenericSubscription that discovered
   // this artifact.
