@@ -1859,9 +1859,9 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * value in this field only has any effect when the CommitSelectionStrategy is
    * Lexical, NewestTag, or SemVer. This field is optional.
    *
-   * Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
+   * Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
    * discovery will FAIL if this field is non-empty. This field will be removed
-   * in apiextensionsv1.13.0.
+   * in v1.13.0.
    *
    * +kubebuilder:validation:Optional
    *
@@ -1889,9 +1889,9 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
    * optional.
    *
-   * Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
+   * Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
    * discovery will FAIL if this field is non-empty. This field will be removed
-   * in apiextensionsv1.13.0.
+   * in v1.13.0.
    *
    * +kubebuilder:validation:Optional
    *
@@ -2384,9 +2384,9 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * image tags that are considered in determining the newest version of an
    * image. This field is optional.
    *
-   * Deprecated: Use AllowTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
+   * Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
    * discovery will FAIL if this field is non-empty. This field will be removed
-   * in apiextensionsv1.13.0.
+   * in v1.13.0.
    *
    * +kubebuilder:validation:Optional
    *
@@ -2410,9 +2410,9 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * newest version of an image. No regular expressions or glob patterns are
    * supported yet. This field is optional.
    *
-   * Deprecated: Use IgnoreTagsRegexes instead. Beginning in apiextensionsv1.11.0, artifact
+   * Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
    * discovery will FAIL if this field is non-empty. This field will be removed
-   * in apiextensionsv1.13.0.
+   * in v1.13.0.
    *
    * +kubebuilder:validation:Optional
    *
