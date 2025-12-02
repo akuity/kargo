@@ -260,8 +260,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 				InternalSubscriptions: []RepoSubscription{
 					{
 						Subscription: &Subscription{
-							Kind: "s3",
-							Name: "my-bucket",
+							SubscriptionType: "s3",
+							Name:             "my-bucket",
 						},
 					},
 				},
@@ -269,7 +269,7 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription)
-				require.Equal(t, original.InternalSubscriptions[0].Subscription.Kind, roundtripped.InternalSubscriptions[0].Subscription.Kind)
+				require.Equal(t, original.InternalSubscriptions[0].Subscription.SubscriptionType, roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType)
 				require.Equal(t, original.InternalSubscriptions[0].Subscription.Name, roundtripped.InternalSubscriptions[0].Subscription.Name)
 			},
 		},
@@ -295,8 +295,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 					{
 						Subscription: &Subscription{
-							Kind: "custom",
-							Name: "custom-sub",
+							SubscriptionType: "custom",
+							Name:             "custom-sub",
 						},
 					},
 				},
@@ -315,8 +315,8 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 				InternalSubscriptions: []RepoSubscription{
 					{
 						Subscription: &Subscription{
-							Kind: "http",
-							Name: "api-endpoint",
+							SubscriptionType: "http",
+							Name:             "api-endpoint",
 							Config: &apiextensionsv1.JSON{
 								Raw: []byte(`{"url":"https://api.example.com","interval":"1h"}`),
 							},
@@ -327,7 +327,7 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription)
-				require.Equal(t, "http", roundtripped.InternalSubscriptions[0].Subscription.Kind)
+				require.Equal(t, "http", roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription.Config)
 			},
 		},
@@ -485,8 +485,8 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 				InternalSubscriptions: []RepoSubscription{
 					{
 						Subscription: &Subscription{
-							Kind: "s3",
-							Name: "my-bucket",
+							SubscriptionType: "s3",
+							Name:             "my-bucket",
 						},
 					},
 				},

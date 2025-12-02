@@ -39,7 +39,7 @@ func init() {
 				sub kargoapi.RepoSubscription,
 			) (bool, error) {
 				return sub.Subscription != nil &&
-					sub.Subscription.Kind == subscriberTypeDemo, nil
+					sub.Subscription.SubscriptionType == subscriberTypeDemo, nil
 			},
 			// This factory function returns a single, stateful, but concurrency-safe
 			// subscriber that's initialized just once the first time the factory

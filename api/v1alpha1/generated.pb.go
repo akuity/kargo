@@ -7493,9 +7493,9 @@ func (m *Subscription) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Name)))
 	i--
 	dAtA[i] = 0x12
-	i -= len(m.Kind)
-	copy(dAtA[i:], m.Kind)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Kind)))
+	i -= len(m.SubscriptionType)
+	copy(dAtA[i:], m.SubscriptionType)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.SubscriptionType)))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -9758,7 +9758,7 @@ func (m *Subscription) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Kind)
+	l = len(m.SubscriptionType)
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.Name)
 	n += 1 + l + sovGenerated(uint64(l))
@@ -11322,7 +11322,7 @@ func (this *Subscription) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Subscription{`,
-		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Kind:` + fmt.Sprintf("%v", this.SubscriptionType) + `,`,
 		`Name:` + fmt.Sprintf("%v", this.Name) + `,`,
 		`Config:` + strings.Replace(fmt.Sprintf("%v", this.Config), "JSON", "v11.JSON", 1) + `,`,
 		`DiscoveryLimit:` + fmt.Sprintf("%v", this.DiscoveryLimit) + `,`,
@@ -25063,7 +25063,7 @@ func (m *Subscription) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Kind = string(dAtA[iNdEx:postIndex])
+			m.SubscriptionType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

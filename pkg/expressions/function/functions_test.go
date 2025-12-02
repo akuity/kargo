@@ -926,8 +926,8 @@ func Test_getArtifactFromFreight(t *testing.T) {
 					Spec: kargoapi.WarehouseSpec{
 						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Subscription: &kargoapi.Subscription{
-								Kind: "fake-kind",
-								Name: "fake-sub",
+								SubscriptionType: "fake-type",
+								Name:             "fake-sub",
 							},
 						}},
 					},

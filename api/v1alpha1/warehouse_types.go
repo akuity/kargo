@@ -137,7 +137,7 @@ type WarehouseSpec struct {
 // JSON from the Subscriptions field into typed RepoSubscription objects in
 // InternalSubscriptions. Any JSON object with a top-level key other than "git",
 // "image", or "chart" is unpacked into a (generic) Subscription with the key as
-// the Kind.
+// the ArtifactType.
 func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 	type warehouseSpecAlias WarehouseSpec
 	aux := &struct {
@@ -192,13 +192,13 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 					return err
 				}
 			} else {
-				// Generic subscription - unpack with key as Kind
-				var genericSub Subscription
-				if err := json.Unmarshal(rawMap[key], &genericSub); err != nil {
+				// Generic subscription - unpack with key as ArtifactType
+				var sub Subscription
+				if err := json.Unmarshal(rawMap[key], &sub); err != nil {
 					return err
 				}
-				genericSub.Kind = key
-				w.InternalSubscriptions[i].Subscription = &genericSub
+				sub.SubscriptionType = key
+				w.InternalSubscriptions[i].Subscription = &sub
 			}
 		}
 	}
@@ -253,7 +253,7 @@ func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
 
 			// If this is a generic Subscription, wrap it with its Kind as the key
 			if sub.Subscription != nil {
-				kind := sub.Subscription.Kind
+				kind := sub.Subscription.SubscriptionType
 				if kind == "" {
 					return nil, fmt.Errorf("subscription at index %d has empty Kind field", i)
 				}
@@ -685,10 +685,10 @@ type ChartSubscription struct {
 
 // Subscription represents a subscription to some kind of artifact repository.
 type Subscription struct {
-	// Kind specifies the kind of subscription this is.
+	// SubscriptionType specifies the kind of subscription this is.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Kind string `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+	SubscriptionType string `json:"subscriptionType" protobuf:"bytes,1,opt,name=subscriptionType"`
 	// Name is a unique (with respect to a Warehouse) name used for identifying
 	// this subscription.
 	//
@@ -905,8 +905,8 @@ type ArtifactReference struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	ArtifactType string `json:"artifactType,omitempty" protobuf:"bytes,1,opt,name=artifactType"`
-	// SubscriptionName is the name of the GenericSubscription that discovered
-	// this artifact.
+	// SubscriptionName is the name of the Subscription that discovered this
+	// artifact.
 	//
 	// +kubebuilder:validation:MinLength=1
 	SubscriptionName string `json:"subscriptionName" protobuf:"bytes,2,opt,name=subscriptionName"`
@@ -924,7 +924,7 @@ type ArtifactReference struct {
 }
 
 // DeepEquals returns a bool indicating whether the receiver deep-equals the
-// provided GenericArtifactReference. I.e., all relevant fields must be equal.
+// provided ArtifactReference. I.e., all relevant fields must be equal.
 func (g *ArtifactReference) DeepEquals(
 	other *ArtifactReference,
 ) bool {

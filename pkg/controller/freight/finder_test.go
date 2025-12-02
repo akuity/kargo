@@ -863,7 +863,7 @@ func TestFindArtifact(t *testing.T) {
 	err := kargoapi.AddToScheme(scheme)
 	require.NoError(t, err)
 
-	const testSubKind = "fake-kind"
+	const testSubType = "fake-type"
 	const testSubName = "fake-sub"
 
 	testOrigin1 := kargoapi.FreightOrigin{
@@ -994,8 +994,8 @@ func TestFindArtifact(t *testing.T) {
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Subscription: &kargoapi.Subscription{
-									Kind: testSubKind,
-									Name: testSubName,
+									SubscriptionType: testSubType,
+									Name:             testSubName,
 								},
 							}},
 						},
@@ -1008,8 +1008,8 @@ func TestFindArtifact(t *testing.T) {
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Subscription: &kargoapi.Subscription{
-									Kind: testSubKind,
-									Name: testSubName,
+									SubscriptionType: testSubType,
+									Name:             testSubName,
 								},
 							}},
 						},
@@ -1053,8 +1053,8 @@ func TestFindArtifact(t *testing.T) {
 						Spec: kargoapi.WarehouseSpec{
 							InternalSubscriptions: []kargoapi.RepoSubscription{{
 								Subscription: &kargoapi.Subscription{
-									Kind: testSubKind,
-									Name: testSubName,
+									SubscriptionType: testSubType,
+									Name:             testSubName,
 								},
 							}},
 						},
