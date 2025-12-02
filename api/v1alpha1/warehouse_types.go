@@ -899,11 +899,12 @@ type DiscoveryResult struct {
 
 // ArtifactReference is a reference to a specific version of an artifact.
 type ArtifactReference struct {
-	// Kind specifies the kind of artifact this is. Often it will be a media
-	// type (MIME type) string.
+	// ArtifactType specifies the type of artifact this is. Often, but not always,
+	// it will be the media type (MIME type) of the artifact referenced by this
+	// ArtifactReference.
 	//
 	// +kubebuilder:validation:MinLength=1
-	Kind string `json:"kind,omitempty" protobuf:"bytes,1,opt,name=kind"`
+	ArtifactType string `json:"artifactType,omitempty" protobuf:"bytes,1,opt,name=artifactType"`
 	// SubscriptionName is the name of the GenericSubscription that discovered
 	// this artifact.
 	//

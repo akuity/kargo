@@ -3461,9 +3461,9 @@ func (m *ArtifactReference) MarshalToSizedBuffer(dAtA []byte) (int, error) {
 	i = encodeVarintGenerated(dAtA, i, uint64(len(m.SubscriptionName)))
 	i--
 	dAtA[i] = 0x12
-	i -= len(m.Kind)
-	copy(dAtA[i:], m.Kind)
-	i = encodeVarintGenerated(dAtA, i, uint64(len(m.Kind)))
+	i -= len(m.ArtifactType)
+	copy(dAtA[i:], m.ArtifactType)
+	i = encodeVarintGenerated(dAtA, i, uint64(len(m.ArtifactType)))
 	i--
 	dAtA[i] = 0xa
 	return len(dAtA) - i, nil
@@ -8275,7 +8275,7 @@ func (m *ArtifactReference) Size() (n int) {
 	}
 	var l int
 	_ = l
-	l = len(m.Kind)
+	l = len(m.ArtifactType)
 	n += 1 + l + sovGenerated(uint64(l))
 	l = len(m.SubscriptionName)
 	n += 1 + l + sovGenerated(uint64(l))
@@ -10117,7 +10117,7 @@ func (this *ArtifactReference) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&ArtifactReference{`,
-		`Kind:` + fmt.Sprintf("%v", this.Kind) + `,`,
+		`Kind:` + fmt.Sprintf("%v", this.ArtifactType) + `,`,
 		`SubscriptionName:` + fmt.Sprintf("%v", this.SubscriptionName) + `,`,
 		`Version:` + fmt.Sprintf("%v", this.Version) + `,`,
 		`Metadata:` + strings.Replace(fmt.Sprintf("%v", this.Metadata), "JSON", "v11.JSON", 1) + `,`,
@@ -12757,7 +12757,7 @@ func (m *ArtifactReference) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Kind = string(dAtA[iNdEx:postIndex])
+			m.ArtifactType = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {

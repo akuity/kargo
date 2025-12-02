@@ -17,7 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/subscription"
 )
 
-const subscriberKindDemo = "demo"
+const subscriberTypeDemo = "demo"
 
 func init() {
 	// Register a demo credentials provider.
@@ -39,7 +39,7 @@ func init() {
 				sub kargoapi.RepoSubscription,
 			) (bool, error) {
 				return sub.Subscription != nil &&
-					sub.Subscription.Kind == subscriberKindDemo, nil
+					sub.Subscription.Kind == subscriberTypeDemo, nil
 			},
 			// This factory function returns a single, stateful, but concurrency-safe
 			// subscriber that's initialized just once the first time the factory
@@ -69,7 +69,7 @@ func (c *credsProvider) Supports(
 	_ context.Context,
 	req credentials.Request,
 ) (bool, error) {
-	return req.Type == subscriberKindDemo, nil
+	return req.Type == subscriberTypeDemo, nil
 }
 
 // GetCredentials implements credentials.Provider.
@@ -114,12 +114,12 @@ func (s *subscriber) DiscoverArtifacts(
 ) (any, error) {
 	// We're not actually doing anything with these dummy credentials, except
 	// proving that we can find them.
-	_, err := s.credsDB.Get(ctx, project, subscriberKindDemo, sub.Subscription.Name)
+	_, err := s.credsDB.Get(ctx, project, subscriberTypeDemo, sub.Subscription.Name)
 	if err != nil {
 		if !component.IsNotFoundError(err) {
 			return nil, fmt.Errorf(
 				"error finding subscriber for subscription type %q",
-				subscriberKindDemo,
+				subscriberTypeDemo,
 			)
 		}
 	}
@@ -167,7 +167,7 @@ func (s *subscriber) DiscoverArtifacts(
 
 	// Grow the internal collection of artifacts.
 	s.artifacts = slices.Insert(s.artifacts, 0, kargoapi.ArtifactReference{
-		Kind:             subscriberKindDemo,
+		ArtifactType:     subscriberTypeDemo,
 		SubscriptionName: sub.Subscription.Name,
 		Version:          s.latestVersion.String(),
 		// The details are opaque to the rest of Kargo in the same way the
