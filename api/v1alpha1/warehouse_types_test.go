@@ -194,27 +194,41 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 	tests := []struct {
 		name      string
 		spec      *WarehouseSpec
-		assertion func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec)
+		assertion func(
+			t *testing.T,
+			original *WarehouseSpec,
+			roundtripped *WarehouseSpec,
+		)
 	}{
 		{
 			name: "single Git subscription",
 			spec: &WarehouseSpec{
 				Shard:    "test-shard",
 				Interval: metav1.Duration{Duration: 5 * time.Minute},
-				InternalSubscriptions: []RepoSubscription{
-					{
-						Git: &GitSubscription{
-							RepoURL: "https://github.com/example/repo.git",
-							Branch:  "main",
-						},
+				InternalSubscriptions: []RepoSubscription{{
+					Git: &GitSubscription{
+						RepoURL: "https://github.com/example/repo.git",
+						Branch:  "main",
 					},
-				},
+				}},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				original *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Git)
-				require.Equal(t, original.InternalSubscriptions[0].Git.RepoURL, roundtripped.InternalSubscriptions[0].Git.RepoURL)
-				require.Equal(t, original.InternalSubscriptions[0].Git.Branch, roundtripped.InternalSubscriptions[0].Git.Branch)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Git.RepoURL,
+					roundtripped.InternalSubscriptions[0].Git.RepoURL,
+				)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Git.Branch,
+					roundtripped.InternalSubscriptions[0].Git.Branch,
+				)
 			},
 		},
 		{
@@ -229,10 +243,18 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				original *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Image)
-				require.Equal(t, original.InternalSubscriptions[0].Image.RepoURL, roundtripped.InternalSubscriptions[0].Image.RepoURL)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Image.RepoURL,
+					roundtripped.InternalSubscriptions[0].Image.RepoURL,
+				)
 			},
 		},
 		{
@@ -247,11 +269,23 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				original *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Chart)
-				require.Equal(t, original.InternalSubscriptions[0].Chart.RepoURL, roundtripped.InternalSubscriptions[0].Chart.RepoURL)
-				require.Equal(t, original.InternalSubscriptions[0].Chart.Name, roundtripped.InternalSubscriptions[0].Chart.Name)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Chart.RepoURL,
+					roundtripped.InternalSubscriptions[0].Chart.RepoURL,
+				)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Chart.Name,
+					roundtripped.InternalSubscriptions[0].Chart.Name,
+				)
 			},
 		},
 		{
@@ -266,11 +300,23 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				original *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription)
-				require.Equal(t, original.InternalSubscriptions[0].Subscription.SubscriptionType, roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType)
-				require.Equal(t, original.InternalSubscriptions[0].Subscription.Name, roundtripped.InternalSubscriptions[0].Subscription.Name)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Subscription.SubscriptionType,
+					roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType,
+				)
+				require.Equal(
+					t,
+					original.InternalSubscriptions[0].Subscription.Name,
+					roundtripped.InternalSubscriptions[0].Subscription.Name,
+				)
 			},
 		},
 		{
@@ -301,7 +347,11 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				_ *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 4)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Git)
 				require.NotNil(t, roundtripped.InternalSubscriptions[1].Image)
@@ -324,11 +374,22 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 					},
 				},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				_ *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Len(t, roundtripped.InternalSubscriptions, 1)
 				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription)
-				require.Equal(t, "http", roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType)
-				require.NotNil(t, roundtripped.InternalSubscriptions[0].Subscription.Config)
+				require.Equal(
+					t,
+					"http",
+					roundtripped.InternalSubscriptions[0].Subscription.SubscriptionType,
+				)
+				require.NotNil(
+					t,
+					roundtripped.InternalSubscriptions[0].Subscription.Config,
+				)
 			},
 		},
 		{
@@ -336,7 +397,11 @@ func TestWarehouseSpecMarshalUnmarshal(t *testing.T) {
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{},
 			},
-			assertion: func(t *testing.T, original *WarehouseSpec, roundtripped *WarehouseSpec) {
+			assertion: func(
+				t *testing.T,
+				_ *WarehouseSpec,
+				roundtripped *WarehouseSpec,
+			) {
 				require.Empty(t, roundtripped.InternalSubscriptions)
 				require.Empty(t, roundtripped.Subscriptions)
 			},
@@ -388,7 +453,8 @@ func TestWarehouseSpecUnmarshalValidation(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "multiple subscriptions",
+			name: "multiple subscriptions",
+			// nolint: lll
 			jsonData:    `{"subscriptions":[{"git":{"repoURL":"https://github.com/example/repo.git"}},{"image":{"repoURL":"nginx"}},{"s3":{"kind":"s3","name":"bucket"}}]}`,
 			expectError: false,
 		},
@@ -399,7 +465,8 @@ func TestWarehouseSpecUnmarshalValidation(t *testing.T) {
 			errorMsg:    "must be an object with exactly one top-level field",
 		},
 		{
-			name:        "invalid subscription with multiple fields",
+			name: "invalid subscription with multiple fields",
+			// nolint: lll
 			jsonData:    `{"subscriptions":[{"git":{"repoURL":"https://github.com/example/repo.git"},"image":{"repoURL":"nginx"}}]}`,
 			expectError: true,
 			errorMsg:    "must be an object with exactly one top-level field",
