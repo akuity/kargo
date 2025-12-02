@@ -239,8 +239,8 @@ func ArtifactFromFreight(
 	return expr.Function(
 		"artifactFrom",
 		getArtifactFromFreight(ctx, c, project, freightReqs, freightRefs),
-		new(func(name string, origin kargoapi.FreightOrigin) expressionFriendlyGenericArtifact),
-		new(func(name string) expressionFriendlyGenericArtifact),
+		new(func(name string, origin kargoapi.FreightOrigin) expressionFriendlyArtifactReference),
+		new(func(name string) expressionFriendlyArtifactReference),
 	)
 }
 
@@ -256,7 +256,7 @@ func ArtifactFromDiscoveredArtifacts(
 	return expr.Function(
 		"artifactFrom",
 		getArtifactFromDiscoveredArtifacts(artifacts),
-		new(func(name string) expressionFriendlyGenericArtifact),
+		new(func(name string) expressionFriendlyArtifactReference),
 	)
 }
 
@@ -850,7 +850,7 @@ func getArtifactFromFreight(
 			subName,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("error finding artifact for subscription %s: %w", subName, err)
+			return nil, fmt.Errorf("error finding artifact from subscription %s: %w", subName, err)
 		}
 		if artifact == nil {
 			return nil, nil
@@ -858,18 +858,19 @@ func getArtifactFromFreight(
 
 		// Unpack details into a map[string]any so they're actually accessible from
 		// within an expression.
-		exprArtifact := expressionFriendlyGenericArtifact{
+		exprArtifact := expressionFriendlyArtifactReference{
+			ArtifactType:     artifact.ArtifactType,
 			SubscriptionName: artifact.SubscriptionName,
 			Version:          artifact.Version,
-			Details:          map[string]any{},
+			Metadata:         map[string]any{},
 		}
 		if artifact.Metadata != nil {
 			if err := json.Unmarshal(
 				artifact.Metadata.Raw,
-				&exprArtifact.Details,
+				&exprArtifact.Metadata,
 			); err != nil {
 				return nil, fmt.Errorf(
-					"error unmarshaling artifact details for subscription %s: %w",
+					"error unmarshaling metadata for artifact from subscription %s: %w",
 					subName, err,
 				)
 			}
@@ -910,16 +911,17 @@ func getArtifactFromDiscoveredArtifacts(
 
 		// Unpack details into a map[string]any so they're actually accessible from
 		// within an expression.
-		exprArtifact := expressionFriendlyGenericArtifact{
+		exprArtifact := expressionFriendlyArtifactReference{
+			ArtifactType:     artifact.ArtifactType,
 			SubscriptionName: artifact.SubscriptionName,
 			Version:          artifact.Version,
-			Details:          map[string]any{},
+			Metadata:         map[string]any{},
 		}
 
 		if artifact.Metadata != nil {
 			if err := json.Unmarshal(
 				artifact.Metadata.Raw,
-				&exprArtifact.Details,
+				&exprArtifact.Metadata,
 			); err != nil {
 				return nil, fmt.Errorf(
 					"error unmarshaling artifact details for subscription %s: %w",
@@ -1169,13 +1171,14 @@ func getCacheKey(prefix, project, name string) string {
 	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
 }
 
-// expressionFriendlyGenericArtifact exists because the Details field of an
-// actual kargoapi.GenericArtifactReference is of type *apiextensionsv1.JSON
-// and its contents are not easy to access within an expression. This similar
-// type has a Details field of type map[string]any instead, which IS easy to
-// access within an expression.
-type expressionFriendlyGenericArtifact struct {
+// expressionFriendlyArtifactReference exists because the Metadata field of an
+// actual kargoapi.ArtifactReference is of type *apiextensionsv1.JSON and its
+// contents are not easy to access within an expression. This similar type has a
+// Metadata field of type map[string]any instead, which IS easy to access within
+// an expression.
+type expressionFriendlyArtifactReference struct {
+	ArtifactType     string
 	SubscriptionName string
 	Version          string
-	Details          map[string]any
+	Metadata         map[string]any
 }

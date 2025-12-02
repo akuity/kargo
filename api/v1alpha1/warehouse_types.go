@@ -208,7 +208,7 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON marshals the WarehouseSpec to JSON, converting the
 // InternalSubscriptions slice into JSON in the Subscriptions field. For
-// GenericSubscription objects, the Kind field is used as the top-level key.
+// Subscription objects, the Kind field is used as the top-level key.
 func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
 	type warehouseSpecAlias WarehouseSpec
 
@@ -885,8 +885,8 @@ type ChartDiscoveryResult struct {
 // DiscoveryResult represents the result of an artifact discovery operation for
 // some subscription.
 type DiscoveryResult struct {
-	// SubscriptionName is the name of the GenericSubscription that discovered
-	// these results.
+	// SubscriptionName is the name of the Subscription that discovered these
+	// results.
 	//
 	// +kubebuilder:validation:MinLength=1
 	SubscriptionName string `json:"name" protobuf:"bytes,3,opt,name=name"`

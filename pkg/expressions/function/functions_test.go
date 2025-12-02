@@ -952,7 +952,7 @@ func Test_getArtifactFromFreight(t *testing.T) {
 			args: []any{"fake-sub"},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
 				assert.True(t, ok)
 				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
 				assert.Equal(t, "fake-version", artifact.Version)
@@ -982,7 +982,7 @@ func Test_getArtifactFromFreight(t *testing.T) {
 			}},
 			assertions: func(t *testing.T, result any, err error) {
 				assert.NoError(t, err)
-				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
 				assert.True(t, ok)
 				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
 				assert.Equal(t, "fake-version", artifact.Version)
@@ -1086,7 +1086,7 @@ func Test_getArtifactFromDiscoveredArtifacts(t *testing.T) {
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.NotNil(t, result)
-				artifact, ok := result.(expressionFriendlyGenericArtifact)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
 				require.True(t, ok)
 				require.Equal(t, "v1.0.0", artifact.Version)
 			},
