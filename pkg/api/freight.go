@@ -18,7 +18,7 @@ import (
 // GenerateFreightID deterministically calculates a piece of Freight's ID based
 // on its contents and returns it.
 func GenerateFreightID(f *kargoapi.Freight) string {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
+	size := len(f.Commits) + len(f.Images) + len(f.Charts) + len(f.Artifacts)
 	hashParts := make([]string, 0, size)
 	for _, commit := range f.Commits {
 		hashParts = append(hashParts, commitHashPart(commit))
