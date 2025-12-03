@@ -14,21 +14,19 @@ import (
 	"github.com/akuity/kargo/pkg/expressions"
 )
 
-func listTargetObjects(
+func (g *genericWebhookReceiver) listTargetObjects(
 	ctx context.Context,
-	c client.Client,
-	project string,
 	target kargoapi.GenericWebhookTarget,
 	actionEnv map[string]any,
 ) ([]client.Object, error) {
-	listOpts, err := buildListOptionsForTarget(project, target, actionEnv)
+	listOpts, err := buildListOptionsForTarget(g.project, target, actionEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build list options: %w", err)
 	}
 	switch target.Kind {
 	case kargoapi.GenericWebhookTargetKindWarehouse:
-		warehouses := &kargoapi.WarehouseList{}
-		if err := c.List(ctx, warehouses, listOpts...); err != nil {
+		warehouses := new(kargoapi.WarehouseList)
+		if err := g.client.List(ctx, warehouses, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
 		}
 		if target.Name == "" {

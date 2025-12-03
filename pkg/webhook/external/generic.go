@@ -104,14 +104,12 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 			actionResults[i].ConditionResult.Satisfied = satisfied
 			if !satisfied {
-				aLogger.Info("condition not satisfied; skipping action")
+				aLogger.Debug("condition not satisfied; skipping action")
 				continue
 			}
 
-			actionResults[i].TargetResults = handleAction(
+			actionResults[i].TargetResults = g.handleAction(
 				logging.ContextWithLogger(ctx, aLogger),
-				g.client,
-				g.project,
 				newActionEnv(action.Parameters, baseEnv),
 				action,
 			)

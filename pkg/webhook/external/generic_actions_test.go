@@ -319,10 +319,14 @@ func TestHandleRefreshAction(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.assertions(t, handleAction(
+			g := &genericWebhookReceiver{
+				baseWebhookReceiver: &baseWebhookReceiver{
+					client:  tt.client,
+					project: tt.project,
+				},
+			}
+			tt.assertions(t, g.handleAction(
 				t.Context(),
-				tt.client,
-				tt.project,
 				tt.actionEnv,
 				kargoapi.GenericWebhookAction{
 					Kind:    kargoapi.GenericWebhookActionKindRefresh,

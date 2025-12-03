@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"maps"
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -49,25 +47,21 @@ func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]a
 	return actionEnv
 }
 
-func handleAction(
+func (g *genericWebhookReceiver) handleAction(
 	ctx context.Context,
-	c client.Client,
-	project string,
-	actionEnv map[string]any,
+	env map[string]any,
 	action kargoapi.GenericWebhookAction,
 ) []targetResult {
 	var targetResults []targetResult
 	switch action.Kind {
 	case kargoapi.GenericWebhookActionKindRefresh:
-		targetResults = handleRefreshAction(ctx, c, project, actionEnv, action)
+		targetResults = g.handleRefreshAction(ctx, env, action)
 	}
 	return targetResults
 }
 
-func handleRefreshAction(
+func (g *genericWebhookReceiver) handleRefreshAction(
 	ctx context.Context,
-	c client.Client,
-	project string,
 	actionEnv map[string]any,
 	action kargoapi.GenericWebhookAction,
 ) []targetResult {
@@ -83,13 +77,13 @@ func handleRefreshAction(
 			Name: target.Name,
 		}
 		tCtx := logging.ContextWithLogger(ctx, tLogger)
-		objects, err := listTargetObjects(tCtx, c, project, target, actionEnv)
+		objects, err := g.listTargetObjects(tCtx, target, actionEnv)
 		if err != nil {
 			tLogger.Error(err, "failed to list objects for target")
 			targetResults[i].ListError = fmt.Errorf("failed to list target objects: %w", err)
 			continue
 		}
-		targetResults[i].RefreshResults = refreshObjects(tCtx, c, objects)
+		targetResults[i].RefreshResults = refreshObjects(tCtx, g.client, objects)
 	}
 	return targetResults
 }
