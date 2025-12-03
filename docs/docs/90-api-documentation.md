@@ -1387,6 +1387,24 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
 
+<a name="akuity-io-kargo-service-v1alpha1-RefreshRequest"></a>
+
+### RefreshRequest
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
+| name | [string](#string) |  name is the name of the object to refresh. leave blank if refreshing a project or cluster config. |
+| kind | [string](#string) |  kind is the kind of object to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.). |
+
+<a name="akuity-io-kargo-service-v1alpha1-RefreshResponse"></a>
+
+### RefreshResponse
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| object | [google.protobuf.Any](#google-protobuf-Any) |   |
+
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
 
 ### RefreshStageRequest
