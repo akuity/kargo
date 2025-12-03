@@ -74,11 +74,6 @@ func refreshWarehouses(
 
 		for _, wh := range ws.Items {
 			whKey := client.ObjectKeyFromObject(&wh)
-			whLogger := logger.WithValues(
-				"namespace", whKey.Namespace,
-				"name", whKey.Name,
-			)
-
 			if _, alreadyRefreshing := toRefresh[whKey]; alreadyRefreshing {
 				continue
 			}
@@ -86,7 +81,11 @@ func refreshWarehouses(
 			if len(qualifiers) > 0 {
 				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
 				if err != nil {
-					whLogger.Error(err, "failed to evaluate if warehouse needs refresh")
+					logger.Error(
+						err,
+						"failed to evaluate if warehouse needs refresh",
+						"warehouse", wh.Name,
+					)
 					xhttp.WriteErrorJSON(w, err)
 					return
 				}
@@ -102,10 +101,10 @@ func refreshWarehouses(
 	logger.Debug("found Warehouses to refresh", "count", len(toRefresh))
 
 	var failures int
-	for whKey, wh := range toRefresh {
+	for _, wh := range toRefresh {
 		whLogger := logger.WithValues(
-			"namespace", whKey.Namespace,
-			"name", whKey.Name,
+			"namespace", wh.Namespace,
+			"name", wh.Name,
 		)
 		if err := api.RefreshObject(ctx, c, wh); err != nil {
 			failures++
