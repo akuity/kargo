@@ -13,6 +13,7 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) RefreshResource(
@@ -24,7 +25,8 @@ func (s *server) RefreshResource(
 		return nil, err
 	}
 
-	if err = api.RefreshObject(ctx, s.client.InternalClient(), o); err != nil {
+	c := s.client.InternalClient()
+	if err = api.RefreshObject(ctx, c, o); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nil, connect.NewError(
 				connect.CodeNotFound,
@@ -37,7 +39,7 @@ func (s *server) RefreshResource(
 	// If we're dealing with a stage and there is a current promotion then refresh it too.
 	stage, ok := o.(*kargoapi.Stage)
 	if ok && stage.Status.CurrentPromotion != nil {
-		err = api.RefreshObject(ctx, s.client.InternalClient(), &kargoapi.Promotion{
+		err = api.RefreshObject(ctx, c, &kargoapi.Promotion{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: stage.Namespace,
 				Name:      stage.Status.CurrentPromotion.Name,
@@ -59,6 +61,8 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	case "ClusterConfig":
 		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
 	case "ProjectConfig":
+		l := logging.LoggerFromContext(ctx)
+		l.Info("checking project metadata", "namespace", om.Namespace, "name", om.Name)
 		return &kargoapi.ProjectConfig{ObjectMeta: *om}, nil
 	case "Warehouse":
 		return &kargoapi.Warehouse{ObjectMeta: *om}, nil

@@ -114,13 +114,6 @@ export const getClusterConfig = KargoService.method.getClusterConfig;
 export const deleteClusterConfig = KargoService.method.deleteClusterConfig;
 
 /**
- * RefreshClusterConfig triggers a refresh of cluster configuration.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig
- */
-export const refreshClusterConfig = KargoService.method.refreshClusterConfig;
-
-/**
  * ListPromotions retrieves all promotions, optionally filtered by stage.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListPromotions
@@ -175,13 +168,6 @@ export const getProjectConfig = KargoService.method.getProjectConfig;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig
  */
 export const deleteProjectConfig = KargoService.method.deleteProjectConfig;
-
-/**
- * RefreshProjectConfig triggers a refresh of project configuration.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig
- */
-export const refreshProjectConfig = KargoService.method.refreshProjectConfig;
 
 /**
  * ApproveFreight marks freight as approved for promotion to a specific stage.

@@ -105,7 +105,7 @@ func TestRefreshResource(t *testing.T) {
 				require.ErrorContainsf(t, err, "project not found", "")
 			},
 		},
-		"non-existing warehouse": {
+		"resource not found": {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
@@ -244,6 +244,35 @@ func TestRefreshResource(t *testing.T) {
 				// Assume it doesn't take 3 seconds to run this unit test.
 				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
 				require.Equal(t, api.ClusterConfigName, cc.Name)
+			},
+		},
+		"project config": {
+			kClient: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.ProjectConfig{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "kargo-demo",
+							Name:      "kargo-demo",
+						},
+					},
+				).
+				Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project: "kargo-demo",
+				Kind:    "ProjectConfig",
+			},
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.NoError(t, err)
+				var pc kargoapi.ProjectConfig
+				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &pc))
+				annotation := pc.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+				refreshTime, err := time.Parse(time.RFC3339, annotation)
+				require.NoError(t, err)
+				// Make sure we set timestamp is close to now
+				// Assume it doesn't take 3 seconds to run this unit test.
+				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
+				require.Equal(t, "kargo-demo", pc.Namespace)
 			},
 		},
 	}

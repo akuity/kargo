@@ -69,8 +69,6 @@ service KargoService {
   rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
   // WatchClusterConfig provides streaming updates for cluster configuration changes.
   rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
-  // RefreshClusterConfig triggers a refresh of cluster configuration.
-  rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
 
   /* Promotion APIs */
 
@@ -101,8 +99,6 @@ service KargoService {
   rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
   // WatchProjectConfig provides streaming updates for project configuration changes.
   rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
-  // RefreshProjectConfig triggers a refresh of project configuration.
-  rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -607,10 +603,12 @@ message WatchClusterConfigResponse {
   string type = 2; // ADDED / MODIFIED / DELETED
 }
 
+// DEPRECATED: Do not use.
 message RefreshClusterConfigRequest {
   /* explicitly empty */
 }
 
+// DEPRECATED: Do not use.
 message RefreshClusterConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
 }
@@ -792,12 +790,14 @@ message WatchProjectConfigResponse {
   string type = 2;
 }
 
+// Deprecated: Do not use.
 // RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 message RefreshProjectConfigRequest {
   // project is the name of the project to refresh configuration for.
   string project = 1;
 }
 
+// Deprecated: Do not use.
 // RefreshProjectConfigResponse contains the refreshed project configuration.
 message RefreshProjectConfigResponse {
   // project_config is the refreshed ProjectConfig object.
