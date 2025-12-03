@@ -25,6 +25,12 @@ func (s *server) RefreshResource(
 	}
 
 	if err = api.RefreshObject(ctx, s.client.InternalClient(), o); err != nil {
+		if client.IgnoreNotFound(err) == nil {
+			return nil, connect.NewError(
+				connect.CodeNotFound,
+				fmt.Errorf("%s not found", req.Msg.GetKind()),
+			)
+		}
 		return nil, err
 	}
 

@@ -140,7 +140,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			Project: o.Project,
 		}))
 	case refreshResourceTypeStage:
-		_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
+		_, err = kargoSvcCli.RefreshResource(ctx, connect.NewRequest(&v1alpha1.RefreshResourceRequest{
 			Project: o.Project,
 			Name:    o.Name,
 		}))

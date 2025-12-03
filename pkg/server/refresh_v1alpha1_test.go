@@ -9,6 +9,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,72 +22,116 @@ import (
 )
 
 func TestRefreshResource(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(testScheme))
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kargo-demo",
+			Labels: map[string]string{
+				kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+			},
+		},
+	}
+
 	testSets := map[string]struct {
 		kClient    client.Client
 		req        *svcv1alpha1.RefreshResourceRequest
 		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
 	}{
 		"empty project": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "",
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "project cannot be empty", "")
+				require.ErrorContainsf(t, err, "project should not be empty", "")
 			},
 		},
 		"empty name": {
+			kClient: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(ns).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "kargo-demo",
 				Name:    "",
 				Kind:    "Warehouse",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "name cannot be empty", "")
+				require.ErrorContainsf(t, err, "name should not be empty", "")
 			},
 		},
 		"empty kind": {
+			kClient: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(ns).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 				Kind:    "",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "kind cannot be empty", "")
+				require.ErrorContainsf(t, err, "unsupported refresh kind", "")
 			},
 		},
 		"non-existing project": {
+			kClient: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(ns).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-x",
+				Project: "not-existing-project",
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 				require.ErrorContainsf(t, err, "project not found", "")
 			},
 		},
 		"non-existing warehouse": {
+			kClient: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(ns).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "non-existing-project",
+				Project: "kargo-demo",
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 				require.ErrorContainsf(t, err, "Warehouse not found", "")
 			},
 		},
 		"warehouse": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(ns,
+					&kargoapi.Warehouse{
+						ObjectMeta: metav1.ObjectMeta{
+							Namespace: "kargo-demo",
+							Name:      "test",
+						},
+						Spec: kargoapi.WarehouseSpec{},
+					},
+				).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "kargo-demo",
 				Name:    "test",
@@ -106,7 +151,15 @@ func TestRefreshResource(t *testing.T) {
 				require.Equal(t, "test", wh.Name)
 			},
 		},
-		"stage": {
+		"stage without current promo": {
+			kClient: fake.NewClientBuilder().WithObjects(ns,
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kargo-demo",
+						Name:      "test",
+					},
+				},
+			).WithScheme(testScheme).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "kargo-demo",
 				Name:    "test",
@@ -126,10 +179,48 @@ func TestRefreshResource(t *testing.T) {
 				require.Equal(t, "test", st.Name)
 			},
 		},
+		"stage with current promo": {
+			kClient: fake.NewClientBuilder().WithObjects(ns,
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kargo-demo",
+						Name:      "test",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "promo-1",
+						},
+					},
+				},
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kargo-demo",
+						Name:      "promo-1",
+					},
+				},
+			).WithScheme(testScheme).Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Kind:    "Stage",
+			},
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.NoError(t, err)
+				var p kargoapi.Promotion
+				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &p))
+				annotation := p.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+				refreshTime, err := time.Parse(time.RFC3339, annotation)
+				require.NoError(t, err)
+				// Make sure we set timestamp is close to now
+				// Assume it doesn't take 3 seconds to run this unit test.
+				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
+				require.Equal(t, "kargo-demo", p.Namespace)
+				require.Equal(t, "test", p.Name)
+			},
+		},
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
 			ctx := context.Background()
 			client, err := kubernetes.NewClient(
 				ctx,
@@ -139,15 +230,9 @@ func TestRefreshResource(t *testing.T) {
 					NewInternalClient: func(
 						_ context.Context,
 						_ *rest.Config,
-						scheme *runtime.Scheme,
+						_ *runtime.Scheme,
 					) (client.Client, error) {
-						return fake.NewClientBuilder().
-							WithScheme(scheme).
-							WithObjects(
-								mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-								mustNewObject[kargoapi.Stage]("testdata/stage.yaml"),
-							).
-							Build(), nil
+						return ts.kClient, nil
 					},
 				},
 			)
