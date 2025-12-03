@@ -982,7 +982,7 @@ export const DeleteStageResponseSchema: GenMessage<DeleteStageResponse> = /*@__P
   messageDesc(file_api_service_v1alpha1_service, 35);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshStageRequest is the request for refreshing a stage's status.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshStageRequest
@@ -1011,7 +1011,7 @@ export const RefreshStageRequestSchema: GenMessage<RefreshStageRequest> = /*@__P
   messageDesc(file_api_service_v1alpha1_service, 36);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshStageResponse contains the refreshed stage information.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshStageResponse
@@ -1781,7 +1781,7 @@ export const WatchProjectConfigResponseSchema: GenMessage<WatchProjectConfigResp
   messageDesc(file_api_service_v1alpha1_service, 67);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshProjectConfigRequest
@@ -1803,7 +1803,7 @@ export const RefreshProjectConfigRequestSchema: GenMessage<RefreshProjectConfigR
   messageDesc(file_api_service_v1alpha1_service, 68);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshProjectConfigResponse contains the refreshed project configuration.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshProjectConfigResponse
@@ -2657,7 +2657,7 @@ export const DeleteWarehouseResponseSchema: GenMessage<DeleteWarehouseResponse> 
   messageDesc(file_api_service_v1alpha1_service, 98);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshWarehouseRequest
@@ -2686,7 +2686,7 @@ export const RefreshWarehouseRequestSchema: GenMessage<RefreshWarehouseRequest> 
   messageDesc(file_api_service_v1alpha1_service, 99);
 
 /**
- * Deprecated: Do not use.
+ * DEPRECATED: Do not use.
  * RefreshWarehouseResponse contains the refreshed warehouse information.
  *
  * @generated from message akuity.io.kargo.service.v1alpha1.RefreshWarehouseResponse

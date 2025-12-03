@@ -557,7 +557,7 @@ message DeleteStageResponse {
   /* explicitly empty */
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshStageRequest is the request for refreshing a stage's status.
 message RefreshStageRequest {
   // project is the name of the project containing the stage.
@@ -566,7 +566,7 @@ message RefreshStageRequest {
   string name = 2;
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshStageResponse contains the refreshed stage information.
 message RefreshStageResponse {
   // stage is the refreshed Stage resource.
@@ -790,14 +790,14 @@ message WatchProjectConfigResponse {
   string type = 2;
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 message RefreshProjectConfigRequest {
   // project is the name of the project to refresh configuration for.
   string project = 1;
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshProjectConfigResponse contains the refreshed project configuration.
 message RefreshProjectConfigResponse {
   // project_config is the refreshed ProjectConfig object.
@@ -1048,7 +1048,7 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 message RefreshWarehouseRequest {
   // project is the name of the project containing the warehouse.
@@ -1057,7 +1057,7 @@ message RefreshWarehouseRequest {
   string name = 2;
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshWarehouseResponse contains the refreshed warehouse information.
 message RefreshWarehouseResponse {
   // warehouse is the refreshed Warehouse resource.

@@ -1371,7 +1371,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigRequest"></a>
 
 ### RefreshProjectConfigRequest
- Deprecated: Do not use. RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
+ DEPRECATED: Do not use. RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project to refresh configuration for. |
@@ -1379,7 +1379,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse"></a>
 
 ### RefreshProjectConfigResponse
- Deprecated: Do not use. RefreshProjectConfigResponse contains the refreshed project configuration.
+ DEPRECATED: Do not use. RefreshProjectConfigResponse contains the refreshed project configuration.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
@@ -1405,7 +1405,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
 
 ### RefreshStageRequest
- Deprecated: Do not use. RefreshStageRequest is the request for refreshing a stage's status.
+ DEPRECATED: Do not use. RefreshStageRequest is the request for refreshing a stage's status.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the stage. |
@@ -1414,7 +1414,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageResponse"></a>
 
 ### RefreshStageResponse
- Deprecated: Do not use. RefreshStageResponse contains the refreshed stage information.
+ DEPRECATED: Do not use. RefreshStageResponse contains the refreshed stage information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage is the refreshed Stage resource. |
@@ -1422,7 +1422,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
 
 ### RefreshWarehouseRequest
- Deprecated: Do not use. RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
+ DEPRECATED: Do not use. RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the warehouse. |
@@ -1431,7 +1431,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
 
 ### RefreshWarehouseResponse
- Deprecated: Do not use. RefreshWarehouseResponse contains the refreshed warehouse information.
+ DEPRECATED: Do not use. RefreshWarehouseResponse contains the refreshed warehouse information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the refreshed Warehouse resource. |

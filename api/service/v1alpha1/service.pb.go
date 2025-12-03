@@ -2184,7 +2184,7 @@ func (*DeleteStageResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{35}
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshStageRequest is the request for refreshing a stage's status.
 type RefreshStageRequest struct {
 	state         protoimpl.MessageState
@@ -2243,7 +2243,7 @@ func (x *RefreshStageRequest) GetName() string {
 	return ""
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshStageResponse contains the refreshed stage information.
 type RefreshStageResponse struct {
 	state         protoimpl.MessageState
@@ -3965,7 +3965,7 @@ func (x *WatchProjectConfigResponse) GetType() string {
 	return ""
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
 type RefreshProjectConfigRequest struct {
 	state         protoimpl.MessageState
@@ -4015,7 +4015,7 @@ func (x *RefreshProjectConfigRequest) GetProject() string {
 	return ""
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshProjectConfigResponse contains the refreshed project configuration.
 type RefreshProjectConfigResponse struct {
 	state         protoimpl.MessageState
@@ -5775,7 +5775,7 @@ func (*DeleteWarehouseResponse) Descriptor() ([]byte, []int) {
 	return file_api_service_v1alpha1_service_proto_rawDescGZIP(), []int{98}
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 type RefreshWarehouseRequest struct {
 	state         protoimpl.MessageState
@@ -5834,7 +5834,7 @@ func (x *RefreshWarehouseRequest) GetName() string {
 	return ""
 }
 
-// Deprecated: Do not use.
+// DEPRECATED: Do not use.
 // RefreshWarehouseResponse contains the refreshed warehouse information.
 type RefreshWarehouseResponse struct {
 	state         protoimpl.MessageState
