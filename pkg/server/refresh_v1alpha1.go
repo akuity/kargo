@@ -13,7 +13,6 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) RefreshResource(
@@ -61,8 +60,6 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	case "ClusterConfig":
 		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
 	case "ProjectConfig":
-		l := logging.LoggerFromContext(ctx)
-		l.Info("checking project metadata", "namespace", om.Namespace, "name", om.Name)
 		return &kargoapi.ProjectConfig{ObjectMeta: *om}, nil
 	case "Warehouse":
 		return &kargoapi.Warehouse{ObjectMeta: *om}, nil
