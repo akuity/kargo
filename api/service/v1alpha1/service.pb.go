@@ -11212,7 +11212,7 @@ type RefreshResourceRequest struct {
 	// name is the name of the object to refresh.
 	// leave blank if refreshing a project or cluster config.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// kind is the kind of resourrce to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.).
+	// kind is the kind of resource to refresh (e.g., "Warehouse", "Stage", "ClusterConfig", etc.).
 	Kind string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 }
 

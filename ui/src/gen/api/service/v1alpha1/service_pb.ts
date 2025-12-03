@@ -5237,7 +5237,7 @@ export type RefreshResourceRequest = Message<"akuity.io.kargo.service.v1alpha1.R
   name: string;
 
   /**
-   * kind is the kind of resourrce to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.).
+   * kind is the kind of resource to refresh (e.g., "Warehouse", "Stage", "ClusterConfig", etc.).
    *
    * @generated from field: string kind = 3;
    */

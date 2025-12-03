@@ -1395,7 +1395,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
 | name | [string](#string) |  name is the name of the object to refresh. leave blank if refreshing a project or cluster config. |
-| kind | [string](#string) |  kind is the kind of resourrce to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.). |
+| kind | [string](#string) |  kind is the kind of resource to refresh (e.g., "Warehouse", "Stage", "ClusterConfig", etc.). |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshResourceResponse"></a>
 
