@@ -46,7 +46,8 @@ service KargoService {
   rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
   // DeleteResource deletes Kubernetes resources specified in the provided manifests.
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
-
+  // RefreshResource triggers a refresh of the specified Kargo resource.
+  rpc RefreshResource(RefreshResourceRequest) returns (RefreshResourceResponse);
   /* Stage APIs */
 
   // ListStages retrieves all stages within a project.
@@ -141,8 +142,6 @@ service KargoService {
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
   // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
-  // RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
-  rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
 
@@ -284,6 +283,8 @@ service KargoService {
   rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
   // DeleteClusterSecret removes a cluster-scoped secret.
   rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
+
+  // Refresh triggers a refresh of the specified Kargo resource.
 }
 
 /* Version and Configuration Messages */
@@ -1047,6 +1048,7 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
+// Deprecated: Do not use.
 // RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 message RefreshWarehouseRequest {
   // project is the name of the project containing the warehouse.
@@ -1055,6 +1057,7 @@ message RefreshWarehouseRequest {
   string name = 2;
 }
 
+// Deprecated: Do not use.
 // RefreshWarehouseResponse contains the refreshed warehouse information.
 message RefreshWarehouseResponse {
   // warehouse is the refreshed Warehouse resource.
@@ -1842,17 +1845,17 @@ message DeleteClusterSecretResponse {
   /* explicitly empty */
 }
 
-message RefreshRequest {
+message RefreshResourceRequest {
   // project is the name of the project containing the object to refresh.
   // leave blank if refreshing a cluster-config.
   string project = 1;
   // name is the name of the object to refresh.
   // leave blank if refreshing a project or cluster config.
   string name = 2;
-  // kind is the kind of object to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.).
+  // kind is the kind of resourrce to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.).
   string kind = 3;
 }
 
-message RefreshResponse {
-  google.protobuf.Any object = 1;
+message RefreshResourceResponse {
+  google.protobuf.Any resource = 1;
 }

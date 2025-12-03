@@ -21,6 +21,7 @@ Stability is not guaranteed.
 | CreateOrUpdateResource | [CreateOrUpdateResourceRequest](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest) | [CreateOrUpdateResourceResponse](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResponse) |
 | UpdateResource | [UpdateResourceRequest](#akuity-io-kargo-service-v1alpha1-UpdateResourceRequest) | [UpdateResourceResponse](#akuity-io-kargo-service-v1alpha1-UpdateResourceResponse) |
 | DeleteResource | [DeleteResourceRequest](#akuity-io-kargo-service-v1alpha1-DeleteResourceRequest) | [DeleteResourceResponse](#akuity-io-kargo-service-v1alpha1-DeleteResourceResponse) |
+| RefreshResource | [RefreshResourceRequest](#akuity-io-kargo-service-v1alpha1-RefreshResourceRequest) | [RefreshResourceResponse](#akuity-io-kargo-service-v1alpha1-RefreshResourceResponse) |
 | ListStages | [ListStagesRequest](#akuity-io-kargo-service-v1alpha1-ListStagesRequest) | [ListStagesResponse](#akuity-io-kargo-service-v1alpha1-ListStagesResponse) |
 | ListImages | [ListImagesRequest](#akuity-io-kargo-service-v1alpha1-ListImagesRequest) | [ListImagesResponse](#akuity-io-kargo-service-v1alpha1-ListImagesResponse) |
 | GetStage | [GetStageRequest](#akuity-io-kargo-service-v1alpha1-GetStageRequest) | [GetStageResponse](#akuity-io-kargo-service-v1alpha1-GetStageResponse) |
@@ -57,7 +58,6 @@ Stability is not guaranteed.
 | GetWarehouse | [GetWarehouseRequest](#akuity-io-kargo-service-v1alpha1-GetWarehouseRequest) | [GetWarehouseResponse](#akuity-io-kargo-service-v1alpha1-GetWarehouseResponse) |
 | WatchWarehouses | [WatchWarehousesRequest](#akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest) | [WatchWarehousesResponse](#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse)(stream) |
 | DeleteWarehouse | [DeleteWarehouseRequest](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest) | [DeleteWarehouseResponse](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse) |
-| RefreshWarehouse | [RefreshWarehouseRequest](#akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest) | [RefreshWarehouseResponse](#akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse) |
 | CreateCredentials | [CreateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest) | [CreateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse) |
 | DeleteCredentials | [DeleteCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest) | [DeleteCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse) |
 | GetCredentials | [GetCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetCredentialsRequest) | [GetCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetCredentialsResponse) |
@@ -1387,23 +1387,23 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
 
-<a name="akuity-io-kargo-service-v1alpha1-RefreshRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-RefreshResourceRequest"></a>
 
-### RefreshRequest
+### RefreshResourceRequest
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
 | name | [string](#string) |  name is the name of the object to refresh. leave blank if refreshing a project or cluster config. |
-| kind | [string](#string) |  kind is the kind of object to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.). |
+| kind | [string](#string) |  kind is the kind of resourrce to refresh (e.g., "Warehouse", "Environment", "ClusterConfig", etc.). |
 
-<a name="akuity-io-kargo-service-v1alpha1-RefreshResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-RefreshResourceResponse"></a>
 
-### RefreshResponse
+### RefreshResourceResponse
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| object | [google.protobuf.Any](#google-protobuf-Any) |   |
+| resource | [google.protobuf.Any](#google-protobuf-Any) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
 
@@ -1425,7 +1425,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
 
 ### RefreshWarehouseRequest
- RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
+ Deprecated: Do not use. RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the warehouse. |
@@ -1434,7 +1434,7 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
 
 ### RefreshWarehouseResponse
- RefreshWarehouseResponse contains the refreshed warehouse information.
+ Deprecated: Do not use. RefreshWarehouseResponse contains the refreshed warehouse information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the refreshed Warehouse resource. |

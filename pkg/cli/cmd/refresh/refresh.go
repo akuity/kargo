@@ -145,7 +145,7 @@ func (o *refreshOptions) run(ctx context.Context) error {
 			Name:    o.Name,
 		}))
 	case refreshResourceTypeWarehouse:
-		_, err = kargoSvcCli.RefreshWarehouse(ctx, connect.NewRequest(&v1alpha1.RefreshWarehouseRequest{
+		_, err = kargoSvcCli.RefreshResource(ctx, connect.NewRequest(&v1alpha1.RefreshResourceRequest{
 			Project: o.Project,
 			Name:    o.Name,
 		}))

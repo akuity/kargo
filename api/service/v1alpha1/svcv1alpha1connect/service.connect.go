@@ -55,6 +55,9 @@ const (
 	// KargoServiceDeleteResourceProcedure is the fully-qualified name of the KargoService's
 	// DeleteResource RPC.
 	KargoServiceDeleteResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteResource"
+	// KargoServiceRefreshResourceProcedure is the fully-qualified name of the KargoService's
+	// RefreshResource RPC.
+	KargoServiceRefreshResourceProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshResource"
 	// KargoServiceListStagesProcedure is the fully-qualified name of the KargoService's ListStages RPC.
 	KargoServiceListStagesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListStages"
 	// KargoServiceListImagesProcedure is the fully-qualified name of the KargoService's ListImages RPC.
@@ -157,9 +160,6 @@ const (
 	// KargoServiceDeleteWarehouseProcedure is the fully-qualified name of the KargoService's
 	// DeleteWarehouse RPC.
 	KargoServiceDeleteWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteWarehouse"
-	// KargoServiceRefreshWarehouseProcedure is the fully-qualified name of the KargoService's
-	// RefreshWarehouse RPC.
-	KargoServiceRefreshWarehouseProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshWarehouse"
 	// KargoServiceCreateCredentialsProcedure is the fully-qualified name of the KargoService's
 	// CreateCredentials RPC.
 	KargoServiceCreateCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateCredentials"
@@ -295,6 +295,7 @@ var (
 	kargoServiceCreateOrUpdateResourceMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("CreateOrUpdateResource")
 	kargoServiceUpdateResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("UpdateResource")
 	kargoServiceDeleteResourceMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("DeleteResource")
+	kargoServiceRefreshResourceMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("RefreshResource")
 	kargoServiceListStagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListStages")
 	kargoServiceListImagesMethodDescriptor                    = kargoServiceServiceDescriptor.Methods().ByName("ListImages")
 	kargoServiceGetStageMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
@@ -331,7 +332,6 @@ var (
 	kargoServiceGetWarehouseMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetWarehouse")
 	kargoServiceWatchWarehousesMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("WatchWarehouses")
 	kargoServiceDeleteWarehouseMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("DeleteWarehouse")
-	kargoServiceRefreshWarehouseMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("RefreshWarehouse")
 	kargoServiceCreateCredentialsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("CreateCredentials")
 	kargoServiceDeleteCredentialsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("DeleteCredentials")
 	kargoServiceGetCredentialsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("GetCredentials")
@@ -397,6 +397,8 @@ type KargoServiceClient interface {
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	// DeleteResource deletes Kubernetes resources specified in the provided manifests.
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
+	// RefreshResource triggers a refresh of the specified Kargo resource.
+	RefreshResource(context.Context, *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error)
 	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	// ListImages returns available images and their usage across stages.
@@ -469,8 +471,6 @@ type KargoServiceClient interface {
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchWarehousesResponse], error)
 	// DeleteWarehouse removes a warehouse from the system.
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
-	// RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
-	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
 	// CreateCredentials creates new credentials for accessing external resources.
 	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
 	// DeleteCredentials removes credentials from the system.
@@ -628,6 +628,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceDeleteResourceProcedure,
 			connect.WithSchema(kargoServiceDeleteResourceMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		refreshResource: connect.NewClient[v1alpha1.RefreshResourceRequest, v1alpha1.RefreshResourceResponse](
+			httpClient,
+			baseURL+KargoServiceRefreshResourceProcedure,
+			connect.WithSchema(kargoServiceRefreshResourceMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		listStages: connect.NewClient[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse](
@@ -844,12 +850,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceDeleteWarehouseProcedure,
 			connect.WithSchema(kargoServiceDeleteWarehouseMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		refreshWarehouse: connect.NewClient[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse](
-			httpClient,
-			baseURL+KargoServiceRefreshWarehouseProcedure,
-			connect.WithSchema(kargoServiceRefreshWarehouseMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		createCredentials: connect.NewClient[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse](
@@ -1123,6 +1123,7 @@ type kargoServiceClient struct {
 	createOrUpdateResource        *connect.Client[v1alpha1.CreateOrUpdateResourceRequest, v1alpha1.CreateOrUpdateResourceResponse]
 	updateResource                *connect.Client[v1alpha1.UpdateResourceRequest, v1alpha1.UpdateResourceResponse]
 	deleteResource                *connect.Client[v1alpha1.DeleteResourceRequest, v1alpha1.DeleteResourceResponse]
+	refreshResource               *connect.Client[v1alpha1.RefreshResourceRequest, v1alpha1.RefreshResourceResponse]
 	listStages                    *connect.Client[v1alpha1.ListStagesRequest, v1alpha1.ListStagesResponse]
 	listImages                    *connect.Client[v1alpha1.ListImagesRequest, v1alpha1.ListImagesResponse]
 	getStage                      *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
@@ -1159,7 +1160,6 @@ type kargoServiceClient struct {
 	getWarehouse                  *connect.Client[v1alpha1.GetWarehouseRequest, v1alpha1.GetWarehouseResponse]
 	watchWarehouses               *connect.Client[v1alpha1.WatchWarehousesRequest, v1alpha1.WatchWarehousesResponse]
 	deleteWarehouse               *connect.Client[v1alpha1.DeleteWarehouseRequest, v1alpha1.DeleteWarehouseResponse]
-	refreshWarehouse              *connect.Client[v1alpha1.RefreshWarehouseRequest, v1alpha1.RefreshWarehouseResponse]
 	createCredentials             *connect.Client[v1alpha1.CreateCredentialsRequest, v1alpha1.CreateCredentialsResponse]
 	deleteCredentials             *connect.Client[v1alpha1.DeleteCredentialsRequest, v1alpha1.DeleteCredentialsResponse]
 	getCredentials                *connect.Client[v1alpha1.GetCredentialsRequest, v1alpha1.GetCredentialsResponse]
@@ -1244,6 +1244,11 @@ func (c *kargoServiceClient) UpdateResource(ctx context.Context, req *connect.Re
 // DeleteResource calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource.
 func (c *kargoServiceClient) DeleteResource(ctx context.Context, req *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
 	return c.deleteResource.CallUnary(ctx, req)
+}
+
+// RefreshResource calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshResource.
+func (c *kargoServiceClient) RefreshResource(ctx context.Context, req *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error) {
+	return c.refreshResource.CallUnary(ctx, req)
 }
 
 // ListStages calls akuity.io.kargo.service.v1alpha1.KargoService.ListStages.
@@ -1424,11 +1429,6 @@ func (c *kargoServiceClient) WatchWarehouses(ctx context.Context, req *connect.R
 // DeleteWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse.
 func (c *kargoServiceClient) DeleteWarehouse(ctx context.Context, req *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error) {
 	return c.deleteWarehouse.CallUnary(ctx, req)
-}
-
-// RefreshWarehouse calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse.
-func (c *kargoServiceClient) RefreshWarehouse(ctx context.Context, req *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error) {
-	return c.refreshWarehouse.CallUnary(ctx, req)
 }
 
 // CreateCredentials calls akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials.
@@ -1677,6 +1677,8 @@ type KargoServiceHandler interface {
 	UpdateResource(context.Context, *connect.Request[v1alpha1.UpdateResourceRequest]) (*connect.Response[v1alpha1.UpdateResourceResponse], error)
 	// DeleteResource deletes Kubernetes resources specified in the provided manifests.
 	DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error)
+	// RefreshResource triggers a refresh of the specified Kargo resource.
+	RefreshResource(context.Context, *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error)
 	// ListStages retrieves all stages within a project.
 	ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error)
 	// ListImages returns available images and their usage across stages.
@@ -1749,8 +1751,6 @@ type KargoServiceHandler interface {
 	WatchWarehouses(context.Context, *connect.Request[v1alpha1.WatchWarehousesRequest], *connect.ServerStream[v1alpha1.WatchWarehousesResponse]) error
 	// DeleteWarehouse removes a warehouse from the system.
 	DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error)
-	// RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
-	RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error)
 	// CreateCredentials creates new credentials for accessing external resources.
 	CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error)
 	// DeleteCredentials removes credentials from the system.
@@ -1904,6 +1904,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceDeleteResourceProcedure,
 		svc.DeleteResource,
 		connect.WithSchema(kargoServiceDeleteResourceMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceRefreshResourceHandler := connect.NewUnaryHandler(
+		KargoServiceRefreshResourceProcedure,
+		svc.RefreshResource,
+		connect.WithSchema(kargoServiceRefreshResourceMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListStagesHandler := connect.NewUnaryHandler(
@@ -2120,12 +2126,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceDeleteWarehouseProcedure,
 		svc.DeleteWarehouse,
 		connect.WithSchema(kargoServiceDeleteWarehouseMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	kargoServiceRefreshWarehouseHandler := connect.NewUnaryHandler(
-		KargoServiceRefreshWarehouseProcedure,
-		svc.RefreshWarehouse,
-		connect.WithSchema(kargoServiceRefreshWarehouseMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceCreateCredentialsHandler := connect.NewUnaryHandler(
@@ -2404,6 +2404,8 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceUpdateResourceHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteResourceProcedure:
 			kargoServiceDeleteResourceHandler.ServeHTTP(w, r)
+		case KargoServiceRefreshResourceProcedure:
+			kargoServiceRefreshResourceHandler.ServeHTTP(w, r)
 		case KargoServiceListStagesProcedure:
 			kargoServiceListStagesHandler.ServeHTTP(w, r)
 		case KargoServiceListImagesProcedure:
@@ -2476,8 +2478,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceWatchWarehousesHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteWarehouseProcedure:
 			kargoServiceDeleteWarehouseHandler.ServeHTTP(w, r)
-		case KargoServiceRefreshWarehouseProcedure:
-			kargoServiceRefreshWarehouseHandler.ServeHTTP(w, r)
 		case KargoServiceCreateCredentialsProcedure:
 			kargoServiceCreateCredentialsHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteCredentialsProcedure:
@@ -2603,6 +2603,10 @@ func (UnimplementedKargoServiceHandler) UpdateResource(context.Context, *connect
 
 func (UnimplementedKargoServiceHandler) DeleteResource(context.Context, *connect.Request[v1alpha1.DeleteResourceRequest]) (*connect.Response[v1alpha1.DeleteResourceResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteResource is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) RefreshResource(context.Context, *connect.Request[v1alpha1.RefreshResourceRequest]) (*connect.Response[v1alpha1.RefreshResourceResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshResource is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListStages(context.Context, *connect.Request[v1alpha1.ListStagesRequest]) (*connect.Response[v1alpha1.ListStagesResponse], error) {
@@ -2747,10 +2751,6 @@ func (UnimplementedKargoServiceHandler) WatchWarehouses(context.Context, *connec
 
 func (UnimplementedKargoServiceHandler) DeleteWarehouse(context.Context, *connect.Request[v1alpha1.DeleteWarehouseRequest]) (*connect.Response[v1alpha1.DeleteWarehouseResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) RefreshWarehouse(context.Context, *connect.Request[v1alpha1.RefreshWarehouseRequest]) (*connect.Response[v1alpha1.RefreshWarehouseResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) CreateCredentials(context.Context, *connect.Request[v1alpha1.CreateCredentialsRequest]) (*connect.Response[v1alpha1.CreateCredentialsResponse], error) {

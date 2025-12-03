@@ -63,6 +63,15 @@ export const updateResource = KargoService.method.updateResource;
 export const deleteResource = KargoService.method.deleteResource;
 
 /**
+ * RefreshResource triggers a refresh of the specified Kargo resource.
+ *
+ * Stage APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshResource
+ */
+export const refreshResource = KargoService.method.refreshResource;
+
+/**
  * ListStages retrieves all stages within a project.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStages
@@ -264,13 +273,6 @@ export const getWarehouse = KargoService.method.getWarehouse;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse
  */
 export const deleteWarehouse = KargoService.method.deleteWarehouse;
-
-/**
- * RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse
- */
-export const refreshWarehouse = KargoService.method.refreshWarehouse;
 
 /**
  * CreateCredentials creates new credentials for accessing external resources.

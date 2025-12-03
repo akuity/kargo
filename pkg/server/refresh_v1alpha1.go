@@ -15,10 +15,10 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 )
 
-func (s *server) Refresh(
+func (s *server) RefreshResource(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.RefreshRequest],
-) (*connect.Response[svcv1alpha1.RefreshResponse], error) {
+	req *connect.Request[svcv1alpha1.RefreshResourceRequest],
+) (*connect.Response[svcv1alpha1.RefreshResourceResponse], error) {
 	o, err := s.getClientObject(ctx, req.Msg)
 	if err != nil {
 		return nil, err
@@ -44,12 +44,12 @@ func (s *server) Refresh(
 	return newRefreshResponse(o), nil
 }
 
-func (s *server) getClientObject(ctx context.Context, req *svcv1alpha1.RefreshRequest) (client.Object, error) {
-	om, err := s.getObjectMeta(ctx, req)
+func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (client.Object, error) {
+	om, err := s.getObjectMeta(ctx, r)
 	if err != nil {
 		return nil, err
 	}
-	switch req.Kind {
+	switch r.Kind {
 	case "ClusterConfig":
 		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
 	case "ProjectConfig":
@@ -61,41 +61,41 @@ func (s *server) getClientObject(ctx context.Context, req *svcv1alpha1.RefreshRe
 	default:
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("unsupported refresh kind: %s", req.Kind),
+			fmt.Errorf("unsupported refresh kind: %s", r.Kind),
 		)
 	}
 }
 
-func (s *server) getObjectMeta(ctx context.Context, req *svcv1alpha1.RefreshRequest) (*metav1.ObjectMeta, error) {
+func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	if req.Kind == "ClusterConfig" {
+	if r.Kind == "ClusterConfig" {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
 
-	if err := validateFieldNotEmpty("project", req.GetProject()); err != nil {
+	if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
 		return nil, err
 	}
-	if err := s.validateProjectExists(ctx, req.GetProject()); err != nil {
+	if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
 		return nil, err
 	}
-	o.SetNamespace(req.GetProject())
+	o.SetNamespace(r.GetProject())
 
-	if req.Kind != "ProjectConfig" {
-		if err := validateFieldNotEmpty("name", req.GetName()); err != nil {
+	if r.Kind != "ProjectConfig" {
+		if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
 			return nil, err
 		}
-		o.SetName(req.GetName())
+		o.SetName(r.GetName())
 	} else {
-		o.SetName(req.GetProject())
+		o.SetName(r.GetProject())
 	}
 	return &o, nil
 }
 
-func newRefreshResponse(obj client.Object) *connect.Response[svcv1alpha1.RefreshResponse] {
+func newRefreshResponse(obj client.Object) *connect.Response[svcv1alpha1.RefreshResourceResponse] {
 	b, _ := json.Marshal(obj)
-	return connect.NewResponse(&svcv1alpha1.RefreshResponse{
-		Object: &anypb.Any{
+	return connect.NewResponse(&svcv1alpha1.RefreshResourceResponse{
+		Resource: &anypb.Any{
 			TypeUrl: obj.GetObjectKind().GroupVersionKind().String(),
 			Value:   b,
 		},
