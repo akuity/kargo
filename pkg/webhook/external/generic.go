@@ -8,10 +8,10 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/expressions"
 	xhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/urls"
@@ -144,7 +144,11 @@ func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 }
 
 func conditionSatisfied(expression string, env map[string]any) (bool, error) {
-	result, err := expressions.EvaluateTemplate(expression, env)
+	program, err := expr.Compile(expression)
+	if err != nil {
+		return false, err
+	}
+	result, err := expr.Run(program, env)
 	if err != nil {
 		return false, err
 	}

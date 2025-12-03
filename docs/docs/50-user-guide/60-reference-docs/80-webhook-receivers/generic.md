@@ -73,7 +73,7 @@ spec:
             - targetEvent: "push"
             - headerKey: "X-Event-Type"
           # Only perform this action if this expression is satisfied
-          matchExpression: "${{ request.header(params.headerKey) == params.targetEvent }}"
+          matchExpression: "request.header(params.headerKey) == params.targetEvent"
           targets:
             # This target is designated via static name
             - kind: Warehouse
@@ -172,7 +172,7 @@ It has one argument:
 If `headerKey` is not present in the request headers, an empty `string` array
 will be returned.
 
-`body`
+`request.body`
 
 Generic object derived from incoming requests whose fields can be accessed using
 standard bracket or dot-notation. For example, `data.address.city` would access 
