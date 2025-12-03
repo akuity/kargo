@@ -54,7 +54,6 @@ func refreshWarehouses(
 
 	// The distinct set of all Warehouses that should be refreshed
 	toRefresh := map[client.ObjectKey]*kargoapi.Warehouse{}
-	var failures int
 	for _, repoURL := range repoURLs {
 		repoLogger := logger.WithValues("repositoryURL", repoURL)
 
@@ -85,13 +84,13 @@ func refreshWarehouses(
 			}
 
 			if len(qualifiers) > 0 {
-				needsRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
 				if err != nil {
 					whLogger.Error(err, "failed to evaluate if warehouse needs refresh")
 					xhttp.WriteErrorJSON(w, err)
 					return
 				}
-				if needsRefresh {
+				if shouldRefresh {
 					toRefresh[whKey] = &wh
 				}
 			} else {
@@ -100,8 +99,9 @@ func refreshWarehouses(
 		}
 	}
 
-	logger.Debug("warehouses to refresh", "count", len(toRefresh))
+	logger.Debug("found Warehouses to refresh", "count", len(toRefresh))
 
+	var failures int
 	for whKey, wh := range toRefresh {
 		whLogger := logger.WithValues(
 			"namespace", whKey.Namespace,
@@ -112,7 +112,7 @@ func refreshWarehouses(
 			whLogger.Error(err, "failed to refresh Warehouse")
 			continue
 		} else {
-			whLogger.Info("marked Warehouse for refresh")
+			whLogger.Debug("marked Warehouse for refresh")
 		}
 	}
 
