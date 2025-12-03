@@ -11,8 +11,9 @@ import (
 
 func TestLoadCLIConfig(t *testing.T) {
 	testConfig := CLIConfig{
-		APIAddress:  "http://localhost:8080",
-		BearerToken: "thisisafaketoken",
+		APIAddress:           "http://localhost:8080",
+		BearerToken:          "thisisafaketoken",
+		ProxyAuthCredentials: "thisisafakeproxytoken",
 	}
 	testCases := []struct {
 		name       string
@@ -67,8 +68,9 @@ func TestLoadCLIConfig(t *testing.T) {
 
 func TestSaveCLIConfig(t *testing.T) {
 	testConfig := CLIConfig{
-		APIAddress:  "http://localhost:8080",
-		BearerToken: "thisisafaketoken",
+		APIAddress:           "http://localhost:8080",
+		BearerToken:          "thisisafaketoken",
+		ProxyAuthCredentials: "thisisafakeproxytoken",
 	}
 
 	configPath := getTestConfigPath()
@@ -117,6 +119,7 @@ func TestMaskedConfig(t *testing.T) {
 		APIAddress:            "http://localhost:8080",
 		BearerToken:           "secret",
 		RefreshToken:          "secret",
+		ProxyAuthCredentials:  "secret",
 		InsecureSkipTLSVerify: true,
 		Project:               "project",
 	}
@@ -125,6 +128,7 @@ func TestMaskedConfig(t *testing.T) {
 	require.Equal(t, "http://localhost:8080", maskedConfig.APIAddress)
 	require.Equal(t, dataMask, maskedConfig.BearerToken)
 	require.Equal(t, dataMask, maskedConfig.RefreshToken)
+	require.Equal(t, dataMask, maskedConfig.ProxyAuthCredentials)
 	require.Equal(t, true, maskedConfig.InsecureSkipTLSVerify)
 	require.Equal(t, "project", maskedConfig.Project)
 }
