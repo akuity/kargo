@@ -17,6 +17,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
@@ -216,6 +217,33 @@ func TestRefreshResource(t *testing.T) {
 				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
 				require.Equal(t, "kargo-demo", p.Namespace)
 				require.Equal(t, "test", p.Name)
+			},
+		},
+		"cluster config": {
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					&kargoapi.ClusterConfig{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: api.ClusterConfigName,
+						},
+					},
+				).Build(),
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project: "",
+				Name:    api.ClusterConfigName,
+				Kind:    "ClusterConfig",
+			},
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.NoError(t, err)
+				var cc kargoapi.ClusterConfig
+				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &cc))
+				annotation := cc.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+				refreshTime, err := time.Parse(time.RFC3339, annotation)
+				require.NoError(t, err)
+				// Make sure we set timestamp is close to now
+				// Assume it doesn't take 3 seconds to run this unit test.
+				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
+				require.Equal(t, api.ClusterConfigName, cc.Name)
 			},
 		},
 	}
