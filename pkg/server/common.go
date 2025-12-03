@@ -35,7 +35,7 @@ var (
 
 	errSecretManagementDisabled = fmt.Errorf("secret management is not enabled")
 
-	errClusterSecretNamespaceNotDefined = fmt.Errorf("cluster secret namespace is not defined")
+	errClusterResourcesNamespaceNotDefined = fmt.Errorf("cluster resources namespace is not defined")
 )
 
 // splitYAML splits YAML bytes into unstructured objects. It separates Project

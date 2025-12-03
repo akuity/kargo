@@ -34,7 +34,7 @@ export const ClusterSecret = () => {
         <>
           Cluster Secret{' '}
           <Tag className='text-xs ml-2' color='blue'>
-            namespace: {config?.clusterSecretsNamespace}
+            namespace: {config?.clusterResourcesNamespace}
           </Tag>
         </>
       }
