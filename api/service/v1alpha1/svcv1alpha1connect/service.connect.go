@@ -70,9 +70,6 @@ const (
 	// KargoServiceDeleteStageProcedure is the fully-qualified name of the KargoService's DeleteStage
 	// RPC.
 	KargoServiceDeleteStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteStage"
-	// KargoServiceRefreshStageProcedure is the fully-qualified name of the KargoService's RefreshStage
-	// RPC.
-	KargoServiceRefreshStageProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/RefreshStage"
 	// KargoServiceGetClusterConfigProcedure is the fully-qualified name of the KargoService's
 	// GetClusterConfig RPC.
 	KargoServiceGetClusterConfigProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetClusterConfig"
@@ -301,7 +298,6 @@ var (
 	kargoServiceGetStageMethodDescriptor                      = kargoServiceServiceDescriptor.Methods().ByName("GetStage")
 	kargoServiceWatchStagesMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("WatchStages")
 	kargoServiceDeleteStageMethodDescriptor                   = kargoServiceServiceDescriptor.Methods().ByName("DeleteStage")
-	kargoServiceRefreshStageMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("RefreshStage")
 	kargoServiceGetClusterConfigMethodDescriptor              = kargoServiceServiceDescriptor.Methods().ByName("GetClusterConfig")
 	kargoServiceDeleteClusterConfigMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterConfig")
 	kargoServiceWatchClusterConfigMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("WatchClusterConfig")
@@ -409,8 +405,6 @@ type KargoServiceClient interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest]) (*connect.ServerStreamForClient[v1alpha1.WatchStagesResponse], error)
 	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
-	// RefreshStage triggers a refresh of stage status and health checks.
-	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
 	// GetClusterConfig retrieves cluster-level configuration settings.
 	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
 	// DeleteClusterConfig removes cluster-level configuration.
@@ -664,12 +658,6 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceDeleteStageProcedure,
 			connect.WithSchema(kargoServiceDeleteStageMethodDescriptor),
-			connect.WithClientOptions(opts...),
-		),
-		refreshStage: connect.NewClient[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse](
-			httpClient,
-			baseURL+KargoServiceRefreshStageProcedure,
-			connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		getClusterConfig: connect.NewClient[v1alpha1.GetClusterConfigRequest, v1alpha1.GetClusterConfigResponse](
@@ -1129,7 +1117,6 @@ type kargoServiceClient struct {
 	getStage                      *connect.Client[v1alpha1.GetStageRequest, v1alpha1.GetStageResponse]
 	watchStages                   *connect.Client[v1alpha1.WatchStagesRequest, v1alpha1.WatchStagesResponse]
 	deleteStage                   *connect.Client[v1alpha1.DeleteStageRequest, v1alpha1.DeleteStageResponse]
-	refreshStage                  *connect.Client[v1alpha1.RefreshStageRequest, v1alpha1.RefreshStageResponse]
 	getClusterConfig              *connect.Client[v1alpha1.GetClusterConfigRequest, v1alpha1.GetClusterConfigResponse]
 	deleteClusterConfig           *connect.Client[v1alpha1.DeleteClusterConfigRequest, v1alpha1.DeleteClusterConfigResponse]
 	watchClusterConfig            *connect.Client[v1alpha1.WatchClusterConfigRequest, v1alpha1.WatchClusterConfigResponse]
@@ -1274,11 +1261,6 @@ func (c *kargoServiceClient) WatchStages(ctx context.Context, req *connect.Reque
 // DeleteStage calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage.
 func (c *kargoServiceClient) DeleteStage(ctx context.Context, req *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error) {
 	return c.deleteStage.CallUnary(ctx, req)
-}
-
-// RefreshStage calls akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage.
-func (c *kargoServiceClient) RefreshStage(ctx context.Context, req *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
-	return c.refreshStage.CallUnary(ctx, req)
 }
 
 // GetClusterConfig calls akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig.
@@ -1689,8 +1671,6 @@ type KargoServiceHandler interface {
 	WatchStages(context.Context, *connect.Request[v1alpha1.WatchStagesRequest], *connect.ServerStream[v1alpha1.WatchStagesResponse]) error
 	// DeleteStage removes a stage from the system.
 	DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error)
-	// RefreshStage triggers a refresh of stage status and health checks.
-	RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error)
 	// GetClusterConfig retrieves cluster-level configuration settings.
 	GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error)
 	// DeleteClusterConfig removes cluster-level configuration.
@@ -1940,12 +1920,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceDeleteStageProcedure,
 		svc.DeleteStage,
 		connect.WithSchema(kargoServiceDeleteStageMethodDescriptor),
-		connect.WithHandlerOptions(opts...),
-	)
-	kargoServiceRefreshStageHandler := connect.NewUnaryHandler(
-		KargoServiceRefreshStageProcedure,
-		svc.RefreshStage,
-		connect.WithSchema(kargoServiceRefreshStageMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceGetClusterConfigHandler := connect.NewUnaryHandler(
@@ -2416,8 +2390,6 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceWatchStagesHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteStageProcedure:
 			kargoServiceDeleteStageHandler.ServeHTTP(w, r)
-		case KargoServiceRefreshStageProcedure:
-			kargoServiceRefreshStageHandler.ServeHTTP(w, r)
 		case KargoServiceGetClusterConfigProcedure:
 			kargoServiceGetClusterConfigHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteClusterConfigProcedure:
@@ -2627,10 +2599,6 @@ func (UnimplementedKargoServiceHandler) WatchStages(context.Context, *connect.Re
 
 func (UnimplementedKargoServiceHandler) DeleteStage(context.Context, *connect.Request[v1alpha1.DeleteStageRequest]) (*connect.Response[v1alpha1.DeleteStageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteStage is not implemented"))
-}
-
-func (UnimplementedKargoServiceHandler) RefreshStage(context.Context, *connect.Request[v1alpha1.RefreshStageRequest]) (*connect.Response[v1alpha1.RefreshStageResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetClusterConfig(context.Context, *connect.Request[v1alpha1.GetClusterConfigRequest]) (*connect.Response[v1alpha1.GetClusterConfigResponse], error) {

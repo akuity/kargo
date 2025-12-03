@@ -60,8 +60,6 @@ service KargoService {
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   // DeleteStage removes a stage from the system.
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
-  // RefreshStage triggers a refresh of stage status and health checks.
-  rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* ClusterConfig APIs */
 
@@ -563,6 +561,7 @@ message DeleteStageResponse {
   /* explicitly empty */
 }
 
+// Deprecated: Do not use.
 // RefreshStageRequest is the request for refreshing a stage's status.
 message RefreshStageRequest {
   // project is the name of the project containing the stage.
@@ -571,6 +570,7 @@ message RefreshStageRequest {
   string name = 2;
 }
 
+// Deprecated: Do not use.
 // RefreshStageResponse contains the refreshed stage information.
 message RefreshStageResponse {
   // stage is the refreshed Stage resource.

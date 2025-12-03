@@ -100,13 +100,6 @@ export const getStage = KargoService.method.getStage;
 export const deleteStage = KargoService.method.deleteStage;
 
 /**
- * RefreshStage triggers a refresh of stage status and health checks.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage
- */
-export const refreshStage = KargoService.method.refreshStage;
-
-/**
  * GetClusterConfig retrieves cluster-level configuration settings.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig

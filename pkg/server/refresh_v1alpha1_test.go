@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,11 +20,11 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestRefreshWarehouse(t *testing.T) {
+func TestRefreshResource(t *testing.T) {
 	testSets := map[string]struct {
-		req          *svcv1alpha1.RefreshResourceRequest
-		errExpected  bool
-		expectedCode connect.Code
+		kClient    client.Client
+		req        *svcv1alpha1.RefreshResourceRequest
+		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
 	}{
 		"empty project": {
 			req: &svcv1alpha1.RefreshResourceRequest{
@@ -33,8 +32,11 @@ func TestRefreshWarehouse(t *testing.T) {
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.ErrorContainsf(t, err, "project cannot be empty", "")
+			},
 		},
 		"empty name": {
 			req: &svcv1alpha1.RefreshResourceRequest{
@@ -42,8 +44,11 @@ func TestRefreshWarehouse(t *testing.T) {
 				Name:    "",
 				Kind:    "Warehouse",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.ErrorContainsf(t, err, "name cannot be empty", "")
+			},
 		},
 		"empty kind": {
 			req: &svcv1alpha1.RefreshResourceRequest{
@@ -51,8 +56,11 @@ func TestRefreshWarehouse(t *testing.T) {
 				Name:    "test",
 				Kind:    "",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeInvalidArgument,
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.ErrorContainsf(t, err, "kind cannot be empty", "")
+			},
 		},
 		"non-existing project": {
 			req: &svcv1alpha1.RefreshResourceRequest{
@@ -60,8 +68,11 @@ func TestRefreshWarehouse(t *testing.T) {
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.ErrorContainsf(t, err, "project not found", "")
+			},
 		},
 		"non-existing warehouse": {
 			req: &svcv1alpha1.RefreshResourceRequest{
@@ -69,23 +80,57 @@ func TestRefreshWarehouse(t *testing.T) {
 				Name:    "test",
 				Kind:    "Warehouse",
 			},
-			errExpected:  true,
-			expectedCode: connect.CodeNotFound,
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
+				require.ErrorContainsf(t, err, "Warehouse not found", "")
+			},
 		},
-		"existing warehouse": {
+		"warehouse": {
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 				Kind:    "Warehouse",
+			},
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.NoError(t, err)
+				var wh kargoapi.Warehouse
+				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &wh))
+				annotation := wh.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+				refreshTime, err := time.Parse(time.RFC3339, annotation)
+				require.NoError(t, err)
+				// Make sure we set timestamp is close to now
+				// Assume it doesn't take 3 seconds to run this unit test.
+				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
+				require.Equal(t, "kargo-demo", wh.Namespace)
+				require.Equal(t, "test", wh.Name)
+			},
+		},
+		"stage": {
+			req: &svcv1alpha1.RefreshResourceRequest{
+				Project: "kargo-demo",
+				Name:    "test",
+				Kind:    "Stage",
+			},
+			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
+				require.NoError(t, err)
+				var st kargoapi.Stage
+				require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &st))
+				annotation := st.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
+				refreshTime, err := time.Parse(time.RFC3339, annotation)
+				require.NoError(t, err)
+				// Make sure we set timestamp is close to now
+				// Assume it doesn't take 3 seconds to run this unit test.
+				require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
+				require.Equal(t, "kargo-demo", st.Namespace)
+				require.Equal(t, "test", st.Name)
 			},
 		},
 	}
 	for name, ts := range testSets {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-
 			ctx := context.Background()
-
 			client, err := kubernetes.NewClient(
 				ctx,
 				&rest.Config{},
@@ -107,40 +152,10 @@ func TestRefreshWarehouse(t *testing.T) {
 				},
 			)
 			require.NoError(t, err)
-
-			if !ts.errExpected {
-				err = client.Create(ctx, &kargoapi.Warehouse{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: ts.req.GetProject(),
-						Name:      ts.req.GetName(),
-					},
-					Spec: kargoapi.WarehouseSpec{},
-				})
-				require.NoError(t, err)
-			}
-
-			svr := &server{
-				client: client,
-			}
+			svr := &server{client: client}
 			svr.externalValidateProjectFn = validation.ValidateProject
 			res, err := svr.RefreshResource(ctx, connect.NewRequest(ts.req))
-			if ts.errExpected {
-				require.Error(t, err)
-				require.Equal(t, ts.expectedCode, connect.CodeOf(err))
-				return
-			}
-
-			require.NoError(t, err)
-			var wh kargoapi.Warehouse
-			require.NoError(t, json.Unmarshal(res.Msg.GetResource().Value, &wh))
-			annotation := wh.GetAnnotations()[kargoapi.AnnotationKeyRefresh]
-			refreshTime, err := time.Parse(time.RFC3339, annotation)
-			require.NoError(t, err)
-			// Make sure we set timestamp is close to now
-			// Assume it doesn't take 3 seconds to run this unit test.
-			require.WithinDuration(t, time.Now(), refreshTime, 3*time.Second)
-			require.Equal(t, ts.req.GetProject(), wh.Namespace)
-			require.Equal(t, ts.req.GetName(), wh.Name)
+			ts.assertions(res, err)
 		})
 	}
 }
