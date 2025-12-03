@@ -109,7 +109,6 @@ func refreshWarehouses(
 		if err := api.RefreshObject(ctx, c, wh); err != nil {
 			failures++
 			whLogger.Error(err, "failed to refresh Warehouse")
-			continue
 		} else {
 			whLogger.Debug("marked Warehouse for refresh")
 		}

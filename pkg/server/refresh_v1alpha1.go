@@ -24,7 +24,7 @@ func (s *server) RefreshResource(
 		return nil, err
 	}
 
-	if err := api.RefreshObject(ctx, s.client.InternalClient(), o); err != nil {
+	if err = api.RefreshObject(ctx, s.client.InternalClient(), o); err != nil {
 		return nil, err
 	}
 

@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // RefreshObject forces reconciliation of a Kubernetes object by setting an
