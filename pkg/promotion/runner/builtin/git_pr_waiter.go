@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/xeipuuv/gojsonschema"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 
@@ -118,7 +120,22 @@ func (g *gitPRWaiter) run(
 	}
 
 	if pr.Open {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+		var retryAfter *time.Duration
+		if cfg.PollInterval != "" {
+			if d, err := time.ParseDuration(cfg.PollInterval); err == nil {
+				retryAfter = &d
+			} else {
+				logging.LoggerFromContext(ctx).WithValues(
+					"step", stepKindGitWaitForPR,
+					"pollInterval", cfg.PollInterval,
+				).Info("unparseable pollInterval; using default requeue interval", "error", err)
+			}
+		}
+
+		return promotion.StepResult{
+			Status:     kargoapi.PromotionStepStatusRunning,
+			RetryAfter: retryAfter,
+		}, nil
 	}
 	if !pr.Merged {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
