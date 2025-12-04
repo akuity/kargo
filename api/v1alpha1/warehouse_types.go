@@ -323,10 +323,6 @@ type RepoSubscription struct {
 // GitSubscription defines a subscription to a Git repository.
 type GitSubscription struct {
 	// URL is the repository's URL. This is a required field.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
-	// +akuity:test-kubebuilder-pattern=GitRepoURLPattern
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// CommitSelectionStrategy specifies the rules for how to identify the newest
 	// commit of interest in the repository specified by the RepoURL field. This
@@ -351,8 +347,6 @@ type GitSubscription struct {
 	// - "NewestTag": Selects the commit referenced by the most recently created
 	//   tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be
 	//   used to narrow the set of tags eligible for selection.
-	//
-	// +kubebuilder:default=NewestFromBranch
 	CommitSelectionStrategy CommitSelectionStrategy `json:"commitSelectionStrategy,omitempty" protobuf:"bytes,2,opt,name=commitSelectionStrategy"`
 	// Branch references a particular branch of the repository. The value in this
 	// field only has any effect when the CommitSelectionStrategy is
@@ -360,11 +354,6 @@ type GitSubscription struct {
 	// NewestFromBranch). This field is optional. When left unspecified, (and the
 	// CommitSelectionStrategy is NewestFromBranch or unspecified), the
 	// subscription is implicitly to the repository's default branch.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=255
-	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
-	// +akuity:test-kubebuilder-pattern=Branch
 	Branch string `json:"branch,omitempty" protobuf:"bytes,3,opt,name=branch"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
@@ -375,7 +364,7 @@ type GitSubscription struct {
 	// version number only.
 	//
 	// +kubebuilder:default=true
-	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,11,opt,name=strictSemvers"`
+	StrictSemvers *bool `json:"strictSemvers" protobuf:"varint,11,opt,name=strictSemvers"`
 	// SemverConstraint specifies constraints on what new tagged commits are
 	// considered in determining the newest commit of interest. The value in this
 	// field only has any effect when the CommitSelectionStrategy is SemVer. This
@@ -383,8 +372,6 @@ type GitSubscription struct {
 	// which means the latest semantically tagged commit will always be used. Care
 	// should be taken with leaving this field unspecified, as it can lead to the
 	// unanticipated rollout of breaking changes.
-	//
-	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// tags that are considered in determining the newest commit of interest. The
@@ -394,16 +381,12 @@ type GitSubscription struct {
 	// Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
 	// in v1.13.0.
-	//
-	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
 	// AllowTagsRegexes is a list of regular expressions that can optionally be
 	// used to limit the tags that are considered in determining the newest commit
 	// of interest. The values in this field only have any effect when the
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
-	//
-	// +kubebuilder:validation:Optional
 	AllowTagsRegexes []string `json:"allowTagsRegexes,omitempty" protobuf:"bytes,13,rep,name=allowTagsRegexes"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest commit of interest. No regular expressions or glob patterns are
@@ -414,16 +397,12 @@ type GitSubscription struct {
 	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
 	// in v1.13.0.
-	//
-	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be
 	// used to exclude tags from consideration when determining the newest commit
 	// of interest. The values in this field only have any effect when the
 	// CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
 	// optional.
-	//
-	// +kubebuilder:validation:Optional
 	IgnoreTagsRegexes []string `json:"ignoreTagsRegexes,omitempty" protobuf:"bytes,14,rep,name=ignoreTagsRegexes"`
 	// ExpressionFilter is an expression that can optionally be used to limit
 	// the commits or tags that are considered in determining the newest commit
@@ -468,8 +447,6 @@ type GitSubscription struct {
 	//
 	// Refer to the expr-lang documentation for more details on syntax and
 	// capabilities of the expression language: https://expr-lang.org.
-	//
-	// +kubebuilder:validation:Optional
 	ExpressionFilter string `json:"expressionFilter,omitempty" protobuf:"bytes,12,opt,name=expressionFilter"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -488,7 +465,6 @@ type GitSubscription struct {
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
-	// +kubebuilder:validation:Optional
 	IncludePaths []string `json:"includePaths,omitempty" protobuf:"bytes,8,rep,name=includePaths"`
 	// ExcludePaths is a list of selectors that designate paths in the repository
 	// that should NOT trigger the production of new Freight when changes are
@@ -503,30 +479,19 @@ type GitSubscription struct {
 	// Paths selected by IncludePaths may be unselected by ExcludePaths. This
 	// is a useful method for including a broad set of paths and then excluding a
 	// subset of them.
-	// +kubebuilder:validation:Optional
 	ExcludePaths []string `json:"excludePaths,omitempty" protobuf:"bytes,9,rep,name=excludePaths"`
 	// DiscoveryLimit is an optional limit on the number of commits that can be
 	// discovered for this subscription. The limit is applied after filtering
 	// commits based on the AllowTagsRegexes, IgnoreTagsRegexes, and
 	// ExpressionFilter fields. When left unspecified, the field is implicitly
 	// treated as if its value were "20". The upper limit for this field is 100.
-	//
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=20
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,10,opt,name=discoveryLimit"`
 }
 
 // ImageSubscription defines a subscription to an image repository.
-//
-// +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, constraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
 type ImageSubscription struct {
 	// RepoURL specifies the URL of the image repository to subscribe to. The
 	// value in this field MUST NOT include an image tag. This field is required.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
-	// +akuity:test-kubebuilder-pattern=ImageRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version
 	// of the image specified by the RepoURL field. This field is optional. When
@@ -558,8 +523,6 @@ type ImageSubscription struct {
 	//   set of tags eligible for selection.
 	//   See the following for for a description of semver version constraint
 	//   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints
-	//
-	// +kubebuilder:default=SemVer
 	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,3,opt,name=imageSelectionStrategy"`
 	// StrictSemvers specifies whether only "strict" semver tags should be
 	// considered. A "strict" semver tag is one containing ALL of major, minor,
@@ -569,9 +532,7 @@ type ImageSubscription struct {
 	// commit hashes, which have the potential to contain numeric characters only
 	// and could be mistaken for a semver string containing the major version
 	// number only.
-	//
-	// +kubebuilder:default=true
-	StrictSemvers bool `json:"strictSemvers" protobuf:"varint,10,opt,name=strictSemvers"`
+	StrictSemvers *bool `json:"strictSemvers" protobuf:"varint,10,opt,name=strictSemvers"`
 	// Constraint specifies ImageSelectionStrategy-specific constraints on what
 	// new image revisions are permissible. Acceptable values for this field vary
 	// contextually by ImageSelectionStrategy. The field is optional for some
@@ -579,8 +540,6 @@ type ImageSubscription struct {
 	// treat this field as optional, specifying no value means "no constraints."
 	// Refer to the descriptions of individual strategies to learn if or how they
 	// use this field.
-	//
-	// +kubebuilder:validation:Optional
 	Constraint string `json:"constraint,omitempty" protobuf:"bytes,11,opt,name=constraint"`
 	// AllowTags is a regular expression that can optionally be used to limit the
 	// image tags that are considered in determining the newest version of an
@@ -589,14 +548,10 @@ type ImageSubscription struct {
 	// Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
 	// in v1.13.0.
-	//
-	// +kubebuilder:validation:Optional
 	AllowTags string `json:"allowTags,omitempty" protobuf:"bytes,5,opt,name=allowTags"`
 	// AllowTagsRegexes is a list of regular expressions that can optionally be
 	// used to limit the image tags that are considered in determining the newest
 	// revision of an image. This field is optional.
-	//
-	// +kubebuilder:validation:Optional
 	AllowTagsRegexes []string `json:"allowTagsRegexes,omitempty" protobuf:"bytes,13,rep,name=allowTagsRegexes"`
 	// IgnoreTags is a list of tags that must be ignored when determining the
 	// newest version of an image. No regular expressions or glob patterns are
@@ -605,16 +560,11 @@ type ImageSubscription struct {
 	// Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed
 	// in v1.13.0.
-	//
-	// +kubebuilder:validation:Optional
 	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be
 	// used to exclude tags from consideration when determining the newest
 	// revision of an image. This field is optional.
-	//
-	// +kubebuilder:validation:Optional
 	IgnoreTagsRegexes []string `json:"ignoreTagsRegexes,omitempty" protobuf:"bytes,14,rep,name=ignoreTagsRegexes"`
-
 	// Platform is a string of the form <os>/<arch> that limits the tags that can
 	// be considered when searching for new versions of an image. This field is
 	// optional. When left unspecified, it is implicitly equivalent to the
@@ -623,8 +573,6 @@ type ImageSubscription struct {
 	// ImageRepositorySubscription will run on a Kubernetes node with a different
 	// OS/architecture than the Kargo controller. At present this is uncommon, but
 	// not unheard of.
-	//
-	// +kubebuilder:validation:Optional
 	Platform string `json:"platform,omitempty" protobuf:"bytes,7,opt,name=platform"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors
 	// should be ignored when connecting to the repository. This should be enabled
@@ -635,10 +583,6 @@ type ImageSubscription struct {
 	// filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes
 	// fields. When left unspecified, the field is implicitly treated as if its
 	// value were "20". The upper limit for this field is 100.
-	//
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=20
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,9,opt,name=discoveryLimit"`
 }
 
@@ -652,10 +596,6 @@ type ChartSubscription struct {
 	// case of a repository within an OCI registry, the URL implicitly points to
 	// a specific chart and the Name field MUST NOT be used. The RepoURL field is
 	// required.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-	// +akuity:test-kubebuilder-pattern=HelmRepoURL
 	RepoURL string `json:"repoURL" protobuf:"bytes,1,opt,name=repoURL"`
 	// Name specifies the name of a Helm chart to subscribe to within a classic
 	// chart repository specified by the RepoURL field. This field is required
@@ -668,18 +608,12 @@ type ChartSubscription struct {
 	// used. Care should be taken with leaving this field unspecified, as it can
 	// lead to the unanticipated rollout of breaking changes.
 	// More info: https://github.com/masterminds/semver#checking-version-constraints
-	//
-	// +kubebuilder:validation:Optional
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,3,opt,name=semverConstraint"`
 	// DiscoveryLimit is an optional limit on the number of chart versions that
 	// can be discovered for this subscription. The limit is applied after
 	// filtering charts based on the SemverConstraint field.
 	// When left unspecified, the field is implicitly treated as if its value
 	// were "20". The upper limit for this field is 100.
-	//
-	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=100
-	// +kubebuilder:default=20
 	DiscoveryLimit int32 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
 }
 

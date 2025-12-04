@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -267,7 +268,7 @@ func TestShouldRefresh(t *testing.T) {
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 							Constraint:             "^1.0.0",
-							StrictSemvers:          true,
+							StrictSemvers:          ptr.To(true),
 						},
 					}},
 				},
@@ -285,7 +286,7 @@ func TestShouldRefresh(t *testing.T) {
 							RepoURL:                "docker.io/example/repo",
 							ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 							Constraint:             "^1.0.0",
-							StrictSemvers:          true,
+							StrictSemvers:          ptr.To(true),
 						},
 					}},
 				},
