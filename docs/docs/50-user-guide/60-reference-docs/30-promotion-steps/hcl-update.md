@@ -8,11 +8,19 @@ description: Updates attribute values in HCL files to modify OpenTofu configurat
 
 # `hcl-update`
 
+:::info
+This promotion step is only available in Kargo on the
+[Akuity Platform](https://akuity.io/akuity-platform), versions v1.9 and above.
+
+Additionally, it requires enabling of the Promotion Controller to allow for
+Pod-based promotions.
+:::
+
 `hcl-update` modifies attribute values in HCL (HashiCorp Configuration Language)
 files. This step is typically used to update OpenTofu configuration files before
-running `tf-plan` and `tf-apply` steps, allowing you to dynamically set values
-such as image tags and other configuration  parameters as part of the promotion
-process.
+running [`tf-plan`](tf-plan.md) and [`tf-apply`](tf-apply.md) steps, allowing
+you to dynamically set values such as image tags and other configuration 
+parameters as part of the promotion process.
 
 ## Configuration
 
