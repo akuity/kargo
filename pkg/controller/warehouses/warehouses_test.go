@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -664,7 +663,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 							context.Context,
 							credentials.Database,
 						) (subscription.Subscriber, error) {
-							return &mockSubscriber{
+							return &subscription.MockSubscriber{
 								DiscoverArtifactsFn: func(
 									context.Context,
 									string,
@@ -701,7 +700,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 							context.Context,
 							credentials.Database,
 						) (subscription.Subscriber, error) {
-							return &mockSubscriber{
+							return &subscription.MockSubscriber{
 								DiscoverArtifactsFn: func(
 									context.Context,
 									string,
@@ -738,7 +737,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 							context.Context,
 							credentials.Database,
 						) (subscription.Subscriber, error) {
-							return &mockSubscriber{
+							return &subscription.MockSubscriber{
 								DiscoverArtifactsFn: func(
 									context.Context,
 									string,
@@ -775,7 +774,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 							context.Context,
 							credentials.Database,
 						) (subscription.Subscriber, error) {
-							return &mockSubscriber{
+							return &subscription.MockSubscriber{
 								DiscoverArtifactsFn: func(
 									context.Context,
 									string,
@@ -812,7 +811,7 @@ func TestDiscoverArtifacts(t *testing.T) {
 							context.Context,
 							credentials.Database,
 						) (subscription.Subscriber, error) {
-							return &mockSubscriber{
+							return &subscription.MockSubscriber{
 								DiscoverArtifactsFn: func(
 									context.Context,
 									string,
@@ -1665,47 +1664,4 @@ func Test_freightCreationCriteriaSatisfied(t *testing.T) {
 		})
 	}
 
-}
-
-type mockSubscriber struct {
-	ApplySubscriptionDefaultsFn func(
-		ctx context.Context,
-		sub *kargoapi.RepoSubscription,
-	) error
-	ValidateSubscriptionFn func(
-		ctx context.Context,
-		f *field.Path,
-		sub kargoapi.RepoSubscription,
-	) field.ErrorList
-	DiscoverArtifactsFn func(
-		ctx context.Context,
-		project string,
-		sub kargoapi.RepoSubscription,
-	) (any, error)
-}
-
-func (m *mockSubscriber) ApplySubscriptionDefaults(
-	ctx context.Context,
-	sub *kargoapi.RepoSubscription,
-) error {
-	return m.ApplySubscriptionDefaultsFn(ctx, sub)
-}
-
-func (m *mockSubscriber) ValidateSubscription(
-	ctx context.Context,
-	f *field.Path,
-	sub kargoapi.RepoSubscription,
-) field.ErrorList {
-	return m.ValidateSubscriptionFn(ctx, f, sub)
-}
-
-func (m *mockSubscriber) DiscoverArtifacts(
-	ctx context.Context,
-	project string,
-	sub kargoapi.RepoSubscription,
-) (any, error) {
-	if m.DiscoverArtifactsFn != nil {
-		return m.DiscoverArtifactsFn(ctx, project, sub)
-	}
-	return nil, nil
 }
