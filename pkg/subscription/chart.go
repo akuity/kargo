@@ -3,12 +3,17 @@ package subscription
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/helm"
 	"github.com/akuity/kargo/pkg/helm/chart"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/validation"
 )
 
 func init() {
@@ -36,6 +41,87 @@ func newChartSubscriber(
 	credentialsDB credentials.Database,
 ) (Subscriber, error) {
 	return &chartSubscriber{credentialsDB: credentialsDB}, nil
+}
+
+// ApplySubscriptionDefaults implements Subscriber.
+func (c *chartSubscriber) ApplySubscriptionDefaults(
+	_ context.Context,
+	sub *kargoapi.RepoSubscription,
+) error {
+	if sub == nil || sub.Chart == nil {
+		return nil
+	}
+	if sub.Chart != nil && sub.Chart.DiscoveryLimit == 0 {
+		sub.Chart.DiscoveryLimit = 20
+	}
+	return nil
+}
+
+var helmRepoURLRegex = regexp.MustCompile(`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`)
+
+// ValidateSubscription implements Subscriber.
+func (c *chartSubscriber) ValidateSubscription(
+	_ context.Context,
+	f *field.Path,
+	s kargoapi.RepoSubscription,
+) field.ErrorList {
+	// TODO(krancour): Longer term, we might want to start doing this with JSON
+	// schema.
+
+	sub := s.Chart
+	var errs field.ErrorList
+
+	// Validate RepoURL: MinLength=1, Pattern (Helm repo URL regex)
+	if err := validation.MinLength(f.Child("repoURL"), sub.RepoURL, 1); err != nil {
+		errs = append(errs, err)
+	}
+	if !helmRepoURLRegex.MatchString(sub.RepoURL) {
+		errs = append(errs, field.Invalid(
+			f.Child("repoURL"),
+			sub.RepoURL,
+			"must be a valid Helm repository URL",
+		))
+	}
+
+	// Validate Name based on RepoURL
+	if strings.HasPrefix(sub.RepoURL, "oci://") && sub.Name != "" {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("name"),
+				sub.Name,
+				"must be empty if repoURL starts with oci://",
+			),
+		)
+	}
+	isHTTP := strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")
+	if isHTTP && sub.Name == "" {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("name"),
+				sub.Name,
+				"must be non-empty if repoURL starts with http:// or https://",
+			),
+		)
+	}
+
+	// Validate SemverConstraint
+	if err := validation.SemverConstraint(
+		f.Child("semverConstraint"),
+		sub.SemverConstraint,
+	); err != nil {
+		errs = append(errs, err)
+	}
+
+	// Validate DiscoveryLimit: Minimum=1, Maximum=100
+	if sub.DiscoveryLimit < 1 {
+		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be >= 1"))
+	} else if sub.DiscoveryLimit > 100 {
+		errs = append(errs, field.Invalid(f.Child("discoveryLimit"), sub.DiscoveryLimit, "must be <= 100"))
+	}
+
+	return errs
 }
 
 // DiscoverArtifacts implement Subscriber.
