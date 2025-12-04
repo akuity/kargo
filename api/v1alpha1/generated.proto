@@ -298,10 +298,6 @@ message ChartSubscription {
   // case of a repository within an OCI registry, the URL implicitly points to
   // a specific chart and the Name field MUST NOT be used. The RepoURL field is
   // required.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-  // +akuity:test-kubebuilder-pattern=HelmRepoURL
   optional string repoURL = 1;
 
   // Name specifies the name of a Helm chart to subscribe to within a classic
@@ -316,8 +312,6 @@ message ChartSubscription {
   // used. Care should be taken with leaving this field unspecified, as it can
   // lead to the unanticipated rollout of breaking changes.
   // More info: https://github.com/masterminds/semver#checking-version-constraints
-  //
-  // +kubebuilder:validation:Optional
   optional string semverConstraint = 3;
 
   // DiscoveryLimit is an optional limit on the number of chart versions that
@@ -325,10 +319,6 @@ message ChartSubscription {
   // filtering charts based on the SemverConstraint field.
   // When left unspecified, the field is implicitly treated as if its value
   // were "20". The upper limit for this field is 100.
-  //
-  // +kubebuilder:validation:Minimum=1
-  // +kubebuilder:validation:Maximum=100
-  // +kubebuilder:default=20
   optional int32 discoveryLimit = 4;
 }
 
@@ -833,10 +823,6 @@ message GitLabWebhookReceiverConfig {
 // GitSubscription defines a subscription to a Git repository.
 message GitSubscription {
   // URL is the repository's URL. This is a required field.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
-  // +akuity:test-kubebuilder-pattern=GitRepoURLPattern
   optional string repoURL = 1;
 
   // CommitSelectionStrategy specifies the rules for how to identify the newest
@@ -862,8 +848,6 @@ message GitSubscription {
   // - "NewestTag": Selects the commit referenced by the most recently created
   //   tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be
   //   used to narrow the set of tags eligible for selection.
-  //
-  // +kubebuilder:default=NewestFromBranch
   optional string commitSelectionStrategy = 2;
 
   // Branch references a particular branch of the repository. The value in this
@@ -872,11 +856,6 @@ message GitSubscription {
   // NewestFromBranch). This field is optional. When left unspecified, (and the
   // CommitSelectionStrategy is NewestFromBranch or unspecified), the
   // subscription is implicitly to the repository's default branch.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:MaxLength=255
-  // +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
-  // +akuity:test-kubebuilder-pattern=Branch
   optional string branch = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -897,8 +876,6 @@ message GitSubscription {
   // which means the latest semantically tagged commit will always be used. Care
   // should be taken with leaving this field unspecified, as it can lead to the
   // unanticipated rollout of breaking changes.
-  //
-  // +kubebuilder:validation:Optional
   optional string semverConstraint = 4;
 
   // AllowTags is a regular expression that can optionally be used to limit the
@@ -909,8 +886,6 @@ message GitSubscription {
   // Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
   // in v1.13.0.
-  //
-  // +kubebuilder:validation:Optional
   optional string allowTags = 5;
 
   // AllowTagsRegexes is a list of regular expressions that can optionally be
@@ -918,8 +893,6 @@ message GitSubscription {
   // of interest. The values in this field only have any effect when the
   // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
   // optional.
-  //
-  // +kubebuilder:validation:Optional
   repeated string allowTagsRegexes = 13;
 
   // IgnoreTags is a list of tags that must be ignored when determining the
@@ -931,8 +904,6 @@ message GitSubscription {
   // Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
   // in v1.13.0.
-  //
-  // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
 
   // IgnoreTagsRegexes is a list of regular expressions that can optionally be
@@ -940,8 +911,6 @@ message GitSubscription {
   // of interest. The values in this field only have any effect when the
   // CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
   // optional.
-  //
-  // +kubebuilder:validation:Optional
   repeated string ignoreTagsRegexes = 14;
 
   // ExpressionFilter is an expression that can optionally be used to limit
@@ -987,8 +956,6 @@ message GitSubscription {
   //
   // Refer to the expr-lang documentation for more details on syntax and
   // capabilities of the expression language: https://expr-lang.org.
-  //
-  // +kubebuilder:validation:Optional
   optional string expressionFilter = 12;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
@@ -1009,7 +976,6 @@ message GitSubscription {
   // Paths selected by IncludePaths may be unselected by ExcludePaths. This
   // is a useful method for including a broad set of paths and then excluding a
   // subset of them.
-  // +kubebuilder:validation:Optional
   repeated string includePaths = 8;
 
   // ExcludePaths is a list of selectors that designate paths in the repository
@@ -1025,7 +991,6 @@ message GitSubscription {
   // Paths selected by IncludePaths may be unselected by ExcludePaths. This
   // is a useful method for including a broad set of paths and then excluding a
   // subset of them.
-  // +kubebuilder:validation:Optional
   repeated string excludePaths = 9;
 
   // DiscoveryLimit is an optional limit on the number of commits that can be
@@ -1033,10 +998,6 @@ message GitSubscription {
   // commits based on the AllowTagsRegexes, IgnoreTagsRegexes, and
   // ExpressionFilter fields. When left unspecified, the field is implicitly
   // treated as if its value were "20". The upper limit for this field is 100.
-  //
-  // +kubebuilder:validation:Minimum=1
-  // +kubebuilder:validation:Maximum=100
-  // +kubebuilder:default=20
   optional int32 discoveryLimit = 10;
 }
 
@@ -1155,15 +1116,9 @@ message ImageDiscoveryResult {
 }
 
 // ImageSubscription defines a subscription to an image repository.
-//
-// +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, constraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
 message ImageSubscription {
   // RepoURL specifies the URL of the image repository to subscribe to. The
   // value in this field MUST NOT include an image tag. This field is required.
-  //
-  // +kubebuilder:validation:MinLength=1
-  // +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
-  // +akuity:test-kubebuilder-pattern=ImageRepoURL
   optional string repoURL = 1;
 
   // ImageSelectionStrategy specifies the rules for how to identify the newest version
@@ -1196,8 +1151,6 @@ message ImageSubscription {
   //   set of tags eligible for selection.
   //   See the following for for a description of semver version constraint
   //   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints
-  //
-  // +kubebuilder:default=SemVer
   optional string imageSelectionStrategy = 3;
 
   // StrictSemvers specifies whether only "strict" semver tags should be
@@ -1208,8 +1161,6 @@ message ImageSubscription {
   // commit hashes, which have the potential to contain numeric characters only
   // and could be mistaken for a semver string containing the major version
   // number only.
-  //
-  // +kubebuilder:default=true
   optional bool strictSemvers = 10;
 
   // Constraint specifies ImageSelectionStrategy-specific constraints on what
@@ -1219,8 +1170,6 @@ message ImageSubscription {
   // treat this field as optional, specifying no value means "no constraints."
   // Refer to the descriptions of individual strategies to learn if or how they
   // use this field.
-  //
-  // +kubebuilder:validation:Optional
   optional string constraint = 11;
 
   // AllowTags is a regular expression that can optionally be used to limit the
@@ -1230,15 +1179,11 @@ message ImageSubscription {
   // Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
   // in v1.13.0.
-  //
-  // +kubebuilder:validation:Optional
   optional string allowTags = 5;
 
   // AllowTagsRegexes is a list of regular expressions that can optionally be
   // used to limit the image tags that are considered in determining the newest
   // revision of an image. This field is optional.
-  //
-  // +kubebuilder:validation:Optional
   repeated string allowTagsRegexes = 13;
 
   // IgnoreTags is a list of tags that must be ignored when determining the
@@ -1248,15 +1193,11 @@ message ImageSubscription {
   // Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed
   // in v1.13.0.
-  //
-  // +kubebuilder:validation:Optional
   repeated string ignoreTags = 6;
 
   // IgnoreTagsRegexes is a list of regular expressions that can optionally be
   // used to exclude tags from consideration when determining the newest
   // revision of an image. This field is optional.
-  //
-  // +kubebuilder:validation:Optional
   repeated string ignoreTagsRegexes = 14;
 
   // Platform is a string of the form <os>/<arch> that limits the tags that can
@@ -1267,8 +1208,6 @@ message ImageSubscription {
   // ImageRepositorySubscription will run on a Kubernetes node with a different
   // OS/architecture than the Kargo controller. At present this is uncommon, but
   // not unheard of.
-  //
-  // +kubebuilder:validation:Optional
   optional string platform = 7;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors
@@ -1281,10 +1220,6 @@ message ImageSubscription {
   // filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes
   // fields. When left unspecified, the field is implicitly treated as if its
   // value were "20". The upper limit for this field is 100.
-  //
-  // +kubebuilder:validation:Minimum=1
-  // +kubebuilder:validation:Maximum=100
-  // +kubebuilder:default=20
   optional int32 discoveryLimit = 9;
 }
 

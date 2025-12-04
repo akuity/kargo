@@ -612,10 +612,6 @@ export type ChartSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Ch
    * a specific chart and the Name field MUST NOT be used. The RepoURL field is
    * required.
    *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(((https?)|(oci))://)([\w\d\.\-]+)(:[\d]+)?(/.*)*$`
-   * +akuity:test-kubebuilder-pattern=HelmRepoURL
-   *
    * @generated from field: optional string repoURL = 1;
    */
   repoURL: string;
@@ -638,8 +634,6 @@ export type ChartSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Ch
    * lead to the unanticipated rollout of breaking changes.
    * More info: https://github.com/masterminds/semver#checking-version-constraints
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: optional string semverConstraint = 3;
    */
   semverConstraint: string;
@@ -650,10 +644,6 @@ export type ChartSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Ch
    * filtering charts based on the SemverConstraint field.
    * When left unspecified, the field is implicitly treated as if its value
    * were "20". The upper limit for this field is 100.
-   *
-   * +kubebuilder:validation:Minimum=1
-   * +kubebuilder:validation:Maximum=100
-   * +kubebuilder:default=20
    *
    * @generated from field: optional int32 discoveryLimit = 4;
    */
@@ -1769,10 +1759,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
   /**
    * URL is the repository's URL. This is a required field.
    *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
-   * +akuity:test-kubebuilder-pattern=GitRepoURLPattern
-   *
    * @generated from field: optional string repoURL = 1;
    */
   repoURL: string;
@@ -1802,8 +1788,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    *   tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be
    *   used to narrow the set of tags eligible for selection.
    *
-   * +kubebuilder:default=NewestFromBranch
-   *
    * @generated from field: optional string commitSelectionStrategy = 2;
    */
   commitSelectionStrategy: string;
@@ -1815,11 +1799,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * NewestFromBranch). This field is optional. When left unspecified, (and the
    * CommitSelectionStrategy is NewestFromBranch or unspecified), the
    * subscription is implicitly to the repository's default branch.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:MaxLength=255
-   * +kubebuilder:validation:Pattern=`^[a-zA-Z0-9]([a-zA-Z0-9._\/-]*[a-zA-Z0-9_-])?$`
-   * +akuity:test-kubebuilder-pattern=Branch
    *
    * @generated from field: optional string branch = 3;
    */
@@ -1849,8 +1828,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * should be taken with leaving this field unspecified, as it can lead to the
    * unanticipated rollout of breaking changes.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: optional string semverConstraint = 4;
    */
   semverConstraint: string;
@@ -1865,8 +1842,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * discovery will FAIL if this field is non-empty. This field will be removed
    * in v1.13.0.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: optional string allowTags = 5;
    */
   allowTags: string;
@@ -1877,8 +1852,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * of interest. The values in this field only have any effect when the
    * CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
    * optional.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string allowTagsRegexes = 13;
    */
@@ -1895,8 +1868,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * discovery will FAIL if this field is non-empty. This field will be removed
    * in v1.13.0.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: repeated string ignoreTags = 6;
    */
   ignoreTags: string[];
@@ -1907,8 +1878,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * of interest. The values in this field only have any effect when the
    * CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is
    * optional.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string ignoreTagsRegexes = 14;
    */
@@ -1959,8 +1928,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * Refer to the expr-lang documentation for more details on syntax and
    * capabilities of the expression language: https://expr-lang.org.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: optional string expressionFilter = 12;
    */
   expressionFilter: string;
@@ -1988,7 +1955,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * Paths selected by IncludePaths may be unselected by ExcludePaths. This
    * is a useful method for including a broad set of paths and then excluding a
    * subset of them.
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string includePaths = 8;
    */
@@ -2008,7 +1974,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * Paths selected by IncludePaths may be unselected by ExcludePaths. This
    * is a useful method for including a broad set of paths and then excluding a
    * subset of them.
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string excludePaths = 9;
    */
@@ -2020,10 +1985,6 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
    * commits based on the AllowTagsRegexes, IgnoreTagsRegexes, and
    * ExpressionFilter fields. When left unspecified, the field is implicitly
    * treated as if its value were "20". The upper limit for this field is 100.
-   *
-   * +kubebuilder:validation:Minimum=1
-   * +kubebuilder:validation:Maximum=100
-   * +kubebuilder:default=20
    *
    * @generated from field: optional int32 discoveryLimit = 10;
    */
@@ -2295,18 +2256,12 @@ export const ImageDiscoveryResultSchema: GenMessage<ImageDiscoveryResult> = /*@_
 /**
  * ImageSubscription defines a subscription to an image repository.
  *
- * +kubebuilder:validation:XValidation:message="If imageSelectionStrategy is Digest, constraint must be set",rule="!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
- *
  * @generated from message github.com.akuity.kargo.api.v1alpha1.ImageSubscription
  */
 export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.ImageSubscription"> & {
   /**
    * RepoURL specifies the URL of the image repository to subscribe to. The
    * value in this field MUST NOT include an image tag. This field is required.
-   *
-   * +kubebuilder:validation:MinLength=1
-   * +kubebuilder:validation:Pattern=`^(\w+([\.-]\w+)*(:[\d]+)?/)?(\w+([\.-]\w+)*)(/\w+([\.-]\w+)*)*$`
-   * +akuity:test-kubebuilder-pattern=ImageRepoURL
    *
    * @generated from field: optional string repoURL = 1;
    */
@@ -2344,8 +2299,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    *   See the following for for a description of semver version constraint
    *   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints
    *
-   * +kubebuilder:default=SemVer
-   *
    * @generated from field: optional string imageSelectionStrategy = 3;
    */
   imageSelectionStrategy: string;
@@ -2360,8 +2313,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * and could be mistaken for a semver string containing the major version
    * number only.
    *
-   * +kubebuilder:default=true
-   *
    * @generated from field: optional bool strictSemvers = 10;
    */
   strictSemvers: boolean;
@@ -2374,8 +2325,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * treat this field as optional, specifying no value means "no constraints."
    * Refer to the descriptions of individual strategies to learn if or how they
    * use this field.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string constraint = 11;
    */
@@ -2390,8 +2339,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * discovery will FAIL if this field is non-empty. This field will be removed
    * in v1.13.0.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: optional string allowTags = 5;
    */
   allowTags: string;
@@ -2400,8 +2347,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * AllowTagsRegexes is a list of regular expressions that can optionally be
    * used to limit the image tags that are considered in determining the newest
    * revision of an image. This field is optional.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string allowTagsRegexes = 13;
    */
@@ -2416,8 +2361,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * discovery will FAIL if this field is non-empty. This field will be removed
    * in v1.13.0.
    *
-   * +kubebuilder:validation:Optional
-   *
    * @generated from field: repeated string ignoreTags = 6;
    */
   ignoreTags: string[];
@@ -2426,8 +2369,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * IgnoreTagsRegexes is a list of regular expressions that can optionally be
    * used to exclude tags from consideration when determining the newest
    * revision of an image. This field is optional.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: repeated string ignoreTagsRegexes = 14;
    */
@@ -2442,8 +2383,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * ImageRepositorySubscription will run on a Kubernetes node with a different
    * OS/architecture than the Kargo controller. At present this is uncommon, but
    * not unheard of.
-   *
-   * +kubebuilder:validation:Optional
    *
    * @generated from field: optional string platform = 7;
    */
@@ -2464,10 +2403,6 @@ export type ImageSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.Im
    * filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes
    * fields. When left unspecified, the field is implicitly treated as if its
    * value were "20". The upper limit for this field is 100.
-   *
-   * +kubebuilder:validation:Minimum=1
-   * +kubebuilder:validation:Maximum=100
-   * +kubebuilder:default=20
    *
    * @generated from field: optional int32 discoveryLimit = 9;
    */
