@@ -1356,34 +1356,6 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [FreightList](#akuity-io-kargo-service-v1alpha1-FreightList) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigRequest"></a>
-
-### RefreshClusterConfigRequest
- DEPRECATED: Do not use.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigResponse"></a>
-
-### RefreshClusterConfigResponse
- DEPRECATED: Do not use.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigRequest"></a>
-
-### RefreshProjectConfigRequest
- DEPRECATED: Do not use. RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project to refresh configuration for. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse"></a>
-
-### RefreshProjectConfigResponse
- DEPRECATED: Do not use. RefreshProjectConfigResponse contains the refreshed project configuration.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
-
 <a name="akuity-io-kargo-service-v1alpha1-RefreshResourceRequest"></a>
 
 ### RefreshResourceRequest
@@ -1401,40 +1373,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | resource | [google.protobuf.Any](#google-protobuf-Any) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
-
-### RefreshStageRequest
- DEPRECATED: Do not use. RefreshStageRequest is the request for refreshing a stage's status.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the stage. |
-| name | [string](#string) |  name is the name of the stage to refresh. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshStageResponse"></a>
-
-### RefreshStageResponse
- DEPRECATED: Do not use. RefreshStageResponse contains the refreshed stage information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage is the refreshed Stage resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
-
-### RefreshWarehouseRequest
- DEPRECATED: Do not use. RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the warehouse. |
-| name | [string](#string) |  name is the name of the warehouse to refresh. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
-
-### RefreshWarehouseResponse
- DEPRECATED: Do not use. RefreshWarehouseResponse contains the refreshed warehouse information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the refreshed Warehouse resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyRequest"></a>
 

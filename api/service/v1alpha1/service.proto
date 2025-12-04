@@ -277,8 +277,6 @@ service KargoService {
   rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
   // DeleteClusterSecret removes a cluster-scoped secret.
   rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
-
-  // Refresh triggers a refresh of the specified Kargo resource.
 }
 
 /* Version and Configuration Messages */
@@ -556,23 +554,6 @@ message DeleteStageRequest {
 message DeleteStageResponse {
   /* explicitly empty */
 }
-
-// DEPRECATED: Do not use.
-// RefreshStageRequest is the request for refreshing a stage's status.
-message RefreshStageRequest {
-  // project is the name of the project containing the stage.
-  string project = 1;
-  // name is the name of the stage to refresh.
-  string name = 2;
-}
-
-// DEPRECATED: Do not use.
-// RefreshStageResponse contains the refreshed stage information.
-message RefreshStageResponse {
-  // stage is the refreshed Stage resource.
-  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
-}
-
 /* ClusterConfig Messages */
 
 message GetClusterConfigRequest {
@@ -601,16 +582,6 @@ message WatchClusterConfigRequest {
 message WatchClusterConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
   string type = 2; // ADDED / MODIFIED / DELETED
-}
-
-// DEPRECATED: Do not use.
-message RefreshClusterConfigRequest {
-  /* explicitly empty */
-}
-
-// DEPRECATED: Do not use.
-message RefreshClusterConfigResponse {
-  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
 }
 
 /* Promotion Messages */
@@ -788,20 +759,6 @@ message WatchProjectConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
   // type indicates the type of change (ADDED / MODIFIED / DELETED).
   string type = 2;
-}
-
-// DEPRECATED: Do not use.
-// RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
-message RefreshProjectConfigRequest {
-  // project is the name of the project to refresh configuration for.
-  string project = 1;
-}
-
-// DEPRECATED: Do not use.
-// RefreshProjectConfigResponse contains the refreshed project configuration.
-message RefreshProjectConfigResponse {
-  // project_config is the refreshed ProjectConfig object.
-  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
 }
 
 /* Freight Messages */
@@ -1046,22 +1003,6 @@ message DeleteWarehouseRequest {
 // DeleteWarehouseResponse is the response after deleting a warehouse.
 message DeleteWarehouseResponse {
   /* explicitly empty */
-}
-
-// DEPRECATED: Do not use.
-// RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
-message RefreshWarehouseRequest {
-  // project is the name of the project containing the warehouse.
-  string project = 1;
-  // name is the name of the warehouse to refresh.
-  string name = 2;
-}
-
-// DEPRECATED: Do not use.
-// RefreshWarehouseResponse contains the refreshed warehouse information.
-message RefreshWarehouseResponse {
-  // warehouse is the refreshed Warehouse resource.
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 // ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
