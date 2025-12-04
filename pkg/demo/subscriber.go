@@ -10,6 +10,7 @@ import (
 
 	"github.com/Masterminds/semver/v3"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/component"
@@ -102,6 +103,40 @@ func newSubscriber(_ context.Context,
 	}
 }
 
+// ApplySubscriptionDefaults implements subscription.Subscriber.
+func (s *subscriber) ApplySubscriptionDefaults(
+	_ context.Context,
+	sub *kargoapi.RepoSubscription,
+) error {
+	if sub.Subscription.Config == nil {
+		sub.Subscription.Config = &v1.JSON{Raw: []byte(`{}`)}
+	}
+	cfg := struct {
+		Message string `json:"message,omitempty"`
+	}{}
+	if err := json.Unmarshal(sub.Subscription.Config.Raw, &cfg); err != nil {
+		return fmt.Errorf("error unmarshaling subscription config: %w", err)
+	}
+	if cfg.Message == "" {
+		cfg.Message = "Hello from the demo subscriber!"
+	}
+	rawCfg, err := json.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("error marshaling subscription config: %w", err)
+	}
+	sub.Subscription.Config = &v1.JSON{Raw: rawCfg}
+	return nil
+}
+
+// ValidateSubscription implements subscription.Subscriber.
+func (s *subscriber) ValidateSubscription(
+	context.Context,
+	*field.Path,
+	kargoapi.RepoSubscription,
+) (errs field.ErrorList) {
+	return nil
+}
+
 // DiscoverArtifacts implements subscription.Subscriber. It grows an internal
 // collection of dummy artifacts by one each time it is invoked and returns a
 // GenericDiscoveryResult. The maximum number of artifact references in the
@@ -150,12 +185,6 @@ func (s *subscriber) DiscoverArtifacts(
 		}
 	}
 
-	const defaultDiscoveryLimit = 20
-	discoveryLimit := sub.Subscription.DiscoveryLimit
-	if discoveryLimit == 0 {
-		discoveryLimit = defaultDiscoveryLimit
-	}
-
 	// Bump the internal version number.
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -187,8 +216,8 @@ func (s *subscriber) DiscoverArtifacts(
 	}
 
 	artifacts := s.artifacts
-	if len(artifacts) > int(discoveryLimit) {
-		artifacts = artifacts[:discoveryLimit]
+	if len(artifacts) > int(sub.Subscription.DiscoveryLimit) {
+		artifacts = artifacts[:sub.Subscription.DiscoveryLimit]
 	}
 
 	return kargoapi.DiscoveryResult{
