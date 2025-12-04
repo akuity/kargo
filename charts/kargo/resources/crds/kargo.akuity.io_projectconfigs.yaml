@@ -333,8 +333,8 @@ spec:
                             properties:
                               action:
                                 description: |-
-                                  Kind indicates the type of action to be performed. `Refresh` is the only
-                                  currently supported Kind.
+                                  Action indicates the type of action to be performed. `Refresh` is the only
+                                  currently supported Action.
                                 enum:
                                 - Refresh
                                 type: string

@@ -118,7 +118,7 @@
                       "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
                       "properties": {
                         "action": {
-                          "description": "Kind indicates the type of action to be performed. `Refresh` is the only\ncurrently supported Kind.",
+                          "description": "Action indicates the type of action to be performed. `Refresh` is the only\ncurrently supported Action.",
                           "enum": [
                             "Refresh"
                           ],

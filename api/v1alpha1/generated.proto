@@ -691,8 +691,8 @@ message FreightStatus {
 // GenericWebhookAction describes an action to be performed on a resource
 // and the conditions under which it should be performed.
 message GenericWebhookAction {
-  // Kind indicates the type of action to be performed. `Refresh` is the only
-  // currently supported Kind.
+  // Action indicates the type of action to be performed. `Refresh` is the only
+  // currently supported Action.
   //
   // +kubebuilder:validation:Enum=Refresh;
   optional string action = 1;
