@@ -92,26 +92,23 @@ spec:
 
 ### Designating Targets
 
-There are 3 different ways of designating `Target`s:
+There are three different ways to designate `Target`s:
 
-1. [By name](#by-name)
-1. [By labels](#by-labels)
-1. [By values in an index](#by-values-in-an-index)
+1. [By Name](#by-name)
+2. [By Labels](#by-labels)
+3. [By Values in an Index](#by-values-in-an-index)
 
-All of which support both static and 
-[expression derived values](#expression-functions).
+All methods support both static values and [expression-derived values](#expression-functions).
 
 :::note
-Designating targets by using more than one of the above methods results in
-criteria that is the logical AND of all defined criteria.
+Using more than one method to designate targets results in criteria that is the logical **AND** of all defined criteria.
 :::
 
-#### By name
+#### By Name
 
-The simplest way of designating a `Target` resource is by designating it by
-`name`.
+The simplest way to designate a `Target` resource is by specifying its `name`.
 
-##### example
+##### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -127,21 +124,21 @@ spec:
           name: wh-secret
       actions:
         - actionType: Refresh
-          matchExpression: "request.header("X-Event-Type") == 'push'"
+          matchExpression: "request.header('X-Event-Type') == 'push'"
           targets:
-            # This target is designated via static name
+            # Static name designation
             - kind: Warehouse
               name: my-warehouse
-            # This target is designated via expression derived name
+            # Expression-derived name designation
             - kind: Warehouse
               name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
-### By labels
+#### By Labels
 
-`labelSelector` contains supports for both `matchLabels` and `matchExpressions`.
+Use `labelSelector` to designate targets based on labels. It supports both `matchLabels` and `matchExpressions`.
 
-#### example
+##### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -157,40 +154,41 @@ spec:
           name: wh-secret
       actions:
         - actionType: Refresh
-          matchExpression: "request.header("X-Event-Type") == 'push'"
+          matchExpression: "request.header('X-Event-Type') == 'push'"
           targets:
             - kind: Warehouse
               labelSelector:
                 matchLabels:
-                  # targets with 'environment' label with value 'prod'.
+                  # Targets with the 'environment' label set to 'prod'
                   environment: prod
                 matchExpressions:
-                  # targets with 'service' label with value 'ui' OR 'api'.
+                  # Targets with the 'service' label set to 'ui' OR 'api'
                   - key: service
                     operator: In
                     values: ["ui", "api"]
 ```
 
-### By values in an index
+#### By Values in an Index
 
-`indexSelector` can be used to retrieve resources by a cached index.
+Use `indexSelector` to retrieve resources by a cached index.
+
+##### Example
 
 ```yaml
 actions:
   - actionType: Refresh
-    matchExpression: "request.header("X-Event-Type") == 'push'"
+    matchExpression: "request.header('X-Event-Type') == 'push'"
     targets:
       - kind: Warehouse
         indexSelector:
-          MatchIndices:
+          matchIndices:
             - key: subscribedURLs
               operator: Equals
               value: "${{ normalizeGit(request.body.repository.url) }}"
 ```
 
 :::note
-`subscribedURLs` is the only available index and refers to `Warehouse`'s that 
-contain subscriptions that subscribe to a provided repository URL.
+`subscribedURLs` is the only available index. It refers to `Warehouse` resources that contain subscriptions for a provided repository URL.
 :::
 
 ### Expression functions
