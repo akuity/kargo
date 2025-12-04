@@ -200,14 +200,14 @@ incoming requests.
 
 The following expression functions are available:
 
-`request.body`
+#### request.body
 
 Derived from incoming requests whose fields can be accessed using
 standard bracket or dot-notation. For example, `data.address.city` would access 
 the `city` property nested within the `address` object, and `data.users[0]` 
 would access the first item in a `users` array. 
 
-`request.header(headerKey)`
+#### request.header(headerKey)
 
 Function that retrieves first value for `headerKey`.
 
@@ -217,7 +217,7 @@ It has one argument:
 If `headerKey` is not present in the request headers, an empty `string` will
 be returned.
 
-`request.headers(headerKey)`
+#### request.headers(headerKey)
 
 Function that retrieves all values for `headerKey`.
 
@@ -227,7 +227,7 @@ It has one argument:
 If `headerKey` is not present in the request headers, an empty `string` array
 will be returned.
 
-`normalizeGit(url)`
+#### normalizeGit(url)
 
 Function that normalizes a git `url`.
 
@@ -236,7 +236,7 @@ It has one argument:
 
 The returned value is a `string`.
 
-`normalizeImage(url)`
+#### normalizeImage(url)
 
 Function that normalizes an image `url`.
 
@@ -245,7 +245,7 @@ It has one argument:
 
 The returned value is a `string`.
 
-`normalizeChart(url)`
+#### normalizeChart(url)
 
 Function that normalizes a chart `url`.
 
