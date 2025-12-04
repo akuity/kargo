@@ -21,6 +21,7 @@ func (s *server) RefreshResource(
 ) (*connect.Response[svcv1alpha1.RefreshResourceResponse], error) {
 	o, err := s.getClientObject(ctx, req.Msg)
 	if err != nil {
+		// errors returned here are already properly formed connect errors
 		return nil, err
 	}
 
@@ -32,7 +33,10 @@ func (s *server) RefreshResource(
 				fmt.Errorf("%s not found", req.Msg.GetKind()),
 			)
 		}
-		return nil, err
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf("failed to refresh %s: %w", req.Msg.GetKind(), err),
+		)
 	}
 
 	// If we're dealing with a stage and there is a current promotion then refresh it too.
@@ -45,7 +49,10 @@ func (s *server) RefreshResource(
 			},
 		})
 		if err != nil {
-			return nil, err
+			return nil, connect.NewError(
+				connect.CodeInternal,
+				fmt.Errorf("failed to refresh %s: %w", req.Msg.GetKind(), err),
+			)
 		}
 	}
 	return newRefreshResponse(o), nil
