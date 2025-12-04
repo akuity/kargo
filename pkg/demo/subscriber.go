@@ -130,10 +130,30 @@ func (s *subscriber) ApplySubscriptionDefaults(
 
 // ValidateSubscription implements subscription.Subscriber.
 func (s *subscriber) ValidateSubscription(
-	context.Context,
-	*field.Path,
-	kargoapi.RepoSubscription,
+	_ context.Context,
+	f *field.Path,
+	sub kargoapi.RepoSubscription,
 ) (errs field.ErrorList) {
+	if sub.Subscription.Config == nil {
+		sub.Subscription.Config = &v1.JSON{Raw: []byte(`{}`)}
+	}
+	cfg := struct {
+		Message string `json:"message,omitempty"`
+	}{}
+	if err := json.Unmarshal(sub.Subscription.Config.Raw, &cfg); err != nil {
+		return field.ErrorList{field.Invalid(
+			f.Child("config"),
+			string(sub.Subscription.Config.Raw),
+			fmt.Sprintf("error unmarshaling subscription config: %v", err),
+		)}
+	}
+	if cfg.Message == "forbidden message" {
+		return field.ErrorList{field.Invalid(
+			f.Child("config").Child("message"),
+			cfg.Message,
+			"the message 'forbidden message' is not allowed",
+		)}
+	}
 	return nil
 }
 
