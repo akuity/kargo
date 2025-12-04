@@ -301,11 +301,8 @@ func (h *httpRequester) buildExprEnv(
 	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
 
 	if len(bodyBytes) > 0 {
-		// Handle text/plain responses by storing the raw text
-		if contentType == contentTypeTextPlain {
-			env["response"].(map[string]any)["body"] = string(bodyBytes) // nolint: forcetypeassert
-		} else if contentType == contentTypeJSON || json.Valid(bodyBytes) {
-			// Handle JSON responses (either explicit content-type or valid JSON)
+		// Handle JSON responses (either explicit content-type or valid JSON)
+		if contentType == contentTypeJSON || json.Valid(bodyBytes) {
 			var parsedBody any
 			if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
 				return nil, fmt.Errorf("failed to parse response: %w", err)
@@ -318,6 +315,9 @@ func (h *httpRequester) buildExprEnv(
 			default:
 				return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
 			}
+		} else if contentType == contentTypeTextPlain {
+			// Handle text/plain responses by storing the raw text
+			env["response"].(map[string]any)["body"] = string(bodyBytes) // nolint: forcetypeassert
 		}
 	}
 
