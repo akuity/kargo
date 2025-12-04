@@ -8,6 +8,7 @@
         "hcl-update",
         "send-message",
         "tf-apply",
+        "tf-output",
         "tf-plan"
     ],
     "pro": [
@@ -18,6 +19,7 @@
         "hcl-update",
         "send-message",
         "tf-apply",
+        "tf-output",
         "tf-plan"
     ]
 }
