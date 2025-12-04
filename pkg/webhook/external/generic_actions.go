@@ -10,14 +10,14 @@ import (
 )
 
 type actionResult struct {
-	ActionKind      kargoapi.GenericWebhookActionKind `json:"actionKind"`
+	ActionType      kargoapi.GenericWebhookActionType `json:"actionType"`
 	ConditionResult conditionResult                   `json:"conditionResult"`
 	TargetResults   []targetResult                    `json:"targetResults,omitempty"`
 }
 
 func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
 	return actionResult{
-		ActionKind: action.Kind,
+		ActionType: action.ActionType,
 		ConditionResult: conditionResult{
 			Expression: action.MatchExpression,
 		},
@@ -53,8 +53,8 @@ func (g *genericWebhookReceiver) handleAction(
 	action kargoapi.GenericWebhookAction,
 ) []targetResult {
 	var targetResults []targetResult
-	switch action.Kind {
-	case kargoapi.GenericWebhookActionKindRefresh:
+	switch action.ActionType {
+	case kargoapi.GenericWebhookActionTypeRefresh:
 		targetResults = g.handleRefreshAction(ctx, env, action)
 	}
 	return targetResults

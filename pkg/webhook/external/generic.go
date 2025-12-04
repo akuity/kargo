@@ -90,7 +90,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 		actionResults := make([]actionResult, len(g.config.Actions))
 		for i, action := range g.config.Actions {
 			aLogger := logger.WithValues(
-				"action", action.Kind,
+				"action", action.ActionType,
 				"expression", action.MatchExpression,
 			)
 
@@ -173,8 +173,8 @@ func hasErrors(ar actionResult) bool {
 		if tr.ListError != nil {
 			return true
 		}
-		switch ar.ActionKind {
-		case kargoapi.GenericWebhookActionKindRefresh:
+		switch ar.ActionType {
+		case kargoapi.GenericWebhookActionTypeRefresh:
 			refreshFailure := func(rr refreshResult) bool { return rr.Failure != "" }
 			if slices.ContainsFunc(tr.RefreshResults, refreshFailure) {
 				return true

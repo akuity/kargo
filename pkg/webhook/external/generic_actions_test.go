@@ -329,8 +329,8 @@ func TestHandleRefreshAction(t *testing.T) {
 				t.Context(),
 				tt.actionEnv,
 				kargoapi.GenericWebhookAction{
-					Kind:    kargoapi.GenericWebhookActionKindRefresh,
-					Targets: tt.targets,
+					ActionType: kargoapi.GenericWebhookActionTypeRefresh,
+					Targets:    tt.targets,
 				},
 			))
 		})

@@ -67,7 +67,7 @@ spec:
         secretRef:
           name: wh-secret
       actions:
-        - action: Refresh
+        - actionType: Refresh
           # Parameters can optionally be defined for use in expressions
           parameters:
             - targetEvent: "push"
