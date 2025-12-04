@@ -1,7 +1,14 @@
 import { faMap } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { ControlButton, Controls, MiniMap, ReactFlow, useNodesState } from '@xyflow/react';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  ControlButton,
+  Controls,
+  MiniMap,
+  ReactFlow,
+  ReactFlowInstance,
+  useNodesState
+} from '@xyflow/react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { queryCache } from '@ui/features/utils/cache';
 import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -29,6 +36,7 @@ const nodeTypes = {
 };
 
 export const Graph = (props: GraphProps) => {
+  const reactFlowInstance = useRef<ReactFlowInstance | null>(null);
   const filterContext = useFreightTimelineControllerContext();
 
   const stackedNodesParents = filterContext?.preferredFilter?.stackedNodesParents || [];
@@ -142,6 +150,12 @@ export const Graph = (props: GraphProps) => {
     return nodes;
   }, [nodes]);
 
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      reactFlowInstance.current?.fitView();
+    });
+  }, [filterContext?.preferredFilter?.hideSubscriptions]);
+
   return (
     <GraphContext.Provider value={{ warehouseByName, stackedNodesParents, onStack, onUnstack }}>
       <ReactFlow
@@ -156,6 +170,7 @@ export const Graph = (props: GraphProps) => {
         minZoom={0}
         onNodesChange={onNodesChange}
         onlyRenderVisibleElements
+        onInit={(inst) => (reactFlowInstance.current = inst)}
       >
         {!Object.keys(dimensions).length && (
           <div className='opacity-0 overflow-hidden h-0'>

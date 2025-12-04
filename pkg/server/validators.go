@@ -7,6 +7,7 @@ import (
 
 	"connectrpc.com/connect"
 	"k8s.io/apimachinery/pkg/util/validation/field"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/akuity/kargo/pkg/server/validation"
 )
@@ -21,8 +22,25 @@ func validateFieldNotEmpty(fieldName string, fieldValue string) error {
 	return nil
 }
 
+func (s *server) validateSystemLevelOrProject(
+	systemLevel bool,
+	project string,
+) error {
+	if !systemLevel && project == "" {
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("project must be specified when system level is false"),
+		)
+	}
+	return nil
+}
+
 func (s *server) validateProjectExists(ctx context.Context, project string) error {
-	if err := s.externalValidateProjectFn(ctx, s.client, project); err != nil {
+	var cl client.Client = s.client
+	if s.client != nil && s.client.InternalClient() != nil {
+		cl = s.client.InternalClient()
+	}
+	if err := s.externalValidateProjectFn(ctx, cl, project); err != nil {
 		if errors.Is(err, validation.ErrProjectNotFound) {
 			return connect.NewError(connect.CodeNotFound, err)
 		}

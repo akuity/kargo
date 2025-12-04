@@ -93,6 +93,52 @@ spec:
 
 ## Advanced Configuration
 
+### Message Threading/Grouping
+
+With many types of notifications, it can be helpful to group related messages together in a thread
+or conversation based on items like the freight being promoted or specific items like a tag name or
+commit ID. This is especially useful for channels like Slack where threaded messages help keep
+discussions organized. To enable message grouping, you can use the `groupingKey` field in the event
+router spec.
+
+Currently, the `groupingKey` feature is only used by Slack channels, but this will be expanded to
+other channel types in future releases.
+
+A `groupingKey` is a string value that can be a plain string or constructed using expressions
+enclosed in `${{ }}` which render to a string. The value of the `groupingKey` is used by the message
+channel to determine which messages should be grouped together. All of the same context is used to
+evaluate the expression as is used in things like message formatting (see see the [message
+formatting documentation](./20-message-formatting.md) for more information). For example, to group
+messages by the freight name and stage being promoted to, you could configure the event router like
+this:
+
+```yaml
+kind: EventRouter
+apiVersion: ee.kargo.akuity.io/v1alpha1
+metadata:
+  name: promotion-status
+  namespace: kargo-demo
+spec:
+  groupingKey: "${{ event.freight.stageName }}-${{ event.freight.name }}"
+  types:
+    - PromotionFailed
+    - PromotionErrored
+  channels:
+    - name: devops-team-slack
+      kind: MessageChannel
+```
+
+:::warning
+
+Please note that this feature currently behaves in the same way as Argo CD Notifications in that the
+current state (i.e. which thread is mapped to a grouping key) is stored in memory. This means that
+if the Kargo controller is restarted, the mapping will be lost and new threads may be created for
+existing grouping keys. We will be adding persistent storage for this in a future release.
+
+:::
+
+### Custom Templates
+
 The default templates and `when` field will likely cover many use cases, but you can also customize
 the message content and formatting by specifying a custom message body. This allows you to tailor
 the notifications to your specific needs. 
