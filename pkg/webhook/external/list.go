@@ -33,7 +33,11 @@ func (g *genericWebhookReceiver) listTargetObjects(
 			return itemsToObjects(warehouses.Items), nil
 		}
 		for _, wh := range warehouses.Items {
-			if wh.Name == target.Name {
+			name, err := evalAsString(target.Name, actionEnv)
+			if err != nil {
+				return nil, fmt.Errorf("failed to evaluate warehouse name as string: %w", err)
+			}
+			if wh.Name == name {
 				return []client.Object{&wh}, nil
 			}
 		}
@@ -111,7 +115,11 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any)
 		labelReqs = append(labelReqs, *labelReq)
 	}
 	for k, v := range ls.MatchLabels {
-		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		strValue, err := evalAsString(v, env)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate matchLabel value as string: %w", err)
+		}
+		req, err := labels.NewRequirement(k, selection.Equals, []string{strValue})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create label requirement: %w", err)
 		}
