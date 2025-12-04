@@ -5,13 +5,21 @@
         "git-merge-pr",
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
-        "send-message"
+        "hcl-update",
+        "send-message",
+        "tf-apply",
+        "tf-output",
+        "tf-plan"
     ],
     "pro": [
         "jira",
         "jfrog-evidence",
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
-        "send-message"
+        "hcl-update",
+        "send-message",
+        "tf-apply",
+        "tf-output",
+        "tf-plan"
     ]
 }
