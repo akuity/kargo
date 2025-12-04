@@ -6,7 +6,8 @@
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
         "hcl-update",
-        "send-message"
+        "send-message",
+        "tf-plan"
     ],
     "pro": [
         "jira",
@@ -14,6 +15,7 @@
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
         "hcl-update",
-        "send-message"
+        "send-message",
+        "tf-plan"
     ]
 }
