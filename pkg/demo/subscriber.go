@@ -159,8 +159,8 @@ func (s *subscriber) ValidateSubscription(
 
 // DiscoverArtifacts implements subscription.Subscriber. It grows an internal
 // collection of dummy artifacts by one each time it is invoked and returns a
-// GenericDiscoveryResult. The maximum number of artifact references in the
-// result is constrained by the DiscoveryLimit attribute of the subscription's
+// DiscoveryResult. The maximum number of artifact references in the result is
+// constrained by the DiscoveryLimit attribute of the subscription's
 // configuration.
 func (s *subscriber) DiscoverArtifacts(
 	ctx context.Context,

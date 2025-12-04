@@ -257,7 +257,9 @@ func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
 			if sub.Subscription != nil {
 				kind := sub.Subscription.SubscriptionType
 				if kind == "" {
-					return nil, fmt.Errorf("subscription at index %d has empty Kind field", i)
+					return nil, fmt.Errorf(
+						"subscription at index %d has empty SubscriptionType field", i,
+					)
 				}
 				genericJSON, err := json.Marshal(sub.Subscription)
 				if err != nil {
@@ -854,8 +856,8 @@ type ArtifactReference struct {
 	// Metadata is a JSON object containing a mostly opaque collection of artifact
 	// attributes. (It must be an object. It may not be a list or a scalar value.)
 	// "Mostly" because Kargo may understand how to interpret some documented,
-	// well-known top-level keys. Those aside, this metadata is only understood by
-	// a corresponding Subscriber implementation that created it.
+	// well-known, top-level keys. Those aside, this metadata is only understood
+	// by a corresponding Subscriber implementation that created it.
 	//
 	// +optional
 	Metadata *apiextensionsv1.JSON `json:"metadata,omitempty" protobuf:"bytes,4,opt,name=metadata"`
@@ -872,8 +874,10 @@ func (g *ArtifactReference) DeepEquals(
 	if g == nil || other == nil {
 		return false
 	}
-	return g.SubscriptionName == other.SubscriptionName &&
-		g.Version == other.Version
+	return g.ArtifactType == other.ArtifactType &&
+		g.SubscriptionName == other.SubscriptionName &&
+		g.Version == other.Version &&
+		g.Metadata == other.Metadata
 }
 
 // +kubebuilder:object:root=true

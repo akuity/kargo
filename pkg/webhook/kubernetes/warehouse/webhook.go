@@ -282,7 +282,7 @@ func (s uniqueSubSet) addSub(
 	// way to identify them uniquely.
 	switch {
 	case sub.Chart != nil:
-		k := &subscriptionKey{
+		k := subscriptionKey{
 			kind: "chart",
 			id:   urls.NormalizeChart(sub.Chart.RepoURL),
 		}
@@ -292,52 +292,52 @@ func (s uniqueSubSet) addSub(
 			// of the uniqueness criteria
 			k.id = k.id + ":" + sub.Chart.Name
 		}
-		if _, exists := s[*k]; exists {
+		if _, exists := s[k]; exists {
 			var errMsg string
 			if isHTTP {
 				errMsg = fmt.Sprintf(
 					"subscription for chart %q already exists at %q",
-					sub.Chart.Name, s[*k],
+					sub.Chart.Name, s[k],
 				)
 			} else {
-				errMsg = fmt.Sprintf("subscription for chart already exists at %q", s[*k])
+				errMsg = fmt.Sprintf("subscription for chart already exists at %q", s[k])
 			}
 			return field.Invalid(f.Child("chart"), sub.Chart.RepoURL, errMsg)
 		}
 	case sub.Git != nil:
-		k := &subscriptionKey{
+		k := subscriptionKey{
 			kind: "git",
 			id:   urls.NormalizeGit(sub.Git.RepoURL),
 		}
-		if _, exists := s[*k]; exists {
+		if _, exists := s[k]; exists {
 			return field.Invalid(
 				f.Child("git"),
 				sub.Git.RepoURL,
-				fmt.Sprintf("subscription for Git repository already exists at %q", s[*k]),
+				fmt.Sprintf("subscription for Git repository already exists at %q", s[k]),
 			)
 		}
 	case sub.Image != nil:
-		k := &subscriptionKey{
+		k := subscriptionKey{
 			kind: "image",
 			id:   urls.NormalizeImage(sub.Image.RepoURL),
 		}
-		if _, exists := s[*k]; exists {
+		if _, exists := s[k]; exists {
 			return field.Invalid(
 				f.Child("image"),
 				sub.Image.RepoURL,
-				fmt.Sprintf("subscription for image repository already exists at %q", s[*k]),
+				fmt.Sprintf("subscription for image repository already exists at %q", s[k]),
 			)
 		}
 	case sub.Subscription != nil:
-		k := &subscriptionKey{
+		k := subscriptionKey{
 			kind: "sub",
 			id:   strings.TrimSpace(strings.ToLower(sub.Subscription.Name)),
 		}
-		if _, exists := s[*k]; exists {
+		if _, exists := s[k]; exists {
 			return field.Invalid(
 				f.Child("subscription"),
 				sub.Subscription.Name,
-				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[*k]),
+				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[k]),
 			)
 		}
 	}

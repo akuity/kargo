@@ -588,7 +588,7 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 			errorMsg:    "must have exactly one of Git, Image, Chart, or Subscription set",
 		},
 		{
-			name: "invalid generic subscription with empty kind",
+			name: "invalid generic subscription with empty subscription type",
 			spec: &WarehouseSpec{
 				InternalSubscriptions: []RepoSubscription{
 					{
@@ -599,7 +599,7 @@ func TestWarehouseSpecMarshalValidationErrors(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "empty Kind field",
+			errorMsg:    "empty SubscriptionType field",
 		},
 		{
 			name: "invalid multiple subscriptions with error in second",

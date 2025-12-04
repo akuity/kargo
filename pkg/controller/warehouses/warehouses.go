@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -553,8 +552,7 @@ func (r *reconciler) discoverArtifacts(
 			discovered.Results = append(discovered.Results, typedRes)
 		default:
 			return nil, fmt.Errorf(
-				"subscriber returned unrecognized result type %s",
-				reflect.TypeOf(typedRes),
+				"subscriber returned unrecognized result type %T", typedRes,
 			)
 		}
 	}

@@ -30,7 +30,7 @@ type Subscriber interface {
 	// - kargoapi.ChartDiscoveryResult
 	// - kargoapi.GitDiscoveryResult
 	// - kargoapi.ImageDiscoveryResult
-	// - kargoapi.GenericDiscoveryResult
+	// - kargoapi.DiscoveryResult
 	DiscoverArtifacts(
 		ctx context.Context,
 		project string,
