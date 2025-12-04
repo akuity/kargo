@@ -4,20 +4,17 @@ sidebar_label: Generic
 
 # Generic Webhook Receiver
 
-The Generic webhook receiver responds to events originating from arbitrary
-repositories by performing `Action`s on `Target`s. Consider the example of a 
-`Warehouse` refresh. In this example, the `Action` is the refresh and the 
-`Target` is the `Warehouse`.
+The generic webhook receiver responds to any inbound POST request by determining
+whether it meets user-defined criteria, then executing user-defined actions on a
+user-defined set of resources when it does.
 
 :::note
-A generic webhook receiver is not limited to a single `Action` and `Action`'s 
-are not limited to a single `Target`.
-:::
-
-:::info
-"Refreshing" a `Warehouse` resource means enqueuing it for immediate
-reconciliation by the Kargo controller, which will execute the discovery of new
-artifacts from all repositories to which that `Warehouse` subscribes.
+Currently, these actions are limited to "refreshing" `Warehouse` resources,
+which triggers their artifact discovery processes, so a typical use of this
+component is responding to "push" events from artifact repositories that
+lack dedicated webhook receiver implementations. Since this component
+effectively enables imperatively refreshing a `Warehouse` from any external
+process, other uses are possible and practical.
 :::
 
 ## Configuring the Receiver
@@ -66,64 +63,171 @@ spec:
       generic:
         secretRef:
           name: wh-secret
+```
+
+### matchExpression
+
+Use `matchExpression` to ensure that an action is only executed when specific 
+criteria are met, providing fine-grained control over webhook behavior.
+
+#### Example
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
       actions:
         - actionType: Refresh
-          # Parameters can optionally be defined for use in expressions
-          parameters:
-            - targetEvent: "push"
-            - headerKey: "X-Event-Type"
           # Only perform this action if this expression is satisfied
-          matchExpression: "request.header(params.headerKey) == params.targetEvent"
+          matchExpression: "request.header("X-Event-Type") == 'push'"
+```
+
+### Designating Targets
+
+There are 3 different ways of designating `Target`s:
+
+1. [By name](#by-name)
+1. [By labels](#by-labels)
+1. [By values in an index](#by-values-in-an-index)
+
+All of which support both static and 
+[expression derived values](#expression-functions).
+
+:::note
+Designating targets by using more than one of the above methods results in
+criteria that is the logical AND of all defined criteria.
+:::
+
+#### By name
+
+The simplest way of designating a `Target` resource is by designating it by
+`name`.
+
+##### example
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+      actions:
+        - actionType: Refresh
+          matchExpression: "request.header("X-Event-Type") == 'push'"
           targets:
             # This target is designated via static name
             - kind: Warehouse
               name: my-warehouse
             # This target is designated via expression derived name
             - kind: Warehouse
-              name: "${{ request.body.repository.name }}"
-            # This target omits the name all together and designates any
-            # resources that fulfill the label and index selector criteria
+              name: "${{ normalizeGit(request.body.repository.name) }}"
+```
+
+### By labels
+
+`labelSelector` contains supports for both `matchLabels` and `matchExpressions`.
+
+#### example
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+      actions:
+        - actionType: Refresh
+          matchExpression: "request.header("X-Event-Type") == 'push'"
+          targets:
             - kind: Warehouse
               labelSelector:
                 matchLabels:
-                  environment: production
+                  # targets with 'environment' label with value 'prod'.
+                  environment: prod
                 matchExpressions:
-                  - key: tier
+                  # targets with 'service' label with value 'ui' OR 'api'.
+                  - key: service
                     operator: In
-                    values: ["critical", "high"]
-              indexSelector:
-                matchExpressions:
-                  - key: subscribedURL
-                    operator: In
-                    value: "${{ normalizeGit(request.body.repository.url) }}"
+                    values: ["ui", "api"]
+```
+
+### By values in an index
+
+`indexSelector` can be used to retrieve resources by a cached index.
+
+```yaml
+actions:
+  - actionType: Refresh
+    matchExpression: "request.header("X-Event-Type") == 'push'"
+    targets:
+      - kind: Warehouse
+        indexSelector:
+          MatchIndices:
+            - key: subscribedURLs
+              operator: Equals
+              value: "${{ normalizeGit(request.body.repository.url) }}"
 ```
 
 :::note
-`name`, `labelSelector`, and `indexSelector` are all
-optional. However, at least one of them must be specified.
+`subscribedURLs` is the only available index and refers to `Warehouse`'s that 
+contain subscriptions that subscribe to a provided repository URL.
 :::
 
-## Designating Targets
-
-There are 3 different ways of designating `Target`s:
-
-1. [Static](#static)
-1. [Expression-Derived](#expression-derived)
-1. [Selector-Based](#selector-based)
-
-### Static
-
-The simplest way of designating a `Target` is by setting a static `name` 
-to identify the resource.
-
-### Expression-Derived
+### Expression functions
 
 The Generic webhook receiver extends
 [built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with various expression functions and objects. These functions and objects can 
-be used to help users derive `Target` information from incoming requests.
+with utilities that can be used to help derive `Target` information from 
+incoming requests.
 
 The following expression functions are available:
+
+`request.body`
+
+Derived from incoming requests whose fields can be accessed using
+standard bracket or dot-notation. For example, `data.address.city` would access 
+the `city` property nested within the `address` object, and `data.users[0]` 
+would access the first item in a `users` array. 
+
+`request.header(headerKey)`
+
+Function that retrieves first value for `headerKey`.
+
+It has one argument:
+- `headerKey` (Required): Case-insensitive header key.
+
+If `headerKey` is not present in the request headers, an empty `string` will
+be returned.
+
+`request.headers(headerKey)`
+
+Function that retrieves all values for `headerKey`.
+
+It has one argument:
+- `headerKey` (Required): Case-insensitive header key.
+
+If `headerKey` is not present in the request headers, an empty `string` array
+will be returned.
 
 `normalizeGit(url)`
 
@@ -151,87 +255,3 @@ It has one argument:
 - `url` (Required): The URL of a chart repository.
 
 The returned value is a `string`.
-
-`request.header(headerKey)`
-
-Function that retrieves first value for `headerKey`.
-
-It has one argument:
-- `headerKey` (Required): Case-insensitive header key.
-
-If `headerKey` is not present in the request headers, an empty `string` will
-be returned.
-
-`request.headers(headerKey)`
-
-Function that retrieves all values for `headerKey`.
-
-It has one argument:
-- `headerKey` (Required): Case-insensitive header key.
-
-If `headerKey` is not present in the request headers, an empty `string` array
-will be returned.
-
-`request.body`
-
-Generic object derived from incoming requests whose fields can be accessed using
-standard bracket or dot-notation. For example, `data.address.city` would access 
-the `city` property nested within the `address` object, and `data.users[0]` 
-would access the first item in a `users` array. 
-
-### Selector-Based
-
-Generic webhook receivers use label and index selectors. They can be used in
-combination with one another(as well as a static or dynamic `Name`). Listed 
-targets would be ones that match the logical AND of all defined constraints.
-
-#### Label Selectors
-
-Label selectors contain support for both `matchLabels` and `matchExpressions`.
-A static list of key/value pairs should be used for `matchLabels`. For 
-`matchExpressions`, you must specify a `key`, `operator` and `values` where
-`values` supports static and/or expression derived values.
-
-```
-labelSelector:
-  matchLabels:
-    environment: production
-  matchExpressions:
-  - key: env
-    operator: In
-    values: ["critical", "high"]
-```
-
-#### Index Selectors
-
-Index Selectors have `matchExpression` support. They use a `key`, `operator`, 
-and `value` combination. Supported operators include `Equal` and `NotEqual`. The
-only supported `key` at this time is `subscribedURLs`. Expressions are supported
-for `value`.
-
-:::note
-`subscribedURLs` refers to `Warehouse`'s that contain subscriptions that 
-subscribe to the provided repository URL.
-:::
-
-```
-indexSelector:
-  matchExpressions:
-  - key: subscribedURLs
-    operator: Equal
-    value: "${{ normalize("git", request.body.repository.url) }}"
-```
-
-
-## Retrieving the Receiver's URL
-
-Kargo will generate a hard-to-guess URL from the receiver's configuration. This
-URL can be obtained using a command such as the following:
-
-```shell
-kubectl get projectconfigs kargo-demo \
-  -n kargo-demo \
-  -o=jsonpath='{.status.webhookReceivers}'
-```
-
-This URL can then be used anywhere webhooks can be configured.

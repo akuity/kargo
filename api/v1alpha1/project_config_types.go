@@ -481,8 +481,8 @@ type IndexSelectorRequirement struct {
 type IndexSelectorRequirementOperator string
 
 const (
-	IndexSelectorRequirementOperatorEqual    IndexSelectorRequirementOperator = "Equal"
-	IndexSelectorRequirementOperatorNotEqual IndexSelectorRequirementOperator = "NotEqual"
+	IndexSelectorRequirementOperatorEqual    IndexSelectorRequirementOperator = "Equals"
+	IndexSelectorRequirementOperatorNotEqual IndexSelectorRequirementOperator = "NotEquals"
 )
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
