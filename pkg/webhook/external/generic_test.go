@@ -33,7 +33,7 @@ func TestGenericHandler(t *testing.T) {
 		assertions func(*testing.T, *httptest.ResponseRecorder)
 	}{
 		{
-			name:    "failure creating global env",
+			name:    "failure creating base env",
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			config:  &kargoapi.GenericWebhookReceiverConfig{},
 			req: func() *http.Request {
@@ -49,7 +49,42 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
-			name:    "condition not met - failed to evaluate",
+			name:    "condition not met - failed to compile expression",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "{x!kj\"}",
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"{x!kj\"}",
+								"satisfied":false,
+								"evalError": "unexpected token Operator(\"!\") (1:3)\n | {x!kj\"}\n | ..^"
+							}
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name:    "condition not met - failed to run expression",
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
@@ -158,6 +193,62 @@ func TestGenericHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "list error",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					List: func(
+						_ context.Context,
+						_ client.WithWatch,
+						_ client.ObjectList,
+						_ ...client.ListOption,
+					) error {
+						return errors.New("oops")
+					},
+				},
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "true",
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"true",
+								"satisfied":true
+							},
+							"targetResults":[
+								{
+									"kind":"Warehouse",
+									"listError":"failed to list target objects: error listing Warehouse targets: oops"
+								}
+							]
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
 			name: "partial success",
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				// this warehouse will be refreshed successfully
@@ -257,6 +348,7 @@ func TestGenericHandler(t *testing.T) {
 				Actions: []kargoapi.GenericWebhookAction{
 					{
 						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						Parameters:      map[string]string{"foo": "bar"},
 						MatchExpression: "request.header('X-Event-Type') == 'push'",
 						// use complex combination of both label and index selectors
 						Targets: []kargoapi.GenericWebhookTarget{

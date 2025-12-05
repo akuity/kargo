@@ -29,6 +29,28 @@ func TestHandleRefreshAction(t *testing.T) {
 		assertions func(*testing.T, []targetResult)
 	}{
 		{
+			name:   "error building list options - invalid operator",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			targets: []kargoapi.GenericWebhookTarget{{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				IndexSelector: kargoapi.IndexSelector{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{{
+						Key:      "",
+						Operator: "InvalidOperator",
+						Value:    "some-value",
+					}},
+				},
+			}},
+			assertions: func(t *testing.T, results []targetResult) {
+				require.Len(t, results, 1)
+				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
+				require.NotEmpty(t, results[0].ListError)
+				require.Contains(t, results[0].ListError,
+					"unsupported operator \"InvalidOperator\" in index selector expression",
+				)
+			},
+		},
+		{
 			name: "error listing Warehouses",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
 				interceptor.Funcs{
@@ -48,8 +70,8 @@ func TestHandleRefreshAction(t *testing.T) {
 			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.Error(t, results[0].ListError)
-				require.Contains(t, results[0].ListError.Error(), "something went wrong")
+				require.NotEmpty(t, results[0].ListError)
+				require.Contains(t, results[0].ListError, "something went wrong")
 			},
 		},
 		{
@@ -136,7 +158,7 @@ func TestHandleRefreshAction(t *testing.T) {
 			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.NoError(t, results[0].ListError)
+				require.Empty(t, results[0].ListError)
 				require.Len(t, results[0].RefreshResults, 1)
 				require.Equal(t, "test-project/warehouse-1", results[0].RefreshResults[0].Success)
 			},
@@ -312,8 +334,8 @@ func TestHandleRefreshAction(t *testing.T) {
 			assertions: func(t *testing.T, results []targetResult) {
 				require.Len(t, results, 1)
 				require.Equal(t, "UnsupportedKind", string(results[0].Kind))
-				require.Error(t, results[0].ListError)
-				require.ErrorContains(t, results[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
+				require.NotEmpty(t, results[0].ListError)
+				require.Contains(t, results[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
 			},
 		},
 	}

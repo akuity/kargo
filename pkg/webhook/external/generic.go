@@ -170,7 +170,7 @@ func hasErrors(ar actionResult) bool {
 		return true
 	}
 	for _, tr := range ar.TargetResults {
-		if tr.ListError != nil {
+		if tr.ListError != "" {
 			return true
 		}
 		switch ar.ActionType {

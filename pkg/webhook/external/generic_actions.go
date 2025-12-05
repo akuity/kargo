@@ -33,7 +33,7 @@ type conditionResult struct {
 type targetResult struct {
 	Kind           kargoapi.GenericWebhookTargetKind `json:"kind"`
 	Name           string                            `json:"name,omitempty"`
-	ListError      error                             `json:"listError,omitempty"`
+	ListError      string                            `json:"listError,omitempty"`
 	RefreshResults []refreshResult                   `json:"refreshResults,omitempty"`
 }
 
@@ -80,10 +80,11 @@ func (g *genericWebhookReceiver) handleRefreshAction(
 		objects, err := g.listTargetObjects(tCtx, target, actionEnv)
 		if err != nil {
 			tLogger.Error(err, "failed to list objects for target")
-			targetResults[i].ListError = fmt.Errorf("failed to list target objects: %w", err)
+			targetResults[i].ListError = fmt.Sprintf("failed to list target objects: %v", err)
 			continue
 		}
 		targetResults[i].RefreshResults = refreshObjects(tCtx, g.client, objects)
 	}
+	logger.Info("checking target results", "results", targetResults)
 	return targetResults
 }
