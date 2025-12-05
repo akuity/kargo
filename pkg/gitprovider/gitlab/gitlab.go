@@ -260,12 +260,39 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 }
 
 func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
+	var merged = glMR.State == "merged"
+	var mergeCommit string
+	if merged {
+		switch {
+		case glMR.MergeCommitSHA != "":
+			// Regular merge (with or without squash):
+			// GitLab gives us the merge commit SHA.
+			mergeCommit = glMR.MergeCommitSHA
+		case glMR.SquashCommitSHA != "":
+			// Fast-forward with squash:
+			// No merge commit exists, but a squash commit SHA may be available.
+			//
+			// Note: GitLab does not reliably populate squash_commit_sha in all
+			// relevant API/webhook payloads yet. We still prefer it when present,
+			// and keep this branch to future-proof against incoming GitLab changes
+			// that aim to backfill and correctly populate squash_commit_sha.
+			//
+			// References:
+			// - https://gitlab.com/gitlab-org/gitlab/-/issues/415449
+			// - https://gitlab.com/gitlab-org/gitlab/-/issues/294257
+			mergeCommit = glMR.SquashCommitSHA
+		default:
+			// Fast-forward without squash:
+			// No merge commit exists; the source HEAD is now on the target branch.
+			mergeCommit = glMR.SHA
+		}
+	}
 	return gitprovider.PullRequest{
 		Number:         glMR.IID,
 		URL:            glMR.WebURL,
 		Open:           isMROpen(glMR),
-		Merged:         glMR.State == "merged",
-		MergeCommitSHA: glMR.MergeCommitSHA,
+		Merged:         merged,
+		MergeCommitSHA: mergeCommit,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
 		CreatedAt:      glMR.CreatedAt,
