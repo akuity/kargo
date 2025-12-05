@@ -32,7 +32,7 @@
   },
   "wait": {
    "type": "boolean",
-   "description": "If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is false."
+   "description": "If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. This step performs synchronous merges only and does not add PRs to merge queues. Default is false."
   }
  }
 }

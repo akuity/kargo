@@ -10,6 +10,20 @@ description: Merges an open pull request.
 `git-merge-pr` merges an open pull request. This step commonly follows a
 [`git-open-pr`](git-open-pr.md) step.
 
+:::caution
+This step only supports synchronous merges due to API limitations of the Git providers.
+It does not work with merge queues or wait for queued merges to finish. If a
+repository enforces merge queues, the behavior depends on the token permissions.
+
+- GitHub: If a merge queue is required, the PR will either be merged directly if the
+  token has bypass permissions, or it will fail with an error if it does not.
+- GitLab: If a merge train is required, the merge will either fail or can be bypassed
+  based on permissions.
+
+If your repo depends on merge queues, you must either give the service account
+permission to bypass them or add PRs to the queue manually outside of Kargo.
+:::
+
 ## Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                                                    |
@@ -49,8 +63,9 @@ steps:
 ### Merge with Wait
 
 This example demonstrates merging a pull request with waiting enabled. If the pull
-request is not immediately ready to merge, the step will return a running status and
-Kargo will retry it later.
+request is not immediately ready to merge (e.g., due to pending CI checks, required
+reviews, or temporary conflicts), the step will return a running status and Kargo
+will retry it on the next reconciliation.
 
 ```yaml
 steps:
@@ -60,3 +75,9 @@ steps:
     prNumber: 42
     wait: true
 ```
+
+:::note
+If the repository requires using a merge queue and the token lacks bypass permissions,
+the step will fail regardless of the `wait` setting, as the step does not add PRs to
+merge queues.
+:::
