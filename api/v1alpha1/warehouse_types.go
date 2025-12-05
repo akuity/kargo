@@ -134,7 +134,7 @@ type WarehouseSpec struct {
 	FreightCreationCriteria *FreightCreationCriteria `json:"freightCreationCriteria,omitempty" protobuf:"bytes,5,opt,name=freightCreationCriteria"`
 }
 
-var knownKeys = []string{"chart", "git", "image"}
+var legacySubscriptionTypes = []string{"chart", "git", "image"}
 
 // UnmarshalJSON unmarshals the JSON data into WarehouseSpec, converting the
 // JSON from the Subscriptions field into typed RepoSubscription objects in
@@ -185,7 +185,7 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 			}
 
 			// Check for known keys (git, image, chart)
-			if slices.Contains(knownKeys, key) {
+			if slices.Contains(legacySubscriptionTypes, key) {
 				// Known subscription type - unmarshal normally
 				if err := json.Unmarshal(
 					aux.Subscriptions[i].Raw,
