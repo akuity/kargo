@@ -310,8 +310,8 @@ export type ArtifactReference = Message<"github.com.akuity.kargo.api.v1alpha1.Ar
    * Metadata is a JSON object containing a mostly opaque collection of artifact
    * attributes. (It must be an object. It may not be a list or a scalar value.)
    * "Mostly" because Kargo may understand how to interpret some documented,
-   * well-known top-level keys. Those aside, this metadata is only understood by
-   * a corresponding Subscriber implementation that created it.
+   * well-known, top-level keys. Those aside, this metadata is only understood
+   * by a corresponding Subscriber implementation that created it.
    *
    * +optional
    *

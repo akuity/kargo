@@ -1922,7 +1922,7 @@ RawFormat specifies the format for raw resource representation.
 | artifactType | [string](#string) |  ArtifactType specifies the type of artifact this is. Often, but not always, it will be the media type (MIME type) of the artifact referenced by this ArtifactReference.   |
 | subscriptionName | [string](#string) |  SubscriptionName is the name of the Subscription that discovered this artifact.   |
 | version | [string](#string) |  Version identifies a specific revision of this artifact.   |
-| metadata | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Metadata is a JSON object containing a mostly opaque collection of artifact attributes. (It must be an object. It may not be a list or a scalar value.) "Mostly" because Kargo may understand how to interpret some documented, well-known top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it.  +optional |
+| metadata | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Metadata is a JSON object containing a mostly opaque collection of artifact attributes. (It must be an object. It may not be a list or a scalar value.) "Mostly" because Kargo may understand how to interpret some documented, well-known, top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig"></a>
 
