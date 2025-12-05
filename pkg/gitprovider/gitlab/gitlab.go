@@ -14,7 +14,14 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
-const ProviderName = "gitlab"
+const (
+	ProviderName = "gitlab"
+
+	mrStateOpened     = "opened"
+	mrStateMerged     = "merged"
+	mrStateSkipMerged = "skip_merged"
+	mrStateLocked     = "locked"
+)
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
@@ -68,10 +75,19 @@ type mergeRequestClient interface {
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
 }
 
+type mergeTrainClient interface {
+	GetMergeRequestOnAMergeTrain(
+		pid any,
+		mergeRequest int64,
+		options ...gitlab.RequestOptionFunc,
+	) (*gitlab.MergeTrain, *gitlab.Response, error)
+}
+
 // provider is a GitLab-based implementation of gitprovider.Interface.
 type provider struct { // nolint: revive
-	projectName string
-	client      mergeRequestClient
+	projectName      string
+	client           mergeRequestClient
+	mergeTrainClient mergeTrainClient
 }
 
 // NewProvider returns a GitLab-based implementation of gitprovider.Interface.
@@ -113,8 +129,9 @@ func NewProvider(
 	}
 
 	return &provider{
-		projectName: projectName,
-		client:      client.MergeRequests,
+		projectName:      projectName,
+		client:           client.MergeRequests,
+		mergeTrainClient: client.MergeTrains,
 	}, nil
 }
 
@@ -156,6 +173,21 @@ func (p *provider) GetPullRequest(
 		return nil, fmt.Errorf("unexpected nil merge request")
 	}
 	pr := convertGitlabMR(glMR.BasicMergeRequest)
+	// Check if MR is in merge train when state is opened
+	if pr.Open {
+		mergeTrain, mtResp, err := p.mergeTrainClient.GetMergeRequestOnAMergeTrain(
+			p.projectName, id,
+		)
+		if err == nil && mtResp != nil && mtResp.StatusCode == 200 && mergeTrain != nil {
+			if mergeTrain.Status != mrStateMerged && mergeTrain.Status != mrStateSkipMerged {
+				pr.Queued = true
+			}
+		} else if mtResp != nil && mtResp.StatusCode == 403 {
+			// Merge Trains not available (Free tier), fall back to state check
+			pr.Queued = true
+		}
+		// HTTP 404 means not in merge train, leave Queued as false
+	}
 	return &pr, nil
 }
 
@@ -219,11 +251,11 @@ func (p *provider) MergePullRequest(
 	}
 
 	switch {
-	case glMR.State == "merged":
+	case glMR.State == mrStateMerged:
 		pr := convertGitlabMR(glMR.BasicMergeRequest)
 		return &pr, true, nil
 
-	case glMR.State != "opened":
+	case glMR.State != mrStateOpened:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
 	case glMR.DetailedMergeStatus != "mergeable":
@@ -231,7 +263,7 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Merge the MR
-	updatedMR, _, err := p.client.AcceptMergeRequest(
+	updatedMR, resp, err := p.client.AcceptMergeRequest(
 		p.projectName, id, &gitlab.AcceptMergeRequestOptions{},
 	)
 	if err != nil {
@@ -242,7 +274,37 @@ func (p *provider) MergePullRequest(
 	}
 
 	pr := convertGitlabMR(updatedMR.BasicMergeRequest)
-	return &pr, true, nil
+	if pr.Merged {
+		return &pr, true, nil
+	}
+
+	// GitLab merge trains keep the MR in "opened" state when queued for merging.
+	// The GitLab API returns HTTP 200 with the MR object in "opened" state.
+	if resp != nil && updatedMR.State == mrStateOpened {
+		// Verify the MR is actually in the merge train using the Merge Trains API.
+		// This API is only available in GitLab Premium/Ultimate tiers.
+		mergeTrain, mtResp, err := p.mergeTrainClient.GetMergeRequestOnAMergeTrain(
+			p.projectName, id,
+		)
+		if err == nil && mtResp != nil && mtResp.StatusCode == 200 && mergeTrain != nil {
+			// MR is confirmed to be in the merge train. Check if it's in an active state.
+			// Status can be: idle, merged, stale, fresh, merging, skip_merged
+			// We consider it queued if it's in an active state (not merged/skip_merged).
+			if mergeTrain.Status != mrStateMerged && mergeTrain.Status != mrStateSkipMerged {
+				pr.Queued = true
+			}
+		} else if mtResp != nil && mtResp.StatusCode == 403 {
+			// Merge Trains API is not available (Free tier or feature disabled).
+			// Fall back to the simple state check: if AcceptMergeRequest succeeded
+			// and state is still "opened", assume it's queued.
+			pr.Queued = true
+		}
+		// If we get 404, the MR is not in the merge train, so Queued remains false.
+	}
+
+	// MR is not merged yet (queued or pending checks). Return non-merged so
+	// the caller can decide to wait/retry according to its policy.
+	return &pr, false, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
@@ -264,7 +326,7 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 		Number:         glMR.IID,
 		URL:            glMR.WebURL,
 		Open:           isMROpen(glMR),
-		Merged:         glMR.State == "merged",
+		Merged:         glMR.State == mrStateMerged,
 		MergeCommitSHA: glMR.MergeCommitSHA,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
@@ -273,7 +335,7 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 }
 
 func isMROpen(glMR gitlab.BasicMergeRequest) bool {
-	return glMR.State == "opened" || glMR.State == "locked"
+	return glMR.State == mrStateOpened || glMR.State == mrStateLocked
 }
 
 func parseRepoURL(repoURL string) (string, string, string, error) {

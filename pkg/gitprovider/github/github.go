@@ -244,6 +244,9 @@ func (p *provider) GetPullRequest(
 		return nil, fmt.Errorf("unexpected nil pull request")
 	}
 	pr := convertGithubPR(*ghPR)
+	// NOTE: GitHub doesn't provide merge queue status in the Get PR API response.
+	// The pr.Queued field will only be populated when MergePullRequest() detects
+	// an HTTP 202 response indicating the PR was enqueued for asynchronous merging.
 	return &pr, nil
 }
 
@@ -321,7 +324,7 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Merge the PR
-	mergeResult, _, err := p.client.MergePullRequest(
+	_, resp, err := p.client.MergePullRequest(
 		ctx,
 		p.owner,
 		p.repo,
@@ -332,9 +335,12 @@ func (p *provider) MergePullRequest(
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
-	if mergeResult == nil {
-		return nil, false, fmt.Errorf("unexpected nil merge result")
-	}
+	// The GitHub merge API may enqueue the PR (merge queue) and return a 202
+	// Accepted. In that case the merge is performed asynchronously and the
+	// PR will not be marked merged immediately. To handle that, we re-fetch
+	// the PR and check the merged state instead of assuming the merge result
+	// indicates final state. If the PR is not merged yet, return the updated
+	// PR with merged=false and nil error so callers can retry later.
 
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
@@ -345,7 +351,20 @@ func (p *provider) MergePullRequest(
 	}
 
 	pr := convertGithubPR(*updatedPR)
-	return &pr, true, nil
+	if pr.Merged {
+		return &pr, true, nil
+	}
+
+	// If the merge call returned an HTTP 202 Accepted, GitHub has enqueued the
+	// PR for asynchronous merging (merge queue). Mark it as queued so callers
+	// can make better decisions about whether to wait or re-request.
+	if resp != nil && resp.StatusCode == 202 {
+		pr.Queued = true
+	}
+
+	// PR is not merged yet (queued or pending checks). Return non-merged so
+	// the caller can decide to wait/retry according to its policy.
+	return &pr, false, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
@@ -374,6 +393,12 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 		MergeCommitSHA: ptr.Deref(ghPR.MergeCommitSHA, ""),
 		Object:         ghPR,
 		HeadSHA:        ptr.Deref(ghPR.Head.SHA, ""),
+	}
+	if ghPR.Mergeable != nil {
+		pr.Mergeable = ghPR.Mergeable
+	}
+	if ghPR.Draft != nil && *ghPR.Draft {
+		pr.Draft = true
 	}
 	if ghPR.CreatedAt != nil {
 		pr.CreatedAt = &ghPR.CreatedAt.Time

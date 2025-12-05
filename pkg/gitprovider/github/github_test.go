@@ -3,6 +3,7 @@ package github
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 
@@ -324,6 +325,7 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, *mockClient.pr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, *mockClient.pr.URL, pr.URL)
 	require.True(t, pr.Open)
+	require.False(t, pr.Queued)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -395,6 +397,7 @@ func TestMergePullRequest(t *testing.T) {
 		prNumber       int64
 		setupMock      func(*mockGithubClient)
 		expectedMerged bool
+		expectQueued   bool
 		expectError    bool
 		errorContains  string
 	}{
@@ -511,7 +514,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "nil merge result",
 			prNumber: 333,
 			setupMock: func(m *mockGithubClient) {
-				// Get PR first
+				// First Get PR
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(333)).
 					Return(&github.PullRequest{
 						Number:    github.Ptr(333),
@@ -522,13 +525,25 @@ func TestMergePullRequest(t *testing.T) {
 						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/333"),
 					}, &github.Response{}, nil).Once()
 
-				// Merge returns nil result
+				// Merge returns nil result (e.g. queued). Then the provider will re-fetch
+				// the PR and observe that it is not yet merged.
 				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(333), "",
 					mock.AnythingOfType("*github.PullRequestOptions")).
 					Return(nil, &github.Response{}, nil)
+
+				// Second Get PR after merge attempt returns still-open PR (not merged yet)
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(333)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(333),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/333"),
+					}, &github.Response{}, nil).Once()
 			},
-			expectError:   true,
-			errorContains: "unexpected nil merge result",
+			expectError:    false,
+			expectedMerged: false,
 		},
 		{
 			name:     "get PR after merge fails",
@@ -593,6 +608,41 @@ func TestMergePullRequest(t *testing.T) {
 			errorContains: "unexpected nil pull request after merge",
 		},
 		{
+			name:     "merge queued (HTTP 202 Accepted)",
+			prNumber: 111,
+			setupMock: func(m *mockGithubClient) {
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(111)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(111),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/111"),
+					}, &github.Response{}, nil).Once()
+
+				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(111), "",
+					mock.AnythingOfType("*github.PullRequestOptions")).
+					Return(&github.PullRequestMergeResult{
+						SHA:     github.Ptr("queued_sha"),
+						Merged:  github.Ptr(false),
+						Message: github.Ptr("Pull Request enqueued for merge"),
+					}, &github.Response{Response: &http.Response{StatusCode: 202}}, nil)
+
+				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(111)).
+					Return(&github.PullRequest{
+						Number:    github.Ptr(111),
+						State:     github.Ptr("open"),
+						Merged:    github.Ptr(false),
+						Mergeable: github.Ptr(true),
+						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
+						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/111"),
+					}, &github.Response{}, nil).Once()
+			},
+			expectedMerged: false,
+			expectQueued:   true,
+		},
+		{
 			name:     "successful merge",
 			prNumber: 777,
 			setupMock: func(m *mockGithubClient) {
@@ -655,6 +705,7 @@ func TestMergePullRequest(t *testing.T) {
 				require.Equal(t, tt.expectedMerged, merged)
 				if pr != nil {
 					require.Equal(t, tt.prNumber, pr.Number)
+					require.Equal(t, tt.expectQueued, pr.Queued)
 				}
 			}
 
