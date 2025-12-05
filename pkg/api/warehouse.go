@@ -66,20 +66,6 @@ func RefreshWarehouse(
 	return warehouse, nil
 }
 
-// RefreshObject forces reconciliation of a Kubernetes object by setting an
-// annotation on the object, causing the controller to reconcile it. Currently,
-// the annotation value is the timestamp of the request, but in the future
-// may include additional metadata/context necessary for the request.
-func RefreshObject(ctx context.Context, c client.Client, obj client.Object) error {
-	return patchAnnotation(
-		ctx,
-		c,
-		obj,
-		kargoapi.AnnotationKeyRefresh,
-		time.Now().Format(time.RFC3339),
-	)
-}
-
 // ListWarehouseFreightOptions is a struct that can be used to specify filtering
 // criteria when listing Freight resources that originated from a Warehouse.
 //
