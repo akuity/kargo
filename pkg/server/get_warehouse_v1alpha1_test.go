@@ -256,3 +256,47 @@ func TestGetWarehouse(t *testing.T) {
 		})
 	}
 }
+
+func Test_prepareOutboundWarehouse(t *testing.T) {
+	testCases := []struct {
+		name       string
+		warehouse  *kargoapi.Warehouse
+		assertions func(*testing.T, *kargoapi.Warehouse, error)
+	}{
+		{
+			name: "clears internal and creates external",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
+						{Git: &kargoapi.GitSubscription{}},
+						{Image: &kargoapi.ImageSubscription{}},
+						{Chart: &kargoapi.ChartSubscription{}},
+						{Subscription: &kargoapi.Subscription{SubscriptionType: "generic"}},
+					},
+				},
+			},
+			assertions: func(t *testing.T, w *kargoapi.Warehouse, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 0, len(w.Spec.InternalSubscriptions))
+				require.Greater(t, len(w.Spec.Subscriptions), 0)
+			},
+		},
+		{
+			name: "empty spec no changes",
+			warehouse: &kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{},
+			},
+			assertions: func(t *testing.T, w *kargoapi.Warehouse, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 0, len(w.Spec.InternalSubscriptions))
+				require.Equal(t, 0, len(w.Spec.Subscriptions))
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := prepareOutboundWarehouse(tc.warehouse)
+			tc.assertions(t, tc.warehouse, err)
+		})
+	}
+}
