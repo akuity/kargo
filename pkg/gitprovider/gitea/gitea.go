@@ -297,23 +297,23 @@ func (p *provider) MergePullRequest(
 	case giteaPR.State != gitea.StateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case giteaPR.Draft:
-		// Draft PRs cannot be merged
-		return nil, false, nil
-
 	case !giteaPR.Mergeable:
-		// Not ready to merge yet (conflicts, failing checks, etc.)
 		return nil, false, nil
 	}
 
-	// Attempt to merge the PR
+	// TODO(fykaa): We should also check if the PR is in draft status before
+	// merging. The Gitea API includes a draft field, but the go-sdk doesn't
+	// expose it yet.
+	//
+	// See: https://gitea.com/gitea/go-sdk/pulls/731
+
+	// Merge the PR
 	if _, err = p.client.MergePullRequest(
 		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},
 	); err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
-	// Re-fetch the PR to get the final state after merge attempt
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
@@ -346,7 +346,6 @@ func convertGiteaPR(giteaPR gitea.PullRequest) gitprovider.PullRequest {
 		URL:     giteaPR.URL,
 		Open:    giteaPR.State == gitea.StateOpen,
 		Merged:  giteaPR.HasMerged,
-		Draft:   giteaPR.Draft,
 		Object:  giteaPR,
 		HeadSHA: giteaPR.Head.Sha,
 	}

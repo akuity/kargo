@@ -118,16 +118,6 @@ type PullRequest struct {
 	HeadSHA string `json:"headSHA"`
 	// CreatedAt is the time the pull request was created.
 	CreatedAt *time.Time `json:"createdAt"`
-	// Mergeable indicates whether the underlying hosting provider considers
-	// the PR mergeable (checks passed, no conflicts, etc.). A nil value
-	// indicates the provider does not expose mergeability information.
-	Mergeable *bool `json:"mergeable,omitempty"`
-	// Draft indicates whether the PR is a draft. Defaults to false.
-	Draft bool `json:"draft,omitempty"`
-	// Queued indicates whether the PR has been requested to merge and is
-	// currently queued for asynchronous merging by the provider (e.g. a
-	// merge queue). Defaults to false.
-	Queued bool `json:"queued,omitempty"`
 }
 
 // Fake is a fake implementation of the provider Interface used to facilitate
@@ -158,9 +148,6 @@ func (f *Fake) CreatePullRequest(
 	ctx context.Context,
 	opts *CreatePullRequestOpts,
 ) (*PullRequest, error) {
-	if f.CreatePullRequestFn == nil {
-		return nil, nil
-	}
 	return f.CreatePullRequestFn(ctx, opts)
 }
 
@@ -169,9 +156,6 @@ func (f *Fake) GetPullRequest(
 	ctx context.Context,
 	number int64,
 ) (*PullRequest, error) {
-	if f.GetPullRequestFn == nil {
-		return nil, nil
-	}
 	return f.GetPullRequestFn(ctx, number)
 }
 
@@ -180,9 +164,6 @@ func (f *Fake) ListPullRequests(
 	ctx context.Context,
 	opts *ListPullRequestOptions,
 ) ([]PullRequest, error) {
-	if f.ListPullRequestsFn == nil {
-		return nil, nil
-	}
 	return f.ListPullRequestsFn(ctx, opts)
 }
 
@@ -191,16 +172,10 @@ func (f *Fake) MergePullRequest(
 	ctx context.Context,
 	number int64,
 ) (*PullRequest, bool, error) {
-	if f.MergePullRequestFn == nil {
-		return nil, false, nil
-	}
 	return f.MergePullRequestFn(ctx, number)
 }
 
 // GetCommitURL implements gitprovider.Interface.
 func (f *Fake) GetCommitURL(repoURL string, sha string) (string, error) {
-	if f.GetCommitURLFn == nil {
-		return "", nil
-	}
 	return f.GetCommitURLFn(repoURL, sha)
 }

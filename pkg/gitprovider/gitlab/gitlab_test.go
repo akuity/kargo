@@ -3,7 +3,6 @@ package gitlab
 import (
 	"context"
 	"errors"
-	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -26,12 +25,6 @@ type mockGitLabClient struct {
 	acceptMRFunc func(pid any, mergeRequest int64, opt *gitlab.AcceptMergeRequestOptions,
 		options ...gitlab.RequestOptionFunc,
 	) (*gitlab.MergeRequest, *gitlab.Response, error)
-}
-
-type mockMergeTrainClient struct {
-	getMergeTrainFunc func(
-		pid any, mergeRequest int64, options ...gitlab.RequestOptionFunc,
-	) (*gitlab.MergeTrain, *gitlab.Response, error)
 }
 
 func (m *mockGitLabClient) CreateMergeRequest(
@@ -80,17 +73,6 @@ func (m *mockGitLabClient) AcceptMergeRequest(
 	return m.mr, nil, nil
 }
 
-func (m *mockMergeTrainClient) GetMergeRequestOnAMergeTrain(
-	pid any,
-	mergeRequest int64,
-	options ...gitlab.RequestOptionFunc,
-) (*gitlab.MergeTrain, *gitlab.Response, error) {
-	if m.getMergeTrainFunc != nil {
-		return m.getMergeTrainFunc(pid, mergeRequest, options...)
-	}
-	return nil, nil, nil
-}
-
 func TestCreatePullRequest(t *testing.T) {
 	mockClient := &mockGitLabClient{
 		mr: &gitlab.MergeRequest{
@@ -103,9 +85,8 @@ func TestCreatePullRequest(t *testing.T) {
 		},
 	}
 	g := provider{
-		projectName:      testProjectName,
-		client:           mockClient,
-		mergeTrainClient: &mockMergeTrainClient{},
+		projectName: testProjectName,
+		client:      mockClient,
 	}
 
 	opts := gitprovider.CreatePullRequestOpts{
@@ -141,9 +122,8 @@ func TestGetPullRequest(t *testing.T) {
 		},
 	}
 	g := provider{
-		projectName:      testProjectName,
-		client:           mockClient,
-		mergeTrainClient: &mockMergeTrainClient{},
+		projectName: testProjectName,
+		client:      mockClient,
 	}
 
 	pr, err := g.GetPullRequest(context.Background(), 1)
@@ -154,7 +134,6 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.mr.MergeCommitSHA, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.mr.WebURL, pr.URL)
 	require.False(t, pr.Open)
-	require.False(t, pr.Queued)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -169,9 +148,8 @@ func TestListPullRequests(t *testing.T) {
 		},
 	}
 	g := provider{
-		projectName:      testProjectName,
-		client:           mockClient,
-		mergeTrainClient: &mockMergeTrainClient{},
+		projectName: testProjectName,
+		client:      mockClient,
 	}
 
 	opts := gitprovider.ListPullRequestOptions{
@@ -194,15 +172,13 @@ func TestListPullRequests(t *testing.T) {
 
 func TestMergePullRequest(t *testing.T) {
 	testCases := []struct {
-		name                 string
-		mockClient           *mockGitLabClient
-		mockMergeTrainClient *mockMergeTrainClient
-		id                   int64
-		expectErr            bool
-		expectMerged         bool
-		expectPR             bool
-		expectQueued         bool
-		errContains          string
+		name         string
+		mockClient   *mockGitLabClient
+		id           int64
+		expectErr    bool
+		expectMerged bool
+		expectPR     bool
+		errContains  string
 	}{
 		{
 			name: "error getting MR",
@@ -216,10 +192,9 @@ func TestMergePullRequest(t *testing.T) {
 				}
 				return mc
 			}(),
-			id:           999,
-			expectErr:    true,
-			expectQueued: false,
-			errContains:  "error getting merge request",
+			id:          999,
+			expectErr:   true,
+			errContains: "error getting merge request",
 		},
 		{
 			name: "nil MR returned from get",
@@ -232,10 +207,9 @@ func TestMergePullRequest(t *testing.T) {
 				}
 				return mc
 			}(),
-			id:           404,
-			expectErr:    true,
-			expectQueued: false,
-			errContains:  "merge request 404 not found",
+			id:          404,
+			expectErr:   true,
+			errContains: "merge request 404 not found",
 		},
 		{
 			name: "MR already merged",
@@ -252,7 +226,6 @@ func TestMergePullRequest(t *testing.T) {
 			id:           123,
 			expectMerged: true,
 			expectPR:     true,
-			expectQueued: false,
 		},
 		{
 			name: "MR not open",
@@ -270,7 +243,6 @@ func TestMergePullRequest(t *testing.T) {
 			expectErr:    true,
 			expectMerged: false,
 			expectPR:     false,
-			expectQueued: false,
 			errContains:  "closed but not merged",
 		},
 		{
@@ -289,7 +261,6 @@ func TestMergePullRequest(t *testing.T) {
 			id:           333,
 			expectMerged: false,
 			expectPR:     false,
-			expectQueued: false,
 		},
 		{
 			name: "error accepting MR",
@@ -314,10 +285,9 @@ func TestMergePullRequest(t *testing.T) {
 				}
 				return mc
 			}(),
-			id:           888,
-			expectErr:    true,
-			expectQueued: false,
-			errContains:  "error merging merge request",
+			id:          888,
+			expectErr:   true,
+			errContains: "error merging merge request",
 		},
 		{
 			name: "nil MR returned after merge",
@@ -342,10 +312,9 @@ func TestMergePullRequest(t *testing.T) {
 				}
 				return mc
 			}(),
-			id:           777,
-			expectErr:    true,
-			expectQueued: false,
-			errContains:  "unexpected nil merge request after merge",
+			id:          777,
+			expectErr:   true,
+			errContains: "unexpected nil merge request after merge",
 		},
 		{
 			name: "successful merge",
@@ -380,152 +349,14 @@ func TestMergePullRequest(t *testing.T) {
 			id:           789,
 			expectMerged: true,
 			expectPR:     true,
-			expectQueued: false,
-		},
-		{
-			name: "merge queued (merge train)",
-			mockClient: func() *mockGitLabClient {
-				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:                 790,
-							State:               "opened",
-							DetailedMergeStatus: "mergeable",
-							WebURL:              "https://gitlab.com/group/project/-/merge_requests/790",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					// GitLab returns HTTP 200 with MR still in "opened" state for merge trains
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:    790,
-							State:  "opened", // Still opened, queued in merge train
-							WebURL: "https://gitlab.com/group/project/-/merge_requests/790",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				return mc
-			}(),
-			mockMergeTrainClient: func() *mockMergeTrainClient {
-				mtc := &mockMergeTrainClient{}
-				mtc.getMergeTrainFunc = func(
-					_ any, _ int64, _ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeTrain, *gitlab.Response, error) {
-					// MR is confirmed to be in merge train with "idle" status
-					return &gitlab.MergeTrain{
-						ID:     1,
-						Status: "idle", // Active status, queued for merge
-					}, &gitlab.Response{Response: &http.Response{StatusCode: 200}}, nil
-				}
-				return mtc
-			}(),
-			id:           790,
-			expectMerged: false,
-			expectPR:     true,
-			expectQueued: true,
-		},
-		{
-			name: "merge train (403 Forbidden - Free tier fallback)",
-			mockClient: func() *mockGitLabClient {
-				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:                 791,
-							State:               "opened",
-							DetailedMergeStatus: "mergeable",
-							WebURL:              "https://gitlab.com/group/project/-/merge_requests/791",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:    791,
-							State:  "opened",
-							WebURL: "https://gitlab.com/group/project/-/merge_requests/791",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				return mc
-			}(),
-			mockMergeTrainClient: func() *mockMergeTrainClient {
-				mtc := &mockMergeTrainClient{}
-				mtc.getMergeTrainFunc = func(
-					_ any, _ int64, _ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeTrain, *gitlab.Response, error) {
-					// Merge Trains not available (Free tier)
-					return nil, &gitlab.Response{Response: &http.Response{StatusCode: 403}}, errors.New("403 Forbidden")
-				}
-				return mtc
-			}(),
-			id:           791,
-			expectMerged: false,
-			expectPR:     true,
-			expectQueued: true,
-		},
-		{
-			name: "merge train (404 Not Found - not in train)",
-			mockClient: func() *mockGitLabClient {
-				mc := &mockGitLabClient{}
-				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:                 792,
-							State:               "opened",
-							DetailedMergeStatus: "mergeable",
-							WebURL:              "https://gitlab.com/group/project/-/merge_requests/792",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				mc.acceptMRFunc = func(_ any, _ int64, _ *gitlab.AcceptMergeRequestOptions,
-					_ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeRequest, *gitlab.Response, error) {
-					return &gitlab.MergeRequest{
-						BasicMergeRequest: gitlab.BasicMergeRequest{
-							IID:    792,
-							State:  "opened",
-							WebURL: "https://gitlab.com/group/project/-/merge_requests/792",
-						},
-					}, &gitlab.Response{}, nil
-				}
-				return mc
-			}(),
-			mockMergeTrainClient: func() *mockMergeTrainClient {
-				mtc := &mockMergeTrainClient{}
-				mtc.getMergeTrainFunc = func(
-					_ any, _ int64, _ ...gitlab.RequestOptionFunc,
-				) (*gitlab.MergeTrain, *gitlab.Response, error) {
-					// MR not in merge train
-					return nil, &gitlab.Response{Response: &http.Response{StatusCode: 404}}, errors.New("404 Not Found")
-				}
-				return mtc
-			}(),
-			id:           792,
-			expectMerged: false,
-			expectPR:     true,
-			expectQueued: false,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			g := provider{
-				projectName:      testProjectName,
-				client:           tc.mockClient,
-				mergeTrainClient: tc.mockMergeTrainClient,
+				projectName: testProjectName,
+				client:      tc.mockClient,
 			}
 
 			pr, merged, err := g.MergePullRequest(context.Background(), tc.id)
@@ -545,7 +376,6 @@ func TestMergePullRequest(t *testing.T) {
 			if tc.expectPR {
 				require.NotNil(t, pr)
 				require.Equal(t, tc.id, pr.Number)
-				require.Equal(t, tc.expectQueued, pr.Queued)
 			} else {
 				require.Nil(t, pr)
 			}

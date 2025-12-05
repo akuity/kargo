@@ -112,56 +112,6 @@ func (g *gitPRMerger) run(
 			fmt.Errorf("error creating git provider service: %w", err)
 	}
 
-	// Retrieve the current PR state before attempting to merge. This allows us
-	// to check if it's already merged, queued for merge, or ready to merge.
-	currentPR, err := gitProv.GetPullRequest(ctx, cfg.PRNumber)
-	if err != nil {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("error getting pull request %d: %w", cfg.PRNumber, err)
-	}
-
-	// If already merged, return success immediately.
-	if currentPR.Merged {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusSucceeded,
-			Output: map[string]any{stateKeyCommit: currentPR.MergeCommitSHA},
-		}, nil
-	}
-
-	// If the provider indicates the PR is already queued for merge, don't
-	// attempt to re-request the merge. Respect the 'wait' config.
-	if currentPR.Queued {
-		if cfg.Wait {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
-		}
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf(
-					"pull request %d is queued for merge and wait is disabled",
-					cfg.PRNumber,
-				),
-			}
-	}
-
-	// If provider indicates PR is not mergeable (or draft), don't attempt
-	// a merge now. Respect the 'wait' config to decide whether to return
-	// RUNNING or FAILED.
-	var notReadyReason string
-	if currentPR.Mergeable != nil && !*currentPR.Mergeable {
-		notReadyReason = "is not mergeable"
-	} else if currentPR.Draft {
-		notReadyReason = "is a draft"
-	}
-	if notReadyReason != "" {
-		if cfg.Wait {
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
-		}
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{
-				Err: fmt.Errorf("pull request %d %s and wait is disabled", cfg.PRNumber, notReadyReason),
-			}
-	}
-
 	// Try to merge the PR using a primitive retry loop. PRs are often ready to
 	// merge moments after being opened, but not quite immediately. Accounting
 	// for this internally avoids the scenario where a Promotion needs to wait
@@ -190,21 +140,6 @@ func (g *gitPRMerger) run(
 	}
 
 	if !merged {
-		// The merge hasn't completed. If the returned PR is marked as queued,
-		// or if it's simply not ready yet, respect the wait config.
-		if mergedPR != nil && mergedPR.Queued {
-			if cfg.Wait {
-				return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
-			}
-			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-				&promotion.TerminalError{
-					Err: fmt.Errorf(
-						"pull request %d is queued for merge and wait is disabled",
-						cfg.PRNumber,
-					),
-				}
-		}
-
 		// PR is not ready to merge yet (checks pending, conflicts, etc.)
 		if cfg.Wait {
 			// Return RUNNING to retry later

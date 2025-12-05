@@ -145,25 +145,6 @@ func (p *provider) GetPullRequest(
 	if err != nil {
 		return nil, fmt.Errorf("error converting pull request %d: %w", id, err)
 	}
-
-	// Check if PR is queued for auto-completion (Azure DevOps merge queue).
-	// When AutoCompleteSetBy is set, the PR is waiting for policies to pass
-	// before being automatically merged.
-	if adoPR.AutoCompleteSetBy != nil && adoPR.Status != nil &&
-		*adoPR.Status == adogit.PullRequestStatusValues.Active {
-		// PR has auto-complete enabled and is still active (not yet merged).
-		// It's queued if the merge is pending policy validation.
-		mergeStatus := ptr.Deref(adoPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
-		if mergeStatus == adogit.PullRequestAsyncStatusValues.Queued {
-			// Explicitly queued - waiting for async merge operation
-			pr.Queued = true
-		}
-		// Note: We do NOT set Queued=true for Succeeded status.
-		// Succeeded means checks passed and it's ready, but if AutoComplete is set
-		// and status is still Active (not Completed), it means policies are blocking.
-		// This is different from being "queued" - it's blocked, not pending.
-	}
-
 	return pr, nil
 }
 
@@ -205,6 +186,8 @@ func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
 ) (*gitprovider.PullRequest, bool, error) {
+	var pr *gitprovider.PullRequest
+
 	gitClient, err := adogit.NewClient(ctx, p.connection)
 	if err != nil {
 		return nil, false, fmt.Errorf("error creating Azure DevOps client: %w", err)
@@ -228,9 +211,9 @@ func (p *provider) MergePullRequest(
 
 	switch status {
 	case adogit.PullRequestStatusValues.Completed:
-		pr, convertErr := convertADOPullRequest(adoPR)
-		if convertErr != nil {
-			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, convertErr)
+		pr, err = convertADOPullRequest(adoPR)
+		if err != nil {
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, err)
 		}
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
@@ -249,8 +232,8 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Attempt to merge the PR by setting status to Completed
-	_, err = gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
+	// Try to merge
+	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
 		PullRequestId: ptr.To(int(id)),
@@ -265,47 +248,15 @@ func (p *provider) MergePullRequest(
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
-
-	// Re-fetch the PR to get the final state after merge attempt.
-	// Azure DevOps may complete merges synchronously OR queue them via auto-complete
-	// if policies require validation. We need to check the actual state.
-	updatedPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
-		Project:       &p.project,
-		RepositoryId:  &p.repo,
-		PullRequestId: ptr.To(int(id)),
-	})
-	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
-	}
 	if updatedPR == nil {
-		return nil, false, fmt.Errorf("unexpected nil pull request after merge")
+		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
 	}
 
-	pr, err := convertADOPullRequest(updatedPR)
+	pr, err = convertADOPullRequest(updatedPR)
 	if err != nil {
 		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
 	}
-
-	if pr.Merged {
-		return pr, true, nil
-	}
-
-	// Check if the PR is now queued for auto-completion after our merge attempt.
-	// Azure DevOps enables auto-complete when you attempt to merge but policies
-	// are not yet satisfied.
-	if updatedPR.AutoCompleteSetBy != nil && updatedPR.Status != nil &&
-		*updatedPR.Status == adogit.PullRequestStatusValues.Active {
-		// PR has auto-complete enabled and is still active (not yet merged).
-		// Check if it's actually queued for async completion.
-		mergeStatus := ptr.Deref(updatedPR.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
-		if mergeStatus == adogit.PullRequestAsyncStatusValues.Queued {
-			// Explicitly queued - async merge operation pending.
-			pr.Queued = true
-		}
-	}
-
-	// PR is not merged yet (queued or pending policies).
-	return pr, false, nil
+	return pr, true, nil
 }
 
 // GetCommitURL implements gitprovider.Interface.
@@ -341,7 +292,7 @@ func convertADOPullRequest(pr *adogit.GitPullRequest) (*gitprovider.PullRequest,
 		return nil, fmt.Errorf("no last merge source commit found for pull request %d", ptr.Deref(pr.PullRequestId, 0))
 	}
 	mergeCommit := ptr.Deref(pr.LastMergeCommit, adogit.GitCommitRef{})
-	result := &gitprovider.PullRequest{
+	return &gitprovider.PullRequest{
 		Number:         int64(ptr.Deref(pr.PullRequestId, 0)),
 		URL:            ptr.Deref(pr.Url, ""),
 		Open:           ptr.Deref(pr.Status, "notSet") == "active",
@@ -349,32 +300,7 @@ func convertADOPullRequest(pr *adogit.GitPullRequest) (*gitprovider.PullRequest,
 		MergeCommitSHA: ptr.Deref(mergeCommit.CommitId, ""),
 		Object:         pr,
 		HeadSHA:        ptr.Deref(pr.LastMergeSourceCommit.CommitId, ""),
-	}
-
-	// Set Draft field if PR is marked as draft
-	if pr.IsDraft != nil && *pr.IsDraft {
-		result.Draft = true
-	}
-
-	// Set Mergeable based on merge status
-	// succeeded = ready to merge (checks passed, no conflicts)
-	// Azure doesn't have a separate "mergeable" boolean
-	mergeStatus := ptr.Deref(pr.MergeStatus, adogit.PullRequestAsyncStatusValues.NotSet)
-	switch mergeStatus {
-	case adogit.PullRequestAsyncStatusValues.Succeeded:
-		result.Mergeable = ptr.To(true)
-	case adogit.PullRequestAsyncStatusValues.Conflicts,
-		adogit.PullRequestAsyncStatusValues.RejectedByPolicy,
-		adogit.PullRequestAsyncStatusValues.Failure:
-		result.Mergeable = ptr.To(false)
-	}
-	// If NotSet or Queued, leave Mergeable as nil (unknown)
-
-	if pr.CreationDate != nil {
-		result.CreatedAt = &pr.CreationDate.Time
-	}
-
-	return result, nil
+	}, nil
 }
 
 func parseRepoURL(repoURL string) (string, string, string, error) {

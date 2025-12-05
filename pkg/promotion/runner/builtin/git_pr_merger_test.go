@@ -104,196 +104,8 @@ func Test_gitPRMerger_run(t *testing.T) {
 		assertions func(*testing.T, promotion.StepResult, error)
 	}{
 		{
-			name: "PR already merged",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					return &gitprovider.PullRequest{
-						Number:         42,
-						Merged:         true,
-						MergeCommitSHA: "already-merged-sha",
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-				require.Equal(t, "already-merged-sha", res.Output[stateKeyCommit])
-			},
-		},
-		{
-			name: "PR already queued in GetPullRequest with wait enabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-						Queued:    true,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     true,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				require.Nil(t, res.Output)
-			},
-		},
-		{
-			name: "PR already queued in GetPullRequest with wait disabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-						Queued:    true,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     false,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "is queued for merge and wait is disabled")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
-			name: "PR not mergeable with wait enabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := false
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     true,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				require.Nil(t, res.Output)
-			},
-		},
-		{
-			name: "PR not mergeable with wait disabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := false
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     false,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "is not mergeable and wait is disabled")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
-			name: "PR is draft with wait enabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-						Draft:     true,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     true,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				require.Nil(t, res.Output)
-			},
-		},
-		{
-			name: "PR is draft with wait disabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-						Draft:     true,
-					}, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     false,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "is a draft and wait is disabled")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
 			name: "error during merge attempt",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -312,87 +124,8 @@ func Test_gitPRMerger_run(t *testing.T) {
 			},
 		},
 		{
-			name: "PR queued after merge attempt with wait enabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
-				MergePullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, bool, error) {
-					return &gitprovider.PullRequest{
-						Number: 42,
-						Queued: true,
-					}, false, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     true,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				require.Nil(t, res.Output)
-			},
-		},
-		{
-			name: "PR queued after merge attempt with wait disabled",
-			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
-				MergePullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, bool, error) {
-					return &gitprovider.PullRequest{
-						Number: 42,
-						Queued: true,
-					}, false, nil
-				},
-			},
-			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
-				Wait:     false,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.ErrorContains(t, err, "is queued for merge and wait is disabled")
-				require.True(t, promotion.IsTerminal(err))
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
 			name: "PR not ready to merge with wait enabled",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -413,17 +146,6 @@ func Test_gitPRMerger_run(t *testing.T) {
 		{
 			name: "PR not ready to merge with wait disabled",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -442,51 +164,30 @@ func Test_gitPRMerger_run(t *testing.T) {
 			},
 		},
 		{
-			name: "successful PR merge",
+			name: "PR number validation",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
-					context.Context,
-					int64,
+					_ context.Context,
+					prNumber int64,
 				) (*gitprovider.PullRequest, bool, error) {
+					require.Equal(t, int64(123), prNumber)
 					return &gitprovider.PullRequest{
-						MergeCommitSHA: "abc123",
+						MergeCommitSHA: "commit456",
 					}, true, nil
 				},
 			},
 			config: builtin.GitMergePRConfig{
-				PRNumber: 42,
+				PRNumber: 123,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+				require.Equal(t, "commit456", res.Output[stateKeyCommit])
 			},
 		},
 		{
 			name: "successful merge with empty merge commit SHA",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					context.Context,
-					int64,
-				) (*gitprovider.PullRequest, error) {
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    42,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
 					context.Context,
 					int64,
@@ -506,37 +207,24 @@ func Test_gitPRMerger_run(t *testing.T) {
 			},
 		},
 		{
-			name: "PR number validation",
+			name: "successful PR merge",
 			provider: &gitprovider.Fake{
-				GetPullRequestFn: func(
-					_ context.Context,
-					prNumber int64,
-				) (*gitprovider.PullRequest, error) {
-					require.Equal(t, int64(123), prNumber)
-					mergeable := true
-					return &gitprovider.PullRequest{
-						Number:    123,
-						Open:      true,
-						Mergeable: &mergeable,
-					}, nil
-				},
 				MergePullRequestFn: func(
-					_ context.Context,
-					prNumber int64,
+					context.Context,
+					int64,
 				) (*gitprovider.PullRequest, bool, error) {
-					require.Equal(t, int64(123), prNumber)
 					return &gitprovider.PullRequest{
-						MergeCommitSHA: "commit456",
+						MergeCommitSHA: "abc123",
 					}, true, nil
 				},
 			},
 			config: builtin.GitMergePRConfig{
-				PRNumber: 123,
+				PRNumber: 42,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-				require.Equal(t, "commit456", res.Output[stateKeyCommit])
+				require.Equal(t, "abc123", res.Output[stateKeyCommit])
 			},
 		},
 	}

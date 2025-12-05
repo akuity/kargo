@@ -277,7 +277,6 @@ func TestGetPullRequest(t *testing.T) {
 		pr: &gitea.PullRequest{
 			Index: int64(42),
 			State: gitea.StateOpen,
-			Draft: true,
 			Head: &gitea.PRBranchInfo{
 				Sha: "HeadSha",
 			},
@@ -297,7 +296,6 @@ func TestGetPullRequest(t *testing.T) {
 			&gitea.PullRequest{
 				Index: int64(42),
 				State: gitea.StateOpen,
-				Draft: true,
 				Head: &gitea.PRBranchInfo{
 					Sha: "HeadSha",
 				},
@@ -332,7 +330,6 @@ func TestGetPullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, pr.URL)
 	require.True(t, pr.Open)
-	require.True(t, pr.Draft)
 }
 
 func TestListPullRequests(t *testing.T) {
@@ -462,19 +459,6 @@ func TestMergePullRequest(t *testing.T) {
 			errorContains: "closed but not merged",
 		},
 		{
-			name:     "PR is a draft",
-			prNumber: 222,
-			setupMock: func(m *mockGiteaClient) {
-				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(222)).
-					Return(&gitea.PullRequest{
-						Index:     222,
-						State:     gitea.StateOpen,
-						Draft:     true,
-						Mergeable: true,
-					}, &gitea.Response{}, nil)
-			},
-		},
-		{
 			name:     "PR not mergeable",
 			prNumber: 333,
 			setupMock: func(m *mockGiteaClient) {
@@ -482,7 +466,6 @@ func TestMergePullRequest(t *testing.T) {
 					Return(&gitea.PullRequest{
 						Index:     333,
 						State:     gitea.StateOpen,
-						Draft:     false,
 						Mergeable: false,
 					}, &gitea.Response{}, nil)
 			},
