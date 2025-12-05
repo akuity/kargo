@@ -7,8 +7,7 @@
   "repoURL": {
    "type": "string",
    "description": "The URL of the remote Git repository containing the pull request.",
-   "minLength": 1,
-   "format": "uri"
+   "minLength": 1
   },
   "prNumber": {
    "type": "integer",
