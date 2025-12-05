@@ -32,15 +32,15 @@ func (t refreshResourceType) String() string {
 func (t refreshResourceType) Type() v1alpha1.RefreshResourceType {
 	switch t {
 	case refreshResourceTypeClusterConfig:
-		return v1alpha1.RefreshResourceType_CLUSTER_CONFIG
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG
 	case refreshResourceTypeProjectConfig:
-		return v1alpha1.RefreshResourceType_PROJECT_CONFIG
-	case refreshResourceTypeStage:
-		return v1alpha1.RefreshResourceType_STAGE
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG
 	case refreshResourceTypeWarehouse:
-		return v1alpha1.RefreshResourceType_WAREHOUSE
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_WAREHOUSE
+	case refreshResourceTypeStage:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_STAGE
 	default:
-		return v1alpha1.RefreshResourceType_UNSPECIFIED
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_UNSPECIFIED
 	}
 }
 

@@ -1788,16 +1788,16 @@ message DeleteClusterSecretResponse {
 
 // RefreshResourceType is an enumeration of resource types that can be refreshed.
 enum RefreshResourceType {
-  // UNSPECIFIED indicates an unspecified resource type.
-  UNSPECIFIED = 0;
-  // CLUSTER_CONFIG indicates a ClusterConfig resource type.
-  CLUSTER_CONFIG = 1;
-  // PROJECT_CONFIG indicates a ProjectConfig resource type.
-  PROJECT_CONFIG = 2;
-  // WAREHOUSE indicates a Warehouse resource type.
-  WAREHOUSE = 3;
-  // STAGE indicates a Stage resource type.
-  STAGE = 4;
+  // REFRESH_RESOURCE_TYPE_UNSPECIFIED indicates an unspecified resource type.
+  REFRESH_RESOURCE_TYPE_UNSPECIFIED = 0;
+  // REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG indicates a ClusterConfig resource type.
+  REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG = 1;
+  // REFRESH_RESOURCE_TYPE_PROJECT_CONFIG indicates a ProjectConfig resource type.
+  REFRESH_RESOURCE_TYPE_PROJECT_CONFIG = 2;
+  // REFRESH_RESOURCE_TYPE_WAREHOUSE indicates a Warehouse resource type.
+  REFRESH_RESOURCE_TYPE_WAREHOUSE = 3;
+  // REFRESH_RESOURCE_TYPE_STAGE indicates a Stage resource type.
+  REFRESH_RESOURCE_TYPE_STAGE = 4;
 }
 
 

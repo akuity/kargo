@@ -1718,11 +1718,11 @@ RefreshResourceType is an enumeration of resource types that can be refreshed.
 
 | Name | Number | Description |
 | ---- | ------ | ----------- |
-| UNSPECIFIED | 0 | UNSPECIFIED indicates an unspecified resource type. |
-| CLUSTER_CONFIG | 1 | CLUSTER_CONFIG indicates a ClusterConfig resource type. |
-| PROJECT_CONFIG | 2 | PROJECT_CONFIG indicates a ProjectConfig resource type. |
-| WAREHOUSE | 3 | WAREHOUSE indicates a Warehouse resource type. |
-| STAGE | 4 | STAGE indicates a Stage resource type. |
+| REFRESH_RESOURCE_TYPE_UNSPECIFIED | 0 | REFRESH_RESOURCE_TYPE_UNSPECIFIED indicates an unspecified resource type. |
+| REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG | 1 | REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG indicates a ClusterConfig resource type. |
+| REFRESH_RESOURCE_TYPE_PROJECT_CONFIG | 2 | REFRESH_RESOURCE_TYPE_PROJECT_CONFIG indicates a ProjectConfig resource type. |
+| REFRESH_RESOURCE_TYPE_WAREHOUSE | 3 | REFRESH_RESOURCE_TYPE_WAREHOUSE indicates a Warehouse resource type. |
+| REFRESH_RESOURCE_TYPE_STAGE | 4 | REFRESH_RESOURCE_TYPE_STAGE indicates a Stage resource type. |
 
  <!-- end enums -->
 

@@ -66,13 +66,13 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 		return nil, err
 	}
 	switch rt := r.GetResourceType(); rt {
-	case svcv1alpha1.RefreshResourceType_CLUSTER_CONFIG:
+	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG:
 		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_PROJECT_CONFIG:
+	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG:
 		return &kargoapi.ProjectConfig{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_WAREHOUSE:
+	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_WAREHOUSE:
 		return &kargoapi.Warehouse{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_STAGE:
+	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_STAGE:
 		return &kargoapi.Stage{ObjectMeta: *om}, nil
 	default:
 		return nil, connect.NewError(
@@ -84,7 +84,7 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	if r.ResourceType == svcv1alpha1.RefreshResourceType_CLUSTER_CONFIG {
+	if r.ResourceType == svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
@@ -97,7 +97,7 @@ func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResour
 	}
 	o.SetNamespace(r.GetProject())
 
-	if r.ResourceType != svcv1alpha1.RefreshResourceType_PROJECT_CONFIG {
+	if r.ResourceType != svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG {
 		if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
 			return nil, err
 		}
