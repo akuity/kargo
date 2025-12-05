@@ -1786,6 +1786,21 @@ message DeleteClusterSecretResponse {
   /* explicitly empty */
 }
 
+// RefreshResourceType is an enumeration of resource types that can be refreshed.
+enum RefreshResourceType {
+  // UNSPECIFIED indicates an unspecified resource type.
+  UNSPECIFIED = 0;
+  // CLUSTER_CONFIG indicates a ClusterConfig resource type.
+  CLUSTER_CONFIG = 1;
+  // PROJECT_CONFIG indicates a ProjectConfig resource type.
+  PROJECT_CONFIG = 2;
+  // WAREHOUSE indicates a Warehouse resource type.
+  WAREHOUSE = 3;
+  // STAGE indicates a Stage resource type.
+  STAGE = 4;
+}
+
+
 message RefreshResourceRequest {
   // project is the name of the project containing the object to refresh.
   // leave blank if refreshing a cluster-config.
@@ -1793,8 +1808,8 @@ message RefreshResourceRequest {
   // name is the name of the object to refresh.
   // leave blank if refreshing a project or cluster config.
   string name = 2;
-  // kind is the kind of resource to refresh (e.g., "Warehouse", "Stage", "ClusterConfig", etc.).
-  string kind = 3;
+  // resource_type is the kind of resource to refresh 
+  RefreshResourceType resource_type = 3;
 }
 
 message RefreshResourceResponse {

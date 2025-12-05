@@ -43,9 +43,9 @@ func TestRefreshResource(t *testing.T) {
 		"empty project": {
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "",
-				Name:    "test",
-				Kind:    "Warehouse",
+				Project:      "",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_WAREHOUSE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
@@ -60,9 +60,9 @@ func TestRefreshResource(t *testing.T) {
 				WithObjects(ns).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "",
-				Kind:    "Warehouse",
+				Project:      "kargo-demo",
+				Name:         "",
+				ResourceType: svcv1alpha1.RefreshResourceType_WAREHOUSE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
@@ -71,15 +71,15 @@ func TestRefreshResource(t *testing.T) {
 				require.ErrorContainsf(t, err, "name should not be empty", "")
 			},
 		},
-		"empty kind": {
+		"empty resource type": {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-				Kind:    "",
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: 0,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
@@ -94,9 +94,9 @@ func TestRefreshResource(t *testing.T) {
 				WithObjects(ns).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "not-existing-project",
-				Name:    "test",
-				Kind:    "Warehouse",
+				Project:      "not-existing-project",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_WAREHOUSE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
@@ -111,15 +111,15 @@ func TestRefreshResource(t *testing.T) {
 				WithObjects(ns).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-				Kind:    "Warehouse",
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_WAREHOUSE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "Warehouse not found", "")
+				require.ErrorContainsf(t, err, "WAREHOUSE not found", "")
 			},
 		},
 		"warehouse": {
@@ -134,9 +134,9 @@ func TestRefreshResource(t *testing.T) {
 					},
 				).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-				Kind:    "Warehouse",
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_WAREHOUSE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.NoError(t, err)
@@ -162,9 +162,9 @@ func TestRefreshResource(t *testing.T) {
 				},
 			).WithScheme(testScheme).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-				Kind:    "Stage",
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_STAGE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.NoError(t, err)
@@ -201,9 +201,9 @@ func TestRefreshResource(t *testing.T) {
 				},
 			).WithScheme(testScheme).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Name:    "test",
-				Kind:    "Stage",
+				Project:      "kargo-demo",
+				Name:         "test",
+				ResourceType: svcv1alpha1.RefreshResourceType_STAGE,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.NoError(t, err)
@@ -229,9 +229,9 @@ func TestRefreshResource(t *testing.T) {
 					},
 				).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "",
-				Name:    api.ClusterConfigName,
-				Kind:    "ClusterConfig",
+				Project:      "",
+				Name:         api.ClusterConfigName,
+				ResourceType: svcv1alpha1.RefreshResourceType_CLUSTER_CONFIG,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.NoError(t, err)
@@ -259,8 +259,8 @@ func TestRefreshResource(t *testing.T) {
 				).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
-				Project: "kargo-demo",
-				Kind:    "ProjectConfig",
+				Project:      "kargo-demo",
+				ResourceType: svcv1alpha1.RefreshResourceType_PROJECT_CONFIG,
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.NoError(t, err)

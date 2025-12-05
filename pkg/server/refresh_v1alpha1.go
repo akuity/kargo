@@ -26,16 +26,18 @@ func (s *server) RefreshResource(
 	}
 
 	c := s.client.InternalClient()
+	rt := req.Msg.GetResourceType()
+
 	if err = api.RefreshObject(ctx, c, o); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nil, connect.NewError(
 				connect.CodeNotFound,
-				fmt.Errorf("%s not found", req.Msg.GetKind()),
+				fmt.Errorf("%s not found", rt),
 			)
 		}
 		return nil, connect.NewError(
 			connect.CodeInternal,
-			fmt.Errorf("failed to refresh %s: %w", req.Msg.GetKind(), err),
+			fmt.Errorf("failed to refresh %s: %w", rt, err),
 		)
 	}
 
@@ -51,7 +53,7 @@ func (s *server) RefreshResource(
 		if err != nil {
 			return nil, connect.NewError(
 				connect.CodeInternal,
-				fmt.Errorf("failed to refresh %s: %w", req.Msg.GetKind(), err),
+				fmt.Errorf("failed to refresh %s: %w", rt, err),
 			)
 		}
 	}
@@ -63,26 +65,26 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	if err != nil {
 		return nil, err
 	}
-	switch r.Kind {
-	case "ClusterConfig":
+	switch rt := r.GetResourceType(); rt {
+	case svcv1alpha1.RefreshResourceType_CLUSTER_CONFIG:
 		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
-	case "ProjectConfig":
+	case svcv1alpha1.RefreshResourceType_PROJECT_CONFIG:
 		return &kargoapi.ProjectConfig{ObjectMeta: *om}, nil
-	case "Warehouse":
+	case svcv1alpha1.RefreshResourceType_WAREHOUSE:
 		return &kargoapi.Warehouse{ObjectMeta: *om}, nil
-	case "Stage":
+	case svcv1alpha1.RefreshResourceType_STAGE:
 		return &kargoapi.Stage{ObjectMeta: *om}, nil
 	default:
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("unsupported refresh kind: %s", r.Kind),
+			fmt.Errorf("unsupported refresh kind: %s", rt),
 		)
 	}
 }
 
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	if r.Kind == "ClusterConfig" {
+	if r.ResourceType == svcv1alpha1.RefreshResourceType_CLUSTER_CONFIG {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
@@ -95,7 +97,7 @@ func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResour
 	}
 	o.SetNamespace(r.GetProject())
 
-	if r.Kind != "ProjectConfig" {
+	if r.ResourceType != svcv1alpha1.RefreshResourceType_PROJECT_CONFIG {
 		if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
 			return nil, err
 		}

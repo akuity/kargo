@@ -29,6 +29,21 @@ func (t refreshResourceType) String() string {
 	return string(t)
 }
 
+func (t refreshResourceType) Type() v1alpha1.RefreshResourceType {
+	switch t {
+	case refreshResourceTypeClusterConfig:
+		return v1alpha1.RefreshResourceType_CLUSTER_CONFIG
+	case refreshResourceTypeProjectConfig:
+		return v1alpha1.RefreshResourceType_PROJECT_CONFIG
+	case refreshResourceTypeStage:
+		return v1alpha1.RefreshResourceType_STAGE
+	case refreshResourceTypeWarehouse:
+		return v1alpha1.RefreshResourceType_WAREHOUSE
+	default:
+		return v1alpha1.RefreshResourceType_UNSPECIFIED
+	}
+}
+
 func (t refreshResourceType) requiresName() bool {
 	switch t {
 	case refreshResourceTypeStage, refreshResourceTypeWarehouse:
@@ -132,7 +147,11 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	req := connect.NewRequest(&v1alpha1.RefreshResourceRequest{})
+	req := connect.NewRequest(&v1alpha1.RefreshResourceRequest{
+		Project:      o.Project,
+		Name:         o.Name,
+		ResourceType: o.ResourceType.Type(),
+	})
 	if _, err = kargoSvcCli.RefreshResource(ctx, req); err != nil {
 		return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
 	}
