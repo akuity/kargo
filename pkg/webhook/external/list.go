@@ -99,7 +99,32 @@ func newListOptionsForIndexSelector(
 // the provided LabelSelector.
 func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any) ([]client.ListOption, error) {
 	var labelReqs []labels.Requirement
-	for _, expr := range ls.MatchExpressions {
+	matchExpressionRequirements, err := newLabelRequirementsForMatchExpressions(ls.MatchExpressions, env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create label requirements for match expressions: %w", err)
+	}
+	labelReqs = append(labelReqs, matchExpressionRequirements...)
+	matchLabelRequirements, err := newLabelRequirementsForMatchLabels(ls.MatchLabels, env)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create label requirements for match labels: %w", err)
+	}
+	labelReqs = append(labelReqs, matchLabelRequirements...)
+	if len(labelReqs) == 0 {
+		return nil, nil
+	}
+	return []client.ListOption{
+		client.MatchingLabelsSelector{
+			Selector: labels.NewSelector().Add(labelReqs...),
+		},
+	}, nil
+}
+
+func newLabelRequirementsForMatchExpressions(
+	matchExpressions []metav1.LabelSelectorRequirement,
+	env map[string]any,
+) ([]labels.Requirement, error) {
+	var labelReqs []labels.Requirement
+	for _, expr := range matchExpressions {
 		op, err := labelOpToSelectionOp(expr.Operator)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
@@ -114,7 +139,15 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any)
 		}
 		labelReqs = append(labelReqs, *labelReq)
 	}
-	for k, v := range ls.MatchLabels {
+	return labelReqs, nil
+}
+
+func newLabelRequirementsForMatchLabels(
+	matchLabels map[string]string,
+	env map[string]any,
+) ([]labels.Requirement, error) {
+	var labelReqs []labels.Requirement
+	for k, v := range matchLabels {
 		strValue, err := evalAsString(v, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate matchLabel value as string: %w", err)
@@ -125,14 +158,7 @@ func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any)
 		}
 		labelReqs = append(labelReqs, *req)
 	}
-	if len(labelReqs) == 0 {
-		return nil, nil
-	}
-	return []client.ListOption{
-		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(labelReqs...),
-		},
-	}, nil
+	return labelReqs, nil
 }
 
 // labelOpToSelectionOp converts a metav1.LabelSelectorOperator
