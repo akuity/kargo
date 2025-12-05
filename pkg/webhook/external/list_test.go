@@ -8,13 +8,15 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_buildListOptionsTarget(t *testing.T) {
+func Test_buildListOption(t *testing.T) {
 	tests := []struct {
 		name     string
 		project  string
@@ -307,6 +309,130 @@ func Test_buildListOptionsTarget(t *testing.T) {
 			}
 			require.NoError(t, err)
 			require.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func Test_listTargetObjects(t *testing.T) {
+	testProject := "test-project"
+	testSecret := "fake-secret"
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	tests := []struct {
+		name       string
+		client     client.Client
+		target     kargoapi.GenericWebhookTarget
+		config     *kargoapi.GenericWebhookReceiverConfig
+		assertions func(*testing.T, []client.Object, error)
+	}{
+		{
+			name:   "failed to build list options for target",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: nil,
+			target: kargoapi.GenericWebhookTarget{
+				IndexSelector: kargoapi.IndexSelector{
+					MatchIndices: []kargoapi.IndexSelectorRequirement{
+						{
+							Key:      "env",
+							Operator: "InvalidOperator",
+							Value:    "prod",
+						},
+					},
+				},
+			},
+			assertions: func(t *testing.T, objects []client.Object, err error) {
+				require.Nil(t, objects)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to build list options")
+			},
+		},
+		{
+			name: "eval error for expression derived name",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "some-warehouse",
+					},
+				},
+			).Build(),
+			config: nil,
+			target: kargoapi.GenericWebhookTarget{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				Name: "${{ 1  + 1 }}",
+			},
+			assertions: func(t *testing.T, objects []client.Object, err error) {
+				require.Nil(t, objects)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to evaluate target name as string")
+			},
+		},
+		{
+			name: "eval error for expression derived label key",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "some-warehouse",
+						Labels: map[string]string{
+							"env": "prod",
+						},
+					},
+				},
+			).Build(),
+			config: nil,
+			target: kargoapi.GenericWebhookTarget{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				LabelSelector: metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"env": "${{ undefined() }}",
+					},
+				},
+			},
+			assertions: func(t *testing.T, objects []client.Object, err error) {
+				require.Nil(t, objects)
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to evaluate matchLabel value as string")
+			},
+		},
+		{
+			name: "no targets found",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      "some-warehouse",
+					},
+				},
+			).Build(),
+			config: nil,
+			target: kargoapi.GenericWebhookTarget{
+				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				Name: "non-existent-warehouse",
+			},
+			assertions: func(t *testing.T, objects []client.Object, err error) {
+				require.NoError(t, err)
+				require.Empty(t, objects)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := genericWebhookReceiver{
+				baseWebhookReceiver: &baseWebhookReceiver{
+					client:     tt.client,
+					project:    testProject,
+					secretName: testSecret,
+				},
+				config: tt.config,
+			}
+			objects, err := g.listTargetObjects(
+				t.Context(),
+				tt.target,
+				nil,
+			)
+			tt.assertions(t, objects, err)
 		})
 	}
 }

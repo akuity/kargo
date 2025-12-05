@@ -32,11 +32,11 @@ func (g *genericWebhookReceiver) listTargetObjects(
 		if target.Name == "" {
 			return itemsToObjects(warehouses.Items), nil
 		}
+		name, err := evalAsString(target.Name, actionEnv)
+		if err != nil {
+			return nil, fmt.Errorf("failed to evaluate target name as string: %w", err)
+		}
 		for _, wh := range warehouses.Items {
-			name, err := evalAsString(target.Name, actionEnv)
-			if err != nil {
-				return nil, fmt.Errorf("failed to evaluate warehouse name as string: %w", err)
-			}
 			if wh.Name == name {
 				return []client.Object{&wh}, nil
 			}
