@@ -203,6 +203,7 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 				w.InternalSubscriptions[i].Subscription = &sub
 			}
 		}
+		w.Subscriptions = nil // Clear to avoid confusion
 	}
 
 	return nil
@@ -211,16 +212,13 @@ func (w *WarehouseSpec) UnmarshalJSON(data []byte) error {
 // MarshalJSON marshals the WarehouseSpec to JSON, converting the
 // InternalSubscriptions slice into JSON in the Subscriptions field. For
 // Subscription objects, the Kind field is used as the top-level key.
-func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
+func (w WarehouseSpec) MarshalJSON() ([]byte, error) {
 	type warehouseSpecAlias WarehouseSpec
-
-	// Create a copy to avoid modifying the original
-	spec := *w
 	aux := &struct {
 		Subscriptions []apiextensionsv1.JSON `json:"subscriptions"`
 		*warehouseSpecAlias
 	}{
-		warehouseSpecAlias: (*warehouseSpecAlias)(&spec),
+		warehouseSpecAlias: (*warehouseSpecAlias)(&w),
 	}
 
 	// Convert InternalSubscriptions to JSON
@@ -286,7 +284,7 @@ func (w *WarehouseSpec) MarshalJSON() ([]byte, error) {
 	}
 
 	// Clear the internal field from the copy to avoid duplication in output
-	spec.InternalSubscriptions = nil
+	w.InternalSubscriptions = nil
 
 	return json.Marshal(aux)
 }
