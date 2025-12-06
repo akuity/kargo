@@ -26,7 +26,7 @@ const (
 
 var registration = gitprovider.Registration{
 	Predicate: func(repoURL string) bool {
-		u, err := url.Parse(repoURL)
+		u, err := url.Parse(urls.NormalizeGit(repoURL))
 		if err != nil {
 			return false
 		}
