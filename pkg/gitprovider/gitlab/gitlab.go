@@ -260,12 +260,19 @@ func (p *provider) GetCommitURL(repoURL string, sha string) (string, error) {
 }
 
 func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
+	mergeCommit := glMR.MergeCommitSHA
+	if mergeCommit == nil {
+		mergeCommit = glMR.SquashCommitSHA
+	}
+	if mergeCommit == nil {
+		mergeCommit = glMR.SHA
+	}
 	return gitprovider.PullRequest{
 		Number:         glMR.IID,
 		URL:            glMR.WebURL,
 		Open:           isMROpen(glMR),
 		Merged:         glMR.State == "merged",
-		MergeCommitSHA: glMR.MergeCommitSHA,
+		MergeCommitSHA: mergeCommit,
 		Object:         glMR,
 		HeadSHA:        glMR.SHA,
 		CreatedAt:      glMR.CreatedAt,
