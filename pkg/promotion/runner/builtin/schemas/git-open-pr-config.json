@@ -21,8 +21,7 @@
     "repoURL": {
       "type": "string",
       "description": "The URL of a remote Git repository to clone.",
-      "minLength": 1,
-      "format": "uri"
+      "minLength": 1
     },
     "sourceBranch": {
       "type": "string",
