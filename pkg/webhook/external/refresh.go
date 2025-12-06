@@ -19,6 +19,36 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+type refreshResult struct {
+	Success string `json:"success,omitempty"`
+	Failure string `json:"failure,omitempty"`
+}
+
+func refreshObjects(
+	ctx context.Context,
+	c client.Client,
+	objList []client.Object,
+) []refreshResult {
+	logger := logging.LoggerFromContext(ctx)
+	refreshResults := make([]refreshResult, len(objList))
+	for i, obj := range objList {
+		objKey := client.ObjectKeyFromObject(obj)
+		objLogger := logger.WithValues(
+			"namespace", objKey.Namespace,
+			"name", objKey.Name,
+			"kind", obj.GetObjectKind(),
+		)
+		if err := api.RefreshObject(ctx, c, obj); err != nil {
+			objLogger.Error(err, "error refreshing")
+			refreshResults[i].Failure = objKey.String()
+		} else {
+			objLogger.Info("successfully refreshed object")
+			refreshResults[i].Success = objKey.String()
+		}
+	}
+	return refreshResults
+}
+
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are

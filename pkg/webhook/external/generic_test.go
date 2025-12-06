@@ -1,0 +1,534 @@
+package external
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/indexer"
+)
+
+func TestGenericHandler(t *testing.T) {
+	const testURL = "https://webhooks.kargo.example.com/nonsense"
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	testCases := []struct {
+		name       string
+		kClient    client.Client
+		config     *kargoapi.GenericWebhookReceiverConfig
+		req        func() *http.Request
+		assertions func(*testing.T, *httptest.ResponseRecorder)
+	}{
+		{
+			name:    "failure creating base env",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config:  &kargoapi.GenericWebhookReceiverConfig{},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					"/",
+					bytes.NewBuffer([]byte(`"invalid-json`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, w.Code)
+				require.Contains(t, w.Body.String(), "invalid request body")
+			},
+		},
+		{
+			name:    "condition not met - failed to compile expression",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "{x!kj\"}",
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"{x!kj\"}",
+								"satisfied":false,
+								"evalError": "unexpected token Operator(\"!\") (1:3)\n | {x!kj\"}\n | ..^"
+							}
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name:    "condition not met - failed to run expression",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType: kargoapi.GenericWebhookActionTypeRefresh,
+						// foo is not defined, so evaluation will fail
+						MatchExpression: "foo()",
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"foo()",
+								"satisfied":false,
+								"evalError": "reflect: call of reflect.Value.Call on zero Value (1:1)\n | foo()\n | ^"
+							}
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name:    "condition not met - evaluated to false",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "request.header('X-Event-Type') == 'push'",
+					},
+				},
+			},
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+				req.Header.Set("X-Event-Type", "pull_request")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"request.header('X-Event-Type') == 'push'",
+								"satisfied":false
+							}
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name:    "condition not met - evaluated to non-boolean type",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "request.header('X-Event-Type')",
+					},
+				},
+			},
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+				req.Header.Set("X-Event-Type", "pull_request")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"request.header('X-Event-Type')",
+								"satisfied":false,
+								"evalError": "match expression result \"pull_request\" is of type string; expected bool"
+							}
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "list error",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithInterceptorFuncs(
+				interceptor.Funcs{
+					List: func(
+						_ context.Context,
+						_ client.WithWatch,
+						_ client.ObjectList,
+						_ ...client.ListOption,
+					) error {
+						return errors.New("oops")
+					},
+				},
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "true",
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				return httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer([]byte(`{"some": "data"}`)),
+				)
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"true",
+								"satisfied":true
+							},
+							"targetResults":[
+								{
+									"kind":"Warehouse",
+									"listError":"failed to list target objects: error listing Warehouse targets: oops"
+								}
+							]
+						}
+					]}
+				`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "partial success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this warehouse will be refreshed successfully
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+				// this warehouse will fully satisfy the label selector but not the index selector
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "other-api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",
+							"tier": "backend",
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/other-repo.git", // does NOT satisfy index selector
+							},
+						}},
+					},
+				},
+				// this label will satisfy the indexSelector, labelSelector.MatchLabels,
+				// but not labelSelector.MatchExpressions
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "ui-warehouse",
+						Labels: map[string]string{
+							"foo": "bar",
+							// "tier": "frontend", // missing
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git",
+							},
+						}},
+					},
+				},
+				// this warehouse will satisfy all selectors but fail during refresh
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "failure-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).WithInterceptorFuncs(
+				interceptor.Funcs{
+					Patch: func(
+						_ context.Context,
+						_ client.WithWatch,
+						obj client.Object,
+						_ client.Patch,
+						_ ...client.PatchOption,
+					) error {
+						if obj.GetName() == "failure-warehouse" {
+							return errors.New("something went wrong")
+						}
+						return nil
+					},
+				},
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						Parameters:      map[string]string{"foo": "bar"},
+						MatchExpression: "request.header('X-Event-Type') == 'push'",
+						// use complex combination of both label and index selectors
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"foo": "bar"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"backend", "frontend"},
+										},
+									},
+								},
+								IndexSelector: kargoapi.IndexSelector{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.WarehousesBySubscribedURLsField,
+											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				// not normalized so the index selector can only work if 'normalize' function is used
+				b := []byte(`{"repository": {"url": "http://github.com/example/repo.git"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "push")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				t.Logf("response body: %s", w.Body.String())
+				require.Equal(t, http.StatusInternalServerError, w.Code)
+				expected := `
+				{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"request.header('X-Event-Type') == 'push'",
+								"satisfied":true
+							},
+							"targetResults":[
+								{
+									"kind":"Warehouse",
+									"refreshResults":[
+										{"success":"test-project/api-warehouse"},
+										{"failure":"test-project/failure-warehouse"}
+									]
+								}
+							]
+						}
+					]
+				}`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+		{
+			name: "success",
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				// this warehouse will be refreshed successfully
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "test-project",
+						Name:      "api-warehouse",
+						Labels: map[string]string{
+							"foo":  "bar",     // satisfies labelSelector.MatchLabels
+							"tier": "backend", // satisfies labelSelector.MatchExpressions
+						},
+					},
+					Spec: kargoapi.WarehouseSpec{
+						Subscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			config: &kargoapi.GenericWebhookReceiverConfig{
+				Actions: []kargoapi.GenericWebhookAction{
+					{
+						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+						MatchExpression: "request.header('X-Event-Type') == 'push'",
+						// use complex combination of both label and index selectors
+						Targets: []kargoapi.GenericWebhookTarget{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								LabelSelector: metav1.LabelSelector{
+									MatchLabels: map[string]string{"foo": "bar"},
+									MatchExpressions: []metav1.LabelSelectorRequirement{
+										{
+											Key:      "tier",
+											Operator: metav1.LabelSelectorOpIn,
+											Values:   []string{"backend", "frontend"},
+										},
+									},
+								},
+								IndexSelector: kargoapi.IndexSelector{
+									MatchIndices: []kargoapi.IndexSelectorRequirement{
+										{
+											Key:      indexer.WarehousesBySubscribedURLsField,
+											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			req: func() *http.Request {
+				// not normalized so the index selector can only work if 'normalizeGit' function is used
+				b := []byte(`{"repository": {"url": "http://github.com/example/repo.git"}}`)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(b),
+				)
+				req.Header.Set("X-Event-Type", "push")
+				return req
+			},
+			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, w.Code)
+				expected := `
+				{
+					"actionResults":[
+						{
+							"actionType":"Refresh",
+							"conditionResult":{
+								"expression":"request.header('X-Event-Type') == 'push'",
+								"satisfied":true
+							},
+							"targetResults":[
+								{
+									"kind":"Warehouse",
+									"refreshResults":[
+										{"success":"test-project/api-warehouse"}
+									]
+								}
+							]
+						}
+					]
+				}`
+				require.JSONEq(t, expected, w.Body.String())
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			requestBody, err := io.ReadAll(tc.req().Body)
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				_ = tc.req().Body.Close()
+			})
+			w := httptest.NewRecorder()
+			(&genericWebhookReceiver{
+				baseWebhookReceiver: &baseWebhookReceiver{
+					client:  tc.kClient,
+					project: "test-project",
+				},
+				config: tc.config,
+			}).getHandler(requestBody).ServeHTTP(w, tc.req())
+			tc.assertions(t, w)
+		})
+	}
+}
