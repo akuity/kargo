@@ -11,17 +11,18 @@ description: Merges an open pull request.
 [`git-open-pr`](git-open-pr.md) step.
 
 :::caution
-This step only supports synchronous merges due to API limitations of the Git providers.
-It does not work with merge queues or wait for queued merges to finish. If a
-repository enforces merge queues, the behavior depends on the token permissions.
+This step only executes synchronous merges. It can neither initiate an
+asynchronous merge by placing a PR on a merge queue (or similar), nor can it
+recognize when an open PR is already _in_ a merge queue (having been placed
+there by someone or something else), and thus cannot wait for an aynchronous
+merge in-progress to complete.
+
+If a repository _enforces_ merge queues, the behavior when attempting a
+synchronous merge depends permissions.
 
 - GitHub: If a merge queue is required, the PR will either be merged directly if the
   token has bypass permissions, or it will fail with an error if it does not.
-- GitLab: If a merge train is required, the merge will either fail or can be bypassed
-  based on permissions.
-
-If your repo depends on merge queues, you must either give the service account
-permission to bypass them or add PRs to the queue manually outside of Kargo.
+- GitLab: This step will always merge directly without using merge trains.
 :::
 
 ## Configuration
