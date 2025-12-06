@@ -29,6 +29,21 @@ func (t refreshResourceType) String() string {
 	return string(t)
 }
 
+func (t refreshResourceType) Type() v1alpha1.RefreshResourceType {
+	switch t {
+	case refreshResourceTypeClusterConfig:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG
+	case refreshResourceTypeProjectConfig:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG
+	case refreshResourceTypeWarehouse:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_WAREHOUSE
+	case refreshResourceTypeStage:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_STAGE
+	default:
+		return v1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_UNSPECIFIED
+	}
+}
+
 func (t refreshResourceType) requiresName() bool {
 	switch t {
 	case refreshResourceTypeStage, refreshResourceTypeWarehouse:
@@ -132,25 +147,12 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	switch o.ResourceType {
-	case refreshResourceTypeClusterConfig:
-		_, err = kargoSvcCli.RefreshClusterConfig(ctx, connect.NewRequest(&v1alpha1.RefreshClusterConfigRequest{}))
-	case refreshResourceTypeProjectConfig:
-		_, err = kargoSvcCli.RefreshProjectConfig(ctx, connect.NewRequest(&v1alpha1.RefreshProjectConfigRequest{
-			Project: o.Project,
-		}))
-	case refreshResourceTypeStage:
-		_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
-			Project: o.Project,
-			Name:    o.Name,
-		}))
-	case refreshResourceTypeWarehouse:
-		_, err = kargoSvcCli.RefreshWarehouse(ctx, connect.NewRequest(&v1alpha1.RefreshWarehouseRequest{
-			Project: o.Project,
-			Name:    o.Name,
-		}))
-	}
-	if err != nil {
+	req := connect.NewRequest(&v1alpha1.RefreshResourceRequest{
+		Project:      o.Project,
+		Name:         o.Name,
+		ResourceType: o.ResourceType.Type(),
+	})
+	if _, err = kargoSvcCli.RefreshResource(ctx, req); err != nil {
 		return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
 	}
 
