@@ -56,7 +56,7 @@ func TestQuayHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "quay.io/mynamespace/repository",
 								Constraint: "^2.0.0", // Constraint won't be met
@@ -94,7 +94,7 @@ func TestQuayHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "quay.io/mynamespace/repository",
 								Constraint: "^1.0.0",
@@ -134,7 +134,7 @@ func TestQuayHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://quay.io/mynamespace/repository",
 								SemverConstraint: "^2.0.0", // Constraint won't be met
@@ -172,7 +172,7 @@ func TestQuayHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://quay.io/mynamespace/repository",
 								SemverConstraint: "^1.0.0",

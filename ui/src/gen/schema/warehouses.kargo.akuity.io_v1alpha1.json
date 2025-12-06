@@ -48,222 +48,7 @@
         "subscriptions": {
           "description": "Subscriptions describes sources of artifacts to be included in Freight\nproduced by this Warehouse.",
           "items": {
-            "description": "RepoSubscription describes a subscription to ONE OF a Git repository, a\ncontainer image repository, or a Helm chart repository.",
-            "properties": {
-              "chart": {
-                "description": "Chart describes a subscription to a Helm chart repository.",
-                "properties": {
-                  "discoveryLimit": {
-                    "default": 20,
-                    "description": "DiscoveryLimit is an optional limit on the number of chart versions that\ncan be discovered for this subscription. The limit is applied after\nfiltering charts based on the SemverConstraint field.\nWhen left unspecified, the field is implicitly treated as if its value\nwere \"20\". The upper limit for this field is 100.",
-                    "format": "int32",
-                    "maximum": 100,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "name": {
-                    "description": "Name specifies the name of a Helm chart to subscribe to within a classic\nchart repository specified by the RepoURL field. This field is required\nwhen the RepoURL field points to a classic chart repository and MUST\notherwise be empty.",
-                    "type": "string"
-                  },
-                  "repoURL": {
-                    "description": "RepoURL specifies the URL of a Helm chart repository. It may be a classic\nchart repository (using HTTP/S) OR a repository within an OCI registry.\nClassic chart repositories can contain differently named charts. When this\nfield points to such a repository, the Name field MUST also be used\nto specify the name of the desired chart within that repository. In the\ncase of a repository within an OCI registry, the URL implicitly points to\na specific chart and the Name field MUST NOT be used. The RepoURL field is\nrequired.",
-                    "minLength": 1,
-                    "pattern": "^(((https?)|(oci))://)([\\w\\d\\.\\-]+)(:[\\d]+)?(/.*)*$",
-                    "type": "string"
-                  },
-                  "semverConstraint": {
-                    "description": "SemverConstraint specifies constraints on what new chart versions are\npermissible. This field is optional. When left unspecified, there will be\nno constraints, which means the latest version of the chart will always be\nused. Care should be taken with leaving this field unspecified, as it can\nlead to the unanticipated rollout of breaking changes.\nMore info: https://github.com/masterminds/semver#checking-version-constraints",
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "repoURL"
-                ],
-                "type": "object"
-              },
-              "git": {
-                "description": "Git describes a subscriptions to a Git repository.",
-                "properties": {
-                  "allowTags": {
-                    "description": "AllowTags is a regular expression that can optionally be used to limit the\ntags that are considered in determining the newest commit of interest. The\nvalue in this field only has any effect when the CommitSelectionStrategy is\nLexical, NewestTag, or SemVer. This field is optional.\n\nDeprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact\ndiscovery will FAIL if this field is non-empty. This field will be removed\nin v1.13.0.",
-                    "type": "string"
-                  },
-                  "allowTagsRegexes": {
-                    "description": "AllowTagsRegexes is a list of regular expressions that can optionally be\nused to limit the tags that are considered in determining the newest commit\nof interest. The values in this field only have any effect when the\nCommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is\noptional.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "branch": {
-                    "description": "Branch references a particular branch of the repository. The value in this\nfield only has any effect when the CommitSelectionStrategy is\nNewestFromBranch or left unspecified (which is implicitly the same as\nNewestFromBranch). This field is optional. When left unspecified, (and the\nCommitSelectionStrategy is NewestFromBranch or unspecified), the\nsubscription is implicitly to the repository's default branch.",
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._\\/-]*[a-zA-Z0-9_-])?$",
-                    "type": "string"
-                  },
-                  "commitSelectionStrategy": {
-                    "default": "NewestFromBranch",
-                    "description": "CommitSelectionStrategy specifies the rules for how to identify the newest\ncommit of interest in the repository specified by the RepoURL field. This\nfield is optional. When left unspecified, the field is implicitly treated\nas if its value were \"NewestFromBranch\".\n\nAccepted values:\n\n- \"NewestFromBranch\": Selects the latest commit on the branch specified\n  by the Branch field or the default branch if none is specified. This is\n  the default strategy.\n\n- \"SemVer\": Selects the commit referenced by the semantically greatest\n  tag. The SemverConstraint field can optionally be used to narrow the set\n  of tags eligible for selection.\n\n- \"Lexical\": Selects the commit referenced by the lexicographically\n  greatest tag. Useful when tags embed a _leading_ date or timestamp. The\n  AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to\n  narrow the set of tags eligible for selection.\n\n- \"NewestTag\": Selects the commit referenced by the most recently created\n  tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be\n  used to narrow the set of tags eligible for selection.",
-                    "enum": [
-                      "Lexical",
-                      "NewestFromBranch",
-                      "NewestTag",
-                      "SemVer"
-                    ],
-                    "type": "string"
-                  },
-                  "discoveryLimit": {
-                    "default": 20,
-                    "description": "DiscoveryLimit is an optional limit on the number of commits that can be\ndiscovered for this subscription. The limit is applied after filtering\ncommits based on the AllowTagsRegexes, IgnoreTagsRegexes, and\nExpressionFilter fields. When left unspecified, the field is implicitly\ntreated as if its value were \"20\". The upper limit for this field is 100.",
-                    "format": "int32",
-                    "maximum": 100,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "excludePaths": {
-                    "description": "ExcludePaths is a list of selectors that designate paths in the repository\nthat should NOT trigger the production of new Freight when changes are\ndetected therein. When specified, changes in the identified paths will not\ntrigger Freight production. When not specified, paths that should trigger\nFreight production will be defined solely by IncludePaths. Selectors may be\ndefined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "expressionFilter": {
-                    "description": "ExpressionFilter is an expression that can optionally be used to limit\nthe commits or tags that are considered in determining the newest commit\nof interest based on their metadata.\n\nFor commit-based strategies (NewestFromBranch), the filter applies to\ncommits and has access to commit metadata variables.\nFor tag-based strategies (Lexical, NewestTag, SemVer), the filter applies\nto tags and has access to tag metadata variables. The filter is applied\nafter AllowTagsRegexes, IgnoreTagsRegexes, and SemverConstraint fields.\n\nThe expression should be a valid expr-lang expression that evaluates to\ntrue or false. When the expression evaluates to true, the commit/tag is\nincluded in the set that is considered. When the expression evaluates to\nfalse, the commit/tag is excluded.\n\nAvailable variables depend on the CommitSelectionStrategy:\n\nFor NewestFromBranch (commit filtering):\n  - `id`: The ID (sha) of the commit.\n  - `commitDate`: The commit date of the commit.\n  - `author`: The author of the commit message, in the format \"Name <email>\".\n  - `committer`: The person who committed the commit, in the format\n\t   \"Name <email>\".\n  - `subject`: The subject (first line) of the commit message.\n\nFor Lexical, NewestTag, SemVer (tag filtering):\n  - `tag`: The name of the tag.\n  - `id`: The ID (sha) of the commit associated with the tag.\n  - `creatorDate`: The creation date of an annotated tag, or the commit\n\t\tdate of a lightweight tag.\n  - `author`: The author of the commit message associated with the tag,\n\t   in the format \"Name <email>\".\n  - `committer`: The person who committed the commit associated with the\n\t   tag, in the format \"Name <email>\".\n  - `subject`: The subject (first line) of the commit message associated\n\t   with the tag.\n\t - `tagger`: The person who created the tag, in the format \"Name <email>\".\n\t   Only available for annotated tags.\n\t - `annotation`: The subject (first line) of the tag annotation. Only\n\t   available for annotated tags.\n\nRefer to the expr-lang documentation for more details on syntax and\ncapabilities of the expression language: https://expr-lang.org.",
-                    "type": "string"
-                  },
-                  "ignoreTags": {
-                    "description": "IgnoreTags is a list of tags that must be ignored when determining the\nnewest commit of interest. No regular expressions or glob patterns are\nsupported yet. The value in this field only has any effect when the\nCommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is\noptional.\n\nDeprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact\ndiscovery will FAIL if this field is non-empty. This field will be removed\nin v1.13.0.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "ignoreTagsRegexes": {
-                    "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be\nused to exclude tags from consideration when determining the newest commit\nof interest. The values in this field only have any effect when the\nCommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is\noptional.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "includePaths": {
-                    "description": "IncludePaths is a list of selectors that designate paths in the repository\nthat should trigger the production of new Freight when changes are detected\ntherein. When specified, only changes in the identified paths will trigger\nFreight production. When not specified, changes in any path will trigger\nFreight production. Selectors may be defined using:\n  1. Exact paths to files or directories (ex. \"charts/foo\")\n  2. Glob patterns (prefix the pattern with \"glob:\"; ex. \"glob:*.yaml\")\n  3. Regular expressions (prefix the pattern with \"regex:\" or \"regexp:\";\n     ex. \"regexp:^.*\\.yaml$\")\n\nPaths selected by IncludePaths may be unselected by ExcludePaths. This\nis a useful method for including a broad set of paths and then excluding a\nsubset of them.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "insecureSkipTLSVerify": {
-                    "description": "InsecureSkipTLSVerify specifies whether certificate verification errors\nshould be ignored when connecting to the repository. This should be enabled\nonly with great caution.",
-                    "type": "boolean"
-                  },
-                  "repoURL": {
-                    "description": "URL is the repository's URL. This is a required field.",
-                    "minLength": 1,
-                    "pattern": "(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))",
-                    "type": "string"
-                  },
-                  "semverConstraint": {
-                    "description": "SemverConstraint specifies constraints on what new tagged commits are\nconsidered in determining the newest commit of interest. The value in this\nfield only has any effect when the CommitSelectionStrategy is SemVer. This\nfield is optional. When left unspecified, there will be no constraints,\nwhich means the latest semantically tagged commit will always be used. Care\nshould be taken with leaving this field unspecified, as it can lead to the\nunanticipated rollout of breaking changes.",
-                    "type": "string"
-                  },
-                  "strictSemvers": {
-                    "default": true,
-                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the CommitSelectionStrategy is SemVer. This should be disabled\ncautiously, as it creates the potential for any tag containing numeric\ncharacters only to be mistaken for a semver string containing the major\nversion number only.",
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "repoURL",
-                  "strictSemvers"
-                ],
-                "type": "object"
-              },
-              "image": {
-                "description": "Image describes a subscription to container image repository.",
-                "properties": {
-                  "allowTags": {
-                    "description": "AllowTags is a regular expression that can optionally be used to limit the\nimage tags that are considered in determining the newest version of an\nimage. This field is optional.\n\nDeprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact\ndiscovery will FAIL if this field is non-empty. This field will be removed\nin v1.13.0.",
-                    "type": "string"
-                  },
-                  "allowTagsRegexes": {
-                    "description": "AllowTagsRegexes is a list of regular expressions that can optionally be\nused to limit the image tags that are considered in determining the newest\nrevision of an image. This field is optional.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "constraint": {
-                    "description": "Constraint specifies ImageSelectionStrategy-specific constraints on what\nnew image revisions are permissible. Acceptable values for this field vary\ncontextually by ImageSelectionStrategy. The field is optional for some\nstrategies. Others either require it or ignore it. For strategies that\ntreat this field as optional, specifying no value means \"no constraints.\"\nRefer to the descriptions of individual strategies to learn if or how they\nuse this field.",
-                    "type": "string"
-                  },
-                  "discoveryLimit": {
-                    "default": 20,
-                    "description": "DiscoveryLimit is an optional limit on the number of image references\nthat can be discovered for this subscription. The limit is applied after\nfiltering images based on the AllowTagsRegexes and IgnoreTagsRegexes\nfields. When left unspecified, the field is implicitly treated as if its\nvalue were \"20\". The upper limit for this field is 100.",
-                    "format": "int32",
-                    "maximum": 100,
-                    "minimum": 1,
-                    "type": "integer"
-                  },
-                  "ignoreTags": {
-                    "description": "IgnoreTags is a list of tags that must be ignored when determining the\nnewest version of an image. No regular expressions or glob patterns are\nsupported yet. This field is optional.\n\nDeprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact\ndiscovery will FAIL if this field is non-empty. This field will be removed\nin v1.13.0.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "ignoreTagsRegexes": {
-                    "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be\nused to exclude tags from consideration when determining the newest\nrevision of an image. This field is optional.",
-                    "items": {
-                      "type": "string"
-                    },
-                    "type": "array"
-                  },
-                  "imageSelectionStrategy": {
-                    "default": "SemVer",
-                    "description": "ImageSelectionStrategy specifies the rules for how to identify the newest version\nof the image specified by the RepoURL field. This field is optional. When\nleft unspecified, the field is implicitly treated as if its value were\n\"SemVer\".\n\nAccepted values:\n\n- \"Digest\": Selects the image currently referenced by the tag specified\n  by the Constraint field.\n\n- \"Lexical\": Selects the image referenced by the lexicographically greatest\n  tag. This strategy is useful when tags embed a leading date or timestamp.\n  The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used\n  to narrow the set of tags eligible for selection.\n\n- \"NewestBuild\": Selects the image that was most recently pushed to the\n  repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can\n  optionally be used to narrow the set of tags eligible for selection. This\n  is the least efficient selection strategy and is likely to cause rate\n  limiting affecting this Warehouse and possibly others. This strategy\n  should be avoided.\n\n- \"SemVer\": Selects the image with the semantically greatest tag. The\n  Constraint field may optionally include a semver version constraint to\n  restrict the set of tags eligible for selection to those representing\n  semantic versions in a given range. The AllowTagsRegexes and\n  IgnoreTagsRegexes fields can optionally be used to further narrow the\n  set of tags eligible for selection.\n  See the following for for a description of semver version constraint\n  syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints",
-                    "enum": [
-                      "Digest",
-                      "Lexical",
-                      "NewestBuild",
-                      "SemVer"
-                    ],
-                    "type": "string"
-                  },
-                  "insecureSkipTLSVerify": {
-                    "description": "InsecureSkipTLSVerify specifies whether certificate verification errors\nshould be ignored when connecting to the repository. This should be enabled\nonly with great caution.",
-                    "type": "boolean"
-                  },
-                  "platform": {
-                    "description": "Platform is a string of the form <os>/<arch> that limits the tags that can\nbe considered when searching for new versions of an image. This field is\noptional. When left unspecified, it is implicitly equivalent to the\nOS/architecture of the Kargo controller. Care should be taken to set this\nvalue correctly in cases where the image referenced by this\nImageRepositorySubscription will run on a Kubernetes node with a different\nOS/architecture than the Kargo controller. At present this is uncommon, but\nnot unheard of.",
-                    "type": "string"
-                  },
-                  "repoURL": {
-                    "description": "RepoURL specifies the URL of the image repository to subscribe to. The\nvalue in this field MUST NOT include an image tag. This field is required.",
-                    "minLength": 1,
-                    "pattern": "^(\\w+([\\.-]\\w+)*(:[\\d]+)?/)?(\\w+([\\.-]\\w+)*)(/\\w+([\\.-]\\w+)*)*$",
-                    "type": "string"
-                  },
-                  "strictSemvers": {
-                    "default": true,
-                    "description": "StrictSemvers specifies whether only \"strict\" semver tags should be\nconsidered. A \"strict\" semver tag is one containing ALL of major, minor,\nand patch version components. This is enabled by default, but only has any\neffect when the ImageSelectionStrategy is SemVer. This should be disabled\ncautiously, as it is not uncommon to tag container images with short Git\ncommit hashes, which have the potential to contain numeric characters only\nand could be mistaken for a semver string containing the major version\nnumber only.",
-                    "type": "boolean"
-                  }
-                },
-                "required": [
-                  "repoURL",
-                  "strictSemvers"
-                ],
-                "type": "object",
-                "x-kubernetes-validations": [
-                  {
-                    "message": "If imageSelectionStrategy is Digest, constraint must be set",
-                    "rule": "!(self.imageSelectionStrategy == 'Digest') || has(self.constraint)"
-                  }
-                ]
-              }
-            },
-            "type": "object"
+            "x-kubernetes-preserve-unknown-fields": true
           },
           "minItems": 1,
           "type": "array"
@@ -494,6 +279,57 @@
                 },
                 "required": [
                   "repoURL"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "results": {
+              "description": "Results holds the artifact references discovered by the Warehouse.",
+              "items": {
+                "description": "DiscoveryResult represents the result of an artifact discovery operation for\nsome subscription.",
+                "properties": {
+                  "artifactReferences": {
+                    "description": "ArtifactReferences is a list of references to specific versions of an\nartifact.",
+                    "items": {
+                      "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                      "properties": {
+                        "artifactType": {
+                          "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "metadata": {
+                          "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                          "x-kubernetes-preserve-unknown-fields": true
+                        },
+                        "subscriptionName": {
+                          "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        },
+                        "version": {
+                          "description": "Version identifies a specific revision of this artifact.",
+                          "minLength": 1,
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "subscriptionName",
+                        "version"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "name": {
+                    "description": "SubscriptionName is the name of the Subscription that discovered these\nresults.",
+                    "minLength": 1,
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "name"
                 ],
                 "type": "object"
               },

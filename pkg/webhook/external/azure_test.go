@@ -76,7 +76,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL: "fakeregistry.azurecr.io/fakeimage",
 							},
@@ -117,7 +117,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "fakeregistry.azurecr.io/fakeimage",
 								Constraint: "^2.0.0", // Constraint won't be met
@@ -159,7 +159,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "fakeregistry.azurecr.io/fakeimage",
 								Constraint: "^1.0.0",
@@ -203,7 +203,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://fakeregistry.azurecr.io/fakeimage",
 								SemverConstraint: "^2.0.0", // Constraint won't be met
@@ -245,7 +245,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://fakeregistry.azurecr.io/fakeimage",
 								SemverConstraint: "^1.0.0",
@@ -290,7 +290,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://dev.azure.com/testorg/testproject/_git/testrepo",
 								Branch:  "not-main", // Constraint won't be met
@@ -330,7 +330,7 @@ func TestAzureHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://dev.azure.com/testorg/testproject/_git/testrepo",
 							},
