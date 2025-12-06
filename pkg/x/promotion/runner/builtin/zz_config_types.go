@@ -372,6 +372,10 @@ type HTTPConfig struct {
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
+	// Optionally overrides the Content-Type header for response parsing. Accepts MIME media
+	// type values: 'application/json', 'application/yaml', or 'text/plain'. If not set, uses
+	// the Content-Type header from the response with JSON fallback.
+	ResponseContentType string `json:"responseContentType,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
