@@ -148,7 +148,7 @@ func (e *projectStageHealthEnqueuer[T]) Update(
 	case oldCond == nil || newCond == nil:
 		fallthrough
 	case oldCond.Status != newCond.Status:
-		logger.Info("Warehouse health changed, enqueueing Project")
+		logger.Info("Stage health changed, enqueueing Project")
 		wq.Add(reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: oldStage.Namespace},
 		})
