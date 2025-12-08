@@ -336,10 +336,11 @@ type SetValues struct {
 	// The key whose value should be set. For nested values, use dots to delimit key parts. e.g.
 	// `image.tag`.
 	Key string `json:"key"`
+	// Whether to force the value to be treated as a literal string. When true, uses
+	// --set-literal instead of --set.
+	Literal bool `json:"literal,omitempty"`
 	// The new value for the key.
 	Value string `json:"value"`
-	// Whether to force the value to be treated as a string. When true, uses --set-literal instead of --set.
-	ForceString bool `json:"forceString,omitempty"`
 }
 
 type HelmUpdateChartConfig struct {
