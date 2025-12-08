@@ -14,7 +14,8 @@ import (
 type actionResult struct {
 	ActionType      kargoapi.GenericWebhookActionType `json:"actionType"`
 	ConditionResult conditionResult                   `json:"conditionResult"`
-	TargetResults   []targetResult                    `json:"targetResults,omitempty"`
+	ListResult      *listResult                       `json:"listResult,omitempty"`
+	RefreshResults  []refreshResult                   `json:"refreshResults,omitempty"`
 }
 
 func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
@@ -30,13 +31,6 @@ type conditionResult struct {
 	Expression string `json:"expression"`
 	Satisfied  bool   `json:"satisfied"`
 	EvalError  string `json:"evalError,omitempty"`
-}
-
-type targetResult struct {
-	Kind           kargoapi.GenericWebhookTargetKind `json:"kind"`
-	Name           string                            `json:"name,omitempty"`
-	ListError      string                            `json:"listError,omitempty"`
-	RefreshResults []refreshResult                   `json:"refreshResults,omitempty"`
 }
 
 func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]any {
@@ -60,54 +54,31 @@ func (g *genericWebhookReceiver) handleAction(
 		"action", action.ActionType,
 		"expression", action.MatchExpression,
 	)
-
 	satisfied, err := conditionSatisfied(action.MatchExpression, env)
 	if err != nil {
 		aLogger.Error(err, "failed to evaluate criteria; skipping action")
 		ar.ConditionResult.EvalError = err.Error()
 		return ar
 	}
-
 	ar.ConditionResult.Satisfied = satisfied
 	if !satisfied {
 		aLogger.Debug("condition not satisfied; skipping action")
 		return ar
 	}
-
+	objects, errs := g.listUniqueObjects(ctx, action, env)
+	if len(errs) > 0 {
+		aLogger.Debug("list errors detected",
+			"numErrors", len(errs),
+			"errors", errs,
+		)
+	}
+	ar.ListResult = newListResult(objects, errs)
+	println("in handleAction, listResult has", len(ar.ListResult.Errors), "errors")
 	switch action.ActionType {
 	case kargoapi.GenericWebhookActionTypeRefresh:
-		ar.TargetResults = g.handleRefreshAction(ctx, env, action)
+		ar.RefreshResults = refreshObjects(ctx, g.client, objects)
 	}
 	return ar
-}
-
-func (g *genericWebhookReceiver) handleRefreshAction(
-	ctx context.Context,
-	actionEnv map[string]any,
-	action kargoapi.GenericWebhookAction,
-) []targetResult {
-	logger := logging.LoggerFromContext(ctx)
-	targetResults := make([]targetResult, len(action.TargetSelectionCriteria))
-	for i, target := range action.TargetSelectionCriteria {
-		tLogger := logger.WithValues(
-			"targetKind", target.Kind,
-			"targetName", target.Name,
-		)
-		targetResults[i] = targetResult{
-			Kind: target.Kind,
-			Name: target.Name,
-		}
-		tCtx := logging.ContextWithLogger(ctx, tLogger)
-		objects, err := g.listTargetObjects(tCtx, target, actionEnv)
-		if err != nil {
-			tLogger.Error(err, "failed to list objects for target")
-			targetResults[i].ListError = fmt.Sprintf("failed to list target objects: %v", err)
-			continue
-		}
-		targetResults[i].RefreshResults = refreshObjects(tCtx, g.client, objects)
-	}
-	logger.Info("checking target results", "results", targetResults)
-	return targetResults
 }
 
 func conditionSatisfied(expression string, env map[string]any) (bool, error) {

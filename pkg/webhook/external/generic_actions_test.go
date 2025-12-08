@@ -42,7 +42,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, false)
-				require.Equal(t, 0, len(ar.TargetResults))
+				require.Equal(t, 0, len(ar.RefreshResults))
 			},
 		},
 		{
@@ -59,7 +59,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.NotEmpty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, false)
-				require.Equal(t, 0, len(ar.TargetResults))
+				require.Equal(t, 0, len(ar.RefreshResults))
 			},
 		},
 		{
@@ -83,10 +83,9 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.NotEmpty(t, ar.TargetResults[0].ListError)
-				require.Contains(t, ar.TargetResults[0].ListError,
+				require.Equal(t, 0, len(ar.RefreshResults))
+				require.NotEmpty(t, ar.ListResult.Errors)
+				require.Contains(t, ar.ListResult.Errors[0],
 					"unsupported operator \"InvalidOperator\" in index selector expression",
 				)
 			},
@@ -116,12 +115,9 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.NotEmpty(t, ar.TargetResults[0].ListError)
-				require.Contains(t, ar.TargetResults[0].ListError,
-					"something went wrong",
-				)
+				require.Equal(t, 0, len(ar.RefreshResults))
+				require.NotEmpty(t, ar.ListResult.Errors)
+				require.Contains(t, ar.ListResult.Errors[0], "something went wrong")
 			},
 		},
 		{
@@ -213,12 +209,11 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Name, "")
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.Empty(t, ar.TargetResults[0].ListError)
-				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
-				require.Equal(t, "test-project/warehouse-1", ar.TargetResults[0].RefreshResults[0].Success)
+				require.Equal(t, 1, len(ar.RefreshResults))
+				require.Equal(t, ar.ListResult.Objects[0].Name, "warehouse-1")
+				require.Empty(t, ar.ListResult.Errors)
+				require.Equal(t, 1, len(ar.RefreshResults))
+				require.Equal(t, "test-project/warehouse-1", ar.RefreshResults[0].Success)
 			},
 		},
 		{
@@ -290,14 +285,14 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Name, "")
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.Empty(t, ar.TargetResults[0].ListError)
-				require.Equal(t, 2, len(ar.TargetResults[0].RefreshResults))
-				firstResult := ar.TargetResults[0].RefreshResults[0]
-				secondResult := ar.TargetResults[0].RefreshResults[1]
-				require.Equal(t, "test-namespace/backend-warehouse", firstResult.Success)
+				require.Equal(t, 2, len(ar.ListResult.Objects))
+				require.Equal(t, ar.ListResult.Objects[0].Name, "backend-warehouse")
+				require.Equal(t, ar.ListResult.Objects[1].Name, "frontend-warehouse")
+				require.Empty(t, ar.ListResult.Errors)
+				require.Equal(t, 2, len(ar.RefreshResults))
+				firstResult := ar.RefreshResults[0]
+				secondResult := ar.RefreshResults[1]
+				require.Equal(t, firstResult.Success, "test-namespace/backend-warehouse")
 				require.Contains(t, secondResult.Failure, "test-namespace/frontend-warehouse")
 			},
 		},
@@ -335,12 +330,11 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Name, "backend-warehouse")
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.Empty(t, ar.TargetResults[0].ListError)
-				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
-				firstWhResult := ar.TargetResults[0].RefreshResults[0]
+				require.Equal(t, 1, len(ar.RefreshResults))
+				require.Equal(t, ar.ListResult.Objects[0].Name, "backend-warehouse")
+				require.Empty(t, ar.ListResult.Errors)
+				require.Equal(t, 1, len(ar.RefreshResults))
+				firstWhResult := ar.RefreshResults[0]
 				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 			},
 		},
@@ -402,12 +396,11 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Name, "backend-warehouse")
-				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
-				require.Empty(t, ar.TargetResults[0].ListError)
-				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
-				firstWhResult := ar.TargetResults[0].RefreshResults[0]
+				require.Equal(t, 1, len(ar.RefreshResults))
+				require.Equal(t, ar.ListResult.Objects[0].Name, "backend-warehouse")
+				require.Empty(t, ar.ListResult.Errors)
+				require.Equal(t, 1, len(ar.RefreshResults))
+				firstWhResult := ar.RefreshResults[0]
 				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 			},
 		},
@@ -425,10 +418,8 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
 				require.Empty(t, ar.ConditionResult.EvalError)
 				require.Equal(t, ar.ConditionResult.Satisfied, true)
-				require.Equal(t, 1, len(ar.TargetResults))
-				require.Equal(t, ar.TargetResults[0].Name, "")
-				require.Equal(t, string(ar.TargetResults[0].Kind), "UnsupportedKind")
-				require.Contains(t, ar.TargetResults[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
+				require.Equal(t, 0, len(ar.RefreshResults))
+				require.Contains(t, ar.ListResult.Errors[0], "unsupported target kind: \"UnsupportedKind\"")
 			},
 		},
 	}

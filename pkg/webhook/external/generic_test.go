@@ -236,12 +236,9 @@ func TestGenericHandler(t *testing.T) {
 								"expression":"true",
 								"satisfied":true
 							},
-							"targetResults":[
-								{
-									"kind":"Warehouse",
-									"listError":"failed to list target objects: error listing Warehouse targets: oops"
-								}
-							]
+							"listResult":{
+								"errors":["selection criteria error at index 0: error listing Warehouse targets: oops"]
+							}
 						}
 					]}
 				`
@@ -394,25 +391,33 @@ func TestGenericHandler(t *testing.T) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `
 				{
-					"actionResults":[
+					"actionResults": [
 						{
-							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"request.header('X-Event-Type') == 'push'",
-								"satisfied":true
+							"actionType": "Refresh",
+							"conditionResult": {
+								"expression": "request.header('X-Event-Type') == 'push'",
+								"satisfied": true
 							},
-							"targetResults":[
-								{
-									"kind":"Warehouse",
-									"refreshResults":[
-										{"success":"test-project/api-warehouse"},
-										{"failure":"test-project/failure-warehouse"}
-									]
-								}
-							]
-						}
-					]
-				}`
+							"listResult": {
+								"objects": [
+									{
+										"Namespace": "test-project",
+										"Name": "api-warehouse"
+									},
+									{
+										"Namespace": "test-project",
+										"Name": "failure-warehouse"
+									}
+								]
+							},
+							"refreshResults": [
+									{"success": "test-project/api-warehouse"},
+									{"failure": "test-project/failure-warehouse"}
+								]
+							}
+						]
+					}
+					`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
@@ -488,22 +493,26 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
+				t.Logf("response body: %s", w.Body.String())
 				expected := `
 				{
-					"actionResults":[
+					"actionResults": [
 						{
-							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"request.header('X-Event-Type') == 'push'",
-								"satisfied":true
+							"actionType": "Refresh",
+							"conditionResult": {
+								"expression": "request.header('X-Event-Type') == 'push'",
+								"satisfied": true
 							},
-							"targetResults":[
-								{
-									"kind":"Warehouse",
-									"refreshResults":[
-										{"success":"test-project/api-warehouse"}
-									]
-								}
+							"listResult": {
+								"objects": [
+									{
+										"Namespace": "test-project",
+										"Name": "api-warehouse"
+									}
+								]
+							},
+							"refreshResults": [
+								{"success": "test-project/api-warehouse"}
 							]
 						}
 					]

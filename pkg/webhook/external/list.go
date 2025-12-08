@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -13,6 +14,44 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/expressions"
 )
+
+type listResult struct {
+	Objects []client.ObjectKey `json:"objects,omitempty"`
+	Errors  []string           `json:"errors,omitempty"`
+}
+
+func newListResult(objects []client.Object, listErrors []error) *listResult {
+	lr := &listResult{
+		Errors: make([]string, len(listErrors)),
+	}
+	for _, obj := range objects {
+		lr.Objects = append(lr.Objects, client.ObjectKeyFromObject(obj))
+	}
+	for i, listErr := range listErrors {
+		lr.Errors[i] = listErr.Error()
+	}
+	return lr
+}
+
+func (g *genericWebhookReceiver) listUniqueObjects(
+	ctx context.Context,
+	action kargoapi.GenericWebhookAction,
+	actionEnv map[string]any,
+) ([]client.Object, []error) {
+	var dedupedList []client.Object
+	var listErrs []error
+	for i, tsc := range action.TargetSelectionCriteria {
+		objects, err := g.listTargetObjects(ctx, tsc, actionEnv)
+		if err != nil {
+			listErrs = append(listErrs,
+				fmt.Errorf("selection criteria error at index %d: %w", i, err),
+			)
+			continue
+		}
+		dedupedList = appendIfNotExists(dedupedList, objects...)
+	}
+	return dedupedList, listErrs
+}
 
 func (g *genericWebhookReceiver) listTargetObjects(
 	ctx context.Context,
@@ -215,4 +254,19 @@ func evalAsString(expr string, env map[string]any) (string, error) {
 		return "", fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
 	}
 	return s, nil
+}
+
+func appendIfNotExists(
+	dedupedList []client.Object,
+	objects ...client.Object,
+) []client.Object {
+	for _, obj := range objects {
+		if !slices.ContainsFunc(dedupedList, func(o client.Object) bool {
+			return o.GetName() == obj.GetName() &&
+				o.GetNamespace() == obj.GetNamespace()
+		}) {
+			dedupedList = append(dedupedList, obj)
+		}
+	}
+	return dedupedList
 }

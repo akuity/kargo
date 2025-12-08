@@ -123,17 +123,9 @@ func hasErrors(ar actionResult) bool {
 	if ar.ConditionResult.EvalError != "" {
 		return true
 	}
-	for _, tr := range ar.TargetResults {
-		if tr.ListError != "" {
-			return true
-		}
-		switch ar.ActionType {
-		case kargoapi.GenericWebhookActionTypeRefresh:
-			refreshFailure := func(rr refreshResult) bool { return rr.Failure != "" }
-			if slices.ContainsFunc(tr.RefreshResults, refreshFailure) {
-				return true
-			}
-		}
+	if ar.ListResult != nil && len(ar.ListResult.Errors) > 0 {
+		return true
 	}
-	return false
+	refreshFailure := func(rr refreshResult) bool { return rr.Failure != "" }
+	return slices.ContainsFunc(ar.RefreshResults, refreshFailure)
 }
