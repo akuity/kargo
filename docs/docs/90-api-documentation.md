@@ -2084,10 +2084,10 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookAction describes an action to be performed on a resource and the conditions under which it should be performed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| action | [string](#string) |  Action indicates the type of action to be performed. `Refresh` is the only currently supported Action.   |
+| action | [string](#string) |  ActionType indicates the type of action to be performed. `Refresh` is the only currently supported action.   |
 | matchExpression | [string](#string) |  MatchExpression defines criteria that a request must meet to trigger this action.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional, action-specific parameters. Values may be static or extracted from the request using expressions.  +optional |
-| targets | [GenericWebhookTarget](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget) |  Targets is a list of selection criteria for the resources on which the action should be performed.   |
+| targets | [GenericWebhookTargetSelectionCriteria](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria) |  TargetSelectionCriteria is a list of selection criteria for the resources on which the action should be performed.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry"></a>
 
@@ -2107,10 +2107,10 @@ RawFormat specifies the format for raw resource representation.
 | secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
 | actions | [GenericWebhookAction](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction) |  Actions is a list of actions to be performed when a webhook event is received.   |
 
-<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTarget"></a>
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria"></a>
 
-### GenericWebhookTarget
- GenericWebhookTarget describes selection criteria for resources to which some action is to be applied. Name, LabelSelector, and IndexSelector are all optional however, at least one must be specified. When multiple criteria are specified, the results are the combined (logical AND) of the criteria.
+### GenericWebhookTargetSelectionCriteria
+ GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some action is to be applied. Name, LabelSelector, and IndexSelector are all optional however, at least one must be specified. When multiple criteria are specified, the results are the combined (logical AND) of the criteria.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | kind | [string](#string) |  Kind is the kind of the target resource.   |

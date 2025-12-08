@@ -396,11 +396,11 @@ type GenericWebhookAction struct {
 	// +optional
 	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 
-	// Targets is a list of selection criteria for the resources on which the
+	// TargetSelectionCriteria is a list of selection criteria for the resources on which the
 	// action should be performed.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Targets []GenericWebhookTarget `json:"targets,omitempty" protobuf:"bytes,4,rep,name=targets"`
+	TargetSelectionCriteria []GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria,omitempty" protobuf:"bytes,4,rep,name=targets"`
 }
 
 // GenericWebhookActionType represents the type of action to be performed on a resource.
@@ -411,11 +411,11 @@ const (
 	GenericWebhookActionTypeRefresh GenericWebhookActionType = "Refresh"
 )
 
-// GenericWebhookTarget describes selection criteria for resources to which some
+// GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some
 // action is to be applied. Name, LabelSelector, and IndexSelector are all optional
 // however, at least one must be specified. When multiple criteria are specified, the
 // results are the combined (logical AND) of the criteria.
-type GenericWebhookTarget struct {
+type GenericWebhookTargetSelectionCriteria struct {
 	// Kind is the kind of the target resource.
 	//
 	// +kubebuilder:validation:Enum=Warehouse;
@@ -468,7 +468,7 @@ type IndexSelectorRequirement struct {
 	// whether the selection requirement is satisfied.
 	//
 	// kubebuilder:validation:Enum=Equal;NotEqual;
-	Operator IndexSelectorRequirementOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+	Operator IndexSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
 
 	// Value can be a static string or an expression that will be evaluated.
 	//
@@ -476,9 +476,9 @@ type IndexSelectorRequirement struct {
 	Value string `json:"value" protobuf:"bytes,3,opt,name=value"`
 }
 
-// IndexSelectorRequirementOperator represents a set of operators that can be
+// IndexSelectorOperator represents a set of operators that can be
 // used in an index selector requirement.
-type IndexSelectorRequirementOperator string
+type IndexSelectorOperator string
 
 const (
 	IndexSelectorOperatorEqual    IndexSelectorOperator = "Equals"

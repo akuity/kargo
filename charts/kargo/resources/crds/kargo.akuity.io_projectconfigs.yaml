@@ -333,8 +333,8 @@ spec:
                             properties:
                               action:
                                 description: |-
-                                  Action indicates the type of action to be performed. `Refresh` is the only
-                                  currently supported Action.
+                                  ActionType indicates the type of action to be performed. `Refresh` is the
+                                  only currently supported action.
                                 enum:
                                 - Refresh
                                 type: string
@@ -350,13 +350,13 @@ spec:
                                   Parameters contains additional, action-specific parameters. Values may be
                                   static or extracted from the request using expressions.
                                 type: object
-                              targets:
+                              targetSelectionCriteria:
                                 description: |-
-                                  Targets is a list of selection criteria for the resources on which the
+                                  TargetSelectionCriteria is a list of selection criteria for the resources on which the
                                   action should be performed.
                                 items:
                                   description: |-
-                                    GenericWebhookTarget describes selection criteria for resources to which some
+                                    GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some
                                     action is to be applied. Name, LabelSelector, and IndexSelector are all optional
                                     however, at least one must be specified. When multiple criteria are specified, the
                                     results are the combined (logical AND) of the criteria.

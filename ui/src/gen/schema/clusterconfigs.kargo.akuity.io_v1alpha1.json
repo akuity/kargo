@@ -118,7 +118,7 @@
                       "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
                       "properties": {
                         "action": {
-                          "description": "Action indicates the type of action to be performed. `Refresh` is the only\ncurrently supported Action.",
+                          "description": "ActionType indicates the type of action to be performed. `Refresh` is the\nonly currently supported action.",
                           "enum": [
                             "Refresh"
                           ],
@@ -135,10 +135,10 @@
                           "description": "Parameters contains additional, action-specific parameters. Values may be\nstatic or extracted from the request using expressions.",
                           "type": "object"
                         },
-                        "targets": {
-                          "description": "Targets is a list of selection criteria for the resources on which the\naction should be performed.",
+                        "targetSelectionCriteria": {
+                          "description": "TargetSelectionCriteria is a list of selection criteria for the resources on which the\naction should be performed.",
                           "items": {
-                            "description": "GenericWebhookTarget describes selection criteria for resources to which some\naction is to be applied. Name, LabelSelector, and IndexSelector are all optional\nhowever, at least one must be specified. When multiple criteria are specified, the\nresults are the combined (logical AND) of the criteria.",
+                            "description": "GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some\naction is to be applied. Name, LabelSelector, and IndexSelector are all optional\nhowever, at least one must be specified. When multiple criteria are specified, the\nresults are the combined (logical AND) of the criteria.",
                             "properties": {
                               "indexSelector": {
                                 "description": "IndexSelector is a selector used to identify cached target resources by cache key.\nIf used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.",
