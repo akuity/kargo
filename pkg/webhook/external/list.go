@@ -94,7 +94,10 @@ func buildListOptionsForTarget(
 	t kargoapi.GenericWebhookTargetSelectionCriteria,
 	env map[string]any,
 ) ([]client.ListOption, error) {
-	listOpts := []client.ListOption{client.InNamespace(project)}
+	var listOpts []client.ListOption
+	if project != "" {
+		listOpts = append(listOpts, client.InNamespace(project))
+	}
 	indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create field selector: %w", err)

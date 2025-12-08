@@ -232,6 +232,16 @@ It has one argument:
 If `headerKey` is not present in the request headers, an empty `string` array
 will be returned.
 
+#### request.params(queryParamKey)
+
+Function that retrieves the query param value for the provided query param key.
+
+It has one argument:
+- `queryParamKey` (Required): URL query parameter key.
+
+If `queryParamKey` is not present in the request headers, an empty `string` 
+will be returned.
+
 #### normalizeGit(url)
 
 Function that normalizes a git `url`.

@@ -107,8 +107,7 @@ func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 			"header":  r.Header.Get,
 			"headers": r.Header.Values,
 			"body":    body,
-			"method":  r.Method,
-			"url":     r.URL.String(),
+			"params":  r.URL.Query().Get,
 		},
 	}, nil
 }
