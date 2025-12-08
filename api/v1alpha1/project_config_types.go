@@ -378,8 +378,8 @@ type GenericWebhookReceiverConfig struct {
 // GenericWebhookAction describes an action to be performed on a resource
 // and the conditions under which it should be performed.
 type GenericWebhookAction struct {
-	// Action indicates the type of action to be performed. `Refresh` is the only
-	// currently supported Action.
+	// ActionType indicates the type of action to be performed. `Refresh` is the
+	// only currently supported action.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
 	ActionType GenericWebhookActionType `json:"action" protobuf:"bytes,1,opt,name=action"`
@@ -481,8 +481,8 @@ type IndexSelectorRequirement struct {
 type IndexSelectorRequirementOperator string
 
 const (
-	IndexSelectorRequirementOperatorEqual    IndexSelectorRequirementOperator = "Equals"
-	IndexSelectorRequirementOperatorNotEqual IndexSelectorRequirementOperator = "NotEquals"
+	IndexSelectorOperatorEqual    IndexSelectorOperator = "Equals"
+	IndexSelectorOperatorNotEqual IndexSelectorOperator = "NotEquals"
 )
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
