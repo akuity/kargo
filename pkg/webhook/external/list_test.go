@@ -18,17 +18,17 @@ import (
 
 func Test_buildListOption(t *testing.T) {
 	tests := []struct {
-		name     string
-		project  string
-		target   kargoapi.GenericWebhookTarget
-		expected []client.ListOption
-		env      map[string]any
-		err      error
+		name                    string
+		project                 string
+		targetSelectionCriteria kargoapi.GenericWebhookTargetSelectionCriteria
+		expected                []client.ListOption
+		env                     map[string]any
+		err                     error
 	}{
 		{
 			name:    "no selectors defined",
 			project: "demo-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 			},
 			env: map[string]any{},
@@ -41,13 +41,13 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "index selector with invalid expression",
 			project: "test-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "env",
-							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+							Operator: kargoapi.IndexSelectorOperatorEqual,
 							Value:    "${{ invalid expression }}",
 						},
 					},
@@ -60,13 +60,13 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "index selector with non-string expression result",
 			project: "test-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "env",
-							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+							Operator: kargoapi.IndexSelectorOperatorEqual,
 							Value:    "${{ 12345 }}",
 						},
 					},
@@ -79,7 +79,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "index selector with unsupported operator",
 			project: "test-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
@@ -98,18 +98,18 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "index selector success",
 			project: "sample-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "region",
-							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+							Operator: kargoapi.IndexSelectorOperatorEqual,
 							Value:    "us-west-1",
 						},
 						{
 							Key:      "status",
-							Operator: kargoapi.IndexSelectorRequirementOperatorNotEqual,
+							Operator: kargoapi.IndexSelectorOperatorNotEqual,
 							Value:    "inactive",
 						},
 					},
@@ -130,7 +130,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "label selector match expressions with invalid operator",
 			project: "test-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -149,7 +149,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "label selector match expressions with invalid requirement (empty values for In operator)",
 			project: "example-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -168,7 +168,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "label selector match expressions with invalid expression result",
 			project: "example-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -187,7 +187,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "label selector match expressions with non-string result",
 			project: "example-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{
@@ -208,7 +208,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "label selector match labels invalid requirement (empty key)",
 			project: "sample-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{"": ""},
@@ -221,7 +221,7 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "simple label selector",
 			project: "test-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -259,13 +259,13 @@ func Test_buildListOption(t *testing.T) {
 		{
 			name:    "combined index and label selectors",
 			project: "combined-project",
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
 							Key:      "region",
-							Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+							Operator: kargoapi.IndexSelectorOperatorEqual,
 							Value:    "us-east-1",
 						},
 					},
@@ -302,7 +302,7 @@ func Test_buildListOption(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildListOptionsForTarget(tt.project, tt.target, tt.env)
+			got, err := buildListOptionsForTarget(tt.project, tt.targetSelectionCriteria, tt.env)
 			if tt.err != nil {
 				require.ErrorContains(t, err, tt.err.Error())
 				return
@@ -320,17 +320,17 @@ func Test_listTargetObjects(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	tests := []struct {
-		name       string
-		client     client.Client
-		target     kargoapi.GenericWebhookTarget
-		config     *kargoapi.GenericWebhookReceiverConfig
-		assertions func(*testing.T, []client.Object, error)
+		name                    string
+		client                  client.Client
+		targetSelectionCriteria kargoapi.GenericWebhookTargetSelectionCriteria
+		config                  *kargoapi.GenericWebhookReceiverConfig
+		assertions              func(*testing.T, []client.Object, error)
 	}{
 		{
 			name:   "failed to build list options for target",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			config: nil,
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{
 						{
@@ -358,7 +358,7 @@ func Test_listTargetObjects(t *testing.T) {
 				},
 			).Build(),
 			config: nil,
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				Name: "${{ 1  + 1 }}",
 			},
@@ -382,7 +382,7 @@ func Test_listTargetObjects(t *testing.T) {
 				},
 			).Build(),
 			config: nil,
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchLabels: map[string]string{
@@ -407,7 +407,7 @@ func Test_listTargetObjects(t *testing.T) {
 				},
 			).Build(),
 			config: nil,
-			target: kargoapi.GenericWebhookTarget{
+			targetSelectionCriteria: kargoapi.GenericWebhookTargetSelectionCriteria{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				Name: "non-existent-warehouse",
 			},
@@ -429,7 +429,7 @@ func Test_listTargetObjects(t *testing.T) {
 			}
 			objects, err := g.listTargetObjects(
 				t.Context(),
-				tt.target,
+				tt.targetSelectionCriteria,
 				nil,
 			)
 			tt.assertions(t, objects, err)

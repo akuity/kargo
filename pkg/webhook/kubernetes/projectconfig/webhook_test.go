@@ -600,7 +600,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 							Generic: &kargoapi.GenericWebhookReceiverConfig{
 								Actions: []kargoapi.GenericWebhookAction{
 									{
-										Targets: []kargoapi.GenericWebhookTarget{
+										TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 											{
 												Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 												// Name, Label Selector, and Index Selector
@@ -631,7 +631,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
 				})
 
-				assert.Equal(t, "spec.webhookReceivers[0].generic.actions[0].targets[0]",
+				assert.Equal(t, "spec.webhookReceivers[0].generic.actions[0].targetSelectionCriteria[0]",
 					statusErr.ErrStatus.Details.Causes[0].Field)
 				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
 				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,

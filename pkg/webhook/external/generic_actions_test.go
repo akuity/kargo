@@ -21,17 +21,17 @@ func TestHandleRefreshAction(t *testing.T) {
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 
 	testCases := []struct {
-		name       string
-		client     client.Client
-		project    string
-		targets    []kargoapi.GenericWebhookTarget
-		actionEnv  map[string]any
-		assertions func(*testing.T, []targetResult)
+		name                    string
+		client                  client.Client
+		project                 string
+		targetSelectionCriteria []kargoapi.GenericWebhookTargetSelectionCriteria
+		actionEnv               map[string]any
+		assertions              func(*testing.T, []targetResult)
 	}{
 		{
 			name:   "error building list options - invalid operator",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{{
@@ -64,7 +64,7 @@ func TestHandleRefreshAction(t *testing.T) {
 					},
 				},
 			).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 			}},
 			assertions: func(t *testing.T, results []targetResult) {
@@ -135,12 +135,12 @@ func TestHandleRefreshAction(t *testing.T) {
 				},
 			).Build(),
 			project: "test-project",
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				IndexSelector: kargoapi.IndexSelector{
 					MatchIndices: []kargoapi.IndexSelectorRequirement{{
 						Key:      indexer.WarehousesBySubscribedURLsField,
-						Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+						Operator: kargoapi.IndexSelectorOperatorEqual,
 						Value:    "https://github.com/example/repo",
 					}},
 				},
@@ -214,7 +214,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				LabelSelector: metav1.LabelSelector{
 					MatchExpressions: []metav1.LabelSelectorRequirement{{
@@ -257,7 +257,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				Name: "backend-warehouse",
 			}},
@@ -307,7 +307,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 				Name: "backend-warehouse",
 				LabelSelector: metav1.LabelSelector{
@@ -328,7 +328,7 @@ func TestHandleRefreshAction(t *testing.T) {
 		{
 			name:   "unsupported target kind",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
-			targets: []kargoapi.GenericWebhookTarget{{
+			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
 				Kind: "UnsupportedKind",
 			}},
 			assertions: func(t *testing.T, results []targetResult) {
@@ -351,8 +351,8 @@ func TestHandleRefreshAction(t *testing.T) {
 				t.Context(),
 				tt.actionEnv,
 				kargoapi.GenericWebhookAction{
-					ActionType: kargoapi.GenericWebhookActionTypeRefresh,
-					Targets:    tt.targets,
+					ActionType:              kargoapi.GenericWebhookActionTypeRefresh,
+					TargetSelectionCriteria: tt.targetSelectionCriteria,
 				},
 			))
 		})

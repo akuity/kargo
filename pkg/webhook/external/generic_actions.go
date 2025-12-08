@@ -66,8 +66,8 @@ func (g *genericWebhookReceiver) handleRefreshAction(
 	action kargoapi.GenericWebhookAction,
 ) []targetResult {
 	logger := logging.LoggerFromContext(ctx)
-	targetResults := make([]targetResult, len(action.Targets))
-	for i, target := range action.Targets {
+	targetResults := make([]targetResult, len(action.TargetSelectionCriteria))
+	for i, target := range action.TargetSelectionCriteria {
 		tLogger := logger.WithValues(
 			"targetKind", target.Kind,
 			"targetName", target.Name,

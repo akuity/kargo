@@ -105,17 +105,20 @@ func validateGenericConfig(
 ) field.ErrorList {
 	var errs field.ErrorList
 	for aIndex, action := range cfg.Actions {
-		errs = append(errs, validateGenericTargets(cfgIndex, aIndex, action.Targets)...)
+		errs = append(errs, validateGenericTargets(cfgIndex, aIndex, action.TargetSelectionCriteria)...)
 	}
 	return errs
 }
 
-func validateGenericTargets(cfgIndex, actionIndex int, targets []kargoapi.GenericWebhookTarget) []*field.Error {
+func validateGenericTargets(
+	cfgIndex, actionIndex int,
+	targets []kargoapi.GenericWebhookTargetSelectionCriteria,
+) []*field.Error {
 	var errs field.ErrorList
 	for tIndex, target := range targets {
 		if targetMisconfigured(&target) {
 			targetPath := fmt.Sprintf(
-				"spec.webhookReceivers[%d].generic.actions[%d].targets[%d]",
+				"spec.webhookReceivers[%d].generic.actions[%d].targetSelectionCriteria[%d]",
 				cfgIndex, actionIndex, tIndex,
 			)
 			errs = append(errs, field.Invalid(
@@ -128,7 +131,7 @@ func validateGenericTargets(cfgIndex, actionIndex int, targets []kargoapi.Generi
 	return errs
 }
 
-func targetMisconfigured(t *kargoapi.GenericWebhookTarget) bool {
+func targetMisconfigured(t *kargoapi.GenericWebhookTargetSelectionCriteria) bool {
 	// these are all optional but at least one must be set
 	return t.Name == "" &&
 		len(t.LabelSelector.MatchLabels) == 0 &&

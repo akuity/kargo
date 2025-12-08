@@ -211,7 +211,7 @@ func TestGenericHandler(t *testing.T) {
 					{
 						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
 						MatchExpression: "true",
-						Targets: []kargoapi.GenericWebhookTarget{
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
 								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 							},
@@ -351,7 +351,7 @@ func TestGenericHandler(t *testing.T) {
 						Parameters:      map[string]string{"foo": "bar"},
 						MatchExpression: "request.header('X-Event-Type') == 'push'",
 						// use complex combination of both label and index selectors
-						Targets: []kargoapi.GenericWebhookTarget{
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
 								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 								LabelSelector: metav1.LabelSelector{
@@ -368,7 +368,7 @@ func TestGenericHandler(t *testing.T) {
 									MatchIndices: []kargoapi.IndexSelectorRequirement{
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
-											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Operator: kargoapi.IndexSelectorOperatorEqual,
 											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
 										},
 									},
@@ -448,7 +448,7 @@ func TestGenericHandler(t *testing.T) {
 						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
 						MatchExpression: "request.header('X-Event-Type') == 'push'",
 						// use complex combination of both label and index selectors
-						Targets: []kargoapi.GenericWebhookTarget{
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
 								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
 								LabelSelector: metav1.LabelSelector{
@@ -465,7 +465,7 @@ func TestGenericHandler(t *testing.T) {
 									MatchIndices: []kargoapi.IndexSelectorRequirement{
 										{
 											Key:      indexer.WarehousesBySubscribedURLsField,
-											Operator: kargoapi.IndexSelectorRequirementOperatorEqual,
+											Operator: kargoapi.IndexSelectorOperatorEqual,
 											Value:    `${{ normalizeGit(request.body.repository.url) }}`,
 										},
 									},

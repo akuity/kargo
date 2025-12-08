@@ -16,23 +16,23 @@ import (
 
 func (g *genericWebhookReceiver) listTargetObjects(
 	ctx context.Context,
-	target kargoapi.GenericWebhookTarget,
+	targetSelectionCriteria kargoapi.GenericWebhookTargetSelectionCriteria,
 	actionEnv map[string]any,
 ) ([]client.Object, error) {
-	listOpts, err := buildListOptionsForTarget(g.project, target, actionEnv)
+	listOpts, err := buildListOptionsForTarget(g.project, targetSelectionCriteria, actionEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build list options: %w", err)
 	}
-	switch target.Kind {
+	switch targetSelectionCriteria.Kind {
 	case kargoapi.GenericWebhookTargetKindWarehouse:
 		warehouses := new(kargoapi.WarehouseList)
 		if err := g.client.List(ctx, warehouses, listOpts...); err != nil {
-			return nil, fmt.Errorf("error listing %s targets: %w", target.Kind, err)
+			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
 		}
-		if target.Name == "" {
+		if targetSelectionCriteria.Name == "" {
 			return itemsToObjects(warehouses.Items), nil
 		}
-		name, err := evalAsString(target.Name, actionEnv)
+		name, err := evalAsString(targetSelectionCriteria.Name, actionEnv)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate target name as string: %w", err)
 		}
@@ -43,7 +43,7 @@ func (g *genericWebhookReceiver) listTargetObjects(
 		}
 		return nil, nil
 	default:
-		return nil, fmt.Errorf("unsupported target kind: %q", target.Kind)
+		return nil, fmt.Errorf("unsupported target kind: %q", targetSelectionCriteria.Kind)
 	}
 }
 
@@ -52,7 +52,7 @@ func (g *genericWebhookReceiver) listTargetObjects(
 // used to list Kubernetes resources that match the target's selection criteria.
 func buildListOptionsForTarget(
 	project string,
-	t kargoapi.GenericWebhookTarget,
+	t kargoapi.GenericWebhookTargetSelectionCriteria,
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	listOpts := []client.ListOption{client.InNamespace(project)}
@@ -83,9 +83,9 @@ func newListOptionsForIndexSelector(
 		}
 		var s fields.Selector
 		switch expr.Operator {
-		case kargoapi.IndexSelectorRequirementOperatorEqual:
+		case kargoapi.IndexSelectorOperatorEqual:
 			s = fields.OneTermEqualSelector(expr.Key, resultStr)
-		case kargoapi.IndexSelectorRequirementOperatorNotEqual:
+		case kargoapi.IndexSelectorOperatorNotEqual:
 			s = fields.OneTermNotEqualSelector(expr.Key, resultStr)
 		default:
 			return nil, fmt.Errorf("unsupported operator %q in index selector expression", expr.Operator)
