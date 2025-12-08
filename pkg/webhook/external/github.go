@@ -210,11 +210,10 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			return
 
 		case *gh.PushEvent:
-			// TODO(krancour): GetHTMLURL() gives us a repo URL starting with
-			// https://. By refreshing Warehouses using a normalized representation of
-			// that URL, we will miss any Warehouses that are subscribed to the same
-			// repository using a different URL format.
-			repoURLs = []string{urls.NormalizeGit(e.GetRepo().GetCloneURL())}
+			repoURLs = []string{
+				urls.NormalizeGit(e.GetRepo().GetCloneURL()),
+				urls.NormalizeGit(e.GetRepo().GetSSHURL()),
+			}
 			ref := e.GetRef()
 			qualifiers = []string{ref}
 			logger = logger.WithValues("ref", ref)
