@@ -387,7 +387,6 @@ func TestGenericHandler(t *testing.T) {
 				return req
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
-				t.Logf("response body: %s", w.Body.String())
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `
 				{
@@ -493,7 +492,6 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
-				t.Logf("response body: %s", w.Body.String())
 				expected := `
 				{
 					"actionResults": [

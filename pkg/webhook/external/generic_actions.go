@@ -73,7 +73,6 @@ func (g *genericWebhookReceiver) handleAction(
 		)
 	}
 	ar.ListResult = newListResult(objects, errs)
-	println("in handleAction, listResult has", len(ar.ListResult.Errors), "errors")
 	switch action.ActionType {
 	case kargoapi.GenericWebhookActionTypeRefresh:
 		ar.RefreshResults = refreshObjects(ctx, g.client, objects)
