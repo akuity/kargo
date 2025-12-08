@@ -92,7 +92,10 @@ func NewProvider(
 		return nil, fmt.Errorf("unsupported Bitbucket host %q", host)
 	}
 
-	client := bitbucket.NewOAuthbearerToken(opts.Token)
+	client, err := bitbucket.NewOAuthbearerToken(opts.Token)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Bitbucket client: %w", err)
+	}
 	client.HttpClient = cleanhttp.DefaultClient()
 
 	return &provider{
