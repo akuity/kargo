@@ -65,9 +65,9 @@ spec:
           name: wh-secret
 ```
 
-### matchExpression
+### whenExpression
 
-Use `matchExpression` to ensure that an action is only executed when specific 
+Use `whenExpression` to ensure that an action is only executed when specific 
 criteria are met, providing fine-grained control over webhook behavior.
 
 #### Example
@@ -87,7 +87,7 @@ spec:
       actions:
         - actionType: Refresh
           # Only perform this action if this expression is satisfied
-          matchExpression: "request.header("X-Event-Type") == 'push'"
+          whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
 ### Defining TargetSelectionCriteria
@@ -127,7 +127,7 @@ spec:
           name: wh-secret
       actions:
         - actionType: Refresh
-          matchExpression: "request.header('X-Event-Type') == 'push'"
+          whenExpression: "request.header('X-Event-Type') == 'push'"
           targetSelectionCriteria:
             # Static name designation
             - kind: Warehouse
@@ -158,7 +158,7 @@ spec:
           name: wh-secret
       actions:
         - actionType: Refresh
-          matchExpression: "request.header('X-Event-Type') == 'push'"
+          whenExpression: "request.header('X-Event-Type') == 'push'"
           targetSelectionCriteria:
             - kind: Warehouse
               labelSelector:
@@ -181,7 +181,7 @@ Use `indexSelector` to retrieve resources by a cached index.
 ```yaml
 actions:
   - actionType: Refresh
-    matchExpression: "request.header('X-Event-Type') == 'push'"
+    whenExpression: "request.header('X-Event-Type') == 'push'"
     targetSelectionCriteria:
       - kind: Warehouse
         indexSelector:

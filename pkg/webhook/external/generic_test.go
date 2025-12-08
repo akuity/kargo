@@ -54,8 +54,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						MatchExpression: "{x!kj\"}",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "{x!kj\"}",
 					},
 				},
 			},
@@ -91,7 +91,7 @@ func TestGenericHandler(t *testing.T) {
 					{
 						ActionType: kargoapi.GenericWebhookActionTypeRefresh,
 						// foo is not defined, so evaluation will fail
-						MatchExpression: "foo()",
+						WhenExpression: "foo()",
 					},
 				},
 			},
@@ -125,8 +125,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						MatchExpression: "request.header('X-Event-Type') == 'push'",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "request.header('X-Event-Type') == 'push'",
 					},
 				},
 			},
@@ -161,8 +161,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						MatchExpression: "request.header('X-Event-Type')",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "request.header('X-Event-Type')",
 					},
 				},
 			},
@@ -209,8 +209,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						MatchExpression: "true",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "true",
 						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
 								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
@@ -344,9 +344,9 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						Parameters:      map[string]string{"foo": "bar"},
-						MatchExpression: "request.header('X-Event-Type') == 'push'",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						Parameters:     map[string]string{"foo": "bar"},
+						WhenExpression: "request.header('X-Event-Type') == 'push'",
 						// use complex combination of both label and index selectors
 						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
@@ -450,8 +450,8 @@ func TestGenericHandler(t *testing.T) {
 			config: &kargoapi.GenericWebhookReceiverConfig{
 				Actions: []kargoapi.GenericWebhookAction{
 					{
-						ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
-						MatchExpression: "request.header('X-Event-Type') == 'push'",
+						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+						WhenExpression: "request.header('X-Event-Type') == 'push'",
 						// use complex combination of both label and index selectors
 						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{

@@ -2085,7 +2085,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | action | [string](#string) |  ActionType indicates the type of action to be performed. `Refresh` is the only currently supported action.   |
-| matchExpression | [string](#string) |  MatchExpression defines criteria that a request must meet to trigger this action.  +optional |
+| whenExpression | [string](#string) |  WhenExpression defines criteria that a request must meet to run this action.  +optional |
 | parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional, action-specific parameters. Values may be static or extracted from the request using expressions.  +optional |
 | targets | [GenericWebhookTargetSelectionCriteria](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria) |  TargetSelectionCriteria is a list of selection criteria for the resources on which the action should be performed.   |
 

@@ -243,11 +243,6 @@ spec:
                                 enum:
                                 - Refresh
                                 type: string
-                              matchExpression:
-                                description: |-
-                                  MatchExpression defines criteria that a request must meet to trigger this
-                                  action.
-                                type: string
                               parameters:
                                 additionalProperties:
                                   type: string
@@ -372,6 +367,11 @@ spec:
                                   type: object
                                 minItems: 1
                                 type: array
+                              whenExpression:
+                                description: |-
+                                  WhenExpression defines criteria that a request must meet to run this
+                                  action.
+                                type: string
                             required:
                             - action
                             type: object

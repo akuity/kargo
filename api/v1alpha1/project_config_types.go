@@ -384,11 +384,11 @@ type GenericWebhookAction struct {
 	// +kubebuilder:validation:Enum=Refresh;
 	ActionType GenericWebhookActionType `json:"action" protobuf:"bytes,1,opt,name=action"`
 
-	// MatchExpression defines criteria that a request must meet to trigger this
+	// WhenExpression defines criteria that a request must meet to run this
 	// action.
 	//
 	// +optional
-	MatchExpression string `json:"matchExpression,omitempty" protobuf:"bytes,2,opt,name=matchExpression"`
+	WhenExpression string `json:"whenExpression,omitempty" protobuf:"bytes,2,opt,name=whenExpression"`
 
 	// Parameters contains additional, action-specific parameters. Values may be
 	// static or extracted from the request using expressions.

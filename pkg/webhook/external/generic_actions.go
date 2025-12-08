@@ -22,7 +22,7 @@ func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
 	return actionResult{
 		ActionType: action.ActionType,
 		ConditionResult: conditionResult{
-			Expression: action.MatchExpression,
+			Expression: action.WhenExpression,
 		},
 	}
 }
@@ -52,9 +52,9 @@ func (g *genericWebhookReceiver) handleAction(
 	env = newActionEnv(action.Parameters, env)
 	aLogger := logging.LoggerFromContext(ctx).WithValues(
 		"action", action.ActionType,
-		"expression", action.MatchExpression,
+		"expression", action.WhenExpression,
 	)
-	satisfied, err := conditionSatisfied(action.MatchExpression, env)
+	satisfied, err := conditionSatisfied(action.WhenExpression, env)
 	if err != nil {
 		aLogger.Error(err, "failed to evaluate criteria; skipping action")
 		ar.ConditionResult.EvalError = err.Error()

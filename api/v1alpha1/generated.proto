@@ -697,11 +697,11 @@ message GenericWebhookAction {
   // +kubebuilder:validation:Enum=Refresh;
   optional string action = 1;
 
-  // MatchExpression defines criteria that a request must meet to trigger this
+  // WhenExpression defines criteria that a request must meet to run this
   // action.
   //
   // +optional
-  optional string matchExpression = 2;
+  optional string whenExpression = 2;
 
   // Parameters contains additional, action-specific parameters. Values may be
   // static or extracted from the request using expressions.

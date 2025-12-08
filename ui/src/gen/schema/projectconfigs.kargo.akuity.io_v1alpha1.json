@@ -198,10 +198,6 @@
                           ],
                           "type": "string"
                         },
-                        "matchExpression": {
-                          "description": "MatchExpression defines criteria that a request must meet to trigger this\naction.",
-                          "type": "string"
-                        },
                         "parameters": {
                           "additionalProperties": {
                             "type": "string"
@@ -316,6 +312,10 @@
                           },
                           "minItems": 1,
                           "type": "array"
+                        },
+                        "whenExpression": {
+                          "description": "WhenExpression defines criteria that a request must meet to run this\naction.",
+                          "type": "string"
                         }
                       },
                       "required": [
