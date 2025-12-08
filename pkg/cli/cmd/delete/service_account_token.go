@@ -8,12 +8,12 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
@@ -144,7 +144,7 @@ func (o *deleteServiceAccountTokenOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		_ = printer.PrintObj(&kargoapi.Stage{
+		_ = printer.PrintObj(&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
 				Namespace: o.Project,
