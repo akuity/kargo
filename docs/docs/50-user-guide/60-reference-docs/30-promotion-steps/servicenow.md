@@ -10,7 +10,7 @@ description: Integrates with ServiceNow to manage Change Requests, Incidents, Pr
 
 :::info
 This promotion step is only available in Kargo on the
-[Akuity Platform](https://akuity.io/akuity-platform), versions v1.8.5 and above.
+[Akuity Platform](https://akuity.io/akuity-platform), versions v1.9.0 and above.
 :::
 
 The `snow` promotion step provides comprehensive integration with ServiceNow, allowing you
