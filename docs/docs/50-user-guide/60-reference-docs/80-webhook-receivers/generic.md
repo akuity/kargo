@@ -90,23 +90,26 @@ spec:
           matchExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
-### Designating Targets
+### Defining TargetSelectionCriteria
 
-There are three different ways to designate `Target`s:
+`TargetSelectionCriteria` is used to designate resources that an action needs
+to be performed on. There are three ways to define `TargetSelectionCriteria`:
 
 1. [By Name](#by-name)
 2. [By Labels](#by-labels)
 3. [By Values in an Index](#by-values-in-an-index)
 
-All methods support both static values and [expression-derived values](#expression-functions).
+All methods support both static values and 
+[expression-derived values](#expression-functions).
 
 :::note
-Using more than one method to designate targets results in criteria that is the logical **AND** of all defined criteria.
+Using more than one of the above results in a criteria set that is the logical
+**AND** of all defined criteria.
 :::
 
 #### By Name
 
-The simplest way to designate a `Target` resource is by specifying its `name`.
+The simplest way to designate a resource is by specifying its `name`.
 
 ##### Example
 
@@ -125,7 +128,7 @@ spec:
       actions:
         - actionType: Refresh
           matchExpression: "request.header('X-Event-Type') == 'push'"
-          targets:
+          targetSelectionCriteria:
             # Static name designation
             - kind: Warehouse
               name: my-warehouse
@@ -136,7 +139,8 @@ spec:
 
 #### By Labels
 
-Use `labelSelector` to designate targets based on labels. It supports both `matchLabels` and `matchExpressions`.
+Use `labelSelector` to designate resources based on labels. It supports both 
+`matchLabels` and `matchExpressions`.
 
 ##### Example
 
@@ -155,14 +159,14 @@ spec:
       actions:
         - actionType: Refresh
           matchExpression: "request.header('X-Event-Type') == 'push'"
-          targets:
+          targetSelectionCriteria:
             - kind: Warehouse
               labelSelector:
                 matchLabels:
-                  # Targets with the 'environment' label set to 'prod'
+                  # Warehouses with the 'environment' label set to 'prod'
                   environment: prod
                 matchExpressions:
-                  # Targets with the 'service' label set to 'ui' OR 'api'
+                  # Warehouses with the 'service' label set to 'ui' OR 'api'
                   - key: service
                     operator: In
                     values: ["ui", "api"]
@@ -178,7 +182,7 @@ Use `indexSelector` to retrieve resources by a cached index.
 actions:
   - actionType: Refresh
     matchExpression: "request.header('X-Event-Type') == 'push'"
-    targets:
+    targetSelectionCriteria:
       - kind: Warehouse
         indexSelector:
           matchIndices:
@@ -188,15 +192,16 @@ actions:
 ```
 
 :::note
-`subscribedURLs` is the only available index. It refers to `Warehouse` resources that contain subscriptions for a provided repository URL.
+`subscribedURLs` is the only available index. It refers to `Warehouse` 
+resources that contain subscriptions for a provided repository URL.
 :::
 
 ### Expression functions
 
 The Generic webhook receiver extends
 [built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with utilities that can be used to help derive `Target` information from 
-incoming requests.
+with utilities that can be used to help derive `TargetSelectionCriteria` 
+information from incoming requests.
 
 The following expression functions are available:
 
