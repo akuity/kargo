@@ -226,7 +226,12 @@ func (p *provider) MergePullRequest(
 	case glMR.State != "opened":
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
+	case glMR.Draft:
+		// Draft MRs cannot be merged
+		return nil, false, nil
+
 	case glMR.DetailedMergeStatus != "mergeable":
+		// Not ready to merge yet (conflicts, failing checks, etc.)
 		return nil, false, nil
 	}
 

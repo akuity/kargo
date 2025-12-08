@@ -316,7 +316,12 @@ func (p *provider) MergePullRequest(
 	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case ghPR.Mergeable == nil || !*ghPR.Mergeable || (ghPR.Draft != nil && *ghPR.Draft):
+	case ptr.Deref(ghPR.Draft, false):
+		// Draft PRs cannot be merged
+		return nil, false, nil
+
+	case ghPR.Mergeable == nil || !*ghPR.Mergeable:
+		// Not ready to merge yet (conflicts, failing checks, etc.)
 		return nil, false, nil
 	}
 
@@ -345,6 +350,7 @@ func (p *provider) MergePullRequest(
 	}
 
 	pr := convertGithubPR(*updatedPR)
+
 	return &pr, true, nil
 }
 
