@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/expr-lang/expr"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -49,15 +51,34 @@ func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]a
 
 func (g *genericWebhookReceiver) handleAction(
 	ctx context.Context,
-	env map[string]any,
 	action kargoapi.GenericWebhookAction,
-) []targetResult {
-	var targetResults []targetResult
+	env map[string]any,
+) actionResult {
+	ar := newActionResult(action)
+	env = newActionEnv(action.Parameters, env)
+	aLogger := logging.LoggerFromContext(ctx).WithValues(
+		"action", action.ActionType,
+		"expression", action.MatchExpression,
+	)
+
+	satisfied, err := conditionSatisfied(action.MatchExpression, env)
+	if err != nil {
+		aLogger.Error(err, "failed to evaluate criteria; skipping action")
+		ar.ConditionResult.EvalError = err.Error()
+		return ar
+	}
+
+	ar.ConditionResult.Satisfied = satisfied
+	if !satisfied {
+		aLogger.Debug("condition not satisfied; skipping action")
+		return ar
+	}
+
 	switch action.ActionType {
 	case kargoapi.GenericWebhookActionTypeRefresh:
-		targetResults = g.handleRefreshAction(ctx, env, action)
+		ar.TargetResults = g.handleRefreshAction(ctx, env, action)
 	}
-	return targetResults
+	return ar
 }
 
 func (g *genericWebhookReceiver) handleRefreshAction(
@@ -87,4 +108,20 @@ func (g *genericWebhookReceiver) handleRefreshAction(
 	}
 	logger.Info("checking target results", "results", targetResults)
 	return targetResults
+}
+
+func conditionSatisfied(expression string, env map[string]any) (bool, error) {
+	program, err := expr.Compile(expression)
+	if err != nil {
+		return false, err
+	}
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return false, err
+	}
+	satisfied, ok := result.(bool)
+	if !ok {
+		return false, fmt.Errorf("match expression result %q is of type %T; expected bool", result, result)
+	}
+	return satisfied, nil
 }

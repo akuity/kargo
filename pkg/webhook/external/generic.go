@@ -8,12 +8,10 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/expr-lang/expr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	xhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -77,42 +75,14 @@ func (g *genericWebhookReceiver) getSecretValues(
 func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
-		logger := logging.LoggerFromContext(ctx)
-
-		baseEnv, err := newBaseEnv(requestBody, r)
+		env, err := newBaseEnv(requestBody, r)
 		if err != nil {
-			// this can only fail if we get invalid json
-			logger.Error(err, "error creating base environment")
 			xhttp.WriteErrorJSON(w, xhttp.Error(err, http.StatusBadRequest))
 			return
 		}
-
 		actionResults := make([]actionResult, len(g.config.Actions))
 		for i, action := range g.config.Actions {
-			aLogger := logger.WithValues(
-				"action", action.ActionType,
-				"expression", action.MatchExpression,
-			)
-
-			actionResults[i] = newActionResult(action)
-			satisfied, err := conditionSatisfied(action.MatchExpression, baseEnv)
-			if err != nil {
-				aLogger.Error(err, "failed to evaluate criteria; skipping action")
-				actionResults[i].ConditionResult.EvalError = err.Error()
-				continue
-			}
-
-			actionResults[i].ConditionResult.Satisfied = satisfied
-			if !satisfied {
-				aLogger.Debug("condition not satisfied; skipping action")
-				continue
-			}
-
-			actionResults[i].TargetResults = g.handleAction(
-				logging.ContextWithLogger(ctx, aLogger),
-				newActionEnv(action.Parameters, baseEnv),
-				action,
-			)
+			actionResults[i] = g.handleAction(ctx, action, env)
 		}
 		statusCode := http.StatusOK
 		if shouldReportAsError(actionResults) {
@@ -141,22 +111,6 @@ func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 			"url":     r.URL.String(),
 		},
 	}, nil
-}
-
-func conditionSatisfied(expression string, env map[string]any) (bool, error) {
-	program, err := expr.Compile(expression)
-	if err != nil {
-		return false, err
-	}
-	result, err := expr.Run(program, env)
-	if err != nil {
-		return false, err
-	}
-	satisfied, ok := result.(bool)
-	if !ok {
-		return false, fmt.Errorf("match expression result %q is of type %T; expected bool", result, result)
-	}
-	return satisfied, nil
 }
 
 func shouldReportAsError(actionResults []actionResult) bool {

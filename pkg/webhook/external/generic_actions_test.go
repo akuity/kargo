@@ -19,33 +19,74 @@ import (
 func TestHandleRefreshAction(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	env := make(map[string]any)
 
 	testCases := []struct {
-		name                    string
-		client                  client.Client
-		project                 string
-		targetSelectionCriteria []kargoapi.GenericWebhookTargetSelectionCriteria
-		actionEnv               map[string]any
-		assertions              func(*testing.T, []targetResult)
+		name       string
+		client     client.Client
+		project    string
+		action     kargoapi.GenericWebhookAction
+		assertions func(*testing.T, actionResult)
 	}{
+		{
+			name:   "condition not satisfied",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "false",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, false)
+				require.Equal(t, 0, len(ar.TargetResults))
+			},
+		},
+		{
+			name:   "error evaluating expression",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "invalid expression",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.NotEmpty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, false)
+				require.Equal(t, 0, len(ar.TargetResults))
+			},
+		},
 		{
 			name:   "error building list options - invalid operator",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-				IndexSelector: kargoapi.IndexSelector{
-					MatchIndices: []kargoapi.IndexSelectorRequirement{{
-						Key:      "",
-						Operator: "InvalidOperator",
-						Value:    "some-value",
-					}},
-				},
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.NotEmpty(t, results[0].ListError)
-				require.Contains(t, results[0].ListError,
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					IndexSelector: kargoapi.IndexSelector{
+						MatchIndices: []kargoapi.IndexSelectorRequirement{{
+							Key:      "",
+							Operator: "InvalidOperator",
+							Value:    "some-value",
+						}},
+					},
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.NotEmpty(t, ar.TargetResults[0].ListError)
+				require.Contains(t, ar.TargetResults[0].ListError,
 					"unsupported operator \"InvalidOperator\" in index selector expression",
 				)
 			},
@@ -64,14 +105,23 @@ func TestHandleRefreshAction(t *testing.T) {
 					},
 				},
 			).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.NotEmpty(t, results[0].ListError)
-				require.Contains(t, results[0].ListError, "something went wrong")
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.NotEmpty(t, ar.TargetResults[0].ListError)
+				require.Contains(t, ar.TargetResults[0].ListError,
+					"something went wrong",
+				)
 			},
 		},
 		{
@@ -135,32 +185,40 @@ func TestHandleRefreshAction(t *testing.T) {
 				},
 			).Build(),
 			project: "test-project",
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-				IndexSelector: kargoapi.IndexSelector{
-					MatchIndices: []kargoapi.IndexSelectorRequirement{{
-						Key:      indexer.WarehousesBySubscribedURLsField,
-						Operator: kargoapi.IndexSelectorOperatorEqual,
-						Value:    "https://github.com/example/repo",
-					}},
-				},
-				LabelSelector: metav1.LabelSelector{
-					MatchLabels: map[string]string{"env": "prod"},
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "tier",
-							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{"backend", "frontend"},
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					IndexSelector: kargoapi.IndexSelector{
+						MatchIndices: []kargoapi.IndexSelectorRequirement{{
+							Key:      indexer.WarehousesBySubscribedURLsField,
+							Operator: kargoapi.IndexSelectorOperatorEqual,
+							Value:    "https://github.com/example/repo",
+						}},
+					},
+					LabelSelector: metav1.LabelSelector{
+						MatchLabels: map[string]string{"env": "prod"},
+						MatchExpressions: []metav1.LabelSelectorRequirement{
+							{
+								Key:      "tier",
+								Operator: metav1.LabelSelectorOpIn,
+								Values:   []string{"backend", "frontend"},
+							},
 						},
 					},
-				},
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Equal(t, kargoapi.GenericWebhookTargetKindWarehouse, results[0].Kind)
-				require.Empty(t, results[0].ListError)
-				require.Len(t, results[0].RefreshResults, 1)
-				require.Equal(t, "test-project/warehouse-1", results[0].RefreshResults[0].Success)
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Name, "")
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.Empty(t, ar.TargetResults[0].ListError)
+				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
+				require.Equal(t, "test-project/warehouse-1", ar.TargetResults[0].RefreshResults[0].Success)
 			},
 		},
 		{
@@ -214,24 +272,32 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-				LabelSelector: metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      "tier",
-						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{"frontend", "backend"},
-					}},
-				},
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Len(t, results[0].RefreshResults, 2)
-				firstWhResult := results[0].RefreshResults[0]
-				require.Empty(t, firstWhResult.Failure)
-				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
-				secondResult := results[0].RefreshResults[1]
-				require.NotEmpty(t, secondResult.Failure)
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					LabelSelector: metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "tier",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"frontend", "backend"},
+						}},
+					},
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Name, "")
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.Empty(t, ar.TargetResults[0].ListError)
+				require.Equal(t, 2, len(ar.TargetResults[0].RefreshResults))
+				firstResult := ar.TargetResults[0].RefreshResults[0]
+				secondResult := ar.TargetResults[0].RefreshResults[1]
+				require.Equal(t, "test-namespace/backend-warehouse", firstResult.Success)
 				require.Contains(t, secondResult.Failure, "test-namespace/frontend-warehouse")
 			},
 		},
@@ -257,14 +323,24 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-				Name: "backend-warehouse",
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Len(t, results[0].RefreshResults, 1)
-				firstWhResult := results[0].RefreshResults[0]
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					Name: "backend-warehouse",
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Name, "backend-warehouse")
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.Empty(t, ar.TargetResults[0].ListError)
+				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
+				firstWhResult := ar.TargetResults[0].RefreshResults[0]
 				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 			},
 		},
@@ -307,54 +383,63 @@ func TestHandleRefreshAction(t *testing.T) {
 				indexer.WarehousesBySubscribedURLsField,
 				indexer.WarehousesBySubscribedURLs,
 			).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: kargoapi.GenericWebhookTargetKindWarehouse,
-				Name: "backend-warehouse",
-				LabelSelector: metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{{
-						Key:      "tier",
-						Operator: metav1.LabelSelectorOpIn,
-						Values:   []string{"frontend", "backend"},
-					}},
-				},
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Len(t, results[0].RefreshResults, 1)
-				firstWhResult := results[0].RefreshResults[0]
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					Name: "backend-warehouse",
+					LabelSelector: metav1.LabelSelector{
+						MatchExpressions: []metav1.LabelSelectorRequirement{{
+							Key:      "tier",
+							Operator: metav1.LabelSelectorOpIn,
+							Values:   []string{"frontend", "backend"},
+						}},
+					},
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Name, "backend-warehouse")
+				require.Equal(t, ar.TargetResults[0].Kind, kargoapi.GenericWebhookTargetKindWarehouse)
+				require.Empty(t, ar.TargetResults[0].ListError)
+				require.Equal(t, 1, len(ar.TargetResults[0].RefreshResults))
+				firstWhResult := ar.TargetResults[0].RefreshResults[0]
 				require.Equal(t, firstWhResult.Success, "test-namespace/backend-warehouse")
 			},
 		},
 		{
 			name:   "unsupported target kind",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
-			targetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
-				Kind: "UnsupportedKind",
-			}},
-			assertions: func(t *testing.T, results []targetResult) {
-				require.Len(t, results, 1)
-				require.Equal(t, "UnsupportedKind", string(results[0].Kind))
-				require.NotEmpty(t, results[0].ListError)
-				require.Contains(t, results[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
+			action: kargoapi.GenericWebhookAction{
+				MatchExpression: "true",
+				ActionType:      kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: "UnsupportedKind",
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Empty(t, ar.ConditionResult.EvalError)
+				require.Equal(t, ar.ConditionResult.Satisfied, true)
+				require.Equal(t, 1, len(ar.TargetResults))
+				require.Equal(t, ar.TargetResults[0].Name, "")
+				require.Equal(t, string(ar.TargetResults[0].Kind), "UnsupportedKind")
+				require.Contains(t, ar.TargetResults[0].ListError, "unsupported target kind: \"UnsupportedKind\"")
 			},
 		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &genericWebhookReceiver{
+			tt.assertions(t, (&genericWebhookReceiver{
 				baseWebhookReceiver: &baseWebhookReceiver{
 					client:  tt.client,
 					project: tt.project,
 				},
-			}
-			tt.assertions(t, g.handleAction(
-				t.Context(),
-				tt.actionEnv,
-				kargoapi.GenericWebhookAction{
-					ActionType:              kargoapi.GenericWebhookActionTypeRefresh,
-					TargetSelectionCriteria: tt.targetSelectionCriteria,
-				},
-			))
+			}).handleAction(t.Context(), tt.action, env))
 		})
 	}
 }
