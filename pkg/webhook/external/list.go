@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
@@ -20,7 +21,7 @@ func (g *genericWebhookReceiver) listUniqueObjects(
 	action kargoapi.GenericWebhookAction,
 	actionEnv map[string]any,
 ) ([]client.Object, []error) {
-	var dedupedList []client.Object
+	var resources []client.Object
 	var listErrs []error
 	for i, tsc := range action.TargetSelectionCriteria {
 		objects, err := g.listTargetObjects(ctx, tsc, actionEnv)
@@ -30,9 +31,18 @@ func (g *genericWebhookReceiver) listUniqueObjects(
 			)
 			continue
 		}
-		dedupedList = appendIfNotExists(dedupedList, objects...)
+		resources = append(resources, objects...)
 	}
-	return dedupedList, listErrs
+	slices.SortFunc(resources, func(a, b client.Object) int {
+		if comp := strings.Compare(a.GetNamespace(), b.GetNamespace()); comp != 0 {
+			return comp
+		}
+		return strings.Compare(a.GetName(), b.GetName())
+	})
+	resources = slices.CompactFunc(resources, func(a, b client.Object) bool {
+		return a.GetNamespace() == b.GetNamespace() && a.GetName() == b.GetName()
+	})
+	return resources, listErrs
 }
 
 func (g *genericWebhookReceiver) listTargetObjects(
@@ -239,19 +249,4 @@ func evalAsString(expr string, env map[string]any) (string, error) {
 		return "", fmt.Errorf("expression result %q evaluated to %T; not a string", result, result)
 	}
 	return s, nil
-}
-
-func appendIfNotExists(
-	dedupedList []client.Object,
-	objects ...client.Object,
-) []client.Object {
-	for _, obj := range objects {
-		if !slices.ContainsFunc(dedupedList, func(o client.Object) bool {
-			return o.GetName() == obj.GetName() &&
-				o.GetNamespace() == obj.GetNamespace()
-		}) {
-			dedupedList = append(dedupedList, obj)
-		}
-	}
-	return dedupedList
 }
