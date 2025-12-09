@@ -297,15 +297,9 @@ func (p *provider) MergePullRequest(
 	case giteaPR.State != gitea.StateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case !giteaPR.Mergeable:
+	case giteaPR.Draft || !giteaPR.Mergeable:
 		return nil, false, nil
 	}
-
-	// TODO(fykaa): We should also check if the PR is in draft status before
-	// merging. The Gitea API includes a draft field, but the go-sdk doesn't
-	// expose it yet.
-	//
-	// See: https://gitea.com/gitea/go-sdk/pulls/731
 
 	// Merge the PR
 	if _, err = p.client.MergePullRequest(
