@@ -297,12 +297,7 @@ func (p *provider) MergePullRequest(
 	case giteaPR.State != gitea.StateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case giteaPR.Draft:
-		// Draft PRs cannot be merged
-		return nil, false, nil
-
-	case !giteaPR.Mergeable:
-		// Not ready to merge yet (conflicts, failing checks, etc.)
+	case giteaPR.Draft || !giteaPR.Mergeable:
 		return nil, false, nil
 	}
 

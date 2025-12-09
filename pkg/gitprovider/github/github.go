@@ -316,12 +316,7 @@ func (p *provider) MergePullRequest(
 	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
 		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
-	case ptr.Deref(ghPR.Draft, false):
-		// Draft PRs cannot be merged
-		return nil, false, nil
-
-	case ghPR.Mergeable == nil || !*ghPR.Mergeable:
-		// Not ready to merge yet (conflicts, failing checks, etc.)
+	case ptr.Deref(ghPR.Draft, false) || !ptr.Deref(ghPR.Mergeable, false):
 		return nil, false, nil
 	}
 
