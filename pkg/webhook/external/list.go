@@ -8,8 +8,6 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -173,18 +171,6 @@ func itemsToObjects[T any, PT interface {
 		objs[i] = PT(&items[i])
 	}
 	return objs
-}
-
-func evalValues(vals []string, env map[string]any) ([]string, error) {
-	values := make([]string, len(vals))
-	for i, v := range vals {
-		s, err := evalAsString(v, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate value %q as string: %w", v, err)
-		}
-		values[i] = s
-	}
-	return values, nil
 }
 
 func evalAsString(expr string, env map[string]any) (string, error) {

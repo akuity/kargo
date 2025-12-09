@@ -144,7 +144,7 @@ func Test_buildListOption(t *testing.T) {
 			},
 			env:      map[string]any{},
 			expected: nil,
-			err:      errors.New("unsupported LabelSelectorOperator: \"InvalidOperator\""),
+			err:      errors.New("\"InvalidOperator\" is not a valid label selector operator"),
 		},
 		{
 			name:    "label selector match expressions with invalid requirement (empty values for In operator)",
@@ -163,7 +163,7 @@ func Test_buildListOption(t *testing.T) {
 			},
 			env:      map[string]any{},
 			expected: nil,
-			err:      errors.New("Invalid value: []: for 'in', 'notin' operators, values set can't be empty"),
+			err:      errors.New("values set can't be empty"),
 		},
 		{
 			name:    "label selector match expressions with invalid expression result",
@@ -202,7 +202,7 @@ func Test_buildListOption(t *testing.T) {
 			env:      map[string]any{},
 			expected: nil,
 			err: errors.New(
-				"failed to parse matchExpression values: failed to evaluate value \"${{ 12345 }}\" as string",
+				"expression result %!q(float64=12345) evaluated to float64; not a string",
 			),
 		},
 		{
@@ -393,7 +393,7 @@ func Test_listTargetObjects(t *testing.T) {
 			assertions: func(t *testing.T, objects []client.Object, err error) {
 				require.Nil(t, objects)
 				require.Error(t, err)
-				require.ErrorContains(t, err, "failed to evaluate matchLabel value as string")
+				require.ErrorContains(t, err, "failed to create label selector: failed to evaluate expression")
 			},
 		},
 		{
@@ -433,64 +433,6 @@ func Test_listTargetObjects(t *testing.T) {
 				nil,
 			)
 			tt.assertions(t, objects, err)
-		})
-	}
-}
-
-func Test_labelOpToSelectionOp(t *testing.T) {
-	tests := []struct {
-		name     string
-		operator metav1.LabelSelectorOperator
-		expected selection.Operator
-		err      error
-	}{
-		{
-			name:     "in operator",
-			operator: metav1.LabelSelectorOpIn,
-			expected: selection.In,
-			err:      nil,
-		},
-		{
-			name:     "not in operator",
-			operator: metav1.LabelSelectorOpNotIn,
-			expected: selection.NotIn,
-			err:      nil,
-		},
-		{
-			name:     "exists operator",
-			operator: metav1.LabelSelectorOpExists,
-			expected: selection.Exists,
-			err:      nil,
-		},
-		{
-			name:     "does not exist operator",
-			operator: metav1.LabelSelectorOpDoesNotExist,
-			expected: selection.DoesNotExist,
-			err:      nil,
-		},
-		{
-			name:     "greater than operator",
-			operator: "GreaterThan",
-			expected: "",
-			err:      errors.New("unsupported LabelSelectorOperator: \"GreaterThan\""),
-		},
-		{
-			name:     "less than operator",
-			operator: "LessThan",
-			expected: "",
-			err:      errors.New("unsupported LabelSelectorOperator: \"LessThan\""),
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := labelOpToSelectionOp(tt.operator)
-			if tt.err != nil {
-				require.ErrorContains(t, err, tt.err.Error())
-				return
-			}
-			require.NoError(t, err)
-			require.Equal(t, tt.expected, got)
 		})
 	}
 }
