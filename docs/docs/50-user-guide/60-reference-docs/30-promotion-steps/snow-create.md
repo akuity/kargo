@@ -31,7 +31,7 @@ Problems etc.,. This integration also provides condition tracking through `snow-
 for promotion workflows that require coordination with project management systems.
 
 `snow-create` step supports two APIs:  
-#### 1. Change Management API   
+#### 1. Change Management API
 This API is used primarily for managing Change Requests.
 
 Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/change-management-api.html).
