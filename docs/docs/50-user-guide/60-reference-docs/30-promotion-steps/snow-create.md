@@ -50,12 +50,12 @@ URL format: `/api/now/{api_version}/table/{tableName}/{sys_id}`
 Most of the time you cannot use the field labels you see in the ServiceNow UI as keys in the REST API. 
 For example, if you want to set the value for the “Short description” field:
 
-<img src="./images/snow-short-des.png" alt="short-description" style="width:50%; height:auto;"/>
+![](./images/snow-short-des.png)
 
 You can't use `Short description` in the REST API. You need to use `short_description` as the key and set the value via REST API parameters.
 To find the correct key for a field, right-click on the field and click `Configure Dictionary`:
 
-<img src="./images/snow-configure-dict.png" alt="configure-dictionary" style="width:70%; height:auto;"/>
+![](./images/snow-configure-dict.png)
 
 `column_name` is the key:
 
@@ -63,7 +63,7 @@ To find the correct key for a field, right-click on the field and click `Configu
 
 To see choices available for a particular field e.g., `State`, right click on the field and click on `Show Choice List` to see the available choices for use in the steps:
 
-<img src="./images/show-choices.png" alt="show-choices" style="width:50%; height:auto;"/>
+![](./images/show-choices.png)
 
 For example `New` is `-1` and `Scheduled` is `-2`
 
