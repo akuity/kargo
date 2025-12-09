@@ -3,7 +3,7 @@ sidebar_label: servicenow
 description: Integrates with ServiceNow to manage Change Requests, Incidents, Problems, etc., and track promotion workflows.
 ---
 
-# `snow`
+# `snow-create`
 
 <span class="tag professional"></span>
 <span class="tag beta"></span>
@@ -13,14 +13,37 @@ This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.9.0 and above.
 :::
 
-The `snow` promotion step provides comprehensive integration with ServiceNow, allowing you
-to create, update, delete, and search for records, and track
+This page is for `snow-create` step. You can create a ServiceNow record using this step. Check below for other ServiceNow promotion steps.
+
+ServiceNow integration for kargo is a group of promotion steps:  
+1. [`snow-create`](./snow-create.md) 
+2. [`snow-update`](./snow-update.md)
+3. [`snow-delete`](./snow-delete.md)
+4. [`snow-query-for-records`](./snow-query-for-records.md)
+5. [`snow-wait-for-condition`](./snow-wait-for-condition.md)
+
+These steps provide a comprehensive integration with ServiceNow, allowing you to create, update, delete, query for records, and track
 promotion workflows. This is particularly useful for maintaining traceability between
 your promotion processes and project management activities.
 
-This promotion step supports various operations including managing Change Requests, Incidents, 
-Problems, and other records in ServiceNow. It also provides status tracking, making it a 
-powerful tool for promotion workflows that require coordination with project management systems.
+All the steps above support different record types in ServiceNow including managing Change Requests, Incidents, 
+Problems etc.,. This integration also provides condition tracking through `snow-wait-for-condition`, making it a powerful tool 
+for promotion workflows that require coordination with project management systems.
+
+`snow-create` step supports two APIs:  
+## 1. Change Management API
+This API is used primarily for managing Change Requests.
+
+Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/change-management-api.html).
+
+URL format: `/api/sn_chg_rest/{api_version}/change/{change_sys_id}/task/{task_sys_id}`
+
+## 2. Table API
+This API is used for managing Incidents, Problems, and other record types.
+
+Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html).
+
+URL format: `/api/now/{api_version}/table/{tableName}/{sys_id}`
 
 ## Credentials Configuration
 
@@ -61,26 +84,14 @@ To find the correct key for a field, right-click on the field and click `Configu
 
 ![](./images/snow-col-name.png)
 
-## Record Management
+To see choices available for a particular field e.g., `State`, right click on the field and click on `Show Choice List` to see the available choices for use in the steps:
+![](./images/show-choices.png)
 
-### Create Record
+For example `New` is `-1` and `Scheduled` is `-2`
 
-`snow` integration supports two ServiceNow APIs:  
-#### 1. Change Management API
-This API is used primarily for managing Change Requests.
+![](./images/choice-list.png)
 
-Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/change-management-api.html).
-
-URL format: `/api/sn_chg_rest/{api_version}/change/{change_sys_id}/task/{task_sys_id}`
-
-#### 2. Table API
-This API is used for managing Incidents, Problems, and other record types.
-
-Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html).
-
-URL format: `/api/now/{api_version}/table/{tableName}/{sys_id}`
-
-#### Configuration
+## Configuration
 
 | Name                 | Type         | Required | Description                                                                                                                     |
 | -------------------- | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -90,14 +101,14 @@ URL format: `/api/now/{api_version}/table/{tableName}/{sys_id}`
 | `template.type`      | `string`     | Y/N      | Template type (`standard`, `emergency`, or `normal`). Required if `template` is specified; otherwise optional.                 |
 | `template.templateId`| `string`     | Y/N      | Template ID of the standard template (required if `template.type` is `standard`; otherwise optional).                          |
 
-#### Output
+## Output
 
 | Name     | Type     | Description                                                                 |
 | -------- | -------- | ----------------------------------------------------------------------------- |
 | `sys_id` | `string` | The `sys_id` of the created ServiceNow record (e.g., `ed89b72c83c172104517e470ceaad30a`). |
 | `number` | `string` | The `number` of the created ServiceNow record (e.g., `CH-123`).             |
 
-#### Example
+## Example
 
 This example creates a new Change Request using the Change Management API:
 
@@ -187,234 +198,6 @@ steps:
       tableName: change_request
     uses: snow-query-records
 ```
-
-### Update Record
-
-Updates an existing ServiceNow record with new information.
-
-#### Configuration
-
-| Name            | Type         | Required | Description                                                                                                                     |
-| --------------- | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `parameters`    | `string map` | Y        | Parameters/fields of the record.                                                                                                |
-| `tableName`     | `string`     | Y        | Table name of the record type you want to update (e.g., `incident`, `problem`, `change_request`).                              |
-| `ticketId`      | `string`     | Y        | Ticket ID (`sys_id`) of the record you want to update.                                                                          |
-| `template`      | `object`     | N        | Specify this to update a Change Request using the Change Management API (if omitted, the Table API is used).                    |
-| `template.type` | `string`     | Y/N      | Template type (`standard`, `emergency`, or `normal`). Required if `template` is specified; otherwise optional.                 |
-
-#### Output
-
-This step does not produce any output.
-
-#### Example
-
-This example updates a Change Request using the Change Management API:
-
-```yaml
-steps:
-  - as: snowupdate
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        short_description: Update deployment for ${{ vars.imageRepo }}:${{
-          imageFrom(vars.imageRepo).Tag }} to done
-      tableName: change_request
-      template:
-        type: standard
-      ticketId: 9d41c061c611228700edc88b231ec47c
-    uses: snow-update
-```
-
-This example updates an Incident using the Table API:
-
-```yaml
-steps:
-  - config:
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        short_description: Update deployment incident for ${{ vars.imageRepo }}:${{ imageFrom(vars.imageRepo).Tag }} to resolved
-      tableName: incident
-    uses: snow-update
-```
-
-This example updates a Change Request using the Table API (notice how the `template` field is omitted):
-
-```yaml
-steps:
-  - as: snowupdate
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        short_description: Update deployment incident for ${{ vars.imageRepo }}:${{
-          imageFrom(vars.imageRepo).Tag }} to resolved
-      tableName: change_request
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-    uses: snow-update
-```
-
-### Delete Record
-
-Deletes a ServiceNow record.
-
-#### Configuration
-
-| Name            | Type     | Required | Description                                                                                                                     |
-| --------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `tableName`     | `string` | Y        | Table name of the record type you want to delete (e.g., `incident`, `problem`, `change_request`).                               |
-| `ticketId`      | `string` | Y        | Ticket ID (`sys_id`) of the record you want to delete.                                                                          |
-| `template`      | `object` | N        | Specify this to delete a Change Request using the Change Management API (if omitted, the Table API is used).                    |
-| `template.type` | `string` | Y/N      | Template type (`standard`, `emergency`, or `normal`). Required if `template` is specified; otherwise optional.                 |
-
-#### Output
-
-This step does not produce any output.
-
-#### Example
-
-This example deletes a Change Request using the Change Management API:
-
-```yaml
-steps:
-  - as: snowdelete
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      tableName: change_request
-      template:
-        type: standard
-      ticketId: d457fbac6112287007379b57c6b2e60 # example
-    uses: snow-delete
-```
-
-This example deletes an Incident using the Table API:
-
-```yaml
-steps:
-  - as: snowdelete
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      tableName: incident
-      ticketId: d457fbac6112287007379b57c6b2e60 # example
-    uses: snow-delete
-```
-
-This example deletes a Change Request using the Table API (notice how the `template` field is omitted):
-
-```yaml
-steps:
-  - as: snowdelete
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      tableName: change_request
-      ticketId: d457fbac6112287007379b57c6b2e60 # example
-    uses: snow-delete
-```
-
-### Query Records
-
-Query for records and return the first matching record.
-
-#### Configuration
-
-| Name        | Type     | Required | Description                                                                                                                     |
-| ----------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `tableName` | `string` | Y        | Table name of the record type you want to query (e.g., `incident`, `problem`, `change_request`).                                |
-| `query`     | `object` | Y        | Specify your query parameters on which you want to filter the records. For supported parameters, please see the official documentation [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html#title_table-GET). |
-
-#### Output
-
-The output is a ServiceNow record. All fields are available for use in subsequent steps.
-
-| Name     | Type     | Description                                           |
-| -------- | -------- | ----------------------------------------------------- |
-| `record` | `object` | The found ServiceNow record object containing all fields. |
-
-#### Example
-
-This example searches for Change Requests with a specific record `number`:
-
-```yaml
-steps:
-  - as: snowquery
-    config:
-      credentials:
-        namespace: kargo-demo
-        secretName: snow-creds
-        type: api-token
-      query:
-        number: CHG0000007
-      tableName: change_request
-    uses: snow-query-records
-# Use the queried record in subsequent steps
-  - as: snowupdate
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        short_description: Update incident for ${{ vars.imageRepo }}:${{
-          imageFrom(vars.imageRepo).Tag }} to resolved
-      tableName: change_request
-      template:
-        type: standard
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-    uses: snow-update
-```
-
-### Wait for Condition
-
-Waits for a ServiceNow record field to be set to a particular value before proceeding.
-
-#### Configuration
-
-| Name        | Type     | Required | Description                                                                                                                     |
-| ----------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `tableName` | `string` | Y        | Table name of the record type you want to wait on (e.g., `incident`, `problem`, `change_request`).                              |
-| `ticketId`  | `string` | Y        | Ticket ID (`sys_id`) of the record you want to monitor.                                                                         |
-| `condition` | `string` | Y        | Condition to wait on before proceeding.                                                                                         |
-
-#### Output
-
-This step does not produce any output.
-
-#### Example
-
-This example waits for a Change Request to be Scheduled (`state=-2`) before proceeding with promotion:
-
-```yaml
-steps:
-  - as: snow-wait-for-condition
-    config:
-      condition: state=-2
-      credentials:
-        namespace: kargo-demo
-        secretName: snow-creds
-        type: api-token
-      tableName: change_request
-      ticketId: d457fbac6112287007379b57c6b2e60
-    uses: snow-wait-for-condition
-# promotion steps continue after approval...
-  - uses: helm-template
-    config:
-      path: ./charts
-      vars:
-        imageTag: "${{ imageFrom(vars.imageRepo).Tag }}"
-        environment: "${{ ctx.stage }}"
-```
-
-You can write more complex conditions as well. See the list of supported operators [here](https://www.servicenow.com/docs/bundle/zurich-platform-user-interface/page/use/common-ui-elements/reference/r_OpAvailableFiltersQueries.html).
 
 ## Different E2E Workflows
 
