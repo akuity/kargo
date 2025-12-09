@@ -76,7 +76,7 @@ type provider struct {
 func NewProvider(
 	repoURL string,
 	opts *gitprovider.Options,
-) (gitprovider.Interface, error) {
+) (p gitprovider.Interface, err error) {
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
@@ -92,10 +92,16 @@ func NewProvider(
 		return nil, fmt.Errorf("unsupported Bitbucket host %q", host)
 	}
 
-	client, err := bitbucket.NewOAuthbearerToken(opts.Token)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Bitbucket client: %w", err)
-	}
+	// The go-bitbucket library may call log.Fatalf for certain error conditions,
+	// which causes a panic. We recover from this to return a proper error.
+	defer func() {
+		if r := recover(); r != nil {
+			p = nil
+			err = fmt.Errorf("failed to create Bitbucket client: %v", r)
+		}
+	}()
+
+	client := bitbucket.NewOAuthbearerToken(opts.Token)
 	client.HttpClient = cleanhttp.DefaultClient()
 
 	return &provider{
