@@ -48,7 +48,7 @@ func (g *genericWebhookReceiver) listTargetObjects(
 	targetSelectionCriteria kargoapi.GenericWebhookTargetSelectionCriteria,
 	actionEnv map[string]any,
 ) ([]client.Object, error) {
-	listOpts, err := buildListOptionsForTarget(g.project, targetSelectionCriteria, actionEnv)
+	listOpts, err := g.buildListOptionsForTarget(targetSelectionCriteria, actionEnv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build list options: %w", err)
 	}
@@ -79,14 +79,13 @@ func (g *genericWebhookReceiver) listTargetObjects(
 // buildListOptionsForTarget builds a list of client.ListOption based on the
 // provided GenericWebhookTarget's selectors. The returned ListOptions can be
 // used to list Kubernetes resources that match the target's selection criteria.
-func buildListOptionsForTarget(
-	project string,
+func (g *genericWebhookReceiver) buildListOptionsForTarget(
 	t kargoapi.GenericWebhookTargetSelectionCriteria,
 	env map[string]any,
 ) ([]client.ListOption, error) {
 	var listOpts []client.ListOption
-	if project != "" {
-		listOpts = append(listOpts, client.InNamespace(project))
+	if g.project != "" {
+		listOpts = append(listOpts, client.InNamespace(g.project))
 	}
 	indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 	if err != nil {

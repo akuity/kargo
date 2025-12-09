@@ -302,7 +302,12 @@ func Test_buildListOption(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := buildListOptionsForTarget(tt.project, tt.targetSelectionCriteria, tt.env)
+			g := &genericWebhookReceiver{
+				baseWebhookReceiver: &baseWebhookReceiver{
+					project: tt.project,
+				},
+			}
+			got, err := g.buildListOptionsForTarget(tt.targetSelectionCriteria, tt.env)
 			if tt.err != nil {
 				require.ErrorContains(t, err, tt.err.Error())
 				return
