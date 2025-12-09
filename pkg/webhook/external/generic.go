@@ -31,8 +31,10 @@ func init() {
 	)
 }
 
-// genericWebhookReceiver is an implementation of WebhookReceiver that
-// handles inbound webhook events from generic providers.
+// genericWebhookReceiver is an implementation of WebhookReceiver that can be
+// configured to respond to any arbitrary POST by applying user-defined actions
+// on user-defined sets of resources selected by name, labels and/or values in
+// pre-built indices.
 type genericWebhookReceiver struct {
 	*baseWebhookReceiver
 	config *kargoapi.GenericWebhookReceiverConfig
