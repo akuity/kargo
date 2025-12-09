@@ -20,19 +20,17 @@ const (
 )
 
 const (
-	summaryWhenExpressionNotMatched = "Request did not match whenExpression"
-	summaryWhenExpressionError      = "Error evaluating when expression"
-	summeryErrorSelectingResources  = "Error selecting target resources"
+	summaryRequestNotMatched     = "Request did not match whenExpression"
+	summaryRequestMatchingError  = "Error evaluating whenExpression"
+	summaryResourceSelectionError  = "Error evaluating targetSelectionCriteria"
 )
 
 type actionResult struct {
-	ActionType              kargoapi.GenericWebhookActionType                `json:"actionType"`
-	WhenExpression          string                                           `json:"whenExpression"`
-	MatchedWhenExpression   bool                                             `json:"matchedWhenExpression"`
-	TargetSelectionCriteria []kargoapi.GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria"`
-	SelectedTargets         []selectedTarget                                 `json:"selectedTargets,omitempty"`
-	Result                  string                                           `json:"result,omitempty"`
-	Summary                 string                                           `json:"summary,omitempty"`
+	kargoapi.GenericWebhookAction `json:",inline"`
+	MatchedWhenExpression         bool             `json:"matchedWhenExpression"`
+	SelectedTargets               []selectedTarget `json:"selectedTargets,omitempty"`
+	Result                        string           `json:"result,omitempty"`
+	Summary                       string           `json:"summary,omitempty"`
 }
 
 type selectedTarget struct {
