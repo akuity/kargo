@@ -1,6 +1,6 @@
 ---
-sidebar_label: ServiceNow
-description: Delete ServiceNow records (Change Requests, Incidents, Problems, etc.) in Kargo promotion workflows.
+sidebar_label: snow-delete
+description: Integrates with ServiceNow to manage Change Requests, Incidents, Problems, etc., and track promotion workflows.
 ---
 
 # `snow-delete`
