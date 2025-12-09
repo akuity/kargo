@@ -31,21 +31,47 @@ Problems etc.,. This integration also provides condition tracking through `snow-
 for promotion workflows that require coordination with project management systems.
 
 `snow-create` step supports two APIs:  
-## 1. Change Management API
+#### 1. Change Management API   
 This API is used primarily for managing Change Requests.
 
 Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/change-management-api.html).
 
 URL format: `/api/sn_chg_rest/{api_version}/change/{change_sys_id}/task/{task_sys_id}`
 
-## 2. Table API
+#### 2. Table API
 This API is used for managing Incidents, Problems, and other record types.
 
 Official documentation is available [here](https://www.servicenow.com/docs/bundle/zurich-api-reference/page/integrate/inbound-rest/concept/c_TableAPI.html).
 
 URL format: `/api/now/{api_version}/table/{tableName}/{sys_id}`
 
-## Credentials Configuration
+### Using the API
+
+Most of the time you cannot use the field labels you see in the ServiceNow UI as keys in the REST API. 
+For example, if you want to set the value for the “Short description” field:
+
+<img src="./images/snow-short-des.png" alt="short-description" style="width:50%; height:auto;"/>
+
+You can't use `Short description` in the REST API. You need to use `short_description` as the key and set the value via REST API parameters.
+To find the correct key for a field, right-click on the field and click `Configure Dictionary`:
+
+<img src="./images/snow-configure-dict.png" alt="configure-dictionary" style="width:70%; height:auto;"/>
+
+`column_name` is the key:
+
+![](./images/snow-col-name.png)
+
+To see choices available for a particular field e.g., `State`, right click on the field and click on `Show Choice List` to see the available choices for use in the steps:
+
+<img src="./images/show-choices.png" alt="show-choices" style="width:50%; height:auto;"/>
+
+For example `New` is `-1` and `Scheduled` is `-2`
+
+![](./images/choice-list.png)
+
+## Configuration
+
+### Credentials
 
 All ServiceNow operations require proper authentication credentials stored in a Kubernetes
 `Secret`.
@@ -68,30 +94,7 @@ For `credentials.type: basic` the referenced `Secret` should contain the followi
 - `password`: Password of the ServiceNow user (for how to set the password for a user, see [this](https://www.servicenow.com/docs/bundle/zurich-platform-security/page/integrate/authentication/task/reset-your-password.html)).
 - `instanceURL`: Your ServiceNow instance URL.
 
-## Using the API
-
-Most of the time you cannot use the field labels you see in the ServiceNow UI as keys in the REST API. 
-For example, if you want to set the value for the “Short description” field:
-
-![](./images/snow-short-des.png)
-
-You can't use `Short description` in the REST API. You need to use `short_description` as the key and set the value via REST API parameters.
-To find the correct key for a field, right-click on the field and click `Configure Dictionary`:
-
-![](./images/snow-configure-dict.png)
-
-`column_name` is the key:
-
-![](./images/snow-col-name.png)
-
-To see choices available for a particular field e.g., `State`, right click on the field and click on `Show Choice List` to see the available choices for use in the steps:
-![](./images/show-choices.png)
-
-For example `New` is `-1` and `Scheduled` is `-2`
-
-![](./images/choice-list.png)
-
-## Configuration
+### Record
 
 | Name                 | Type         | Required | Description                                                                                                                     |
 | -------------------- | ------------ | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
