@@ -284,6 +284,166 @@ value13: | # This is a string
 				require.Equal(t, "42\n", parsed["value13"])
 			},
 		},
+		{
+			name:         "standard delimiter with missing closing tag",
+			jsonTemplate: `{ "AString": "${{ aString " }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "Cannot find end tag")
+			},
+		},
+		{
+			name:         "standard delimiter cannot handle }} in expression body",
+			jsonTemplate: `{ "AString": "${{ quote(\"{{.domain}}\") }}" }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				// This fail because }} appears in the expression body
+				// fasttemplate finds the first }} and terminates, leaving unterminated string
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "literal not terminated")
+			},
+		},
+		{
+			name:         "alternative delimiters with nested objects",
+			jsonTemplate: `{ "AString": "$~~ {'foo': 'bar', 'nested': {'bat': 'baz'}} ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := map[string]any{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				expected := map[string]any{
+					"foo": "bar",
+					"nested": map[string]any{
+						"bat": "baz",
+					},
+				}
+				require.Equal(t, expected, parsed["AString"])
+			},
+		},
+		{
+			name:         "alternative delimiters with Go template syntax",
+			jsonTemplate: `{ "AString": "$~~ quote(\"{{.domain}}\") ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := map[string]any{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "{{.domain}}", parsed["AString"])
+			},
+		},
+		{
+			name:         "alternative delimiters with multiple closing braces",
+			jsonTemplate: `{ "AString": "$~~ quote(\"Updated image to {{.tag}}\") ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := map[string]any{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "Updated image to {{.tag}}", parsed["AString"])
+			},
+		},
+		{
+			name: "alternative delimiters in nested structure",
+			jsonTemplate: `{
+				"AStringMap": { "key": "$~~ quote(\"{{.value}}\") ~~" },
+				"AStringArr": [ "$~~ quote(\"{{.item}}\") ~~"]
+			}`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "{{.value}}", parsed.AStringMap["key"])
+				require.Equal(t, "{{.item}}", parsed.AStringArr[0])
+			},
+		},
+		{
+			name:         "alternative delimiters mixing with variables",
+			jsonTemplate: `{ "AString": "$~~ aString + \" -> {{.domain}}\" ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "hello -> {{.domain}}", parsed.AString)
+			},
+		},
+		{
+			name:         "alternative delimiter with missing closing tag",
+			jsonTemplate: `{ "AString": "$~~ aString " }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "Cannot find end tag")
+			},
+		},
+		{
+			name:         "alternative delimiter cannot handle ~~ in expression body",
+			jsonTemplate: `{ "AString": "$~~ quote(\"this has ~~ inside it\") ~~" }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				// This fail because ~~ appears in the expression body
+				// fasttemplate finds the first ~~ and terminates, leaving unterminated string
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "literal not terminated")
+			},
+		},
+		{
+			name:         "standard delimiters with $~~ inside expression",
+			jsonTemplate: `{ "AString": "${{ \"This string contains literal \" + quote(\"$~~\") + \" inside it\" }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "This string contains literal \"$~~\" inside it", parsed.AString)
+			},
+		},
+		{
+			name:         "alternative delimiters with ${{ inside expression",
+			jsonTemplate: `{ "AString": "$~~ \"This string contains literal \" + quote(\"${{\") + \" inside it\" ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "This string contains literal \"${{\" inside it", parsed.AString)
+			},
+		},
+		{
+			name:         "mixed delimiters - standard comes first",
+			jsonTemplate: `{ "AString": "${{ aString }}", "AnotherString": "$~~ quote(\"{{.tag}}\") ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				var parsed map[string]string
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "hello", parsed["AString"])
+				require.Equal(t, "{{.tag}}", parsed["AnotherString"])
+			},
+		},
+		{
+			name:         "mixed delimiters - alternative comes first",
+			jsonTemplate: `{ "AString": "$~~ quote(\"{{.tag}}\") ~~", "AnotherString": "${{ aString }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				var parsed map[string]string
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "{{.tag}}", parsed["AString"])
+				require.Equal(t, "hello", parsed["AnotherString"])
+			},
+		},
+		{
+			name:         "both delimiters present but only standard is used",
+			jsonTemplate: `{ "AString": "foo ${{ aString }} and also $~~ ignored ~~" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "foo hello and also $~~ ignored ~~", parsed.AString)
+			},
+		},
+		{
+			name:         "overlapping delimiters - alternative comes first by position",
+			jsonTemplate: `{ "AString": "$~~ 'test' ~~ and ${{ aString }}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				// $~~ appears first (index 0), so alternative delimiters are used for entire value
+				// This means ${{ is treated as literal text, not as a delimiter
+				require.Equal(t, "test and ${{ aString }}", parsed.AString)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {
