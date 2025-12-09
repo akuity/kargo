@@ -56,6 +56,12 @@ func TestGenericHandler(t *testing.T) {
 					{
 						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
 						WhenExpression: "{x!kj\"}",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								Name: "doesntmatter",
+							},
+						},
 					},
 				},
 			},
@@ -69,14 +75,21 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"actionResults":[
+					"results":[
 						{
 							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"{x!kj\"}",
-								"satisfied":false,
-								"evalError": "unexpected token Operator(\"!\") (1:3)\n | {x!kj\"}\n | ..^"
-							}
+							"whenExpression":"{x!kj\"}",
+							"matchedWhenExpression":false,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"name":"doesntmatter",
+									"labelSelector":{},
+									"indexSelector":{}
+								}
+							],
+							"result":"Error",
+							"summary":"Error evaluating when expression"
 						}
 					]}
 				`
@@ -92,6 +105,12 @@ func TestGenericHandler(t *testing.T) {
 						ActionType: kargoapi.GenericWebhookActionTypeRefresh,
 						// foo is not defined, so evaluation will fail
 						WhenExpression: "foo()",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								Name: "doesntmatter",
+							},
+						},
 					},
 				},
 			},
@@ -105,14 +124,21 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"actionResults":[
+					"results":[
 						{
 							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"foo()",
-								"satisfied":false,
-								"evalError": "reflect: call of reflect.Value.Call on zero Value (1:1)\n | foo()\n | ^"
-							}
+							"whenExpression":"foo()",
+							"matchedWhenExpression":false,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"name":"doesntmatter",
+									"labelSelector":{},
+									"indexSelector":{}
+								}
+							],
+							"result":"Error",
+							"summary":"Error evaluating when expression"
 						}
 					]}
 				`
@@ -127,6 +153,12 @@ func TestGenericHandler(t *testing.T) {
 					{
 						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
 						WhenExpression: "request.header('X-Event-Type') == 'push'",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								Name: "doesntmatter",
+							},
+						},
 					},
 				},
 			},
@@ -142,13 +174,21 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
 				expected := `{
-					"actionResults":[
+					"results":[
 						{
 							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"request.header('X-Event-Type') == 'push'",
-								"satisfied":false
-							}
+							"whenExpression":"request.header('X-Event-Type') == 'push'",
+							"matchedWhenExpression":false,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"name":"doesntmatter",
+									"labelSelector":{},
+									"indexSelector":{}
+								}
+							],
+							"result":"NotApplicable",
+							"summary":"Request did not match whenExpression"
 						}
 					]}
 				`
@@ -163,6 +203,12 @@ func TestGenericHandler(t *testing.T) {
 					{
 						ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
 						WhenExpression: "request.header('X-Event-Type')",
+						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+							{
+								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								Name: "doesntmatter",
+							},
+						},
 					},
 				},
 			},
@@ -178,14 +224,21 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"actionResults":[
+					"results":[
 						{
 							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"request.header('X-Event-Type')",
-								"satisfied":false,
-								"evalError": "match expression result \"pull_request\" is of type string; expected bool"
-							}
+							"whenExpression":"request.header('X-Event-Type')",
+							"matchedWhenExpression":false,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"name":"doesntmatter",
+									"labelSelector":{},
+									"indexSelector":{}
+								}
+							],
+							"result":"Error",
+							"summary":"Error evaluating when expression"
 						}
 					]}
 				`
@@ -214,6 +267,7 @@ func TestGenericHandler(t *testing.T) {
 						TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
 							{
 								Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+								Name: "doesntmatter",
 							},
 						},
 					},
@@ -229,16 +283,21 @@ func TestGenericHandler(t *testing.T) {
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
 				expected := `{
-					"actionResults":[
+					"results":[
 						{
 							"actionType":"Refresh",
-							"conditionResult":{
-								"expression":"true",
-								"satisfied":true
-							},
-							"listResult":{
-								"errors":["selection criteria error at index 0: error listing Warehouse targets: oops"]
-							}
+							"whenExpression":"true",
+							"matchedWhenExpression":true,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"name":"doesntmatter",
+									"labelSelector":{},
+									"indexSelector":{}
+								}
+							],
+							"result":"Error",
+							"summary":"Error selecting target resources"
 						}
 					]}
 				`
@@ -388,40 +447,58 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `
-				{
-					"actionResults": [
+				expected := `{
+					"results":[
 						{
-							"actionType": "Refresh",
-							"conditionResult": {
-								"expression": "request.header('X-Event-Type') == 'push'",
-								"satisfied": true
-							},
-							"listResult": {
-								"objects": [
-									{
-										"Namespace": "test-project",
-										"Name": "api-warehouse"
+							"actionType":"Refresh",
+							"whenExpression":"request.header('X-Event-Type') == 'push'",
+							"matchedWhenExpression":true,
+							"targetSelectionCriteria":[
+								{
+									"kind":"Warehouse",
+									"labelSelector":{
+										"matchLabels":{"foo":"bar"},
+										"matchExpressions":[
+											{
+												"key":"tier",
+												"operator":"In",
+												"values":["backend","frontend"]
+											}
+										]
 									},
-									{
-										"Namespace": "test-project",
-										"Name": "failure-warehouse"
+									"indexSelector":{
+										"matchIndicies":[
+											{
+												"key":"subscribedURLs",
+												"operator":"Equals",
+												"value":"${{ normalizeGit(request.body.repository.url) }}"
+											}
+										]
 									}
-								]
-							},
-							"refreshResults": [
-									{"success": "test-project/api-warehouse"},
-									{"failure": "test-project/failure-warehouse"}
-								]
-							}
-						]
-					}
-					`
+								}
+							],
+							"selectedTargets":[
+								{
+									"namespace":"test-project",
+									"name":"api-warehouse",
+									"success":true
+								},
+								{
+									"namespace":"test-project",
+									"name":"failure-warehouse",
+									"success":false
+								}
+							],
+							"result":"PartialSuccess",
+							"summary":"Refreshed 1 of 2 selected resources"
+						}
+					]}
+				`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
 		{
-			name: "success",
+			name: "full success",
 			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				// this warehouse will be refreshed successfully
 				&kargoapi.Warehouse{
@@ -492,29 +569,54 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
+				t.Logf("response body: %s", w.Body.String())
 				expected := `
-				{
-					"actionResults": [
-						{
-							"actionType": "Refresh",
-							"conditionResult": {
-								"expression": "request.header('X-Event-Type') == 'push'",
-								"satisfied": true
-							},
-							"listResult": {
-								"objects": [
+					{
+						"results": [
+							{
+								"actionType": "Refresh",
+								"whenExpression": "request.header('X-Event-Type') == 'push'",
+								"matchedWhenExpression": true,
+								"targetSelectionCriteria": [
 									{
-										"Namespace": "test-project",
-										"Name": "api-warehouse"
+										"kind": "Warehouse",
+										"labelSelector": {
+											"matchLabels": {"foo": "bar"},
+											"matchExpressions": [
+											{
+												"key": "tier",
+												"operator": "In",
+												"values": [
+													"backend",
+													"frontend"
+												]
+											}
+										]
+									},
+									"indexSelector": {
+										"matchIndicies": [
+												{
+													"key": "subscribedURLs",
+													"operator": "Equals",
+													"value": "${{ normalizeGit(request.body.repository.url) }}"
+												}
+											]
+										}
 									}
-								]
-							},
-							"refreshResults": [
-								{"success": "test-project/api-warehouse"}
-							]
-						}
-					]
-				}`
+								],
+								"selectedTargets": [
+									{
+										"namespace": "test-project",
+										"name": "api-warehouse",
+										"success": true
+									}
+								],
+								"result": "Success",
+								"summary": "Refreshed 1 of 1 selected resources"
+							}
+						]
+					}
+				`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},

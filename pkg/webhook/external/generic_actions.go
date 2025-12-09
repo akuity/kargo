@@ -11,26 +11,42 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
+const (
+	resultNotApplicable  = "NotApplicable"
+	resultError          = "Error"
+	resultSuccess        = "Success"
+	resultPartialSuccess = "PartialSuccess"
+	resultFailure        = "Failure"
+)
+
+const (
+	summaryWhenExpressionNotMatched = "Request did not match whenExpression"
+	summaryWhenExpressionError      = "Error evaluating when expression"
+	summeryErrorSelectingResources  = "Error selecting target resources"
+)
+
 type actionResult struct {
-	ActionType      kargoapi.GenericWebhookActionType `json:"actionType"`
-	ConditionResult conditionResult                   `json:"conditionResult"`
-	ListResult      *listResult                       `json:"listResult,omitempty"`
-	RefreshResults  []refreshResult                   `json:"refreshResults,omitempty"`
+	ActionType              kargoapi.GenericWebhookActionType                `json:"actionType"`
+	WhenExpression          string                                           `json:"whenExpression"`
+	MatchedWhenExpression   bool                                             `json:"matchedWhenExpression"`
+	TargetSelectionCriteria []kargoapi.GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria"`
+	SelectedTargets         []selectedTarget                                 `json:"selectedTargets,omitempty"`
+	Result                  string                                           `json:"result,omitempty"`
+	Summary                 string                                           `json:"summary,omitempty"`
+}
+
+type selectedTarget struct {
+	Namespace string `json:"namespace"`
+	Name      string `json:"name"`
+	Success   bool   `json:"success"`
 }
 
 func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
 	return actionResult{
-		ActionType: action.ActionType,
-		ConditionResult: conditionResult{
-			Expression: action.WhenExpression,
-		},
+		ActionType:              action.ActionType,
+		WhenExpression:          action.WhenExpression,
+		TargetSelectionCriteria: action.TargetSelectionCriteria,
 	}
-}
-
-type conditionResult struct {
-	Expression string `json:"expression"`
-	Satisfied  bool   `json:"satisfied"`
-	EvalError  string `json:"evalError,omitempty"`
 }
 
 func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]any {
@@ -54,33 +70,36 @@ func (g *genericWebhookReceiver) handleAction(
 		"action", action.ActionType,
 		"expression", action.WhenExpression,
 	)
-	satisfied, err := conditionSatisfied(action.WhenExpression, env)
+	met, err := whenExpressionMet(action.WhenExpression, env)
 	if err != nil {
 		aLogger.Error(err, "failed to evaluate criteria; skipping action")
-		ar.ConditionResult.EvalError = err.Error()
+		ar.MatchedWhenExpression = false
+		ar.Result = resultError
+		ar.Summary = summaryWhenExpressionError
 		return ar
 	}
-	ar.ConditionResult.Satisfied = satisfied
-	if !satisfied {
+	ar.MatchedWhenExpression = met
+	if !met {
 		aLogger.Debug("condition not satisfied; skipping action")
+		ar.Result = resultNotApplicable
+		ar.Summary = summaryWhenExpressionNotMatched
 		return ar
 	}
 	objects, errs := g.listUniqueObjects(ctx, action, env)
 	if len(errs) > 0 {
-		aLogger.Debug("list errors detected",
-			"numErrors", len(errs),
-			"errors", errs,
-		)
+		aLogger.Debug("list errors detected", "errors", errs)
+		ar.Result = resultError
+		ar.Summary = summeryErrorSelectingResources
+		return ar
 	}
-	ar.ListResult = newListResult(objects, errs)
 	switch action.ActionType {
 	case kargoapi.GenericWebhookActionTypeRefresh:
-		ar.RefreshResults = refreshObjects(ctx, g.client, objects)
+		ar.SelectedTargets, ar.Result, ar.Summary = refreshObjects(ctx, g.client, objects)
 	}
 	return ar
 }
 
-func conditionSatisfied(expression string, env map[string]any) (bool, error) {
+func whenExpressionMet(expression string, env map[string]any) (bool, error) {
 	program, err := expr.Compile(expression)
 	if err != nil {
 		return false, err

@@ -19,18 +19,14 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
-type refreshResult struct {
-	Success string `json:"success,omitempty"`
-	Failure string `json:"failure,omitempty"`
-}
-
 func refreshObjects(
 	ctx context.Context,
 	c client.Client,
 	objList []client.Object,
-) []refreshResult {
+) ([]selectedTarget, string, string) {
 	logger := logging.LoggerFromContext(ctx)
-	refreshResults := make([]refreshResult, len(objList))
+	selectedTargets := make([]selectedTarget, len(objList))
+	var successCount, failureCount int
 	for i, obj := range objList {
 		objKey := client.ObjectKeyFromObject(obj)
 		objLogger := logger.WithValues(
@@ -38,15 +34,39 @@ func refreshObjects(
 			"name", objKey.Name,
 			"kind", obj.GetObjectKind(),
 		)
+		selectedTargets[i] = selectedTarget{
+			Namespace: objKey.Namespace,
+			Name:      objKey.Name,
+		}
 		if err := api.RefreshObject(ctx, c, obj); err != nil {
 			objLogger.Error(err, "error refreshing")
-			refreshResults[i].Failure = objKey.String()
+			failureCount++
+			selectedTargets[i].Success = false
 		} else {
 			objLogger.Info("successfully refreshed object")
-			refreshResults[i].Success = objKey.String()
+			successCount++
+			selectedTargets[i].Success = true
 		}
 	}
-	return refreshResults
+	result := getResult(len(objList), successCount, failureCount)
+	summary := fmt.Sprintf("Refreshed %d of %d selected resources",
+		successCount,
+		len(objList),
+	)
+	return selectedTargets, result, summary
+}
+
+func getResult(total, successes, failures int) string {
+	var result string
+	switch {
+	case successes == total:
+		result = resultSuccess
+	case failures == total:
+		result = resultFailure
+	default:
+		result = resultPartialSuccess
+	}
+	return result
 }
 
 // refreshWarehouses refreshes all Warehouses in the given namespace that are

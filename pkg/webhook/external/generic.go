@@ -91,7 +91,7 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 			statusCode = http.StatusInternalServerError
 		}
 		xhttp.WriteResponseJSON(w, statusCode,
-			map[string]any{"actionResults": actionResults},
+			map[string]any{"results": actionResults},
 		)
 	})
 }
@@ -116,17 +116,8 @@ func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 
 func shouldReportAsError(actionResults []actionResult) bool {
 	return slices.ContainsFunc(actionResults, func(ar actionResult) bool {
-		return hasErrors(ar)
+		return ar.Result == resultError ||
+			ar.Result == resultFailure ||
+			ar.Result == resultPartialSuccess
 	})
-}
-
-func hasErrors(ar actionResult) bool {
-	if ar.ConditionResult.EvalError != "" {
-		return true
-	}
-	if ar.ListResult != nil && len(ar.ListResult.Errors) > 0 {
-		return true
-	}
-	refreshFailure := func(rr refreshResult) bool { return rr.Failure != "" }
-	return slices.ContainsFunc(ar.RefreshResults, refreshFailure)
 }

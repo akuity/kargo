@@ -15,24 +15,6 @@ import (
 	"github.com/akuity/kargo/pkg/expressions"
 )
 
-type listResult struct {
-	Objects []client.ObjectKey `json:"objects,omitempty"`
-	Errors  []string           `json:"errors,omitempty"`
-}
-
-func newListResult(objects []client.Object, listErrors []error) *listResult {
-	lr := &listResult{
-		Errors: make([]string, len(listErrors)),
-	}
-	for _, obj := range objects {
-		lr.Objects = append(lr.Objects, client.ObjectKeyFromObject(obj))
-	}
-	for i, listErr := range listErrors {
-		lr.Errors[i] = listErr.Error()
-	}
-	return lr
-}
-
 func (g *genericWebhookReceiver) listUniqueObjects(
 	ctx context.Context,
 	action kargoapi.GenericWebhookAction,
