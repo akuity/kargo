@@ -51,12 +51,31 @@ config:
   message: ${{ "Hello, world!" }}
 ```
 
-The above example will be evaluated as the following:
+The above example will be evaluated as follows:
 
 ```yaml
 config:
   message: Hello, world!
 ```
+
+:::info
+If your expression needs to contain the `}}` charachter sequence (such as when using
+Go templates), use alternative delimiters `$~~` and `~~` instead:
+```yaml
+config:
+  # This would fail with standard delimiters due to }} in the string
+  message: $~~ quote("Updated image to {{.tag}}") ~~
+```
+The above example will be evaluated as follows:
+```yaml
+config:
+  template: Updated image to {{.tag}}
+```
+
+The delimiter type for each value is chosen based on whichever delimiter appears
+first in that value. You cannot mix `}}` with standard delimiters ( `${{` and `}}` )
+or mix `~~` with alternative delimiters ( `$~~` and `~~` ) in the same expression.
+:::
 
 The
 [expr-lang language definition docs](https://expr-lang.org/docs/language-definition)
