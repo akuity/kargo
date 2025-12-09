@@ -30,30 +30,7 @@ All the steps above support different record types in ServiceNow including manag
 Problems etc.,. This integration also provides condition tracking through `snow-wait-for-condition`, making it a powerful tool 
 for promotion workflows that require coordination with project management systems.
 
-## Credentials Configuration
-
-All ServiceNow operations require proper authentication credentials stored in a Kubernetes
-`Secret`.
-
-| Name                     | Type     | Required | Description                                                                                     |
-| ------------------------ | -------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
-| `credentials.type`       | `string` | Y        | Type of ServiceNow credentials to use for authentication (either `api-token` or `basic`).       |
-
-For `credentials.type: api-token` the referenced `Secret` should contain the following keys:
-
-- `apiToken`: ServiceNow API Token (see [this blog post](https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924) for how to create an API token in ServiceNow).
-- `instanceURL`: Your ServiceNow instance URL.
-
-![](./images/snow-instance-url.png)
-
-For `credentials.type: basic` the referenced `Secret` should contain the following keys:
-
-- `username`: Username of the ServiceNow user (you may want to [create a user](https://www.servicenow.com/docs/bundle/zurich-platform-administration/page/administer/users-and-groups/task/t_CreateAUser.html) specifically for this integration).
-- `password`: Password of the ServiceNow user (for how to set the password for a user, see [this](https://www.servicenow.com/docs/bundle/zurich-platform-security/page/integrate/authentication/task/reset-your-password.html)).
-- `instanceURL`: Your ServiceNow instance URL.
-
-## Using the API
+#### Using the API
 Most of the time you cannot use the field labels seen in the ServiceNow UI as REST API keys. Use the field’s `column_name` (e.g., `short_description`).
 
 For example, if you want to set the value for the “Short description” field:
@@ -77,6 +54,31 @@ For example `New` is `-1` and `Scheduled` is `-2`
 ![](./images/choice-list.png)
 
 ## Configuration
+
+### Credentials
+
+All ServiceNow operations require proper authentication credentials stored in a Kubernetes
+`Secret`.
+
+| Name                     | Type     | Required | Description                                                                                     |
+| ------------------------ | -------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
+| `credentials.type`       | `string` | Y        | Type of ServiceNow credentials to use for authentication (either `api-token` or `basic`).       |
+
+For `credentials.type: api-token` the referenced `Secret` should contain the following keys:
+
+- `apiToken`: ServiceNow API Token (see [this blog post](https://www.servicenow.com/community/developer-advocate-blog/inbound-rest-api-keys/ba-p/2854924) for how to create an API token in ServiceNow).
+- `instanceURL`: Your ServiceNow instance URL.
+
+![](./images/snow-instance-url.png)
+
+For `credentials.type: basic` the referenced `Secret` should contain the following keys:
+
+- `username`: Username of the ServiceNow user (you may want to [create a user](https://www.servicenow.com/docs/bundle/zurich-platform-administration/page/administer/users-and-groups/task/t_CreateAUser.html) specifically for this integration).
+- `password`: Password of the ServiceNow user (for how to set the password for a user, see [this](https://www.servicenow.com/docs/bundle/zurich-platform-security/page/integrate/authentication/task/reset-your-password.html)).
+- `instanceURL`: Your ServiceNow instance URL.
+
+### Record
 
 | Name            | Type     | Required | Description                                                                                                                     |
 | --------------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
