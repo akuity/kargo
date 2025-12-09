@@ -131,87 +131,35 @@ func newListOptionsForIndexSelector(
 
 // newListOptionsForLabelSelector creates a list of client.ListOption based on
 // the provided LabelSelector.
-func newListOptionsForLabelSelector(ls metav1.LabelSelector, env map[string]any) ([]client.ListOption, error) {
-	var labelReqs []labels.Requirement
-	matchExpressionRequirements, err := newLabelRequirementsForMatchExpressions(ls.MatchExpressions, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create label requirements for match expressions: %w", err)
-	}
-	labelReqs = append(labelReqs, matchExpressionRequirements...)
-	matchLabelRequirements, err := newLabelRequirementsForMatchLabels(ls.MatchLabels, env)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create label requirements for match labels: %w", err)
-	}
-	labelReqs = append(labelReqs, matchLabelRequirements...)
-	if len(labelReqs) == 0 {
+func newListOptionsForLabelSelector(
+	ls metav1.LabelSelector,
+	env map[string]any,
+) ([]client.ListOption, error) {
+	ls = *ls.DeepCopy()
+	if ls.Size() == 0 {
 		return nil, nil
 	}
+	var err error
+	for labelKey, labelVal := range ls.MatchLabels {
+		if ls.MatchLabels[labelKey], err = evalAsString(labelVal, env); err != nil {
+			return nil, err
+		}
+	}
+	for i, req := range ls.MatchExpressions {
+		for j, val := range req.Values {
+			ls.MatchExpressions[i].Values[j], err = evalAsString(val, env)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	selector, err := metav1.LabelSelectorAsSelector(&ls)
+	if err != nil {
+		return nil, fmt.Errorf("failed to convert label selector: %w", err)
+	}
 	return []client.ListOption{
-		client.MatchingLabelsSelector{
-			Selector: labels.NewSelector().Add(labelReqs...),
-		},
+		client.MatchingLabelsSelector{Selector: selector},
 	}, nil
-}
-
-func newLabelRequirementsForMatchExpressions(
-	matchExpressions []metav1.LabelSelectorRequirement,
-	env map[string]any,
-) ([]labels.Requirement, error) {
-	var labelReqs []labels.Requirement
-	for _, expr := range matchExpressions {
-		op, err := labelOpToSelectionOp(expr.Operator)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert label selector operator: %w", err)
-		}
-		values, err := evalValues(expr.Values, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse matchExpression values: %w", err)
-		}
-		labelReq, err := labels.NewRequirement(expr.Key, op, values)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create label requirement: %w", err)
-		}
-		labelReqs = append(labelReqs, *labelReq)
-	}
-	return labelReqs, nil
-}
-
-func newLabelRequirementsForMatchLabels(
-	matchLabels map[string]string,
-	env map[string]any,
-) ([]labels.Requirement, error) {
-	var labelReqs []labels.Requirement
-	for k, v := range matchLabels {
-		strValue, err := evalAsString(v, env)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate matchLabel value as string: %w", err)
-		}
-		req, err := labels.NewRequirement(k, selection.Equals, []string{strValue})
-		if err != nil {
-			return nil, fmt.Errorf("failed to create label requirement: %w", err)
-		}
-		labelReqs = append(labelReqs, *req)
-	}
-	return labelReqs, nil
-}
-
-// labelOpToSelectionOp converts a metav1.LabelSelectorOperator
-// into a selection.Operator, which is used to build label requirements.
-// Returns an error if the operator is not supported. Unsupported operators are
-// GT, LT, Exists, and NotExists.
-func labelOpToSelectionOp(op metav1.LabelSelectorOperator) (selection.Operator, error) {
-	switch op {
-	case metav1.LabelSelectorOpIn:
-		return selection.In, nil
-	case metav1.LabelSelectorOpNotIn:
-		return selection.NotIn, nil
-	case metav1.LabelSelectorOpExists:
-		return selection.Exists, nil
-	case metav1.LabelSelectorOpDoesNotExist:
-		return selection.DoesNotExist, nil
-	default:
-		return "", fmt.Errorf("unsupported LabelSelectorOperator: %q", op)
-	}
 }
 
 // itemsToObjects converts a slice of Kubernetes resources to []client.Object.
