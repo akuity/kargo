@@ -1,5 +1,5 @@
 ---
-sidebar_label: servicenow
+sidebar_label: snow-wait-for-condition
 description: Integrates with ServiceNow to manage Change Requests, Incidents, Problems, etc., and track promotion workflows.
 ---
 
