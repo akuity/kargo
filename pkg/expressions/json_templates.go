@@ -23,6 +23,12 @@ import (
 // Since the template itself must be valid JSON, all expressions MUST be
 // enclosed in quotes.
 //
+// Standard delimiters are ${{ and }}. When expressions need to contain }}
+// (e.g., nested objects or Go template syntax like {{.domain}}), alternative
+// delimiters $~~ and ~~ can be used instead. For example:
+//   - Standard:    "${{ quote('hello') }}"
+//   - Alternative: "$~~ quote('{{.domain}}') ~~" (when }} appears in the expression)
+//
 // If, after evaluating all expressions in a single value (multiples are
 // permitted), the result can be parsed as a bool, float64, or other valid
 // non-string JSON, it will be treated as such. This ensures the possibility of
@@ -99,14 +105,29 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 // EvaluateTemplate evaluates a single template string with the provided
 // environment. Note that a single template string can contain multiple
 // expressions.
+//
+// Standard delimiters are ${{ and }}. When expressions need to contain }}
+// (e.g., nested objects or Go template syntax), alternative delimiters $~~ and ~~
+// can be used instead.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	if !strings.Contains(template, "${{") {
+	// Determine which delimiter pair to use
+	startTag := "${{"
+	endTag := "}}"
+	hasStandardDelim := strings.Contains(template, "${{")
+	hasAltDelim := strings.Contains(template, "$~~")
+
+	if hasAltDelim {
+		// Use alternative delimiters
+		startTag = "$~~"
+		endTag = "~~"
+	} else if !hasStandardDelim {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
 		// would be more intuitive to just use "42".
 		return template, nil
 	}
+
 	if exprOpts == nil {
 		exprOpts = make([]expr.Option, 0, 2)
 	}
@@ -123,7 +144,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 			new(func(any) string),
 		),
 	)
-	t, err := fasttemplate.NewTemplate(template, "${{", "}}")
+	t, err := fasttemplate.NewTemplate(template, startTag, endTag)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing template: %w", err)
 	}
