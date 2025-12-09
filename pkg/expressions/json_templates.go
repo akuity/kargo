@@ -108,19 +108,26 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 //
 // Standard delimiters are ${{ and }}. When expressions need to contain }}
 // (e.g., nested objects or Go template syntax), alternative delimiters $~~ and ~~
-// can be used instead.
+// can be used instead. The choice of
+// delimiter determines which sequences can appear inside the expression:
+//   - If you start with ${{, then }} cannot appear in the expression, but $~~ can
+//   - If you start with $~~, then ~~ cannot appear in the expression, but ${{ can
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	// Determine which delimiter pair to use
+	// Determine which delimiter pair to use by checking which start tag appears first
 	startTag := "${{"
 	endTag := "}}"
-	hasStandardDelim := strings.Contains(template, "${{")
-	hasAltDelim := strings.Contains(template, "$~~")
 
-	if hasAltDelim {
-		// Use alternative delimiters
+	stdIdx := strings.Index(template, "${{")
+	altIdx := strings.Index(template, "$~~")
+
+	// If both exist, use whichever comes first
+	// If only one exists, use that one
+	// If neither exists, template has no expressions
+	if altIdx >= 0 && (stdIdx < 0 || altIdx < stdIdx) {
+		// Alternative delimiter appears first (or is the only one)
 		startTag = "$~~"
 		endTag = "~~"
-	} else if !hasStandardDelim {
+	} else if stdIdx < 0 {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
