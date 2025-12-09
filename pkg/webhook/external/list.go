@@ -109,16 +109,16 @@ func newListOptionsForIndexSelector(
 ) ([]client.ListOption, error) {
 	var listOpts []client.ListOption
 	for _, expr := range is.MatchIndices {
-		resultStr, err := evalAsString(expr.Value, env)
+		value, err := evalAsString(expr.Value, env)
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate values expression as string: %w", err)
 		}
 		var s fields.Selector
 		switch expr.Operator {
 		case kargoapi.IndexSelectorOperatorEqual:
-			s = fields.OneTermEqualSelector(expr.Key, resultStr)
+			s = fields.OneTermEqualSelector(expr.Key, value)
 		case kargoapi.IndexSelectorOperatorNotEqual:
-			s = fields.OneTermNotEqualSelector(expr.Key, resultStr)
+			s = fields.OneTermNotEqualSelector(expr.Key, value)
 		default:
 			return nil, fmt.Errorf("unsupported operator %q in index selector expression", expr.Operator)
 		}
