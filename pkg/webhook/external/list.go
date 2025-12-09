@@ -65,12 +65,13 @@ func (g *genericWebhookReceiver) listTargetObjects(
 		if err != nil {
 			return nil, fmt.Errorf("failed to evaluate target name as string: %w", err)
 		}
+		var filtered []client.Object
 		for _, wh := range warehouses.Items {
 			if wh.Name == name {
-				return []client.Object{&wh}, nil
+				filtered = append(filtered, &wh)
 			}
 		}
-		return nil, nil
+		return filtered, nil
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", targetSelectionCriteria.Kind)
 	}
