@@ -342,7 +342,7 @@ func (p *provider) MergePullRequest(
 
 	// Check if PR is draft - cannot merge draft PRs
 	if bbPR.Draft {
-		return nil, false, fmt.Errorf("cannot merge pull request %d: pull request is in draft state", id)
+		return nil, false, nil
 	}
 
 	// TODO: The Bitbucket API lacks comprehensive merge eligibility checks. We
