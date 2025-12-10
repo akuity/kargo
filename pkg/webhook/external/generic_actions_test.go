@@ -29,7 +29,7 @@ func TestHandleAction(t *testing.T) {
 		assertions func(*testing.T, actionResult)
 	}{
 		{
-			name:   "condition not satisfied",
+			name:   "whenExpression not satisfied",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			action: kargoapi.GenericWebhookAction{
 				WhenExpression: "false",
@@ -53,7 +53,7 @@ func TestHandleAction(t *testing.T) {
 			},
 		},
 		{
-			name:   "error evaluating when expression",
+			name:   "error evaluating whenExpression",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			action: kargoapi.GenericWebhookAction{
 				WhenExpression: "invalid expression",
