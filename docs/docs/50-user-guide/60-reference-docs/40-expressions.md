@@ -59,22 +59,22 @@ config:
 ```
 
 :::info
-If your expression needs to contain the `}}` charachter sequence (such as when using
-Go templates), use alternative delimiters `$~~` and `~~` instead:
+If your expression needs to contain the `}}` character sequence (such as when using
+Go templates), use alternative delimiters `${%` and `%}` instead:
 ```yaml
 config:
   # This would fail with standard delimiters due to }} in the string
-  message: $~~ quote("Updated image to {{.tag}}") ~~
+  message: ${% "Updated image to {{.tag}}" %}
 ```
 The above example will be evaluated as follows:
 ```yaml
 config:
-  template: Updated image to {{.tag}}
+  message: Updated image to {{.tag}}
 ```
 
-The delimiter type for each value is chosen based on whichever delimiter appears
-first in that value. You cannot mix `}}` with standard delimiters ( `${{` and `}}` )
-or mix `~~` with alternative delimiters ( `$~~` and `~~` ) in the same expression.
+You cannot use `}}` within standard delimiters `${{ }}`, nor can you use `%}`
+within alternative delimiters `${% %}`. Choose the appropriate delimiter for each
+expression based on which characters you need to include.
 :::
 
 The

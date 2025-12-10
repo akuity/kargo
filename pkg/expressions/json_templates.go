@@ -1,15 +1,19 @@
 package expressions
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
 	"github.com/expr-lang/expr"
-	"github.com/valyala/fasttemplate"
+)
+
+const (
+	stdStartDelim = "${{"
+	stdEndDelim   = "}}"
+	altStartDelim = "${%"
+	altEndDelim   = "%}"
 )
 
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
@@ -25,9 +29,11 @@ import (
 //
 // Standard delimiters are ${{ and }}. When expressions need to contain }}
 // (e.g., nested objects or Go template syntax like {{.domain}}), alternative
-// delimiters $~~ and ~~ can be used instead. For example:
+// delimiters ${% and %} can be used instead. Both delimiter types can coexist
+// in the same value, and all expressions will be evaluated. For example:
 //   - Standard:    "${{ quote('hello') }}"
-//   - Alternative: "$~~ quote('{{.domain}}') ~~" (when }} appears in the expression)
+//   - Alternative: "${% '{{.domain}}' %}" (when }} appears in the expression)
+//   - Mixed:       "${{ ctx.stage }} deployed ${% '{{.tag}}' %}"
 //
 // If, after evaluating all expressions in a single value (multiples are
 // permitted), the result can be parsed as a bool, float64, or other valid
@@ -104,30 +110,15 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 
 // EvaluateTemplate evaluates a single template string with the provided
 // environment. Note that a single template string can contain multiple
-// expressions.
+// expressions with different delimiter types.
 //
 // Standard delimiters are ${{ and }}. When expressions need to contain }}
-// (e.g., nested objects or Go template syntax), alternative delimiters $~~ and ~~
-// can be used instead. The choice of
-// delimiter determines which sequences can appear inside the expression:
-//   - If you start with ${{, then }} cannot appear in the expression, but $~~ can
-//   - If you start with $~~, then ~~ cannot appear in the expression, but ${{ can
+// (e.g., nested objects or Go template syntax), alternative delimiters ${% and %}
+// can be used instead. Multiple expressions with different delimiters can coexist
+// in the same template string.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	// Determine which delimiter pair to use by checking which start tag appears first
-	startTag := "${{"
-	endTag := "}}"
-
-	stdIdx := strings.Index(template, "${{")
-	altIdx := strings.Index(template, "$~~")
-
-	// If both exist, use whichever comes first
-	// If only one exists, use that one
-	// If neither exists, template has no expressions
-	if altIdx >= 0 && (stdIdx < 0 || altIdx < stdIdx) {
-		// Alternative delimiter appears first (or is the only one)
-		startTag = "$~~"
-		endTag = "~~"
-	} else if stdIdx < 0 {
+	// Check if template contains any expressions
+	if !strings.Contains(template, stdStartDelim) && !strings.Contains(template, altStartDelim) {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
@@ -151,21 +142,18 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 			new(func(any) string),
 		),
 	)
-	t, err := fasttemplate.NewTemplate(template, startTag, endTag)
+
+	evaluator := getExpressionEvaluator(env, exprOpts...)
+	result, err := evaluateMultiDelimiterTemplate(template, evaluator)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing template: %w", err)
-	}
-	out := &bytes.Buffer{}
-	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env, exprOpts...)); err != nil {
 		return nil, err
 	}
 	// If there is a trailing newline, remove it. If the | operator was used in
 	// the original YAML, the result will have a trailing newline, which can
 	// cause problems with the logic that follows.
-	result := out.String()
 	var removedNewline bool
 	if strings.HasSuffix(result, "\n") {
-		result = strings.TrimSuffix(out.String(), "\n")
+		result = strings.TrimSuffix(result, "\n")
 		removedNewline = true
 	}
 	// If the result is enclosed in quotes, this is probably the result of an
@@ -210,30 +198,80 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	return result, nil
 }
 
-// getExpressionEvaluator returns a fasttemplate.TagFunc that evaluates input
-// as a single expr-lang expression with the provided map as the environment.
-func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) fasttemplate.TagFunc {
-	return func(out io.Writer, expression string) (int, error) {
+// evaluateMultiDelimiterTemplate evaluates a template that may contain multiple
+// expressions with different delimiter types (${{ }} and ${% %}).
+func evaluateMultiDelimiterTemplate(template string, evaluator func(string) (string, error)) (string, error) {
+	var result strings.Builder
+	pos := 0
+
+	for pos < len(template) {
+		stdIdx := strings.Index(template[pos:], stdStartDelim)
+		altIdx := strings.Index(template[pos:], altStartDelim)
+
+		var startDelim, endDelim string
+		var nextIdx int
+
+		if stdIdx >= 0 && (altIdx < 0 || stdIdx < altIdx) {
+			// Standard delimiter comes first
+			startDelim = stdStartDelim
+			endDelim = stdEndDelim
+			nextIdx = stdIdx
+		} else if altIdx >= 0 {
+			// Alternative delimiter comes first
+			startDelim = altStartDelim
+			endDelim = altEndDelim
+			nextIdx = altIdx
+		} else {
+			// No more expressions found
+			result.WriteString(template[pos:])
+			break
+		}
+
+		result.WriteString(template[pos : pos+nextIdx])
+		pos += nextIdx
+
+		exprStart := pos + len(startDelim)
+		endIdx := strings.Index(template[exprStart:], endDelim)
+		if endIdx < 0 {
+			return "", fmt.Errorf("cannot find end tag=%q in tail %q", endDelim, template[pos:])
+		}
+
+		expression := template[exprStart : exprStart+endIdx]
+		evaluated, err := evaluator(expression)
+		if err != nil {
+			return "", err
+		}
+		result.WriteString(evaluated)
+
+		pos = exprStart + endIdx + len(endDelim)
+	}
+
+	return result.String(), nil
+}
+
+// getExpressionEvaluator returns a function that evaluates input as a single
+// expr-lang expression with the provided map as the environment.
+func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) func(string) (string, error) {
+	return func(expression string) (string, error) {
 		program, err := expr.Compile(expression, exprOpts...)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 		result, err := expr.Run(program, env)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
 		if resStr, ok := result.(string); ok {
-			// A string result can be written directly to the output as is.
-			return out.Write([]byte(resStr))
+			// A string result can be returned directly
+			return resStr, nil
 		}
 		// For non-string results, which could include nils, bools, numbers of any
 		// type, structs, collections, etc. the result must be marshaled to JSON
-		// before being written to the output.
 		resJSON, err := json.Marshal(result)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-		return out.Write(resJSON)
+		return string(resJSON), nil
 	}
 }
 
