@@ -1,4 +1,4 @@
-import { Freight, GenericArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, ArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export type TableSource =
   | {
@@ -24,7 +24,7 @@ export type TableSource =
     }
   | ({
       type: 'other';
-    } & GenericArtifactReference);
+    } & ArtifactReference);
 
 export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
   const images: TableSource[] =
@@ -52,7 +52,7 @@ export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
     version: chart?.version
   }));
 
-  const other: TableSource[] = freight?.otherArtifacts?.map((otherArtifact) => ({
+  const other: TableSource[] = freight?.artifacts?.map((otherArtifact) => ({
     type: 'other',
     ...otherArtifact
   }));

@@ -1,9 +1,10 @@
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { layoutGraph } from './graph/layout-graph';
 import { warehouseIndexer } from './graph/node-indexer';
 
-export const groupNodes = (stages: Stage[], warehouses: Warehouse[]) => {
+export const groupNodes = (stages: Stage[], warehouses: WarehouseExpanded[]) => {
   const { graph } = layoutGraph({ stages: stages }, { warehouses: warehouses }, {});
 
   const stackNodesAfter = new Set<string>();

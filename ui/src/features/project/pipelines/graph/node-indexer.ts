@@ -1,7 +1,8 @@
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { RepoSubscription, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export const warehouseIndexer = {
-  index: (warehouse: Warehouse) => {
+  index: (warehouse: WarehouseExpanded) => {
     const warehouseUID = warehouse?.metadata?.uid;
     const warehouseName = warehouse?.metadata?.name;
 
@@ -11,7 +12,7 @@ export const warehouseIndexer = {
 };
 
 export const repoSubscriptionIndexer = {
-  index: (wh: Warehouse, subscription: RepoSubscription) => {
+  index: (wh: WarehouseExpanded, subscription: RepoSubscription) => {
     const warehouseIndex = warehouseIndexer.index(wh);
     const subscriptionRepoURL =
       subscription?.image?.repoURL || subscription?.git?.repoURL || subscription?.chart?.repoURL;

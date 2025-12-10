@@ -1,13 +1,13 @@
 import { Table } from 'antd';
 import Radio from 'antd/es/radio/radio';
 
-import { GenericArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
+import { ArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 type GenericArtifactTableProps = {
   show?: boolean;
-  references: GenericArtifactReference[];
-  selected: GenericArtifactReference | undefined;
-  select: (reference?: GenericArtifactReference) => void;
+  references: ArtifactReference[];
+  selected: ArtifactReference | undefined;
+  select: (reference?: ArtifactReference) => void;
 };
 
 export const GenericArtifactTable = (props: GenericArtifactTableProps) => {

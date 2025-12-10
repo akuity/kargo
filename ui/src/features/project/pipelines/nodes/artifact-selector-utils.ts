@@ -1,7 +1,7 @@
 import {
   Chart,
   FreightReference,
-  GenericArtifactReference,
+  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image
 } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -25,7 +25,7 @@ export const normalizeFreight = (freight: FreightReference) => {
     artifacts.push(chart);
   }
 
-  for (const other of freight?.otherArtifacts || []) {
+  for (const other of freight?.artifacts || []) {
     artifacts.push(other);
   }
 
@@ -36,15 +36,15 @@ export const selectFirstArtifact = _selectFirstArtifact;
 
 const isSameArtifact = (a: ArtifactTypes, b: ArtifactTypes) => {
   if (
-    a.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference' &&
-    b.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference'
+    a.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference' &&
+    b.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference'
   ) {
     return a.subscriptionName === b.subscriptionName;
   }
 
   if (
-    a.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference' &&
-    b.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference'
+    a.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference' &&
+    b.$typeName !== 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference'
   ) {
     return a.repoURL === b.repoURL;
   }

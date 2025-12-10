@@ -14,7 +14,7 @@ import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/us
 import {
   Chart,
   FreightReference,
-  GenericArtifactReference,
+  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image,
   Stage
@@ -189,9 +189,7 @@ const Artifact = (props: {
     );
   }
 
-  if (
-    props.artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference'
-  ) {
+  if (props.artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
     return (
       <Tag bordered={false} color='geekblue'>
         {props.artifact.version}

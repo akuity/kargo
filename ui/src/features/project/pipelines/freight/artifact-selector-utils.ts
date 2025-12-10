@@ -37,8 +37,8 @@ export const selectFirstArtifact = (freights: Freight[]) => {
       return freight?.charts?.[0];
     }
 
-    if (freight?.otherArtifacts?.length) {
-      return freight?.otherArtifacts?.[0];
+    if (freight?.artifacts?.length) {
+      return freight?.artifacts?.[0];
     }
   }
 

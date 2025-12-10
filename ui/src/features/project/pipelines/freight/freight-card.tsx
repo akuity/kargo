@@ -291,7 +291,7 @@ export const FreightCard = (props: FreightCardProps) => {
               <FreightArtifact key={image?.repoURL} artifact={image} />
             ))}
 
-            {props.freight?.otherArtifacts?.slice(0, 2).map((other) => (
+            {props.freight?.artifacts?.slice(0, 2).map((other) => (
               <FreightArtifact key={other?.version} artifact={other} />
             ))}
 

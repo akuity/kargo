@@ -23,7 +23,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact(repoURL) || props.subscription.other?.name;
+    const title = humanComprehendableArtifact(repoURL) || props.subscription.subscription?.name;
     const base = artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 
@@ -38,7 +38,7 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
     icon = faGitAlt;
   } else if (props.subscription?.image) {
     icon = faDocker;
-  } else if (props.subscription?.other) {
+  } else if (props.subscription?.subscription) {
     icon = null;
   }
 
@@ -64,9 +64,9 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
         </Link>
       )}
 
-      {!!props.subscription?.other?.artifactKind && (
+      {!!props.subscription?.subscription?.subscriptionType && (
         <Tag color='blue' className='text-[9px] text-wrap' bordered={false}>
-          kind: {props.subscription.other?.artifactKind}
+          kind: {props.subscription.subscription?.subscriptionType}
         </Tag>
       )}
     </Card>

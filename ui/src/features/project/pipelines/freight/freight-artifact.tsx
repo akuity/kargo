@@ -8,7 +8,7 @@ import {
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
 import {
   Chart,
-  GenericArtifactReference,
+  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image
 } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -25,7 +25,7 @@ type FreightArtifactProps = {
 export const FreightArtifact = (props: FreightArtifactProps) => {
   const artifactType = props.artifact?.$typeName;
 
-  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.GenericArtifactReference') {
+  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
     return (
       <Tag color='geekblue' bordered={false}>
         {shortVersion(props.artifact.version)}

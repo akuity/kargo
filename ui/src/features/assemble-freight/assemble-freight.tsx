@@ -8,6 +8,7 @@ import { useParams } from 'react-router-dom';
 import yaml from 'yaml';
 
 import { newErrorHandler, newTransportWithAuth } from '@ui/config/transport';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { createResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import {
   Chart,
@@ -15,13 +16,12 @@ import {
   DiscoveredCommit,
   DiscoveredImageReference,
   Freight,
-  GenericArtifactReference,
-  GenericDiscoveryResult,
+  ArtifactReference,
+  DiscoveryResult as GenericDiscoveryResult,
   GitCommit,
   GitDiscoveryResult,
   Image,
-  ImageDiscoveryResult,
-  Warehouse
+  ImageDiscoveryResult
 } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { FreightContents } from '../freight-timeline/freight-contents';
@@ -54,7 +54,7 @@ const constructFreight = (
     images: [] as Image[],
     charts: [] as Chart[],
     commits: [] as GitCommit[],
-    otherArtifacts: [] as GenericArtifactReference[]
+    artifacts: [] as ArtifactReference[]
   } as Freight;
 
   for (const key in chosenItems) {
@@ -88,7 +88,7 @@ const constructFreight = (
         committer: commitRef.committer
       } as GitCommit);
     } else if ('artifactReferences' in artifact) {
-      freight.otherArtifacts.push(info as GenericArtifactReference);
+      freight.artifacts.push(info as ArtifactReference);
     }
   }
 
@@ -100,7 +100,7 @@ export const AssembleFreight = ({
   cloneFreight,
   onSuccess
 }: {
-  warehouse?: Warehouse;
+  warehouse?: WarehouseExpanded;
   cloneFreight?: Freight;
   onSuccess: () => void;
 }) => {
@@ -132,8 +132,7 @@ export const AssembleFreight = ({
     const images: ImageDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.images || [];
     const charts: ChartDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.charts || [];
     const git: GitDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.git || [];
-    const other: GenericDiscoveryResult[] =
-      warehouse?.status?.discoveredArtifacts?.otherResults || [];
+    const other: GenericDiscoveryResult[] = warehouse?.status?.discoveredArtifacts?.results || [];
 
     return [images, charts, git, other];
   }, [warehouse]);
@@ -187,7 +186,7 @@ export const AssembleFreight = ({
       };
     }
 
-    for (const other of discoveredArtifacts?.otherResults || []) {
+    for (const other of discoveredArtifacts?.results || []) {
       items[getSubscriptionKey(other)] = {
         artifact: other,
         info: other.artifactReferences[0]
@@ -338,7 +337,7 @@ const DiscoveryTable = ({
       <GenericArtifactTable
         references={(selected as GenericDiscoveryResult).artifactReferences || []}
         select={select}
-        selected={selectedItem as GenericArtifactReference}
+        selected={selectedItem as ArtifactReference}
         show={'artifactReferences' in selected}
       />
     </>
