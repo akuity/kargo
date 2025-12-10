@@ -46,7 +46,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "false")
-				require.Equal(t, ar.MatchedWhenExpression, false)
+				require.False(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultNotApplicable)
 				require.Equal(t, ar.Summary, summaryRequestNotMatched)
 				require.Equal(t, 0, len(ar.SelectedTargets))
@@ -70,7 +70,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "invalid expression")
-				require.Equal(t, ar.MatchedWhenExpression, false)
+				require.False(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryRequestMatchingError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
@@ -108,7 +108,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
@@ -143,7 +143,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
@@ -259,7 +259,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultSuccess)
 				require.Equal(t, len(ar.SelectedTargets), 1)
 				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-project")
@@ -347,7 +347,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultPartialSuccess)
 				require.Equal(t, 2, len(ar.SelectedTargets))
 				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
@@ -398,7 +398,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, 1, len(ar.SelectedTargets))
 				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
 				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-namespace")
@@ -475,7 +475,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, 1, len(ar.SelectedTargets))
 				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
 				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-namespace")
@@ -500,7 +500,7 @@ func TestHandleAction(t *testing.T) {
 					}},
 				)
 				require.Equal(t, ar.WhenExpression, "true")
-				require.Equal(t, ar.MatchedWhenExpression, true)
+				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
