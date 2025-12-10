@@ -16,7 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/indexer"
 )
 
-func TestHandleRefreshAction(t *testing.T) {
+func TestHandleAction(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
 	env := make(map[string]any)
