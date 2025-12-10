@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -14,6 +15,46 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 )
+
+const (
+	RefreshResourceTypeClusterConfig RefreshResourceType = "clusterconfig"
+	RefreshResourceTypeProjectConfig RefreshResourceType = "projectconfig"
+	RefreshResourceTypeStage         RefreshResourceType = "stage"
+	RefreshResourceTypeWarehouse     RefreshResourceType = "warehouse"
+)
+
+var ObjectRefreshResourceType map[RefreshResourceType]client.Object = map[RefreshResourceType]client.Object{
+	RefreshResourceTypeClusterConfig: new(kargoapi.ClusterConfig),
+	RefreshResourceTypeProjectConfig: new(kargoapi.ProjectConfig),
+	RefreshResourceTypeStage:         new(kargoapi.Stage),
+	RefreshResourceTypeWarehouse:     new(kargoapi.Warehouse),
+}
+
+type RefreshResourceType string
+
+func (t RefreshResourceType) String() string {
+	// normalize for type-casts
+	s := strings.ToLower(string(t))
+	return strings.TrimSpace(s)
+}
+
+func (t RefreshResourceType) RequiresName() bool {
+	switch t {
+	case RefreshResourceTypeStage, RefreshResourceTypeWarehouse:
+		return true
+	default:
+		return false
+	}
+}
+
+func (t RefreshResourceType) RequiresProject() bool {
+	switch t {
+	case RefreshResourceTypeProjectConfig, RefreshResourceTypeStage, RefreshResourceTypeWarehouse:
+		return true
+	default:
+		return false
+	}
+}
 
 func (s *server) RefreshResource(
 	ctx context.Context,
@@ -65,46 +106,45 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	if err != nil {
 		return nil, err
 	}
-	switch rt := r.GetResourceType(); rt {
-	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG:
-		return &kargoapi.ClusterConfig{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG:
-		return &kargoapi.ProjectConfig{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_WAREHOUSE:
-		return &kargoapi.Warehouse{ObjectMeta: *om}, nil
-	case svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_STAGE:
-		return &kargoapi.Stage{ObjectMeta: *om}, nil
-	default:
+	rt := RefreshResourceType(r.GetResourceType())
+	object, ok := ObjectRefreshResourceType[rt]
+	if !ok {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			fmt.Errorf("unsupported refresh kind: %s", rt),
 		)
 	}
+	object.SetNamespace(om.GetNamespace())
+	object.SetName(om.GetName())
+	return object, nil
 }
 
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	if r.ResourceType == svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG {
+	rt := RefreshResourceType(r.GetResourceType())
+	if !rt.RequiresName() && !rt.RequiresProject() {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
 
-	if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
-		return nil, err
+	if rt.RequiresProject() {
+		if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
+			return nil, err
+		}
+		if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
+			return nil, err
+		}
+		o.SetNamespace(r.GetProject())
 	}
-	if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
-		return nil, err
-	}
-	o.SetNamespace(r.GetProject())
 
-	if r.ResourceType != svcv1alpha1.RefreshResourceType_REFRESH_RESOURCE_TYPE_PROJECT_CONFIG {
+	if rt.RequiresName() {
 		if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
 			return nil, err
 		}
 		o.SetName(r.GetName())
-	} else {
-		o.SetName(r.GetProject())
+		return &o, nil
 	}
+	o.SetName(r.GetProject())
 	return &o, nil
 }
 
