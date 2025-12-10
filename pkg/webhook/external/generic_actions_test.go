@@ -48,7 +48,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.WhenExpression, "false")
 				require.Equal(t, ar.MatchedWhenExpression, false)
 				require.Equal(t, ar.Result, resultNotApplicable)
-				require.Equal(t, ar.Summary, summaryWhenExpressionNotMatched)
+				require.Equal(t, ar.Summary, summaryRequestNotMatched)
 				require.Equal(t, 0, len(ar.SelectedTargets))
 			},
 		},
@@ -72,7 +72,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.WhenExpression, "invalid expression")
 				require.Equal(t, ar.MatchedWhenExpression, false)
 				require.Equal(t, ar.Result, resultError)
-				require.Equal(t, ar.Summary, summaryWhenExpressionError)
+				require.Equal(t, ar.Summary, summaryRequestMatchingError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
 			},
 		},
@@ -110,7 +110,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.WhenExpression, "true")
 				require.Equal(t, ar.MatchedWhenExpression, true)
 				require.Equal(t, ar.Result, resultError)
-				require.Equal(t, ar.Summary, summeryErrorSelectingResources)
+				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
 			},
 		},
@@ -145,7 +145,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.WhenExpression, "true")
 				require.Equal(t, ar.MatchedWhenExpression, true)
 				require.Equal(t, ar.Result, resultError)
-				require.Equal(t, ar.Summary, summeryErrorSelectingResources)
+				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
 			},
 		},
@@ -502,7 +502,7 @@ func TestHandleRefreshAction(t *testing.T) {
 				require.Equal(t, ar.WhenExpression, "true")
 				require.Equal(t, ar.MatchedWhenExpression, true)
 				require.Equal(t, ar.Result, resultError)
-				require.Equal(t, ar.Summary, summeryErrorSelectingResources)
+				require.Equal(t, ar.Summary, summaryResourceSelectionError)
 				require.Equal(t, 0, len(ar.SelectedTargets))
 			},
 		},

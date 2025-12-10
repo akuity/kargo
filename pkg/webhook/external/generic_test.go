@@ -74,24 +74,27 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `{
-					"results":[
-						{
-							"actionType":"Refresh",
-							"whenExpression":"{x!kj\"}",
-							"matchedWhenExpression":false,
-							"targetSelectionCriteria":[
-								{
-									"kind":"Warehouse",
-									"name":"doesntmatter",
-									"labelSelector":{},
-									"indexSelector":{}
-								}
-							],
-							"result":"Error",
-							"summary":"Error evaluating when expression"
-						}
-					]}
+				t.Logf("response body: %s", w.Body.String())
+				expected := `
+					{
+						"results":[
+							{
+								"action":"Refresh",
+								"whenExpression":"{x!kj\"}",
+								"targetSelectionCriteria":[
+									{
+										"kind":"Warehouse",
+										"name":"doesntmatter",
+										"labelSelector":{},
+										"indexSelector":{}
+									}
+								],
+								"matchedWhenExpression":false,
+								"result":"Error",
+								"summary":"Error evaluating whenExpression"
+							}
+						]
+					}
 				`
 				require.JSONEq(t, expected, w.Body.String())
 			},
@@ -123,25 +126,27 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `{
-					"results":[
+				t.Logf("response body: %s", w.Body.String())
+				expected := `
+					{
+					"results": [
 						{
-							"actionType":"Refresh",
-							"whenExpression":"foo()",
-							"matchedWhenExpression":false,
-							"targetSelectionCriteria":[
+							"action": "Refresh",
+							"whenExpression": "foo()",
+							"targetSelectionCriteria": [
 								{
-									"kind":"Warehouse",
-									"name":"doesntmatter",
-									"labelSelector":{},
-									"indexSelector":{}
+								"kind": "Warehouse",
+								"name": "doesntmatter",
+								"labelSelector": {},
+								"indexSelector": {}
 								}
 							],
-							"result":"Error",
-							"summary":"Error evaluating when expression"
+							"matchedWhenExpression": false,
+							"result": "Error",
+							"summary": "Error evaluating whenExpression"
 						}
-					]}
-				`
+					]
+				}`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
@@ -173,10 +178,11 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusOK, w.Code)
+				t.Logf("response body: %s", w.Body.String())
 				expected := `{
 					"results":[
 						{
-							"actionType":"Refresh",
+							"action":"Refresh",
 							"whenExpression":"request.header('X-Event-Type') == 'push'",
 							"matchedWhenExpression":false,
 							"targetSelectionCriteria":[
@@ -223,25 +229,27 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `{
-					"results":[
+				t.Logf("response body: %s", w.Body.String())
+				expected := `
+				{
+					"results": [
 						{
-							"actionType":"Refresh",
-							"whenExpression":"request.header('X-Event-Type')",
-							"matchedWhenExpression":false,
-							"targetSelectionCriteria":[
+							"action": "Refresh",
+							"whenExpression": "request.header('X-Event-Type')",
+							"targetSelectionCriteria": [
 								{
-									"kind":"Warehouse",
-									"name":"doesntmatter",
-									"labelSelector":{},
-									"indexSelector":{}
+								"kind": "Warehouse",
+								"name": "doesntmatter",
+								"labelSelector": {},
+								"indexSelector": {}
 								}
 							],
-							"result":"Error",
-							"summary":"Error evaluating when expression"
+							"matchedWhenExpression": false,
+							"result": "Error",
+							"summary": "Error evaluating whenExpression"
 						}
-					]}
-				`
+					]
+				}`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
@@ -282,25 +290,27 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `{
-					"results":[
+				t.Logf("response body: %s", w.Body.String())
+				expected := `
+				{
+					"results": [
 						{
-							"actionType":"Refresh",
-							"whenExpression":"true",
-							"matchedWhenExpression":true,
-							"targetSelectionCriteria":[
+							"action": "Refresh",
+							"whenExpression": "true",
+							"targetSelectionCriteria": [
 								{
-									"kind":"Warehouse",
-									"name":"doesntmatter",
-									"labelSelector":{},
-									"indexSelector":{}
+								"kind": "Warehouse",
+								"name": "doesntmatter",
+								"labelSelector": {},
+								"indexSelector": {}
 								}
 							],
-							"result":"Error",
-							"summary":"Error selecting target resources"
+							"matchedWhenExpression": true,
+							"result": "Error",
+							"summary": "Error evaluating targetSelectionCriteria"
 						}
-					]}
-				`
+					]
+				}`
 				require.JSONEq(t, expected, w.Body.String())
 			},
 		},
@@ -447,52 +457,59 @@ func TestGenericHandler(t *testing.T) {
 			},
 			assertions: func(t *testing.T, w *httptest.ResponseRecorder) {
 				require.Equal(t, http.StatusInternalServerError, w.Code)
-				expected := `{
-					"results":[
+				t.Logf("response body: %s", w.Body.String())
+				expected := `
+				{
+					"results": [
 						{
-							"actionType":"Refresh",
-							"whenExpression":"request.header('X-Event-Type') == 'push'",
-							"matchedWhenExpression":true,
-							"targetSelectionCriteria":[
+							"action": "Refresh",
+							"whenExpression": "request.header('X-Event-Type') == 'push'",
+							"parameters": {"foo": "bar"},
+							"targetSelectionCriteria": [
 								{
-									"kind":"Warehouse",
-									"labelSelector":{
-										"matchLabels":{"foo":"bar"},
-										"matchExpressions":[
+									"kind": "Warehouse",
+									"labelSelector": {
+										"matchLabels": {"foo": "bar"},
+										"matchExpressions": [
+										{
+											"key": "tier",
+											"operator": "In",
+											"values": [
+												"backend",
+												"frontend"
+											]
+										}
+									]
+								},
+								"indexSelector": {
+									"matchIndicies": [
 											{
-												"key":"tier",
-												"operator":"In",
-												"values":["backend","frontend"]
-											}
-										]
-									},
-									"indexSelector":{
-										"matchIndicies":[
-											{
-												"key":"subscribedURLs",
-												"operator":"Equals",
-												"value":"${{ normalizeGit(request.body.repository.url) }}"
+												"key": "subscribedURLs",
+												"operator": "Equals",
+												"value": "${{ normalizeGit(request.body.repository.url) }}"
 											}
 										]
 									}
 								}
 							],
-							"selectedTargets":[
+							"matchedWhenExpression": true,
+							"selectedTargets": [
 								{
-									"namespace":"test-project",
-									"name":"api-warehouse",
-									"success":true
+									"namespace": "test-project",
+									"name": "api-warehouse",
+									"success": true
 								},
 								{
-									"namespace":"test-project",
-									"name":"failure-warehouse",
-									"success":false
+									"namespace": "test-project",
+									"name": "failure-warehouse",
+									"success": false
 								}
 							],
-							"result":"PartialSuccess",
-							"summary":"Refreshed 1 of 2 selected resources"
-						}
-					]}
+							"result": "PartialSuccess",
+							"summary": "Refreshed 1 of 2 selected resources"
+							}
+						]
+					}
 				`
 				require.JSONEq(t, expected, w.Body.String())
 			},
@@ -574,15 +591,14 @@ func TestGenericHandler(t *testing.T) {
 					{
 						"results": [
 							{
-								"actionType": "Refresh",
+								"action": "Refresh",
 								"whenExpression": "request.header('X-Event-Type') == 'push'",
-								"matchedWhenExpression": true,
 								"targetSelectionCriteria": [
 									{
 										"kind": "Warehouse",
 										"labelSelector": {
-											"matchLabels": {"foo": "bar"},
-											"matchExpressions": [
+										"matchLabels": {"foo": "bar"},
+										"matchExpressions": [
 											{
 												"key": "tier",
 												"operator": "In",
@@ -594,7 +610,7 @@ func TestGenericHandler(t *testing.T) {
 										]
 									},
 									"indexSelector": {
-										"matchIndicies": [
+											"matchIndicies": [
 												{
 													"key": "subscribedURLs",
 													"operator": "Equals",
@@ -604,6 +620,7 @@ func TestGenericHandler(t *testing.T) {
 										}
 									}
 								],
+								"matchedWhenExpression": true,
 								"selectedTargets": [
 									{
 										"namespace": "test-project",

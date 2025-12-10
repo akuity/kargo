@@ -20,9 +20,9 @@ const (
 )
 
 const (
-	summaryRequestNotMatched     = "Request did not match whenExpression"
-	summaryRequestMatchingError  = "Error evaluating whenExpression"
-	summaryResourceSelectionError  = "Error evaluating targetSelectionCriteria"
+	summaryRequestNotMatched      = "Request did not match whenExpression"
+	summaryRequestMatchingError   = "Error evaluating whenExpression"
+	summaryResourceSelectionError = "Error evaluating targetSelectionCriteria"
 )
 
 type actionResult struct {
@@ -41,9 +41,7 @@ type selectedTarget struct {
 
 func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
 	return actionResult{
-		ActionType:              action.ActionType,
-		WhenExpression:          action.WhenExpression,
-		TargetSelectionCriteria: action.TargetSelectionCriteria,
+		GenericWebhookAction: action,
 	}
 }
 
@@ -73,21 +71,21 @@ func (g *genericWebhookReceiver) handleAction(
 		aLogger.Error(err, "failed to evaluate criteria; skipping action")
 		ar.MatchedWhenExpression = false
 		ar.Result = resultError
-		ar.Summary = summaryWhenExpressionError
+		ar.Summary = summaryRequestMatchingError
 		return ar
 	}
 	ar.MatchedWhenExpression = met
 	if !met {
 		aLogger.Debug("condition not satisfied; skipping action")
 		ar.Result = resultNotApplicable
-		ar.Summary = summaryWhenExpressionNotMatched
+		ar.Summary = summaryRequestNotMatched
 		return ar
 	}
 	objects, errs := g.listUniqueObjects(ctx, action, env)
 	if len(errs) > 0 {
 		aLogger.Debug("list errors detected", "errors", errs)
 		ar.Result = resultError
-		ar.Summary = summeryErrorSelectingResources
+		ar.Summary = summaryResourceSelectionError
 		return ar
 	}
 	switch action.ActionType {
