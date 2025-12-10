@@ -56,7 +56,7 @@ func (g *genericWebhookReceiver) listTargetObjects(
 	switch targetSelectionCriteria.Kind {
 	case kargoapi.GenericWebhookTargetKindWarehouse:
 		warehouses := new(kargoapi.WarehouseList)
-		if err := g.client.List(ctx, warehouses, listOpts...); err != nil {
+		if err = g.client.List(ctx, warehouses, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
 		}
 		objects = itemsToObjects(warehouses.Items)

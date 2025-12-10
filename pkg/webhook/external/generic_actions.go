@@ -96,6 +96,9 @@ func (g *genericWebhookReceiver) handleAction(
 }
 
 func whenExpressionMet(expression string, env map[string]any) (bool, error) {
+	if expression == "" {
+		return true, nil
+	}
 	program, err := expr.Compile(expression)
 	if err != nil {
 		return false, err

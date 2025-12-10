@@ -29,6 +29,30 @@ func TestHandleAction(t *testing.T) {
 		assertions func(*testing.T, actionResult)
 	}{
 		{
+			name:   "whenExpression empty",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			action: kargoapi.GenericWebhookAction{
+				WhenExpression: "",
+				ActionType:     kargoapi.GenericWebhookActionTypeRefresh,
+				TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{{
+					Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+				}},
+			},
+			assertions: func(t *testing.T, ar actionResult) {
+				require.Equal(t, ar.ActionType, kargoapi.GenericWebhookActionTypeRefresh)
+				require.Equal(t, ar.TargetSelectionCriteria,
+					[]kargoapi.GenericWebhookTargetSelectionCriteria{{
+						Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+					}},
+				)
+				require.Equal(t, ar.WhenExpression, "")
+				require.True(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
+				require.Equal(t, ar.Result, resultSuccess)
+				require.Equal(t, ar.Summary, "Refreshed 0 of 0 selected resources")
+			},
+		},
+		{
 			name:   "whenExpression not satisfied",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			action: kargoapi.GenericWebhookAction{
