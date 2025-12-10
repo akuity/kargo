@@ -43,7 +43,7 @@ func refreshObjects(
 			failureCount++
 			selectedTargets[i].Success = false
 		} else {
-			objLogger.Info("successfully refreshed object")
+			objLogger.Debug("successfully refreshed object")
 			successCount++
 			selectedTargets[i].Success = true
 		}
