@@ -379,7 +379,7 @@ func TestHandleAction(t *testing.T) {
 		{
 			name: "successful refresh using static name only",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				// does not have the specified name
+				// incorrect name
 				&kargoapi.Warehouse{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "test-namespace",
