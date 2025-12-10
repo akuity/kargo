@@ -302,14 +302,14 @@ func TestHandleAction(t *testing.T) {
 				},
 			).WithInterceptorFuncs(interceptor.Funcs{
 				Patch: func(
-					_ context.Context,
-					_ client.WithWatch,
+					ctx context.Context,
+					client client.WithWatch,
 					obj client.Object,
-					_ client.Patch,
-					_ ...client.PatchOption,
+					patch client.Patch,
+					opts ...client.PatchOption,
 				) error {
 					if obj.GetName() == "backend-warehouse" {
-						return nil
+						return client.Patch(ctx, obj, patch, opts...)
 					}
 					return errors.New("something went wrong")
 				},
