@@ -23,7 +23,7 @@ const (
 	RefreshResourceTypeWarehouse     RefreshResourceType = "warehouse"
 )
 
-var ObjectRefreshResourceType map[RefreshResourceType]client.Object = map[RefreshResourceType]client.Object{
+var ObjectRefreshResourceType = map[RefreshResourceType]client.Object{
 	RefreshResourceTypeClusterConfig: new(kargoapi.ClusterConfig),
 	RefreshResourceTypeProjectConfig: new(kargoapi.ProjectConfig),
 	RefreshResourceTypeStage:         new(kargoapi.Stage),
