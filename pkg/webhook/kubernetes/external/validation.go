@@ -116,7 +116,7 @@ func validateGenericTargets(
 ) []*field.Error {
 	var errs field.ErrorList
 	for i, target := range targets {
-		if validateSelectionTargetCriteria(&target) {
+		if selectionTargetCriteriaIsEmpty(&target) {
 			targetPath := fmt.Sprintf(
 				"spec.webhookReceivers[%d].generic.actions[%d].targetSelectionCriteria[%d]",
 				cfgIndex, actionIndex, i,
@@ -131,8 +131,8 @@ func validateGenericTargets(
 	return errs
 }
 
-func validateSelectionTargetCriteria(t *kargoapi.GenericWebhookTargetSelectionCriteria) bool {
-	// these are all optional but at least one must be set
+// name, labelSelector, and indexSelector are mutually exclusive; at least one must be set.
+func selectionTargetCriteriaIsEmpty(t *kargoapi.GenericWebhookTargetSelectionCriteria) bool {
 	return t.Name == "" &&
 		len(t.LabelSelector.MatchLabels) == 0 &&
 		len(t.LabelSelector.MatchExpressions) == 0 &&
