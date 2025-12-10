@@ -52,29 +52,34 @@ func (g *genericWebhookReceiver) listTargetObjects(
 	if err != nil {
 		return nil, fmt.Errorf("failed to build list options: %w", err)
 	}
+	var objects []client.Object
 	switch targetSelectionCriteria.Kind {
 	case kargoapi.GenericWebhookTargetKindWarehouse:
 		warehouses := new(kargoapi.WarehouseList)
 		if err := g.client.List(ctx, warehouses, listOpts...); err != nil {
 			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
 		}
+		objects = itemsToObjects(warehouses.Items)
 		if targetSelectionCriteria.Name == "" {
 			return itemsToObjects(warehouses.Items), nil
 		}
-		name, err := evalAsString(targetSelectionCriteria.Name, actionEnv)
-		if err != nil {
-			return nil, fmt.Errorf("failed to evaluate target name as string: %w", err)
-		}
-		var filtered []client.Object
-		for _, wh := range warehouses.Items {
-			if wh.Name == name {
-				filtered = append(filtered, &wh)
-			}
-		}
-		return filtered, nil
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", targetSelectionCriteria.Kind)
 	}
+	if targetSelectionCriteria.Name == "" {
+		return objects, nil
+	}
+	name, err := evalAsString(targetSelectionCriteria.Name, actionEnv)
+	if err != nil {
+		return nil, fmt.Errorf("failed to evaluate target name as string: %w", err)
+	}
+	var filtered []client.Object
+	for _, o := range objects {
+		if o.GetName() == name {
+			filtered = append(filtered, o)
+		}
+	}
+	return filtered, nil
 }
 
 // buildListOptionsForTarget builds a list of client.ListOption based on the
