@@ -1364,7 +1364,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
 | name | [string](#string) |  name is the name of the object to refresh. leave blank if refreshing a project or cluster config. |
-| resource_type | [RefreshResourceType](#akuity-io-kargo-service-v1alpha1-RefreshResourceType) |  resource_type is the kind of resource to refresh |
+| resource_type | [string](#string) |  resource_type is the kind of resource to refresh. should be one of: ProjectConfig, ClusterConfig, Warehouse, or Stage. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RefreshResourceResponse"></a>
 
@@ -1709,20 +1709,6 @@ RawFormat specifies the format for raw resource representation.
 | RAW_FORMAT_UNSPECIFIED | 0 | RAW_FORMAT_UNSPECIFIED indicates no specific format is requested. |
 | RAW_FORMAT_JSON | 1 | RAW_FORMAT_JSON requests JSON format for raw resources. |
 | RAW_FORMAT_YAML | 2 | RAW_FORMAT_YAML requests YAML format for raw resources. |
-
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshResourceType"></a>
-
-### RefreshResourceType
-RefreshResourceType is an enumeration of resource types that can be refreshed.
-
-| Name | Number | Description |
-| ---- | ------ | ----------- |
-| REFRESH_RESOURCE_TYPE_UNSPECIFIED | 0 | REFRESH_RESOURCE_TYPE_UNSPECIFIED indicates an unspecified resource type. |
-| REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG | 1 | REFRESH_RESOURCE_TYPE_CLUSTER_CONFIG indicates a ClusterConfig resource type. |
-| REFRESH_RESOURCE_TYPE_PROJECT_CONFIG | 2 | REFRESH_RESOURCE_TYPE_PROJECT_CONFIG indicates a ProjectConfig resource type. |
-| REFRESH_RESOURCE_TYPE_WAREHOUSE | 3 | REFRESH_RESOURCE_TYPE_WAREHOUSE indicates a Warehouse resource type. |
-| REFRESH_RESOURCE_TYPE_STAGE | 4 | REFRESH_RESOURCE_TYPE_STAGE indicates a Stage resource type. |
 
  <!-- end enums -->
 
