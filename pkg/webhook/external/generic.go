@@ -98,8 +98,10 @@ func (g *genericWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc
 
 func newBaseEnv(requestBody []byte, r *http.Request) (map[string]any, error) {
 	var body any
-	if err := json.Unmarshal(requestBody, &body); err != nil {
-		return nil, fmt.Errorf("invalid request body: %w", err)
+	if len(requestBody) > 0 {
+		if err := json.Unmarshal(requestBody, &body); err != nil {
+			return nil, fmt.Errorf("invalid request body: %w", err)
+		}
 	}
 	return map[string]any{
 		"normalizeGit":   urls.NormalizeGit,
