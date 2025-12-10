@@ -49,7 +49,7 @@ func TestHandleAction(t *testing.T) {
 				require.False(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultNotApplicable)
 				require.Equal(t, ar.Summary, summaryRequestNotMatched)
-				require.Equal(t, 0, len(ar.SelectedTargets))
+				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -73,7 +73,7 @@ func TestHandleAction(t *testing.T) {
 				require.False(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryRequestMatchingError)
-				require.Equal(t, 0, len(ar.SelectedTargets))
+				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -111,7 +111,7 @@ func TestHandleAction(t *testing.T) {
 				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Equal(t, 0, len(ar.SelectedTargets))
+				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -146,7 +146,7 @@ func TestHandleAction(t *testing.T) {
 				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Equal(t, 0, len(ar.SelectedTargets))
+				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -503,7 +503,7 @@ func TestHandleAction(t *testing.T) {
 				require.True(t, ar.MatchedWhenExpression)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Equal(t, 0, len(ar.SelectedTargets))
+				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 	}
