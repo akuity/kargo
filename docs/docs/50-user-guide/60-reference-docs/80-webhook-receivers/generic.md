@@ -19,6 +19,8 @@ process, other uses are possible and practical.
 
 ## Configuring the Receiver
 
+### Base Configuration
+
 A Generic webhook receiver must reference a Kubernetes `Secret` resource with
 a `secret` key in its data map.
 
@@ -65,12 +67,44 @@ spec:
           name: wh-secret
 ```
 
-### whenExpression
+### Defining Actions
+
+Actions are defined by:
+
+1. [`actionType`](#actiontype)
+1. [`whenExpression`](#whenexpression)
+1. [`targetSelectionCriteria`](#defining-targetselectioncriteria)
+
+#### actionType
+
+The `actionType` field refers to the action that should be performed.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+      actions:
+        - actionType: Refresh
+```
+
+:::note
+The only currently supported `actionType` is `Refresh`.
+:::
+
+#### whenExpression
 
 Use `whenExpression` to ensure that an action is only executed when specific 
 criteria are met, providing fine-grained control over webhook behavior.
 
-#### Example
+##### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -90,28 +124,32 @@ spec:
           whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
-### Defining TargetSelectionCriteria
+:::note
+This is can be left empty if the action should run unconditionally.
+:::
 
-`TargetSelectionCriteria` is used to designate resources that an action needs
-to be performed on. There are three ways to define `TargetSelectionCriteria`:
+#### Defining targetSelectionCriteria
+
+`targetSelectionCriteria` is used to select resources that an action needs
+to be performed on. There are three ways to define `targetSelectionCriteria`:
 
 1. [By Name](#by-name)
 2. [By Labels](#by-labels)
 3. [By Values in an Index](#by-values-in-an-index)
 
 All methods support both static values and 
-[expression-derived values](#expression-functions).
+[expression-derived values](#expression-reference).
 
 :::note
 Using more than one of the above results in a criteria set that is the logical
 **AND** of all defined criteria.
 :::
 
-#### By Name
+##### By Name
 
-The simplest way to designate a resource is by specifying its `name`.
+The simplest way to select a resource is by specifying its `name`.
 
-##### Example
+###### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -137,12 +175,12 @@ spec:
               name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
-#### By Labels
+##### By Labels
 
 Use `labelSelector` to designate resources based on labels. It supports both 
 `matchLabels` and `matchExpressions`.
 
-##### Example
+###### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -172,11 +210,11 @@ spec:
                     values: ["ui", "api"]
 ```
 
-#### By Values in an Index
+##### By Values in an Index
 
 Use `indexSelector` to retrieve resources by a cached index.
 
-##### Example
+###### Example
 
 ```yaml
 actions:
@@ -196,21 +234,28 @@ actions:
 resources that contain subscriptions for a provided repository URL.
 :::
 
-### Expression functions
+### Expression Reference
 
 The Generic webhook receiver extends
 [built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with utilities that can be used to help derive `TargetSelectionCriteria` 
-information from incoming requests.
+with utilities that can be used to help derive `targetSelectionCriteria` 
+information from incoming requests. The following reference contains the
+variables and functions available for yeilding expression derived values.
 
-The following expression functions are available:
+- [request.body](#requestbody)
+- [request.header](#requestheaderheaderkey)
+- [request.headers](#requestheadersheaderkey)
+- [request.params](#requestparamsqueryparamkey)
+- [normalizeGit](#normalizegiturl)
+- [normalizeImage](#normalizeimageurl)
+- [normalizeChart](#normalizecharturl)
 
 #### request.body
 
-Derived from incoming requests whose fields can be accessed using
-standard bracket or dot-notation. For example, `data.address.city` would access 
-the `city` property nested within the `address` object, and `data.users[0]` 
-would access the first item in a `users` array. 
+Derived from incoming requests whose fields can be accessed using bracket or 
+dot-notation. For example, `data.address.city` would access the `city` property 
+nested within the `address` object, and `data.users[0]` would access the first 
+item in a `users` array.
 
 #### request.header(headerKey)
 
@@ -244,7 +289,15 @@ will be returned.
 
 #### normalizeGit(url)
 
-Function that normalizes a git `url`.
+Normalizes Git URLs of the following forms:
+
+  - http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
+  - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+  - [user@]host.xz[:path/to/repo[.git][/]]
+
+This is useful for the purposes of comparison and also in cases where a
+canonical representation of a Git URL is needed. Any URL that cannot be
+normalized will be returned as-is.
 
 It has one argument:
 - `url` (Required): The URL of a git repository.
@@ -253,7 +306,14 @@ The returned value is a `string`.
 
 #### normalizeImage(url)
 
-Function that normalizes an image `url`.
+Normalizes image repository URLs. Notably, hostnames docker.io
+and index.docker.io, if present, are dropped. The optional /library prefix
+for official images from Docker Hub, if included, is also dropped. Valid,
+non-Docker Hub repository URLs will be returned unchanged.
+
+This is useful for the purposes of comparison and also in cases where a
+canonical representation of a repository URL is needed. Any URL that cannot
+be normalized will be returned as-is.
 
 It has one argument:
 - `url` (Required): The URL of an image repository.
@@ -264,7 +324,22 @@ The returned value is a `string`.
 
 Function that normalizes a chart `url`.
 
+`normalizeChart` normalizes a chart repository URL for purposes of comparison.
+Crucially, this function removes the oci:// prefix from the URL if there is
+one.
+
 It has one argument:
 - `url` (Required): The URL of a chart repository.
 
 The returned value is a `string`.
+
+## Retrieving the Receiver's URL
+
+Kargo will generate a hard-to-guess URL from the receiver's configuration. This
+URL can be obtained using a command such as the following:
+
+```shell
+kubectl get projectconfigs kargo-demo \
+  -n kargo-demo \
+  -o=jsonpath='{.status.webhookReceivers}'
+```
