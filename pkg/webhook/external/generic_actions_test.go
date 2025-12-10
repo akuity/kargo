@@ -47,9 +47,9 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "false")
 				require.False(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
 				require.Equal(t, ar.Result, resultNotApplicable)
 				require.Equal(t, ar.Summary, summaryRequestNotMatched)
-				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -71,9 +71,9 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "invalid expression")
 				require.False(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryRequestMatchingError)
-				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -109,9 +109,9 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -144,9 +144,9 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 		{
@@ -260,10 +260,18 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
+				require.Equal(
+					t,
+					[]selectedTarget{
+						{
+							Namespace: "test-project",
+							Name:      "warehouse-1",
+							Success:   true,
+						},
+					},
+					ar.SelectedTargets,
+				)
 				require.Equal(t, ar.Result, resultSuccess)
-				require.Equal(t, len(ar.SelectedTargets), 1)
-				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-project")
-				require.Equal(t, ar.SelectedTargets[0].Name, "warehouse-1")
 				require.Equal(t, ar.Summary, "Refreshed 1 of 1 selected resources")
 			},
 		},
@@ -348,14 +356,23 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
+				require.Equal(
+					t,
+					[]selectedTarget{
+						{
+							Namespace: "test-namespace",
+							Name:      "backend-warehouse",
+							Success:   true,
+						},
+						{
+							Namespace: "test-namespace",
+							Name:      "frontend-warehouse",
+							Success:   false,
+						},
+					},
+					ar.SelectedTargets,
+				)
 				require.Equal(t, ar.Result, resultPartialSuccess)
-				require.Equal(t, 2, len(ar.SelectedTargets))
-				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
-				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-namespace")
-				require.Equal(t, ar.SelectedTargets[0].Success, true)
-				require.Equal(t, ar.SelectedTargets[1].Name, "frontend-warehouse")
-				require.Equal(t, ar.SelectedTargets[1].Namespace, "test-namespace")
-				require.Equal(t, ar.SelectedTargets[1].Success, false)
 				require.Equal(t, ar.Summary, "Refreshed 1 of 2 selected resources")
 			},
 		},
@@ -399,10 +416,19 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
-				require.Equal(t, 1, len(ar.SelectedTargets))
-				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
-				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-namespace")
-				require.Equal(t, ar.SelectedTargets[0].Success, true)
+				require.Equal(
+					t,
+					[]selectedTarget{
+						{
+							Namespace: "test-namespace",
+							Name:      "backend-warehouse",
+							Success:   true,
+						},
+					},
+					ar.SelectedTargets,
+				)
+				require.Equal(t, ar.Result, resultSuccess)
+				require.Equal(t, ar.Summary, "Refreshed 1 of 1 selected resources")
 			},
 		},
 		{
@@ -476,10 +502,19 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
-				require.Equal(t, 1, len(ar.SelectedTargets))
-				require.Equal(t, ar.SelectedTargets[0].Name, "backend-warehouse")
-				require.Equal(t, ar.SelectedTargets[0].Namespace, "test-namespace")
-				require.Equal(t, ar.SelectedTargets[0].Success, true)
+				require.Equal(
+					t,
+					[]selectedTarget{
+						{
+							Namespace: "test-namespace",
+							Name:      "backend-warehouse",
+							Success:   true,
+						},
+					},
+					ar.SelectedTargets,
+				)
+				require.Equal(t, ar.Result, resultSuccess)
+				require.Equal(t, ar.Summary, "Refreshed 1 of 1 selected resources")
 			},
 		},
 		{
@@ -501,9 +536,9 @@ func TestHandleAction(t *testing.T) {
 				)
 				require.Equal(t, ar.WhenExpression, "true")
 				require.True(t, ar.MatchedWhenExpression)
+				require.Empty(t, ar.SelectedTargets)
 				require.Equal(t, ar.Result, resultError)
 				require.Equal(t, ar.Summary, summaryResourceSelectionError)
-				require.Empty(t, ar.SelectedTargets)
 			},
 		},
 	}
