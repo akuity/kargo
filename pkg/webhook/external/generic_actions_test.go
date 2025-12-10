@@ -53,7 +53,7 @@ func TestHandleAction(t *testing.T) {
 			},
 		},
 		{
-			name:   "error evaluating expression",
+			name:   "error evaluating when expression",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			action: kargoapi.GenericWebhookAction{
 				WhenExpression: "invalid expression",
