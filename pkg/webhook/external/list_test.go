@@ -16,7 +16,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func Test_buildListOption(t *testing.T) {
+func Test_buildListOptionsForTarget(t *testing.T) {
 	tests := []struct {
 		name                    string
 		project                 string
