@@ -104,8 +104,8 @@ func validateGenericConfig(
 	cfg *kargoapi.GenericWebhookReceiverConfig,
 ) field.ErrorList {
 	var errs field.ErrorList
-	for aIndex, action := range cfg.Actions {
-		errs = append(errs, validateGenericTargets(cfgIndex, aIndex, action.TargetSelectionCriteria)...)
+	for i, action := range cfg.Actions {
+		errs = append(errs, validateGenericTargets(cfgIndex, i, action.TargetSelectionCriteria)...)
 	}
 	return errs
 }
@@ -115,11 +115,11 @@ func validateGenericTargets(
 	targets []kargoapi.GenericWebhookTargetSelectionCriteria,
 ) []*field.Error {
 	var errs field.ErrorList
-	for tIndex, target := range targets {
+	for i, target := range targets {
 		if targetMisconfigured(&target) {
 			targetPath := fmt.Sprintf(
 				"spec.webhookReceivers[%d].generic.actions[%d].targetSelectionCriteria[%d]",
-				cfgIndex, actionIndex, tIndex,
+				cfgIndex, actionIndex, i,
 			)
 			errs = append(errs, field.Invalid(
 				field.NewPath(targetPath),
