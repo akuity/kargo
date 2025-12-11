@@ -633,7 +633,7 @@ spec:
       repoURL: oci://example.com/my-other-chart
   freightCreationCriteria:
     expression: |
-      chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Tag
+      chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Version
 ```
 
 :::info
