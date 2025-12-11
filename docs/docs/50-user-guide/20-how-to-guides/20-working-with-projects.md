@@ -70,7 +70,7 @@ is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
 those `Stage`s.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 This section focuses only on _enabling or disabling_ auto-promotion for specific
 `Stage`s through Project-level configuration. For `Stage`-level controls over

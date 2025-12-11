@@ -19,7 +19,7 @@ of useful information in these pages.
 
 :::
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're a developer using Kargo to implement flexible and powerful GitOps
 promotion pipelines, you'll find the most relevant topics to that role

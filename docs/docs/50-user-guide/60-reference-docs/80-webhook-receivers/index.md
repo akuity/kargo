@@ -4,7 +4,7 @@ Below is an index of documentation for specific webhook receivers that can be
 used to trigger applicable `Warehouse` discovery processes as new artifacts are
 published to your repositories.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 For more generalized coverage of Kargo's webhook receivers, developers may
 refer to the

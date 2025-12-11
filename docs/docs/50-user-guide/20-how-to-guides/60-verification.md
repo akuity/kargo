@@ -198,7 +198,7 @@ status:
   startedAt: 2025-01-28T20:47:50Z
 ```
 
-:::info `AnalysisTemplate` vs `AnalysisRun`
+:::info[`AnalysisTemplate` vs `AnalysisRun`]
 
 An `AnalysisTemplate` _defines_ a verification process, while an `AnalysisRun`
 tracks the _progress and result_ of an execution of that process.

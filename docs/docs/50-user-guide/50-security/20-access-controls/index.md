@@ -9,7 +9,7 @@ _users_ -- ones who might be considered to be "project admins." Such users are
 the intended audience for this document.
 
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're an operator looking to understand more about access controls,
 especially the few outside the purview of project admins, you may find some
