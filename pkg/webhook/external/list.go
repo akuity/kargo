@@ -23,7 +23,7 @@ func (g *genericWebhookReceiver) listUniqueObjects(
 	for i, tsc := range action.TargetSelectionCriteria {
 		objects, err := g.listTargetObjects(ctx, tsc, actionEnv)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list target objects for action targetSelectionCriteria[%d]: %w", i, err)
+			return nil, fmt.Errorf("failed to list objects for targetSelectionCriteria at index %d: %w", i, err)
 		}
 		resources = append(resources, objects...)
 	}
