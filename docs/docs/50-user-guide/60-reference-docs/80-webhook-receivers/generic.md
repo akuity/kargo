@@ -77,7 +77,7 @@ Actions are defined by:
 
 #### actionType
 
-The `actionType` field refers to the action that should be performed.
+The `actionType` field specifies the action that should be performed.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
