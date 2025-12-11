@@ -48,7 +48,7 @@ func TestNewBaseSelector(t *testing.T) {
 						os:   "linux",
 						arch: "amd64",
 					},
-					s.platform,
+					s.platformConstraint,
 				)
 				require.NotNil(t, s.repoClient)
 				require.True(t, s.repoClient.useCachedTags)
@@ -66,7 +66,7 @@ func TestNewBaseSelector(t *testing.T) {
 func Test_baseSelector_imagesToAPIImages(t *testing.T) {
 	now := time.Now()
 	apiImages := (&baseSelector{}).imagesToAPIImages(
-		[]Image{
+		[]image{
 			{
 				Tag:         "foo",
 				Digest:      "foo-digest",

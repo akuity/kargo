@@ -141,20 +141,20 @@ func (t *tagBasedSelector) filterTags(tags []string) []string {
 func (t *tagBasedSelector) getImagesByTags(
 	ctx context.Context,
 	tags []string,
-) ([]Image, error) {
+) ([]image, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	limit := t.discoveryLimit
 	if limit == 0 || limit > len(tags) {
 		limit = len(tags)
 	}
-	images := make([]Image, 0, limit)
+	images := make([]image, 0, limit)
 	for _, tag := range tags {
 		if len(images) >= limit {
 			break
 		}
 
-		image, err := t.repoClient.getImageByTag(ctx, tag, t.platform)
+		image, err := t.repoClient.getImageByTag(ctx, tag, t.platformConstraint)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}

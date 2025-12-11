@@ -46,7 +46,7 @@ var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
 // repositoryClient is a client for retrieving information from a specific image
 // container repository.
 type repositoryClient struct {
-	imageCache    cache.Cache[Image]
+	imageCache    cache.Cache[image]
 	useCachedTags bool
 	registry      *registry
 	repoURL       string
@@ -59,32 +59,25 @@ type repositoryClient struct {
 		ctx context.Context,
 		tag string,
 		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
-	getImageByDigestFn func(
-		context.Context,
-		string,
-		*platformConstraint,
-	) (*Image, error)
+	getImageByDigestFn func(ctx context.Context, digest string) (*image, error)
 
 	getImageFromRemoteDescFn func(
 		context.Context,
 		*remote.Descriptor,
-		*platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageIndexFn func(
 		ctx context.Context,
 		digest string,
 		idx v1.ImageIndex,
-		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	getImageFromV1ImageFn func(
 		digest string,
 		img v1.Image,
-		platform *platformConstraint,
-	) (*Image, error)
+	) (*image, error)
 
 	remoteListFn func(name.Repository, ...remote.Option) ([]string, error)
 
@@ -156,71 +149,80 @@ func (r *repositoryClient) getTags(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-// getImageByTag retrieves an Image by tag. This function uses no cache since
-// tags can be mutable.
+// getImageByTag retrieves an Image by tag.
 func (r *repositoryClient) getImageByTag(
 	ctx context.Context,
 	tag string,
-	platform *platformConstraint,
-) (*Image, error) {
-	logger := logging.LoggerFromContext(ctx)
-	logger.Trace(
-		"retrieving image",
-		"tag", tag,
-	)
+	pc *platformConstraint,
+) (*image, error) {
+	logger := logging.LoggerFromContext(ctx).WithValues("tag", tag)
+	logger.Trace("retrieving image")
 
 	cacheKey := fmt.Sprintf("%s:%s", r.repoURL, tag)
 
+	var img *image
+
 	if r.useCachedTags {
-		if img, exists, err := r.imageCache.Get(ctx, cacheKey); err != nil {
-			logger.Error(err, "error retrieving image from cache", "tag", tag)
+		if foundImg, exists, err := r.imageCache.Get(ctx, cacheKey); err != nil {
+			logger.Error(err, "error retrieving image from cache")
+			// Not returning early here because we still want to try to get it from
+			// the registry
 		} else if exists {
-			return &img, nil
+			logger.Trace("image found in cache")
+			img = &foundImg
+			// Not returning early here because we still may need to filter by
+			// platform
 		} else {
-			logger.Trace("image found in cache", "tag", tag)
+			logger.Trace("image not found in cache")
 		}
 	}
 
-	repoRef := r.repoRef.Context().Tag(tag)
-	opts := append(r.remoteOptions, remote.WithContext(ctx))
-	desc, err := r.remoteGetFn(repoRef, opts...)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error getting image descriptor for tag %q from repo URL %s: %w",
-			tag, r.repoURL, err,
-		)
-	}
-
-	img, err := r.getImageFromRemoteDescFn(ctx, desc, platform)
-	if err != nil {
-		return nil, fmt.Errorf(
-			"error getting image from descriptor for tag %q from repo URL %s: %w",
-			tag, r.repoURL, err,
-		)
-	}
-
-	if img != nil {
-		img.Tag = tag
-		if r.useCachedTags {
-			// Cache the image
-			if err = r.imageCache.Set(ctx, cacheKey, *img); err != nil {
-				logger.Error(err, "error caching image", "tag", tag)
-			} else {
-				logger.Trace("cached image", "tag", tag)
+	if img == nil {
+		repoRef := r.repoRef.Context().Tag(tag)
+		opts := append(r.remoteOptions, remote.WithContext(ctx))
+		desc, err := r.remoteGetFn(repoRef, opts...)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"error getting image descriptor for tag %q from repo URL %s: %w",
+				tag, r.repoURL, err,
+			)
+		}
+		if img, err = r.getImageFromRemoteDescFn(ctx, desc); err != nil {
+			return nil, fmt.Errorf(
+				"error getting image from descriptor for tag %q from repo URL %s: %w",
+				tag, r.repoURL, err,
+			)
+		}
+		if img != nil {
+			img.Tag = tag
+			if r.useCachedTags {
+				// Cache the image
+				if err = r.imageCache.Set(ctx, cacheKey, *img); err != nil {
+					logger.Error(err, "error caching image", "tag", tag)
+				} else {
+					logger.Trace("cached image", "tag", tag)
+				}
 			}
 		}
 	}
 
-	return img, nil
+	if pc == nil {
+		return img, nil
+	}
+	for _, p := range img.Platforms {
+		if pc.matches(p.OS, p.Arch, p.Variant) {
+			return img, nil
+		}
+	}
+
+	return nil, nil
 }
 
-// getImageByDigest retrieves an Image for a given digest. This function uses a
-// cache since information retrieved by digest will never change.
+// getImageByDigest retrieves an Image for a given digest.
 func (r *repositoryClient) getImageByDigest(
 	ctx context.Context,
 	digest string,
-	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	logger := logging.LoggerFromContext(ctx)
 	logger.Trace(
 		"retrieving image",
@@ -245,7 +247,7 @@ func (r *repositoryClient) getImageByDigest(
 		)
 	}
 
-	img, err := r.getImageFromRemoteDescFn(ctx, desc, platform)
+	img, err := r.getImageFromRemoteDescFn(ctx, desc)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error getting image from descriptor for digest %s from repo URL %s: %w",
@@ -271,8 +273,7 @@ func (r *repositoryClient) getImageByDigest(
 func (r *repositoryClient) getImageFromRemoteDesc(
 	ctx context.Context,
 	desc *remote.Descriptor,
-	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	switch desc.MediaType {
 	case types.OCIImageIndex, types.DockerManifestList:
 		idx, err := desc.ImageIndex()
@@ -283,7 +284,7 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 			)
 		}
 
-		img, err := r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx, platform)
+		img, err := r.getImageFromV1ImageIndexFn(ctx, desc.Digest.String(), idx)
 		if err != nil {
 			return nil, err
 		}
@@ -310,7 +311,7 @@ func (r *repositoryClient) getImageFromRemoteDesc(
 			)
 		}
 
-		finalImg, err := r.getImageFromV1ImageFn(desc.Digest.String(), img, platform)
+		finalImg, err := r.getImageFromV1ImageFn(desc.Digest.String(), img)
 		if err != nil {
 			return nil, err
 		}
@@ -339,8 +340,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 	ctx context.Context,
 	digest string,
 	idx v1.ImageIndex,
-	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	idxManifest, err := idx.IndexManifest()
 	if err != nil {
 		return nil, fmt.Errorf(
@@ -349,10 +349,13 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		)
 	}
 
-	// Extract annotations from the index manifest.
-	annotations := idxManifest.Annotations
-
-	refs := make([]v1.Descriptor, 0, len(idxManifest.Manifests))
+	// NB: Indices do not have their own creation date, but like all other objects
+	// in a registry, are immutable, therefore an index cannot have been created
+	// any earlier than the newest of the images it references. We'll find the
+	// latest creation time among all referenced images and use that as the
+	// creation time of the index.
+	var createdAt *time.Time
+	platforms := make([]platform, 0, len(idxManifest.Manifests))
 	for _, ref := range idxManifest.Manifests {
 		if ref.Platform == nil ||
 			ref.Platform.OS == unknown || ref.Platform.OS == "" ||
@@ -361,68 +364,7 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 			// be an attestation or something else. Skip it.
 			continue
 		}
-		refs = append(refs, ref)
-	}
-	if len(refs) == 0 {
-		return nil, errors.New("empty V2 manifest list or OCI index is not supported")
-	}
-	// If there's a platform constraint, find the ref that matches it and
-	// that's the information we're really after.
-	if platform != nil {
-		var matchedRefs []v1.Descriptor
-		for _, ref := range refs {
-			if !platform.matches(ref.Platform.OS, ref.Platform.Architecture, ref.Platform.Variant) {
-				continue
-			}
-			matchedRefs = append(matchedRefs, ref)
-		}
-
-		if len(matchedRefs) == 0 {
-			// No refs matched the platform
-			return nil, nil
-		}
-
-		if len(matchedRefs) > 1 {
-			// This really shouldn't happen.
-			return nil, fmt.Errorf(
-				"expected only one reference to match platform %q, but found %d",
-				platform.String(),
-				len(matchedRefs),
-			)
-		}
-
-		ref := matchedRefs[0]
-
-		img, err := r.getImageByDigestFn(ctx, ref.Digest.String(), platform)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting image with digest %s: %w",
-				ref.Digest.String(),
-				err,
-			)
-		}
-		if img == nil {
-			// This really shouldn't happen.
-			return nil, fmt.Errorf(
-				"expected manifest for digest %s to match platform %q, but it did not",
-				ref.Digest.String(),
-				platform.String(),
-			)
-		}
-		img.Digest = digest
-		img.Annotations = annotations
-
-		return img, nil
-	}
-
-	// If we get to here there was no platform constraint.
-
-	// Manifest lists and indices don't have a createdAt timestamp, and we had no
-	// platform constraint, so we'll follow ALL the references to find the most
-	// recently pushed manifest's createdAt timestamp.
-	var createdAt *time.Time
-	for _, ref := range refs {
-		img, err := r.getImageByDigestFn(ctx, ref.Digest.String(), platform)
+		img, err := r.getImageByDigestFn(ctx, ref.Digest.String())
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting image with digest %s: %w", ref.Digest, err,
@@ -435,37 +377,37 @@ func (r *repositoryClient) getImageFromV1ImageIndex(
 		if createdAt == nil || img.CreatedAt.After(*createdAt) {
 			createdAt = img.CreatedAt
 		}
-
-		// TODO(hidde): Without a platform constraint, we can not collect
-		// annotations in a meaningful way. We should consider how to handle
-		// this in the future.
+		platforms = append(platforms, platform{
+			OS:          ref.Platform.OS,
+			Arch:        ref.Platform.Architecture,
+			Variant:     ref.Platform.Variant,
+			CreatedAt:   img.CreatedAt,
+			Annotations: ref.Annotations,
+		})
+	}
+	if len(platforms) == 0 {
+		return nil, errors.New("empty V2 manifest list or OCI index is not supported")
 	}
 
-	return &Image{
+	return &image{
 		Digest:      digest,
 		CreatedAt:   createdAt,
-		Annotations: annotations,
+		Annotations: idxManifest.Annotations,
+		Platforms:   platforms,
 	}, nil
 }
 
-// getImageFromV1Image gets an Image from a given v1.Image. It is valid for this
-// function to return nil the image does not match the specified platform, if
-// any.
+// getImageFromV1Image gets an Image from a given v1.Image.
 func (r *repositoryClient) getImageFromV1Image(
 	digest string,
 	img v1.Image,
-	platform *platformConstraint,
-) (*Image, error) {
+) (*image, error) {
 	cfg, err := img.ConfigFile()
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error getting image config for image with digest %s: %w",
 			digest, err,
 		)
-	}
-	if platform != nil && !platform.matches(cfg.OS, cfg.Architecture, cfg.Variant) {
-		// This image doesn't match the platform constraint.
-		return nil, nil
 	}
 
 	// Extract annotations from the manifest
@@ -477,7 +419,7 @@ func (r *repositoryClient) getImageFromV1Image(
 		)
 	}
 
-	return &Image{
+	return &image{
 		Digest: digest,
 		CreatedAt: getCreationTime(
 			[]map[string]string{

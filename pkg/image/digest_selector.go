@@ -68,7 +68,7 @@ func (d *digestSelector) Select(
 
 	logger.Trace("selecting image")
 
-	img, err := d.repoClient.getImageByTag(ctx, d.mutableTag, d.platform)
+	img, err := d.repoClient.getImageByTag(ctx, d.mutableTag, d.platformConstraint)
 	if err != nil {
 		var te *transport.Error
 		if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
@@ -85,5 +85,5 @@ func (d *digestSelector) Select(
 	}
 
 	logger.Trace("found image with tag")
-	return d.imagesToAPIImages([]Image{*img}, 0), nil
+	return d.imagesToAPIImages([]image{*img}, 0), nil
 }

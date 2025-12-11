@@ -6,11 +6,11 @@ import (
 	"github.com/akuity/kargo/pkg/types"
 )
 
-var imageCache cache.Cache[Image]
+var imageCache cache.Cache[image]
 
 func init() {
 	var err error
-	imageCache, err = cache.NewInMemoryCache[Image](
+	imageCache, err = cache.NewInMemoryCache[image](
 		types.MustParseInt(os.GetEnv("MAX_IMAGE_CACHE_ENTRIES", "100000")),
 	)
 	if err != nil {
@@ -18,6 +18,6 @@ func init() {
 	}
 }
 
-func SetCache(c cache.Cache[Image]) {
+func SetCache(c cache.Cache[image]) {
 	imageCache = c
 }

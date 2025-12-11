@@ -13,8 +13,8 @@ import (
 // functionality for all Selector implementations. It is not intended to be used
 // directly.
 type baseSelector struct {
-	platform   *platformConstraint
-	repoClient *repositoryClient
+	platformConstraint *platformConstraint
+	repoClient         *repositoryClient
 }
 
 func newBaseSelector(
@@ -25,7 +25,7 @@ func newBaseSelector(
 	var err error
 	s := &baseSelector{}
 	if sub.Platform != "" {
-		if s.platform, err = parsePlatformConstraint(sub.Platform); err != nil {
+		if s.platformConstraint, err = parsePlatformConstraint(sub.Platform); err != nil {
 			return nil, fmt.Errorf(
 				"error parsing platform constraint %q: %w",
 				sub.Platform, err,
@@ -54,7 +54,7 @@ func (b *baseSelector) getLoggerContext() []any {
 	return []any{
 		"registry", b.repoClient.registry.name,
 		"image", b.repoClient.repoURL,
-		"platformConstrained", b.platform != nil,
+		"platformConstrained", b.platformConstraint != nil,
 	}
 }
 
@@ -64,7 +64,7 @@ func (b *baseSelector) getLoggerContext() []any {
 // selector's discovery limit, the slice returned will be truncated so as not to
 // exceed that limit.
 func (b *baseSelector) imagesToAPIImages(
-	images []Image,
+	images []image,
 	limit int,
 ) []kargoapi.DiscoveredImageReference {
 	if limit <= 0 || limit > len(images) {
@@ -75,7 +75,7 @@ func (b *baseSelector) imagesToAPIImages(
 		apiImages[i] = kargoapi.DiscoveredImageReference{
 			Tag:         img.Tag,
 			Digest:      img.Digest,
-			Annotations: img.Annotations,
+			Annotations: img.getAnnotations(b.platformConstraint),
 		}
 		if img.CreatedAt != nil {
 			apiImages[i].CreatedAt = &metav1.Time{Time: *img.CreatedAt}
