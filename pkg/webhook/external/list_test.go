@@ -398,7 +398,7 @@ func Test_listTargetObjects(t *testing.T) {
 			assertions: func(t *testing.T, objects []client.Object, err error) {
 				require.Nil(t, objects)
 				require.Error(t, err)
-				require.ErrorContains(t, err, "failed to create label selector: failed to evaluate expression")
+				require.ErrorContains(t, err, "failed to evaluate expression")
 			},
 		},
 		{

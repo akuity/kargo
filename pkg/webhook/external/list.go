@@ -91,12 +91,12 @@ func (g *genericWebhookReceiver) buildListOptionsForTarget(
 	}
 	indexSelectorListOpts, err := newListOptionsForIndexSelector(t.IndexSelector, env)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create field selector: %w", err)
+		return nil, fmt.Errorf("failed to create index selector list options: %w", err)
 	}
 	listOpts = append(listOpts, indexSelectorListOpts...)
 	labelSelectorListOpts, err := newListOptionsForLabelSelector(t.LabelSelector, env)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create label selector: %w", err)
+		return nil, fmt.Errorf("failed to create label selector list options: %w", err)
 	}
 	listOpts = append(listOpts, labelSelectorListOpts...)
 	return listOpts, nil

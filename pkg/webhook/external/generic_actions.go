@@ -39,12 +39,6 @@ type selectedTarget struct {
 	Success   bool   `json:"success"`
 }
 
-func newActionResult(action kargoapi.GenericWebhookAction) actionResult {
-	return actionResult{
-		GenericWebhookAction: action,
-	}
-}
-
 func newActionEnv(params map[string]string, baseEnv map[string]any) map[string]any {
 	actionEnv := maps.Clone(baseEnv)
 	m := make(map[string]any, len(params))
@@ -60,15 +54,15 @@ func (g *genericWebhookReceiver) handleAction(
 	action kargoapi.GenericWebhookAction,
 	env map[string]any,
 ) actionResult {
-	ar := newActionResult(action)
+	ar := actionResult{GenericWebhookAction: action}
 	env = newActionEnv(action.Parameters, env)
 	aLogger := logging.LoggerFromContext(ctx).WithValues(
 		"action", action.ActionType,
-		"expression", action.WhenExpression,
+		"whenExpression", action.WhenExpression,
 	)
 	met, err := whenExpressionMet(action.WhenExpression, env)
 	if err != nil {
-		aLogger.Error(err, "failed to evaluate criteria; skipping action")
+		aLogger.Error(err, "failed to evaluate whenExpression; skipping action")
 		ar.MatchedWhenExpression = false
 		ar.Result = resultError
 		ar.Summary = summaryRequestMatchingError
@@ -76,7 +70,7 @@ func (g *genericWebhookReceiver) handleAction(
 	}
 	ar.MatchedWhenExpression = met
 	if !met {
-		aLogger.Debug("condition not satisfied; skipping action")
+		aLogger.Debug("whenExpression not satisfied; skipping action")
 		ar.Result = resultNotApplicable
 		ar.Summary = summaryRequestNotMatched
 		return ar
