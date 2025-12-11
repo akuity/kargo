@@ -2,7 +2,6 @@ package promotion
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -77,18 +76,7 @@ func (e *LocalEngine) Promote(
 		defer os.RemoveAll(promoCtx.WorkDir)
 	}
 
-	result, err := e.orchestator.ExecuteSteps(ctx, promoCtx, steps)
-	if err != nil {
-		return Result{
-			Status: kargoapi.PromotionPhaseErrored,
-		}, fmt.Errorf("step execution failed: %w", err)
-	}
-
-	if result.Status == kargoapi.PromotionPhaseErrored {
-		return result, errors.New(result.Message)
-	}
-
-	return result, nil
+	return e.orchestator.ExecuteSteps(ctx, promoCtx, steps)
 }
 
 // setupWorkDir creates a temporary working directory if one is not provided.
