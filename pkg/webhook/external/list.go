@@ -56,9 +56,6 @@ func (g *genericWebhookReceiver) listTargetObjects(
 			return nil, fmt.Errorf("error listing %s targets: %w", targetSelectionCriteria.Kind, err)
 		}
 		objects = itemsToObjects(warehouses.Items)
-		if targetSelectionCriteria.Name == "" {
-			return itemsToObjects(warehouses.Items), nil
-		}
 	default:
 		return nil, fmt.Errorf("unsupported target kind: %q", targetSelectionCriteria.Kind)
 	}
