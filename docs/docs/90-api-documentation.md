@@ -2,7 +2,7 @@
 <a name="top"></a>
 
 <a name="api_service_v1alpha1_service-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## service/v1alpha1
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
@@ -1762,7 +1762,7 @@ RawFormat specifies the format for raw resource representation.
  <!-- end enums -->
 
 <a name="api_rbac_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## rbac/v1alpha1
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
@@ -1819,7 +1819,7 @@ RawFormat specifies the format for raw resource representation.
 <!-- end messages --> <!-- end enums -->
 
 <a name="api_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## v1alpha1
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>
