@@ -129,7 +129,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
 					AllowTagsRegexes:       []string{"^nothing-matches-this$"},
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -154,7 +154,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 						`^trixie$`,
 						`^wheezy$`,
 					},
-					UseCachedTags: true,
+					CacheByTag: true,
 				},
 				getDockerHubCreds(),
 			)
@@ -184,7 +184,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					},
 					Platform:       "linux/made-up-arch",
 					DiscoveryLimit: 1,
-					UseCachedTags:  true,
+					CacheByTag:     true,
 				},
 				getDockerHubCreds(),
 			)
@@ -210,7 +210,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					},
 					Platform:       platform,
 					DiscoveryLimit: 1,
-					UseCachedTags:  true,
+					CacheByTag:     true,
 				},
 				getDockerHubCreds(),
 			)
@@ -238,7 +238,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTags:              "nothing-matches-this",
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -257,7 +257,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
 					AllowTags:              `^bookworm-202310\d\d$`,
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -282,7 +282,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					AllowTags:              `^bookworm-202310\d\d$`,
 					Platform:               "linux/made-up-arch",
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -302,7 +302,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					AllowTags:              `^bookworm-202310\d\d$`,
 					Platform:               platform,
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -330,7 +330,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^99.0",
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -349,7 +349,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 					Constraint:             "^12.0",
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -378,7 +378,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					Constraint:             "^12.0",
 					Platform:               "linux/made-up-arch",
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)
@@ -398,7 +398,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 					Constraint:             "^12.0",
 					Platform:               platform,
 					DiscoveryLimit:         1,
-					UseCachedTags:          true,
+					CacheByTag:             true,
 				},
 				getDockerHubCreds(),
 			)

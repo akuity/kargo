@@ -51,7 +51,7 @@ func TestNewBaseSelector(t *testing.T) {
 					s.platformConstraint,
 				)
 				require.NotNil(t, s.repoClient)
-				require.True(t, s.repoClient.useCachedTags)
+				require.True(t, s.repoClient.cacheByTag)
 			},
 		},
 	}

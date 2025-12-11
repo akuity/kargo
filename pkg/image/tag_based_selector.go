@@ -40,7 +40,7 @@ func newTagBasedSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
 ) (*tagBasedSelector, error) {
-	base, err := newBaseSelector(sub, creds, sub.UseCachedTags)
+	base, err := newBaseSelector(sub, creds, sub.CacheByTag)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}

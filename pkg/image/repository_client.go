@@ -47,7 +47,7 @@ var metaSem = semaphore.NewWeighted(maxMetadataConcurrency)
 // container repository.
 type repositoryClient struct {
 	imageCache    cache.Cache[image]
-	useCachedTags bool
+	cacheByTag    bool
 	registry      *registry
 	repoURL       string
 	repoRef       name.Reference
@@ -91,7 +91,7 @@ func newRepositoryClient(
 	repoURL string,
 	insecureSkipTLSVerify bool,
 	creds *Credentials,
-	useCachedTags bool,
+	cacheByTag bool,
 ) (*repositoryClient, error) {
 	repoRef, err := name.ParseReference(repoURL)
 	if err != nil {
@@ -115,11 +115,11 @@ func newRepositoryClient(
 	}
 
 	r := &repositoryClient{
-		imageCache:    imageCache,
-		useCachedTags: useCachedTags,
-		registry:      reg,
-		repoURL:       repoURL,
-		repoRef:       repoRef,
+		imageCache: imageCache,
+		cacheByTag: cacheByTag,
+		registry:   reg,
+		repoURL:    repoURL,
+		repoRef:    repoRef,
 		remoteOptions: []remote.Option{
 			remote.WithTransport(&rateLimitedRoundTripper{
 				limiter:              reg.rateLimiter,
@@ -162,7 +162,7 @@ func (r *repositoryClient) getImageByTag(
 
 	var img *image
 
-	if r.useCachedTags {
+	if r.cacheByTag {
 		if foundImg, exists, err := r.imageCache.Get(ctx, cacheKey); err != nil {
 			logger.Error(err, "error retrieving image from cache")
 			// Not returning early here because we still want to try to get it from
@@ -195,7 +195,7 @@ func (r *repositoryClient) getImageByTag(
 		}
 		if img != nil {
 			img.Tag = tag
-			if r.useCachedTags {
+			if r.cacheByTag {
 				// Cache the image
 				if err = r.imageCache.Set(ctx, cacheKey, *img); err != nil {
 					logger.Error(err, "error caching image", "tag", tag)
@@ -257,7 +257,7 @@ func (r *repositoryClient) getImageByDigest(
 
 	// If we're using cached tags, the caller is going to be caching the image
 	// by tag, so we'll skip caching it by digest to save space.
-	if img != nil && !r.useCachedTags {
+	if img != nil && !r.cacheByTag {
 		// Cache the image
 		if err = r.imageCache.Set(ctx, digest, *img); err != nil {
 			logger.Error(err, "error caching image", "digest", digest)

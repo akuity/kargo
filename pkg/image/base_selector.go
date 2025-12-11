@@ -20,7 +20,7 @@ type baseSelector struct {
 func newBaseSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
-	useCachedTags bool,
+	cacheByTag bool,
 ) (*baseSelector, error) {
 	var err error
 	s := &baseSelector{}
@@ -37,7 +37,7 @@ func newBaseSelector(
 		repoURL,
 		sub.InsecureSkipTLSVerify,
 		creds,
-		useCachedTags,
+		cacheByTag,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error creating repository client for image %q: %w",

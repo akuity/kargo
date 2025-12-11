@@ -31,8 +31,8 @@ data:
   {{- if .Values.controller.gitClient.signingKeySecret.name }}
   GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
   {{- end }}
-  ALLOW_IMAGE_TAG_CACHING: {{ quote .Values.controller.imageCache.allowUseCachedTags }}
-  REQUIRE_IMAGE_TAG_CACHING: {{ quote .Values.controller.imageCache.requireUseCachedTags }}
+  ALLOW_CACHE_BY_TAG: {{ quote .Values.controller.imageCache.allowCacheByTag }}
+  REQUIRE_CACHE_BY_TAG: {{ quote .Values.controller.imageCache.requireCacheByTag }}
   MAX_IMAGE_CACHE_ENTRIES: {{ .Values.controller.imageCache.maxEntries | quote }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}

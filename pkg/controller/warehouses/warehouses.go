@@ -33,8 +33,8 @@ type ReconcilerConfig struct {
 	ShardName                 string        `envconfig:"SHARD_NAME"`
 	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
 	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
-	AllowUseCachedTags        bool          `envconfig:"ALLOW_IMAGE_TAG_CACHING" default:"true"`
-	RequireUseCachedTags      bool          `envconfig:"REQUIRE_IMAGE_TAG_CACHING" default:"false"`
+	AllowCacheByTag           bool          `envconfig:"ALLOW_CACHE_BY_TAG" default:"true"`
+	RequireCacheByTag         bool          `envconfig:"REQUIRE_CACHE_BY_TAG" default:"false"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {

@@ -22,7 +22,7 @@ func TestNewRepositoryClient(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	require.NotNil(t, client.imageCache)
-	require.True(t, client.useCachedTags)
+	require.True(t, client.cacheByTag)
 	require.NotNil(t, client.registry)
 	require.NotEmpty(t, client.repoURL)
 	require.NotNil(t, client.repoRef)
@@ -59,8 +59,8 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 		{
 			name: "cache hit with no platform constraint",
 			client: &repositoryClient{
-				repoURL:       testRepoURL,
-				useCachedTags: true,
+				repoURL:    testRepoURL,
+				cacheByTag: true,
 			},
 			setupCache: func(t *testing.T, c cache.Cache[image]) {
 				err = c.Set(
@@ -78,8 +78,8 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 		{
 			name: "cache hit with unsatisfied platform constraint",
 			client: &repositoryClient{
-				repoURL:       testRepoURL,
-				useCachedTags: true,
+				repoURL:    testRepoURL,
+				cacheByTag: true,
 			},
 			setupCache: func(t *testing.T, c cache.Cache[image]) {
 				err = c.Set(
@@ -98,8 +98,8 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 		{
 			name: "cache hit with satisfied platform constraint",
 			client: &repositoryClient{
-				repoURL:       testRepoURL,
-				useCachedTags: true,
+				repoURL:    testRepoURL,
+				cacheByTag: true,
 			},
 			setupCache: func(t *testing.T, c cache.Cache[image]) {
 				err = c.Set(
