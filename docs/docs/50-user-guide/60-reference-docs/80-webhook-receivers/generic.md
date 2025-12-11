@@ -128,7 +128,7 @@ spec:
 This is can be left empty if the action should run unconditionally.
 :::
 
-#### Defining targetSelectionCriteria
+#### targetSelectionCriteria
 
 `targetSelectionCriteria` is used to select resources that an action needs
 to be performed on. There are three ways to define `targetSelectionCriteria`:
@@ -322,9 +322,7 @@ The returned value is a `string`.
 
 #### normalizeChart(url)
 
-Function that normalizes a chart `url`.
-
-`normalizeChart` normalizes a chart repository URL for purposes of comparison.
+Normalizes a chart repository URL for purposes of comparison.
 Crucially, this function removes the oci:// prefix from the URL if there is
 one.
 
