@@ -104,7 +104,8 @@ The only currently supported `actionType` is `Refresh`.
 Use `whenExpression` to ensure that an action is only executed when specific 
 criteria are met, providing fine-grained control over webhook behavior.
 
-##### Example
+The following example depicts an action that is executed only when the request 
+contains an `X-Event-Type` header with the value `push`:
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -120,7 +121,6 @@ spec:
           name: wh-secret
       actions:
         - actionType: Refresh
-          # Only perform this action if this expression is satisfied
           whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
@@ -134,22 +134,22 @@ This is can be left empty if the action should run unconditionally.
 to be performed on. There are three ways to define `targetSelectionCriteria`:
 
 1. [By Name](#by-name)
-2. [By Labels](#by-labels)
-3. [By Values in an Index](#by-values-in-an-index)
+1. [By Labels](#by-labels)
+1. [By Values in an Index](#by-values-in-an-index)
 
-All methods support both static values and 
-[expression-derived values](#expression-reference).
+All methods support both static and [dynamic](#expression-reference) values.
 
 :::note
-Using more than one of the above results in a criteria set that is the logical
-**AND** of all defined criteria.
+Using more than one of the above selects resources at the logical intersection
+of the criteria. (i.e. Criteria are "ANDed.")
 :::
 
 ##### By Name
 
 The simplest way to select a resource is by specifying its `name`.
 
-###### Example
+The following example depicts `targetSelectionCriteria` that selects
+`Warehouse` resources by a static `name`.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -167,18 +167,38 @@ spec:
         - actionType: Refresh
           whenExpression: "request.header('X-Event-Type') == 'push'"
           targetSelectionCriteria:
-            # Static name designation
             - kind: Warehouse
               name: my-warehouse
-            # Expression-derived name designation
+```
+
+The following example depicts `targetSelectionCriteria` that selects
+`Warehouse` resources by a `name` that is dynamically sourced from a git URL
+in the request body.
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+      actions:
+        - actionType: Refresh
+          whenExpression: "request.header('X-Event-Type') == 'push'"
+          targetSelectionCriteria:
             - kind: Warehouse
               name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
 ##### By Labels
 
-Use `labelSelector` to designate resources based on labels. It supports both 
-`matchLabels` and `matchExpressions`.
+The following example depicts `targetSelectionCriteria` that selects
+`Warehouse` resources with an `environment` label whose value is `prod`:
 
 ###### Example
 
@@ -201,10 +221,32 @@ spec:
             - kind: Warehouse
               labelSelector:
                 matchLabels:
-                  # Warehouses with the 'environment' label set to 'prod'
                   environment: prod
+```
+
+The following example depicts `targetSelectionCriteria` that selects
+`Warehouse` resources with a `service` label whose value is either `ui` or 
+`api`:
+
+```yaml
+apiVersion: kargo.akuity.io/v1alpha1
+kind: ProjectConfig
+metadata:
+  name: kargo-demo
+  namespace: kargo-demo
+spec:
+  webhookReceivers:
+    - name: my-receiver
+      generic:
+        secretRef:
+          name: wh-secret
+      actions:
+        - actionType: Refresh
+          whenExpression: "request.header('X-Event-Type') == 'push'"
+          targetSelectionCriteria:
+            - kind: Warehouse
+              labelSelector:
                 matchExpressions:
-                  # Warehouses with the 'service' label set to 'ui' OR 'api'
                   - key: service
                     operator: In
                     values: ["ui", "api"]
@@ -214,7 +256,9 @@ spec:
 
 Use `indexSelector` to retrieve resources by a cached index.
 
-###### Example
+The following example depicts `targetSelectionCriteria` that dynamically selects
+`Warehouse` resources that contain subscriptions to the normalized git 
+URL from the request body.
 
 ```yaml
 actions:
@@ -238,9 +282,9 @@ resources that contain subscriptions for a provided repository URL.
 
 The Generic webhook receiver extends
 [built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with utilities that can be used to help derive `targetSelectionCriteria` 
+with utilities that can be used to help resolve `targetSelectionCriteria` 
 information from incoming requests. The following reference contains the
-variables and functions available for yeilding expression derived values.
+variables and functions available for yeilding dynamic values.
 
 - [request.body](#requestbody)
 - [request.header](#requestheaderheaderkey)
@@ -252,7 +296,8 @@ variables and functions available for yeilding expression derived values.
 
 #### request.body
 
-Derived from incoming requests whose fields can be accessed using bracket or 
+`request.body` is structured data parsed from the original request body which is 
+assumed to contain valid JSON. Fields can be accessed using bracket or 
 dot-notation. For example, `data.address.city` would access the `city` property 
 nested within the `address` object, and `data.users[0]` would access the first 
 item in a `users` array.
