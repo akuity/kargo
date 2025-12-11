@@ -18,16 +18,12 @@ func (g *genericWebhookReceiver) listUniqueObjects(
 	ctx context.Context,
 	action kargoapi.GenericWebhookAction,
 	actionEnv map[string]any,
-) ([]client.Object, []error) {
+) ([]client.Object, error) {
 	var resources []client.Object
-	var listErrs []error
 	for i, tsc := range action.TargetSelectionCriteria {
 		objects, err := g.listTargetObjects(ctx, tsc, actionEnv)
 		if err != nil {
-			listErrs = append(listErrs,
-				fmt.Errorf("selection criteria error at index %d: %w", i, err),
-			)
-			continue
+			return nil, fmt.Errorf("failed to list target objects for action targetSelectionCriteria[%d]: %w", i, err)
 		}
 		resources = append(resources, objects...)
 	}
@@ -40,7 +36,7 @@ func (g *genericWebhookReceiver) listUniqueObjects(
 	resources = slices.CompactFunc(resources, func(a, b client.Object) bool {
 		return a.GetNamespace() == b.GetNamespace() && a.GetName() == b.GetName()
 	})
-	return resources, listErrs
+	return resources, nil
 }
 
 func (g *genericWebhookReceiver) listTargetObjects(

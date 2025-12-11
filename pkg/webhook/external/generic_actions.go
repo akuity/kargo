@@ -81,9 +81,9 @@ func (g *genericWebhookReceiver) handleAction(
 		ar.Summary = summaryRequestNotMatched
 		return ar
 	}
-	objects, errs := g.listUniqueObjects(ctx, action, env)
-	if len(errs) > 0 {
-		aLogger.Debug("list errors detected", "errors", errs)
+	objects, err := g.listUniqueObjects(ctx, action, env)
+	if err != nil {
+		aLogger.Error(err, "failed to list unique objects")
 		ar.Result = resultError
 		ar.Summary = summaryResourceSelectionError
 		return ar
