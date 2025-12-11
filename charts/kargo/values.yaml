@@ -421,6 +421,8 @@ api:
     configMapName: ""
     ## @param api.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
     secretName: ""
+    ## @param api.cabundle.securityContext Security context for the parse-cabundle init container. Allows overriding the default securityContext which runs as root.
+    securityContext: {}
 
   probes:
     ## @param api.probes.enabled Whether liveness and readiness probes should be included in the API server deployment. It is sometimes advantageous to disable these during local development.
@@ -605,6 +607,8 @@ controller:
     configMapName: ""
     ## @param controller.cabundle.secretName Specifies the name of an optional Secret containing CA certs that is managed "out of band." Values in the Secret named here should each contain a single PEM-encoded CA cert. If defined, the value of this field takes precedence over any in configMapName.
     secretName: ""
+    ## @param controller.cabundle.securityContext Security context for the parse-cabundle init container. Allows overriding the default securityContext which runs as root.
+    securityContext: {}
 
 ## @section Garbage Collector
 garbageCollector:

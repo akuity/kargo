@@ -145,8 +145,13 @@ spec:
       - name: parse-cabundle
         image: {{ include "kargo.image" . }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        {{- with .Values.api.cabundle.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- else }}
         securityContext:
           runAsUser: 0
+        {{- end }}
         command:
         - "/bin/sh"
         - "-c"
