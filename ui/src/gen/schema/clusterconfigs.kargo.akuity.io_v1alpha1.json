@@ -109,6 +109,167 @@
                 ],
                 "type": "object"
               },
+              "generic": {
+                "description": "Generic contains the configuration for a generic webhook receiver.",
+                "properties": {
+                  "actions": {
+                    "description": "Actions is a list of actions to be performed when a webhook event is received.",
+                    "items": {
+                      "description": "GenericWebhookAction describes an action to be performed on a resource\nand the conditions under which it should be performed.",
+                      "properties": {
+                        "action": {
+                          "description": "ActionType indicates the type of action to be performed. `Refresh` is the\nonly currently supported action.",
+                          "enum": [
+                            "Refresh"
+                          ],
+                          "type": "string"
+                        },
+                        "parameters": {
+                          "additionalProperties": {
+                            "type": "string"
+                          },
+                          "description": "Parameters contains additional, action-specific parameters. Values may be\nstatic or extracted from the request using expressions.",
+                          "type": "object"
+                        },
+                        "targetSelectionCriteria": {
+                          "description": "TargetSelectionCriteria is a list of selection criteria for the resources on which the\naction should be performed.",
+                          "items": {
+                            "description": "GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some\naction is to be applied. Name, LabelSelector, and IndexSelector are all optional\nhowever, at least one must be specified. When multiple criteria are specified, the\nresults are the combined (logical AND) of the criteria.",
+                            "properties": {
+                              "indexSelector": {
+                                "description": "IndexSelector is a selector used to identify cached target resources by cache key.\nIf used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.",
+                                "properties": {
+                                  "matchIndicies": {
+                                    "description": "MatchIndices is a list of index selector requirements.",
+                                    "items": {
+                                      "description": "IndexSelectorRequirement encapsulates a requirement used to select indexes\nbased on specific criteria.",
+                                      "properties": {
+                                        "key": {
+                                          "description": "Key is the key of the index.",
+                                          "enum": [
+                                            "subscribedURLs",
+                                            "receiverPaths"
+                                          ],
+                                          "type": "string"
+                                        },
+                                        "operator": {
+                                          "description": "Operator indicates the operation that should be used to evaluate\nwhether the selection requirement is satisfied.\n\nkubebuilder:validation:Enum=Equal;NotEqual;",
+                                          "type": "string"
+                                        },
+                                        "value": {
+                                          "description": "Value can be a static string or an expression that will be evaluated.\n\nkubebuilder:validation:Required",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "required": [
+                                        "key",
+                                        "operator",
+                                        "value"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "minItems": 1,
+                                    "type": "array"
+                                  }
+                                },
+                                "type": "object"
+                              },
+                              "kind": {
+                                "description": "Kind is the kind of the target resource.",
+                                "enum": [
+                                  "Warehouse"
+                                ],
+                                "type": "string"
+                              },
+                              "labelSelector": {
+                                "description": "LabelSelector is a label selector to identify the target resources.\nIf used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.",
+                                "properties": {
+                                  "matchExpressions": {
+                                    "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
+                                    "items": {
+                                      "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
+                                      "properties": {
+                                        "key": {
+                                          "description": "key is the label key that the selector applies to.",
+                                          "type": "string"
+                                        },
+                                        "operator": {
+                                          "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
+                                          "type": "string"
+                                        },
+                                        "values": {
+                                          "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "type": "array",
+                                          "x-kubernetes-list-type": "atomic"
+                                        }
+                                      },
+                                      "required": [
+                                        "key",
+                                        "operator"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "type": "array",
+                                    "x-kubernetes-list-type": "atomic"
+                                  },
+                                  "matchLabels": {
+                                    "additionalProperties": {
+                                      "type": "string"
+                                    },
+                                    "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
+                                    "type": "object"
+                                  }
+                                },
+                                "type": "object",
+                                "x-kubernetes-map-type": "atomic"
+                              },
+                              "name": {
+                                "description": "Name is the name of the target resource. If LabelSelector and/or IndexSelectors\nare also specified, the results are the combined (logical AND) of the criteria.",
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ],
+                            "type": "object"
+                          },
+                          "minItems": 1,
+                          "type": "array"
+                        },
+                        "whenExpression": {
+                          "description": "WhenExpression defines criteria that a request must meet to run this\naction.",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "action"
+                      ],
+                      "type": "object"
+                    },
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "secretRef": {
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with the sender. It is used only by\nKargo to create a complex, hard-to-guess URL, which implicitly serves as a\nshared secret.",
+                    "properties": {
+                      "name": {
+                        "default": "",
+                        "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                        "type": "string"
+                      }
+                    },
+                    "type": "object",
+                    "x-kubernetes-map-type": "atomic"
+                  }
+                },
+                "required": [
+                  "secretRef"
+                ],
+                "type": "object"
+              },
               "gitea": {
                 "description": "Gitea contains the configuration for a webhook receiver that is compatible\nwith Gitea payloads.",
                 "properties": {
