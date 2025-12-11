@@ -824,7 +824,7 @@ or at the Project level by a Project admin.
 The remainder of this section focuses on configuring webhook receivers at the
 Project level.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're an operator looking to understand how you can configure Kargo to
 listen for inbound webhook requests to trigger the discovery processes of all

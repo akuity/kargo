@@ -8,7 +8,7 @@ description: Learn how to do a basic installation of Kargo using Helm
 Installing Kargo's __cluster-side components__ (e.g. controllers and API server)
 with __default configuration__ is quick and easy.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're looking for a more customized installation of cluster-side components,
 refer to

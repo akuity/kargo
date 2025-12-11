@@ -352,7 +352,7 @@ steps:
       environment: "${{ ctx.stage }}"
 ```
 
-:::info Content Formatting
+:::info[Content Formatting]
 
 The Jira configuration supports setting issue and comment content using `description`
 or `body` fields. These are plain text fields that do not support special formatting

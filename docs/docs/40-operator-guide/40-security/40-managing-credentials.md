@@ -12,7 +12,7 @@ access to Git repositories.
 This section focuses on an operator's role in providing Kargo Projects with
 necessary credentials.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're a user looking to learn more about managing
 credentials at the project level, refer instead to the
@@ -112,7 +112,7 @@ searched only _after_ finding no matching credentials in the project's own
 namespace.
 
 
-:::info Precedence
+:::info[Precedence]
 
 When Kargo searches for repository credentials in a "global" namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_

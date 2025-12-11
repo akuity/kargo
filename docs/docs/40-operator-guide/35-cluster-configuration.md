@@ -8,7 +8,7 @@ This document is a guide to Kargo configuration options that are available to
 operators _at runtime_. These are generally analogs to Project level
 configuration options available to developers.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 Most system level configuration options are exercised by operators at the time
 of installation or upgrade. For details, refer to

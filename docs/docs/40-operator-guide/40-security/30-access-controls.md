@@ -10,7 +10,7 @@ a few access controls that an operator might need to be concerned with and this
 documentation focuses on those.
 
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're a project admin looking to understand more about access controls,
 you may find some value in this document, but most of what you need to know

@@ -10,7 +10,7 @@ tree is dedicated to topics such as managing Kargo projects, defining promotion
 pipelines, and managing credentials and other secrets used by your pipelines --
 all from an end-user's perspective.
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're an operator responsible for the installation and maintenance of Kargo,
 you'll find the most relevant topics to that role documented in the

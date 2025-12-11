@@ -108,10 +108,10 @@ The only currently supported `actionType` is `Refresh`.
 
 #### whenExpression
 
-Use `whenExpression` to ensure that an action is only executed when specific 
+Use `whenExpression` to ensure that an action is only executed when specific
 criteria are met, providing fine-grained control over webhook behavior.
 
-The following example depicts an action that is executed only when the request 
+The following example depicts an action that is executed only when the request
 contains an `X-Event-Type` header with the value `push`:
 
 ```yaml
@@ -234,7 +234,7 @@ spec:
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
-`Warehouse` resources with a `service` label whose value is either `ui` or 
+`Warehouse` resources with a `service` label whose value is either `ui` or
 `api`:
 
 ```yaml
@@ -266,7 +266,7 @@ spec:
 Use `indexSelector` to retrieve resources by a cached index.
 
 The following example depicts `targetSelectionCriteria` that dynamically selects
-`Warehouse` resources that contain subscriptions to the normalized git 
+`Warehouse` resources that contain subscriptions to the normalized git
 URL from the request body.
 
 ```yaml
@@ -284,7 +284,7 @@ actions:
 
 :::note
 
-`subscribedURLs` is the only available index. It refers to `Warehouse` 
+`subscribedURLs` is the only available index. It refers to `Warehouse`
 resources that contain subscriptions for a provided repository URL.
 
 :::
@@ -292,8 +292,8 @@ resources that contain subscriptions for a provided repository URL.
 ### Expression Reference
 
 The Generic webhook receiver extends
-[built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with utilities that can be used to help resolve `targetSelectionCriteria` 
+[built-in expr-lang support](https://expr-lang.org/docs/language-definition)
+with utilities that can be used to help resolve `targetSelectionCriteria`
 information from incoming requests. The following reference contains the
 variables and functions available for yielding dynamic values.
 
@@ -307,10 +307,10 @@ variables and functions available for yielding dynamic values.
 
 #### request.body
 
-`request.body` is structured data parsed from the original request body which is 
-assumed to contain valid JSON. Fields can be accessed using bracket or 
-dot-notation. For example, `data.address.city` would access the `city` property 
-nested within the `address` object, and `data.users[0]` would access the first 
+`request.body` is structured data parsed from the original request body which is
+assumed to contain valid JSON. Fields can be accessed using bracket or
+dot-notation. For example, `data.address.city` would access the `city` property
+nested within the `address` object, and `data.users[0]` would access the first
 item in a `users` array.
 
 #### request.header(headerKey)
@@ -343,7 +343,7 @@ It has one argument:
 
 - `queryParamKey` (Required): URL query parameter key.
 
-If `queryParamKey` is not present in the request headers, an empty `string` 
+If `queryParamKey` is not present in the request headers, an empty `string`
 will be returned.
 
 #### normalizeGit(url)

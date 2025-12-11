@@ -9,7 +9,7 @@ requiring a user to share short-lived credentials with non-human agents, such as
 a CI process.
 
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're looking to use the built-in, system-level `ServiceAccount`s, refer to
 the

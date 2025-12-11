@@ -30,7 +30,7 @@ The referenced `Secret` should contain the following keys:
 - `baseURL`: (Optional) GitHub base URL for GitHub Enterprise Server
 - `uploadURL`: (Optional) GitHub upload URL for GitHub Enterprise Server. Only required for GitHub Enterprise Server installations
 
-:::info Required Permissions
+:::info[Required Permissions]
 
 The GitHub token must have the following permissions:
 

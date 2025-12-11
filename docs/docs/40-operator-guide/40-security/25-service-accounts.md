@@ -9,7 +9,7 @@ requiring a user to share short-lived credentials with non-human agents, such as
 a CI process.
 
 
-:::info Not what you were looking for?
+:::info[Not what you were looking for?]
 
 If you're a project admin looking to create and manage `ServiceAccount`s within
 your projects, you may find some value in this document, but most of what you
