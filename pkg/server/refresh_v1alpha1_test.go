@@ -79,13 +79,13 @@ func TestRefreshResource(t *testing.T) {
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
 				Name:         "test",
-				ResourceType: "",
+				ResourceType: "invalid",
 			},
 			assertions: func(res *connect.Response[svcv1alpha1.RefreshResourceResponse], err error) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "unsupported refresh kind", "")
+				require.ErrorContains(t, err, "unsupported resource type \"invalid\": no matching registration found")
 			},
 		},
 		"non-existing project": {

@@ -14,6 +14,7 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	"github.com/akuity/kargo/pkg/component"
 )
 
 const (
@@ -23,12 +24,63 @@ const (
 	RefreshResourceTypeWarehouse     RefreshResourceType = "warehouse"
 )
 
-var ObjectRefreshResourceType = map[RefreshResourceType]client.Object{
-	RefreshResourceTypeClusterConfig: new(kargoapi.ClusterConfig),
-	RefreshResourceTypeProjectConfig: new(kargoapi.ProjectConfig),
-	RefreshResourceTypeStage:         new(kargoapi.Stage),
-	RefreshResourceTypeWarehouse:     new(kargoapi.Warehouse),
+func init() {
+	defaultRefreshObjectRegistry.MustRegister(
+		refreshObjectRegistration{
+			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
+				return rt == RefreshResourceTypeClusterConfig, nil
+			},
+			Value: func() client.Object { return new(kargoapi.ClusterConfig) },
+		},
+	)
+	defaultRefreshObjectRegistry.MustRegister(
+		refreshObjectRegistration{
+			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
+				return rt == RefreshResourceTypeProjectConfig, nil
+			},
+			Value: func() client.Object { return new(kargoapi.ProjectConfig) },
+		},
+	)
+	defaultRefreshObjectRegistry.MustRegister(
+		refreshObjectRegistration{
+			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
+				return rt == RefreshResourceTypeStage, nil
+			},
+			Value: func() client.Object { return new(kargoapi.Stage) },
+		},
+	)
+	defaultRefreshObjectRegistry.MustRegister(
+		refreshObjectRegistration{
+			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
+				return rt == RefreshResourceTypeWarehouse, nil
+			},
+			Value: func() client.Object { return new(kargoapi.Warehouse) },
+		},
+	)
 }
+
+type (
+	refreshObjectPredicate = func(
+		context.Context,
+		RefreshResourceType,
+	) (bool, error)
+
+	refreshObjectFactory = func() client.Object
+
+	refreshObjectRegistration = component.PredicateBasedRegistration[
+		RefreshResourceType,
+		refreshObjectPredicate,
+		refreshObjectFactory,
+		struct{},
+	]
+)
+
+var defaultRefreshObjectRegistry = component.MustNewPredicateBasedRegistry[
+	RefreshResourceType,
+	refreshObjectPredicate,
+	refreshObjectFactory,
+	struct{},
+]()
 
 type RefreshResourceType string
 
@@ -107,16 +159,17 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 		return nil, err
 	}
 	rt := RefreshResourceType(r.GetResourceType())
-	object, ok := ObjectRefreshResourceType[rt]
-	if !ok {
+	registered, err := defaultRefreshObjectRegistry.Get(ctx, rt)
+	if err != nil {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("unsupported refresh kind: %s", rt),
+			fmt.Errorf("unsupported resource type %q: %w", rt, err),
 		)
 	}
-	object.SetNamespace(om.GetNamespace())
-	object.SetName(om.GetName())
-	return object, nil
+	o := registered.Value()
+	o.SetNamespace(om.GetNamespace())
+	o.SetName(om.GetName())
+	return o, nil
 }
 
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
