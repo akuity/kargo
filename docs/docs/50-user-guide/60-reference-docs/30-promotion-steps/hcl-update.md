@@ -9,11 +9,13 @@ description: Updates attribute values in HCL files to modify OpenTofu configurat
 # `hcl-update`
 
 :::info
+
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.9 and above.
 
 Additionally, it requires enabling of the Promotion Controller to allow for
 Pod-based promotions.
+
 :::
 
 `hcl-update` modifies attribute values in HCL (HashiCorp Configuration Language)

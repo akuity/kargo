@@ -9,11 +9,13 @@ description: Retrieves outputs from OpenTofu state for use in subsequent steps.
 # `tf-output`
 
 :::info
+
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.9 and above.
 
 Additionally, it requires enabling of the Promotion Controller to allow for
 Pod-based promotions.
+
 :::
 
 `tf-output` retrieves output values from OpenTofu state. These outputs can be
@@ -22,9 +24,11 @@ typically used after [`tf-apply`](tf-apply.md) to access values such as resource
 IDs, endpoints, or other computed attributes.
 
 :::note
+
 By default, sensitive outputs are filtered from the results when retrieving all
 outputs. Set `sensitive: true` to include them, or retrieve a specific output by
 name to bypass filtering.
+
 :::
 
 ## Configuration
@@ -183,8 +187,10 @@ is useful when you need access to values that OpenTofu marks as sensitive, such
 as generated passwords or API keys.
 
 :::warning
+
 Exercise caution when including sensitive outputs, as they may contain secrets
 or other confidential information.
+
 :::
 
 ```yaml

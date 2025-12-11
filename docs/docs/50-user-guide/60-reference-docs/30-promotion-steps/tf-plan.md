@@ -9,11 +9,13 @@ description: Executes an OpenTofu plan operation to preview infrastructure chang
 # `tf-plan`
 
 :::info
+
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.9 and above.
 
 Additionally, it requires enabling of the Promotion Controller to allow for
 Pod-based promotions.
+
 :::
 
 `tf-plan` executes an OpenTofu plan operation to preview what infrastructure
@@ -22,9 +24,11 @@ generates an execution plan, which can optionally be saved to a file for use
 with the [`tf-apply`](tf-apply.md) step.
 
 :::note
+
 The step returns `Succeeded` when changes are detected and `Skipped` when no
 changes are detected. This allows you to conditionally execute subsequent steps
 based on whether infrastructure changes are needed.
+
 :::
 
 ## Configuration
