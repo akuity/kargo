@@ -172,8 +172,8 @@ spec:
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
-`Warehouse` resources by a `name` that is dynamically sourced from a git URL
-in the request body.
+`Warehouse` resources by a `name` that is dynamically sourced from a repository
+URL in the request body.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -199,8 +199,6 @@ spec:
 
 The following example depicts `targetSelectionCriteria` that selects
 `Warehouse` resources with an `environment` label whose value is `prod`:
-
-###### Example
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
