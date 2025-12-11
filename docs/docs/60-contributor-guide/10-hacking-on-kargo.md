@@ -28,6 +28,7 @@ make hack-test-unit
 ```
 
 :::info
+
 If you wish to opt-out of executing the tests within a container (for
 performance reasons, perhaps), drop the `hack-` prefix from the target:
 
@@ -36,6 +37,7 @@ make test-unit
 ```
 
 This will require Go to be installed locally.
+
 :::
 
 ## Running Linters
@@ -70,11 +72,13 @@ make hack-lint
 ```
 
 :::info
+
 If you wish to opt-out of executing any or all linters within a container (for
 performance reasons, perhaps), drop the `hack-` prefix from the desired target.
 
 This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
+
 :::
 
 ## Executing Code Generation
@@ -89,6 +93,7 @@ make hack-codegen
 ```
 
 :::info
+
 If you wish to opt-out of executing code-generation within a container (for
 performance reasons, perhaps), drop the `hack-` prefix from the target:
 
@@ -98,6 +103,7 @@ make codegen
 
 This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
+
 :::
 
 ## Building the Image
@@ -110,11 +116,14 @@ make hack-build
 ```
 
 :::info
+
 There is seldom a need to do this, as the next section will cover a better
 option for rapidly building and deploying Kargo from source.
+
 :::
 
-:::tip
+:::info
+
 The [Docker buildx](https://github.com/docker/buildx) machine required by the
 build process has to be created with the `--driver-opt network=host` option to
 allow it to access the (temporary) local image registry used for the base image.
@@ -124,6 +133,7 @@ source metadata for localhost:5001/kargo-base:latest-arm64` or `granting
 entitlement network.host is not allowed by build daemon configuration`), you
 may need to (re)create the machine using `docker buildx create` with this
 option set.
+
 :::
 
 ## Iterating Quickly
@@ -156,12 +166,14 @@ this.
     its built-in Kubernetes support.
 
     :::info
+
     A specific benefit of this option is that nothing special is required in
     terms of creating a local image registry connected to the cluster.
     Additionally, this approach requires no specific port-forwarding rules to be
     defined.
     :::
     :::info
+
     Although this is one of the fastest paths to a local Kubernetes cluster, be
     aware that Docker Desktop supports only a _single_ Kubernetes cluster. If
     that cluster reaches a state you are dissatisfied with, resetting it will
@@ -185,12 +197,14 @@ this.
     its built-in Kubernetes support.
 
     :::info
+
     A specific benefit of this option is that nothing special is required in
     terms of creating a local image registry connected to the cluster.
     Additionally, this approach requires no specific port-forwarding rules to be
     defined.
     :::
     :::info
+
     Although this is one of the fastest paths to a local Kubernetes cluster, be
     aware that OrbStack supports only a _single_ Kubernetes cluster. If
     that cluster reaches a state you are dissatisfied with, resetting it will
@@ -226,6 +240,7 @@ this.
     ```
 
     :::info
+
     While this option is a bit more complex than using Docker Desktop or OrbStack
     directly, it offers the advantage of being fully-disposable. If your cluster
     reaches a state you are dissatisfied with, you can simply destroy it and
@@ -253,6 +268,7 @@ this.
     ```
 
     :::info
+
     While this option is a bit more complex than using Docker Desktop or OrbStack
     directly, it offers the advantage of being fully-disposable. If your cluster
     reaches a state you are dissatisfied with, you can simply destroy it and
@@ -267,6 +283,7 @@ this.
     [Argo CD](https://argoproj.github.io/cd/) installed.
 
     :::info
+
     The Argo CD dashboard will be exposed at
     [localhost:30080](https://localhost:30080).
 
@@ -319,6 +336,7 @@ this.
     rebuild and replace running components with the click of a button.
 
     :::warning
+
     If using OrbStack, be advised it is only compatible with Tilt as of Tilt
     v0.33.6. Please use that version or greater.
     :::
@@ -333,6 +351,7 @@ this.
     well as the logs from each component.
 
     :::info
+
     Tilt is often configured to watch files and automatically rebuild and replace
     running components when their source code is changed. This is deliberately
     disabled for Kargo since the Docker image takes long enough to build that
@@ -342,6 +361,7 @@ this.
     :::
 
     :::info
+
     If you specified a custom domain name for a tunnel to the external webhooks
     server in the previous step by defining a value for the
     `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` environment variable, you should
@@ -431,6 +451,7 @@ this.
     ```
 
     :::info
+
     This command deliberately leaves your local image registry running so that if
     you resume work later, you are doing so with a local registry that’s already
     primed with most layers of Kargo’s image.
@@ -458,6 +479,7 @@ this.
     ```
 
     :::info
+
     This command deliberately leaves your local image registry running so that if
     you resume work later, you are doing so with a local registry that’s already
     primed with most layers of Kargo’s image.
@@ -499,6 +521,7 @@ make hack-serve-docs
 ```
 
 :::info
+
 If you wish to opt-out of executing code-generation within a container (for
 performance reasons, perhaps), drop the `hack-` prefix from the target to run the docs natively on your system:
 
@@ -508,4 +531,5 @@ make serve-docs
 
 This will require quite a variety of tools to be installed locally, so we do not
 recommend this if you can avoid it.
+
 :::

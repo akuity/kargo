@@ -9,7 +9,9 @@ description: Dispatches GitHub Actions workflows using the workflow_dispatch eve
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.
+
 :::
 
 The `gha-dispatch-workflow` promotion step provides integration with GitHub Actions, allowing you to dispatch workflows using the `workflow_dispatch` event. This is particularly useful for triggering CI/CD pipelines, running tests, or executing deployment scripts as part of your promotion workflows.
@@ -29,6 +31,7 @@ The referenced `Secret` should contain the following keys:
 - `uploadURL`: (Optional) GitHub upload URL for GitHub Enterprise Server. Only required for GitHub Enterprise Server installations
 
 :::info Required Permissions
+
 The GitHub token must have the following permissions:
 
 **Fine-grained Personal Access Token:**
@@ -37,6 +40,7 @@ The GitHub token must have the following permissions:
 
 **Classic Personal Access Token:**
 - `repo` - read/write access
+
 :::
 
 ## Configuration

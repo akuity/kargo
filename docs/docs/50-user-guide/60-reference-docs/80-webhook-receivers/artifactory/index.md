@@ -9,21 +9,27 @@ Artifactory repositories by _refreshing_ all `Warehouse` resources subscribed to
 those repositories.
 
 :::warning
+
 This webhook receiver does not respond to events where `domain` is `artifact`
 and `event_type` is `deployed`.
+
 :::
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 ## Self-Hosted Artifactory
 
 :::info
+
 If you are not using a self-hosted Artifactory instance, skip to
 [the configuring the receiver](#configuring-the-receiver) section.
+
 :::
 
 In order for a webhook initiated `Warehouse` refresh to successfully occur,
@@ -42,8 +48,10 @@ from the webhook payloads.
 1. At the bottom of the form, click <Hlt>Save</Hlt>.
 
 :::info
+
 For additional information on configuring your <Hlt>Custom Base URL</Hlt>
 refer directly to the [Artifactory Docs](https://jfrog.com/help/r/jfrog-platform-administration-documentation/general-settings).
+
 :::
 
 ## Configuring the Receiver
@@ -54,6 +62,7 @@ with a `secret-token` key in its data map. This
 Artifactory to sign requests and by the receiver to verify those signatures.
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -62,6 +71,7 @@ secret_token=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret token: $secret_token"
 echo "Encoded secret token: $(echo -n $secret_token | base64)"
 ```
+
 :::
 
 ```yaml
@@ -174,6 +184,7 @@ kubectl get projectconfigs kargo-demo \
        <Hlt>Show status of successful executions in the Troubleshooting tab</Hlt>.
 
         :::info
+
         Although Artifactory supports sending test events to the URL, such
         events are _not_ displayed in the troubleshooting tab; only actual
         events are.
@@ -185,6 +196,7 @@ kubectl get projectconfigs kargo-demo \
         ![Select Trigger](./img/select-trigger.png "Select Trigger")
 
         :::info
+
         Artifactory supports many different types of registries and repositories.
         This webhook responds only to events originating from repositories in OCI
         registries. No other type of repository, including legacy (HTTP/S) Helm
@@ -216,6 +228,7 @@ kubectl get projectconfigs kargo-demo \
     1. Select <Hlt>Use secret for payload signing</Hlt>.
 
         :::caution
+
         The webhook receiver won't accept unsigned requests.
         :::
 

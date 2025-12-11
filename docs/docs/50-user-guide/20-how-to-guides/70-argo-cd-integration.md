@@ -36,8 +36,10 @@ steps:
 ```
 
 :::info
+
 For in-depth information on the usage of the `argocd-update` step, see the
 [examples](../60-reference-docs/30-promotion-steps/argocd-update.md#examples).
+
 :::
 
 ### Authorizing Updates
@@ -87,10 +89,12 @@ check is used to continuously monitor the
 that was updated by the `argocd-update` step as part of the `Stage` health.
 
 :::info
+
 It is important to note that `Stage` health is not determined solely by the
 health of the `Application`(s) that the `Stage` is managing. The health of the
 `Stage` is determined by the health of all `Application` resources that the
 `Stage` is managing, _as well as_ any other indicators of health that are
 part of the `Stage`'s definition. For example, a `Stage` may be considered
 unhealthy if the latest `Promotion` to that `Stage` failed.
+
 :::

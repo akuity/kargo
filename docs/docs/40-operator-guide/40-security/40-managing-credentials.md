@@ -12,21 +12,23 @@ access to Git repositories.
 This section focuses on an operator's role in providing Kargo Projects with
 necessary credentials.
 
-:::info
-__Not what you were looking for?__
+:::info Not what you were looking for?
 
 If you're a user looking to learn more about managing
 credentials at the project level, refer instead to the
 [Managing Credentials](../../50-user-guide/50-security/30-managing-credentials.md)
 section of the User's Guide.
+
 :::
 
 :::info
+
 Whether you're installing Kargo
 [using Helm](../20-advanced-installation/10-advanced-with-helm.md) or
 [via Argo CD](../20-advanced-installation/20-advanced-with-argocd.md), the
 next two sections assume familiarity with procedures for configuring that
 installation.
+
 :::
 
 ## Repository Credentials as `Secret` Resources
@@ -72,6 +74,7 @@ contain the following keys:
     to `true`.
 
     :::info
+
     This is useful if, for example, your project accesses many GitHub
     repositories, all beginning with `https://github.com/example-org`, and can
     use the same token for accessing all of them.
@@ -84,6 +87,7 @@ contain the following keys:
   * `password`: A password or personal access token.
 
     :::info
+
     If the value of the `password` key is a __personal access token__, the value
     of the `username` field is often inconsequential. You should consult your
     repository's documentation for more information.
@@ -107,8 +111,8 @@ When Kargo searches for repository credentials, these additional namespaces are
 searched only _after_ finding no matching credentials in the project's own
 namespace.
 
-:::note
-__Precedence__
+
+:::info Precedence
 
 When Kargo searches for repository credentials in a "global" namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_
@@ -121,12 +125,15 @@ a regular expression matching the repository URL.
 
 When searching for an exact match, and then again when searching for a pattern
 match, appropriately labeled `Secret`s are considered in lexical order by name.
+
 :::
 
 :::info
+
 Because Kargo matches credentials to repositories by repository type and URL,
 users do not need to be informed of the details (e.g. names) of any global
 credentials, except possibly that they exist.
+
 :::
 
 ### Enabling Global Credentials
@@ -157,11 +164,14 @@ roleRef:
 ```
 
 :::note
+
 The `kargo-controller-read-secrets` `ClusterRole` is predefined by the Kargo
 Helm chart and grants read-only access to `Secret` resources.
+
 :::
 
 :::info
+
 By default, Kargo controllers _lack_ cluster-wide permissions on `Secret`
 resources. Instead, the Kargo _management controller_ dynamically expands and
 contracts controller access to `Secret`s on a namespace-by-namespace basis as
@@ -169,9 +179,11 @@ new `Project`s are created and deleted.
 
 _It is because this process does not account for "global" credential namespaces
 that these bindings must be created manually by an operator._
+
 :::
 
 :::warning
+
 Setting the `controller.serviceAccount.clusterWideSecretReadingEnabled` option
 to `true` at installation will grant Kargo controllers cluster-wide read
 permission on `Secret` resources.
@@ -180,6 +192,7 @@ __This is highly discouraged, especially in sharded environments where this
 permission would have the undesirable effect of granting remote Kargo
 controllers read permissions on all `Secret`s throughout the Kargo control
 plane's cluster -- including `Secret`s having nothing to do with Kargo.__
+
 :::
 
 ## Ambient Credentials
@@ -211,11 +224,13 @@ to set up IRSA. For either, you will assign an IAM role to the
 will be) installed.
 
 :::note
+
 To use IRSA, you will additionally need to specify the
 [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference-arns.html) of
 the controller's IAM role as the value of the
 `controller.serviceAccount.iamRole` setting in Kargo's Helm chart at
 installation.
+
 :::
 
 At this point, an IAM role will be associated with the Kargo _controller_,
@@ -229,24 +244,30 @@ _always_ be of the form `kargo-project-<project name>`. It is this role that
 should be granted read-only access to applicable ECR repositories.
 
 :::info
+
 The name of the IAM role associated with each Kargo project is deliberately
 not configurable to prevent project admins from attempting to coerce Kargo into
 assuming arbitrary IAM roles.
+
 :::
 
 :::caution
+
 For optimal adherence to the principle of least privilege, the IAM role
 associated with the `kargo-controller` `ServiceAccount` should be limited only
 to the ability to assume project-specific IAM roles. Project-specific IAM roles
 should be limited only to read-only access to applicable ECR repositories.
+
 :::
 
 :::info
+
 If the Kargo controller is unable to assume a project-specific IAM role, it will
 fall back to using its own IAM role directly. For organizations without strict
 tenancy requirements, this can eliminate the need to manage a large number of
 project-specific IAM roles. While useful, this approach is not strictly
 recommended.
+
 :::
 
 Tokens Kargo obtains for accessing any specific ECR repository on behalf of
@@ -272,9 +293,11 @@ or can be added to an
 [existing cluster](https://cloud.google.com/kubernetes-engine/docs/how-to/workload-identity#enable-existing-cluster).
 
 :::note
+
 Clusters managed by
 [GKE Autopilot](https://cloud.google.com/kubernetes-engine/docs/concepts/autopilot-overview)
 have WIF enabled automatically.
+
 :::
 
 With WIF enabled,
@@ -289,8 +312,10 @@ principal://iam.googleapis.com/projects/<gcp project number>/locations/global/wo
 ```
 
 :::note
+
 There is no need to annotate the Kargo controller's KSA in any specific way to
 enable the above.
+
 :::
 
 Because the Kargo controller acts on behalf of multiple Kargo projects, each of
@@ -304,9 +329,11 @@ _always_ be of the form
 `kargo-project-<kargo project name>@<gcp project name>.iam.gserviceaccount.com`.
 
 :::info
+
 The name of the GSA associated with each Kargo project is deliberately not
 configurable to prevent project admins from attempting to coerce Kargo into
 impersonating arbitrary GSAs.
+
 :::
 
 To enabled this, each project-specific GSA must:
@@ -320,12 +347,15 @@ To enabled this, each project-specific GSA must:
   GAR repositories with which it interacts.
 
 :::caution
+
 Following the principle of least privilege, the IAM principal associated with
 the Kargo controller's GSA should be granted no permissions beyond the
 ability to impersonate project-specific GSAs.
+
 :::
 
 :::note
+
 Beginning with Kargo `v1.5.0`, if maintaining a separate GSA for every Kargo
 project is deemed too onerous and strict adherence to the principle of least
 privilege is not a concern, permissions may be granted directly to the Kargo 
@@ -333,6 +363,7 @@ controller's KSA. In the event that a project-specific GSA does not exist or
 cannot be impersonated, Kargo will fall back on using the controller's KSA
 directly to access GAR repositories. While useful, this approach is not
 strictly recommended.
+
 :::
 
 Tokens Kargo obtains for accessing any specific GAR repository on behalf of
@@ -353,6 +384,7 @@ or can be added to an
 [existing cluster](https://learn.microsoft.com/en-us/azure/aks/workload-identity-deploy-cluster#update-an-existing-aks-cluster).
 
 :::danger
+
 Azure Workload Identity can be complex to configure and difficult to
 troubleshoot.
 
@@ -360,6 +392,7 @@ Before continuing, be certain of the following:
 
 * Your AKS cluster has the __OIDC Issuer__ feature enabled.
 * Your AKS cluster has the __Workload Identity__ feature enabled.
+
 :::
 
 For Workload Identity to work, the Kargo controller's Kubernetes
@@ -369,6 +402,7 @@ to create one and [these](https://learn.microsoft.com/en-us/azure/aks/workload-i
 to federate it with the controller's `ServiceAccount`.
 
 :::info
+
 Federating the managed identity to the Kargo controller's
 `ServiceAccount` establishes a trust relationship. In AKS clusters with Workload
 Identity enabled, a
@@ -379,6 +413,7 @@ been federated to a managed identity. Knowing such a `Pod` is authorized to act
 on behalf of the associated managed identity, the webhook will modify the
 `Pod`'s spec to inject credentials in a well-known location for discovery by any
 Azure clients executing within any of its containers.
+
 :::
 
 To access container images or Helm charts hosted in ACR, the managed identity
@@ -386,6 +421,7 @@ To access container images or Helm charts hosted in ACR, the managed identity
 on the registry or on individual repositories within it.
 
 :::danger
+
 Before continuing, be certain of the following:
 
 * You have created a __User-Assigned Managed Identity__.
@@ -399,6 +435,7 @@ Before continuing, be certain of the following:
 
 * The managed identity has been granted the __`AcrPull` role__ on your ACR
   registry or specific repositories within it.
+
 :::
 
 For Workload Identity to inject credentials into any `Pod`, two specific Kargo
@@ -414,6 +451,7 @@ configuration settings are required:
    `azure.workload.identity/client-id: <managed identity client id>`.
 
     :::warning
+
     Azure documentation states this annotation is optional, however, in
     practice, it often _is_ required.
     :::
@@ -434,12 +472,15 @@ controller:
 ```
 
 :::info
+
 For further guidance on this, refer to the advanced installation guides for
 [Helm](../20-advanced-installation/10-advanced-with-helm.md)
 or [Argo CD](../20-advanced-installation/20-advanced-with-argocd.md)
+
 :::
 
 :::warning
+
 If the `azure.workload.identity/use: "true"` label is present on the Kargo
 controller's `Pod` and the `azure.workload.identity/client-id` annotation is
 also present on the Kargo controller's `ServiceAccount`, _but_ the `Pod` was
@@ -448,13 +489,16 @@ to the controller's `ServiceAccount` having been federated with a managed
 identity, the `Pod` will not have been injected with necessary credentials. Such
 a `Pod` should be deleted. The controller's `Deployment` will create a
 replacement `Pod` which will be injected with necessary credentials.
+
 :::
 
 :::caution
+
 For optimal adherence to the principle of least privilege, the managed identity
 associated with the `kargo-controller` `ServiceAccount` should be limited only
 to the `AcrPull` role on the specific ACR repositories required by your Kargo
 projects.
+
 :::
 
 Tokens Kargo obtains for accessing any specific ACR repository are valid for 
@@ -462,6 +506,7 @@ approximately 3 hours and cached for 2.5 hours. A controller restart clears
 the cache.
 
 :::note
+
 When authenticating to ECR using EKS Pod Identity or IRSA (Amazon), or when
 authenticating to GAR using Workload Identity Federation (Google), the option
 exists for strict adherence to the the principle of least privilege by
@@ -473,4 +518,5 @@ registries or repositories.
 Assuming/impersonating a project-specific identity in Azure is considerably more
 complex than doing so in AWS or GCP. As a result, the Kargo controller lacks the
 option described above for Azure Workload Identity / ACR.
+
 :::

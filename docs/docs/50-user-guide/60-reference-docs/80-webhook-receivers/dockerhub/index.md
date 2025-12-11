@@ -9,9 +9,11 @@ repositories by _refreshing_ all `Warehouse` resources subscribed to those
 repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 ## Configuring the Receiver
@@ -20,6 +22,7 @@ A Docker Hub webhook receiver must reference a Kubernetes `Secret` resource with
 a `secret` key in its data map.
 
 :::info
+
 _This secret will not be shared directly with Docker Hub._
 
 Docker Hub does not natively implement any mechanism whereby receivers may
@@ -28,9 +31,11 @@ incorporates the secret into the generation of a hard-to-guess URL for the
 receiver. This URL serves as a _de facto_
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) and authentication
 mechanism.
+
 :::
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -104,15 +109,19 @@ To configure a single Docker Hub repository to notify a receiver when objects
 1. Verify the new webhook appears under <Hlt>Current webhooks</Hlt>.
 
 :::note
+
 If you'd like to review outbound webhook requests for troubleshooting purposes,
 select the three dots to the right of a webhook, then select
 <Hlt>View history</Hlt> from the context menu.
+
 :::
 
 When these steps are complete, the repository will send events to the webhook
 receiver.
 
 :::info
+
 For additional information on configuring webhooks, refer directly to the
 [Docker Hub Docs](https://docs.docker.com/docker-hub/repos/manage/webhooks/).
+
 :::

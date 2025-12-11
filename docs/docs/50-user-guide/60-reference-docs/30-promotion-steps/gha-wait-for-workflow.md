@@ -9,7 +9,9 @@ description: Waits for GitHub Actions workflow runs to complete with optional st
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.
+
 :::
 
 The `gha-wait-for-workflow` promotion step provides integration with GitHub Actions, allowing you to wait for workflow runs to complete and optionally validate their conclusion status. This is particularly useful for ensuring that CI/CD pipelines, tests, or deployment scripts complete successfully before proceeding with subsequent promotion steps.
@@ -29,6 +31,7 @@ The referenced `Secret` should contain the following keys:
 - `uploadURL`: (Optional) GitHub upload URL for GitHub Enterprise Server. Only required for GitHub Enterprise Server installations
 
 :::info Required Permissions
+
 The GitHub token must have the following permissions:
 
 **Fine-grained Personal Access Token:**
@@ -36,6 +39,7 @@ The GitHub token must have the following permissions:
 
 **Classic Personal Access Token:**
 - `repo` - read/write access
+
 :::
 
 ## Configuration

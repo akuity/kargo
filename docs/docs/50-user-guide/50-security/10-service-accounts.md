@@ -8,13 +8,14 @@ Kargo `ServiceAccount`s enable programmatic access to Kargo APIs without
 requiring a user to share short-lived credentials with non-human agents, such as
 a CI process.
 
-:::note
-__Not what you were looking for?__
+
+:::info Not what you were looking for?
 
 If you're looking to use the built-in, system-level `ServiceAccount`s, refer to
 the
 [Operator Guide's ServiceAccounts](../../40-operator-guide/40-security/25-service-accounts.md)
 documentation.
+
 :::
 
 ## Understanding Kargo ServiceAccounts
@@ -39,7 +40,9 @@ them).
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -82,18 +85,22 @@ metadata:
 ```
 
 :::info
+
 The `rbac.kargo.akuity.io/service-account: "true"` label identifies the resource
 as a _Kargo_ `ServiceAccount`. The `ServiceAccount` is still completely usable
 without this label (i.e. can still be used to interact with Kargo APIs
 programmatically), however, neither the UI nor `kargo` CLI will recognize it as
 being a _Kargo_ `ServiceAccount`.
+
 :::
 
 :::note
+
 When managing resources declaratively (e.g., via GitOps), do _not_ include a
 `rbac.kargo.akuity.io/managed: "true"` annotation. Resources with this
 annotation can be modified or deleted via the Kargo API, which may conflict with
 declarative management.
+
 :::
 
 </TabItem>
@@ -105,7 +112,9 @@ declarative management.
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -124,12 +133,14 @@ role.rbac.kargo.akuity.io/developer updated
 ```
 
 :::info
+
 A _Kargo_ `Role` is an abstraction over a trio of `ServiceAccount`, `Role`, and
 `RoleBinding` _Kubernetes_ resources. When you grant a Kargo `Role` to a Kargo
 `ServiceAccount`, the Kargo `Role`'s underlying Kubernetes `RoleBinding`
 resource is updated to include the Kargo `ServiceAccount` as a subject. For
 more details about Kargo roles, see the
 [Access Controls](./20-access-controls/index.md) documentation.
+
 :::
 
 </TabItem>
@@ -162,7 +173,9 @@ subjects:
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -184,11 +197,13 @@ Token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjdwQ0...
 ```
 
 :::danger
+
 The token value is displayed only once during creation. Do not lose it!
 
 If you lose the token value, you must delete the token and create a new one _or_
 the existing token's value can be retrieved by a user with sufficient permission
 using `kubectl` instead of the `kargo` CLI.
+
 :::
 
 List all authentication tokens:
@@ -236,12 +251,14 @@ type: kubernetes.io/service-account-token
 ```
 
 :::info
+
 Kubernetes will automatically populate the token data asynchronously. The
 `rbac.kargo.akuity.io/service-account-token: "true"` label is required to
 identify the `Secret` as a Kargo `ServiceAccount` token.
 
 For more information about ServiceAccount token secrets, see the
 [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/secret/#serviceaccount-token-secrets).
+
 :::
 
 </TabItem>
@@ -254,9 +271,11 @@ includes tools like `kubectl` as well as any programming language client library
 for Kubernetes or Kargo.
 
 :::note
+
 While the `kargo` CLI does not directly support specifying a token via command
 line flags, you can configure it to use a token by editing
 `~/.config/kargo/config`.
+
 :::
 
 ### Deleting Authentication Tokens
@@ -265,7 +284,9 @@ line flags, you can configure it to use a token by editing
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -303,7 +324,9 @@ manifests.
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -339,7 +362,9 @@ list in the `RoleBinding` resource.
 <TabItem value="ui" label="Using the UI">
 
 :::info
+
 UI support for this feature is not yet implemented.
+
 :::
 
 </TabItem>
@@ -355,9 +380,12 @@ kargo delete serviceaccount --project my-project my-sa
 serviceaccount/my-sa deleted
 ```
 
+
 :::warning
+
 Deleting a Kargo `ServiceAccount` via the `kargo` CLI automatically deletes all
 associated authentication tokens as well.
+
 :::
 
 Verify the `ServiceAccount` has been deleted:
@@ -373,9 +401,11 @@ To delete a `ServiceAccount` declaratively, simply remove the `ServiceAccount`
 resource from your manifests.
 
 :::warning
+
 Deleting a `ServiceAccount` will invalidate all associated authentication
 tokens. Be sure to also remove any associated `Secret` resources containing
 tokens.
+
 :::
 
 </TabItem>

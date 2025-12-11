@@ -19,6 +19,7 @@ location. In the example below, we save it to `kargo-values.yaml`
 1. Edit and save the values.
 
     :::info
+
     You will find this configuration file contains helpful comments for every
     option, so specific options are not covered in detail here.
 

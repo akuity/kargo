@@ -10,6 +10,7 @@ minor release roughly every six weeks, with two or three major features
 completed per release, although this varies slightly by scope.
 
 :::caution
+
 This roadmap highlights only major, _planned_ work for the **open source**
 edition of Kargo. Priorities may evolve over time based on community feedback
 and Akuity customer needs. For more detailed and up-to-date plans, please refer
@@ -23,6 +24,7 @@ like to contribute, please avoid wasted or duplicated effort by discussing
 feature requests and design proposals with maintainers prior to starting work.
 While we cannot guarantee specific timelines or outcomes, we value and consider
 every submission.
+
 :::
 
 ## In Progress

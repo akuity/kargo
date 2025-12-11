@@ -8,7 +8,9 @@
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
 
 :::warning
+
 Stability is not guaranteed.
+
 :::
 
 | Method Name | Request Type | Response Type |

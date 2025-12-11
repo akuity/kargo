@@ -39,8 +39,10 @@ other YAML-based configuration files with new versions or settings during the
 promotion process.
 
 :::info
+
 For more information on `imageFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ```yaml

@@ -14,8 +14,10 @@ multiple sources or rendering Stage-specific manifests to a Stage-specific
 branch.
 
 :::note
+
 It is a noteworthy limitation of Git that one branch cannot be checked out in
 multiple working trees.
+
 :::
 
 ## Configuration
@@ -52,8 +54,10 @@ likely to perform actions that revise the contents of the Stage-specific branch
 using the commit from the Freight as input.
 
 :::info
+
 For more information on `commitFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ```yaml
@@ -84,8 +88,10 @@ with the help of a [`copy` step](copy.md). For this case, a `git-clone` step
 may be configured similarly to the following.
 
 :::info
+
 For more information on `commitFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ```yaml

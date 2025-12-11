@@ -9,15 +9,19 @@ repositories by _refreshing_ all `Warehouse` resources subscribed to those
 repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 :::info
+
 The GitLab webhook receiver also works with GitLab Dedicated and GitLab
 Self Managed, although some URLs in this document may need to be adjusted
 accordingly.
+
 :::
 
 ## Configuring the Receiver
@@ -28,6 +32,7 @@ A GitLab webhook receiver must reference a Kubernetes `Secret` resource with a
 GitLab to sign requests and by the receiver to verify those signatures.
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -106,6 +111,7 @@ kubectl get projectconfigs kargo-demo \
     </Tabs>
 
     :::caution
+
     If you configure identical webhooks affecting a given project at _both_
     the project level and group level, both webhooks will be triggered by
     applicable events in that project.
@@ -143,6 +149,7 @@ kubectl get projectconfigs kargo-demo \
     ![Test Button](./img/test-button.png "Test Button")
 
     :::note
+
     This is safe to do because the test payload will lack the necessary
     details to successfully refresh `Warehouse` resources subscribed to the
     repository.
@@ -152,12 +159,15 @@ kubectl get projectconfigs kargo-demo \
     appear at the top of the <Hlt>Webhooks settings</Hlt> page.
 
     :::info
+
     If the test event is not successful, troubleshoot by clicking the
     <Hlt>Edit</Hlt> button next to your webhook, then scrolling down to the
     <Hlt>Recent events</Hlt> section to view details of the failed request.
     :::
 
 :::info
+
 For additional information on configuring GitLab webhooks, refer directly to the
 [GitLab Docs](https://docs.gitlab.com/user/project/integrations/webhooks/).
+
 :::

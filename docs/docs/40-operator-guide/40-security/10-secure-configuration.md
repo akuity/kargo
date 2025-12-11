@@ -9,11 +9,14 @@ security considerations that should be taken into account at installation time,
 as well as calling out the specific configuration options that address them.
 
 :::info
+
 If you're only installing Kargo into a local Kubernetes cluster for testing
 purposes, installing Kargo with the default configuration should be sufficient.
+
 :::
 
 :::info
+
 Whether you're installing Kargo
 [using Helm](../20-advanced-installation/10-advanced-with-helm.md) or
 [via Argo CD](../20-advanced-installation/20-advanced-with-argocd.md), this
@@ -22,6 +25,7 @@ document assumes familiarity with procedures for configuring that installation.
 Refer to the
 [Kargo Chart's README](https://github.com/akuity/kargo/tree/main/charts/kargo)
 for detailed documentation of all configuration options.
+
 :::
 
 ## Securing the API Server
@@ -50,12 +54,14 @@ Disabling the admin account can be done at installation time by setting
 `api.adminAccount.enabled` to `false`.
 
 :::note
+
 The admin account is Kargo's _only_ built-in account. When disabling it, as we
 recommend, this effectively _requires_ that you configure SSO via OpenID
 Connect.
 
 Refer to [SSO with OpenID Connect](./20-openid-connect/index.md) for in-depth
 coverage of this topic.
+
 :::
 
 ### Securing the Admin Account
@@ -130,8 +136,10 @@ must be formatted in the conventional manner for a certificate described
 [here](https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets).
 
 :::info
+
 We strongly recommend using [cert-manager](https://cert-manager.io/) to manage
 `Secret` resources containing TLS certificates.
+
 :::
 
 If you _have_ opted into using `Ingress` (`api.ingress.enabled` set to `true`),
@@ -143,9 +151,11 @@ formatted in the conventional manner for a certificate described
 [here](https://kubernetes.io/docs/concepts/configuration/secret/#tls-secrets).
 
 :::info
+
 With `Ingress` enabled and terminating TLS, it may be tempting to disable TLS
 on the API server itself. Your threat model may or may not permit this, but
 we recommend against it.
+
 :::
 
 ## Securing the Controller
@@ -160,11 +170,13 @@ limits the controller to accessing `Secret` resources within project namespaces
 only.
 
 :::info
+
 It is not uncommon for Kargo controllers to be installed in clusters other than
 the Kargo control plane. Restricting controller access to only `Secret`
 resources within project namespaces is a measure designed to prevent exposure
 of non-Kargo-project `Secret` resources in the control plane's cluster in the
 event that a remote controller's credentials are compromised.
+
 :::
 
 It is possible to opt-in to cluster-scoped `Secret` access by setting
@@ -173,9 +185,11 @@ installation time, __although we strongly recommend keeping the default
 configuration for this option (`false`).__
 
 :::info
+
 The likely impetus for enabling cluster-scoped `Secret` access is to eliminate
 the need for manually managing `RoleBinding`s that grant the controller
 read-only access to `Secret` resources in specially designated "global
 credential namespaces" as described [here](40-managing-credentials.md). __We
 still do not recommend this.__
+
 :::
