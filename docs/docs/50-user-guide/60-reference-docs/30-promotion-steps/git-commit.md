@@ -76,12 +76,14 @@ contextual information. In this example, the commit message is prefixed with the
 current stage using the
 [pre-defined `ctx.stage` variable](../40-expressions.md#pre-defined-variables).
 
-:::tip
+:::info
+
 The `message` field supports multi-line strings. Use `|` to indicate a block
 scalar and preserve newlines.
 
 This allows for multi-line commits, which can be useful for providing detailed
 commit messages when several changes are being committed together.
+
 :::
 
 ```yaml

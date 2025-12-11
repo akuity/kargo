@@ -8,8 +8,7 @@ description: Learn how to do a basic installation of Kargo using Helm
 Installing Kargo's __cluster-side components__ (e.g. controllers and API server)
 with __default configuration__ is quick and easy.
 
-:::info
-__Not what you were looking for?__
+:::info[Not what you were looking for?]
 
 If you're looking for a more customized installation of cluster-side components,
 refer to
@@ -20,14 +19,17 @@ for guidance on configuring Kargo to address common operational concerns.
 
 If you're a developer looking for instructions for installing the Kargo CLI, see
 [Installing the CLI](../50-user-guide/05-installing-the-cli/index.md).
+
 :::
 
 :::caution
+
 The default configuration is suitable _only_ for trying Kargo in a local cluster
 that is not internet-facing.
 
 For detailed instructions for a secure installation, refer to
 [Secure Configuration](./40-security/10-secure-configuration.md).
+
 :::
 
 ## Prerequisites
@@ -40,6 +42,7 @@ You will need:
   pre-installed.
 
   :::note
+
   cert-manager is not an absolute dependency, but _is_ required for installation
   with the default configuration.
   :::
@@ -50,12 +53,14 @@ pre-installed in your Kubernetes cluster:
 - [Argo CD](https://argo-cd.readthedocs.io)
 
   :::info
+
   Kargo works best when paired with Argo CD.
   :::
 
 - [Argo Rollouts](https://argoproj.github.io/argo-rollouts/)
 
   :::info
+
   Kargo's verification feature makes use of Argo Rollouts `AnalysisTemplate` and
   `AnalysisRun` resources internally.
 

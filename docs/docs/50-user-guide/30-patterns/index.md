@@ -18,9 +18,11 @@ address more complex use cases.
 All patterns presented here will assume Argo CD as the GitOps agent.
 
 :::note
+
 The intent of this section is _not_ to constrain solutions to these patterns,
 but to provide inspiration and guidance on how Kargo's flexibility can be
 leveraged creatively.
+
 :::
 
 ## Pipeline Structure
@@ -89,6 +91,7 @@ To apply this pattern:
        configuration.
 
 :::note
+
 The combined configuration can be written to the same Git repository that is
 monitored by the `Warehouse` or an entirely separate repository.
 
@@ -99,14 +102,17 @@ created a "feedback loop."
 
 This is discussed in greater details in the [Storage Options](#storage-options)
 section.
+
 :::
 
 :::info
+
 This pattern can still update the image used by an application, but it treats
 such a change as it would any other configuration change. i.e. It does not occur
 automatically as in the [Image Updater](#image-updater) pattern, but any
 user-initiated update of application configuration to reference a new image
 revision will be rolled out in the same way as any other configuration change.
+
 :::
 
 ### Common Case
@@ -138,6 +144,7 @@ To apply this pattern:
        configuration.
 
 :::note
+
 The combined configuration can be written to the same Git repository that is
 monitored by the `Warehouse` or an entirely separate repository.
 
@@ -148,6 +155,7 @@ created a "feedback loop."
 
 This is discussed in greater details in the [Storage Options](#storage-options)
 section.
+
 :::
 
 ### Parallel Pipelines
@@ -159,10 +167,12 @@ to effect completely independent workflows for different applications.
 ![Parallel Pipelines](./img/parallel-pipelines.png)
 
 :::info
+
 The choice to define multiple, independent pipelines within a single `Project`
 might be made on the basis of organizational structure. If, for instance, a
 single team is responsible for multiple, related microservices, it may make
 sense to manage them together in a single `Project`.
+
 :::
 
 ### Pre-Pipelines
@@ -212,12 +222,15 @@ To move related artifacts through a pipeline together:
        with the combined configurations.
 
 :::info
+
 A single Argo CD `Application` resource _can_ manage the deployment of multiple
 related services -- a fact you may sometimes wish to leverage in the case of
 services that are tightly coupled.
+
 :::
 
 :::warning
+
 If you find yourself creating `Warehouse` resources that subscribe to a large
 number of repositories to create `Freight` resources that reference a large
 number of artifacts that will all be promoted from stage to stage _together as a
@@ -225,6 +238,7 @@ unit_, it is advisable to stop and ask yourself if coupling the promotion of so
 many artifacts was truly your intent. In many cases, users who have found
 themselves doing something such as this have done so without understanding the
 options that may have served their use case better.
+
 :::
 
 ### Ordered Services
@@ -257,9 +271,11 @@ of ways to approach this.
    ![Ordered Services](./img/ordered-services.png)
 
    :::note
+
    In this example, with alternating stages promoting a _different subsets_ of
    the artifacts referenced by a `Freight` resource, there are two (slightly)
    _different_ promotion processes used by alternating stages.
+
    :::
 
 ### Fanning Out / In
@@ -294,8 +310,10 @@ promoted:
 ![A/B Testing](./img/a-b-testing.png)
 
 :::info
+
 It is common for pipelines to fan in or out (or both) at
 [Control Flow Stages](#control-flow-stages).
+
 :::
 
 ### Control Flow Stages
@@ -366,9 +384,11 @@ revisions to promote.
 ![Freight Assembly](./img/assembly.png)
 
 :::info
+
 Additional features have been proposed to limit the automatic production of
 `Freight` that may reference incompatible revisions of different artifacts,
 which, in time, are likely to be implemented as well.
+
 :::
 
 ### Mixed Promotion Modes
@@ -541,6 +561,7 @@ resemble this:
 ```
 
 :::warning
+
 When storing configuration for many applications in a single repository, any
 `Warehouse` resources that subscribe to that repository should be carefully
 configured with
@@ -548,6 +569,7 @@ configured with
 such that only changes to _relevant_ configuration are detected. A `guestbook`
 `Warehouse`, for instance, should be unconcerned with changes to `portal`
 configuration.
+
 :::
 
 ### Storage Options
@@ -562,6 +584,7 @@ such as Argo CD. There are a few viable options by which to approach this:
    required.
 
    :::info
+
    The practice of storing stage-specific configuration in dedicated branches
    seems to have been unfairly misunderstood as being the same as _GitFlow_.
 
@@ -571,6 +594,7 @@ such as Argo CD. There are a few viable options by which to approach this:
    encourage users to view stage-specific branches _not_ as a maintenance
    burden, but simply as _storage_. If it helps to conceptualize it, each
    branch may as well be an S3 bucket.
+
    :::
 
 1. **Writing Back to `main`**
@@ -585,10 +609,12 @@ such as Argo CD. There are a few viable options by which to approach this:
    processes in the `src` directory and the output in the `builds` directory.
 
    :::warning
+
    Any `Warehouse` resources that subscribe to this repository must carefully
    apply path filters to ensure that changes within the `builds` directory do
    not trigger the production of new `Freight` resources. Failure to do so may
    result in a "feedback loop."
+
    :::
 
    ```console
@@ -647,7 +673,9 @@ This section documents a "typical" promotion process as well as a few common
 techniques.
 
 :::info
+
 Support for custom / third-party promotion steps is coming in a future release.
+
 :::
 
 ### The Common Case
@@ -695,9 +723,11 @@ reason over the changes that will be applied after the GitOps agent has
 performed the rendering.
 
 :::info
+
 Pre-rendering configuration in this manner can also boost the performance of
 your GitOps agent, which will be relieved of any responsibility for executing
 configuration management tools.
+
 :::
 
 ### Pseudo-GitOps

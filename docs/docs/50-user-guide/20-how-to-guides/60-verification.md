@@ -93,8 +93,10 @@ spec:
 ```
 
 :::info
+
 For further documentation and examples of `AnalysisTemplate`s, refer to the
 [`AnalysisTemplate` reference](../60-reference-docs/50-analysis-templates.md).
+
 :::
 
 ## How Verification Works
@@ -111,12 +113,14 @@ either automatically (with auto-promotion) or manually (via the UI, API, or
 CLI). `Freight` which have not passed verification in a `Stage` are blocked
 from continuing further downstream.
 
-:::tip
+:::info
+
 It is sometimes desired to skip the verification process entirely (e.g. a
 hotfix needs to be fast-tracked to production). Verification (and the entire
 Pipeline for that matter) can be bypassed by
 [manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
 for a specified `Stage`.
+
 :::
 
 While a `Stage` is verifying (i.e. the `AnalysisRun` is not yet completed) no
@@ -194,11 +198,11 @@ status:
   startedAt: 2025-01-28T20:47:50Z
 ```
 
-:::note
-__`AnalysisTemplate` vs `AnalysisRun`__
+:::info[`AnalysisTemplate` vs `AnalysisRun`]
 
 An `AnalysisTemplate` _defines_ a verification process, while an `AnalysisRun`
 tracks the _progress and result_ of an execution of that process.
+
 :::
 
 ## Arguments and Metadata
@@ -253,6 +257,7 @@ spec:
 ```
 
 :::caution
+
 Kargo promotion processes require expressions to be enclosed within `${{ }}`,
 Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within
 `{{ }}` (i.e. without `$`).
@@ -260,9 +265,11 @@ Argo Rollouts `AnalysisTemplate`s require expressions to be enclosed within
 Ensure that expressions are enclosed within the correct syntax for the
 type of resource you are working with, recognizable by the `apiVersion` and
 `kind` fields.
+
 :::
 
 :::caution
+
 If specifying arguments for use in the creation of an `AnalysisRun` via a
 `Stage`'s `spec.verification.args` field, each `AnalysisTemplate` referenced in
 `spec.verification.analysisTemplates` _must_ declare those arguments in its
@@ -290,6 +297,7 @@ verification) to fail.
 Refer directly to the
 [Rollouts Docs](https://argo-rollouts.readthedocs.io/en/stable/features/analysis/#analysis-template-arguments)
 for further details.
+
 :::
 
 ## Implicit Argo CD Verification
@@ -308,10 +316,12 @@ Kargo has a built-in understanding of
 and will delay verification until `Application`s have reached a `Healthy` state.
 
 :::note
+
 If a `Stage` references one or more Argo CD `Application`s as part of its
 promotion process, but does not explicitly define any verification process,
 successful verification is implicitly contingent on the `Application`s reaching
 a `Healthy` state.
+
 :::
 
 ## Soak Times
@@ -351,14 +361,18 @@ spec:
 ```
 
 :::note
+
 Soak time is not technically a verification feature, but is documented alongside
 it because both relate to preventing `Freight` from moving downstream until
 required conditions have been met. These two features may even be used in
 conjunction with one another.
+
 :::
 
 :::info
+
 [Manually approving](./50-working-with-freight.md#manual-approvals) `Freight`
 for a `Stage` makes it immediately available to that `Stage` _regardless_ of
 whether any required soak time has elapsed.
+
 :::

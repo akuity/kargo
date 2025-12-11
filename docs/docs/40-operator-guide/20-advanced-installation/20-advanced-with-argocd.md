@@ -6,11 +6,14 @@ sidebar_label: With Argo CD
 
 This document outlines a few generalized approaches to installing and managing
 Kargo using Argo CD.
+
 :::note
+
 This section assumes that you have already installed any dependencies or
 prerequisites required for running Kargo on a Kubernetes cluster. Please refer
 to [Basic Installation](../10-basic-installation.md#prerequisites)
 for more details.
+
 :::
 
 All methods described here will involve deploying Kargo using an Argo CD
@@ -24,11 +27,13 @@ but the techniques shown here can be applied to any configurable elements of
 the Kargo Helm chart.
 
 :::info
+
 Detailed information about available options can be found in the
 [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
 
 For important security-related configuration, refer to the
 [Secure Configuration Guide](../40-security/10-secure-configuration.md).
+
 :::
 
 Recommended commands for generating a complex password and signing key, and for
@@ -42,8 +47,10 @@ echo "Signing Key: $(openssl rand -base64 48 | tr -d "=+/" | head -c 32)"
 ```
 
 :::note
+
 Methods of securing the admin account are explored in greater detail
 [here](../40-security/10-secure-configuration.md#securing-the-admin-account).
+
 :::
 
 ## `spec.source.helm.parameters`
@@ -130,11 +137,13 @@ to reference _both_ the Kargo Helm chart repository and a `values.yaml` file of
 your own from your own Git repository.
 
 :::info
+
 An added benefit to this approach is that if you have other resources to
 include in the Kargo installation, such as
 [`SealedSecret`s](https://github.com/bitnami-labs/sealed-secrets) or
 [`ExternalSecret`s](https://external-secrets.io/latest/), they also can
 be obtained from your own Git repository using the second source.
+
 :::
 
 In the configuration below, the second source (the one with `repoURL` pointed at

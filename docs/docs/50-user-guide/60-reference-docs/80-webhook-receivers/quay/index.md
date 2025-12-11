@@ -9,9 +9,11 @@ from Quay.io repositories by "refreshing" all `Warehouse` resources subscribed
 to those repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 ## Configuring the Receiver
@@ -20,6 +22,7 @@ A Quay.io webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret` key in its data map.
 
 :::info
+
 _This secret will not be shared directly with Quay.io._
 
 Quay.io does not natively implement any mechanism whereby receivers may
@@ -28,9 +31,11 @@ incorporates the secret into the generation of a hard-to-guess URL for the
 receiver. This URL serves as a _de facto_
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) and authentication
 mechanism.
+
 :::
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -110,12 +115,16 @@ container images or Helm charts) have been pushed to it:
     ![Created](./img/created.png "Created")
 
 :::info
+
 Verifying delivery of webhook requests can be difficult as Quay.io offers a
 mechanism for submitting test webhook requests, but offers no way to view the
 results of such a request.
+
 :::
 
 :::info
+
 For additional information on configuring Quay.io webhooks, refer directly to
 the [Quay.io Docs](https://docs.quay.io/guides/notifications.html).
+
 :::

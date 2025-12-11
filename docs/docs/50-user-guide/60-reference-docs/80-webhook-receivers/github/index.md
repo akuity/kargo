@@ -18,15 +18,19 @@ resources subscribed to the GHCR repositories from which those events
 originated.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 :::info
+
 The GitHub webhook receiver also works with GitHub Enterprise Cloud and GitHub
 Enterprise Server, although some URLs in this document may need to be adjusted
 accordingly.
+
 :::
 
 ## Configuring the Receiver
@@ -37,6 +41,7 @@ A GitHub webhook receiver must reference a Kubernetes `Secret` resource with a
 GitHub to sign requests and by the receiver to verify those signatures.
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -149,6 +154,7 @@ To configure a single GitHub repository to notify a receiver of relevant events:
         <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
 
         :::note
+
         You will only receive events from those GHCR repositories explicitly
         associated with your Git repository.
 
@@ -179,8 +185,10 @@ When these steps are complete, the repository will send events to the webhook
 receiver.
 
 :::info
+
 For additional information on configuring webhooks, refer directly to the
 [GitHub Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks).
+
 :::
 
 ### Webhooks from an Organization
@@ -220,6 +228,7 @@ repositories in the organization:
         <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
 
         :::note
+
         You will only receive events from those GHCR repositories explicitly
         associated with your Git repository.
 
@@ -250,9 +259,11 @@ When these steps are complete, all repositories in the organization will send
 events to the webhook receiver.
 
 :::info
+
 For additional information on configuring organization webhooks, refer directly
 to the
 [GitHub Docs](https://docs.github.com/en/webhooks/using-webhooks/creating-webhooks#creating-organization-webhooks).
+
 :::
 
 ### Webhooks from a GitHub App
@@ -278,6 +289,7 @@ receiver of relevant events from any repository into which it's been installed:
        choosing.
 
         :::note
+
         This name must be _globally unique_ across all of GitHub.
 
         Unfortunately, you will not learn whether the name you've selected is
@@ -287,6 +299,7 @@ receiver of relevant events from any repository into which it's been installed:
     1. Complete the <Hlt>Homepage URL</Hlt> field using a URL of your choosing.
 
         :::info
+
         This is a required field, but for our purposes, its value is
         unimportant.
         :::
@@ -295,6 +308,7 @@ receiver of relevant events from any repository into which it's been installed:
        <Hlt>Post installation</Hlt> sections of the form.
 
         :::info
+
         These sections are not relevant to webhook delivery.
         :::
 
@@ -315,6 +329,7 @@ receiver of relevant events from any repository into which it's been installed:
        <Hlt>Read-only</Hlt>.
 
         :::note
+
         You will only receive events from those GHCR repositories explicitly
         associated with your Git repository.
 
@@ -330,6 +345,7 @@ receiver of relevant events from any repository into which it's been installed:
         <Hlt>Registry package</Hlt> is also selected.
 
         :::note
+
         The events available for selection in this section of the form are
         dynamic and dependent on your selections in the <Hlt>Permissions</Hlt>
         section.
@@ -341,6 +357,7 @@ receiver of relevant events from any repository into which it's been installed:
        <Hlt>Only this account</Hlt> is selected.
 
         :::danger
+
         If you select the other option (<Hlt>Any account</Hlt>), your
         App will be installable into any repository in GitHub, regardless
         of what account owns it. _Every_ repository into which your App is
@@ -381,6 +398,7 @@ receiver of relevant events from any repository into which it's been installed:
           by the account to send events to the webhook receiver.
 
             :::note
+
             Selecting this option will result in the App also being installed
             in _new_ repositories belonging to the account as they are created.
             :::
@@ -390,6 +408,7 @@ receiver of relevant events from any repository into which it's been installed:
           webhook receiver.
 
             :::note
+
             If this option is selected, the installation process can be
             repeated in the future to install the App into additional
             repositories.
@@ -401,7 +420,9 @@ When these steps are complete, all repositories into which your GitHub App has
 been installed will send events to the webhook receiver.
 
 :::info
+
 For additional information on configuring webhooks for GitHub Apps, refer
 directly to the
 [GitHub Docs](https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/using-webhooks-with-github-apps).
+
 :::

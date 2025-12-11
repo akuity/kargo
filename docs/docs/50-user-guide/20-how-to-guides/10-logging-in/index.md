@@ -22,7 +22,9 @@ its [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
        server.
 
         :::info
+
         The Kargo API server also serves the web-based UI.
+
         :::
 
         You will be presented with the login screen, where you may have the
@@ -32,12 +34,14 @@ its [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
         ![Kargo Login Screen](./img/logging-in.png)
 
         :::info
+
         It is common for local installations of Kargo to have the admin
         user enabled, while production installations are more likely to have
         SSO enabled and the admin user disabled.
 
         If the admin user is enabled, the password can be obtained from the
         operator who installed Kargo's cluster-side components.
+
         :::
 
     1. Enter the admin user's password and click <Hlt>Login</Hlt>.
@@ -63,12 +67,14 @@ its [CLI](../../05-installing-the-cli/index.md), you will need to log in first.
       ```
 
       :::info
+
       It is common for local installations of Kargo to have the admin
       user enabled, while production installations are more likely to have
       SSO enabled and the admin user disabled.
 
       If the admin user is enabled, the password can be obtained from the
       operator who installed Kargo's cluster-side components.
+
       :::
 
       OR

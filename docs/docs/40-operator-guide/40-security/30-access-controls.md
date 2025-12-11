@@ -9,14 +9,15 @@ _users_ -- ones who might be considered to be "project admins." There are only
 a few access controls that an operator might need to be concerned with and this
 documentation focuses on those.
 
-:::note
-__Not what you were looking for?__
+
+:::info[Not what you were looking for?]
 
 If you're a project admin looking to understand more about access controls,
 you may find some value in this document, but most of what you need to know
 can be found in the
 [User Guide's Access Controls](../../50-user-guide/50-security/20-access-controls/index.md)
 section.
+
 :::
 
 ## Overview
@@ -31,11 +32,13 @@ Kargo also implements access controls through _pure Kubernetes
 [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)._
 
 :::info
+
 Kargo's creators learned from previous experience that when APIs are modeled as
 Kubernetes resources, it is best to rely solely on Kubernetes-native
 authorization mechanisms. By doing so, access controls are enforced even for
 users with direct access to the Kargo control plane's underlying cluster who
 might shun the Kargo CLI and UI in favor of `kubectl`.
+
 :::
 
 There is a natural _impedance_ between users authenticating to _Kargo_ through
@@ -102,12 +105,14 @@ metadata:
 ```
 
 :::info
+
 Mappings specified using annotations with keys of the form
 `rbac.kargo.akuity.io/claim.<name>` with comma-delimited values are also
 supported for reasons of backwards compatibility. The effective mapping is
 therefore the union of mappings defined using such annotations with any
 mappings defined using the newer, recommended `rbac.kargo.akuity.io/claims`
 annotation.
+
 :::
 
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
@@ -190,8 +195,10 @@ metadata:
 ```
 
 :::info
+
 For additional information, refer to the
 [OpenID Connect](./20-openid-connect/index.md) section of the Operator Guide.
+
 :::
 
 #### Global `ServiceAccount` Namespaces
@@ -204,15 +211,19 @@ control over the project-level permissions of those `ServiceAccount`s using
 `RoleBinding`s in the project namespaces.
 
 :::info
+
 The main convenience of this approach is that it enables individual
 project admins to take the existence of certain classes of user for granted
 instead of having to manage user-to-`ServiceAccount` mappings themselves.
+
 :::
 
 :::info
+
 "Global" is a misnomer. `ServiceAccount` resources in designated namespaces are
 not truly global because they are still mapped to users according to the rules
 described in the previous sections.
+
 :::
 
 Enabling global `ServiceAccount` namespaces requires three steps be taken

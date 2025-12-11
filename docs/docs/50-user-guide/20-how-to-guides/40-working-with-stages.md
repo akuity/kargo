@@ -56,9 +56,11 @@ allows you to define common variables at the `Stage` level while still being
 able to override or supplement them at the promotion level as needed.
 
 :::info
+
 Variables defined at the Stage level can be referenced using
 `${{ vars.<variable-name> }}` syntax throughout the `Stage` specification,
 including in promotion templates and verification arguments.
+
 :::
 
 ### Requested Freight
@@ -71,10 +73,12 @@ origin itself (e.g. a `Warehouse`) and/or any number of "upstream" `Stage`
 resources.
 
 :::info
+
 `Warehouse`s are the only type of origin at present, but it is anticipated that
 future versions of Kargo will introduce additional origin types. This is why
 "types" of `Freight` are described by an `origin` field having `kind` and `name`
 subfields instead of being described only by the name of a `Warehouse`.
+
 :::
 
 #### Freight Availability
@@ -100,9 +104,11 @@ Valid strategies are:
 Last, any `Freight` that has been explicitly _approved_ for promotion to the
 `Stage` is available, without requiring upstream verification.
 
-:::tip
+:::info
+
 Explicit approvals are a useful method for applying the occasional "hotfix"
 without waiting for a `Freight` resource to traverse the entirety of a pipeline.
+
 :::
 
 #### Auto-Promotion
@@ -114,6 +120,7 @@ the previous section and automatically initiate a promotion when suitable
 `Freight` are found to be available.
 
 :::info
+
 Auto-promotion being enabled through Project-level configuration is a security
 measure.
 
@@ -125,6 +132,7 @@ by enabling auto-promotion.
 Keeping enablement of auto-promotion defined at the Project-level ensures that
 (in practice) only a Project's administrator has the authority to enable or
 disable auto-promotion for any `Stage`.
+
 :::
 
 The definition of "suitable" `Freight` is dependent on the `requestedFreight`'s
@@ -265,7 +273,8 @@ spec:
   # ...
 ```
 
-:::tip
+:::info
+
 By requesting `Freight` from multiple sources, a `Stage` can effectively
 participate in _multiple pipelines_ that may each deliver different collections
 of artifacts independently of the others.
@@ -273,6 +282,7 @@ of artifacts independently of the others.
 __This is _advanced_ configuration. If you're very new to Kargo
 and requesting `Freight` from multiple origins, you probably
 didn't mean to.__
+
 :::
 
 ### Promotion Templates
@@ -359,8 +369,10 @@ promotionTemplate:
 ```
 
 :::info
+
 For complete documentation of all Kargo's built-in promotion steps, refer
 to the [Promotion Steps Reference](../60-reference-docs/30-promotion-steps/index.md).
+
 :::
 
 ### Verification
@@ -386,8 +398,10 @@ spec:
 ```
 
 :::info
+
 For complete documentation of how to perform verification, refer to the
 [Verification Guide](./60-verification.md).
+
 :::
 
 ### Status
@@ -498,7 +512,9 @@ Kargo provides tools to manage Stages using either its UI or
 CLI. This section explains how to handle Stages effectively through both interfaces.
 
 :::info
+
 Users with credentials for and sufficient permissions within the Kargo control plane's Kubernetes cluster can also manage `Stage` resources using `kubectl`.
+
 :::
 
 ### Creating a Stage
@@ -685,6 +701,7 @@ as desired.
    ![verify-stage](img/reverify-freight.png)
 
     :::note
+
     If you wish to stop the in-progress verification, you can click <Hlt>Abort Verification</Hlt>.
     :::
 

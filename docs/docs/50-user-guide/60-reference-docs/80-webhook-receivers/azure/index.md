@@ -16,9 +16,11 @@ The receiver responds to `push` and `git.push` events by _refreshing_ all
 event.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 ## Configuring the Receiver
@@ -27,6 +29,7 @@ An Azure webhook receiver must reference a Kubernetes `Secret` resource with a
 `secret` key in its data map.
 
 :::info
+
 _This secret will not be shared directly with Azure._
 
 Azure does not natively implement any mechanism whereby receivers may
@@ -35,9 +38,11 @@ incorporates the secret into the generation of a hard-to-guess URL for the
 receiver. This URL serves as a _de facto_
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) and authentication
 mechanism.
+
 :::
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -117,6 +122,7 @@ DevOps services.
     1. Set the <Hlt>Scope</Hlt> using the format `<repository>:<tag>`.
 
         :::note
+
         Wildcards are supported in both the `repository` and `tag` part of the
         <Hlt>Scope</Hlt> string.
         :::
@@ -139,8 +145,10 @@ DevOps services.
        ![Success](./img/acr/success.png "Success")
 
 :::info
+
 For additional information on configuring ACR webhooks, refer directly to
 the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-webhook#create-webhook---azure-portal).
+
 :::
 
 ### Azure DevOps
@@ -194,7 +202,9 @@ the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/contai
 1. Click <Hlt>Finish</Hlt>.
 
 :::info
+
 For additional information on configuring Azure DevOps webhooks, refer directly
 to the
 [Azure DevOps Docs](https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops).
+
 :::

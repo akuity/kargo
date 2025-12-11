@@ -21,13 +21,16 @@ metadata:
 ```
 
 :::note
+
 Deletion of a `Project` resource results in the deletion of the corresponding
 `Namespace`. For convenience, the inverse is also true -- deletion of a
 project's `Namespace` results in the deletion of the corresponding `Project`
 resource.
+
 :::
 
 :::info
+
 There are compelling advantages to using `Project` resources instead of
 permitting users to create `Namespace` resources directly:
 
@@ -41,6 +44,7 @@ _any_ new `Namespace` directly.
 * Boilerplate configuration is automatically created at the time of `Project`
 creation. This includes things such as project-level RBAC resources and
 `ServiceAccount` resources.
+
 :::
 
 ## Project Configuration
@@ -66,14 +70,14 @@ is defined by a `stageSelector` and an `autoPromotionEnabled` flag. The
 `autoPromotionEnabled` flag indicates whether automatic promotion is enabled for
 those `Stage`s.
 
-:::info
-__Not what you were looking for?__
+:::info[Not what you were looking for?]
 
 This section focuses only on _enabling or disabling_ auto-promotion for specific
 `Stage`s through Project-level configuration. For `Stage`-level controls over
 _which_ `Freight` are eligible for auto-promotion when enabled, refer to the
 [Auto-Promotion](./40-working-with-stages.md#auto-promotion) section of our
 Working with Stages guide.
+
 :::
 
 #### Basic Promotion Policy
@@ -110,10 +114,12 @@ Kargo supports more flexible ways to specify which `Stage`s a promotion policy
 applies to, using either pattern matching or label selectors.
 
 :::warning
+
 Pattern and label matching introduce security considerations. Users with
 appropriate permissions could potentially create resources with names or labels
 deliberately crafted to match patterns, bypassing intended promotion controls.
 Using [exact names](#basic-promotion-policy) provides the most secure option.
+
 :::
 
 ##### Using Stage Selectors with Patterns
@@ -307,9 +313,11 @@ This enables pre-configuring such `Namespace`s according to your
 own requirements.
 
 :::info
+
 Requiring a `Namespace` to have the `kargo.akuity.io/project: "true"` label to
 be eligible for adoption by a new `Project` is intended to prevent accidental or
 willful hijacking of an existing `Namespace`.
+
 :::
 
 The following example demonstrates adoption of a `Namespace` that's been

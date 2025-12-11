@@ -9,12 +9,14 @@ whether it meets user-defined criteria, then executing user-defined actions on a
 user-defined set of resources when it does.
 
 :::note
+
 Currently, these actions are limited to "refreshing" `Warehouse` resources,
 which triggers their artifact discovery processes, so a typical use of this
 component is responding to "push" events from artifact repositories that
 lack dedicated webhook receiver implementations. Since this component
 effectively enables imperatively refreshing a `Warehouse` from any external
 process, other uses are possible and practical.
+
 :::
 
 ## Configuring the Receiver
@@ -25,13 +27,16 @@ A Generic webhook receiver must reference a Kubernetes `Secret` resource with
 a `secret` key in its data map.
 
 :::info
+
 Kargo incorporates the secret into the generation of a hard-to-guess URL for the
 receiver. This URL serves as a _de facto_
 [shared secret](https://en.wikipedia.org/wiki/Shared_secret) and authentication
 mechanism.
+
 :::
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -96,15 +101,17 @@ spec:
 ```
 
 :::note
+
 The only currently supported `actionType` is `Refresh`.
 :::
 
+
 #### whenExpression
 
-Use `whenExpression` to ensure that an action is only executed when specific 
+Use `whenExpression` to ensure that an action is only executed when specific
 criteria are met, providing fine-grained control over webhook behavior.
 
-The following example depicts an action that is executed only when the request 
+The following example depicts an action that is executed only when the request
 contains an `X-Event-Type` header with the value `push`:
 
 ```yaml
@@ -125,7 +132,9 @@ spec:
 ```
 
 :::note
-This is can be left empty if the action should run unconditionally.
+
+This can be left empty if the action should run unconditionally.
+
 :::
 
 #### targetSelectionCriteria
@@ -140,8 +149,10 @@ to be performed on. There are three ways to define `targetSelectionCriteria`:
 All methods support both static and [dynamic](#expression-reference) values.
 
 :::note
+
 Using more than one of the above selects resources at the logical intersection
 of the criteria. (i.e. Criteria are "ANDed.")
+
 :::
 
 ##### By Name
@@ -223,7 +234,7 @@ spec:
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
-`Warehouse` resources with a `service` label whose value is either `ui` or 
+`Warehouse` resources with a `service` label whose value is either `ui` or
 `api`:
 
 ```yaml
@@ -255,7 +266,7 @@ spec:
 Use `indexSelector` to retrieve resources by a cached index.
 
 The following example depicts `targetSelectionCriteria` that dynamically selects
-`Warehouse` resources that contain subscriptions to the normalized git 
+`Warehouse` resources that contain subscriptions to the normalized git
 URL from the request body.
 
 ```yaml
@@ -272,17 +283,19 @@ actions:
 ```
 
 :::note
-`subscribedURLs` is the only available index. It refers to `Warehouse` 
+
+`subscribedURLs` is the only available index. It refers to `Warehouse`
 resources that contain subscriptions for a provided repository URL.
+
 :::
 
 ### Expression Reference
 
 The Generic webhook receiver extends
-[built-in expr-lang support](https://expr-lang.org/docs/language-definition) 
-with utilities that can be used to help resolve `targetSelectionCriteria` 
+[built-in expr-lang support](https://expr-lang.org/docs/language-definition)
+with utilities that can be used to help resolve `targetSelectionCriteria`
 information from incoming requests. The following reference contains the
-variables and functions available for yeilding dynamic values.
+variables and functions available for yielding dynamic values.
 
 - [request.body](#requestbody)
 - [request.header](#requestheaderheaderkey)
@@ -294,10 +307,10 @@ variables and functions available for yeilding dynamic values.
 
 #### request.body
 
-`request.body` is structured data parsed from the original request body which is 
-assumed to contain valid JSON. Fields can be accessed using bracket or 
-dot-notation. For example, `data.address.city` would access the `city` property 
-nested within the `address` object, and `data.users[0]` would access the first 
+`request.body` is structured data parsed from the original request body which is
+assumed to contain valid JSON. Fields can be accessed using bracket or
+dot-notation. For example, `data.address.city` would access the `city` property
+nested within the `address` object, and `data.users[0]` would access the first
 item in a `users` array.
 
 #### request.header(headerKey)
@@ -305,6 +318,7 @@ item in a `users` array.
 Retrieves first value for `headerKey`.
 
 It has one argument:
+
 - `headerKey` (Required): Case-insensitive header key.
 
 If `headerKey` is not present in the request headers, an empty `string` will
@@ -315,6 +329,7 @@ be returned.
 Retrieves all values for `headerKey`.
 
 It has one argument:
+
 - `headerKey` (Required): Case-insensitive header key.
 
 If `headerKey` is not present in the request headers, an empty `string` array
@@ -325,24 +340,26 @@ will be returned.
 Retrieves the query param value for the provided query param key.
 
 It has one argument:
+
 - `queryParamKey` (Required): URL query parameter key.
 
-If `queryParamKey` is not present in the request headers, an empty `string` 
+If `queryParamKey` is not present in the request headers, an empty `string`
 will be returned.
 
 #### normalizeGit(url)
 
 Normalizes Git URLs of the following forms:
 
-  - http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
-  - ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
-  - [user@]host.xz[:path/to/repo[.git][/]]
+- `http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]`
+- `ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]`
+- `[user@]host.xz[:path/to/repo[.git][/]]`
 
 This is useful for the purposes of comparison and also in cases where a
 canonical representation of a Git URL is needed. Any URL that cannot be
 normalized will be returned as-is.
 
 It has one argument:
+
 - `url` (Required): The URL of a git repository.
 
 The returned value is a `string`.
@@ -359,6 +376,7 @@ canonical representation of a repository URL is needed. Any URL that cannot
 be normalized will be returned as-is.
 
 It has one argument:
+
 - `url` (Required): The URL of an image repository.
 
 The returned value is a `string`.
@@ -370,6 +388,7 @@ Crucially, this function removes the oci:// prefix from the URL if there is
 one.
 
 It has one argument:
+
 - `url` (Required): The URL of a chart repository.
 
 The returned value is a `string`.

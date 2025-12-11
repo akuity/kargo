@@ -8,14 +8,15 @@ Most access controls in Kargo are within the purview of highly-privileged
 _users_ -- ones who might be considered to be "project admins." Such users are
 the intended audience for this document.
 
-:::note
-__Not what you were looking for?__
+
+:::info[Not what you were looking for?]
 
 If you're an operator looking to understand more about access controls,
 especially the few outside the purview of project admins, you may find some
 value in this document, but most of what you need to know can be found in the
 [Operator Guide's Access Controls](../../../40-operator-guide/40-security/30-access-controls.md)
 section.
+
 :::
 
 ## Overview
@@ -32,11 +33,13 @@ Kargo also implements access controls through _pure Kubernetes
 [RBAC](https://kubernetes.io/docs/reference/access-authn-authz/rbac/)._
 
 :::info
+
 Kargo's creators learned from previous experience that when APIs are modeled as
 Kubernetes resources, it is best to rely solely on Kubernetes-native
 authorization mechanisms. By doing so, access controls are enforced even for
 users with direct access to the Kargo control plane's underlying cluster who
 might shun the Kargo CLI and UI in favor of `kubectl`.
+
 :::
 
 There is a natural _impedance_ between users authenticating to _Kargo_ through
@@ -100,12 +103,14 @@ metadata:
 ```
 
 :::info
+
 Mappings specified using annotations with keys of the form
 `rbac.kargo.akuity.io/claim.<name>` with comma-delimited values are also
 supported for reasons of backwards compatibility. The effective mapping is
 therefore the union of mappings defined using such annotations with any
 mappings defined using the newer, recommended `rbac.kargo.akuity.io/claims`
 annotation.
+
 :::
 
 A user may be mapped to multiple `ServiceAccount` resources. A user's effective
@@ -164,9 +169,11 @@ modify, or delete Kargo roles:
 ![Edit Role](img/roles-manage-3.png)
 
 :::info
+
 The Kargo API server translates all such creations, modifications, and deletions
 into the appropriate actions on the underlying `ServiceAccount`, `Role`, and
 `RoleBinding` resources.
+
 :::
 
 #### Managing Kargo Roles With the CLI
@@ -255,7 +262,9 @@ into the appropriate actions on the underlying `ServiceAccount`, `Role`, and
   ```
 
   :::note
+
   Output of the above command is not shown here due to its length.
+
   :::
 
 * Last, it is, of course, possible to delete a role:
@@ -411,9 +420,11 @@ control in the hands of the operator, and you should be aware of them.
    which Kargo is installed.
 
     :::note
+
     It is common for operators to map _all_ authenticated users to the
     `kargo-viewer` `ServiceAccount` to effect broad read-only permissions. These
     permissions _do not_ extend to credentials and other project `Secret`s.
+
     :::
 
 1. Operators can designate one or more namespaces as containing "global"
@@ -432,9 +443,11 @@ control in the hands of the operator, and you should be aware of them.
     `RoleBinding`s.
 
     :::info
+
     "Global" is a misnomer. `ServiceAccount` resources in designated namespaces
     are not truly global because they are still mapped to users according to the
     rules described in the previous sections.
+
     :::
 
     Example custom `RoleBinding` to a local `Project` role using a "global"

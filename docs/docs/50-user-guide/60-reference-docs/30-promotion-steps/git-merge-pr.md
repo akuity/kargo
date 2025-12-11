@@ -11,20 +11,24 @@ description: Merges an open pull request.
 [`git-open-pr`](git-open-pr.md) step.
 
 :::important
+
 This step only executes synchronous merges. It can neither initiate an
 asynchronous merge by placing a PR on a merge queue (or similar), nor can it
 recognize when an open PR is already _in_ a merge queue (having been placed
 there by someone or something else), and thus cannot wait for an aynchronous
 merge in-progress to complete.
+
 :::
 
 :::caution
+
 __GitHub__ repositories can be configured with branch protection rules that
 require PRs to be merged via a merge queue. When such a rule is in place, the
 results of the `git-merge-pr` step attempting a synchronous merge will depend
 upon permissions. With sufficient permissions to bypass branch protection rules,
 the merge queue will be bypassed. Without such permissions, the step's attempt
 to merge will fail.
+
 :::
 
 ## Configuration
@@ -38,7 +42,9 @@ to merge will fail.
 | `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
 
 :::warning
+
 The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
+
 :::
 
 ## Output

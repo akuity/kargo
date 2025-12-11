@@ -20,13 +20,14 @@ from them) are CRDs re-used from the
 intentionally built to be useful in contexts other than Argo Rollouts. Re-using
 this resource type to define verification processes means those processes
 benefit from this rich and battle-tested feature of Argo Rollouts.
-
 :::info
+
 This reference guide is intended to give a brief introduction to
 `AnalysisTemplate`s for some common use cases. Please consult the
 [relevant sections](https://argoproj.github.io/argo-rollouts/features/analysis/)
 of the Argo Rollouts documentation for comprehensive coverage of the full
 range of `AnalysisTemplate` capabilities.
+
 :::
 
 `AnalysisTemplate`s integrate natively with many popular open-source and
@@ -54,9 +55,11 @@ created and can then be referenced in metrics configuration. Arguments are
 dereferenced using the syntax: `{{ args.<name> }}`.
 
 :::caution
+
 Unlike Kargo promotion processes, which require expressions to be enclosed
 within `${{ }}`, Argo Rollouts `AnalysisTemplate`s require expressions to be
 enclosed within `{{ }}` (i.e. without `$`).
+
 :::
 
 The following example shows an `AnalysisTemplate` with three arguments. Values
@@ -125,11 +128,12 @@ spec:
 ```
 
 :::caution
+
 When specifying an `interval`, you must also specify a `count`. Without 
 it, the AnalysisRun would collect an indefinite amount of measurements
 and never complete (until terminated).
-:::
 
+:::
 
 ## Success Condition
 
