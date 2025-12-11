@@ -16,6 +16,16 @@ const (
 	altEndDelim   = "%}"
 )
 
+type supportedDelimiterSet struct {
+	start string
+	end   string
+}
+
+var supportedDelimiters = []supportedDelimiterSet{
+	{start: stdStartDelim, end: stdEndDelim},
+	{start: altStartDelim, end: altEndDelim},
+}
+
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
 // template containing expr-lang expressions offset by ${{ and }}, using the
 // provided environment as context. The evaluated JSON is returned as a new byte
@@ -143,8 +153,7 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 		),
 	)
 
-	evaluator := getExpressionEvaluator(env, exprOpts...)
-	result, err := evaluateMultiDelimiterTemplate(template, evaluator)
+	result, err := evaluateTemplate(template, env, exprOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -198,81 +207,94 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	return result, nil
 }
 
-// evaluateMultiDelimiterTemplate evaluates a template that may contain multiple
+// evaluateTemplate evaluates a template that may contain multiple
 // expressions with different delimiter types (${{ }} and ${% %}).
-func evaluateMultiDelimiterTemplate(template string, evaluator func(string) (string, error)) (string, error) {
+func evaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (string, error) {
 	var result strings.Builder
-	pos := 0
 
-	for pos < len(template) {
-		stdIdx := strings.Index(template[pos:], stdStartDelim)
-		altIdx := strings.Index(template[pos:], altStartDelim)
+	for {
+		before, expression, after, err := nextExpression(template)
+		if err != nil {
+			return "", err
+		}
 
-		var startDelim, endDelim string
-		var nextIdx int
+		result.WriteString(before)
 
-		if stdIdx >= 0 && (altIdx < 0 || stdIdx < altIdx) {
-			// Standard delimiter comes first
-			startDelim = stdStartDelim
-			endDelim = stdEndDelim
-			nextIdx = stdIdx
-		} else if altIdx >= 0 {
-			// Alternative delimiter comes first
-			startDelim = altStartDelim
-			endDelim = altEndDelim
-			nextIdx = altIdx
-		} else {
+		if expression == "" {
 			// No more expressions found
-			result.WriteString(template[pos:])
+			result.WriteString(after)
 			break
 		}
 
-		result.WriteString(template[pos : pos+nextIdx])
-		pos += nextIdx
-
-		exprStart := pos + len(startDelim)
-		endIdx := strings.Index(template[exprStart:], endDelim)
-		if endIdx < 0 {
-			return "", fmt.Errorf("cannot find end tag=%q in tail %q", endDelim, template[pos:])
-		}
-
-		expression := template[exprStart : exprStart+endIdx]
-		evaluated, err := evaluator(expression)
+		evaluated, err := evaluateExpression(expression, env, exprOpts...)
 		if err != nil {
 			return "", err
 		}
 		result.WriteString(evaluated)
 
-		pos = exprStart + endIdx + len(endDelim)
+		template = after
 	}
 
 	return result.String(), nil
 }
 
-// getExpressionEvaluator returns a function that evaluates input as a single
-// expr-lang expression with the provided map as the environment.
-func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) func(string) (string, error) {
-	return func(expression string) (string, error) {
-		program, err := expr.Compile(expression, exprOpts...)
-		if err != nil {
-			return "", err
+// nextExpression finds the next expression in the template string, returning
+// the part of the template before the expression, the expression itself, and
+// the part after the expression. If no expression is found, the entire template
+// is returned as the "after" part, with empty strings for the "before" and
+// "expression" parts.
+func nextExpression(template string) (string, string, string, error) {
+	var delim *supportedDelimiterSet
+	delimStartIdx := -1
+	for _, d := range supportedDelimiters {
+		if i := strings.Index(template, d.start); i >= 0 {
+			if delimStartIdx < 0 || i < delimStartIdx {
+				delimStartIdx = i
+				delim = &d
+			}
 		}
-		result, err := expr.Run(program, env)
-		if err != nil {
-			return "", err
-		}
-		if resStr, ok := result.(string); ok {
-			// A string result can be returned directly
-			return resStr, nil
-		}
-		// For non-string results, which could include nils, bools, numbers of any
-		// type, structs, collections, etc. the result must be marshaled to JSON
-		resJSON, err := json.Marshal(result)
-		if err != nil {
-			return "", err
-		}
-		return string(resJSON), nil
 	}
+	if delim == nil {
+		return "", "", template, nil
+	}
+	exprStartIdx := delimStartIdx + len(delim.start)
+	exprRelDelimEndIdx := strings.Index(template[exprStartIdx:], delim.end)
+	if exprRelDelimEndIdx < 0 {
+		return "", "", "", fmt.Errorf(
+			"unclosed expression: expected %q but reached end of template",
+			delim.end,
+		)
+	}
+	exprEndIdx := exprStartIdx + exprRelDelimEndIdx
+	delimEndIdx := exprStartIdx + exprRelDelimEndIdx + len(delim.end)
+	return template[:delimStartIdx], // Template part preceding the expression
+		template[exprStartIdx:exprEndIdx], // The expression itself
+		template[delimEndIdx:], // Template part following the expression
+		nil
+}
+
+// evaluateExpression evaluates input as a single expr-lang expression with the
+// provided map as the environment.
+func evaluateExpression(expression string, env map[string]any, exprOpts ...expr.Option) (string, error) {
+	program, err := expr.Compile(expression, exprOpts...)
+	if err != nil {
+		return "", err
+	}
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return "", err
+	}
+	if resStr, ok := result.(string); ok {
+		// A string result can be returned directly
+		return resStr, nil
+	}
+	// For non-string results, which could include nils, bools, numbers of any
+	// type, structs, collections, etc. the result must be marshaled to JSON
+	resJSON, err := json.Marshal(result)
+	if err != nil {
+		return "", err
+	}
+	return string(resJSON), nil
 }
 
 // quoteFunc formats a value as a quoted string, with special handling for

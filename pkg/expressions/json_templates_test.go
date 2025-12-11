@@ -289,7 +289,7 @@ value13: | # This is a string
 			jsonTemplate: `{ "AString": "${{ aString " }`,
 			assertions: func(t *testing.T, _ []byte, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "cannot find end tag")
+				require.Contains(t, err.Error(), "unclosed expression")
 			},
 		},
 		{
@@ -367,7 +367,7 @@ value13: | # This is a string
 			jsonTemplate: `{ "AString": "${% aString " }`,
 			assertions: func(t *testing.T, _ []byte, err error) {
 				require.Error(t, err)
-				require.Contains(t, err.Error(), "cannot find end tag")
+				require.Contains(t, err.Error(), "unclosed expression")
 			},
 		},
 		{
