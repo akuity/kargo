@@ -9,8 +9,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -26,6 +28,14 @@ func TestRefreshResource(t *testing.T) {
 	testScheme := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(testScheme))
 	require.NoError(t, kargoapi.AddToScheme(testScheme))
+	gvs := []schema.GroupVersion{kargoapi.GroupVersion}
+	mapper := meta.NewDefaultRESTMapper(gvs)
+	mapper.Add(kargoapi.GroupVersion.WithKind("Warehouse"), meta.RESTScopeNamespace)
+	mapper.Add(kargoapi.GroupVersion.WithKind("Stage"), meta.RESTScopeNamespace)
+	mapper.Add(kargoapi.GroupVersion.WithKind("Promotion"), meta.RESTScopeNamespace)
+	mapper.Add(kargoapi.GroupVersion.WithKind("ProjectConfig"), meta.RESTScopeNamespace)
+	mapper.Add(kargoapi.GroupVersion.WithKind("ClusterConfig"), meta.RESTScopeRoot)
+
 	ns := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kargo-demo",
@@ -41,7 +51,7 @@ func TestRefreshResource(t *testing.T) {
 		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
 	}{
 		"empty project": {
-			kClient: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			kClient: fake.NewClientBuilder().WithScheme(testScheme).WithRESTMapper(mapper).Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "",
 				Name:         "test",
@@ -58,6 +68,7 @@ func TestRefreshResource(t *testing.T) {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
+				WithRESTMapper(mapper).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
@@ -75,6 +86,7 @@ func TestRefreshResource(t *testing.T) {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
+				WithRESTMapper(mapper).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
@@ -85,13 +97,14 @@ func TestRefreshResource(t *testing.T) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContains(t, err, "unsupported resource type \"invalid\": no matching registration found")
+				require.ErrorContains(t, err, "no matches for kind \"invalid\" in version \"kargo.akuity.io/v1alpha1\"")
 			},
 		},
 		"non-existing project": {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
+				WithRESTMapper(mapper).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "not-existing-project",
@@ -109,6 +122,7 @@ func TestRefreshResource(t *testing.T) {
 			kClient: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(ns).
+				WithRESTMapper(mapper).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
@@ -119,7 +133,7 @@ func TestRefreshResource(t *testing.T) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
-				require.ErrorContainsf(t, err, "warehouse not found", "")
+				require.ErrorContainsf(t, err, "Warehouse not found", "")
 			},
 		},
 		"warehouse": {
@@ -132,7 +146,8 @@ func TestRefreshResource(t *testing.T) {
 						},
 						Spec: kargoapi.WarehouseSpec{},
 					},
-				).Build(),
+				).WithRESTMapper(mapper).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
 				Name:         "test",
@@ -153,14 +168,17 @@ func TestRefreshResource(t *testing.T) {
 			},
 		},
 		"stage without current promo": {
-			kClient: fake.NewClientBuilder().WithObjects(ns,
+			kClient: fake.NewClientBuilder().
+			WithObjects(ns,
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kargo-demo",
 						Name:      "test",
 					},
 				},
-			).WithScheme(testScheme).Build(),
+			).WithScheme(testScheme).
+			WithRESTMapper(mapper).
+			Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
 				Name:         "test",
@@ -199,7 +217,9 @@ func TestRefreshResource(t *testing.T) {
 						Name:      "promo-1",
 					},
 				},
-			).WithScheme(testScheme).Build(),
+			).WithScheme(testScheme).
+			WithRESTMapper(mapper).
+			Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",
 				Name:         "test",
@@ -227,7 +247,8 @@ func TestRefreshResource(t *testing.T) {
 							Name: api.ClusterConfigName,
 						},
 					},
-				).Build(),
+				).WithRESTMapper(mapper).
+				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "",
 				Name:         api.ClusterConfigName,
@@ -257,6 +278,7 @@ func TestRefreshResource(t *testing.T) {
 						},
 					},
 				).
+				WithRESTMapper(mapper).
 				Build(),
 			req: &svcv1alpha1.RefreshResourceRequest{
 				Project:      "kargo-demo",

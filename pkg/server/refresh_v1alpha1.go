@@ -3,13 +3,16 @@ package server
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/anypb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -18,17 +21,18 @@ import (
 )
 
 const (
-	RefreshResourceTypeClusterConfig RefreshResourceType = "clusterconfig"
-	RefreshResourceTypeProjectConfig RefreshResourceType = "projectconfig"
-	RefreshResourceTypeStage         RefreshResourceType = "stage"
-	RefreshResourceTypeWarehouse     RefreshResourceType = "warehouse"
+	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
+	RefreshResourceTypeProjectConfig RefreshResourceType = "ProjectConfig"
+	RefreshResourceTypeStage         RefreshResourceType = "Stage"
+	RefreshResourceTypeWarehouse     RefreshResourceType = "Warehouse"
 )
 
 func init() {
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeClusterConfig, nil
+				return rt == RefreshResourceTypeClusterConfig || 
+					rt == strings.ToLower(RefreshResourceTypeClusterConfig), nil
 			},
 			Value: func() client.Object { return new(kargoapi.ClusterConfig) },
 		},
@@ -36,7 +40,8 @@ func init() {
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeProjectConfig, nil
+				return rt == RefreshResourceTypeProjectConfig ||
+				rt == strings.ToLower(RefreshResourceTypeProjectConfig), nil
 			},
 			Value: func() client.Object { return new(kargoapi.ProjectConfig) },
 		},
@@ -85,27 +90,19 @@ var defaultRefreshObjectRegistry = component.MustNewPredicateBasedRegistry[
 type RefreshResourceType string
 
 func (t RefreshResourceType) String() string {
-	// normalize for type-casts
-	s := strings.ToLower(string(t))
-	return strings.TrimSpace(s)
+	return string(t)
 }
 
-func (t RefreshResourceType) RequiresName() bool {
-	switch t {
-	case RefreshResourceTypeStage, RefreshResourceTypeWarehouse:
-		return true
-	default:
-		return false
+func (t RefreshResourceType) GVK() schema.GroupVersionKind {
+	return schema.GroupVersionKind{
+		Group:   kargoapi.GroupVersion.Group,
+		Version: kargoapi.GroupVersion.Version,
+		Kind:    t.String(),
 	}
 }
 
-func (t RefreshResourceType) RequiresProject() bool {
-	switch t {
-	case RefreshResourceTypeProjectConfig, RefreshResourceTypeStage, RefreshResourceTypeWarehouse:
-		return true
-	default:
-		return false
-	}
+func (t RefreshResourceType) NameEqualsProject() bool {
+	return t == RefreshResourceTypeProjectConfig
 }
 
 func (s *server) RefreshResource(
@@ -175,29 +172,38 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
 	rt := RefreshResourceType(r.GetResourceType())
-	if !rt.RequiresName() && !rt.RequiresProject() {
+	if rt.String() == "" {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("resource type unset"),
+		)
+	}
+	isNamespaced, err := apiutil.IsGVKNamespaced(rt.GVK(), s.client.RESTMapper())
+	if err != nil {
+		return nil, connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("unsupported resource type %q: %w", rt, err),
+		)
+	}
+	if !isNamespaced {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
-
-	if rt.RequiresProject() {
-		if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
-			return nil, err
-		}
-		if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
-			return nil, err
-		}
-		o.SetNamespace(r.GetProject())
+	if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
+		return nil, err
 	}
-
-	if rt.RequiresName() {
-		if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
-			return nil, err
-		}
-		o.SetName(r.GetName())
+	if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
+		return nil, err
+	}
+	o.SetNamespace(r.GetProject())
+	if rt.NameEqualsProject() {
+		o.SetName(r.GetProject())
 		return &o, nil
 	}
-	o.SetName(r.GetProject())
+	if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
+		return nil, err
+	}
+	o.SetName(r.GetName())
 	return &o, nil
 }
 
@@ -210,3 +216,4 @@ func newRefreshResponse(obj client.Object) *connect.Response[svcv1alpha1.Refresh
 		},
 	})
 }
+q
