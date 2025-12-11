@@ -259,7 +259,7 @@ item in a `users` array.
 
 #### request.header(headerKey)
 
-Function that retrieves first value for `headerKey`.
+Retrieves first value for `headerKey`.
 
 It has one argument:
 - `headerKey` (Required): Case-insensitive header key.
@@ -269,7 +269,7 @@ be returned.
 
 #### request.headers(headerKey)
 
-Function that retrieves all values for `headerKey`.
+Retrieves all values for `headerKey`.
 
 It has one argument:
 - `headerKey` (Required): Case-insensitive header key.
@@ -279,7 +279,7 @@ will be returned.
 
 #### request.params(queryParamKey)
 
-Function that retrieves the query param value for the provided query param key.
+Retrieves the query param value for the provided query param key.
 
 It has one argument:
 - `queryParamKey` (Required): URL query parameter key.
