@@ -9,9 +9,11 @@ Harbor repositories by _refreshing_ all `Warehouse` resources subscribed to
 those repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 ## Configuring the Receiver
@@ -23,11 +25,14 @@ the `Authorization` header of the webhook request sent by Harbor and verified by
 Kargo.
 
 :::info
+
 While supplying an "Auth Header" is optional in Harbor, Kargo requires using
 this.
+
 :::
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -36,6 +41,7 @@ auth_header=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Auth header: $auth_header"
 echo "Encoded auth header: $(echo -n $auth_header | base64)"
 ```
+
 :::
 
 ```yaml
@@ -100,6 +106,7 @@ kubectl get projectconfigs kargo-demo \
        [generated above](#configuring-the-receiver).
 
         :::note
+
         Use the unencoded value; not the base64-encoded value.
         :::
 
