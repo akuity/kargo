@@ -1800,5 +1800,4 @@ message RefreshResourceRequest {
 
 message RefreshResourceResponse {
   google.protobuf.Any resource = 1;
-
 }
