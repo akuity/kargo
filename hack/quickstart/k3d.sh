@@ -10,7 +10,7 @@ k3d cluster create kargo-quickstart \
   --no-lb \
   --k3s-arg '--disable=traefik@server:0' \
   -p '31443-31445:31443-31445@servers:0:direct' \
-  -p '30081-30083:30081-30083@servers:0:direct' \
+  -p '32080-32082:32080-32082@servers:0:direct' \
   --wait
 
 helm install cert-manager cert-manager \
