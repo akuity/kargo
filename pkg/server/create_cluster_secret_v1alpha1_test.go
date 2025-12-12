@@ -40,8 +40,8 @@ func TestCreateClusterSecret(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg: config.ServerConfig{
-			SecretManagementEnabled: true,
-			ClusterSecretNamespace:  "",
+			SecretManagementEnabled:   true,
+			ClusterResourcesNamespace: "",
 		},
 	}
 
@@ -58,7 +58,7 @@ func TestCreateClusterSecret(t *testing.T) {
 	_, err = s.CreateClusterSecret(ctx, payload)
 	require.Error(t, err)
 
-	s.cfg.ClusterSecretNamespace = "kargo-cluster-secrts"
+	s.cfg.ClusterResourcesNamespace = "kargo-cluster-secrts"
 
 	resp, err := s.CreateClusterSecret(
 		ctx,

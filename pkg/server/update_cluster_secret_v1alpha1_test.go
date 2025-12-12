@@ -53,8 +53,8 @@ func TestUpdateClusterSecret(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg: config.ServerConfig{
-			SecretManagementEnabled: true,
-			ClusterSecretNamespace:  "kargo-cluster-secrts",
+			SecretManagementEnabled:   true,
+			ClusterResourcesNamespace: "kargo-cluster-secrts",
 		},
 		externalValidateProjectFn: validation.ValidateProject,
 	}

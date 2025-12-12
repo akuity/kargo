@@ -70,7 +70,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			name: "error building receiver",
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
-					ClusterSecretsNamespace: testSecretNamespace,
+					ClusterResourcesNamespace: testSecretNamespace,
 				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Secret{
@@ -133,7 +133,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 			name: "great success!",
 			reconciler: &reconciler{
 				cfg: ReconcilerConfig{
-					ClusterSecretsNamespace: testSecretNamespace,
+					ClusterResourcesNamespace: testSecretNamespace,
 				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&corev1.Secret{
