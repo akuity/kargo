@@ -20,12 +20,12 @@ nodes:
     hostPort: 31444
   - containerPort: 31445 # External webhooks server
     hostPort: 31445
-  - containerPort: 30084 # test application instance
-    hostPort: 30084
-  - containerPort: 30085 # UAT application instance
-    hostPort: 30085
-  - containerPort: 30086 # prod application instance
-    hostPort: 30086
+  - containerPort: 32080 # test application instance
+    hostPort: 32080
+  - containerPort: 32081 # UAT application instance
+    hostPort: 32081
+  - containerPort: 32082 # prod application instance
+    hostPort: 32082
   
 EOF
 
