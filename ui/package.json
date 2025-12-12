@@ -16,7 +16,7 @@
   "devDependencies": {
     "@apidevtools/json-schema-ref-parser": "^14.2.1",
     "@eslint/compat": "^1.4.0",
-    "@eslint/eslintrc": "^3.3.0",
+    "@eslint/eslintrc": "^3.3.3",
     "@eslint/js": "^9.36.0",
     "@openapi-contrib/openapi-schema-to-json-schema": "^5.1.0",
     "@tanstack/react-query-devtools": "^5.90.2",
@@ -70,7 +70,7 @@
     "@rjsf/core": "^5.24.12",
     "@rjsf/utils": "^5.24.12",
     "@rjsf/validator-ajv8": "^5.24.12",
-    "@tanstack/react-query": "^5.90.10",
+    "@tanstack/react-query": "^5.90.11",
     "@types/dagre": "^0.7.53",
     "@xyflow/react": "^12.8.2",
     "antd": "^5.27.4",
@@ -88,7 +88,7 @@
     "recharts": "^2.15.3",
     "semver": "^7.7.3",
     "vite-plugin-monaco-editor": "^1.1.0",
-    "yaml": "^2.8.1",
+    "yaml": "^2.8.2",
     "zod": "^4.1.13"
   }
 }
