@@ -270,12 +270,12 @@ func convertGitlabMR(glMR gitlab.BasicMergeRequest) gitprovider.PullRequest {
 			mergeCommit = glMR.MergeCommitSHA
 		case glMR.SquashCommitSHA != "":
 			// Fast-forward with squash:
-			// No merge commit exists, but a squash commit SHA may be available.
+			// No merge_commit_sha exists; fall back to squash_commit_sha.
 			//
 			// Note: GitLab does not reliably populate squash_commit_sha in all
-			// relevant API/webhook payloads yet. We still prefer it when present,
-			// and keep this branch to future-proof against incoming GitLab changes
-			// that aim to backfill and correctly populate squash_commit_sha.
+			// relevant API/webhook payloads yet. We keep this branch to
+			// future-proof against incoming GitLab changes that aim to backfill
+			// and correctly populate squash_commit_sha.
 			//
 			// References:
 			// - https://gitlab.com/gitlab-org/gitlab/-/issues/415449
