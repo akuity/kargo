@@ -2266,6 +2266,46 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [VerifiedStage](#github-com-akuity-kargo-api-v1alpha1-VerifiedStage) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction"></a>
+
+### GenericWebhookAction
+ GenericWebhookAction describes an action to be performed on a resource and the conditions under which it should be performed.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| action | [string](#string) |  ActionType indicates the type of action to be performed. `Refresh` is the only currently supported action.   |
+| whenExpression | [string](#string) |  WhenExpression defines criteria that a request must meet to run this action.  +optional |
+| parameters | [GenericWebhookAction.ParametersEntry](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry) |  Parameters contains additional, action-specific parameters. Values may be static or extracted from the request using expressions.  +optional |
+| targets | [GenericWebhookTargetSelectionCriteria](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria) |  TargetSelectionCriteria is a list of selection criteria for the resources on which the action should be performed.   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction-ParametersEntry"></a>
+
+### GenericWebhookAction.ParametersEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookReceiverConfig"></a>
+
+### GenericWebhookReceiverConfig
+ GenericWebhookReceiverConfig describes a generic webhook receiver that can be configured to respond to any arbitrary POST by applying user-defined actions on user-defined sets of resources selected by name, labels and/or values in pre-built indices. Both types of selectors support using values extracted from the request by means of expressions. Currently, refreshing resources is the only supported action and Warehouse is the only supported kind. "Refreshing" means immediately enqueuing the target resource for reconciliation by its controller. The practical effect of refreshing a Warehouses is triggering its artifact discovery process.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
+| actions | [GenericWebhookAction](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction) |  Actions is a list of actions to be performed when a webhook event is received.   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria"></a>
+
+### GenericWebhookTargetSelectionCriteria
+ GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some action is to be applied. Name, LabelSelector, and IndexSelector are all optional however, at least one must be specified. When multiple criteria are specified, the results are the combined (logical AND) of the criteria.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| kind | [string](#string) |  Kind is the kind of the target resource.   |
+| name | [string](#string) |  Name is the name of the target resource. If LabelSelector and/or IndexSelectors are also specified, the results are the combined (logical AND) of the criteria.  +optional |
+| labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
+| indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
 ### GitCommit
@@ -2417,6 +2457,24 @@ RawFormat specifies the format for raw resource representation.
 | platform | [string](#string) |  Platform is a string of the form &lt;os&gt;/&lt;arch&gt; that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image referenced by this ImageRepositorySubscription will run on a Kubernetes node with a different OS/architecture than the Kargo controller. At present this is uncommon, but not unheard of. |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
 | discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100. |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-IndexSelector"></a>
+
+### IndexSelector
+ IndexSelector defines selection criteria that match resources on the basis of values in pre-built, well-known indices.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| matchIndices | [IndexSelectorRequirement](#github-com-akuity-kargo-api-v1alpha1-IndexSelectorRequirement) |  MatchIndices is a list of index selector requirements.   |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-IndexSelectorRequirement"></a>
+
+### IndexSelectorRequirement
+ IndexSelectorRequirement encapsulates a requirement used to select indexes based on specific criteria.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |  Key is the key of the index.   |
+| operator | [string](#string) |  Operator indicates the operation that should be used to evaluate whether the selection requirement is satisfied.   |
+| value | [string](#string) |  Value can be a static string or an expression that will be evaluated.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Project"></a>
 
@@ -2859,6 +2917,7 @@ RawFormat specifies the format for raw resource representation.
 | artifactory | [ArtifactoryWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig) |  Artifactory contains the configuration for a webhook receiver that is compatible with JFrog Artifactory payloads. |
 | azure | [AzureWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-AzureWebhookReceiverConfig) |  Azure contains the configuration for a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads. |
 | gitea | [GiteaWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig) |  Gitea contains the configuration for a webhook receiver that is compatible with Gitea payloads. |
+| generic | [GenericWebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookReceiverConfig) |  Generic contains the configuration for a generic webhook receiver. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WebhookReceiverDetails"></a>
 

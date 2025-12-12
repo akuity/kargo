@@ -76,7 +76,7 @@ type provider struct {
 func NewProvider(
 	repoURL string,
 	opts *gitprovider.Options,
-) (gitprovider.Interface, error) {
+) (p gitprovider.Interface, err error) {
 	if opts == nil {
 		opts = &gitprovider.Options{}
 	}
@@ -91,6 +91,15 @@ func NewProvider(
 	if host != supportedHost {
 		return nil, fmt.Errorf("unsupported Bitbucket host %q", host)
 	}
+
+	// The go-bitbucket library may call log.Fatalf for certain error conditions,
+	// which causes a panic. We recover from this to return a proper error.
+	defer func() {
+		if r := recover(); r != nil {
+			p = nil
+			err = fmt.Errorf("failed to create Bitbucket client: %v", r)
+		}
+	}()
 
 	client := bitbucket.NewOAuthbearerToken(opts.Token)
 	client.HttpClient = cleanhttp.DefaultClient()
@@ -333,7 +342,7 @@ func (p *provider) MergePullRequest(
 
 	// Check if PR is draft - cannot merge draft PRs
 	if bbPR.Draft {
-		return nil, false, fmt.Errorf("cannot merge pull request %d: pull request is in draft state", id)
+		return nil, false, nil
 	}
 
 	// TODO: The Bitbucket API lacks comprehensive merge eligibility checks. We

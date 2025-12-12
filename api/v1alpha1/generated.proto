@@ -737,6 +737,94 @@ message FreightStatus {
   map<string, .k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON> metadata = 4;
 }
 
+// GenericWebhookAction describes an action to be performed on a resource
+// and the conditions under which it should be performed.
+message GenericWebhookAction {
+  // ActionType indicates the type of action to be performed. `Refresh` is the
+  // only currently supported action.
+  //
+  // +kubebuilder:validation:Enum=Refresh;
+  optional string action = 1;
+
+  // WhenExpression defines criteria that a request must meet to run this
+  // action.
+  //
+  // +optional
+  optional string whenExpression = 2;
+
+  // Parameters contains additional, action-specific parameters. Values may be
+  // static or extracted from the request using expressions.
+  //
+  // +optional
+  map<string, string> parameters = 3;
+
+  // TargetSelectionCriteria is a list of selection criteria for the resources on which the
+  // action should be performed.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated GenericWebhookTargetSelectionCriteria targets = 4;
+}
+
+// GenericWebhookReceiverConfig describes a generic webhook receiver that can be
+// configured to respond to any arbitrary POST by applying user-defined actions
+// on user-defined sets of resources selected by name, labels and/or values in pre-built indices.
+// Both types of selectors support using values extracted from the request by
+// means of expressions. Currently, refreshing resources is the only supported
+// action and Warehouse is the only supported kind. "Refreshing" means
+// immediately enqueuing the target resource for reconciliation by its
+// controller. The practical effect of refreshing a Warehouses is triggering its
+// artifact discovery process.
+message GenericWebhookReceiverConfig {
+  // SecretRef contains a reference to a Secret. For Project-scoped webhook
+  // receivers, the referenced Secret must be in the same namespace as the
+  // ProjectConfig.
+  //
+  // For cluster-scoped webhook receivers, the referenced Secret must be in the
+  // designated "cluster Secrets" namespace.
+  //
+  // The Secret's data map is expected to contain a `secret` key whose value
+  // does NOT need to be shared directly with the sender. It is used only by
+  // Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
+  // shared secret.
+  //
+  // +kubebuilder:validation:Required
+  optional .k8s.io.api.core.v1.LocalObjectReference secretRef = 1;
+
+  // Actions is a list of actions to be performed when a webhook event is received.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated GenericWebhookAction actions = 2;
+}
+
+// GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some
+// action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+// however, at least one must be specified. When multiple criteria are specified, the
+// results are the combined (logical AND) of the criteria.
+message GenericWebhookTargetSelectionCriteria {
+  // Kind is the kind of the target resource.
+  //
+  // +kubebuilder:validation:Enum=Warehouse;
+  optional string kind = 1;
+
+  // Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+  // are also specified, the results are the combined (logical AND) of the criteria.
+  //
+  // +optional
+  optional string name = 2;
+
+  // LabelSelector is a label selector to identify the target resources.
+  // If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+  //
+  // +optional
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector labelSelector = 3;
+
+  // IndexSelector is a selector used to identify cached target resources by cache key.
+  // If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+  //
+  // +optional
+  optional IndexSelector indexSelector = 4;
+}
+
 // GitCommit describes a specific commit from a specific Git repository.
 message GitCommit {
   // RepoURL is the URL of a Git repository.
@@ -1221,6 +1309,35 @@ message ImageSubscription {
   // fields. When left unspecified, the field is implicitly treated as if its
   // value were "20". The upper limit for this field is 100.
   optional int32 discoveryLimit = 9;
+}
+
+// IndexSelector defines selection criteria that match resources on the basis of
+// values in pre-built, well-known indices.
+message IndexSelector {
+  // MatchIndices is a list of index selector requirements.
+  //
+  // +kubebuilder:validation:MinItems=1
+  repeated IndexSelectorRequirement matchIndices = 1;
+}
+
+// IndexSelectorRequirement encapsulates a requirement used to select indexes
+// based on specific criteria.
+message IndexSelectorRequirement {
+  // Key is the key of the index.
+  //
+  // +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
+  optional string key = 1;
+
+  // Operator indicates the operation that should be used to evaluate
+  // whether the selection requirement is satisfied.
+  //
+  // kubebuilder:validation:Enum=Equal;NotEqual;
+  optional string operator = 2;
+
+  // Value can be a static string or an expression that will be evaluated.
+  //
+  // kubebuilder:validation:Required
+  optional string value = 3;
 }
 
 // Project is a resource type that reconciles to a specially labeled namespace
@@ -2111,6 +2228,9 @@ message WebhookReceiverConfig {
   // Gitea contains the configuration for a webhook receiver that is compatible
   // with Gitea payloads.
   optional GiteaWebhookReceiverConfig gitea = 7;
+
+  // Generic contains the configuration for a generic webhook receiver.
+  optional GenericWebhookReceiverConfig generic = 11;
 }
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.

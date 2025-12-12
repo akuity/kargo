@@ -336,6 +336,9 @@ type SetValues struct {
 	// The key whose value should be set. For nested values, use dots to delimit key parts. e.g.
 	// `image.tag`.
 	Key string `json:"key"`
+	// Whether to force the value to be treated as a literal string. When true, uses
+	// --set-literal instead of --set.
+	Literal bool `json:"literal,omitempty"`
 	// The new value for the key.
 	Value string `json:"value"`
 }
@@ -372,6 +375,10 @@ type HTTPConfig struct {
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
+	// Optionally overrides the Content-Type header for response parsing. Accepts MIME media
+	// type values: 'application/json', 'application/yaml', or 'text/plain'. If not set, uses
+	// the Content-Type header from the response with JSON fallback.
+	ResponseContentType string `json:"responseContentType,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
