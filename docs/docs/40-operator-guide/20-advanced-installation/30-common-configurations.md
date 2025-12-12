@@ -411,9 +411,9 @@ For more information, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
 :::
 
-## Resource Management
+## Warehouse Performance
 
-### Tuning Warehouse Reconciliation Intervals
+### Tuning Reconciliation Intervals
 
 If your cluster contains many `Warehouse` resources, which periodically poll
 artifact repositories, or if developers have
@@ -466,6 +466,51 @@ controller:
 For a list of resource kinds that can be configured, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
 :::
+
+### Image Metadata Caching
+
+Kargo can cache image metadata more aggressively when tags are known to be
+**immutable**. This can significantly improve performance by reducing API calls
+to container image registries.
+
+The following settings control whether developers may (or must) use this
+feature:
+
+- `allowCacheByTag` (default: `true`): When `true`, developers can opt into
+  aggressive tag-based caching by setting `cacheByTag: true` on individual
+  image subscriptions. When `false`, this option is not available to developers.
+
+- `requireCacheByTag` (default: `false`): When `true`, all image subscriptions
+  **must** use `cacheByTag: true`.
+
+:::warning Use with caution!
+These settings should only be used when you can guarantee that all image tags
+in use are **immutable** (i.e., a tag always references the same image and is
+never updated to point to a different image).
+:::
+
+Example configuration to allow (but not require) tag-based caching:
+
+```yaml
+controller:
+  imageCache:
+    allowCacheByTag: true
+    requireCacheByTag: false
+```
+
+Example configuration to require tag-based caching everywhere (for maximum
+performance in an immutable-tags-only environment):
+
+```yaml
+controller:
+  imageCache:
+    allowCacheByTag: true
+    requireCacheByTag: true
+```
+
+For more information on how to use this feature, see the
+[Performance Considerations](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#caching-image-metadata-by-tag)
+section of the user guide.
 
 ## Garbage Collection
 
