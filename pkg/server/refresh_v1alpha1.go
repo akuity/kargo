@@ -10,9 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"google.golang.org/protobuf/types/known/anypb"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -20,6 +18,9 @@ import (
 	"github.com/akuity/kargo/pkg/component"
 )
 
+// RefreshResourceType represents the type of Kargo resource to refresh.
+// They are camel-cased versions of the Kargo resource kinds for compatibility
+// purposes with Kubernetes REST mappers.
 const (
 	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
 	RefreshResourceTypeProjectConfig RefreshResourceType = "ProjectConfig"
@@ -31,35 +32,41 @@ func init() {
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeClusterConfig || 
-					rt == strings.ToLower(RefreshResourceTypeClusterConfig), nil
+				return RefreshResourceTypeClusterConfig.equals(rt), nil
 			},
-			Value: func() client.Object { return new(kargoapi.ClusterConfig) },
+			Value: func() (client.Object, RefreshResourceType) {
+				return new(kargoapi.ClusterConfig), RefreshResourceTypeClusterConfig
+			},
 		},
 	)
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeProjectConfig ||
-				rt == strings.ToLower(RefreshResourceTypeProjectConfig), nil
+				return RefreshResourceTypeProjectConfig.equals(rt), nil
 			},
-			Value: func() client.Object { return new(kargoapi.ProjectConfig) },
+			Value: func() (client.Object, RefreshResourceType) {
+				return new(kargoapi.ProjectConfig), RefreshResourceTypeProjectConfig
+			},
 		},
 	)
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeStage, nil
+				return RefreshResourceTypeStage.equals(rt), nil
 			},
-			Value: func() client.Object { return new(kargoapi.Stage) },
+			Value: func() (client.Object, RefreshResourceType) {
+				return new(kargoapi.Stage), RefreshResourceTypeStage
+			},
 		},
 	)
 	defaultRefreshObjectRegistry.MustRegister(
 		refreshObjectRegistration{
 			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return rt == RefreshResourceTypeWarehouse, nil
+				return RefreshResourceTypeWarehouse.equals(rt), nil
 			},
-			Value: func() client.Object { return new(kargoapi.Warehouse) },
+			Value: func() (client.Object, RefreshResourceType) {
+				return new(kargoapi.Warehouse), RefreshResourceTypeWarehouse
+			},
 		},
 	)
 }
@@ -70,7 +77,7 @@ type (
 		RefreshResourceType,
 	) (bool, error)
 
-	refreshObjectFactory = func() client.Object
+	refreshObjectFactory = func() (client.Object, RefreshResourceType)
 
 	refreshObjectRegistration = component.PredicateBasedRegistration[
 		RefreshResourceType,
@@ -89,20 +96,30 @@ var defaultRefreshObjectRegistry = component.MustNewPredicateBasedRegistry[
 
 type RefreshResourceType string
 
+// String returns the string representation of the RefreshResourceType.
+// If the RefreshResourceType is not registered, an empty string is returned.
 func (t RefreshResourceType) String() string {
-	return string(t)
-}
-
-func (t RefreshResourceType) GVK() schema.GroupVersionKind {
-	return schema.GroupVersionKind{
-		Group:   kargoapi.GroupVersion.Group,
-		Version: kargoapi.GroupVersion.Version,
-		Kind:    t.String(),
+	registered, err := defaultRefreshObjectRegistry.Get(context.Background(), t)
+	if err != nil {
+		return ""
 	}
+	_, rt := registered.Value()
+	return string(rt)
 }
 
+func (t RefreshResourceType) IsNamespaced() bool {
+	return !t.equals(RefreshResourceTypeClusterConfig)
+}
+
+// NameEqualsProject returns true if the name of the resource should be the same
+// as the project name. This is true for ProjectConfig resources.
 func (t RefreshResourceType) NameEqualsProject() bool {
-	return t == RefreshResourceTypeProjectConfig
+	return t.equals(RefreshResourceTypeProjectConfig)
+}
+
+// cli uses lowercase strings for resource types
+func (t RefreshResourceType) equals(rt RefreshResourceType) bool {
+	return strings.EqualFold(string(t), string(rt))
 }
 
 func (s *server) RefreshResource(
@@ -155,15 +172,15 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	if err != nil {
 		return nil, err
 	}
-	rt := RefreshResourceType(r.GetResourceType())
-	registered, err := defaultRefreshObjectRegistry.Get(ctx, rt)
+	rt := r.GetResourceType()
+	registered, err := defaultRefreshObjectRegistry.Get(ctx, RefreshResourceType(rt))
 	if err != nil {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
 			fmt.Errorf("unsupported resource type %q: %w", rt, err),
 		)
 	}
-	o := registered.Value()
+	o, _ := registered.Value()
 	o.SetNamespace(om.GetNamespace())
 	o.SetName(om.GetName())
 	return o, nil
@@ -171,21 +188,11 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 
 func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	rt := RefreshResourceType(r.GetResourceType())
-	if rt.String() == "" {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			errors.New("resource type unset"),
-		)
-	}
-	isNamespaced, err := apiutil.IsGVKNamespaced(rt.GVK(), s.client.RESTMapper())
+	rt, err := validateRefreshResourceType(ctx, r)
 	if err != nil {
-		return nil, connect.NewError(
-			connect.CodeInvalidArgument,
-			fmt.Errorf("unsupported resource type %q: %w", rt, err),
-		)
+		return nil, err
 	}
-	if !isNamespaced {
+	if !rt.IsNamespaced() {
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
@@ -216,4 +223,23 @@ func newRefreshResponse(obj client.Object) *connect.Response[svcv1alpha1.Refresh
 		},
 	})
 }
-q
+
+func validateRefreshResourceType(
+	ctx context.Context,
+	r *svcv1alpha1.RefreshResourceRequest,
+) (RefreshResourceType, error) {
+	rt := RefreshResourceType(r.GetResourceType())
+	if string(rt) == "" {
+		return "", connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("resource type is unset"),
+		)
+	}
+	if _, err := defaultRefreshObjectRegistry.Get(ctx, rt); err != nil {
+		return "", connect.NewError(
+			connect.CodeInvalidArgument,
+			fmt.Errorf("%q is unsupported as a refresh resource type: %w", rt, err),
+		)
+	}
+	return rt, nil
+}

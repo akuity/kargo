@@ -60,7 +60,7 @@ kargo refresh projectconfig --project=my-project
 func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 
-	if o.ResourceType.RequiresProject() {
+	if o.ResourceType.IsNamespaced() {
 		option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 			"The Project the resource belongs to. If not set, the default project will be used.")
 	}
@@ -70,7 +70,7 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 // complete sets the resource type for the refresh options, and further parses
 // the command arguments to set the resource name.
 func (o *refreshOptions) complete(args []string) {
-	if o.ResourceType.RequiresName() {
+	if o.ResourceType.IsNamespaced() && !o.ResourceType.NameEqualsProject() {
 		o.Name = strings.TrimSpace(args[0])
 	}
 }
@@ -84,11 +84,11 @@ func (o *refreshOptions) validate() error {
 		errs = append(errs, errors.New("resource type is required"))
 	}
 
-	if o.ResourceType.RequiresProject() && o.Project == "" {
+	if o.ResourceType.IsNamespaced() && o.Project == "" {
 		errs = append(errs, errors.New("project is required"))
 	}
 
-	if o.ResourceType.RequiresName() && o.Name == "" {
+	if !o.ResourceType.NameEqualsProject() && o.Name == "" {
 		errs = append(errs, errors.New("name is required"))
 	}
 
