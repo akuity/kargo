@@ -145,6 +145,26 @@ func TestInMemoryCache_Set(t *testing.T) {
 				require.Equal(t, bob, value)
 			},
 		},
+		{
+			name: "lru eviction when cache is full",
+			setup: func(c *lru.Cache[string, testStruct]) {
+				c.Add("alice-key", alice)
+			},
+			value: bob,
+			assertions: func(
+				t *testing.T,
+				c *lru.Cache[string, testStruct],
+				err error,
+			) {
+				require.NoError(t, err)
+				value, found := c.Get(testKey)
+				require.True(t, found)
+				require.Equal(t, bob, value)
+				// The cache size is 1, so Alice should have been evicted.
+				_, found = c.Get("alice-key")
+				require.False(t, found)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
