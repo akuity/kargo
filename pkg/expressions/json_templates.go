@@ -9,25 +9,18 @@ import (
 	"github.com/expr-lang/expr"
 )
 
-const (
-	stdStartDelim = "${{"
-	stdEndDelim   = "}}"
-	altStartDelim = "${%"
-	altEndDelim   = "%}"
-)
-
 type supportedDelimiterSet struct {
 	start string
 	end   string
 }
 
 var supportedDelimiters = []supportedDelimiterSet{
-	{start: stdStartDelim, end: stdEndDelim},
-	{start: altStartDelim, end: altEndDelim},
+	{start: "${{", end: "}}"},
+	{start: "${%", end: "%}"},
 }
 
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
-// template containing expr-lang expressions offset by ${{ and }}, using the
+// template containing expr-lang expressions offset by supported delimiters, using the
 // provided environment as context. The evaluated JSON is returned as a new byte
 // slice, ready for unmarshaling.
 //
@@ -37,13 +30,11 @@ var supportedDelimiters = []supportedDelimiterSet{
 // Since the template itself must be valid JSON, all expressions MUST be
 // enclosed in quotes.
 //
-// Standard delimiters are ${{ and }}. When expressions need to contain }}
-// (e.g., nested objects or Go template syntax like {{.domain}}), alternative
-// delimiters ${% and %} can be used instead. Both delimiter types can coexist
-// in the same value, and all expressions will be evaluated. For example:
-//   - Standard:    "${{ quote('hello') }}"
-//   - Alternative: "${% '{{.domain}}' %}" (when }} appears in the expression)
-//   - Mixed:       "${{ ctx.stage }} deployed ${% '{{.tag}}' %}"
+// Multiple delimiter types can coexist in the same value, and all expressions will
+// be evaluated. For example:
+//   - "${{ quote('hello') }}"
+//   - "${% '{{.domain}}' %}"
+//   - "${{ ctx.stage }} deployed ${% '{{.tag}}' %}"
 //
 // If, after evaluating all expressions in a single value (multiples are
 // permitted), the result can be parsed as a bool, float64, or other valid
@@ -52,8 +43,8 @@ var supportedDelimiters = []supportedDelimiterSet{
 // that expressions must, themselves, be contained within a string value. This
 // does mean that for expressions which may evaluate as something resembling a
 // valid non-string JSON value, the user must take care to ensure that the
-// expression evaluates to a string enclosed in quotes. e.g. ${{ true }} will
-// evaluated as a bool, but ${{ quote(true) }} will be evaluated as a string.
+// expression evaluates to a string enclosed in quotes. For example, an expression
+// evaluating to true will result in a bool, but quote(true) will result in a string.
 // This behavior should be intuitive to anyone familiar with YAML.
 func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
 	if _, ok := env["quote"]; ok {
@@ -119,16 +110,17 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 }
 
 // EvaluateTemplate evaluates a single template string with the provided
-// environment. Note that a single template string can contain multiple
-// expressions with different delimiter types.
-//
-// Standard delimiters are ${{ and }}. When expressions need to contain }}
-// (e.g., nested objects or Go template syntax), alternative delimiters ${% and %}
-// can be used instead. Multiple expressions with different delimiters can coexist
-// in the same template string.
+// environment. A single template string can contain multiple
+// expressions with different supported delimiter types.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	// Check if template contains any expressions
-	if !strings.Contains(template, stdStartDelim) && !strings.Contains(template, altStartDelim) {
+	hasDelim := false
+	for _, d := range supportedDelimiters {
+		if strings.Contains(template, d.start) {
+			hasDelim = true
+			break
+		}
+	}
+	if !hasDelim {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
@@ -207,8 +199,6 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	return result, nil
 }
 
-// evaluateTemplate evaluates a template that may contain multiple
-// expressions with different delimiter types (${{ }} and ${% %}).
 func evaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (string, error) {
 	var result strings.Builder
 
