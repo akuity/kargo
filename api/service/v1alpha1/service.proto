@@ -7,6 +7,7 @@ import "api/v1alpha1/generated.proto";
 import "k8s.io/api/core/v1/generated.proto";
 import "api/stubs/rollouts/v1alpha1/generated.proto";
 import "api/rbac/v1alpha1/generated.proto";
+import "google/protobuf/any.proto";
 
 option go_package = "github.com/akuity/kargo/api/service/v1alpha1;svcv1alpha1";
 
@@ -45,7 +46,8 @@ service KargoService {
   rpc UpdateResource(UpdateResourceRequest) returns (UpdateResourceResponse);
   // DeleteResource deletes Kubernetes resources specified in the provided manifests.
   rpc DeleteResource(DeleteResourceRequest) returns (DeleteResourceResponse);
-
+  // RefreshResource triggers a refresh of the specified Kargo resource.
+  rpc RefreshResource(RefreshResourceRequest) returns (RefreshResourceResponse);
   /* Stage APIs */
 
   // ListStages retrieves all stages within a project.
@@ -58,8 +60,6 @@ service KargoService {
   rpc WatchStages(WatchStagesRequest) returns (stream WatchStagesResponse);
   // DeleteStage removes a stage from the system.
   rpc DeleteStage(DeleteStageRequest) returns (DeleteStageResponse);
-  // RefreshStage triggers a refresh of stage status and health checks.
-  rpc RefreshStage(RefreshStageRequest) returns (RefreshStageResponse);
 
   /* ClusterConfig APIs */
 
@@ -69,8 +69,6 @@ service KargoService {
   rpc DeleteClusterConfig(DeleteClusterConfigRequest) returns (DeleteClusterConfigResponse);
   // WatchClusterConfig provides streaming updates for cluster configuration changes.
   rpc WatchClusterConfig(WatchClusterConfigRequest) returns (stream WatchClusterConfigResponse);
-  // RefreshClusterConfig triggers a refresh of cluster configuration.
-  rpc RefreshClusterConfig(RefreshClusterConfigRequest) returns (RefreshClusterConfigResponse);
 
   /* Promotion APIs */
 
@@ -101,8 +99,6 @@ service KargoService {
   rpc DeleteProjectConfig(DeleteProjectConfigRequest) returns (DeleteProjectConfigResponse);
   // WatchProjectConfig provides streaming updates for project configuration changes.
   rpc WatchProjectConfig(WatchProjectConfigRequest) returns (stream WatchProjectConfigResponse);
-  // RefreshProjectConfig triggers a refresh of project configuration.
-  rpc RefreshProjectConfig(RefreshProjectConfigRequest) returns (RefreshProjectConfigResponse);
 
   /* Freight APIs */
 
@@ -140,8 +136,6 @@ service KargoService {
   rpc WatchWarehouses(WatchWarehousesRequest) returns (stream WatchWarehousesResponse);
   // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
-  // RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
-  rpc RefreshWarehouse(RefreshWarehouseRequest) returns (RefreshWarehouseResponse);
 
   /* Credential APIs */
 
@@ -560,21 +554,6 @@ message DeleteStageRequest {
 message DeleteStageResponse {
   /* explicitly empty */
 }
-
-// RefreshStageRequest is the request for refreshing a stage's status.
-message RefreshStageRequest {
-  // project is the name of the project containing the stage.
-  string project = 1;
-  // name is the name of the stage to refresh.
-  string name = 2;
-}
-
-// RefreshStageResponse contains the refreshed stage information.
-message RefreshStageResponse {
-  // stage is the refreshed Stage resource.
-  github.com.akuity.kargo.api.v1alpha1.Stage stage = 1;
-}
-
 /* ClusterConfig Messages */
 
 message GetClusterConfigRequest {
@@ -603,14 +582,6 @@ message WatchClusterConfigRequest {
 message WatchClusterConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
   string type = 2; // ADDED / MODIFIED / DELETED
-}
-
-message RefreshClusterConfigRequest {
-  /* explicitly empty */
-}
-
-message RefreshClusterConfigResponse {
-  github.com.akuity.kargo.api.v1alpha1.ClusterConfig cluster_config = 1;
 }
 
 /* Promotion Messages */
@@ -788,18 +759,6 @@ message WatchProjectConfigResponse {
   github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
   // type indicates the type of change (ADDED / MODIFIED / DELETED).
   string type = 2;
-}
-
-// RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
-message RefreshProjectConfigRequest {
-  // project is the name of the project to refresh configuration for.
-  string project = 1;
-}
-
-// RefreshProjectConfigResponse contains the refreshed project configuration.
-message RefreshProjectConfigResponse {
-  // project_config is the refreshed ProjectConfig object.
-  github.com.akuity.kargo.api.v1alpha1.ProjectConfig project_config = 1;
 }
 
 /* Freight Messages */
@@ -1044,20 +1003,6 @@ message DeleteWarehouseRequest {
 // DeleteWarehouseResponse is the response after deleting a warehouse.
 message DeleteWarehouseResponse {
   /* explicitly empty */
-}
-
-// RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
-message RefreshWarehouseRequest {
-  // project is the name of the project containing the warehouse.
-  string project = 1;
-  // name is the name of the warehouse to refresh.
-  string name = 2;
-}
-
-// RefreshWarehouseResponse contains the refreshed warehouse information.
-message RefreshWarehouseResponse {
-  // warehouse is the refreshed Warehouse resource.
-  github.com.akuity.kargo.api.v1alpha1.Warehouse warehouse = 1;
 }
 
 // ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
@@ -1839,4 +1784,20 @@ message DeleteClusterSecretRequest {
 // DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
 message DeleteClusterSecretResponse {
   /* explicitly empty */
+}
+
+message RefreshResourceRequest {
+  // project is the name of the project containing the object to refresh.
+  // leave blank if refreshing a cluster-config.
+  string project = 1;
+  // name is the name of the object to refresh.
+  // leave blank if refreshing a project or cluster config.
+  string name = 2;
+  // resource_type is the kind of resource to refresh.
+  // should be one of: ProjectConfig, ClusterConfig, Warehouse, or Stage.
+  string resource_type = 3;
+}
+
+message RefreshResourceResponse {
+  google.protobuf.Any resource = 1;
 }

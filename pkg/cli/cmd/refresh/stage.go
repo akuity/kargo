@@ -15,12 +15,13 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/server"
 )
 
 func newRefreshStageCommand(cfg config.CLIConfig) *cobra.Command {
 	cmdOpts := &refreshOptions{
 		Config:       cfg,
-		ResourceType: refreshResourceTypeStage,
+		ResourceType: server.RefreshResourceTypeStage,
 	}
 
 	cmd := &cobra.Command{
