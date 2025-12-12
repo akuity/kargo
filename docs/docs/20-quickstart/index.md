@@ -735,8 +735,8 @@ We leave it as an exercise to the reader to use the dashboard to progress the
 :::info
 The `uat` and `prod` instances of our site should be accessible at:
 
-* `uat`: [localhost:30082](http://localhost:30082)
-* `prod`: [localhost:30083](http://localhost:30083)
+* `uat`: [localhost:32081](http://localhost:32081)
+* `prod`: [localhost:32082](http://localhost:32082)
 :::
 
 :::info
