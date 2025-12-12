@@ -2,6 +2,7 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -136,6 +137,11 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list warehouses: %w", err)
 		}
+		for _, w := range resp.Msg.GetWarehouses() {
+			if err = repairInboundWarehouse(w); err != nil {
+				return fmt.Errorf("fix warehouse: %w", err)
+			}
+		}
 		return PrintObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
@@ -152,6 +158,10 @@ func (o *getWarehousesOptions) run(ctx context.Context) error {
 				},
 			),
 		); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		if err = repairInboundWarehouse(resp.Msg.GetWarehouse()); err != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -185,4 +195,15 @@ func newWarehouseTable(list *metav1.List) *metav1.Table {
 		},
 		Rows: rows,
 	}
+}
+
+// custom unmarshaling is not applied when deserializing a Warehouse from a
+// protobuf message, so this helper can be used to compensate for that.
+func repairInboundWarehouse(w *kargoapi.Warehouse) error {
+	type specAlias kargoapi.WarehouseSpec
+	specJSON, err := json.Marshal(specAlias(w.Spec))
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(specJSON, &w.Spec)
 }

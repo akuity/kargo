@@ -3,13 +3,14 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Segmented, Select, Typography } from 'antd';
 import { useMemo } from 'react';
 
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from './context/freight-timeline-controller-context';
 import { groupNodes } from './group-nodes';
 
 type GraphFiltersProps = {
-  warehouses: Warehouse[];
+  warehouses: WarehouseExpanded[];
   stages: Stage[];
   pipelineView: 'graph' | 'list';
   setPipelineView: (view: 'graph' | 'list') => void;

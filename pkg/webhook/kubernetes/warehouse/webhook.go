@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -16,8 +15,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/image"
+	"github.com/akuity/kargo/pkg/subscription"
 	"github.com/akuity/kargo/pkg/urls"
+	"github.com/akuity/kargo/pkg/validation"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
@@ -27,21 +27,15 @@ var warehouseGroupKind = schema.GroupKind{
 }
 
 type webhook struct {
-	client client.Client
-
-	// The following behaviors are overridable for testing purposes:
-
-	validateProjectFn func(
-		context.Context,
-		client.Client,
-		client.Object,
-	) error
-
-	validateSpecFn func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList
+	client             client.Client
+	subscriberRegistry subscription.SubscriberRegistry
 }
 
 func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+	w := newWebhook(
+		mgr.GetClient(),
+		subscription.DefaultSubscriberRegistry,
+	)
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
 		WithDefaulter(w).
@@ -49,16 +43,19 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
-	w := &webhook{
-		client: kubeClient,
+func newWebhook(
+	kubeClient client.Client,
+	subscriberRegistry subscription.SubscriberRegistry,
+) *webhook {
+	return &webhook{
+		client:             kubeClient,
+		subscriberRegistry: subscriberRegistry,
 	}
-	w.validateProjectFn = libWebhook.ValidateProject
-	w.validateSpecFn = w.validateSpec
-	return w
 }
 
-func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
+const defaultDiscoveryLimit = int32(20)
+
+func (w *webhook) Default(ctx context.Context, obj runtime.Object) error {
 	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 
 	// Sync the shard label to the convenience shard field
@@ -71,6 +68,30 @@ func (w *webhook) Default(_ context.Context, obj runtime.Object) error {
 		delete(warehouse.Labels, kargoapi.LabelKeyShard)
 	}
 
+	for i := range warehouse.Spec.InternalSubscriptions {
+		sub := &warehouse.Spec.InternalSubscriptions[i]
+		subReg, err := w.subscriberRegistry.Get(ctx, *sub)
+		if err != nil {
+			return err
+		}
+		// The registration's value is a factory function
+		subscriber, err := subReg.Value(ctx, nil)
+		if err != nil {
+			return fmt.Errorf("error instantiating subscriber: %w", err)
+		}
+
+		// Default common elements of generic subscriptions
+		if sub.Subscription != nil {
+			if sub.Subscription.DiscoveryLimit == 0 {
+				sub.Subscription.DiscoveryLimit = defaultDiscoveryLimit
+			}
+		}
+
+		if err := subscriber.ApplySubscriptionDefaults(ctx, sub); err != nil {
+			return fmt.Errorf("error applying defaults to subscriptions: %w", err)
+		}
+	}
+
 	return nil
 }
 
@@ -80,7 +101,7 @@ func (w *webhook) ValidateCreate(
 ) (admission.Warnings, error) {
 	warehouse := obj.(*kargoapi.Warehouse) // nolint: forcetypeassert
 	var errs field.ErrorList
-	if err := w.validateProjectFn(
+	if err := libWebhook.ValidateProject(
 		ctx,
 		w.client,
 		warehouse,
@@ -97,7 +118,7 @@ func (w *webhook) ValidateCreate(
 	}
 	if errs = append(
 		errs,
-		w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec)...,
+		w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec)...,
 	); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
@@ -105,12 +126,12 @@ func (w *webhook) ValidateCreate(
 }
 
 func (w *webhook) ValidateUpdate(
-	_ context.Context,
+	ctx context.Context,
 	_ runtime.Object,
 	newObj runtime.Object,
 ) (admission.Warnings, error) {
 	warehouse := newObj.(*kargoapi.Warehouse) // nolint: forcetypeassert
-	if errs := w.validateSpecFn(field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
+	if errs := w.validateSpec(ctx, field.NewPath("spec"), &warehouse.Spec); len(errs) > 0 {
 		return nil, apierrors.NewInvalid(warehouseGroupKind, warehouse.Name, errs)
 	}
 	return nil, nil
@@ -125,16 +146,18 @@ func (w *webhook) ValidateDelete(
 }
 
 func (w *webhook) validateSpec(
+	ctx context.Context,
 	f *field.Path,
 	spec *kargoapi.WarehouseSpec,
 ) field.ErrorList {
 	if spec == nil { // nil spec is caught by declarative validations
 		return nil
 	}
-	return w.validateSubs(f.Child("subscriptions"), spec.Subscriptions)
+	return w.validateSubs(ctx, f.Child("subscriptions"), spec.InternalSubscriptions)
 }
 
 func (w *webhook) validateSubs(
+	ctx context.Context,
 	f *field.Path,
 	subs []kargoapi.RepoSubscription,
 ) field.ErrorList {
@@ -144,143 +167,103 @@ func (w *webhook) validateSubs(
 	var errs field.ErrorList
 	seen := make(uniqueSubSet, len(subs))
 	for i, sub := range subs {
-		errs = append(errs, w.validateSub(f.Index(i), sub, seen)...)
+		errs = append(errs, w.validateSub(ctx, f.Index(i), sub, seen)...)
 	}
 	return errs
 }
 
 func (w *webhook) validateSub(
+	ctx context.Context,
 	f *field.Path,
 	sub kargoapi.RepoSubscription,
 	seen uniqueSubSet,
 ) field.ErrorList {
+	// A small bit of special-casing is required here because, unlike generic
+	// subscriptions, the original three subscription types do not have a field
+	// that indicates their type.
+	switch {
+	case sub.Chart != nil:
+		f = f.Child("chart")
+	case sub.Git != nil:
+		f = f.Child("git")
+	case sub.Image != nil:
+		f = f.Child("image")
+	case sub.Subscription != nil:
+		f = f.Child(sub.Subscription.SubscriptionType)
+	}
+
+	subReg, err := w.subscriberRegistry.Get(ctx, sub)
+	if err != nil {
+		return field.ErrorList{field.Invalid(
+			f,
+			"",
+			fmt.Sprintf("subscriber registry lookup failed: %v", err),
+		)}
+	}
+	// The registration's value is a factory function
+	subscriber, err := subReg.Value(ctx, nil)
+	if err != nil {
+		return field.ErrorList{field.Invalid(
+			f,
+			"",
+			fmt.Sprintf("subscriber instantiation failed: %v", err),
+		)}
+	}
+
 	var errs field.ErrorList
-	var repoTypes int
-	if sub.Git != nil {
-		repoTypes++
-		errs = append(errs, w.validateGitSub(f.Child("git"), *sub.Git, seen)...)
+
+	// Validate the common elements of generic subscriptions
+	if sub.Subscription != nil {
+		errs = append(errs, w.validateGenericSub(f, *sub.Subscription)...)
 	}
-	if sub.Image != nil {
-		repoTypes++
-		errs = append(errs, w.validateImageSub(f.Child("image"), *sub.Image, seen)...)
+
+	// Subscriber-specific validation
+	errs = append(errs, subscriber.ValidateSubscription(ctx, f, sub)...)
+
+	// Validate uniqueness
+	if err := seen.addSub(f, sub); err != nil {
+		errs = append(errs, err)
 	}
-	if sub.Chart != nil {
-		repoTypes++
-		errs = append(errs, w.validateChartSub(f.Child("chart"), *sub.Chart, seen)...)
-	}
-	if repoTypes != 1 {
-		errs = append(
-			errs,
-			field.Invalid(
-				f,
-				sub,
-				fmt.Sprintf(
-					"exactly one of %s.git, %s.image, or %s.chart must be non-empty",
-					f.String(),
-					f.String(),
-					f.String(),
-				),
-			),
-		)
-	}
+
 	return errs
 }
 
-func (w *webhook) validateGitSub(
+func (w *webhook) validateGenericSub(
 	f *field.Path,
-	sub kargoapi.GitSubscription,
-	seen uniqueSubSet,
+	sub kargoapi.Subscription,
 ) field.ErrorList {
 	var errs field.ErrorList
-	if err := validateSemverConstraint(
-		f.Child("semverConstraint"),
-		sub.SemverConstraint,
+
+	// Validate SubscriptionType: MinLength=1
+	if err := validation.MinLength(
+		f.Child("subscriptionType"),
+		sub.SubscriptionType,
+		1,
 	); err != nil {
 		errs = append(errs, err)
 	}
-	if err := seen.addGit(sub, f); err != nil {
-		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
-	}
-	return errs
-}
 
-func (w *webhook) validateImageSub(
-	f *field.Path,
-	sub kargoapi.ImageSubscription,
-	seen uniqueSubSet,
-) field.ErrorList {
-	var errs field.ErrorList
-	if sub.ImageSelectionStrategy == kargoapi.ImageSelectionStrategySemVer || sub.ImageSelectionStrategy == "" {
-		if sub.Constraint != "" {
-			if err := validateSemverConstraint(
-				f.Child("constraint"),
-				sub.Constraint,
-			); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-	if sub.Platform != "" {
-		if !image.ValidatePlatformConstraint(sub.Platform) {
-			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
-		}
-	}
-	if err := seen.addImage(sub, f); err != nil {
-		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
-	}
-	return errs
-}
-
-func (w *webhook) validateChartSub(
-	f *field.Path,
-	sub kargoapi.ChartSubscription,
-	seen uniqueSubSet,
-) field.ErrorList {
-	var errs field.ErrorList
-	if err := validateSemverConstraint(
-		f.Child("semverConstraint"),
-		sub.SemverConstraint,
-	); err != nil {
+	// Validate Name: MinLength=1
+	if err := validation.MinLength(f.Child("name"), sub.Name, 1); err != nil {
 		errs = append(errs, err)
 	}
-	if strings.HasPrefix(sub.RepoURL, "oci://") && sub.Name != "" {
-		errs = append(
-			errs,
-			field.Invalid(
-				f.Child("name"),
-				sub.Name,
-				"must be empty if repoURL starts with oci://",
-			),
-		)
-	}
-	isHTTP := strings.HasPrefix(sub.RepoURL, "http://") || strings.HasPrefix(sub.RepoURL, "https://")
-	if isHTTP && sub.Name == "" {
-		errs = append(
-			errs,
-			field.Invalid(
-				f.Child("name"),
-				sub.Name,
-				"must be non-empty if repoURL starts with http:// or https://",
-			),
-		)
-	}
-	if err := seen.addChart(sub, isHTTP, f); err != nil {
-		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
-	}
-	return errs
-}
 
-func validateSemverConstraint(
-	f *field.Path,
-	semverConstraint string,
-) *field.Error {
-	if semverConstraint == "" {
-		return nil
+	// Validate DiscoveryLimit: Minimum=1, Maximum=100
+	if sub.DiscoveryLimit < 1 {
+		errs = append(errs, field.Invalid(
+			f.Child("discoveryLimit"),
+			sub.DiscoveryLimit,
+			"must be >= 1",
+		))
+	} else if sub.DiscoveryLimit > 100 {
+		errs = append(errs, field.Invalid(
+			f.Child("discoveryLimit"),
+			sub.DiscoveryLimit,
+			"must be <= 100",
+		))
 	}
-	if _, err := semver.NewConstraint(semverConstraint); err != nil {
-		return field.Invalid(f, semverConstraint, "")
-	}
-	return nil
+
+	return errs
 }
 
 type subscriptionKey struct {
@@ -290,38 +273,73 @@ type subscriptionKey struct {
 
 type uniqueSubSet map[subscriptionKey]*field.Path
 
-func (s uniqueSubSet) addGit(sub kargoapi.GitSubscription, p *field.Path) error {
-	k := subscriptionKey{kind: "git", id: urls.NormalizeGit(sub.RepoURL)}
-	if _, exists := s[k]; exists {
-		return fmt.Errorf("subscription for Git repository already exists at %q", s[k])
-	}
-	s[k] = p
-	return nil
-}
-
-func (s uniqueSubSet) addImage(sub kargoapi.ImageSubscription, p *field.Path) error {
-	// The normalization of Helm chart repository URLs can also be used here
-	// to ensure the uniqueness of the image reference as it does the job of
-	// ensuring lower-casing, etc. without introducing unwanted side effects.
-	k := subscriptionKey{kind: "image", id: urls.NormalizeChart(sub.RepoURL)}
-	if _, exists := s[k]; exists {
-		return fmt.Errorf("subscription for image repository already exists at %q", s[k])
-	}
-	s[k] = p
-	return nil
-}
-
-func (s uniqueSubSet) addChart(sub kargoapi.ChartSubscription, isHTTP bool, p *field.Path) error {
-	k := subscriptionKey{kind: "chart", id: urls.NormalizeChart(sub.RepoURL)}
-	if isHTTP {
-		k.id = k.id + ":" + sub.Name
-	}
-	if _, exists := s[k]; exists {
-		if isHTTP {
-			return fmt.Errorf("subscription for chart %q already exists at %q", sub.Name, s[k])
+func (s uniqueSubSet) addSub(
+	f *field.Path,
+	sub kargoapi.RepoSubscription,
+) *field.Error {
+	// A small bit of special-casing is required here because, unlike generic
+	// subscriptions, the original three subscription types do not have one common
+	// way to identify them uniquely.
+	switch {
+	case sub.Chart != nil:
+		k := subscriptionKey{
+			kind: "chart",
+			id:   urls.NormalizeChart(sub.Chart.RepoURL),
 		}
-		return fmt.Errorf("subscription for chart already exists at %q", s[k])
+		isHTTP := strings.HasPrefix(sub.Chart.RepoURL, "http://") || strings.HasPrefix(sub.Chart.RepoURL, "https://")
+		if isHTTP {
+			// For classical HTTP(S) Helm chart repositories, the chart name is part
+			// of the uniqueness criteria
+			k.id = k.id + ":" + sub.Chart.Name
+		}
+		if _, exists := s[k]; exists {
+			var errMsg string
+			if isHTTP {
+				errMsg = fmt.Sprintf(
+					"subscription for chart %q already exists at %q",
+					sub.Chart.Name, s[k],
+				)
+			} else {
+				errMsg = fmt.Sprintf("subscription for chart already exists at %q", s[k])
+			}
+			return field.Invalid(f.Child("chart"), sub.Chart.RepoURL, errMsg)
+		}
+	case sub.Git != nil:
+		k := subscriptionKey{
+			kind: "git",
+			id:   urls.NormalizeGit(sub.Git.RepoURL),
+		}
+		if _, exists := s[k]; exists {
+			return field.Invalid(
+				f.Child("git"),
+				sub.Git.RepoURL,
+				fmt.Sprintf("subscription for Git repository already exists at %q", s[k]),
+			)
+		}
+	case sub.Image != nil:
+		k := subscriptionKey{
+			kind: "image",
+			id:   urls.NormalizeImage(sub.Image.RepoURL),
+		}
+		if _, exists := s[k]; exists {
+			return field.Invalid(
+				f.Child("image"),
+				sub.Image.RepoURL,
+				fmt.Sprintf("subscription for image repository already exists at %q", s[k]),
+			)
+		}
+	case sub.Subscription != nil:
+		k := subscriptionKey{
+			kind: "sub",
+			id:   strings.TrimSpace(strings.ToLower(sub.Subscription.Name)),
+		}
+		if _, exists := s[k]; exists {
+			return field.Invalid(
+				f.Child("subscription"),
+				sub.Subscription.Name,
+				fmt.Sprintf("subscription with name %q already exists at %q", sub.Subscription.Name, s[k]),
+			)
+		}
 	}
-	s[k] = p
 	return nil
 }

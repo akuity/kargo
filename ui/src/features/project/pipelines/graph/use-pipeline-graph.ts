@@ -3,7 +3,8 @@ import { Edge, MarkerType, Node } from '@xyflow/react';
 import { useContext, useMemo } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
@@ -18,7 +19,7 @@ export const reactFlowNodeConstants = {
 
 export const useReactFlowPipelineGraph = (
   stages: Stage[],
-  warehouses: Warehouse[],
+  warehouses: WarehouseExpanded[],
   // basically list of warehouses
   pipeline: string[],
   redraw: boolean,

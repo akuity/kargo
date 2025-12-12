@@ -431,7 +431,7 @@ func TestStepEvaluator_Vars(t *testing.T) {
 				Namespace: "fake-project",
 			},
 			Spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
 						Git: &kargoapi.GitSubscription{
 							RepoURL: "https://fake-git-repo",
@@ -975,7 +975,7 @@ func TestStepEvaluator_Config(t *testing.T) {
 				Namespace: "fake-project",
 			},
 			Spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
 						Git: &kargoapi.GitSubscription{
 							RepoURL: "https://fake-git-repo",

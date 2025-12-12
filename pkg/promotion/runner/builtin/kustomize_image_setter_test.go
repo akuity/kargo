@@ -166,7 +166,7 @@ kind: Kustomization
 			},
 			client: fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
@@ -343,17 +343,17 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 			},
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "redis"}},
 					},
 				}),
 				mockWarehouse(testNamespace, "warehouse3", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "postgres"}},
 					},
 				}),
@@ -387,12 +387,12 @@ func Test_kustomizeImageSetter_buildTargetImagesAutomatically(t *testing.T) {
 			},
 			objects: []runtime.Object{
 				mockWarehouse(testNamespace, "warehouse1", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),
 				mockWarehouse(testNamespace, "warehouse2", kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{Image: &kargoapi.ImageSubscription{RepoURL: "nginx"}},
 					},
 				}),

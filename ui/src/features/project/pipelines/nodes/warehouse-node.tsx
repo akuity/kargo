@@ -15,13 +15,13 @@ import { generatePath, useNavigate } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
 import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import styles from './node-size-source-of-truth.module.less';
 
-export const WarehouseNode = (props: { warehouse: Warehouse }) => {
+export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
   const colorContext = useContext(ColorContext);
   const navigate = useNavigate();
 
@@ -133,7 +133,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
   );
 };
 
-const useWarehouseState = (warehouse: Warehouse) =>
+const useWarehouseState = (warehouse: WarehouseExpanded) =>
   useMemo(() => {
     let reconciling = false;
 
