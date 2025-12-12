@@ -9,17 +9,22 @@ description: Waits for GitHub Actions workflow runs to complete with optional st
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.
+
 :::
 
 :::warning Breaking Changes in v1.9
+
 Starting with Kargo v1.9, this promotion step has significant configuration changes:
+
 - The `credentials` field has been removed
 - `owner` and `repo` fields have been replaced with a single `repoURL` field
 - Credentials are now inherited from Git repository credentials configured in Kargo
 - A new optional `insecureSkipTLSVerify` field has been added
 
 See the [Migration Guide](#migration-from-v18-to-v19) below for details.
+
 :::
 
 The `gha-wait-for-workflow` promotion step provides integration with GitHub Actions, allowing you to wait for workflow runs to complete and optionally validate their conclusion status. This is particularly useful for ensuring that CI/CD pipelines, tests, or deployment scripts complete successfully before proceeding with subsequent promotion steps.
@@ -34,6 +39,7 @@ Starting with Kargo v1.9, credentials are inherited from Git repository credenti
 - **GitHub App credentials** - App ID, installation ID, and private key
 
 :::info Required Permissions
+
 The GitHub credentials must have the following permissions:
 
 **Fine-grained Personal Access Token:**
@@ -44,12 +50,15 @@ The GitHub credentials must have the following permissions:
 
 **GitHub App:**
 - `actions:read` - To read workflow run status
+
 :::
 
 ### v1.8 (Deprecated)
 
 :::warning Removed in v1.9
+
 The following credentials configuration has been removed in v1.9. Use the new Git repository credentials model instead.
+
 :::
 
 All GitHub Actions operations require proper authentication credentials stored in a Kubernetes `Secret`.
@@ -78,7 +87,9 @@ The referenced `Secret` should contain the following keys:
 ### v1.8 (Deprecated)
 
 :::warning Changed in v1.9
+
 The following configuration format has been changed in v1.9.
+
 :::
 
 | Name                 | Type      | Required | Description                                                                                |
@@ -89,6 +100,7 @@ The following configuration format has been changed in v1.9.
 | `expectedConclusion` | `string`  | N        | The expected final conclusion status. If not provided, conclusion status is not validated. |
 
 Valid values for `expectedConclusion`:
+
 - `success` - The workflow completed successfully
 - `failure` - The workflow failed
 - `cancelled` - The workflow was cancelled

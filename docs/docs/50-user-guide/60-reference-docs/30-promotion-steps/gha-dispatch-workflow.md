@@ -9,17 +9,22 @@ description: Dispatches GitHub Actions workflows using the workflow_dispatch eve
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.8 and above.
+
 :::
 
 :::warning Breaking Changes in v1.9
+
 Starting with Kargo v1.9, this promotion step has significant configuration changes:
+
 - The `credentials` field has been removed
 - `owner` and `repo` fields have been replaced with a single `repoURL` field
 - Credentials are now inherited from Git repository credentials configured in Kargo
 - A new optional `insecureSkipTLSVerify` field has been added
 
 See the [Migration Guide](#migration-from-v18-to-v19) below for details.
+
 :::
 
 The `gha-dispatch-workflow` promotion step provides integration with GitHub Actions, allowing you to dispatch workflows using the `workflow_dispatch` event. This is particularly useful for triggering CI/CD pipelines, running tests, or executing deployment scripts as part of your promotion workflows.
@@ -37,13 +42,16 @@ Starting with Kargo v1.9, credentials are inherited from Git repository credenti
 The GitHub credentials must have the following permissions:
 
 **Fine-grained Personal Access Token:**
+
 - `actions:write` - To dispatch workflows
 - `actions:read` - To read workflow run status
 
 **Classic Personal Access Token:**
+
 - `repo` - read/write access
 
 **GitHub App:**
+
 - `actions:write` - To dispatch workflows
 - `actions:read` - To read workflow run status
 :::
@@ -51,7 +59,9 @@ The GitHub credentials must have the following permissions:
 ### v1.8 (Deprecated)
 
 :::warning Removed in v1.9
+
 The following credentials configuration has been removed in v1.9. Use the new Git repository credentials model instead.
+
 :::
 
 All GitHub Actions operations require proper authentication credentials stored in a Kubernetes `Secret`.
@@ -82,7 +92,9 @@ The referenced `Secret` should contain the following keys:
 ### v1.8 (Deprecated)
 
 :::warning Removed in v1.9
+
 The following configuration format has been removed in v1.9.
+
 :::
 
 | Name           | Type      | Required | Description                                                                                           |
