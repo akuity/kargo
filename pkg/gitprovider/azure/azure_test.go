@@ -125,3 +125,49 @@ func TestGetCommitURL(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistrationPredicate(t *testing.T) {
+	testCases := []struct {
+		name     string
+		repoURL  string
+		expected bool
+	}{
+		{
+			name:     "invalid URL",
+			repoURL:  "not-a-url",
+			expected: false,
+		},
+		{
+			name:     "unsupported host",
+			repoURL:  "https://github.com/org/repo",
+			expected: false,
+		},
+		{
+			name:     "modern URL format",
+			repoURL:  "https://dev.azure.com/myorg/myproject/_git/myrepo",
+			expected: true,
+		},
+		{
+			name:     "modern URL format with .git suffix",
+			repoURL:  "https://dev.azure.com/myorg/myproject/_git/myrepo.git",
+			expected: true,
+		},
+		{
+			name:     "legacy URL format",
+			repoURL:  "https://myorg.visualstudio.com/myproject/_git/myrepo",
+			expected: true,
+		},
+		{
+			name:     "legacy URL format with .git suffix",
+			repoURL:  "https://myorg.visualstudio.com/myproject/_git/myrepo.git",
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := registration.Predicate(tc.repoURL)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}

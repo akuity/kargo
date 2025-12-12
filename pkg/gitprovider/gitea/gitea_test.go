@@ -634,3 +634,44 @@ func TestGetCommitURL(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistrationPredicate(t *testing.T) {
+	testCases := []struct {
+		name     string
+		repoURL  string
+		expected bool
+	}{
+		{
+			name:     "invalid URL",
+			repoURL:  "not-a-url",
+			expected: false,
+		},
+		{
+			name:     "HTTPS Gitea URL",
+			repoURL:  "https://gitea.example.com/akuity/kargo",
+			expected: true,
+		},
+		{
+			name:     "HTTPS Gitea URL with .git suffix",
+			repoURL:  "https://gitea.example.com/akuity/kargo.git",
+			expected: true,
+		},
+		{
+			name:     "SCP-style Gitea URL",
+			repoURL:  "git@gitea.example.com:akuity/kargo",
+			expected: true,
+		},
+		{
+			name:     "HTTP Gitea URL with port",
+			repoURL:  "http://gitea.example.com:8080/akuity/kargo",
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := registration.Predicate(tc.repoURL)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}

@@ -468,3 +468,54 @@ func TestGetCommitURL(t *testing.T) {
 		})
 	}
 }
+
+func TestRegistrationPredicate(t *testing.T) {
+	testCases := []struct {
+		name     string
+		repoURL  string
+		expected bool
+	}{
+		{
+			name:     "invalid URL",
+			repoURL:  "not-a-url",
+			expected: false,
+		},
+		{
+			name:     "HTTPS GitLab URL",
+			repoURL:  "https://gitlab.com/akuity/kargo",
+			expected: true,
+		},
+		{
+			name:     "HTTPS GitLab URL with .git suffix",
+			repoURL:  "https://gitlab.com/akuity/kargo.git",
+			expected: true,
+		},
+		{
+			name:     "self-hosted GitLab HTTPS URL",
+			repoURL:  "https://gitlab.akuity.io/akuity/kargo.git",
+			expected: true,
+		},
+		{
+			name:     "SSH URL",
+			repoURL:  "ssh://gitlab.com/akuity/kargo.git",
+			expected: true,
+		},
+		{
+			name:     "SCP-style GitLab URL",
+			repoURL:  "git@gitlab.com:akuity/kargo.git",
+			expected: true,
+		},
+		{
+			name:     "HTTP URL without gitlab in host",
+			repoURL:  "http://git.example.com/akuity/kargo",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := registration.Predicate(tc.repoURL)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}

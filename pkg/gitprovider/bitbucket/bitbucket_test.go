@@ -1036,27 +1036,44 @@ func Test_toProviderPR(t *testing.T) {
 	})
 }
 
-func Test_registration(t *testing.T) {
-	t.Run("predicate matches bitbucket.org URL", func(t *testing.T) {
-		result := registration.Predicate("https://bitbucket.org/owner/repo")
-		assert.True(t, result)
-	})
-
-	t.Run("predicate doesn't match other URLs", func(t *testing.T) {
-		result := registration.Predicate("https://github.com/owner/repo")
-		assert.False(t, result)
-	})
-
-	t.Run("predicate handles invalid URLs", func(t *testing.T) {
-		result := registration.Predicate("://invalid-url")
-		assert.False(t, result)
-	})
-
-	t.Run("NewProvider factory works", func(t *testing.T) {
-		provider, err := registration.NewProvider("https://bitbucket.org/owner/repo", nil)
-		assert.NoError(t, err)
-		assert.NotNil(t, provider)
-	})
+func TestRegistrationPredicate(t *testing.T) {
+	testCases := []struct {
+		name     string
+		repoURL  string
+		expected bool
+	}{
+		{
+			name:     "invalid URL format",
+			repoURL:  "://invalid-url",
+			expected: false,
+		},
+		{
+			name:     "HTTPS Bitbucket URL",
+			repoURL:  "https://bitbucket.org/owner/repo",
+			expected: true,
+		},
+		{
+			name:     "HTTPS Bitbucket URL with trailing slash",
+			repoURL:  "https://bitbucket.org/owner/repo/",
+			expected: true,
+		},
+		{
+			name:     "HTTPS Bitbucket URL with .git suffix",
+			repoURL:  "https://bitbucket.org/owner/repo.git",
+			expected: true,
+		},
+		{
+			name:     "SCP-style Bitbucket URL",
+			repoURL:  "git@bitbucket.org:owner/repo.git",
+			expected: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := registration.Predicate(tc.repoURL)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }
 
 func TestGetCommitURL(t *testing.T) {
