@@ -414,6 +414,11 @@ func TestParseGitLabURL(t *testing.T) {
 			expectedHost:   "gitlab.com",
 		},
 		{
+			url:            "git@gitlab.com:akuity/kargo.git",
+			expectedScheme: "https",
+			expectedHost:   "gitlab.com",
+		},
+		{
 			url:            "http://git.example.com/akuity/kargo",
 			expectedScheme: "http",
 			expectedHost:   "git.example.com",
