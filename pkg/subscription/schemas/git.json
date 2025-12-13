@@ -1,0 +1,92 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "title": "GitSubscription",
+    "description": "GitSubscription defines a subscription to a Git repository.",
+    "type": "object",
+    "required": ["repoURL"],
+    "properties": {
+        "repoURL": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))$",
+            "description": "URL is the repository's URL. This is a required field."
+        },
+        "commitSelectionStrategy": {
+            "type": "string",
+            "enum": ["NewestFromBranch", "SemVer", "Lexical", "NewestTag"],
+            "default": "NewestFromBranch",
+            "description": "CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field."
+        },
+        "branch": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255,
+            "pattern": "^[a-zA-Z0-9]([a-zA-Z0-9._\\/-]*[a-zA-Z0-9_-])?$",
+            "description": "Branch references a particular branch of the repository. Only has effect when CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the subscription is implicitly to the repository's default branch. Must be a valid branch name."
+        },
+        "strictSemvers": {
+            "type": "boolean",
+            "default": true,
+            "description": "StrictSemvers specifies whether only \"strict\" semver tags should be considered. A \"strict\" semver tag contains ALL of major, minor, and patch version components. Only has effect when CommitSelectionStrategy is SemVer."
+        },
+        "semverConstraint": {
+            "type": "string",
+            "description": "SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer."
+        },
+        "allowTags": {
+            "type": "string",
+            "description": "AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes instead."
+        },
+        "allowTagsRegexes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer."
+        },
+        "ignoreTags": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. Deprecated: Use ignoreTagsRegexes instead."
+        },
+        "ignoreTagsRegexes": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer."
+        },
+        "expressionFilter": {
+            "type": "string",
+            "description": "ExpressionFilter is an expression that can optionally be used to limit the commits or tags that are considered in determining the newest commit of interest based on their metadata."
+        },
+        "insecureSkipTLSVerify": {
+            "type": "boolean",
+            "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution."
+        },
+        "includePaths": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "IncludePaths is a list of selectors that designate paths in the repository that should trigger the production of new Freight when changes are detected therein."
+        },
+        "excludePaths": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "ExcludePaths is a list of selectors that designate paths in the repository that should NOT trigger the production of new Freight when changes are detected therein."
+        },
+        "discoveryLimit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 20,
+            "description": "DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100."
+        }
+    },
+    "additionalProperties": false
+}
