@@ -161,7 +161,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 
 		// Determine the completion of the step based on the metadata.
 		if !o.determineStepCompletion(promoCtx, step, reg.Metadata, err) {
-			// The step is still running, so we need to wait
+			// Step incomplete; return error (if any) for progressive backoff.
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
@@ -169,7 +169,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
 				RetryAfter:            result.RetryAfter,
-			}, nil
+			}, err
 		}
 
 		// If the step succeeded, we can add any health checks to the list.

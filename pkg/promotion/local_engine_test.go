@@ -45,7 +45,7 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				{Kind: "error-step"},
 			},
 			assertions: func(t *testing.T, result Result, err error) {
-				assert.ErrorContains(t, err, "error running step")
+				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 			},
 		},
@@ -58,11 +58,31 @@ func TestSimpleEngine_Promote(t *testing.T) {
 				{Kind: "context-waiter"},
 			},
 			assertions: func(t *testing.T, result Result, err error) {
-				assert.ErrorContains(t, err, context.Canceled.Error())
+				assert.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
+				assert.Contains(t, result.Message, context.Canceled.Error())
 				assert.Len(t, result.StepExecutionMetadata, 1)
 				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 				assert.Contains(t, result.StepExecutionMetadata[0].Message, context.Canceled.Error())
+			},
+		},
+		{
+			name: "running promotion with recoverable error returns error for backoff",
+			promoCtx: Context{
+				Project: "test-project",
+			},
+			steps: []Step{
+				{
+					Kind:  "recoverable-error-step",
+					Alias: "step1",
+					Retry: &kargoapi.PromotionStepRetry{ErrorThreshold: 3},
+				},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				assert.Error(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
+				assert.Len(t, result.StepExecutionMetadata, 1)
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, result.StepExecutionMetadata[0].Status)
 			},
 		},
 	}
@@ -108,6 +128,17 @@ func TestSimpleEngine_Promote(t *testing.T) {
 									Status: kargoapi.PromotionStepStatusErrored,
 								}, ctx.Err()
 							},
+						}
+					},
+				},
+				StepRunnerRegistration{
+					Name: "recoverable-error-step",
+					Value: func(StepRunnerCapabilities) StepRunner {
+						return &MockStepRunner{
+							RunResult: StepResult{
+								Status: kargoapi.PromotionStepStatusErrored,
+							},
+							RunErr: errors.New("recoverable error"),
 						}
 					},
 				},
