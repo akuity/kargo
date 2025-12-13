@@ -16,14 +16,14 @@ func Test_chartSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		sub := &kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{}}
 		err := s.ApplySubscriptionDefaults(t.Context(), sub)
 		require.NoError(t, err)
-		require.Equal(t, int32(20), sub.Chart.DiscoveryLimit)
+		require.Equal(t, int64(20), sub.Chart.DiscoveryLimit)
 	})
 
 	t.Run("preserves non-zero discoveryLimit", func(t *testing.T) {
 		sub := &kargoapi.RepoSubscription{Chart: &kargoapi.ChartSubscription{DiscoveryLimit: 13}}
 		err := s.ApplySubscriptionDefaults(t.Context(), sub)
 		require.NoError(t, err)
-		require.Equal(t, int32(13), sub.Chart.DiscoveryLimit)
+		require.Equal(t, int64(13), sub.Chart.DiscoveryLimit)
 	})
 
 	t.Run("no-op on nil chart", func(t *testing.T) {

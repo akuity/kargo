@@ -135,7 +135,7 @@ func Test_webhook_Default(t *testing.T) {
 		}
 		err := w.Default(context.Background(), warehouse)
 		require.NoError(t, err)
-		const testDiscoveryLimit = int32(42)
+		const testDiscoveryLimit int64 = 42
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].Git.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].Image.DiscoveryLimit)
 		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].Chart.DiscoveryLimit)

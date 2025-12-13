@@ -20,7 +20,7 @@ func Test_gitSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.CommitSelectionStrategyNewestFromBranch, sub.Git.CommitSelectionStrategy)
 		require.NotNil(t, sub.Git.StrictSemvers)
 		require.True(t, *sub.Git.StrictSemvers)
-		require.Equal(t, int32(20), sub.Git.DiscoveryLimit)
+		require.Equal(t, int64(20), sub.Git.DiscoveryLimit)
 	})
 
 	t.Run("preserves non-zero values", func(t *testing.T) {
@@ -35,7 +35,7 @@ func Test_gitSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.CommitSelectionStrategySemVer, sub.Git.CommitSelectionStrategy)
 		require.NotNil(t, sub.Git.StrictSemvers)
 		require.False(t, *sub.Git.StrictSemvers)
-		require.Equal(t, int32(7), sub.Git.DiscoveryLimit)
+		require.Equal(t, int64(7), sub.Git.DiscoveryLimit)
 	})
 
 	t.Run("no-op on nil git", func(t *testing.T) {

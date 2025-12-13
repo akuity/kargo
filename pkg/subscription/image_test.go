@@ -19,7 +19,7 @@ func Test_imageSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.ImageSelectionStrategySemVer, sub.Image.ImageSelectionStrategy)
 		require.NotNil(t, sub.Image.StrictSemvers)
 		require.True(t, *sub.Image.StrictSemvers)
-		require.Equal(t, int32(20), sub.Image.DiscoveryLimit)
+		require.Equal(t, int64(20), sub.Image.DiscoveryLimit)
 	})
 
 	t.Run("preserves non-zero values", func(t *testing.T) {
@@ -34,7 +34,7 @@ func Test_imageSubscriber_ApplySubscriptionDefaults(t *testing.T) {
 		require.Equal(t, kargoapi.ImageSelectionStrategyNewestBuild, sub.Image.ImageSelectionStrategy)
 		require.NotNil(t, sub.Image.StrictSemvers)
 		require.False(t, *sub.Image.StrictSemvers)
-		require.Equal(t, int32(9), sub.Image.DiscoveryLimit)
+		require.Equal(t, int64(9), sub.Image.DiscoveryLimit)
 	})
 
 	t.Run("no-op on nil image", func(t *testing.T) {
