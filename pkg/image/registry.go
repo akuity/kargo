@@ -2,10 +2,8 @@ package image
 
 import (
 	"sync"
-	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
-	"github.com/patrickmn/go-cache"
 	"go.uber.org/ratelimit"
 )
 
@@ -14,11 +12,7 @@ var dockerRegistry = &registry{
 	name:             "Docker Hub",
 	imagePrefix:      name.DefaultRegistry,
 	defaultNamespace: "library",
-	imageCache: cache.New(
-		30*time.Minute, // Default ttl for each entry
-		time.Hour,      // Cleanup interval
-	),
-	rateLimiter: ratelimit.New(10),
+	rateLimiter:      ratelimit.New(10),
 }
 
 var (
@@ -39,7 +33,6 @@ type registry struct {
 	name             string
 	imagePrefix      string
 	defaultNamespace string
-	imageCache       *cache.Cache
 	rateLimiter      ratelimit.Limiter
 }
 
@@ -48,10 +41,6 @@ func newRegistry(imagePrefix string) *registry {
 	return &registry{
 		name:        imagePrefix,
 		imagePrefix: imagePrefix,
-		imageCache: cache.New(
-			30*time.Minute, // Default ttl for each entry
-			time.Hour,      // Cleanup interval
-		),
 		// TODO: Make this configurable.
 		rateLimiter: ratelimit.New(20),
 	}

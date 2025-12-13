@@ -48,6 +48,19 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
+		if sub.CacheByTag && !r.cfg.AllowCacheByTag {
+			return nil, fmt.Errorf(
+				"image tag caching is disabled by controller configuration",
+			)
+		}
+		if !sub.CacheByTag && r.cfg.RequireCacheByTag {
+			return nil, fmt.Errorf(
+				"image tag caching is required by controller configuration; enable " +
+					"with caution as this feature is safe only for subscriptions not " +
+					"involving \"mutable\" tags",
+			)
+		}
+
 		selector, err := image.NewSelector(ctx, sub, regCreds)
 		if err != nil {
 			return nil, fmt.Errorf(

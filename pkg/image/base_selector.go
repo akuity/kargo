@@ -13,18 +13,19 @@ import (
 // functionality for all Selector implementations. It is not intended to be used
 // directly.
 type baseSelector struct {
-	platform   *platformConstraint
-	repoClient *repositoryClient
+	platformConstraint *platformConstraint
+	repoClient         *repositoryClient
 }
 
 func newBaseSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
+	cacheByTag bool,
 ) (*baseSelector, error) {
 	var err error
 	s := &baseSelector{}
 	if sub.Platform != "" {
-		if s.platform, err = parsePlatformConstraint(sub.Platform); err != nil {
+		if s.platformConstraint, err = parsePlatformConstraint(sub.Platform); err != nil {
 			return nil, fmt.Errorf(
 				"error parsing platform constraint %q: %w",
 				sub.Platform, err,
@@ -36,6 +37,7 @@ func newBaseSelector(
 		repoURL,
 		sub.InsecureSkipTLSVerify,
 		creds,
+		cacheByTag,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error creating repository client for image %q: %w",
@@ -52,7 +54,7 @@ func (b *baseSelector) getLoggerContext() []any {
 	return []any{
 		"registry", b.repoClient.registry.name,
 		"image", b.repoClient.repoURL,
-		"platformConstrained", b.platform != nil,
+		"platformConstrained", b.platformConstraint != nil,
 	}
 }
 
@@ -73,7 +75,7 @@ func (b *baseSelector) imagesToAPIImages(
 		apiImages[i] = kargoapi.DiscoveredImageReference{
 			Tag:         img.Tag,
 			Digest:      img.Digest,
-			Annotations: img.Annotations,
+			Annotations: img.getAnnotations(b.platformConstraint),
 		}
 		if img.CreatedAt != nil {
 			apiImages[i].CreatedAt = &metav1.Time{Time: *img.CreatedAt}

@@ -19,7 +19,7 @@ import (
 // - DOCKER_HUB_PASSWORD (personal access token)
 
 func TestGetTags(t *testing.T) {
-	client, err := newRepositoryClient("debian", false, getDockerHubCreds())
+	client, err := newRepositoryClient("debian", false, getDockerHubCreds(), true)
 	require.NoError(t, err)
 	require.NotNil(t, client)
 	tags, err := client.getTags(context.Background())
