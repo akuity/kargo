@@ -184,7 +184,7 @@ spec:
 
 The following example depicts `targetSelectionCriteria` that selects
 `Warehouse` resources by a `name` that is dynamically sourced from a repository
-URL in the request body.
+name in the request body.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1

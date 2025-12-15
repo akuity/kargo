@@ -361,7 +361,7 @@ spec:
                                         IndexSelector is a selector used to identify cached target resources by cache key.
                                         If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
                                       properties:
-                                        matchIndicies:
+                                        matchIndices:
                                           description: MatchIndices is a list of index
                                             selector requirements.
                                           items:
