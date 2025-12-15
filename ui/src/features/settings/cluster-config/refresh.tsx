@@ -17,9 +17,11 @@ export const Refresh = () => {
       <Button
         icon={<FontAwesomeIcon icon={faUndo} />}
         loading={refreshResourceMutation.isPending}
-        onClick={() => refreshResourceMutation.mutate({
-          resourceType: refreshResourceTypeClusterConfig,
-        })}
+        onClick={() =>
+          refreshResourceMutation.mutate({
+            resourceType: refreshResourceTypeClusterConfig
+          })
+        }
       >
         Refresh
       </Button>

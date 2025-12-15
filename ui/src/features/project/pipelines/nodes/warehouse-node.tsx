@@ -123,7 +123,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
             refreshResourceMutation.mutate({
               project: props.warehouse?.metadata?.namespace,
               name: props.warehouse?.metadata?.name,
-              resourceType: refreshResourceTypeWarehouse,
+              resourceType: refreshResourceTypeWarehouse
             });
           }}
           loading={warehouseState.refreshing}

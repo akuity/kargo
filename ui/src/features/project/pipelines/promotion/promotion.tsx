@@ -203,7 +203,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
               refreshResourceMutation.mutate({
                 project: promotion?.metadata?.namespace,
                 name: affiliatedStage,
-                resourceType: refreshResouceTypeStage,
+                resourceType: refreshResouceTypeStage
               })
             }
             loading={refreshResourceMutation.isPending}

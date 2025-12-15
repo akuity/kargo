@@ -17,10 +17,12 @@ export const Refresh = (props: { project: string }) => {
       <Button
         icon={<FontAwesomeIcon icon={faUndo} />}
         loading={refreshResourceMutation.isPending}
-        onClick={() => refreshResourceMutation.mutate({ 
-          project: props.project,
-          resourceType: refreshResourceTypeProjectConfig,
-        })}
+        onClick={() =>
+          refreshResourceMutation.mutate({
+            project: props.project,
+            resourceType: refreshResourceTypeProjectConfig
+          })
+        }
       >
         Refresh
       </Button>
