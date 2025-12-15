@@ -59,6 +59,33 @@ config:
   message: Hello, world!
 ```
 
+:::info What if?
+If an expression must contain the literal character sequence `}}`, that sequence
+can be mistaken as marking the end of the expression, cutting the expression
+short, and resulting in an error or, at least, unexpected results.
+Inconveniently, the `}}` character sequence is a common one occurring in the
+definition of JSON objects or string representations of such an objects.
+
+The following would fail, because the expression would be misidentified as
+`{"labels": {"app": "nginx"`, which is not valid JSON:
+
+```yaml
+config:
+  jsonObject: ${{ {"labels": {"app": "nginx"}} }}
+```
+
+As a workaround for the above, a secondary set of delimiters, `${%` and `%}`,
+are supported as well. Opt for these delimiters when an expression must contain
+the literal character sequence `}}`. Similarly, always opt for `${{` and `}}`
+as delimiters when an expression must contain the literal character sequence
+`%}`.
+
+```yaml
+config:
+  jsonData: %{{ {"labels": {"app": "nginx"}} }}
+```
+:::
+
 The
 [expr-lang language definition docs](https://expr-lang.org/docs/language-definition)
 provide a comprehensive overview of the language's syntax and capabilities, so
