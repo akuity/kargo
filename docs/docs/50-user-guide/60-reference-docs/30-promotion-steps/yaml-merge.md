@@ -13,6 +13,7 @@ When `ignoreMissingFiles` is false (default), the step will fail
 if any file from `inFiles` does not exist.
 
 :::note
+
 Merging is performed as follows:
 - **Scalar values:** If both documents define a scalar (string, number, boolean)
   at the same key, the value from the second document overrides the first.
@@ -24,6 +25,7 @@ Merging is performed as follows:
   are included as-is in the result.
 - **Null values:** If a key is set to `null` in the second document, it removes
   or overrides the value from the first document.
+
 :::
 
 ## Configuration

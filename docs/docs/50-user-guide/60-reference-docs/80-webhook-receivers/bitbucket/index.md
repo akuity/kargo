@@ -9,15 +9,19 @@ Bitbucket repositories by _refreshing_ all `Warehouse` resources subscribed to
 those repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 :::info
+
 The Bitbucket webhook receiver also works with Bitbucket Server and Bitbucket
 Data Center, although some URLs in this document may need to be adjusted
 accordingly.
+
 :::
 
 ## Configuring the Receiver
@@ -28,6 +32,7 @@ a `secret` key in its data map. This
 Bitbucket to sign requests and by the receiver to verify those signatures.
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -101,6 +106,7 @@ events:
        [webhook receiver's configuration](#configuring-the-receiver).
 
         :::danger
+
         Do not use the <Hlt>Generate secret</Hlt> button in the Bitbucket UI.
 
         Kargo incorporates the secret's value into the URL it generates for the
@@ -132,6 +138,8 @@ When these steps are complete, the repository will send events to the webhook
 receiver.
 
 :::info
+
 For additional information on configuring webhooks, refer directly to the
 [Bitbucket Docs](https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/).
+
 :::

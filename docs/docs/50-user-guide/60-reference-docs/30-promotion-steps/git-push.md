@@ -17,6 +17,7 @@ retrying the push. Any merge conflict requiring manual resolution will
 immediately halt further attempts.
 
 :::info
+
 This step's internal retry logic is helpful in scenarios when concurrent
 Promotions to multiple Stages may all write to the same branch of the same
 repository.
@@ -24,6 +25,7 @@ repository.
 Because conflicts requiring manual resolution will halt further attempts, it is
 recommended to design your Promotion processes such that Promotions to multiple
 Stages that write to the same branch do not write to the same files.
+
 :::
 
 ## Configuration
