@@ -7,6 +7,7 @@ import { queryCache } from '@ui/features/utils/cache';
 import { refreshResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 export const Refresh = (props: { project: string }) => {
+  const refreshResourceTypeProjectConfig = 'ProjectConfig';
   const refreshResourceMutation = useMutation(refreshResource, {
     onSuccess: () => queryCache.projectConfig.refetch()
   });
@@ -16,7 +17,10 @@ export const Refresh = (props: { project: string }) => {
       <Button
         icon={<FontAwesomeIcon icon={faUndo} />}
         loading={refreshResourceMutation.isPending}
-        onClick={() => refreshResourceMutation.mutate({ project: props.project })}
+        onClick={() => refreshResourceMutation.mutate({ 
+          project: props.project,
+          resourceType: refreshResourceTypeProjectConfig,
+        })}
       >
         Refresh
       </Button>

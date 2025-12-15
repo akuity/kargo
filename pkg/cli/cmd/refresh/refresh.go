@@ -84,12 +84,13 @@ func (o *refreshOptions) validate() error {
 		errs = append(errs, errors.New("resource type is required"))
 	}
 
-	if o.ResourceType.IsNamespaced() && o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
-	}
-
-	if !o.ResourceType.NameEqualsProject() && o.Name == "" {
-		errs = append(errs, errors.New("name is required"))
+	if o.ResourceType.IsNamespaced() {
+		if o.Project == "" {
+			errs = append(errs, errors.New("project is required"))
+		}
+		if !o.ResourceType.NameEqualsProject() && o.Name == "" {
+			errs = append(errs, errors.New("name is required"))
+		}
 	}
 
 	return errors.Join(errs...)

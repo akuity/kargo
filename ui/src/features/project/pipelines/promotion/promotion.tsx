@@ -64,6 +64,7 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     }
   });
 
+  const refreshResouceTypeStage = 'Stage';
   const refreshResourceMutation = useMutation(refreshResource);
 
   const promotion = props.promotion;
@@ -201,7 +202,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
             onClick={() =>
               refreshResourceMutation.mutate({
                 project: promotion?.metadata?.namespace,
-                name: affiliatedStage
+                name: affiliatedStage,
+                resourceType: refreshResouceTypeStage,
               })
             }
             loading={refreshResourceMutation.isPending}

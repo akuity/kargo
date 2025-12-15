@@ -38,7 +38,12 @@ export const StageActions = ({
 
   const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshResource);
 
-  const onRefresh = () => refresh({ name: stageName, project: projectName });
+  const refreshResourceTypeStage = 'Stage';
+  const onRefresh = () => refresh({ 
+    name: stageName, 
+    project: projectName,
+    resourceType: refreshResourceTypeStage,
+  });
 
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {

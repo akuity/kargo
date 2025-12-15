@@ -7,6 +7,7 @@ import { queryCache } from '@ui/features/utils/cache';
 import { refreshResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 export const Refresh = () => {
+  const refreshResourceTypeClusterConfig = 'ClusterConfig';
   const refreshResourceMutation = useMutation(refreshResource, {
     onSuccess: () => queryCache.clusterConfig.refetch()
   });
@@ -16,7 +17,9 @@ export const Refresh = () => {
       <Button
         icon={<FontAwesomeIcon icon={faUndo} />}
         loading={refreshResourceMutation.isPending}
-        onClick={() => refreshResourceMutation.mutate({})}
+        onClick={() => refreshResourceMutation.mutate({
+          resourceType: refreshResourceTypeClusterConfig,
+        })}
       >
         Refresh
       </Button>

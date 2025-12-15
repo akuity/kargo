@@ -29,6 +29,7 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
 
   const warehouseState = useWarehouseState(props.warehouse);
 
+  const refreshResourceTypeWarehouse = 'Warehouse';
   const refreshResourceMutation = useMutation(refreshResource, {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
@@ -121,7 +122,8 @@ export const WarehouseNode = (props: { warehouse: Warehouse }) => {
             e.stopPropagation();
             refreshResourceMutation.mutate({
               project: props.warehouse?.metadata?.namespace,
-              name: props.warehouse?.metadata?.name
+              name: props.warehouse?.metadata?.name,
+              resourceType: refreshResourceTypeWarehouse,
             });
           }}
           loading={warehouseState.refreshing}
