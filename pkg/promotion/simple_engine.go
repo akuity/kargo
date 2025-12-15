@@ -2,7 +2,6 @@ package promotion
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -83,12 +82,7 @@ func (e *simpleEngine) Promote(
 		defer os.RemoveAll(workDir)
 	}
 
-	result := e.executeSteps(ctx, promoCtx, steps, workDir)
-	if result.Status == kargoapi.PromotionPhaseErrored {
-		err = errors.New(result.Message)
-	}
-
-	return result, err
+	return e.executeSteps(ctx, promoCtx, steps, workDir)
 }
 
 // executeSteps executes a list of Steps in sequence.
@@ -97,7 +91,7 @@ func (e *simpleEngine) executeSteps(
 	pCtx Context,
 	steps []Step,
 	workDir string,
-) Result {
+) (Result, error) {
 	// NB: Make a deep copy of the Context so that we don't modify the original.
 	promoCtx := pCtx.DeepCopy()
 	if promoCtx.State == nil {
@@ -189,7 +183,7 @@ func (e *simpleEngine) executeSteps(
 
 		// Determine what to do based on the result.
 		if !e.determineStepCompletion(step, registration.Metadata, stepExecMeta, err) {
-			// The step is still running, so we need to wait
+			// Step incomplete; return error (if any) for progressive backoff.
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
@@ -197,7 +191,7 @@ func (e *simpleEngine) executeSteps(
 				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
 				RetryAfter:            result.RetryAfter,
-			}
+			}, err
 		}
 
 		// If the step succeeded, we can add any health checks to the list.
@@ -218,7 +212,7 @@ func (e *simpleEngine) executeSteps(
 		StepExecutionMetadata: promoCtx.StepExecutionMetadata,
 		State:                 promoCtx.State,
 		HealthChecks:          healthChecks,
-	}
+	}, nil
 }
 
 func (e *simpleEngine) prepareStepMetadata(promoCtx *Context, step Step) *kargoapi.StepExecutionMetadata {
