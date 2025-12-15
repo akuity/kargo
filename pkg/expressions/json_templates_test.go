@@ -306,8 +306,8 @@ value13: | # This is a string
 			},
 		},
 		{
-			name: "alternative delimiters allow other end delimiter characters "+
-							"within expression",
+			name: "alternative delimiters allow other end delimiter characters " +
+				"within expression",
 			// This test asserts that choosing an alternative delimiter for an
 			// expression solves the problem of another end delimiter characters
 			// sequence needing to appear within the expression.

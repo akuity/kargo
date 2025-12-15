@@ -196,9 +196,9 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 }
 
 func evaluateTemplate(
-		template string,
-		env map[string]any,
-		exprOpts ...expr.Option,
+	template string,
+	env map[string]any,
+	exprOpts ...expr.Option,
 ) (string, error) {
 	var result strings.Builder
 
