@@ -51,36 +51,38 @@ config:
   message: ${{ "Hello, world!" }}
 ```
 
-The above example will be evaluated as follows:
+The above example will be evaluated as the following:
 
 ```yaml
 config:
   message: Hello, world!
 ```
 
-:::info
-If your expression needs to contain the `}}` character sequence (such as when
-constructing JSON objects or strings containing JSON), use alternative delimiters
-`${%` and `%}` instead:
+:::info What if?
+If an expression must contain the literal character sequence `}}`, that sequence
+can be mistaken as marking the end of the expression, cutting the expression
+short, and resulting in an error or, at least, unexpected results.
+Inconveniently, the `}}` character sequence is a common one occurring in the
+definition of JSON objects or string representations of such an objects.
+
+The following would fail, because the expression would be misidentified as
+`{"labels": {"app": "nginx"`, which is not valid JSON:
 
 ```yaml
 config:
-  # This would fail with standard delimiters due to }} in the JSON
-  jsonData: ${% '{"metadata": {"labels": {"app": "nginx"}}}' %}
+  jsonObject: ${{ {"labels": {"app": "nginx"}} }}
 ```
 
-The above example will be evaluated as follows:
+As a workaround for the above, a secondary set of delimiters, `${%` and `%}`,
+are supported as well. Opt for these delimiters when an expression must contain
+the literal character sequence `}}`. Similarly, always opt for `${{` and `}}`
+as delimiters when an expression must contain the literal character sequence
+`%}`.
 
 ```yaml
 config:
-  jsonData: '{"metadata": {"labels": {"app": "nginx"}}}'
+  jsonData: %{{ {"labels": {"app": "nginx"}} }}
 ```
-
-You must not use `}}` within standard delimiters `${{ }}`, nor `%}` within
-alternative delimiters `${% %}`, as this will cause Kargo to misinterpret the
-expression boundaries and terminate the expression prematurely. Choose the
-appropriate delimiter for each expression based on which characters you need to
-include.
 :::
 
 The
