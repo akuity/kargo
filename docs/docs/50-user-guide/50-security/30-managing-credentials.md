@@ -12,14 +12,14 @@ access to Git repositories.
 This section presents an overview of how users can manage and use such
 credentials within their Kargo Projects.
 
-:::info
-__Not what you were looking for?__
+:::info[Not what you were looking for?]
 
 If you're an operator looking to understand your role in managing
 credentials, you may find a some value in this document, but should
 refer also to the
 [Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
 section of the Operator's Guide.
+
 :::
 
 ## Repository Credentials as `Secret` Resources
@@ -43,8 +43,10 @@ stringData:
 ```
 
 :::info
+
 `Secret`s defined within a project's namespace are accessible only to
 `Warehouse`s and `Promotion`s within that project.
+
 :::
 
 The names of `Secret` resources are inconsequential because Kargo matches
@@ -57,11 +59,13 @@ representing credentials for a Git, Helm chart, or container image repository,
 or _something else_, respectively.
 
 :::info
+
 Despite the appearance of "cred-type" in the label key, `Secret`s labeled as
 `generic` do not actually need to represent credentials. They could contain
 _any_ kind of sensitive information used in your promotion processes. Managing
 such `Secret`s is covered separately in
 [Managing Other Secrets](../50-security/40-managing-other-secrets.md).
+
 :::
 
 `Secret`s labeled as `git`, `image`, or `helm` credentials must generally
@@ -78,9 +82,11 @@ contain the following keys:
     to `true`.
 
     :::info
+
     This is useful if, for example, your project accesses many GitHub
     repositories, all beginning with `https://github.com/example-org`, and can
     use the same token for accessing all of them.
+
     :::
 
 * Either:
@@ -96,11 +102,13 @@ contain the following keys:
     `git@github.com:example/repo.git`.
 
 :::info
+
 Exceptions to the formatting discussed above are covered in later sections.
+
 :::
 
-:::note
-__Precedence__
+
+:::info[Precedence]
 
 When Kargo searches for repository credentials in a project's namespace, it
 _first_ iterates over all appropriately labeled `Secret`s _without_
@@ -113,6 +121,7 @@ a regular expression matching the repository URL.
 
 When searching for an exact match, and then again when searching for a pattern
 match, appropriately labeled `Secret`s are considered in lexical order by name.
+
 :::
 
 ## Global Credentials
@@ -134,10 +143,13 @@ Unless the operator has disabled it, users with the appropriate permissions can
 manage project-level credentials using either the UI or CLI.
 
 :::info
+
 UI-based instructions coming soon.
+
 :::
 
 :::caution
+
 While the UI or CLI may be a fine way of managing project-level credentials
 whilst getting to know Kargo, it is unquestionably more secure to use other
 means to ensure the existence of these specially-formatted `Secret`s.
@@ -149,6 +161,7 @@ If this is the case, managing your credentials is likely to involve GitOps'ing
 your Kargo projects and also leveraging additional tools such as
 [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) or the
 [External Secrets Operator](https://external-secrets.io/latest/).
+
 :::
 
 ### Creating Credentials
@@ -169,9 +182,11 @@ secret/my-credentials created
 ```
 
 :::caution
+
 If you do not wish for your password or personal access token to be stored
 in your shell history, you may wish to omit the `--password` flag, in which
 case the CLI will prompt you to enter the password interactively.
+
 :::
 
 ### Listing / Viewing Credentials
@@ -257,9 +272,11 @@ tokens to "ambient" credentials that can be obtained automatically when running
 within certain cloud platforms.
 
 :::note
+
 In many cases, applying the options discussed in the following sections may
 require the assistance of an operator/administrator for the applicable
 platforms.
+
 :::
 
 ### GitHub Authentication Options
@@ -278,6 +295,7 @@ the `username` and `password` fields of a `Secret` resource as described
 document.
 
 :::info
+
 This method of authentication may be best when wishing to rigorously enforce
 the principle of least privilege, as personal access tokens can be scoped to
 specific permissions on specific repositories.
@@ -285,6 +303,7 @@ specific permissions on specific repositories.
 A drawback to this method, however, is that the token is owned by a specific
 GitHub user, and if that user should lose their own access to the repositories
 in question, Kargo will also lose access.
+
 :::
 
 #### GitHub App Authentication
@@ -293,8 +312,10 @@ in question, Kargo will also lose access.
 [as an authentication method](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/about-authentication-with-a-github-app).
 
 :::note
+
 You may require the assistance of your GitHub organization's administrator to
 create or install a GitHub App.
+
 :::
 
 1. [Create a GitHub App](https://github.com/settings/apps/new):
@@ -348,6 +369,7 @@ create or install a GitHub App.
     ```
 
     :::info
+
     GitHub currently recommends using an App's alphanumeric client ID whenever
     possible, but Kargo does support the deprecated, numeric App ID as an
     alternative identifier for a GitHub App. The following example is thus
@@ -377,6 +399,7 @@ create or install a GitHub App.
     :::
 
     :::note
+
     The `kargo create/update credentials` commands do not support creating or
     updating non username/password credentials. To create or update a `Secret`
     such as the one shown above, use GitOps instead, or the
@@ -384,11 +407,14 @@ create or install a GitHub App.
     :::
 
 :::info
+
 Compared to personal access tokens, a benefit of authenticating with a GitHub
 App is that the App's permissions are not tied to a specific GitHub user.
+
 :::
 
 :::caution
+
 It is easy to violate the principle of least privilege when authenticating using
 GitHub Apps.
 
@@ -469,26 +495,32 @@ stringData:
 ```
 
 :::note
+
 The `kargo create/update credentials` commands do not support creating or
 updating non username/password credentials. To create or update a `Secret` such
 as the one shown above, use GitOps instead, or the
 `kargo apply --project <project> -f <filename>` command.
+
 :::
 
 :::caution
+
 Following the principle of least privilege, the IAM user associated with the
 access key ID and secret access key should be limited only to read-only access
 to the required ECR repositories. Configuring this will likely require the
 assistance of an AWS account administrator.
+
 :::
 
 :::caution
+
 This method of authentication is a "lowest common denominator" approach that
 will work regardless of where Kargo is deployed. i.e. if running Kargo outside
 EKS, this method will still work.
 
 If running Kargo within EKS, you may wish to either consider using EKS Pod
 Identity or IRSA instead.
+
 :::
 
 #### EKS Pod Identity or IAM Roles for Service Accounts (IRSA)
@@ -502,11 +534,13 @@ to authenticate. Leveraging either eliminates the need to store ECR credentials
 in a `Secret` resource.
 
 :::info
+
 Both of these options rely upon extensive external configuration that likely
 requires the assistance of Kargo's operator and an AWS account administrator,
 and as such, further details are covered in the
 [Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
 section of the Operator Guide.
+
 :::
 
 ### Google Artifact Registry
@@ -518,6 +552,7 @@ they are hosted in Google Artifact Registry.
 #### Long-Lived Credentials {#gar-long-lived-credentials}
 
 :::caution
+
 Google Artifact Registry does _directly_ support long-lived credentials
 [as described here](https://cloud.google.com/artifact-registry/docs/docker/authentication#json-key).
 The username `_json_key_base64` and the base64-encoded service account key
@@ -527,6 +562,7 @@ this document.
 
 __Google strongly discourages this method of authentication however, and so do
 we.__
+
 :::
 
 Google documentation recommends
@@ -569,24 +605,30 @@ To use this option, your `Secret` should take the following form:
   ```
 
 :::note
+
 Service account keys contain structured data, so it is important that the
 key be base64-encoded.
+
 :::
 
 :::caution
+
 Following the principle of least privilege, the service account associated with
 the service account key should be limited only to read-only access to the
 required Google Artifact Registry repositories. Configuring this will likely
 require the assistance of a GCP project administrator.
+
 :::
 
 :::caution
+
 This method of authentication is a "lowest common denominator" approach that
 will work regardless of where Kargo is deployed. i.e. If running Kargo outside
 of GKE, this method will still work.
 
 If running Kargo within GKE, you may wish to consider using Workload Identity
 Federation instead.
+
 :::
 
 #### Workload Identity Federation
@@ -599,11 +641,13 @@ chart repositories, and relies upon some external setup. Leveraging this
 option eliminates the need to store credentials in a `Secret` resource.
 
 :::info
+
 This option relies upon extensive external configuration that likely requires
 the assistance of Kargo's operator and a GCP project administrator, and as such,
 further coverage is delegated to the
 [Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
 section of the Operator Guide.
+
 :::
 
 ### Azure Container Registry (ACR)
@@ -623,18 +667,22 @@ with or without an expiration date. These tokens can be stored in the
 document.
 
 :::caution
+
 Following the principle of least privilege, the ACR token should be limited only
 to read-only access to the required ACR repositories. Configuring this will
 likely require the assistance of an Azure administrator.
+
 :::
 
 :::caution
+
 This method of authentication is a "lowest common denominator" approach that
 will work regardless of where Kargo is deployed. i.e. If running Kargo outside
 of AKS, this method will still work.
 
 If running Kargo within AKS, you may wish to consider using Azure Workload
 Identity instead.
+
 :::
 
 #### Azure Workload Identity
@@ -646,9 +694,11 @@ to authenticate. Leveraging this option eliminates the need to store credentials
 in a `Secret` resource.
 
 :::info
+
 This option relies upon extensive external configuration that likely requires
 the assistance of Kargo's operator and an Azure administrator, and as such,
 further coverage is delegated to the
 [Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
 section of the Operator Guide.
+
 :::

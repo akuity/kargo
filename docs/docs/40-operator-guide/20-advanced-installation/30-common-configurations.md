@@ -8,14 +8,18 @@ This document outlines common advanced installation scenarios and
 configurations for Kargo. 
 
 :::info
+
 For complete parameter documentation, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+
 :::
 
 :::info
+
 For more information on how to apply these configurations, see the
 advanced installation guides for [Helm](10-advanced-with-helm.md) and
 [Argo CD](20-advanced-with-argocd.md).
+
 :::
 
 ## Standard Kubernetes Configuration
@@ -41,9 +45,11 @@ controller:
 ```
 
 :::note
+
 For a full list of supported configurations, refer to the
 [Global Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#global-parameters)
 or the component-specific parameter sections in the chart documentation.
+
 :::
 
 ## API Configuration
@@ -53,10 +59,12 @@ installation time. These configurations are used to control the behavior of
 Kargo's API server and its web-based user interface.
 
 :::info
+
 The sections below outline common configurations for the API server. For a full
 list of supported configurations, refer to the
 [API Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#api).
 section in the chart documentation.
+
 :::
 
 ### API Host
@@ -74,9 +82,11 @@ api:
 ```
 
 :::note
+
 The host is allowed to include a port number, e.g. `kargo.example.com:8080`,
 but should not include a protocol (e.g. `http://` or `https://`) as this is
 automatically inferred from other configuration options.
+
 :::
 
 ### API Service
@@ -86,15 +96,19 @@ type `ClusterIP`, which is only accessible within the cluster or through
 [port forwarding](https://kubernetes.io/docs/tasks/access-application-cluster/port-forward-access-application-cluster/).
 
 :::caution
+
 Changing the API server service type can expose the API server to the internet
 in an insecure manner. Refer to the
 [Secure Configuration](../40-security/10-secure-configuration.md) section for
 more information on securing the API server.
+
 :::
 
 :::info
+
 Instead of making use of a `Service` resource, you can also expose the API
 server using an [`Ingress` resource](#api-ingress).
+
 :::
 
 If you want to expose the API server to the internet, but do not want to make
@@ -122,8 +136,10 @@ By default, Kargo will enable TLS directly on the API server using a
 self-signed certificate issued by [cert-manager](https://cert-manager.io/).
 
 :::note
+
 When making use of the self-signed certificate option, cert-manager must be
 installed in the cluster.
+
 :::
 
 To supply your own certificate, set the following configuration:
@@ -158,16 +174,20 @@ api:
 ```
 
 :::info
+
 If you exercise any of the chart's built-in TLS configuration options,
 setting `terminatedUpstream` is never required.
+
 :::
 
 ### API Ingress
 
 :::info
+
 Instead of making use of an `Ingress` resource, you can also expose the API
 server using a `LoadBalancer` or `NodePort` service type. Refer to the
 [API Service](#api-service) section for more information.
+
 :::
 
 By default, Kargo will not create an `Ingress` resource for the API server
@@ -176,10 +196,12 @@ and will only be accessible within the cluster or through the API server's
 an `Ingress` resource can be created.
 
 :::caution
+
 Enabling the API server Ingress without proper configuration can expose the API
 server to the internet in an insecure manner. Refer to the
 [Secure Configuration](../40-security/10-secure-configuration.md) section for
 more information on securing the API server.
+
 :::
 
 To configure the API server to use an `Ingress` resource, set the following
@@ -195,11 +217,13 @@ api:
 #### Ingress TLS
 
 By default, Kargo will enable TLS on the `Ingress` resource using a self-signed
-certificate using [cert-manager](https://cert-manager.io). 
+certificate using [cert-manager](https://cert-manager.io).
 
 :::note
+
 When making use of the self-signed certificate option, cert-manager must be
 installed in the cluster.
+
 :::
 
 To supply your own certificate, set the following configuration:
@@ -262,9 +286,11 @@ controller:
 ```
 
 :::note
+
 When using a signing key, the `gitClient.name` and `gitClient.email`
 configuration options must match the name and email associated with the GPG
 key.
+
 :::
 
 ## Argo CD Configuration
@@ -288,10 +314,12 @@ When disabled, the controller will not watch Argo CD `Application` resources
 and disable Argo CD specific features.
 
 :::info
+
 If the integration is enabled without Argo CD installed, the controller will
 disable the Argo CD specific features on boot. Explicitly disabling is preferred
 if this integration is not desired, as it will grant fewer permissions to the
 controller.
+
 :::
 
 ### Argo CD Namespace
@@ -346,10 +374,12 @@ When disabled, the controller will not reconcile Argo Rollouts `AnalysisRun`
 resources and attempts to verify Stages via `Analysis` will fail.
 
 :::info
+
 If the integration is enabled without Argo Rollouts installed, the controller
 will disable the Argo Rollouts specific features on boot. Explicitly disabling
 is preferred if this integration is not desired, as it will grant fewer
 permissions to the controller.
+
 :::
 
 ### Logs from Job Metrics
@@ -398,17 +428,21 @@ api:
 ```
 
 :::note
+
 This "lowest common denominator" approach to streaming job metric logs does
 leave it as an exercise for the Kargo administrator to arrange for the
 forwarding and storage of applicable logs.
 
 Users of Kargo via the [Akuity Platform](https://akuity.io/akuity-platform),
 however, will have this seamlessly handled for them.
+
 :::
 
 :::note
+
 For more information, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+
 :::
 
 ## Resource Management
@@ -423,17 +457,21 @@ artifact discovery processes (i.e. You may wish to _increase_ the minimum
 polling interval.)
 
 :::info
+
 Developers can tune this interval on individual `Warehouse` resources, but the
 effective interval for any `Warehouse` will be the _greater_ of any specified
 there and the minimum specified here. i.e. Developers cannot configure a
 `Warehouse`'s artifact discovery process to run more frequently than you permit.
+
 :::
 
 :::note
+
 If you do this, you will increase the average time required for every
 `Warehouse` to notice new artifacts. You can compensate for this by configuring
 `Warehouse` artifact discovery processes to be
 [triggered by webhooks](../35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks).
+
 :::
 
 ```yaml
@@ -500,8 +538,10 @@ controller:
 ```
 
 :::note
+
 For a list of resource kinds that can be configured, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+
 :::
 
 ## Garbage Collection
@@ -521,10 +561,12 @@ garbageCollector:
 ```
 
 :::caution
+
 Disabling the garbage collector will result in old `Freight` and `Promotion`
 resources accumulating in the cluster. This can lead to increased resource
 usage and potential performance issues. Therefore, this is typically not
 recommended and should only be done with caution.
+
 :::
 
 ### Scheduling the Garbage Collection
@@ -562,10 +604,12 @@ garbageCollector:
 ```
 
 :::note
+
 `Promotion` resources are only deleted if they are in a terminal state (i.e.
 `Succeeded` or `Failed`). `Freight` resources are only deleted if they are not
 actively in use by any `Stage`.
 
 In both cases, this holds true even if the resource is older than the minimum
 deletion age.
+
 :::

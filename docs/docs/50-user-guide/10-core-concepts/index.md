@@ -34,10 +34,12 @@ such as "staging," or else grappled with how to automate such a process, then
 you're already familiar with the idea of a promotion.
 
 :::note
+
 Promotions are different from _deployments_. Promotions focus on propagating
 changes to the _desired state_ of each stage in your application's lifecycle.
 The job of _deploying_ -- making the actual state of a Kubernetes cluster
 reflect the desired state -- is left to a GitOps agent like Argo CD.
+
 :::
 
 ## Stages

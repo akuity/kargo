@@ -14,7 +14,7 @@ This promotion step is only available in Kargo on the [Akuity Platform](https://
 
 :::
 
-:::warning Breaking Changes in v1.9
+:::warning[Breaking Changes in v1.9]
 
 Starting with Kargo v1.9, this promotion step has significant configuration changes:
 
@@ -91,7 +91,7 @@ The referenced `Secret` should contain the following keys:
 
 ### v1.8 (Deprecated)
 
-:::warning Removed in v1.9
+:::warning[Removed in v1.9]
 
 The following configuration format has been removed in v1.9.
 
@@ -167,7 +167,8 @@ To migrate from v1.8 to v1.9:
 3. **Configure Git repository credentials** in Kargo with GitHub PAT or GitHub App credentials
 4. **Optionally add `insecureSkipTLSVerify`** if you need to skip TLS verification
 
-**Before (v1.8):**
+### Before (v1.8)
+
 ```yaml
 config:
   credentials:
@@ -178,7 +179,8 @@ config:
   ref: main
 ```
 
-**After (v1.9):**
+### After (v1.9)
+
 ```yaml
 config:
   repoURL: https://github.com/myorg/my-app

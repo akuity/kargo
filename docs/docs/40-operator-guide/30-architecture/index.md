@@ -21,9 +21,11 @@ definitions (CRDs) such as `Project`s, `Warehouse`s, `Stage`s, `Freight`, and
 `Promotion`s.
 
 :::info
+
 You can read more about the concepts behind these CRDs in the
 [Core Concepts](https://docs.kargo.io/user-guide/core-concepts/) section of
 the documentation.
+
 :::
 
 A Kubernetes cluster running most of Kargo's components and hosting all its data
@@ -42,7 +44,9 @@ The API server provides the back end services that both the Kargo [UI](#ui) and
 a single-page application (SPA).
 
 :::info
+
 This is one of only two internet-facing components in Kargo.
+
 :::
 
 ### UI
@@ -61,8 +65,10 @@ domain-specific functionality beyond what's easily accomplished with `kubectl`
 alone.
 
 :::info
+
 Because Kargo's data are Kubernetes resources, it's also practical and not
 uncommon for users to interact with Kargo using the standard `kubectl` CLI.
+
 :::
 
 ### Controller
@@ -110,20 +116,26 @@ plane cluster and allow the Kubernetes API server to hook into Kargo-specific
 logic as Kargo resources are created, modified, and deleted.
 
 :::caution
+
 **This webhook server is not an optional component. It is critical to Kargo's
 proper function.**
+
 :::
 
 :::note
+
 This webhook server is *not internet-facing*. Its only client is the Kubernetes
 API server *within the same cluster.* It *must* use TLS. (The Kubernetes API
 server will not interact with webhook servers that do not.) Self-signed
 certificates are generally sufficient for this purpose.
+
 :::
 
 :::info
+
 This component is distinct from the external webhooks server. (See next
 section.)
+
 :::
 
 ### External Webhooks Server (Optional)
@@ -136,7 +148,9 @@ request to Kargo when a new commit is pushed, this server receives that
 request and initiates appropriate actions in response.
 
 :::info
+
 This is Kargo's second internet-facing component (after the API server).
+
 :::
 
 ### Management Controller
@@ -147,11 +161,14 @@ This secondary controller handles critical clerical work. One of its most
 important functions is dynamically managing the permissions of other components.
 
 :::caution
+
 **This is not an optional component. It is critical to Kargo's proper
 function.**
+
 :::
 
 :::info
+
 Because some components are internet-facing (the API server and external
 webhooks Server) and others (controllers) can be distributed to other clusters,
 operators are often reluctant to provide these components with broad access to
@@ -160,6 +177,7 @@ mitigate this, the management controller, which is neither internet-facing nor
 distributed, is granted broad permissions and dynamically expands and contracts
 *narrower* sets of permissions for other components and Kargo users as
 `Project`s are created and deleted.
+
 :::
 
 ### Dex (Optional)
@@ -172,12 +190,15 @@ most IdPs that implement the required protocols. However, some IdPs do not and
 Dex serves as an adapter for such cases.
 
 :::info
+
 **Example:** GitHub doesn't implement OpenID Connect at all, but Dex can
 integrate with GitHub while providing a compliant interface to Kargo, allowing
 users to sign in with their GitHub accounts.
+
 :::
 
 :::info
+
 For many IdPs, like Microsoft Entra ID (formerly Azure Active Directory), Okta,
 or Google Cloud Identity Platform, Dex is not needed.
 
@@ -185,6 +206,7 @@ In simple, "kick the tires" configurations, Kargo uses Dex's built-in mock IdP
 or disables integration with identity providers entirely and uses a built-in
 admin account instead. **We recommend never enabling the admin account in
 production.**
+
 :::
 
 ## Topology
@@ -279,6 +301,7 @@ then distributing configuration with the corresponding tokens to the many
 clusters throughout your enterprise.
 
 :::info
+
 [Documentation for Kargo's Helm chart](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md)
 explains most aspects of this in great detail, *but why not let the Kargo
 experts handle it for you?*
@@ -291,4 +314,5 @@ at large scale are encouraged to consider using the
 Kargo control planes as well as credentials and configuration for any number of
 distributed controllers, which can be deployed to your own clusters in just
 seconds.
+
 :::
