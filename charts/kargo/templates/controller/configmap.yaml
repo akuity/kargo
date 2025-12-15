@@ -50,4 +50,7 @@ data:
   {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
   MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
   {{- end }}
+  {{- if .Values.controller.reconcilers.stages.requeueInterval }}
+  STAGE_REQUEUE_INTERVAL: {{ .Values.controller.reconcilers.stages.requeueInterval | quote }}
+  {{- end }}
 {{- end }}

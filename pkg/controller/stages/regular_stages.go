@@ -50,12 +50,13 @@ import (
 
 // ReconcilerConfig represents configuration for the stage reconciler.
 type ReconcilerConfig struct {
-	IsDefaultController                bool   `envconfig:"IS_DEFAULT_CONTROLLER"`
-	ShardName                          string `envconfig:"SHARD_NAME"`
-	RolloutsIntegrationEnabled         bool   `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
-	RolloutsControllerInstanceID       string `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
-	MaxConcurrentControlFlowReconciles int    `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
-	MaxConcurrentReconciles            int    `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+	IsDefaultController                bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
+	ShardName                          string        `envconfig:"SHARD_NAME"`
+	RolloutsIntegrationEnabled         bool          `envconfig:"ROLLOUTS_INTEGRATION_ENABLED"`
+	RolloutsControllerInstanceID       string        `envconfig:"ROLLOUTS_CONTROLLER_INSTANCE_ID"`
+	MaxConcurrentControlFlowReconciles int           `envconfig:"MAX_CONCURRENT_CONTROL_FLOW_RECONCILES" default:"4"`
+	MaxConcurrentReconciles            int           `envconfig:"MAX_CONCURRENT_STAGE_RECONCILES" default:"4"`
+	RequeueInterval                    time.Duration `envconfig:"STAGE_REQUEUE_INTERVAL" default:"5m"`
 }
 
 // Name returns the name of the Stage controller.
@@ -394,8 +395,7 @@ func (r *RegularStageReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
 	}
 	// Otherwise, requeue after a delay.
-	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	return ctrl.Result{RequeueAfter: r.cfg.RequeueInterval}, nil
 }
 
 func (r *RegularStageReconciler) reconcile(

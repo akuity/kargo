@@ -23,4 +23,13 @@ data:
   MAX_CONCURRENT_PROJECT_RECONCILES: {{ .Values.managementController.reconcilers.projects.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_PROJECT_CONFIG_RECONCILES: {{ .Values.managementController.reconcilers.projectConfigs.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_SERVICE_ACCOUNT_RECONCILES: {{ .Values.managementController.reconcilers.serviceAccounts.maxConcurrentReconciles | default .Values.managementController.reconcilers.maxConcurrentReconciles | quote }}
+  {{- if .Values.managementController.reconcilers.clusterConfigs.requeueInterval }}
+  CLUSTER_CONFIG_REQUEUE_INTERVAL: {{ .Values.managementController.reconcilers.clusterConfigs.requeueInterval | quote }}
+  {{- end }}
+  {{- if .Values.managementController.reconcilers.projectConfigs.requeueInterval }}
+  PROJECT_CONFIG_REQUEUE_INTERVAL: {{ .Values.managementController.reconcilers.projectConfigs.requeueInterval | quote }}
+  {{- end }}
+  {{- if .Values.managementController.reconcilers.projects.requeueInterval }}
+  PROJECT_REQUEUE_INTERVAL: {{ .Values.managementController.reconcilers.projects.requeueInterval | quote }}
+  {{- end }}
 {{- end }}

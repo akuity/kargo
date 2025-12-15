@@ -443,6 +443,43 @@ controller:
       minReconciliationInterval: 15m
 ```
 
+### Tuning Requeue Intervals
+
+After a successful reconciliation, controllers will requeue resources to be
+reconciled again after a configurable interval. By default, this interval is
+set to 5 minutes for all controllers. This can be tuned to reduce or increase
+the frequency of reconciliations based on your needs.
+
+For example, to reduce the frequency of `Stage` reconciliations to once every
+10 minutes:
+
+```yaml
+controller:
+  reconcilers:
+    stages:
+      requeueInterval: 10m
+```
+
+Similarly, for the management controller's reconcilers:
+
+```yaml
+managementController:
+  reconcilers:
+    projects:
+      requeueInterval: 10m
+    projectConfigs:
+      requeueInterval: 10m
+    clusterConfigs:
+      requeueInterval: 10m
+```
+
+:::note
+The requeue interval determines how often a resource will be reconciled in the
+absence of any changes to the resource or its dependencies. If a resource is
+modified or an event triggers reconciliation, it will be reconciled immediately
+regardless of this interval.
+:::
+
 ### Tuning Concurrent Reconciliation Limits
 
 By default, Kargo will reconcile up to four resources of the same kind

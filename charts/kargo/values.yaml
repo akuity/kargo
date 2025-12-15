@@ -500,6 +500,8 @@ controller:
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.stages.requeueInterval optionally sets the requeue interval for Stage resources after a successful reconciliation. Accepts duration format (e.g., "5m", "1h", "30s"). Defaults to "5m".
+      requeueInterval:
     warehouses:
       ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
@@ -794,15 +796,22 @@ managementController:
   reconcilers:
     ## @param managementController.reconcilers.maxConcurrentReconciles specifies the maximum number of resources EACH of the management controller's reconcilers can reconcile concurrently. This setting may also be overridden on a per-reconciler basis.
     maxConcurrentReconciles: 4
+    clusterConfigs:
+      ## @param managementController.reconcilers.clusterConfigs.requeueInterval optionally sets the requeue interval for ClusterConfig resources after a successful reconciliation. Accepts duration format (e.g., "5m", "1h", "30s"). Defaults to "5m".
+      requeueInterval:
     namespaces:
       ## @param managementController.reconcilers.namespaces.maxConcurrentReconciles optionally overrides the maximum number of Namespace resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
     projectConfigs:
       ## @param managementController.reconcilers.projectConfigs.maxConcurrentReconciles optionally overrides the maximum number of ProjectConfig resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param managementController.reconcilers.projectConfigs.requeueInterval optionally sets the requeue interval for ProjectConfig resources after a successful reconciliation. Accepts duration format (e.g., "5m", "1h", "30s"). Defaults to "5m".
+      requeueInterval:
     projects:
       ## @param managementController.reconcilers.projects.maxConcurrentReconciles optionally overrides the maximum number of Project resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param managementController.reconcilers.projects.requeueInterval optionally sets the requeue interval for Project resources after a successful reconciliation. Accepts duration format (e.g., "5m", "1h", "30s"). Defaults to "5m".
+      requeueInterval:
     serviceAccounts:
       ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:

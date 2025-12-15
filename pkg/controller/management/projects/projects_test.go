@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -201,6 +202,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 		{
 			name: "success",
 			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					RequeueInterval: 5 * time.Minute,
+				},
 				getProjectFn: func(
 					context.Context,
 					client.Client,
@@ -229,8 +233,48 @@ func TestReconciler_Reconcile(t *testing.T) {
 					return nil
 				},
 			},
-			assertions: func(t *testing.T, _ ctrl.Result, err error) {
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
 				require.NoError(t, err)
+				require.Equal(t, 5*time.Minute, result.RequeueAfter)
+			},
+		},
+		{
+			name: "success with custom requeue interval",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					RequeueInterval: 10 * time.Minute,
+				},
+				getProjectFn: func(
+					context.Context,
+					client.Client,
+					string,
+				) (*kargoapi.Project, error) {
+					return &kargoapi.Project{}, nil
+				},
+				ensureFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) (bool, error) {
+					return false, nil
+				},
+				reconcileFn: func(
+					context.Context,
+					*kargoapi.Project,
+				) (kargoapi.ProjectStatus, error) {
+					return kargoapi.ProjectStatus{}, nil
+				},
+				patchProjectStatusFn: func(
+					_ context.Context,
+					_ *kargoapi.Project,
+					_ kargoapi.ProjectStatus,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 10*time.Minute, result.RequeueAfter)
 			},
 		},
 	}
