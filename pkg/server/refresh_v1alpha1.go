@@ -15,11 +15,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
-	"github.com/akuity/kargo/pkg/component"
 )
 
 // RefreshResourceType represents the type of Kargo resource to refresh.
-// They are camel-cased versions of the Kargo resource kinds for compatibility
+type RefreshResourceType string
+
+// RefreshResourceType constants for supported resource types. They are
+// PascalCase representations of the Kargo resource kinds for compatibility
 // purposes with Kubernetes REST mappers.
 const (
 	RefreshResourceTypeClusterConfig RefreshResourceType = "ClusterConfig"
@@ -28,98 +30,36 @@ const (
 	RefreshResourceTypeWarehouse     RefreshResourceType = "Warehouse"
 )
 
-func init() {
-	defaultRefreshObjectRegistry.MustRegister(
-		refreshObjectRegistration{
-			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return RefreshResourceTypeClusterConfig.equals(rt), nil
-			},
-			Value: func() (client.Object, RefreshResourceType) {
-				return new(kargoapi.ClusterConfig), RefreshResourceTypeClusterConfig
-			},
-		},
-	)
-	defaultRefreshObjectRegistry.MustRegister(
-		refreshObjectRegistration{
-			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return RefreshResourceTypeProjectConfig.equals(rt), nil
-			},
-			Value: func() (client.Object, RefreshResourceType) {
-				return new(kargoapi.ProjectConfig), RefreshResourceTypeProjectConfig
-			},
-		},
-	)
-	defaultRefreshObjectRegistry.MustRegister(
-		refreshObjectRegistration{
-			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return RefreshResourceTypeStage.equals(rt), nil
-			},
-			Value: func() (client.Object, RefreshResourceType) {
-				return new(kargoapi.Stage), RefreshResourceTypeStage
-			},
-		},
-	)
-	defaultRefreshObjectRegistry.MustRegister(
-		refreshObjectRegistration{
-			Predicate: func(_ context.Context, rt RefreshResourceType) (bool, error) {
-				return RefreshResourceTypeWarehouse.equals(rt), nil
-			},
-			Value: func() (client.Object, RefreshResourceType) {
-				return new(kargoapi.Warehouse), RefreshResourceTypeWarehouse
-			},
-		},
-	)
-}
-
-type (
-	refreshObjectPredicate = func(
-		context.Context,
-		RefreshResourceType,
-	) (bool, error)
-
-	refreshObjectFactory = func() (client.Object, RefreshResourceType)
-
-	refreshObjectRegistration = component.PredicateBasedRegistration[
-		RefreshResourceType,
-		refreshObjectPredicate,
-		refreshObjectFactory,
-		struct{},
-	]
-)
-
-var defaultRefreshObjectRegistry = component.MustNewPredicateBasedRegistry[
-	RefreshResourceType,
-	refreshObjectPredicate,
-	refreshObjectFactory,
-	struct{},
-]()
-
-type RefreshResourceType string
-
 // String returns the string representation of the RefreshResourceType.
-// If the RefreshResourceType is not registered, an empty string is returned.
 func (t RefreshResourceType) String() string {
-	registered, err := defaultRefreshObjectRegistry.Get(context.Background(), t)
-	if err != nil {
-		return ""
-	}
-	_, rt := registered.Value()
-	return string(rt)
+	return string(t)
 }
 
+// IsNamespaced returns true if the resource type is namespaced.
 func (t RefreshResourceType) IsNamespaced() bool {
-	return !t.equals(RefreshResourceTypeClusterConfig)
+	return !strings.EqualFold(string(t), string(RefreshResourceTypeClusterConfig))
 }
 
 // NameEqualsProject returns true if the name of the resource should be the same
 // as the project name. This is true for ProjectConfig resources.
 func (t RefreshResourceType) NameEqualsProject() bool {
-	return t.equals(RefreshResourceTypeProjectConfig)
+	return strings.EqualFold(string(t), string(RefreshResourceTypeProjectConfig))
 }
 
-// cli uses lowercase strings for resource types
-func (t RefreshResourceType) equals(rt RefreshResourceType) bool {
-	return strings.EqualFold(string(t), string(rt))
+// refreshObjectFactories maps resource types to their object factory functions.
+var refreshObjectFactories = map[string]func() client.Object{
+	strings.ToLower(string(RefreshResourceTypeClusterConfig)): func() client.Object { return new(kargoapi.ClusterConfig) },
+	strings.ToLower(string(RefreshResourceTypeProjectConfig)): func() client.Object { return new(kargoapi.ProjectConfig) },
+	strings.ToLower(string(RefreshResourceTypeStage)):         func() client.Object { return new(kargoapi.Stage) },
+	strings.ToLower(string(RefreshResourceTypeWarehouse)):     func() client.Object { return new(kargoapi.Warehouse) },
+}
+
+func getRefreshObjectFactory(resourceType string) (func() client.Object, error) {
+	factory, ok := refreshObjectFactories[strings.ToLower(resourceType)]
+	if !ok {
+		return nil, fmt.Errorf("unsupported resource type: %s", resourceType)
+	}
+	return factory, nil
 }
 
 func (s *server) RefreshResource(
@@ -148,7 +88,8 @@ func (s *server) RefreshResource(
 		)
 	}
 
-	// If we're dealing with a stage and there is a current promotion then refresh it too.
+	// If we're dealing with a stage and there is a current promotion then
+	// refresh it too.
 	stage, ok := o.(*kargoapi.Stage)
 	if ok && stage.Status.CurrentPromotion != nil {
 		err = api.RefreshObject(ctx, c, &kargoapi.Promotion{
@@ -172,23 +113,25 @@ func (s *server) getClientObject(ctx context.Context, r *svcv1alpha1.RefreshReso
 	if err != nil {
 		return nil, err
 	}
-	rt := r.GetResourceType()
-	registered, err := defaultRefreshObjectRegistry.Get(ctx, RefreshResourceType(rt))
+	factory, err := getRefreshObjectFactory(r.GetResourceType())
 	if err != nil {
 		return nil, connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("unsupported resource type %q: %w", rt, err),
+			fmt.Errorf("%q is unsupported as a refresh resource type", r.GetResourceType()),
 		)
 	}
-	o, _ := registered.Value()
+	o := factory()
 	o.SetNamespace(om.GetNamespace())
 	o.SetName(om.GetName())
 	return o, nil
 }
 
-func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResourceRequest) (*metav1.ObjectMeta, error) {
+func (s *server) getObjectMeta(
+	ctx context.Context,
+	r *svcv1alpha1.RefreshResourceRequest,
+) (*metav1.ObjectMeta, error) {
 	var o metav1.ObjectMeta
-	rt, err := validateRefreshResourceType(ctx, r)
+	rt, err := validateRefreshResourceType(r)
 	if err != nil {
 		return nil, err
 	}
@@ -196,10 +139,10 @@ func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResour
 		o.SetName(api.ClusterConfigName)
 		return &o, nil
 	}
-	if err := validateFieldNotEmpty("project", r.GetProject()); err != nil {
+	if err = validateFieldNotEmpty("project", r.GetProject()); err != nil {
 		return nil, err
 	}
-	if err := s.validateProjectExists(ctx, r.GetProject()); err != nil {
+	if err = s.validateProjectExists(ctx, r.GetProject()); err != nil {
 		return nil, err
 	}
 	o.SetNamespace(r.GetProject())
@@ -207,7 +150,7 @@ func (s *server) getObjectMeta(ctx context.Context, r *svcv1alpha1.RefreshResour
 		o.SetName(r.GetProject())
 		return &o, nil
 	}
-	if err := validateFieldNotEmpty("name", r.GetName()); err != nil {
+	if err = validateFieldNotEmpty("name", r.GetName()); err != nil {
 		return nil, err
 	}
 	o.SetName(r.GetName())
@@ -224,22 +167,19 @@ func newRefreshResponse(obj client.Object) *connect.Response[svcv1alpha1.Refresh
 	})
 }
 
-func validateRefreshResourceType(
-	ctx context.Context,
-	r *svcv1alpha1.RefreshResourceRequest,
-) (RefreshResourceType, error) {
-	rt := RefreshResourceType(r.GetResourceType())
-	if string(rt) == "" {
+func validateRefreshResourceType(r *svcv1alpha1.RefreshResourceRequest) (RefreshResourceType, error) {
+	rt := r.GetResourceType()
+	if rt == "" {
 		return "", connect.NewError(
 			connect.CodeInvalidArgument,
 			errors.New("resource type is unset"),
 		)
 	}
-	if _, err := defaultRefreshObjectRegistry.Get(ctx, rt); err != nil {
+	if _, err := getRefreshObjectFactory(rt); err != nil {
 		return "", connect.NewError(
 			connect.CodeInvalidArgument,
-			fmt.Errorf("%q is unsupported as a refresh resource type: %w", rt, err),
+			fmt.Errorf("%q is unsupported as a refresh resource type", rt),
 		)
 	}
-	return rt, nil
+	return RefreshResourceType(rt), nil
 }

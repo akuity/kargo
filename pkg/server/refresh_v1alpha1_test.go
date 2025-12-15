@@ -103,7 +103,7 @@ func TestRefreshResource(t *testing.T) {
 				require.Nil(t, res)
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.ErrorContains(t, err, "no matching registration found")
+				require.ErrorContains(t, err, "invalid_argument: \"invalid\" is unsupported as a refresh resource type")
 			},
 		},
 		"non-existing project": {
