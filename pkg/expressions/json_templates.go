@@ -20,21 +20,16 @@ var supportedDelimiters = []supportedDelimiterSet{
 }
 
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
-// template containing expr-lang expressions offset by supported delimiters, using the
-// provided environment as context. The evaluated JSON is returned as a new byte
-// slice, ready for unmarshaling.
+// template containing expr-lang expressions, offset by supported delimiters,
+// using the provided environment as context. Multiple (different) supported
+// delimiters can be used within a single template. The evaluated JSON is
+// returned as a new byte slice, ready for unmarshaling.
 //
 // Only expressions contained within values are evaluated. i.e. Any expressions
 // within keys are NOT evaluated.
 //
 // Since the template itself must be valid JSON, all expressions MUST be
 // enclosed in quotes.
-//
-// Multiple delimiter types can coexist in the same value, and all expressions will
-// be evaluated. For example:
-//   - "${{ quote('hello') }}"
-//   - "${% '{{.domain}}' %}"
-//   - "${{ ctx.stage }} deployed ${% '{{.tag}}' %}"
 //
 // If, after evaluating all expressions in a single value (multiples are
 // permitted), the result can be parsed as a bool, float64, or other valid
@@ -43,8 +38,9 @@ var supportedDelimiters = []supportedDelimiterSet{
 // that expressions must, themselves, be contained within a string value. This
 // does mean that for expressions which may evaluate as something resembling a
 // valid non-string JSON value, the user must take care to ensure that the
-// expression evaluates to a string enclosed in quotes. For example, an expression
-// evaluating to true will result in a bool, but quote(true) will result in a string.
+// expression evaluates to a string enclosed in quotes. For example, an
+// expression evaluating to true will result in a bool, but quote(true) will
+// result in a string.
 // This behavior should be intuitive to anyone familiar with YAML.
 func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
 	if _, ok := env["quote"]; ok {
@@ -110,8 +106,8 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 }
 
 // EvaluateTemplate evaluates a single template string with the provided
-// environment. A single template string can contain multiple
-// expressions with different supported delimiter types.
+// environment. A single template string can contain multiple expressions offset
+// by any of the supported delimiters.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
 	hasDelim := false
 	for _, d := range supportedDelimiters {
@@ -199,7 +195,11 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	return result, nil
 }
 
-func evaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (string, error) {
+func evaluateTemplate(
+		template string,
+		env map[string]any,
+		exprOpts ...expr.Option,
+) (string, error) {
 	var result strings.Builder
 
 	for {
