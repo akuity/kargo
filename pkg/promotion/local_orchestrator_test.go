@@ -486,7 +486,9 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			steps: []Step{
 				{Kind: "success-step", Alias: "step1"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Equal(t, int64(0), result.CurrentStep)
 
