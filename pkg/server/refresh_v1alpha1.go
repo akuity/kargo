@@ -48,10 +48,10 @@ func (t RefreshResourceType) NameEqualsProject() bool {
 
 // refreshObjectFactories maps resource types to their object factory functions.
 var refreshObjectFactories = map[string]func() client.Object{
-	strings.ToLower(string(RefreshResourceTypeClusterConfig)): func() client.Object { return new(kargoapi.ClusterConfig) },
-	strings.ToLower(string(RefreshResourceTypeProjectConfig)): func() client.Object { return new(kargoapi.ProjectConfig) },
-	strings.ToLower(string(RefreshResourceTypeStage)):         func() client.Object { return new(kargoapi.Stage) },
-	strings.ToLower(string(RefreshResourceTypeWarehouse)):     func() client.Object { return new(kargoapi.Warehouse) },
+	strings.ToLower(string(RefreshResourceTypeClusterConfig)): func() client.Object { return &kargoapi.ClusterConfig{} },
+	strings.ToLower(string(RefreshResourceTypeProjectConfig)): func() client.Object { return &kargoapi.ProjectConfig{} },
+	strings.ToLower(string(RefreshResourceTypeStage)):         func() client.Object { return &kargoapi.Stage{} },
+	strings.ToLower(string(RefreshResourceTypeWarehouse)):     func() client.Object { return &kargoapi.Warehouse{} },
 }
 
 func getRefreshObjectFactory(resourceType string) (func() client.Object, error) {
