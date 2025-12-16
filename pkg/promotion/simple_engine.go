@@ -128,8 +128,15 @@ func (e *simpleEngine) executeSteps(
 			exprDataCache = e.cacheFunc()
 		}
 
-		if e.shouldSkipStep(ctx, exprDataCache, promoCtx, step, stepExecMeta) {
-			continue
+		// Only evaluate the "if" conditio when the step has not yet started.
+		// If the step has already started (on a previous reconciliation), we
+		// should not re-evaluate whether to skip it. Re-evaluating could cause
+		// a step's own Failed status from a previous attempt to incorrectly
+		// trigger the skip condition.
+		if stepExecMeta.StartedAt == nil {
+			if e.shouldSkipStep(ctx, exprDataCache, promoCtx, step, stepExecMeta) {
+				continue
+			}
 		}
 
 		// Get a StepRunner for the step.

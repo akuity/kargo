@@ -582,6 +582,30 @@ func TestSimpleEngine_executeSteps(t *testing.T) {
 			},
 		},
 		{
+			name: "previously failed step does not skip on retry",
+			promoCtx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					Alias:     "step1",
+					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Minute))),
+					Status:    kargoapi.PromotionStepStatusFailed,
+					Message:   "previous failure",
+				}},
+			},
+			steps: []Step{
+				{Kind: "success-step", Alias: "step1"},
+			},
+			assertions: func(t *testing.T, result Result) {
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+
+				require.Len(t, result.StepExecutionMetadata, 1)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+			},
+		},
+		{
 			name: "panic during step execution",
 			register: func(registry stepRunnerRegistry) {
 				registry.register(
