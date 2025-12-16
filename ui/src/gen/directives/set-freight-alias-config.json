@@ -1,0 +1,18 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "SetFreightAliasConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "freightID": {
+   "type": "string",
+   "description": "The ID of the Freight resource to update.",
+   "minLength": 1
+  },
+  "newAlias": {
+   "type": "string",
+   "description": "The desired new alias to set on the Freight.",
+   "minLength": 1
+  }
+ }
+}

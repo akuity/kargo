@@ -541,6 +541,13 @@ type OCIDownloadConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type SetFreightAliasConfig struct {
+	// The ID of the Freight resource to update.
+	FreightID string `json:"freightID"`
+	// The desired new alias to set on the Freight.
+	NewAlias string `json:"newAlias"`
+}
+
 type SetMetadataConfig struct {
 	// List of metadata updates to apply to various resources
 	Updates []Update `json:"updates"`
