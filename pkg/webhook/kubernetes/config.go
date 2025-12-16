@@ -11,6 +11,8 @@ type Config struct {
 	// admission request to distinguish if the request is coming from controlplane.
 	RawControlplaneUserRegex string         `envconfig:"CONTROLPLANE_USER_REGEX"`
 	ControlplaneUserRegex    *regexp.Regexp `ignored:"true"`
+	AllowCacheByTag          bool           `envconfig:"ALLOW_CACHE_BY_TAG" default:"true"`
+	RequireCacheByTag        bool           `envconfig:"REQUIRE_CACHE_BY_TAG" default:"false"`
 }
 
 func ConfigFromEnv() Config {

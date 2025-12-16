@@ -27,6 +27,7 @@ var warehouseGroupKind = schema.GroupKind{
 }
 
 type webhook struct {
+	cfg    libWebhook.Config
 	client client.Client
 
 	// The following behaviors are overridable for testing purposes:
@@ -40,8 +41,11 @@ type webhook struct {
 	validateSpecFn func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+func SetupWebhookWithManager(
+	cfg libWebhook.Config,
+	mgr ctrl.Manager,
+) error {
+	w := newWebhook(cfg, mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
 		WithDefaulter(w).
@@ -49,8 +53,9 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
+func newWebhook(cfg libWebhook.Config, kubeClient client.Client) *webhook {
 	w := &webhook{
+		cfg:    cfg,
 		client: kubeClient,
 	}
 	w.validateProjectFn = libWebhook.ValidateProject
@@ -224,6 +229,24 @@ func (w *webhook) validateImageSub(
 		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
+	}
+	// Note(krancour): If the admin requires image subscriptions to cache image
+	// metadata by tag, we will not silently enforce it. We want users to be aware
+	// of the policy and acknowledge it by explicitly opting in. This is checked
+	// again during the artifact discovery process. For the OPPOSITE scenario,
+	// where the admin forbids caching by tag, we return no error here, because it
+	// is safe to silently enforce it at artifact discovery time.
+	if w.cfg.RequireCacheByTag && !sub.CacheByTag {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("cacheByTag"),
+				sub.CacheByTag,
+				"caching image metadata by tag is required by controller "+
+					"configuration; enable with caution as this feature is safe only "+
+					"for subscriptions not involving \"mutable\" tags",
+			),
+		)
 	}
 	if err := seen.addImage(sub, f); err != nil {
 		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))
