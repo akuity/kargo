@@ -3,13 +3,9 @@
 // output to output directory (supplied as second argument)
 
 import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'fs';
-import path, { dirname } from 'path';
-import { fileURLToPath } from 'url';
+import path from 'path';
 
 import $RefParser from '@apidevtools/json-schema-ref-parser';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 /**
  *
@@ -36,6 +32,7 @@ const removePropertiesRecursively = (schema, props) => {
 
 const main = async () => {
   if (process.argv.length < 4) {
+    // eslint-disable-next-line no-console
     console.error('Usage: node generate-directive-schema.mjs <input-directory> <output-directory>');
     process.exit(1);
   }
@@ -53,10 +50,7 @@ const main = async () => {
   for (const file of source) {
     const fileBase = path.basename(file);
     if (file.endsWith('.json')) {
-      copyFileSync(
-        path.resolve(inputDir, file),
-        path.resolve(outputDir, fileBase)
-      );
+      copyFileSync(path.resolve(inputDir, file), path.resolve(outputDir, fileBase));
     }
   }
 
