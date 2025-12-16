@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/image"
 	"github.com/akuity/kargo/pkg/urls"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
@@ -230,13 +231,9 @@ func (w *webhook) validateImageSub(
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
 	}
-	// Note(krancour): If the admin requires image subscriptions to cache image
-	// metadata by tag, we will not silently enforce it. We want users to be aware
-	// of the policy and acknowledge it by explicitly opting in. This is checked
-	// again during the artifact discovery process. For the OPPOSITE scenario,
-	// where the admin forbids caching by tag, we return no error here, because it
-	// is safe to silently enforce it at artifact discovery time.
-	if w.cfg.RequireCacheByTag && !sub.CacheByTag {
+	if sub.ImageSelectionStrategy != kargoapi.ImageSelectionStrategyDigest &&
+		!sub.CacheByTag &&
+		w.cfg.CacheByTagPolicy == warehouses.CacheByTagPolicyRequire {
 		errs = append(
 			errs,
 			field.Invalid(

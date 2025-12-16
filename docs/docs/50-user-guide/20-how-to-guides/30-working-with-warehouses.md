@@ -109,18 +109,26 @@ fields:
   major version number only.
 
 - `cacheByTag`: Set to `true` to enable more aggressive caching of image
-  metadata by tag. This can significantly reduce the number of API calls to the
-  registry and improve performance.
+  metadata using tags as keys. This can significantly reduce the number of API
+  calls to the registry and improve performance.
 
   The default is `false`.
 
   :::warning Use with caution!
-  Only enable this option if your tags are known to be **immutable**
-  (i.e., a tag always references the same image and is never updated to point
-  to a different image).
+  This setting is safest if your tags are known to be "immutable" (i.e., tag
+  always references the same image and is never updated to point to a different
+  image).
 
-  This setting does not apply to the `Digest` selection strategy, which always
-  assumes tags are mutable.
+  This setting does NOT apply to the `Digest` selection strategy, which assumes
+  the one tag it subscribes to is a mutable one.
+  :::
+
+  :::warning
+  Operators may also choose from a number of policies regarding the caching of
+  image metadata using tags as keys. Some of these policies (`Forbid` and
+  `Force`) can override an individual container image subscription's choice to
+  cache metadata by tag or not. See
+  [common configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md) for further details.
   :::
 
 #### Image Selection Strategies

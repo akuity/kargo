@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/urls"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
@@ -633,7 +634,11 @@ func TestValidateImageSub(t *testing.T) {
 			},
 		},
 	}
-	w := &webhook{cfg: libWebhook.Config{RequireCacheByTag: true}}
+	w := &webhook{
+		cfg: libWebhook.Config{
+			CacheByTagPolicy: warehouses.CacheByTagPolicyRequire,
+		},
+	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(

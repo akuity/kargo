@@ -48,19 +48,22 @@ func (r *reconciler) discoverImages(
 			logger.Debug("found no credentials for image repo")
 		}
 
-		if !sub.CacheByTag && r.cfg.RequireCacheByTag {
-			return nil, fmt.Errorf(
-				"caching image metadata by tag is required by controller " +
-					"configuration; enable with caution as this feature is safe only " +
-					"for subscriptions not involving \"mutable\" tags",
-			)
+		switch r.cfg.CacheByTagPolicy {
+		case CacheByTagPolicyForbid:
+			sub.CacheByTag = false
+		case CacheByTagPolicyAllow:
+			// Leave as is
+		case CacheByTagPolicyRequire:
+			if !sub.CacheByTag {
+				return nil, fmt.Errorf(
+					"caching image metadata by tag is required by controller " +
+						"configuration; enable with caution as this feature is safe only " +
+						"for subscriptions not involving \"mutable\" tags",
+				)
+			}
+		case CacheByTagPolicyForce:
+			sub.CacheByTag = true
 		}
-
-		// This will silently override the user's choice to cache by tag if the
-		// controller configuration does not allow it. This is safe because
-		// unexpectedly NOT caching by tag won't lead to any surprises other than
-		// degraded performance.
-		sub.CacheByTag = sub.CacheByTag && r.cfg.AllowCacheByTag
 
 		selector, err := image.NewSelector(ctx, sub, regCreds)
 		if err != nil {

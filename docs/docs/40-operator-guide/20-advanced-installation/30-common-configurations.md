@@ -469,43 +469,57 @@ For a list of resource kinds that can be configured, refer to the
 
 ### Image Metadata Caching
 
-Kargo can cache image metadata more aggressively when tags are known to be
-**immutable**. This can significantly improve performance by reducing API calls
-to container image registries.
+Kargo can cache container image metadata more aggressively using image tags as
+keys (instead of digests). This can significantly improve performance by
+reducing API calls to container image registries, but is safest to do when
+images are known to use "immutable" tags (i.e. existing tags are never
+overwritten).
 
-The following settings control whether developers may (or must) use this
-feature:
+Operators may select one of four policies regarding caching image metadata by
+tag:
 
-- `allowCacheByTag` (default: `true`): When `true`, developers can opt into
-  aggressive tag-based caching by setting `cacheByTag: true` on individual
-  image subscriptions. When `false`, this option is not available to developers.
+- `Forbid`: Container image subscriptions may not cache image metadata by tag.
+  This is silently enforced. Subscriptions that opt into caching image metadata
+  by tag will be treated as if they had not.
 
-- `requireCacheByTag` (default: `false`): When `true`, all image subscriptions
-  **must** use `cacheByTag: true`.
+- `Allow` Individual container image subscriptions may choose whether to cache
+  image metadata by tag. This option leaves the decision in the hands of
+  developers.
 
-:::warning Use with caution!
-These settings should only be used when you can guarantee that all image tags
-in use are **immutable** (i.e., a tag always references the same image and is
-never updated to point to a different image).
-:::
+  :::info
+  For purposes of backwards compatibility, `Allow` is the default policy.
+  :::
 
-Example configuration to allow (but not require) tag-based caching:
+- `Require`: Container image subscriptions MUST explicitly opt into caching
+  image metadata by tag or their artifact discovery processes will fail.
+  Requiring explicit opt-in is tantamount to soliciting acknowledgement from
+  developers that caching image metadata by tag is in effect. This is intended
+  to minimize the possibility of surprise at any stale results from an image
+  discovery process. This option sacrifices some small degree of usability for
+  safety.
+
+- `Force`: Caching image metadata is silently enforced. Subscriptions that to
+  not opt into caching image metadata by tag will be treated as if they had.
+
+  :::info
+  This is the recommended policy in an immutable-tags-only environment.
+  :::
+
+Example configuration to allow (but not require) individual container image
+subscriptions to cache image metadata by tag:
 
 ```yaml
 controller:
   imageCache:
-    allowCacheByTag: true
-    requireCacheByTag: false
+    cacheByTagPolicy: Allow
 ```
 
-Example configuration to require tag-based caching everywhere (for maximum
-performance in an immutable-tags-only environment):
+Example configuration to silently enforce caching image metadata by tag:
 
 ```yaml
 controller:
   imageCache:
-    allowCacheByTag: true
-    requireCacheByTag: true
+    cacheByTagPolicy: Force
 ```
 
 For more information on how to use this feature, see the
