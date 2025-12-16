@@ -37,7 +37,7 @@ controller:
     namespaces:
     - kargo-shared-credentials
   imageCache:
-    allowCacheByTag: true
+    cacheByTagPolicy: Force
 crds:
   install: true
 externalWebhooksServer:
