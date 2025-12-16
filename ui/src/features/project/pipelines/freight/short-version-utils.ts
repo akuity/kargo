@@ -1,5 +1,5 @@
 export const shortVersion = (version: string = '', length = 12) => {
-  if (version.length <= length) {
+  if (version.length <= length + 3) {
     return version;
   }
 
