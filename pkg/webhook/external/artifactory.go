@@ -109,7 +109,7 @@ func (a *artifactoryWebhookReceiver) getHandler(requestBody []byte) http.Handler
 		}
 
 		mac := hmac.New(sha256.New, token)
-		mac.Write(requestBody)
+		_, _ = mac.Write(requestBody)
 		computedSig := hex.EncodeToString(mac.Sum(nil))
 
 		if !hmac.Equal([]byte(sig), []byte(computedSig)) {
