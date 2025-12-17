@@ -154,3 +154,11 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
 {{- end -}}
+
+{{- define "kargo.clusterResourcesNamespace" -}}
+{{- if .Values.global.clusterResourcesNamespace }}
+CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
+{{- else }}
+CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
+{{- end }}
+{{- end -}}

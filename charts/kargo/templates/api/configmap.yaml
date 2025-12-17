@@ -22,11 +22,8 @@ data:
   {{- if .Values.api.secretManagementEnabled }}
   SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
-  {{- if .Values.global.clusterResourcesNamespace }}
-  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
-  {{- else }}
-  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
-  {{- end }}
+  {{/* Backwards-compatible helper for resolving the namespace for cluster-scoped resources */}}
+  {{- include "kargo.clusterResourcesNamespace" .  | nindent 2 }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
