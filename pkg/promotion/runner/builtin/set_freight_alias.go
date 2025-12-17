@@ -81,28 +81,41 @@ func (s *setFreightAlias) run(
 	freight, err := api.GetFreightByNameOrAlias(ctx, s.kargoClient, stepCtx.Project, cfg.FreightID, "")
 	if err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, &promotion.TerminalError{Err: fmt.Errorf("get freight: %w", err)}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.FreightID, stepCtx.Project, err),
+			}
 	}
 
 	if freight == nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, &promotion.TerminalError{Err: fmt.Errorf("freight %q not found in project %q", cfg.FreightID, stepCtx.Project)}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("Freight %q not found in project %q", cfg.FreightID, stepCtx.Project),
+			}
 	}
 
-	// check if alias is already used by another freight in the project
+	// Check if alias is already used by another Freight in the project
 	freightList := kargoapi.FreightList{}
-	if err := s.kargoClient.List(ctx, &freightList, client.InNamespace(stepCtx.Project), client.MatchingLabels{kargoapi.LabelKeyAlias: cfg.NewAlias}); err != nil {
+	if err := s.kargoClient.List(
+		ctx,
+		&freightList,
+		client.InNamespace(stepCtx.Project),
+		client.MatchingLabels{kargoapi.LabelKeyAlias: cfg.NewAlias},
+	); err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, &promotion.TerminalError{Err: fmt.Errorf("list freight: %w", err)}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("failed to list Freights in project %q to check for alias conflicts: %w", stepCtx.Project, err),
+			}
 	}
 
 	if len(freightList.Items) > 1 || (len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, &promotion.TerminalError{Err: fmt.Errorf("alias %q already used by another piece of Freight in proejct %q", cfg.NewAlias, stepCtx.Project)}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("alias %q is already in use by another Freight in project %q", cfg.NewAlias, stepCtx.Project),
+			}
 	}
 
 	patchBytes := []byte(
@@ -117,8 +130,10 @@ func (s *setFreightAlias) run(
 
 	if err := s.kargoClient.Patch(ctx, freight, patch); err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, &promotion.TerminalError{Err: fmt.Errorf("patch freight alias: %w", err)}
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf("failed to patch alias for Freight %q in project %q: %w", freight.Name, stepCtx.Project, err),
+			}
 	}
 
 	return promotion.StepResult{
