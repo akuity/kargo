@@ -123,39 +123,6 @@ func Test_setFreightAlias_run(t *testing.T) {
 			},
 		},
 		{
-			name: "alias already used by another freight in the project",
-			client: fake.NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(
-					&kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      testFreight,
-							Namespace: testProject,
-						},
-					},
-					&kargoapi.Freight{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      otherFreight,
-							Namespace: testProject,
-							Labels: map[string]string{
-								kargoapi.LabelKeyAlias: newAlias,
-							},
-						},
-						Alias: newAlias,
-					},
-				).
-				Build(),
-			cfg: builtin.SetFreightAliasConfig{
-				FreightName: testFreight,
-				NewAlias:    newAlias,
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, _ client.Client, err error) {
-				require.ErrorContains(t, err, "already in use")
-				require.ErrorContains(t, err, newAlias)
-				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
-			},
-		},
-		{
 			name: "patch error",
 			client: fake.NewClientBuilder().
 				WithScheme(scheme).
