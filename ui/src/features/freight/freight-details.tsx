@@ -91,7 +91,7 @@ export const FreightDetails = ({
                   icon: <FontAwesomeIcon icon={faInfoCircle} />,
                   children: (
                     <>
-                      <div className='mb-4'>
+                      <div className='mb-8'>
                         {alias && freight?.metadata?.name && (
                           <CopyValue label='NAME:' value={freight.metadata?.name} />
                         )}

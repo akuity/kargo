@@ -1,6 +1,6 @@
 import { IconProp } from '@fortawesome/fontawesome-svg-core';
 import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor } from '@fortawesome/free-solid-svg-icons';
+import { faAnchor, faArrowDownShortWide } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Table } from 'antd';
 import classNames from 'classnames';
@@ -16,55 +16,50 @@ type FreightTableProps = {
 };
 
 export const FreightTable = (props: FreightTableProps) => {
-  const freightSource = useMemo(() => {
-    if (!props.freight) {
-      return {
-        builtInFreightSource: [],
-        genericFreightSource: []
-      };
-    }
-
-    const freightSources = flattenFreightOrigin(props.freight);
-
-    const builtInFreightSource = freightSources.filter((f) => f.type !== 'other');
-    const genericFreightSource = freightSources.filter((f) => f.type === 'other');
-
-    return {
-      builtInFreightSource,
-      genericFreightSource
-    };
-  }, [props.freight]);
+  const freightSource = useMemo(() => flattenFreightOrigin(props.freight), [props.freight]);
 
   return (
     <>
-      {freightSource.builtInFreightSource?.length > 0 && (
+      {freightSource?.length > 0 && (
         <Table
           className={classNames(props.className)}
-          pagination={{ pageSize: 5 }}
-          dataSource={freightSource.builtInFreightSource}
+          pagination={{ pageSize: 5, hideOnSinglePage: true }}
+          dataSource={freightSource}
           columns={[
             {
-              title: 'Source',
-              width: '5%',
-              render: (_, { type }) => {
-                let icon: IconProp = faGitAlt;
+              title: 'Type',
+              width: '10%',
+              render: (_, record) => {
+                if (record.type === 'other') {
+                  return record.artifactType || '-';
+                }
 
-                switch (type) {
+                let icon: IconProp = faArrowDownShortWide;
+
+                switch (record.type) {
                   case 'helm':
                     icon = faAnchor;
                     break;
                   case 'image':
                     icon = faDocker;
                     break;
+                  case 'git':
+                    icon = faGitAlt;
                 }
 
                 return <FontAwesomeIcon icon={icon} />;
               }
             },
             {
-              title: 'Repo',
-              dataIndex: 'repoURL',
-              width: '30%'
+              title: 'Repo / Name',
+              width: '30%',
+              render: (_, record) => {
+                if (record.type === 'other') {
+                  return record.subscriptionName || '-';
+                }
+
+                return record.repoURL;
+              }
             },
             {
               title: 'Version',
@@ -76,6 +71,8 @@ export const FreightTable = (props: FreightTableProps) => {
                     return record.version;
                   case 'image':
                     return record.tag;
+                  default:
+                    return '-';
                 }
               }
             },
@@ -88,26 +85,6 @@ export const FreightTable = (props: FreightTableProps) => {
             }
           ]}
         />
-      )}
-
-      {freightSource.genericFreightSource.length > 0 && (
-        <>
-          <div className='font-semibold mt-4 mb-2 text-xs'>OTHER ARTIFACTS</div>
-          <Table
-            pagination={{ pageSize: 5 }}
-            dataSource={freightSource.genericFreightSource}
-            columns={[
-              {
-                title: 'Name',
-                dataIndex: 'subscriptionName'
-              },
-              {
-                title: 'Version',
-                dataIndex: 'version'
-              }
-            ]}
-          />
-        </>
       )}
     </>
   );
