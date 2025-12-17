@@ -127,6 +127,9 @@ jobs:
 
   publish-charts:
     needs: publish-image
+    permissions:
+      contents: read
+      packages: write # Used to push images to `ghcr.io`
     runs-on: ubuntu-latest
     steps:
     - name: Determine which repository to use
