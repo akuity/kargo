@@ -5,10 +5,11 @@ description: Updates the alias of a Freight Resource in a project`
 
 # `set-freight-alias`
 
-`set-freight-alias` updates the alias of a Freight Resource in a project.
-Unlike most promotion steps, which operate on the Freight currently being promoted,
-this step explicitly targets a Freight via its `freightID`. This allows updating aliases 
-for other Freights in the same project, even if they are not part of the current promotion.
+`set-freight-alias` updates the alias of a Freight Resource in a project. Unlike
+most promotion steps, which operate on the Freight currently being promoted,
+this step explicitly targets a Freight via its `freightID`. This allows updating
+aliases for other Freights in the same project, even if they are not part of the
+current promotion.
 
 :::note
 
@@ -27,12 +28,14 @@ Always ensure the new alias is unique within the project. If the alias is alread
 
 ### Common Usage
 
-Sometimes, you may want to rename a Freight alias for a resource that is not currently being promoted,
-but exists in the same project. This is useful for housekeeping, environment reassignments, or preparing resources
-for future promotions without affecting the currently promoted Freight.
+Sometimes, you may want to rename a Freight alias for a resource that is not
+currently being promoted, but exists in the same project. This is useful for
+housekeeping, environment reassignments, or preparing resources for future
+promotions without affecting the currently promoted Freight.
 
-For example, suppose you have a Freight `freight-id-456` that represents a previous deployment in your project.
-Its alias is `staging-old`, and you want to rename it to `archived` to reflect its status:
+For example, suppose you have a Freight `freight-id-456` that represents a
+previous deployment in your project. Its alias is `staging-old`, and you want to
+rename it to `archived` to reflect its status:
 
 ```yaml
 steps:
@@ -42,6 +45,7 @@ steps:
     newAlias: "archived
 ```
 
-After this step runs, the freight `freight-id-456` will have its alias updated to `archived`,
-while the Freight currently being promoted remains unaffected. The corresponding label 
-`kargo.akuity.io/alias` will also be updated to reflect the new alias.
+After this step runs, the freight `freight-id-456` will have its alias updated
+to `archived`, while the Freight currently being promoted remains unaffected.
+The corresponding label `kargo.akuity.io/alias` will also be updated to reflect
+the new alias.

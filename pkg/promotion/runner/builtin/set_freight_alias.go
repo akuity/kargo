@@ -3,13 +3,15 @@ package builtin
 import (
 	"context"
 	"fmt"
+
+	"github.com/xeipuuv/gojsonschema"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
-	"github.com/xeipuuv/gojsonschema"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 const stepKindSetFreightAlias = "set-freight-alias"
@@ -70,8 +72,9 @@ func (s *setFreightAlias) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.SetFreightAliasConfig,
 ) (promotion.StepResult, error) {
-	// This step intentionally targets a Freight specified explicitly via `freightID`
-	// instead of implicitly operating on `stepCtx.TargetFreightRef`.
+	// This step intentionally targets a Freight specified explicitly via
+	// `freightID` instead of implicitly operating on
+	// `stepCtx.TargetFreightRef`.
 	//
 	// While most promotion steps act on the Freight currently being promoted,
 	// updating a Freight alias is a project-scoped mutation rather than a
@@ -91,7 +94,7 @@ func (s *setFreightAlias) run(
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("Freight %q not found in project %q", cfg.FreightID, stepCtx.Project),
+				Err: fmt.Errorf("freight %q not found in project %q", cfg.FreightID, stepCtx.Project),
 			}
 	}
 
