@@ -453,7 +453,7 @@ type IndexSelector struct {
 	// MatchIndices is a list of index selector requirements.
 	//
 	// +kubebuilder:validation:MinItems=1
-	MatchIndices []IndexSelectorRequirement `json:"matchIndicies,omitempty" protobuf:"bytes,1,rep,name=matchIndices"`
+	MatchIndices []IndexSelectorRequirement `json:"matchIndices,omitempty" protobuf:"bytes,1,rep,name=matchIndices"`
 }
 
 // IndexSelectorRequirement encapsulates a requirement used to select indexes

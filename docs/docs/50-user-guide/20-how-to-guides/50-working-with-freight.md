@@ -18,8 +18,10 @@ Freight can therefore be thought of as a sort of meta-artifact. Freight is what
 Kargo seeks to progress from one stage to another.
 
 :::info
+
 To learn the fundamentals of freight and the warehouses that produce freight,
 see [Core Concepts](../10-core-concepts/index.md).
+
 :::
 
 The remainder of this page describes features of freight that will enable you
@@ -47,12 +49,15 @@ produce and apply it as the value of the `Freight` resource's
 [label](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/).
 
 :::info
+
 Generating aliases of the form `<adjective>-<animal>` is a strategy borrowed
 from Docker, which generates similar names for containers not explicitly named
 by users.
+
 :::
 
 :::info
+
 Why a label?
 
 Kubernetes enforces the immutability of the `metadata.name` field for all
@@ -62,6 +67,7 @@ Kubernetes
 [labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/),
 by contrast, are both mutable and indexed, which makes them ideal for use as
 secondary identifiers.
+
 :::
 
 When using the Kargo CLI to query for `Freight` resources, the `alias` field is
@@ -79,9 +85,11 @@ f5f87aa23c9e97f43eb83dd63768ee41f5ba3766   mortal-dragonfly   35s
 ```
 
 :::info
+
 The Kargo UI, to make efficient use of screen real estate, displays aliases
 only, but a `Freight` resource's `name` can always be discovered by hovering
 over its alias.
+
 :::
 
 By default, the freight timeline shows the `Warehouse` name for each freight.
@@ -90,9 +98,11 @@ You can also enable alias display in the freight timeline filter: click the _fun
 ![Freight Alias Name](./img/freight-alias-name.png)
 
 :::note
+
 Kargo CLI commands will accept `Freight` aliases as an alternative to a
 `Freight` name. Refer to the help text for the `kargo` command for more
 information.
+
 :::
 
 ### Updating Aliases
@@ -185,10 +195,12 @@ kargo approve \
 </Tabs>
 
 :::note
+
 Manually granting approval for a `Freight` resource to be promoted to any given
 `Stage` requires the same level of permissions as would be required to carry out
 that promotion, although, granting manual approval does _not_ automatically
 create a corresponding `Promotion` resource.
+
 :::
 
 After successfully granting manual approval for a `Freight` resource to be

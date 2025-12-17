@@ -17,7 +17,7 @@ import { paths } from '@ui/config/paths';
 import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { useFreightTimelineControllerContext } from '@ui/features/project/pipelines/context/freight-timeline-controller-context';
-import { refreshWarehouse } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+import { refreshResource } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import styles from './node-size-source-of-truth.module.less';
 
@@ -29,7 +29,8 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
 
   const warehouseState = useWarehouseState(props.warehouse);
 
-  const refreshWarehouseMutation = useMutation(refreshWarehouse, {
+  const refreshResourceTypeWarehouse = 'Warehouse';
+  const refreshResourceMutation = useMutation(refreshResource, {
     onSuccess: () => {
       message.success('Warehouse successfully refreshed');
     }
@@ -119,9 +120,10 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
           icon={<FontAwesomeIcon icon={faRefresh} />}
           onClick={(e) => {
             e.stopPropagation();
-            refreshWarehouseMutation.mutate({
+            refreshResourceMutation.mutate({
               project: props.warehouse?.metadata?.namespace,
-              name: props.warehouse?.metadata?.name
+              name: props.warehouse?.metadata?.name,
+              resourceType: refreshResourceTypeWarehouse
             });
           }}
           loading={warehouseState.refreshing}

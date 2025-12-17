@@ -2,13 +2,15 @@
 <a name="top"></a>
 
 <a name="api_service_v1alpha1_service-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## service/v1alpha1
 <a name="akuity-io-kargo-service-v1alpha1-KargoService"></a>
 
 :::warning
+
 Stability is not guaranteed.
+
 :::
 
 | Method Name | Request Type | Response Type |
@@ -21,16 +23,15 @@ Stability is not guaranteed.
 | CreateOrUpdateResource | [CreateOrUpdateResourceRequest](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest) | [CreateOrUpdateResourceResponse](#akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceResponse) |
 | UpdateResource | [UpdateResourceRequest](#akuity-io-kargo-service-v1alpha1-UpdateResourceRequest) | [UpdateResourceResponse](#akuity-io-kargo-service-v1alpha1-UpdateResourceResponse) |
 | DeleteResource | [DeleteResourceRequest](#akuity-io-kargo-service-v1alpha1-DeleteResourceRequest) | [DeleteResourceResponse](#akuity-io-kargo-service-v1alpha1-DeleteResourceResponse) |
+| RefreshResource | [RefreshResourceRequest](#akuity-io-kargo-service-v1alpha1-RefreshResourceRequest) | [RefreshResourceResponse](#akuity-io-kargo-service-v1alpha1-RefreshResourceResponse) |
 | ListStages | [ListStagesRequest](#akuity-io-kargo-service-v1alpha1-ListStagesRequest) | [ListStagesResponse](#akuity-io-kargo-service-v1alpha1-ListStagesResponse) |
 | ListImages | [ListImagesRequest](#akuity-io-kargo-service-v1alpha1-ListImagesRequest) | [ListImagesResponse](#akuity-io-kargo-service-v1alpha1-ListImagesResponse) |
 | GetStage | [GetStageRequest](#akuity-io-kargo-service-v1alpha1-GetStageRequest) | [GetStageResponse](#akuity-io-kargo-service-v1alpha1-GetStageResponse) |
 | WatchStages | [WatchStagesRequest](#akuity-io-kargo-service-v1alpha1-WatchStagesRequest) | [WatchStagesResponse](#akuity-io-kargo-service-v1alpha1-WatchStagesResponse)(stream) |
 | DeleteStage | [DeleteStageRequest](#akuity-io-kargo-service-v1alpha1-DeleteStageRequest) | [DeleteStageResponse](#akuity-io-kargo-service-v1alpha1-DeleteStageResponse) |
-| RefreshStage | [RefreshStageRequest](#akuity-io-kargo-service-v1alpha1-RefreshStageRequest) | [RefreshStageResponse](#akuity-io-kargo-service-v1alpha1-RefreshStageResponse) |
 | GetClusterConfig | [GetClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-GetClusterConfigRequest) | [GetClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-GetClusterConfigResponse) |
 | DeleteClusterConfig | [DeleteClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterConfigRequest) | [DeleteClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterConfigResponse) |
 | WatchClusterConfig | [WatchClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-WatchClusterConfigRequest) | [WatchClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-WatchClusterConfigResponse)(stream) |
-| RefreshClusterConfig | [RefreshClusterConfigRequest](#akuity-io-kargo-service-v1alpha1-RefreshClusterConfigRequest) | [RefreshClusterConfigResponse](#akuity-io-kargo-service-v1alpha1-RefreshClusterConfigResponse) |
 | ListPromotions | [ListPromotionsRequest](#akuity-io-kargo-service-v1alpha1-ListPromotionsRequest) | [ListPromotionsResponse](#akuity-io-kargo-service-v1alpha1-ListPromotionsResponse) |
 | WatchPromotions | [WatchPromotionsRequest](#akuity-io-kargo-service-v1alpha1-WatchPromotionsRequest) | [WatchPromotionsResponse](#akuity-io-kargo-service-v1alpha1-WatchPromotionsResponse)(stream) |
 | GetPromotion | [GetPromotionRequest](#akuity-io-kargo-service-v1alpha1-GetPromotionRequest) | [GetPromotionResponse](#akuity-io-kargo-service-v1alpha1-GetPromotionResponse) |
@@ -42,7 +43,6 @@ Stability is not guaranteed.
 | GetProjectConfig | [GetProjectConfigRequest](#akuity-io-kargo-service-v1alpha1-GetProjectConfigRequest) | [GetProjectConfigResponse](#akuity-io-kargo-service-v1alpha1-GetProjectConfigResponse) |
 | DeleteProjectConfig | [DeleteProjectConfigRequest](#akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest) | [DeleteProjectConfigResponse](#akuity-io-kargo-service-v1alpha1-DeleteProjectConfigResponse) |
 | WatchProjectConfig | [WatchProjectConfigRequest](#akuity-io-kargo-service-v1alpha1-WatchProjectConfigRequest) | [WatchProjectConfigResponse](#akuity-io-kargo-service-v1alpha1-WatchProjectConfigResponse)(stream) |
-| RefreshProjectConfig | [RefreshProjectConfigRequest](#akuity-io-kargo-service-v1alpha1-RefreshProjectConfigRequest) | [RefreshProjectConfigResponse](#akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse) |
 | ApproveFreight | [ApproveFreightRequest](#akuity-io-kargo-service-v1alpha1-ApproveFreightRequest) | [ApproveFreightResponse](#akuity-io-kargo-service-v1alpha1-ApproveFreightResponse) |
 | DeleteFreight | [DeleteFreightRequest](#akuity-io-kargo-service-v1alpha1-DeleteFreightRequest) | [DeleteFreightResponse](#akuity-io-kargo-service-v1alpha1-DeleteFreightResponse) |
 | GetFreight | [GetFreightRequest](#akuity-io-kargo-service-v1alpha1-GetFreightRequest) | [GetFreightResponse](#akuity-io-kargo-service-v1alpha1-GetFreightResponse) |
@@ -57,7 +57,6 @@ Stability is not guaranteed.
 | GetWarehouse | [GetWarehouseRequest](#akuity-io-kargo-service-v1alpha1-GetWarehouseRequest) | [GetWarehouseResponse](#akuity-io-kargo-service-v1alpha1-GetWarehouseResponse) |
 | WatchWarehouses | [WatchWarehousesRequest](#akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest) | [WatchWarehousesResponse](#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse)(stream) |
 | DeleteWarehouse | [DeleteWarehouseRequest](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest) | [DeleteWarehouseResponse](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse) |
-| RefreshWarehouse | [RefreshWarehouseRequest](#akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest) | [RefreshWarehouseResponse](#akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse) |
 | CreateCredentials | [CreateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest) | [CreateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse) |
 | DeleteCredentials | [DeleteCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest) | [DeleteCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse) |
 | GetCredentials | [GetCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetCredentialsRequest) | [GetCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetCredentialsResponse) |
@@ -1359,67 +1358,23 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [FreightList](#akuity-io-kargo-service-v1alpha1-FreightList) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-RefreshResourceRequest"></a>
 
-### RefreshClusterConfigRequest
- explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-RefreshClusterConfigResponse"></a>
-
-### RefreshClusterConfigResponse
+### RefreshResourceRequest
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| cluster_config | [github.com.akuity.kargo.api.v1alpha1.ClusterConfig](#github-com-akuity-kargo-api-v1alpha1-ClusterConfig) |   |
+| project | [string](#string) |  project is the name of the project containing the object to refresh. leave blank if refreshing a cluster-config. |
+| name | [string](#string) |  name is the name of the object to refresh. leave blank if refreshing a project or cluster config. |
+| resource_type | [string](#string) |  resource_type is the kind of resource to refresh. should be one of: ProjectConfig, ClusterConfig, Warehouse, or Stage. |
 
-<a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-RefreshResourceResponse"></a>
 
-### RefreshProjectConfigRequest
- RefreshProjectConfigRequest is the request for triggering a refresh of project configuration.
+### RefreshResourceResponse
+ 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project to refresh configuration for. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshProjectConfigResponse"></a>
-
-### RefreshProjectConfigResponse
- RefreshProjectConfigResponse contains the refreshed project configuration.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project_config | [github.com.akuity.kargo.api.v1alpha1.ProjectConfig](#github-com-akuity-kargo-api-v1alpha1-ProjectConfig) |  project_config is the refreshed ProjectConfig object. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshStageRequest"></a>
-
-### RefreshStageRequest
- RefreshStageRequest is the request for refreshing a stage's status.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the stage. |
-| name | [string](#string) |  name is the name of the stage to refresh. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshStageResponse"></a>
-
-### RefreshStageResponse
- RefreshStageResponse contains the refreshed stage information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| stage | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stage is the refreshed Stage resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseRequest"></a>
-
-### RefreshWarehouseRequest
- RefreshWarehouseRequest is the request for refreshing a warehouse's status and freight discovery.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the warehouse. |
-| name | [string](#string) |  name is the name of the warehouse to refresh. |
-
-<a name="akuity-io-kargo-service-v1alpha1-RefreshWarehouseResponse"></a>
-
-### RefreshWarehouseResponse
- RefreshWarehouseResponse contains the refreshed warehouse information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| warehouse | [github.com.akuity.kargo.api.v1alpha1.Warehouse](#github-com-akuity-kargo-api-v1alpha1-Warehouse) |  warehouse is the refreshed Warehouse resource. |
+| resource | [google.protobuf.Any](#google-protobuf-Any) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-ReverifyRequest"></a>
 
@@ -1760,7 +1715,7 @@ RawFormat specifies the format for raw resource representation.
  <!-- end enums -->
 
 <a name="api_rbac_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## rbac/v1alpha1
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-Claim"></a>
@@ -1817,7 +1772,7 @@ RawFormat specifies the format for raw resource representation.
 <!-- end messages --> <!-- end enums -->
 
 <a name="api_v1alpha1_generated-proto"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## v1alpha1
 <a name="github-com-akuity-kargo-api-v1alpha1-AnalysisRunArgument"></a>

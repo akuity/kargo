@@ -8,14 +8,15 @@ Kargo `ServiceAccount`s enable programmatic access to Kargo APIs without
 requiring a user to share short-lived credentials with non-human agents, such as
 a CI process.
 
-:::note
-__Not what you were looking for?__
+
+:::info[Not what you were looking for?]
 
 If you're a project admin looking to create and manage `ServiceAccount`s within
 your projects, you may find some value in this document, but most of what you
 need to know can be found in the
 [User Guide's ServiceAccounts](../../50-user-guide/50-security/10-service-accounts.md)
 section.
+
 :::
 
 ## Understanding Kargo ServiceAccounts
@@ -78,11 +79,13 @@ Token: eyJhbGciOiJSUzI1NiIsImtpZCI6IjdwQ0...
 ```
 
 :::danger
+
 The token value is displayed only once during creation. Do not lose it!
 
 If you lose the token value, you must delete the token and create a new one _or_
 the existing token's value can be retrieved by a user with sufficient permission
 using `kubectl` instead of the `kargo` CLI.
+
 :::
 
 List all system-level authentication tokens:
@@ -116,9 +119,11 @@ includes tools like `kubectl` as well as any programming language client library
 for Kubernetes or Kargo.
 
 :::note
+
 While the `kargo` CLI does not directly support specifying a token via command
 line flags, you can configure it to use a token by editing
 `~/.config/kargo/config`.
+
 :::
 
 ### Deleting Authentication Tokens

@@ -21,12 +21,13 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		registrations []StepRunnerRegistration
 		promoCtx      Context
 		steps         []Step
-		assertions    func(*testing.T, Result)
+		assertions    func(*testing.T, Result, error)
 	}{
 		{
 			name:  "runner not found",
 			steps: []Step{{Kind: "unknown-step"}},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "error getting runner for step kind")
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -42,7 +43,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		{
 			name:  "error determining whether to skip step",
 			steps: []Step{{If: "${{ bogus() }}"}},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "error checking if step")
 				assert.Contains(t, result.Message, "should be skipped")
@@ -64,7 +66,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "success-step", Alias: "step1"},
 				{Kind: "success-step", Alias: "step2"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -94,7 +97,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "skipped-step", Alias: "step1"},
 				{Kind: "skipped-step", Alias: "step2"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -125,7 +129,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "error-step", Alias: "step2", If: "${{ false }}"},
 				{Kind: "success-step", Alias: "step3", If: "${{ true }}"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(2), result.CurrentStep)
@@ -173,7 +178,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				// This step should be run
 				{Kind: "success-step", Alias: "step2"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -200,7 +206,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "success-step", Alias: "step1"},
 				{Kind: "terminal-error-step", Alias: "step2"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "an unrecoverable error occurred")
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -231,7 +238,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "success-step", Alias: "step1"},
 				{Kind: "error-step", Alias: "step2"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "met error threshold")
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -265,7 +273,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 					Retry: &kargoapi.PromotionStepRetry{ErrorThreshold: 3},
 				},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.Error(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -298,7 +307,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "timed out after")
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -329,7 +339,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "timed out after")
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -344,7 +355,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 		{
 			name:  "step is still running; timeout not elapsed",
 			steps: []Step{{Kind: "running-step"}},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseRunning, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -362,7 +374,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "context-waiter"}, // Closes context and errors
 				{Kind: "success-step"},   // Won't run because of canceled context
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, context.Canceled.Error())
 				assert.Equal(t, int64(1), result.CurrentStep)
@@ -397,7 +410,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				Kind:  "task-level-output-step",
 				Alias: "task-1::custom-output",
 			}},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -441,7 +455,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				Kind:  "task-level-output-step",
 				Alias: "custom-output",
 			}},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
 				assert.Empty(t, result.Message)
 				assert.Equal(t, int64(0), result.CurrentStep)
@@ -456,6 +471,32 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 						"test": "value",
 					},
 				}, result.State)
+			},
+		},
+		{
+			name: "previously failed step does not skip on retry",
+			promoCtx: Context{
+				StepExecutionMetadata: kargoapi.StepExecutionMetadataList{{
+					Alias:     "step1",
+					StartedAt: ptr.To(metav1.NewTime(time.Now().Add(-time.Minute))),
+					Status:    kargoapi.PromotionStepStatusFailed,
+					Message:   "previous failure",
+				}},
+			},
+			steps: []Step{
+				{Kind: "success-step", Alias: "step1"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+
+				assert.Equal(t, kargoapi.PromotionPhaseSucceeded, result.Status)
+				assert.Equal(t, int64(0), result.CurrentStep)
+
+				require.Len(t, result.StepExecutionMetadata, 1)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
 			},
 		},
 		{
@@ -487,7 +528,8 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 				{Kind: "panic-step", Alias: "step2"},
 				{Kind: "success-step", Alias: "step3"},
 			},
-			assertions: func(t *testing.T, result Result) {
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
 				assert.Contains(t, result.Message, "something went wrong")
 				assert.Equal(t, int64(2), result.CurrentStep)
@@ -599,8 +641,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			tt.promoCtx.WorkDir = t.TempDir()
 
 			result, err := orchestrator.ExecuteSteps(ctx, tt.promoCtx, tt.steps)
-			require.NoError(t, err)
-			tt.assertions(t, result)
+			tt.assertions(t, result, err)
 		})
 	}
 }

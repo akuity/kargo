@@ -482,7 +482,7 @@ func TestGenericHandler(t *testing.T) {
 									]
 								},
 								"indexSelector": {
-									"matchIndicies": [
+									"matchIndices": [
 											{
 												"key": "subscribedURLs",
 												"operator": "Equals",
@@ -610,7 +610,7 @@ func TestGenericHandler(t *testing.T) {
 										]
 									},
 									"indexSelector": {
-											"matchIndicies": [
+											"matchIndices": [
 												{
 													"key": "subscribedURLs",
 													"operator": "Equals",

@@ -63,6 +63,15 @@ export const updateResource = KargoService.method.updateResource;
 export const deleteResource = KargoService.method.deleteResource;
 
 /**
+ * RefreshResource triggers a refresh of the specified Kargo resource.
+ *
+ * Stage APIs 
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshResource
+ */
+export const refreshResource = KargoService.method.refreshResource;
+
+/**
  * ListStages retrieves all stages within a project.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListStages
@@ -91,13 +100,6 @@ export const getStage = KargoService.method.getStage;
 export const deleteStage = KargoService.method.deleteStage;
 
 /**
- * RefreshStage triggers a refresh of stage status and health checks.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshStage
- */
-export const refreshStage = KargoService.method.refreshStage;
-
-/**
  * GetClusterConfig retrieves cluster-level configuration settings.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetClusterConfig
@@ -110,13 +112,6 @@ export const getClusterConfig = KargoService.method.getClusterConfig;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterConfig
  */
 export const deleteClusterConfig = KargoService.method.deleteClusterConfig;
-
-/**
- * RefreshClusterConfig triggers a refresh of cluster configuration.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshClusterConfig
- */
-export const refreshClusterConfig = KargoService.method.refreshClusterConfig;
 
 /**
  * ListPromotions retrieves all promotions, optionally filtered by stage.
@@ -173,13 +168,6 @@ export const getProjectConfig = KargoService.method.getProjectConfig;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectConfig
  */
 export const deleteProjectConfig = KargoService.method.deleteProjectConfig;
-
-/**
- * RefreshProjectConfig triggers a refresh of project configuration.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshProjectConfig
- */
-export const refreshProjectConfig = KargoService.method.refreshProjectConfig;
 
 /**
  * ApproveFreight marks freight as approved for promotion to a specific stage.
@@ -264,13 +252,6 @@ export const getWarehouse = KargoService.method.getWarehouse;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteWarehouse
  */
 export const deleteWarehouse = KargoService.method.deleteWarehouse;
-
-/**
- * RefreshWarehouse triggers a refresh of warehouse status and freight discovery.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.RefreshWarehouse
- */
-export const refreshWarehouse = KargoService.method.refreshWarehouse;
 
 /**
  * CreateCredentials creates new credentials for accessing external resources.

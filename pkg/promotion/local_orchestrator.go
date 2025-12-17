@@ -90,20 +90,27 @@ func (o *LocalOrchestrator) ExecuteSteps(
 
 		processor := NewStepEvaluator(o.client, o.newCache())
 
-		// Evaluate the "if" condition for the step to determine if it should
-		// be executed.
-		skip, err := processor.ShouldSkip(ctx, promoCtx, step)
-		switch {
-		case err != nil:
-			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
-				"error checking if step %q should be skipped: %s", step.Alias, err,
-			)
-			// Skip the step, because despite this failure, some steps' "if"
-			// conditions may still allow them to run.
-			continue
-		case skip:
-			meta.WithStatus(kargoapi.PromotionStepStatusSkipped)
-			continue
+		// Only evaluate the "if" conditio when the step has not yet started.
+		// If the step has already started (on a previous reconciliation), we
+		// should not re-evaluate whether to skip it. Re-evaluating could cause
+		// a step's own Failed status from a previous attempt to incorrectly
+		// trigger the skip condition.
+		if meta.StartedAt == nil {
+			// Evaluate the "if" condition for the step to determine if it should
+			// be executed.
+			skip, err := processor.ShouldSkip(ctx, promoCtx, step)
+			switch {
+			case err != nil:
+				meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
+					"error checking if step %q should be skipped: %s", step.Alias, err,
+				)
+				// Skip the step, because despite this failure, some steps' "if"
+				// conditions may still allow them to run.
+				continue
+			case skip:
+				meta.WithStatus(kargoapi.PromotionStepStatusSkipped)
+				continue
+			}
 		}
 
 		// Get the reg for the step (for validation purposes).
@@ -161,7 +168,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 
 		// Determine the completion of the step based on the metadata.
 		if !o.determineStepCompletion(promoCtx, step, reg.Metadata, err) {
-			// The step is still running, so we need to wait
+			// Step incomplete; return error (if any) for progressive backoff.
 			return Result{
 				Status:                kargoapi.PromotionPhaseRunning,
 				CurrentStep:           i,
@@ -169,7 +176,7 @@ func (o *LocalOrchestrator) ExecuteSteps(
 				State:                 promoCtx.State,
 				HealthChecks:          healthChecks,
 				RetryAfter:            result.RetryAfter,
-			}, nil
+			}, err
 		}
 
 		// If the step succeeded, we can add any health checks to the list.

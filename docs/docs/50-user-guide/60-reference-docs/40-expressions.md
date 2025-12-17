@@ -9,8 +9,8 @@ The [steps](15-promotion-templates.md#steps) of a user-defined promotion process
 as well as a `Stage`'s
 [verification arguments](../20-how-to-guides/60-verification.md#arguments-and-metadata)
 may take advantage of expressions in their configuration.
-
 :::info
+
 The documentation on this page assumes a general familiarity with the concepts
 of Promotion Templates and Analysis Templates, as well as some knowledge of how
 a promotion process is defined as a sequence of discrete steps and how
@@ -25,6 +25,7 @@ For detailed coverage of individual promotion steps, refer to the
 For information on Analysis Templates, refer to the
 [Verification Guide](../20-how-to-guides/60-verification.md) and
 [Analysis Templates Reference](50-analysis-templates.md).
+
 :::
 
 ## Syntax
@@ -58,19 +59,47 @@ config:
   message: Hello, world!
 ```
 
+:::info What if?
+If an expression must contain the literal character sequence `}}`, that sequence
+can be mistaken as marking the end of the expression, cutting the expression
+short, and resulting in an error or, at least, unexpected results.
+Inconveniently, the `}}` character sequence is a common one occurring in the
+definition of JSON objects or string representations of such an objects.
+
+The following would fail, because the expression would be misidentified as
+`{"labels": {"app": "nginx"`, which is not valid JSON:
+
+```yaml
+config:
+  jsonObject: ${{ {"labels": {"app": "nginx"}} }}
+```
+
+As a workaround for the above, a secondary set of delimiters, `${%` and `%}`,
+are supported as well. Opt for these delimiters when an expression must contain
+the literal character sequence `}}`. Similarly, always opt for `${{` and `}}`
+as delimiters when an expression must contain the literal character sequence
+`%}`.
+
+```yaml
+config:
+  jsonData: %{{ {"labels": {"app": "nginx"}} }}
+```
+:::
+
 The
 [expr-lang language definition docs](https://expr-lang.org/docs/language-definition)
 provide a comprehensive overview of the language's syntax and capabilities, so
 this reference will continue to focus only on Kargo-specific extensions and
 usage.
+:::info
 
-:::tip
 You can test your expressions using the
 [expr-lang playground](https://expr-lang.org/playground).
 
 The playground allows you to evaluate expressions against sample data and
 see the results in real-time. This is especially useful for debugging and
 validating your expressions before using them in your Kargo configuration.
+
 :::
 
 ## Structure and Behavior
@@ -143,9 +172,10 @@ config:
 
 Kargo provides a number of pre-defined variables that are accessible within
 expressions. This section enumerates these variables, their structure, and use.
-
 :::info
+
 Expect other useful variables to be added in the future.
+
 :::
 
 ### Promotion Variables
@@ -233,12 +263,13 @@ promotionTemplate:
           - repoURL: ${{ vars.gitRepo }}
             desiredRevision: ${{ outputs.commit.commit }}
 ```
-
 :::info
+
 Since the usage of expressions and pre-defined variables effectively
 parameterizes the promotion process, the same promotion process can be reused in
 other `Projects` or `Stages` with few, if any, modifications (other than the
 definition of the static variables).
+
 :::
 
 ### Verification Variables
@@ -249,12 +280,14 @@ definition of the static variables).
 | `vars` | `object` | A user-defined map of variable names to static values of any type. The map is derived from the `Stage`'s `spec.vars` field. Variable names must observe standard Go variable-naming rules. Stage-level variables can be referenced in verification arguments to pass dynamic values to AnalysisRuns. |
 
 :::note
+
 Verification processes evaluate a `Stage`'s current state and, while frequently
 executed immediately following a promotion, are not intrinsically part of the
 promotion process itself. Therefore, promotion-level variables (such as those defined
 in `spec.promotionTemplate.spec.vars`) and promotion context (like `outputs` from
 promotion steps) are not accessible during verification. Only Stage-level variables
 and context are available.
+
 :::
 
 #### Context (`ctx`) Object Structure for Verification
@@ -367,12 +400,13 @@ The `FreightOrigin` object can be used as an optional argument to the
 `commitFrom()`, `imageFrom()`, or `chartFrom()` functions to disambiguate the
 desired source of an artifact when necessary. These functions return `nil` when
 relevant `Freight` is not found from the `FreightCollection`.
+:::info
 
-:::tip
 You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
 [optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
 features.
+
 :::
 
 ### `freightMetadata(freightName)`
@@ -395,21 +429,24 @@ config:
   # Using optional chaining (?.) with nil coalescing for nested values
   nested: ${{ freightMetadata(ctx.targetFreight.name)?.config?.settings?.timeoutSeconds ?? 300 }}
 ```
+:::info
 
-:::tip
 You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
 [optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
 features.
+
 :::
 
 :::note
+
 An optional second argument (`freightMetadata(freightName, 'key-name')`) is supported
 but deprecated as of `v1.8` and will be removed in `v1.10`. While the two-argument
 form returns a single value for the specified key, the single-argument form returns
 the complete metadata map. To migrate, use either dot notation
 (`freightMetadata(freightName).keyName`) or map access syntax
 (`freightMetadata(freightName)['key-name']`) to access specific values.
+
 :::
 
 ### `stageMetadata(stageName)`
@@ -435,12 +472,13 @@ config:
   # Using optional chaining (?.) with nil coalescing for nested values
   nested: ${{ stageMetadata(ctx.stage)?.config?.settings?.timeoutSeconds ?? 300 }}
 ```
+:::info
 
-:::tip
 You can handle `nil` values gracefully in Expr using its
 [nil coalescing](https://expr-lang.org/docs/language-definition#nil-coalescing) and
 [optional chaining](https://expr-lang.org/docs/language-definition#optional-chaining)
 features.
+
 :::
 
 ### `commitFrom()`
@@ -565,9 +603,10 @@ spec:
     expression: |
       imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
 ```
-
 :::info
+
 The returned `Image` object is the same in all contexts.
+
 :::
 
 In all other contexts, such as promotion and verification processes, the
@@ -635,9 +674,10 @@ spec:
     expression: |
       chartFrom('oci://example.com/my-chart').Version == chartFrom('oci://example.com/my-other-chart').Version
 ```
-
 :::info
+
 The returned `Chart` object is the same in all contexts.
+
 :::
 
 In all other contexts, such as promotion and verification processes, the
@@ -760,11 +800,12 @@ The returned struct provides the following methods:
 | `IncMinor()` | `Version` | Returns a new version with the minor version incremented and patch reset to 0. |
 | `IncPatch()` | `Version` | Returns a new version with the patch version incremented. |
 | `String()` | `string` | Returns the full version string. |
-
 :::info
+
 The function uses the [Semantic Versioning](https://semver.org/) specification
 to parse versions. It supports versions with or without the `v` prefix, as well
 as prerelease and build metadata components.
+
 :::
 
 Example:
@@ -804,11 +845,12 @@ values include, and are limited to:
 | `Metadata` | Only the build metadata differs (major, minor, and patch versions are the same). |
 | `None` | The versions are identical. |
 | `Incomparable` | One or both arguments are not valid semantic versions. |
-
 :::info
+
 The function uses the [Semantic Versioning](https://semver.org/) specification
 to parse and compare versions. It supports versions with or without the `v`
 prefix, as well as prerelease and build metadata components.
+
 :::
 
 Example:
