@@ -7,8 +7,8 @@ on:
   schedule:
   - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
   workflow_dispatch:
-jobs:
 
+jobs:
   publish-image:
     permissions:
       contents: write # Used to upload assets
@@ -67,7 +67,7 @@ jobs:
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - name: Docker meta
       id: meta
-      uses: docker/metadata-action@v5
+      uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
       with:
         images: ${{ steps.repo.outputs.repo }}
         flavor: latest=false
@@ -81,7 +81,7 @@ jobs:
         docker push localhost:5000/kargo-base:latest-amd64
     - name: Build and push final image
       id: image
-      uses: docker/build-push-action@v6
+      uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
       with:
         platforms: linux/amd64,linux/arm64
         build-args: |
@@ -105,7 +105,7 @@ jobs:
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
     - name: Publish SBOM
       if: github.event_name == 'release'
-      uses: anchore/sbom-action@v0
+      uses: anchore/sbom-action@43a17d6e7add2b5535efe4dcae9952337c479a93 # v0.20.11
       with:
         image: ${{ steps.meta.outputs.tags }}
 
@@ -116,7 +116,7 @@ jobs:
       actions: read # for detecting the Github Actions environment.
       id-token: write # for creating OIDC tokens for signing.
       packages: write # for uploading attestations. (https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#known-issues)
-    # Must be refernced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
+    # Must be referenced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
       image: ${{ needs.publish-image.outputs.kargo-repo }}
@@ -127,6 +127,9 @@ jobs:
 
   publish-charts:
     needs: publish-image
+    permissions:
+      contents: read
+      packages: write # Used to push images to `ghcr.io`
     runs-on: ubuntu-latest
     steps:
     - name: Determine which repository to use
@@ -150,11 +153,11 @@ jobs:
         echo "VERSION is set to: $VERSION"
         echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: Set up Helm
-      uses: azure/setup-helm@v4
+      uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
       with:
-        version: '3.12.3'
+        version: '3.19.4'
     - name: Login to GHCR
-      uses: docker/login-action@v3
+      uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
       with:
         registry: ghcr.io
         username: ${{ github.actor }}
@@ -238,7 +241,7 @@ jobs:
       run: |
         make sign-and-notarize-cli
     - name: Publish CLI
-      uses: svenstaro/upload-release-action@v2
+      uses: svenstaro/upload-release-action@6b7fa9f267e90b50a19fef07b3596790bb941741 # v2.11.3
       with:
         file: bin/*
         file_glob: true
@@ -313,7 +316,7 @@ jobs:
       run: |
         apt update && apt install awscli -y
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v5
+      uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}
         aws-region: us-west-2
@@ -350,6 +353,7 @@ jobs:
       actions: read # To read the workflow path.
       id-token: write # To sign the provenance.
       contents: write # To add assets to a release.
+    # Must be referenced by a tag. https://github.com/slsa-framework/slsa-github-generator/blob/main/internal/builders/container/README.md#referencing-the-slsa-generator
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
     with:
       base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
