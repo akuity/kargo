@@ -30,352 +30,393 @@ func TestSelectImageDockerHub(t *testing.T) {
 
 	ctx := logging.ContextWithLogger(context.Background(), logger)
 
-	t.Run("digest strategy miss", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				Constraint:             "fake-constraint",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+	t.Run("digest strategy", func(t *testing.T) {
 
-		image, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, image)
+		t.Run("miss", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					Constraint:             "fake-constraint",
+					DiscoveryLimit:         1,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			image, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, image)
+		})
+
+		t.Run("success", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					Constraint:             "bookworm",
+					DiscoveryLimit:         1,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+			require.Len(t, images, 1)
+
+			image := images[0]
+			require.Equal(t, "bookworm", image.Tag)
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
+		t.Run("miss with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					Constraint:             "bookworm",
+					Platform:               "linux/made-up-arch",
+					DiscoveryLimit:         1,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
+
+		t.Run("success with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
+					Constraint:             "bookworm",
+					Platform:               platform,
+					DiscoveryLimit:         1,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+
+			image := images[0]
+			require.Equal(t, "bookworm", image.Tag)
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
 	})
 
-	t.Run("digest strategy success", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				Constraint:             "bookworm",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+	t.Run("lexical strategy", func(t *testing.T) {
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-		require.Len(t, images, 1)
+		t.Run("miss", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					AllowTagsRegexes:       []string{"^nothing-matches-this$"},
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
 
-		image := images[0]
-		require.Equal(t, "bookworm", image.Tag)
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
+
+		t.Run("success", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					DiscoveryLimit:         1,
+					// Limit tags to JUST "trixie" and "wheezy" to avoid blowing past
+					// Docker Hub rate limits. We'll expect to get "wheezy" back as the
+					// lexically greatest tag matching that constraint.
+					AllowTagsRegexes: []string{
+						`^trixie$`,
+						`^wheezy$`,
+					},
+					CacheByTag: true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+
+			image := images[0]
+			require.Contains(t, image.Tag, "wheezy")
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
+		t.Run("miss with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					// Limit tags to JUST "trixie" and "wheezy" to avoid blowing past
+					// Docker Hub rate limits.
+					AllowTagsRegexes: []string{
+						`^trixie$`,
+						`^wheezy$`,
+					},
+					Platform:       "linux/made-up-arch",
+					DiscoveryLimit: 1,
+					CacheByTag:     true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
+
+		t.Run("success with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
+					// Limit tags to JUST "trixie" and "wheezy" to avoid blowing past
+					// Docker Hub rate limits. We'll expect to get "wheezy" back as the
+					// lexically greatest tag matching that constraint.
+					AllowTagsRegexes: []string{
+						`^trixie$`,
+						`^wheezy$`,
+					},
+					Platform:       platform,
+					DiscoveryLimit: 1,
+					CacheByTag:     true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+
+			image := images[0]
+			require.Contains(t, image.Tag, "wheezy")
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
 	})
 
-	t.Run("digest strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				Constraint:             "bookworm",
-				Platform:               "linux/made-up-arch",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+	t.Run("newest build strategy", func(t *testing.T) {
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
+		t.Run("miss", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+					AllowTags:              "nothing-matches-this",
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
+
+		t.Run("success", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+					AllowTags:              `^bookworm-202310\d\d$`,
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+
+			image := images[0]
+			require.Contains(t, image.Tag, "bookworm-202310")
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
+		t.Run("miss with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+					AllowTags:              `^bookworm-202310\d\d$`,
+					Platform:               "linux/made-up-arch",
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Nil(t, images)
+		})
+
+		t.Run("success with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
+					AllowTags:              `^bookworm-202310\d\d$`,
+					Platform:               platform,
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
+
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
+
+			image := images[0]
+			require.Contains(t, image.Tag, "bookworm-202310")
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
+
 	})
 
-	t.Run("digest strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-				Constraint:             "bookworm",
-				Platform:               platform,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+	t.Run("semver strategy", func(t *testing.T) {
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
+		t.Run("miss", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					Constraint:             "^99.0",
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
 
-		image := images[0]
-		require.Equal(t, "bookworm", image.Tag)
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
 
-	t.Run("lexical strategy miss", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-				AllowTags:              "nothing-matches-this",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+		t.Run("success", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					Constraint:             "^12.0",
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
-	})
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
 
-	t.Run("lexical strategy success", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+			image := images[0]
+			semVer, err := semver.NewVersion(image.Tag)
+			require.NoError(t, err)
+			minimum := semver.MustParse("12.0.0")
+			require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
+			require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
+		t.Run("miss with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					Constraint:             "^12.0",
+					Platform:               "linux/made-up-arch",
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
 
-		image := images[0]
-		// So far, this is lexically the last Debian release
-		require.Contains(t, image.Tag, "wheezy")
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.Empty(t, images)
+		})
 
-	t.Run("lexical strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-				// Note: If we go older than jessie, we don't seem to get the correct
-				// digest, but jessie is ancient, so for now I am chalking it up to
-				// something having to do with the evolution of the Docker Hub API over
-				// time.
-				AllowTags:      "^jessie",
-				Platform:       "linux/made-up-arch",
-				DiscoveryLimit: 1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+		t.Run("success with platform constraint", func(t *testing.T) {
+			s, err := NewSelector(
+				t.Context(),
+				kargoapi.ImageSubscription{
+					RepoURL:                debianRepo,
+					ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
+					Constraint:             "^12.0",
+					Platform:               platform,
+					DiscoveryLimit:         1,
+					CacheByTag:             true,
+				},
+				getDockerHubCreds(),
+			)
+			require.NoError(t, err)
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
-	})
+			images, err := s.Select(ctx)
+			require.NoError(t, err)
+			require.NotEmpty(t, images)
 
-	t.Run("lexical strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyLexical,
-				AllowTags:              "^jessie",
-				Platform:               platform,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
+			image := images[0]
+			semVer, err := semver.NewVersion(image.Tag)
+			require.NoError(t, err)
+			minimum := semver.MustParse("12.0.0")
+			require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
+			require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
+			require.NotEmpty(t, image.Digest)
+			require.NotNil(t, image.CreatedAt)
+		})
 
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-
-		image := images[0]
-		require.Contains(t, image.Tag, "jessie")
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
-
-	t.Run("newest build strategy miss", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              "nothing-matches-this",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
-	})
-
-	t.Run("newest build strategy success", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              `^bookworm-202310\d\d$`,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-
-		image := images[0]
-		require.Contains(t, image.Tag, "bookworm-202310")
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
-
-	t.Run("newest build strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              `^bookworm-202310\d\d$`,
-				Platform:               "linux/made-up-arch",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Nil(t, images)
-	})
-
-	t.Run("newest build strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategyNewestBuild,
-				AllowTags:              `^bookworm-202310\d\d$`,
-				Platform:               platform,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-
-		image := images[0]
-		require.Contains(t, image.Tag, "bookworm-202310")
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
-
-	t.Run("semver strategy miss", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				Constraint:             "^99.0",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
-	})
-
-	t.Run("semver strategy success", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				Constraint:             "^12.0",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-
-		image := images[0]
-		semVer, err := semver.NewVersion(image.Tag)
-		require.NoError(t, err)
-		minimum := semver.MustParse("12.0.0")
-		require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
-		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
-	})
-
-	t.Run("semver strategy miss with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				Constraint:             "^12.0",
-				Platform:               "linux/made-up-arch",
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.Empty(t, images)
-	})
-
-	t.Run("semver strategy success with platform constraint", func(t *testing.T) {
-		s, err := NewSelector(
-			t.Context(),
-			kargoapi.ImageSubscription{
-				RepoURL:                debianRepo,
-				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
-				Constraint:             "^12.0",
-				Platform:               platform,
-				DiscoveryLimit:         1,
-			},
-			getDockerHubCreds(),
-		)
-		require.NoError(t, err)
-
-		images, err := s.Select(ctx)
-		require.NoError(t, err)
-		require.NotEmpty(t, images)
-
-		image := images[0]
-		semVer, err := semver.NewVersion(image.Tag)
-		require.NoError(t, err)
-		minimum := semver.MustParse("12.0.0")
-		require.True(t, semVer.GreaterThan(minimum) || semVer.Equal(minimum))
-		require.True(t, semVer.LessThan(semver.MustParse("13.0.0")))
-		require.NotEmpty(t, image.Digest)
-		require.NotNil(t, image.CreatedAt)
 	})
 }

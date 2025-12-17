@@ -40,7 +40,7 @@ func newTagBasedSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
 ) (*tagBasedSelector, error) {
-	base, err := newBaseSelector(sub, creds)
+	base, err := newBaseSelector(sub, creds, sub.CacheByTag)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
@@ -154,7 +154,7 @@ func (t *tagBasedSelector) getImagesByTags(
 			break
 		}
 
-		image, err := t.repoClient.getImageByTag(ctx, tag, t.platform)
+		image, err := t.repoClient.getImageByTag(ctx, tag, t.platformConstraint)
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image with tag %q: %w", tag, err)
 		}

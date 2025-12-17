@@ -518,6 +518,12 @@ controller:
       ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
       type: ""
 
+  imageCache:
+    ## @param controller.imageCache.cacheByTagPolicy establishes a policy regarding the caching of container image metadata using tags as keys in order to realize a performance boost. Doing so is safest when it is known that image tags are immutable (never overwritten). Permissible values are: "Forbid" (no caching by tag; silently enforced), "Allow" (subscriptions MAY opt-in to caching by tag), "Require" (subscriptions MUST opt-in to caching by tag; effectively this is developer acknowledgement of the cache by tag behavior), "Force" (caching by tag is silently enforced).
+    cacheByTagPolicy: Allow
+    ## @param controller.imageCache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
+    maxEntries: 100000
+
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
   argocd:

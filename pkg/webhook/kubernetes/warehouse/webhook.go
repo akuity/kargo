@@ -16,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/image"
 	"github.com/akuity/kargo/pkg/urls"
 	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
@@ -27,6 +28,7 @@ var warehouseGroupKind = schema.GroupKind{
 }
 
 type webhook struct {
+	cfg    libWebhook.Config
 	client client.Client
 
 	// The following behaviors are overridable for testing purposes:
@@ -40,8 +42,11 @@ type webhook struct {
 	validateSpecFn func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager) error {
-	w := newWebhook(mgr.GetClient())
+func SetupWebhookWithManager(
+	cfg libWebhook.Config,
+	mgr ctrl.Manager,
+) error {
+	w := newWebhook(cfg, mgr.GetClient())
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
 		WithDefaulter(w).
@@ -49,8 +54,9 @@ func SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-func newWebhook(kubeClient client.Client) *webhook {
+func newWebhook(cfg libWebhook.Config, kubeClient client.Client) *webhook {
 	w := &webhook{
+		cfg:    cfg,
 		client: kubeClient,
 	}
 	w.validateProjectFn = libWebhook.ValidateProject
@@ -224,6 +230,20 @@ func (w *webhook) validateImageSub(
 		if !image.ValidatePlatformConstraint(sub.Platform) {
 			errs = append(errs, field.Invalid(f.Child("platform"), sub.Platform, ""))
 		}
+	}
+	if sub.ImageSelectionStrategy != kargoapi.ImageSelectionStrategyDigest &&
+		!sub.CacheByTag &&
+		w.cfg.CacheByTagPolicy == warehouses.CacheByTagPolicyRequire {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("cacheByTag"),
+				sub.CacheByTag,
+				"caching image metadata by tag is required by controller "+
+					"configuration; enable with caution as this feature is safe only "+
+					"for subscriptions not involving \"mutable\" tags",
+			),
+		)
 	}
 	if err := seen.addImage(sub, f); err != nil {
 		errs = append(errs, field.Invalid(f, sub.RepoURL, err.Error()))

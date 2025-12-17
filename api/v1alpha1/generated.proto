@@ -1315,6 +1315,24 @@ message ImageSubscription {
   // +kubebuilder:validation:Maximum=100
   // +kubebuilder:default=20
   optional int32 discoveryLimit = 9;
+
+  // CacheByTag specifies whether to use image metadata cached by tag when
+  // discovering new image revisions. When set to true, image metadata cached by
+  // tag will be used when available, which can help reduce the number of
+  // requests made to the image repository and dramatically improve performance.
+  // When set to false, image metadata is only ever cached by digest. This
+  // setting is only safe to enable when it's known with certainty that relevant
+  // tags are "immutable" (i.e. the exact images referenced by tags remain
+  // constant over time and tags are never "re-used" to point to new/different
+  // images). This setting will automatically be ignored by the Digest selection
+  // strategy, which assumes that tags are mutable. Note that the Kargo
+  // administrator may choose to either disallow the use of this setting OR
+  // require that it be used (for non-Digest selection strategies). When
+  // configuration disagrees with the administrator's policy, artifact discovery
+  // will FAIL.
+  //
+  // +kubebuilder:default=false
+  optional bool cacheByTag = 15;
 }
 
 // IndexSelector defines selection criteria that match resources on the basis of

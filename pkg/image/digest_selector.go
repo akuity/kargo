@@ -34,7 +34,11 @@ func newDigestSelector(
 	sub kargoapi.ImageSubscription,
 	creds *Credentials,
 ) (Selector, error) {
-	base, err := newBaseSelector(sub, creds)
+	base, err := newBaseSelector(
+		sub,
+		creds,
+		false, // Do not use cached tags; this selector assumes tags are mutable
+	)
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
@@ -64,7 +68,7 @@ func (d *digestSelector) Select(
 
 	logger.Trace("selecting image")
 
-	img, err := d.repoClient.getImageByTag(ctx, d.mutableTag, d.platform)
+	img, err := d.repoClient.getImageByTag(ctx, d.mutableTag, d.platformConstraint)
 	if err != nil {
 		var te *transport.Error
 		if errors.As(err, &te) && te.StatusCode == http.StatusNotFound {
