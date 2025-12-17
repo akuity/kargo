@@ -120,7 +120,10 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		case *gl.PushEvent:
 			var repoURLs []string
 			if e.Repository != nil {
-				repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
+				repoURLs = []string{
+					urls.NormalizeGit(e.Repository.GitHTTPURL),
+					urls.NormalizeGit(e.Repository.GitSSHURL),
+				}
 			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,
@@ -131,7 +134,10 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		case *gl.TagEvent:
 			var repoURLs []string
 			if e.Repository != nil {
-				repoURLs = []string{urls.NormalizeGit(e.Repository.GitHTTPURL)}
+				repoURLs = []string{
+					urls.NormalizeGit(e.Repository.GitHTTPURL),
+					urls.NormalizeGit(e.Repository.GitSSHURL),
+				}
 			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,

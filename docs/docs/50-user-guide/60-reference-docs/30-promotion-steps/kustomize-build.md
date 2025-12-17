@@ -18,6 +18,7 @@ preceded by a [`git-clear`](git-clear.md) step and followed by
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a directory containing a `kustomization.yaml` file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `outPath` | `string` | Y | Path to the file or directory where rendered manifests are to be written. If the path ends with `.yaml` or `.yml` it is presumed to indicate a file and is otherwise presumed to indicate a directory. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `outputFormat` | `string` | N | Specifies the naming convention for output files when writing to a directory. `kargo` (default) uses `[namespace-]kind-name.yaml` format (e.g., `deployment-myapp.yaml` or `default-deployment-myapp.yaml`). `kustomize` matches the naming convention of `kustomize build -o dir/`, using `[namespace_]group_version_kind_name.yaml` format (e.g., `apps_v1_deployment_myapp.yaml` or `default_apps_v1_deployment_myapp.yaml`). |
 | `plugin.helm.apiVersions` | `[]string` | N | Optionally specifies a list of supported API versions to be used when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes API versions. |
 | `plugin.helm.kubeVersion` | `string` | N | Optionally specifies a Kubernetes version to be assumed when rendering manifests using Kustomize's Helm chart plugin. This is useful for charts that may contain logic specific to different Kubernetes versions. |
 
@@ -94,5 +95,37 @@ steps:
   config:
     path: ./src/stages/${{ ctx.stage }}
     outPath: ./out
+# Commit, push, etc...
+```
+
+### Using Kustomize Output Format
+
+By default, `kustomize-build` uses the Kargo naming convention for output files
+(`[namespace-]kind-name.yaml`). If you prefer filenames that match the output of
+`kustomize build -o dir/`, you can set `outputFormat: kustomize` to use the
+Kustomize naming convention (`[namespace_]group_version_kind_name.yaml`).
+
+```yaml
+vars:
+- name: gitRepo
+  value: https://github.com/example/repo.git
+steps:
+- uses: git-clone
+  config:
+    repoURL: ${{ vars.gitRepo }}
+    checkout:
+    - commit: ${{ commitFrom(vars.gitRepo).ID }}
+      path: ./src
+    - branch: stage/${{ ctx.stage }}
+      create: true
+      path: ./out
+- uses: git-clear
+  config:
+    path: ./out
+- uses: kustomize-build
+  config:
+    path: ./src/stages/${{ ctx.stage }}
+    outPath: ./out
+    outputFormat: kustomize
 # Commit, push, etc...
 ```

@@ -15,9 +15,17 @@ func ValidateWebhookReceivers(
 	errs := append(field.ErrorList{},
 		validateUniqueNames(f, webhookReceivers)...,
 	)
-	return append(errs,
+	errs = append(errs,
 		validateMutuallyExclusive(f, webhookReceivers)...,
 	)
+	for i, r := range webhookReceivers {
+		if r.Generic != nil {
+			errs = append(errs,
+				validateGenericConfig(i, r.Generic)...,
+			)
+		}
+	}
+	return errs
 }
 
 func validateMutuallyExclusive(
@@ -50,6 +58,9 @@ func validateMutuallyExclusive(
 		}
 		if r.Gitea != nil {
 			receivers = append(receivers, "Gitea")
+		}
+		if r.Generic != nil {
+			receivers = append(receivers, "Generic")
 		}
 		if len(receivers) > 1 {
 			errs = append(errs, field.Forbidden(
@@ -86,4 +97,44 @@ func validateUniqueNames(
 		dupes[r.Name] = i
 	}
 	return errs
+}
+
+func validateGenericConfig(
+	cfgIndex int,
+	cfg *kargoapi.GenericWebhookReceiverConfig,
+) field.ErrorList {
+	var errs field.ErrorList
+	for i, action := range cfg.Actions {
+		errs = append(errs, validateGenericTargets(cfgIndex, i, action.TargetSelectionCriteria)...)
+	}
+	return errs
+}
+
+func validateGenericTargets(
+	cfgIndex, actionIndex int,
+	targets []kargoapi.GenericWebhookTargetSelectionCriteria,
+) []*field.Error {
+	var errs field.ErrorList
+	for i, target := range targets {
+		if selectionTargetCriteriaIsEmpty(&target) {
+			targetPath := fmt.Sprintf(
+				"spec.webhookReceivers[%d].generic.actions[%d].targetSelectionCriteria[%d]",
+				cfgIndex, actionIndex, i,
+			)
+			errs = append(errs, field.Invalid(
+				field.NewPath(targetPath),
+				target,
+				"at least one of name, labelSelector, or indexSelector must be specified for target",
+			))
+		}
+	}
+	return errs
+}
+
+// name, labelSelector, and indexSelector are mutually exclusive; at least one must be set.
+func selectionTargetCriteriaIsEmpty(t *kargoapi.GenericWebhookTargetSelectionCriteria) bool {
+	return t.Name == "" &&
+		len(t.LabelSelector.MatchLabels) == 0 &&
+		len(t.LabelSelector.MatchExpressions) == 0 &&
+		len(t.IndexSelector.MatchIndices) == 0
 }

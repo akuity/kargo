@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -392,4 +393,80 @@ func Test_gitCloner_run(t *testing.T) {
 		},
 		res.Output["commits"],
 	)
+}
+
+func Test_gitCloner_run_with_submodules(t *testing.T) {
+	// Set up a test Git server in-process
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+		},
+	)
+	require.NoError(t, service.Setup())
+	server := httptest.NewServer(service)
+	t.Cleanup(server.Close)
+
+	// Create submodule remote repo and push a file
+	subRepoURL := fmt.Sprintf("%s/sub.git", server.URL)
+	subRepo, err := git.Clone(subRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = subRepo.Close()
+	})
+	err = os.WriteFile(filepath.Join(subRepo.Dir(), "sub.txt"), []byte("sub"), 0o600)
+	require.NoError(t, err)
+	err = subRepo.AddAllAndCommit("Initial commit sub", nil)
+	require.NoError(t, err)
+	err = subRepo.Push(nil)
+	require.NoError(t, err)
+
+	// Create main repo and add the submodule
+	mainRepoURL := fmt.Sprintf("%s/main.git", server.URL)
+	mainRepo, err := git.Clone(mainRepoURL, nil, nil)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = mainRepo.Close()
+	})
+
+	// Use git submodule add to create proper submodule metadata
+	cmd := exec.Command("git", "submodule", "add", "-b", "master", subRepoURL, "sub")
+	cmd.Dir = mainRepo.Dir()
+	out, err := cmd.CombinedOutput()
+	require.NoErrorf(t, err, "git submodule add failed: %s", string(out))
+
+	// Commit and push the submodule addition
+	err = mainRepo.AddAllAndCommit("Add submodule", nil)
+	require.NoError(t, err)
+	err = mainRepo.Push(nil)
+	require.NoError(t, err)
+
+	mainCommitID, err := mainRepo.LastCommitID()
+	require.NoError(t, err)
+
+	// Run git-cloner with recurseSubmodules = true
+	r := newGitCloner(promotion.StepRunnerCapabilities{
+		CredsDB: &credentials.FakeDB{},
+	})
+	runner, ok := r.(*gitCloner)
+	require.True(t, ok)
+
+	stepCtx := &promotion.StepContext{
+		WorkDir: t.TempDir(),
+	}
+
+	res, err := runner.run(
+		t.Context(),
+		stepCtx,
+		builtin.GitCloneConfig{
+			RepoURL:           mainRepoURL,
+			Checkout:          []builtin.Checkout{{Commit: mainCommitID, Path: "src"}},
+			RecurseSubmodules: true,
+		},
+	)
+	require.NoError(t, err)
+	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+
+	// Assert submodule file was populated inside worktree
+	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "src", "sub", "sub.txt"))
 }

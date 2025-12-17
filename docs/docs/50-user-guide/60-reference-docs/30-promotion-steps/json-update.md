@@ -37,8 +37,10 @@ This pattern is commonly used when managing configuration files that need to
 stay synchronized with deployed container versions.
 
 :::info
+
 For more information on `imageFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ```yaml

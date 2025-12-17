@@ -319,6 +319,187 @@ spec:
                       required:
                       - secretRef
                       type: object
+                    generic:
+                      description: Generic contains the configuration for a generic
+                        webhook receiver.
+                      properties:
+                        actions:
+                          description: Actions is a list of actions to be performed
+                            when a webhook event is received.
+                          items:
+                            description: |-
+                              GenericWebhookAction describes an action to be performed on a resource
+                              and the conditions under which it should be performed.
+                            properties:
+                              action:
+                                description: |-
+                                  ActionType indicates the type of action to be performed. `Refresh` is the
+                                  only currently supported action.
+                                enum:
+                                - Refresh
+                                type: string
+                              parameters:
+                                additionalProperties:
+                                  type: string
+                                description: |-
+                                  Parameters contains additional, action-specific parameters. Values may be
+                                  static or extracted from the request using expressions.
+                                type: object
+                              targetSelectionCriteria:
+                                description: |-
+                                  TargetSelectionCriteria is a list of selection criteria for the resources on which the
+                                  action should be performed.
+                                items:
+                                  description: |-
+                                    GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some
+                                    action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+                                    however, at least one must be specified. When multiple criteria are specified, the
+                                    results are the combined (logical AND) of the criteria.
+                                  properties:
+                                    indexSelector:
+                                      description: |-
+                                        IndexSelector is a selector used to identify cached target resources by cache key.
+                                        If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+                                      properties:
+                                        matchIndices:
+                                          description: MatchIndices is a list of index
+                                            selector requirements.
+                                          items:
+                                            description: |-
+                                              IndexSelectorRequirement encapsulates a requirement used to select indexes
+                                              based on specific criteria.
+                                            properties:
+                                              key:
+                                                description: Key is the key of the
+                                                  index.
+                                                enum:
+                                                - subscribedURLs
+                                                - receiverPaths
+                                                type: string
+                                              operator:
+                                                description: |-
+                                                  Operator indicates the operation that should be used to evaluate
+                                                  whether the selection requirement is satisfied.
+
+                                                  kubebuilder:validation:Enum=Equal;NotEqual;
+                                                type: string
+                                              value:
+                                                description: |-
+                                                  Value can be a static string or an expression that will be evaluated.
+
+                                                  kubebuilder:validation:Required
+                                                type: string
+                                            required:
+                                            - key
+                                            - operator
+                                            - value
+                                            type: object
+                                          minItems: 1
+                                          type: array
+                                      type: object
+                                    kind:
+                                      description: Kind is the kind of the target
+                                        resource.
+                                      enum:
+                                      - Warehouse
+                                      type: string
+                                    labelSelector:
+                                      description: |-
+                                        LabelSelector is a label selector to identify the target resources.
+                                        If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+                                      properties:
+                                        matchExpressions:
+                                          description: matchExpressions is a list
+                                            of label selector requirements. The requirements
+                                            are ANDed.
+                                          items:
+                                            description: |-
+                                              A label selector requirement is a selector that contains values, a key, and an operator that
+                                              relates the key and values.
+                                            properties:
+                                              key:
+                                                description: key is the label key
+                                                  that the selector applies to.
+                                                type: string
+                                              operator:
+                                                description: |-
+                                                  operator represents a key's relationship to a set of values.
+                                                  Valid operators are In, NotIn, Exists and DoesNotExist.
+                                                type: string
+                                              values:
+                                                description: |-
+                                                  values is an array of string values. If the operator is In or NotIn,
+                                                  the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                                                  the values array must be empty. This array is replaced during a strategic
+                                                  merge patch.
+                                                items:
+                                                  type: string
+                                                type: array
+                                                x-kubernetes-list-type: atomic
+                                            required:
+                                            - key
+                                            - operator
+                                            type: object
+                                          type: array
+                                          x-kubernetes-list-type: atomic
+                                        matchLabels:
+                                          additionalProperties:
+                                            type: string
+                                          description: |-
+                                            matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                                            map is equivalent to an element of matchExpressions, whose key field is "key", the
+                                            operator is "In", and the values array contains only "value". The requirements are ANDed.
+                                          type: object
+                                      type: object
+                                      x-kubernetes-map-type: atomic
+                                    name:
+                                      description: |-
+                                        Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+                                        are also specified, the results are the combined (logical AND) of the criteria.
+                                      type: string
+                                  required:
+                                  - kind
+                                  type: object
+                                minItems: 1
+                                type: array
+                              whenExpression:
+                                description: |-
+                                  WhenExpression defines criteria that a request must meet to run this
+                                  action.
+                                type: string
+                            required:
+                            - action
+                            type: object
+                          minItems: 1
+                          type: array
+                        secretRef:
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret must be in the same namespace as the
+                            ProjectConfig.
+
+                            For cluster-scoped webhook receivers, the referenced Secret must be in the
+                            designated "cluster Secrets" namespace.
+
+                            The Secret's data map is expected to contain a `secret` key whose value
+                            does NOT need to be shared directly with the sender. It is used only by
+                            Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
+                            shared secret.
+                          properties:
+                            name:
+                              default: ""
+                              description: |-
+                                Name of the referent.
+                                This field is effectively required, but due to backwards compatibility is
+                                allowed to be empty. Instances of this type with an empty value here are
+                                almost certainly wrong.
+                                More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                              type: string
+                          type: object
+                          x-kubernetes-map-type: atomic
+                      required:
+                      - secretRef
+                      type: object
                     gitea:
                       description: |-
                         Gitea contains the configuration for a webhook receiver that is compatible

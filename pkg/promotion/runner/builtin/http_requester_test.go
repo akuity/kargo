@@ -132,6 +132,15 @@ func Test_httpRequester_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid response content type",
+			config: promotion.Config{
+				"responseContentType": "invalid",
+			},
+			expectedProblems: []string{
+				"responseContentType: Does not match pattern",
+			},
+		},
+		{
 			name: "output name not specified",
 			config: promotion.Config{
 				"outputs": []promotion.Config{{}},
@@ -246,10 +255,11 @@ func Test_httpRequester_run(t *testing.T) {
 			},
 		},
 		{
-			name: "success and not failed; non-json body",
+			name: "unknown content-type with invalid JSON leaves body empty",
 			handler: func(w http.ResponseWriter, _ *http.Request) {
-				// This is a non-JSON body
-				_, err := w.Write([]byte(`this is just a regular string`))
+				// Unknown content-type with invalid JSON should leave body as empty map
+				w.Header().Set("Content-Type", "text/html")
+				_, err := w.Write([]byte(`<html>hello</html>`))
 				require.NoError(t, err)
 			},
 			cfg: builtin.HTTPConfig{
@@ -259,23 +269,12 @@ func Test_httpRequester_run(t *testing.T) {
 						Name:           "status",
 						FromExpression: "response.status",
 					},
-					{
-						Name:           "theMeaningOfLife",
-						FromExpression: "response.body.theMeaningOfLife",
-					},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-				require.Equal(
-					t,
-					map[string]any{
-						"status":           int64(http.StatusOK),
-						"theMeaningOfLife": nil,
-					},
-					res.Output,
-				)
+				require.Equal(t, map[string]any{"status": int64(http.StatusOK)}, res.Output)
 			},
 		},
 		{
@@ -411,6 +410,154 @@ func Test_httpRequester_run(t *testing.T) {
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 			},
 		},
+		{
+			name: "text/plain response with numeric content",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				_, err := w.Write([]byte(`1`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: `response.body == "1"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "numeric_response",
+						FromExpression: "response.body",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"numeric_response": "1",
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "text/plain response with word content",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+				_, err := w.Write([]byte(`one`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: `response.body == "one"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "word_response",
+						FromExpression: "response.body",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"word_response": "one",
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "YAML response with application/yaml content-type",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/yaml")
+				_, err := w.Write([]byte("status: ok\ncount: 42\n"))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				SuccessExpression: `response.body.status == "ok"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "yaml_status",
+						FromExpression: "response.body.status",
+					},
+					{
+						Name:           "yaml_count",
+						FromExpression: "response.body.count",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"yaml_status": "ok",
+						// sigs.k8s.io/yaml converts YAML to JSON first, so integers become float64
+						"yaml_count": float64(42),
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "responseContentType config override forces YAML parsing",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "text/plain")
+				_, err := w.Write([]byte("key: value\n"))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				ResponseContentType: "application/yaml",
+				SuccessExpression:   `response.body.key == "value"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "yaml_key",
+						FromExpression: "response.body.key",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"yaml_key": "value",
+					},
+					res.Output,
+				)
+			},
+		},
+		{
+			name: "responseContentType config override forces text/plain parsing",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, err := w.Write([]byte(`{"foo": "bar"}`))
+				require.NoError(t, err)
+			},
+			cfg: builtin.HTTPConfig{
+				ResponseContentType: "text/plain",
+				SuccessExpression:   `response.body == "{\"foo\": \"bar\"}"`,
+				Outputs: []builtin.HTTPOutput{
+					{
+						Name:           "raw_body",
+						FromExpression: "response.body",
+					},
+				},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(
+					t,
+					map[string]any{
+						"raw_body": `{"foo": "bar"}`,
+					},
+					res.Output,
+				)
+			},
+		},
 	}
 
 	h := &httpRequester{}
@@ -496,9 +643,10 @@ func Test_httpRequester_getClient(t *testing.T) {
 
 func Test_httpRequester_buildExprEnv(t *testing.T) {
 	testCases := []struct {
-		name       string
-		resp       *http.Response
-		assertions func(*testing.T, map[string]any, error)
+		name                string
+		resp                *http.Response
+		responseContentType string
+		assertions          func(*testing.T, map[string]any, error)
 	}{
 		{
 			name: "response body Content-Length exceeds limit",
@@ -592,19 +740,112 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 			},
 			assertions: func(t *testing.T, _ map[string]any, err error) {
 				require.Error(t, err)
-				require.ErrorContains(t, err, "failed to parse response")
+				require.ErrorContains(t, err, "failed to parse JSON response")
 			},
 		},
 		{
-			name: "JSON content-type but unexpected string body",
+			name: "JSON string response succeeds",
 			resp: &http.Response{
 				StatusCode: http.StatusOK,
 				Header:     http.Header{"Content-Type": []string{"application/json"}},
 				Body:       io.NopCloser(strings.NewReader(`"foo"`)),
 			},
-			assertions: func(t *testing.T, _ map[string]any, err error) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "unexpected type when unmarshaling")
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Equal(t, "foo", body)
+			},
+		},
+		{
+			name: "JSON number response succeeds",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`42`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Equal(t, float64(42), body)
+			},
+		},
+		{
+			name: "JSON boolean response succeeds",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`true`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Equal(t, true, body)
+			},
+		},
+		{
+			name: "JSON null response succeeds",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`null`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Nil(t, body)
+			},
+		},
+		{
+			name: "case-insensitive JSON content-type",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"APPLICATION/JSON"}},
+				Body:       io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "bar", body["foo"])
+			},
+		},
+		{
+			name: "unknown content-type with invalid JSON leaves body empty",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/html"}},
+				Body:       io.NopCloser(strings.NewReader(`<html>hello</html>`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Equal(t, map[string]any{}, body)
+			},
+		},
+		{
+			name: "text/plain with JSON-like content stays as string",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain"}},
+				Body:       io.NopCloser(strings.NewReader(`{"key": "value"}`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				// Should be a string, not parsed as JSON
+				require.Equal(t, `{"key": "value"}`, body)
+			},
+		},
+		{
+			name: "empty content-type with non-JSON body leaves body empty",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{},
+				Body:       io.NopCloser(strings.NewReader(`hello world`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				require.Equal(t, map[string]any{}, body)
 			},
 		},
 		{
@@ -624,11 +865,202 @@ func Test_httpRequester_buildExprEnv(t *testing.T) {
 				require.Equal(t, map[string]any{"foo": "bar"}, body)
 			},
 		},
+		{
+			name: "text/plain with numeric content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`1`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "1", body)
+			},
+		},
+		{
+			name: "text/plain with float content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`3.14`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "3.14", body)
+			},
+		},
+		{
+			name: "text/plain with word content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`one`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "one", body)
+			},
+		},
+		{
+			name: "text/plain with sentence content",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain; charset=utf-8"}},
+				Body:       io.NopCloser(strings.NewReader(`this is not json`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				bodyAny, ok := env["response"].(map[string]any)["body"]
+				require.True(t, ok)
+				body, ok := bodyAny.(string)
+				require.True(t, ok)
+				require.Equal(t, "this is not json", body)
+			},
+		},
+		{
+			name: "application/yaml content-type parses as YAML",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/yaml"}},
+				Body:       io.NopCloser(strings.NewReader("foo: bar\nbaz: 42\n")),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "bar", body["foo"])
+				// sigs.k8s.io/yaml converts YAML to JSON first, so integers become float64
+				require.Equal(t, float64(42), body["baz"])
+			},
+		},
+		{
+			name: "text/yaml content-type parses as YAML",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/yaml"}},
+				Body:       io.NopCloser(strings.NewReader("items:\n  - one\n  - two\n")),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				items := body["items"].([]any)                                    // nolint:forcetypeassert
+				require.Len(t, items, 2)
+				require.Equal(t, "one", items[0])
+				require.Equal(t, "two", items[1])
+			},
+		},
+		{
+			name: "application/x-yaml content-type parses as YAML",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/x-yaml"}},
+				Body:       io.NopCloser(strings.NewReader("key: value\n")),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "value", body["key"])
+			},
+		},
+		{
+			name: "invalid YAML body returns error",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/yaml"}},
+				Body:       io.NopCloser(strings.NewReader("foo: [bar\n")),
+			},
+			assertions: func(t *testing.T, _ map[string]any, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "failed to parse YAML response")
+			},
+		},
+		// responseContentType config override tests
+		{
+			name: "responseContentType override forces JSON parsing",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain"}},
+				Body:       io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
+			},
+			responseContentType: "application/json",
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "bar", body["foo"])
+			},
+		},
+		{
+			name: "responseContentType override forces YAML parsing",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/plain"}},
+				Body:       io.NopCloser(strings.NewReader("foo: bar\n")),
+			},
+			responseContentType: "application/yaml",
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "bar", body["foo"])
+			},
+		},
+		{
+			name: "responseContentType override forces text/plain parsing",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+				Body:       io.NopCloser(strings.NewReader(`{"foo": "bar"}`)),
+			},
+			responseContentType: "text/plain",
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"] // nolint:forcetypeassert
+				// Should be a string, not parsed as JSON
+				require.Equal(t, `{"foo": "bar"}`, body)
+			},
+		},
+		{
+			name: "responseContentType override text/yaml works",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"text/html"}},
+				Body:       io.NopCloser(strings.NewReader("key: value\n")),
+			},
+			responseContentType: "text/yaml",
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, "value", body["key"])
+			},
+		},
+		{
+			name: "unknown content-type with valid JSON falls back to JSON",
+			resp: &http.Response{
+				StatusCode: http.StatusOK,
+				Header:     http.Header{"Content-Type": []string{"application/octet-stream"}},
+				Body:       io.NopCloser(strings.NewReader(`{"success": true}`)),
+			},
+			assertions: func(t *testing.T, env map[string]any, err error) {
+				require.NoError(t, err)
+				body := env["response"].(map[string]any)["body"].(map[string]any) // nolint:forcetypeassert
+				require.Equal(t, true, body["success"])
+			},
+		},
 	}
 	h := &httpRequester{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			env, err := h.buildExprEnv(context.Background(), testCase.resp)
+			env, err := h.buildExprEnv(context.Background(), testCase.resp, testCase.responseContentType)
 			testCase.assertions(t, env, err)
 		})
 	}
@@ -838,6 +1270,93 @@ func Test_httpRequester_buildOutputs(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			outputs, err := h.buildOutputs(testCase.outputExprs, nil)
 			testCase.assertions(t, outputs, err)
+		})
+	}
+}
+
+func Test_httpRequester_determineResponseParseMode(t *testing.T) {
+	testCases := []struct {
+		name        string
+		contentType string
+		expected    httpResponseParseMode
+	}{
+		{
+			name:        "application/json returns JSON mode",
+			contentType: "application/json",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "APPLICATION/JSON (uppercase) returns JSON mode",
+			contentType: "APPLICATION/JSON",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "Application/Json (mixed case) returns JSON mode",
+			contentType: "Application/Json",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "application/yaml returns YAML mode",
+			contentType: "application/yaml",
+			expected:    httpParseModeYAML,
+		},
+		{
+			name:        "text/yaml returns YAML mode",
+			contentType: "text/yaml",
+			expected:    httpParseModeYAML,
+		},
+		{
+			name:        "application/x-yaml returns YAML mode",
+			contentType: "application/x-yaml",
+			expected:    httpParseModeYAML,
+		},
+		{
+			name:        "APPLICATION/YAML (uppercase) returns YAML mode",
+			contentType: "APPLICATION/YAML",
+			expected:    httpParseModeYAML,
+		},
+		{
+			name:        "TEXT/YAML (uppercase) returns YAML mode",
+			contentType: "TEXT/YAML",
+			expected:    httpParseModeYAML,
+		},
+		{
+			name:        "text/plain returns text mode",
+			contentType: "text/plain",
+			expected:    httpParseModeText,
+		},
+		{
+			name:        "TEXT/PLAIN (uppercase) returns text mode",
+			contentType: "TEXT/PLAIN",
+			expected:    httpParseModeText,
+		},
+		{
+			name:        "empty string falls back to JSON mode",
+			contentType: "",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "text/html falls back to JSON mode",
+			contentType: "text/html",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "application/octet-stream falls back to JSON mode",
+			contentType: "application/octet-stream",
+			expected:    httpParseModeJSON,
+		},
+		{
+			name:        "unknown/type falls back to JSON mode",
+			contentType: "unknown/type",
+			expected:    httpParseModeJSON,
+		},
+	}
+
+	h := &httpRequester{}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := h.determineResponseParseMode(tc.contentType)
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }

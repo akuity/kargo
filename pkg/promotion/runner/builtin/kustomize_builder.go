@@ -13,8 +13,10 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/resmap"
+	"sigs.k8s.io/kustomize/api/resource"
 	kustypes "sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
@@ -97,7 +99,7 @@ func (k *kustomizeBuilder) run(
 	}
 
 	// Write the built manifests to the output path.
-	if err := k.writeResult(rm, outPath); err != nil {
+	if err = k.writeResult(rm, outPath, cfg.OutputFormat); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"failed to write built manifests to %q: %w", cfg.OutPath,
 			fs.SanitizePathError(err, stepCtx.WorkDir),
@@ -106,7 +108,7 @@ func (k *kustomizeBuilder) run(
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, nil
 }
 
-func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
+func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string, outputFmt *builtin.OutputFormat) error {
 	if ext := filepath.Ext(outPath); ext == ".yaml" || ext == ".yml" {
 		if err := os.MkdirAll(filepath.Dir(outPath), 0o700); err != nil {
 			return err
@@ -122,28 +124,20 @@ func (k *kustomizeBuilder) writeResult(rm resmap.ResMap, outPath string) error {
 	if err := os.MkdirAll(outPath, 0o700); err != nil {
 		return err
 	}
-	for _, r := range rm.Resources() {
-		kind, namespace, name := r.GetKind(), r.GetNamespace(), r.GetName()
-		if kind == "" || name == "" {
-			return fmt.Errorf("resource kind and name of %q must be non-empty to write to a directory", r.CurId())
-		}
 
-		fileName := fmt.Sprintf("%s-%s", kind, name)
-		if namespace != "" {
-			fileName = fmt.Sprintf("%s-%s", namespace, fileName)
-		}
-
-		b, err := r.AsYAML()
-		if err != nil {
-			return fmt.Errorf("failed to convert %q to YAML: %w", r.CurId(), err)
-		}
-
-		path := filepath.Join(outPath, fmt.Sprintf("%s.yaml", strings.ToLower(fileName)))
-		if err = os.WriteFile(path, b, 0o600); err != nil {
-			return err
-		}
+	// Write to the directory based on the configured format.
+	format := builtin.Kargo
+	if outputFmt != nil {
+		format = *outputFmt
 	}
-	return nil
+	switch format {
+	case builtin.Kargo:
+		return k.writeIndividualFiles(outPath, rm, k.fileNameKargo)
+	case builtin.Kustomize:
+		return k.writeIndividualFiles(outPath, rm, k.fileNameKustomize)
+	default:
+		return fmt.Errorf("unsupported output format: %v", format)
+	}
 }
 
 // kustomizeBuild builds the manifests in the given directory using Kustomize.
@@ -183,4 +177,74 @@ func kustomizeBuild(kusFS filesys.FileSystem, path string, pluginCfg *builtin.Pl
 
 	k := krusty.MakeKustomizer(buildOptions)
 	return k.Run(kusFS, path)
+}
+
+// fileNameFunc generates a filename for a resource.
+type fileNameFunc func(res *resource.Resource, multipleNamespaces bool) string
+
+// writeIndividualFiles writes each resource to a separate file using the provided
+// filename generator function.
+//
+// The iteration pattern is borrowed from Kustomize to ensure consistent behavior
+// with `kustomize build -o dir/`.
+//
+// nolint:lll
+// xref: https://github.com/kubernetes-sigs/kustomize/blob/17a06a72be7fa8e3fd50b5536c2fb32f8a4126cf/kustomize/commands/build/writer.go
+//
+// Copyright 2019 The Kubernetes Authors.
+// SPDX-License-Identifier: Apache-2.0
+func (k *kustomizeBuilder) writeIndividualFiles(dirPath string, m resmap.ResMap, fileNameFn fileNameFunc) error {
+	byNamespace := m.GroupedByCurrentNamespace()
+	multiNs := len(byNamespace) > 1
+
+	for _, resList := range byNamespace {
+		for _, res := range resList {
+			if err := k.writeResource(dirPath, fileNameFn(res, multiNs), res); err != nil {
+				return err
+			}
+		}
+	}
+	for _, res := range m.ClusterScoped() {
+		if err := k.writeResource(dirPath, fileNameFn(res, false), res); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k *kustomizeBuilder) writeResource(path, fName string, res *resource.Resource) error {
+	m, err := res.Map()
+	if err != nil {
+		return err
+	}
+	yml, err := yaml.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(path, fName), yml, 0o600)
+}
+
+// fileNameKargo generates filenames in Kargo format: [namespace-]kind-name.yaml.
+// Namespace is always included when present on the resource.
+func (k *kustomizeBuilder) fileNameKargo(res *resource.Resource, _ bool) string {
+	kind, namespace, name := res.GetKind(), res.GetNamespace(), res.GetName()
+	if namespace != "" {
+		return strings.ToLower(fmt.Sprintf("%s-%s-%s.yaml", namespace, kind, name))
+	}
+	return strings.ToLower(fmt.Sprintf("%s-%s.yaml", kind, name))
+}
+
+// fileNameKustomize generates filenames in Kustomize format:
+// [namespace_]group_version_kind_name.yaml.
+// Namespace is only included when multiple namespaces are present in the
+// resource map.
+func (k *kustomizeBuilder) fileNameKustomize(res *resource.Resource, multipleNamespaces bool) string {
+	base := strings.ToLower(res.GetGvk().StringWoEmptyField()) + "_" + strings.ToLower(res.GetName()) + ".yaml"
+	if multipleNamespaces {
+		namespace := res.GetNamespace()
+		if namespace != "" {
+			return strings.ToLower(namespace) + "_" + base
+		}
+	}
+	return base
 }

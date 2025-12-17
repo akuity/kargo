@@ -9,7 +9,9 @@ description: Manages evidence creation, verification, and deletion for artifacts
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the [Akuity Platform](https://akuity.io/akuity-platform), versions v1.7 and above.
+
 :::
 
 The `jfrog-evidence` promotion step provides comprehensive integration with JFrog Artifactory's evidence management capabilities, allowing you to create, verify, and delete evidence for artifacts. This enables secure attestation and verification of your promotion workflows through cryptographically signed evidence that can track artifact provenance, test results, and compliance status.
