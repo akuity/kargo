@@ -7,8 +7,8 @@ on:
   schedule:
   - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
   workflow_dispatch:
-jobs:
 
+jobs:
   publish-image:
     permissions:
       contents: write # Used to upload assets
