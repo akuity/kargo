@@ -487,7 +487,9 @@ tag:
   developers.
 
   :::info
+
   For purposes of backwards compatibility, `Allow` is the default policy.
+
   :::
 
 - `Require`: Container image subscriptions MUST explicitly opt into caching
@@ -502,7 +504,9 @@ tag:
   not opt into caching image metadata by tag will be treated as if they had.
 
   :::info
+
   This is the recommended policy in an immutable-tags-only environment.
+
   :::
 
 Example configuration to allow (but not require) individual container image

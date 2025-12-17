@@ -114,21 +114,25 @@ fields:
 
   The default is `false`.
 
-  :::warning Use with caution!
+  :::warning[Use with caution!]
+
   This setting is safest if your tags are known to be "immutable" (i.e., tag
   always references the same image and is never updated to point to a different
   image).
 
   This setting does NOT apply to the `Digest` selection strategy, which assumes
   the one tag it subscribes to is a mutable one.
+
   :::
 
   :::warning
+
   Operators may also choose from a number of policies regarding the caching of
   image metadata using tags as keys. Some of these policies (`Forbid` and
   `Force`) can override an individual container image subscription's choice to
   cache metadata by tag or not. See
   [common configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md) for further details.
+
   :::
 
 #### Image Selection Strategies
@@ -248,6 +252,7 @@ strategies are:
   ```
 
   :::tip
+
   If your tags are known to be **immutable** (i.e., a tag always references the
   same image and is never updated to point to a different image), you can use
   the `cacheByTag` field to enable more aggressive caching of image metadata by
@@ -267,10 +272,12 @@ strategies are:
 
   :::
 
-  :::warning Use with caution!
+  :::warning[Use with caution!]
+
   Only enable `cacheByTag` if you are certain that all relevant tags are
   **immutable**. Using this with mutable tags (like `latest`) can cause Kargo
   to select stale images indefinitely.
+
   :::
 
 ### Git Repository Subscriptions
@@ -864,13 +871,15 @@ This enables significantly more aggressive caching of image metadata, which can
 reduce API calls and improve performance by orders of magnitude in repositories
 with large numbers of tags.
 
-:::warning Use with caution!
+:::warning[Use with caution!]
+
 Only enable this option if your tags are known to be **immutable**
 (i.e., a tag always references the same image and is never updated to point
 to a different image).
 
 This setting does not apply to the `Digest` selection strategy, which always
 assumes tags are mutable.
+
 :::
 
 ## Triggering Artifact Discovery Using Webhooks
