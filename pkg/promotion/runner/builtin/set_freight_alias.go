@@ -81,12 +81,12 @@ func (s *setFreightAlias) run(
 	// promotion-scoped one. There are valid use cases where a user may want to
 	// update the alias of a different Freight in the same project that is not
 	// currently being promoted
-	freight, err := api.GetFreightByNameOrAlias(ctx, s.kargoClient, stepCtx.Project, cfg.FreightID, "")
+	freight, err := api.GetFreightByNameOrAlias(ctx, s.kargoClient, stepCtx.Project, cfg.FreightName, "")
 	if err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.FreightID, stepCtx.Project, err),
+				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.FreightName, stepCtx.Project, err),
 			}
 	}
 
@@ -94,7 +94,7 @@ func (s *setFreightAlias) run(
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("freight %q not found in project %q", cfg.FreightID, stepCtx.Project),
+				Err: fmt.Errorf("freight %q not found in project %q", cfg.FreightName, stepCtx.Project),
 			}
 	}
 

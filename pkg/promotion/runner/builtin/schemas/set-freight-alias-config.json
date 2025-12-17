@@ -3,11 +3,11 @@
   "title": "SetFreightAliasConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["freightID","newAlias"],
+  "required": ["freightName","newAlias"],
   "properties": {
-    "freightID": {
+    "freightName": {
       "type": "string",
-      "description": "The ID of the Freight resource to update.",
+      "description": "The name of the Freight resource to update.",
       "minLength": 1
     },
     "newAlias": {

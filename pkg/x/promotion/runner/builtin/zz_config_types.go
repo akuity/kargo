@@ -542,8 +542,8 @@ type OCIDownloadConfig struct {
 }
 
 type SetFreightAliasConfig struct {
-	// The ID of the Freight resource to update.
-	FreightID string `json:"freightID"`
+	// The name of the Freight resource to update.
+	FreightName string `json:"freightName"`
 	// The desired new alias to set on the Freight.
 	NewAlias string `json:"newAlias"`
 }
