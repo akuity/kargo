@@ -19,36 +19,36 @@ import (
 func Test_setFreightAlias_convert(t *testing.T) {
 	tests := []validationTestCase{
 		{
-			name:   "both freightID and newAlias are not specified",
+			name:   "both freightName and newAlias are not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{
-				"(root): freightID is required",
+				"(root): freightName is required",
 				"(root): newAlias is required",
 			},
 		},
 		{
-			name: "freightID is not specified",
+			name: "freightName is not specified",
 			config: promotion.Config{
 				"newAlias": "stable",
 			},
 			expectedProblems: []string{
-				"(root): freightID is required",
+				"(root): freightName is required",
 			},
 		},
 		{
-			name: "freightID is empty",
+			name: "freightName is empty",
 			config: promotion.Config{
-				"freightID": "",
-				"newAlias":  "new-alias",
+				"freightName": "",
+				"newAlias":    "new-alias",
 			},
 			expectedProblems: []string{
-				"freightID: String length must be greater than or equal to 1",
+				"freightName: String length must be greater than or equal to 1",
 			},
 		},
 		{
 			name: "newAlias is not specified",
 			config: promotion.Config{
-				"freightID": "fake-freight-id",
+				"freightName": "fake-freight-id",
 			},
 			expectedProblems: []string{
 				"(root): newAlias is required",
@@ -57,8 +57,8 @@ func Test_setFreightAlias_convert(t *testing.T) {
 		{
 			name: "newAlias is empty",
 			config: promotion.Config{
-				"freightID": "fake-freight-id",
-				"newAlias":  "",
+				"freightName": "fake-freight-id",
+				"newAlias":    "",
 			},
 			expectedProblems: []string{
 				"newAlias: String length must be greater than or equal to 1",
@@ -67,9 +67,9 @@ func Test_setFreightAlias_convert(t *testing.T) {
 		{
 			name: "unknown field is not allowed",
 			config: promotion.Config{
-				"freightID":  "fake-freight-id",
-				"newAlias":   "new-alias",
-				"unexpected": "nope",
+				"freightName": "fake-freight-id",
+				"newAlias":    "new-alias",
+				"unexpected":  "nope",
 			},
 			expectedProblems: []string{
 				"(root): Additional property unexpected is not allowed",
@@ -78,8 +78,8 @@ func Test_setFreightAlias_convert(t *testing.T) {
 		{
 			name: "valid minimal config",
 			config: promotion.Config{
-				"freightID": "fake-freight-id",
-				"newAlias":  "new-alias",
+				"freightName": "fake-freight-id",
+				"newAlias":    "new-alias",
 			},
 		},
 	}

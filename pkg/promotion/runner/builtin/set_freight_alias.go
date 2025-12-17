@@ -72,16 +72,24 @@ func (s *setFreightAlias) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.SetFreightAliasConfig,
 ) (promotion.StepResult, error) {
-	// This step intentionally targets a Freight specified explicitly via
-	// `freightID` instead of implicitly operating on
-	// `stepCtx.TargetFreightRef`.
+	// This step requires selecting a Freight by its immutable identifier
+	// (`freightID` / name) rather than by alias.
 	//
-	// While most promotion steps act on the Freight currently being promoted,
-	// updating a Freight alias is a project-scoped mutation rather than a
-	// promotion-scoped one. There are valid use cases where a user may want to
-	// update the alias of a different Freight in the same project that is not
-	// currently being promoted
-	freight, err := api.GetFreightByNameOrAlias(ctx, s.kargoClient, stepCtx.Project, cfg.FreightName, "")
+	// Freight aliases are mutable and may be updated independently by multiple
+	// Stages within the same project. If alias-based selection were allowed,
+	// concurrent alias mutations could cause this step to resolve and mutate the
+	// wrong Freight.
+	//
+	// Using an immutable identifier guarantees deterministic behavior and avoids
+	// unintended cross-Stage side effects, even when multiple Stages update Freight
+	// aliases concurrently.
+	freight, err := api.GetFreightByNameOrAlias(
+		ctx,
+		s.kargoClient,
+		stepCtx.Project,
+		cfg.FreightName,
+		"",
+	)
 	if err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
@@ -98,29 +106,6 @@ func (s *setFreightAlias) run(
 			}
 	}
 
-	// Check if alias is already used by another Freight in the project
-	freightList := kargoapi.FreightList{}
-	if err := s.kargoClient.List(
-		ctx,
-		&freightList,
-		client.InNamespace(stepCtx.Project),
-		client.MatchingLabels{kargoapi.LabelKeyAlias: cfg.NewAlias},
-	); err != nil {
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("failed to list Freights in project %q to check for alias conflicts: %w", stepCtx.Project, err),
-			}
-	}
-
-	if len(freightList.Items) > 1 || (len(freightList.Items) == 1 && freightList.Items[0].Name != freight.Name) {
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf("alias %q is already in use by another Freight in project %q", cfg.NewAlias, stepCtx.Project),
-			}
-	}
-
 	patchBytes := []byte(
 		fmt.Sprintf(
 			`{"metadata":{"labels":{%q:%q}},"alias":%q}`,
@@ -131,6 +116,9 @@ func (s *setFreightAlias) run(
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 
+	// Alias uniqueness is enforced by the admission webhook.
+	// Do not pre-check for conflicts here, as doing so would be
+	// vulnerable to TOCTOU races.
 	if err := s.kargoClient.Patch(ctx, freight, patch); err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
