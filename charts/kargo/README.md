@@ -16,7 +16,7 @@
 
 | Name                                     | Description                                                                                                                                      | Value                       |
 | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------- |
-| `global.clusterResourcesNamespace`       | Indicates a namespace where cluster-scoped resources can be located.                                                                             | `kargo-resources-namespace` |
+| `global.clusterResourcesNamespace`       | is for resources associated with cluster-scoped resources and for which no cluster-scoped analog exists.                                         | `kargo-resources-namespace` |
 | `global.clusterSecretsNamespace`         | DEPRECATED( Use clusterResourcesNamespace instead ) Indicates a namespace where Secrets associated with cluster-scoped resources can be located. | `kargo-cluster-secrets`     |
 | `global.createClusterResourcesNamespace` | Indicates whether the `clusterResourcesNamespace` should be managed by the chart.                                                                | `true`                      |
 | `global.createClusterSecretsNamespace`   | DEPRECATED( Use clusterResourcesNamespace ) Indicates whether the `clusterSecretsNamespace` should be managed by the chart.                      | `true`                      |

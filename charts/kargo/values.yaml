@@ -17,7 +17,7 @@ image:
 
 ## @section Global Parameters
 global:
-  ## @param global.clusterResourcesNamespace Indicates a namespace where cluster-scoped resources can be located.
+  ## @param global.clusterResourcesNamespace is for resources associated with cluster-scoped resources and for which no cluster-scoped analog exists.
   clusterResourcesNamespace: kargo-resources-namespace
   ## @param global.clusterSecretsNamespace DEPRECATED( Use clusterResourcesNamespace instead ) Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
   clusterSecretsNamespace: kargo-cluster-secrets
