@@ -10,8 +10,8 @@ metadata:
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
-  {{/* Backwards-compatible helper for resolving the namespace for cluster-scoped resources */}}
-  {{- include "kargo.clusterResourcesNamespace" .  | nindent 2 }}
+  CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
+  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
   LOG_LEVEL: {{ quote .Values.externalWebhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.externalWebhooksServer.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
