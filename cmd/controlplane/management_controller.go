@@ -194,7 +194,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 					},
 					&corev1.Secret{}: {
 						Namespaces: map[string]cache.Config{
-							os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "kargo-cluster-secrets"): {},
+							os.GetEnv("CLUSTER_RESOURCES_NAMESPACE", "kargo-resources-namespace"): {},
 						},
 					},
 				},
