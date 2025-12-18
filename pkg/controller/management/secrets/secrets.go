@@ -11,10 +11,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 type ReconcilerConfig struct {
@@ -103,10 +105,7 @@ func (r *reconciler) Reconcile(
 		},
 		srcSecret,
 	); err != nil {
-		return ctrl.Result{}, fmt.Errorf(
-			"error getting source secret %q in namespace %q: %w",
-			req.Name, r.cfg.SourceNamespace, err,
-		)
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if !srcSecret.DeletionTimestamp.IsZero() {
@@ -118,7 +117,7 @@ func (r *reconciler) Reconcile(
 	// The reason to requeue is to ensure that a possible deletion of the Secret
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, srcSecret); ok || err != nil {
-		logger.Debug("ensured finalizer on source Secret")
+		logger.Debug("ensured finalizer on source Secret; requeuing")
 		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
@@ -126,18 +125,14 @@ func (r *reconciler) Reconcile(
 
 	// Remove the finalizer that was just copied over so that deletes of new
 	// secrets won't be blocked by anything.
-	if err := api.RemoveFinalizer(ctx, r.client, destSecret); err != nil {
-		return ctrl.Result{}, fmt.Errorf(
-			"error removing finalizer from destination Secret %q in namespace %q: %w",
-			req.Name, r.cfg.DestinationNamespace, err,
-		)
-	}
+	controllerutil.RemoveFinalizer(destSecret, kargoapi.FinalizerName)
 
 	destSecret.Namespace = r.cfg.DestinationNamespace
 	// Clear the ResourceVersion and UID from the copy so we can create/patch it in the
 	// destination namespace.
 	destSecret.ResourceVersion = ""
 	destSecret.UID = ""
+	destSecret.DeletionTimestamp = nil
 	if destSecret.Annotations == nil {
 		destSecret.Annotations = make(map[string]string, 1)
 	}
