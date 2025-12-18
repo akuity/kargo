@@ -13,7 +13,33 @@ import (
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/image"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/validation"
+)
+
+// CacheByTagPolicy represents a policy regarding caching of container image
+// metadata using image tags as keys.
+type CacheByTagPolicy string
+
+const (
+	// CacheByTagPolicyForbid indicates that caching by tag is forbidden. This
+	// is silently enforced. Any container image subscription that opts into
+	// caching by tag will be treated as if it does not.
+	CacheByTagPolicyForbid CacheByTagPolicy = "Forbid"
+	// CacheByTagPolicyAllow indicates that caching by tag is allowed. Container
+	// image subscriptions may opt into caching by tag.
+	CacheByTagPolicyAllow CacheByTagPolicy = "Allow"
+	// CacheByTagPolicyRequire indicates that caching by tag is required.
+	// Container image subscriptions must explicitly opt into caching by tag or
+	// their artifact discovery processes will fail. Requiring the explicit opt-in
+	// is tantamount to acknowledging the cache by tag behavior to minimize the
+	// potential for developers to be taken by surprise. This option sacrifices
+	// some small degree of usability for safety.
+	CacheByTagPolicyRequire CacheByTagPolicy = "Require"
+	// CacheByTagPolicyForce indicates that caching by tag is forced. This is
+	// silently enforced. Any container image subscription that does not opt into
+	// caching by tag will be treated as if it does.
+	CacheByTagPolicyForce CacheByTagPolicy = "Force"
 )
 
 func init() {
@@ -31,7 +57,8 @@ func init() {
 // imageSubscriber is an implementation of the Subscriber interface that
 // discovers container images from a container image repository.
 type imageSubscriber struct {
-	credentialsDB credentials.Database
+	credentialsDB    credentials.Database
+	cacheByTagPolicy CacheByTagPolicy
 }
 
 // newImageSubscriber returns an implementation of the Subscriber interface that
@@ -40,7 +67,15 @@ func newImageSubscriber(
 	_ context.Context,
 	credentialsDB credentials.Database,
 ) (Subscriber, error) {
-	return &imageSubscriber{credentialsDB: credentialsDB}, nil
+	return &imageSubscriber{
+		credentialsDB: credentialsDB,
+		cacheByTagPolicy: CacheByTagPolicy(
+			os.GetEnv(
+				"CACHE_BY_TAG_POLICY",
+				string(CacheByTagPolicyAllow),
+			),
+		),
+	}, nil
 }
 
 // ApplySubscriptionDefaults implements Subscriber.
@@ -140,6 +175,22 @@ func (i *imageSubscriber) ValidateSubscription(
 		}
 	}
 
+	// Validate cache settings
+	if sub.ImageSelectionStrategy != kargoapi.ImageSelectionStrategyDigest &&
+		!sub.CacheByTag &&
+		i.cacheByTagPolicy == CacheByTagPolicyRequire {
+		errs = append(
+			errs,
+			field.Invalid(
+				f.Child("cacheByTag"),
+				sub.CacheByTag,
+				"caching image metadata by tag is required by controller "+
+					"configuration; enable with caution as this feature is safe only "+
+					"for subscriptions not involving \"mutable\" tags",
+			),
+		)
+	}
+
 	// Validate DiscoveryLimit: Minimum=1, Maximum=100
 	if sub.DiscoveryLimit < 1 {
 		errs = append(errs, field.Invalid(
@@ -210,6 +261,23 @@ func (i *imageSubscriber) DiscoverArtifacts(
 		logger.Debug("obtained credentials for image repo")
 	} else {
 		logger.Debug("found no credentials for image repo")
+	}
+
+	switch i.cacheByTagPolicy {
+	case CacheByTagPolicyForbid:
+		imgSub.CacheByTag = false
+	case CacheByTagPolicyAllow:
+		// Leave as is
+	case CacheByTagPolicyRequire:
+		if !imgSub.CacheByTag {
+			return nil, fmt.Errorf(
+				"caching image metadata by tag is required by controller " +
+					"configuration; enable with caution as this feature is safe only " +
+					"for subscriptions not involving \"mutable\" tags",
+			)
+		}
+	case CacheByTagPolicyForce:
+		imgSub.CacheByTag = true
 	}
 
 	selector, err := image.NewSelector(ctx, *imgSub, regCreds)

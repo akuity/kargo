@@ -91,50 +91,53 @@ type ImageSubscription struct {
 	// the image tags that are considered in determining the newest revision of an image. This
 	// field is optional.
 	AllowTagsRegexes []string `json:"allowTagsRegexes,omitempty" protobuf:"bytes,2,rep,name=allowTagsRegexes"`
+	// CacheByTag specifies whether to cache image metadata by tag. This can improve performance
+	// but may lead to stale data if mutable tags are used.
+	CacheByTag bool `json:"cacheByTag,omitempty" protobuf:"varint,3,opt,name=cacheByTag"`
 	// Constraint specifies ImageSelectionStrategy-specific constraints on what new image
 	// revisions are permissible. Acceptable values for this field vary contextually by
 	// ImageSelectionStrategy. The field is optional for some strategies. Others either require
 	// it or ignore it. For strategies that treat this field as optional, specifying no value
 	// means "no constraints."
-	Constraint string `json:"constraint,omitempty" protobuf:"bytes,3,opt,name=constraint"`
+	Constraint string `json:"constraint,omitempty" protobuf:"bytes,4,opt,name=constraint"`
 	// DiscoveryLimit is an optional limit on the number of image references that can be
 	// discovered for this subscription. The limit is applied after filtering images based on
 	// the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is
 	// implicitly treated as if its value were "20". The upper limit for this field is 100.
-	DiscoveryLimit int64 `json:"discoveryLimit,omitempty" protobuf:"varint,4,opt,name=discoveryLimit"`
+	DiscoveryLimit int64 `json:"discoveryLimit,omitempty" protobuf:"varint,5,opt,name=discoveryLimit"`
 	// IgnoreTags is a list of tags that must be ignored when determining the newest version of
 	// an image. No regular expressions or glob patterns are supported yet. This field is
 	// optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact
 	// discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.
-	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,5,rep,name=ignoreTags"`
+	IgnoreTags []string `json:"ignoreTags,omitempty" protobuf:"bytes,6,rep,name=ignoreTags"`
 	// IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
 	// tags from consideration when determining the newest revision of an image. This field is
 	// optional.
-	IgnoreTagsRegexes []string `json:"ignoreTagsRegexes,omitempty" protobuf:"bytes,6,rep,name=ignoreTagsRegexes"`
+	IgnoreTagsRegexes []string `json:"ignoreTagsRegexes,omitempty" protobuf:"bytes,7,rep,name=ignoreTagsRegexes"`
 	// ImageSelectionStrategy specifies the rules for how to identify the newest version of the
 	// image specified by the RepoURL field. This field is optional. When left unspecified, the
 	// field is implicitly treated as if its value were "SemVer". Accepted values: "Digest",
 	// "Lexical", "NewestBuild", "SemVer".
-	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,7,opt,name=imageSelectionStrategy"`
+	ImageSelectionStrategy ImageSelectionStrategy `json:"imageSelectionStrategy,omitempty" protobuf:"bytes,8,opt,name=imageSelectionStrategy"`
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
-	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,8,opt,name=insecureSkipTLSVerify"`
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,9,opt,name=insecureSkipTLSVerify"`
 	// Platform is a string of the form <os>/<arch> that limits the tags that can be considered
 	// when searching for new versions of an image. This field is optional. When left
 	// unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller.
 	// Care should be taken to set this value correctly in cases where the image will run on a
 	// Kubernetes node with a different OS/architecture than the Kargo controller.
-	Platform string `json:"platform,omitempty" protobuf:"bytes,9,opt,name=platform"`
+	Platform string `json:"platform,omitempty" protobuf:"bytes,10,opt,name=platform"`
 	// RepoURL specifies the URL of the image repository to subscribe to. The value in this
 	// field MUST NOT include an image tag. This field is required.
-	RepoURL string `json:"repoURL" protobuf:"bytes,10,opt,name=repoURL"`
+	RepoURL string `json:"repoURL" protobuf:"bytes,11,opt,name=repoURL"`
 	// StrictSemvers specifies whether only "strict" semver tags should be considered. A
 	// "strict" semver tag is one containing ALL of major, minor, and patch version components.
 	// This is enabled by default, but only has any effect when the ImageSelectionStrategy is
 	// SemVer. This should be disabled cautiously, as it is not uncommon to tag container images
 	// with short Git commit hashes, which could be mistaken for a semver string containing the
 	// major version number only.
-	StrictSemvers *bool `json:"strictSemvers,omitempty" protobuf:"varint,11,opt,name=strictSemvers"`
+	StrictSemvers *bool `json:"strictSemvers,omitempty" protobuf:"varint,12,opt,name=strictSemvers"`
 }
 
 // CommitSelectionStrategy specifies the rules for how to identify the newest commit of

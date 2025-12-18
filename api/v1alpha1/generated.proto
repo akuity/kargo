@@ -1095,50 +1095,54 @@ message ImageSubscription {
   // field is optional.
   repeated string allowTagsRegexes = 2;
 
+  // CacheByTag specifies whether to cache image metadata by tag. This can improve performance
+  // but may lead to stale data if mutable tags are used.
+  optional bool cacheByTag = 3;
+
   // Constraint specifies ImageSelectionStrategy-specific constraints on what new image
   // revisions are permissible. Acceptable values for this field vary contextually by
   // ImageSelectionStrategy. The field is optional for some strategies. Others either require
   // it or ignore it. For strategies that treat this field as optional, specifying no value
   // means "no constraints."
-  optional string constraint = 3;
+  optional string constraint = 4;
 
   // DiscoveryLimit is an optional limit on the number of image references that can be
   // discovered for this subscription. The limit is applied after filtering images based on
   // the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is
   // implicitly treated as if its value were "20". The upper limit for this field is 100.
-  optional int64 discoveryLimit = 4;
+  optional int64 discoveryLimit = 5;
 
   // IgnoreTags is a list of tags that must be ignored when determining the newest version of
   // an image. No regular expressions or glob patterns are supported yet. This field is
   // optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact
   // discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.
-  repeated string ignoreTags = 5;
+  repeated string ignoreTags = 6;
 
   // IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude
   // tags from consideration when determining the newest revision of an image. This field is
   // optional.
-  repeated string ignoreTagsRegexes = 6;
+  repeated string ignoreTagsRegexes = 7;
 
   // ImageSelectionStrategy specifies the rules for how to identify the newest version of the
   // image specified by the RepoURL field. This field is optional. When left unspecified, the
   // field is implicitly treated as if its value were "SemVer". Accepted values: "Digest",
   // "Lexical", "NewestBuild", "SemVer".
-  optional string imageSelectionStrategy = 7;
+  optional string imageSelectionStrategy = 8;
 
   // InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
   // when connecting to the repository. This should be enabled only with great caution.
-  optional bool insecureSkipTLSVerify = 8;
+  optional bool insecureSkipTLSVerify = 9;
 
   // Platform is a string of the form <os>/<arch> that limits the tags that can be considered
   // when searching for new versions of an image. This field is optional. When left
   // unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller.
   // Care should be taken to set this value correctly in cases where the image will run on a
   // Kubernetes node with a different OS/architecture than the Kargo controller.
-  optional string platform = 9;
+  optional string platform = 10;
 
   // RepoURL specifies the URL of the image repository to subscribe to. The value in this
   // field MUST NOT include an image tag. This field is required.
-  optional string repoURL = 10;
+  optional string repoURL = 11;
 
   // StrictSemvers specifies whether only "strict" semver tags should be considered. A
   // "strict" semver tag is one containing ALL of major, minor, and patch version components.
@@ -1146,7 +1150,7 @@ message ImageSubscription {
   // SemVer. This should be disabled cautiously, as it is not uncommon to tag container images
   // with short Git commit hashes, which could be mistaken for a semver string containing the
   // major version number only.
-  optional bool strictSemvers = 11;
+  optional bool strictSemvers = 12;
 }
 
 // IndexSelector defines selection criteria that match resources on the basis of

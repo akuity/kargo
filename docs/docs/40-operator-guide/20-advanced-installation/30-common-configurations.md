@@ -445,9 +445,9 @@ For more information, refer to the
 
 :::
 
-## Resource Management
+## Warehouse Performance
 
-### Tuning Warehouse Reconciliation Intervals
+### Tuning Reconciliation Intervals
 
 If your cluster contains many `Warehouse` resources, which periodically poll
 artifact repositories, or if developers have
@@ -506,6 +506,69 @@ For a list of resource kinds that can be configured, refer to the
 [chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
 
 :::
+
+### Image Metadata Caching
+
+Kargo can cache container image metadata more aggressively using image tags as
+keys (instead of digests). This can significantly improve performance by
+reducing API calls to container image registries, but is safest to do when
+images are known to use "immutable" tags (i.e. existing tags are never
+overwritten).
+
+Operators may select one of four policies regarding caching image metadata by
+tag:
+
+- `Forbid`: Container image subscriptions may not cache image metadata by tag.
+  This is silently enforced. Subscriptions that opt into caching image metadata
+  by tag will be treated as if they had not.
+
+- `Allow` Individual container image subscriptions may choose whether to cache
+  image metadata by tag. This option leaves the decision in the hands of
+  developers.
+
+  :::info
+
+  For purposes of backwards compatibility, `Allow` is the default policy.
+
+  :::
+
+- `Require`: Container image subscriptions MUST explicitly opt into caching
+  image metadata by tag or their artifact discovery processes will fail.
+  Requiring explicit opt-in is tantamount to soliciting acknowledgement from
+  developers that caching image metadata by tag is in effect. This is intended
+  to minimize the possibility of surprise at any stale results from an image
+  discovery process. This option sacrifices some small degree of usability for
+  safety.
+
+- `Force`: Caching image metadata is silently enforced. Subscriptions that to
+  not opt into caching image metadata by tag will be treated as if they had.
+
+  :::info
+
+  This is the recommended policy in an immutable-tags-only environment.
+
+  :::
+
+Example configuration to allow (but not require) individual container image
+subscriptions to cache image metadata by tag:
+
+```yaml
+controller:
+  imageCache:
+    cacheByTagPolicy: Allow
+```
+
+Example configuration to silently enforce caching image metadata by tag:
+
+```yaml
+controller:
+  imageCache:
+    cacheByTagPolicy: Force
+```
+
+For more information on how to use this feature, see the
+[Performance Considerations](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#caching-image-metadata-by-tag)
+section of the user guide.
 
 ## Garbage Collection
 

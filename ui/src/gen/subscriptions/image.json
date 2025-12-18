@@ -70,6 +70,11 @@
    "maximum": 100,
    "default": 20,
    "description": "DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were \"20\". The upper limit for this field is 100."
+  },
+  "cacheByTag": {
+   "type": "boolean",
+   "default": false,
+   "description": "CacheByTag specifies whether to cache image metadata by tag. This can improve performance but may lead to stale data if mutable tags are used."
   }
  },
  "additionalProperties": false

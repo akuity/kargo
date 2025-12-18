@@ -29,6 +29,7 @@ sed -i.bak 's/NewestFromBranch[[:space:]]*CommitSelectionStrategy/CommitSelectio
 sed -i.bak 's/NewestTag[[:space:]]*CommitSelectionStrategy/CommitSelectionStrategyNewestTag CommitSelectionStrategy/' ${out_file}
 sed -i.bak 's/Digest[[:space:]]*ImageSelectionStrategy/ImageSelectionStrategyDigest ImageSelectionStrategy/' ${out_file}
 sed -i.bak 's/NewestBuild[[:space:]]*ImageSelectionStrategy/ImageSelectionStrategyNewestBuild ImageSelectionStrategy/' ${out_file}
+sed -i.bak 's/CacheByTag[[:space:]]*\*bool/CacheByTag bool/' ${out_file}
 sed -i.bak 's/InsecureSkipTLSVerify[[:space:]]*\*bool/InsecureSkipTLSVerify bool/' ${out_file}
 
 rm ${out_file}.bak

@@ -156,9 +156,22 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 		{
+			name: "caching by tag required but not set",
+			sub: kargoapi.ImageSubscription{
+				RepoURL: "ghcr.io/akuity/kargo",
+			},
+			assertions: func(t *testing.T, errs field.ErrorList) {
+				require.NotNil(t, errs)
+				require.True(t, len(errs) > 0)
+				require.Equal(t, "image.cacheByTag", errs[0].Field)
+				require.Equal(t, field.ErrorTypeInvalid, errs[0].Type)
+			},
+		},
+		{
 			name: "DiscoveryLimit too small",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:        "ghcr.io/akuity/kargo",
+				CacheByTag:     true,
 				DiscoveryLimit: 0,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
@@ -172,6 +185,7 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			name: "DiscoveryLimit too large",
 			sub: kargoapi.ImageSubscription{
 				RepoURL:        "ghcr.io/akuity/kargo",
+				CacheByTag:     true,
 				DiscoveryLimit: 101,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
@@ -188,6 +202,7 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 				ImageSelectionStrategy: kargoapi.ImageSelectionStrategySemVer,
 				Constraint:             "^1.0.0",
 				Platform:               "linux/amd64",
+				CacheByTag:             true,
 				DiscoveryLimit:         20,
 			},
 			assertions: func(t *testing.T, errs field.ErrorList) {
@@ -195,7 +210,9 @@ func Test_imageSubscriber_ValidateSubscription(t *testing.T) {
 			},
 		},
 	}
-	s := &imageSubscriber{}
+	s := &imageSubscriber{
+		cacheByTagPolicy: CacheByTagPolicyRequire,
+	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
