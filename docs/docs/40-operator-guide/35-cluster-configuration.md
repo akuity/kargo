@@ -249,7 +249,7 @@ spec:
   # contain the following key:
   # - `apiKey`: The Slack token with permissions to post messages to the desired channel
   secretRef:
-    # The name of the Secret in the cluster secrets namespace
+    # The name of the Secret in the cluster resources namespace
     name: slack-token
   # Configuration specific to Slack
   slack:
