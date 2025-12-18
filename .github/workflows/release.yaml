@@ -209,6 +209,8 @@ jobs:
   publish-cli:
     needs: [build-ui]
     if: github.event_name == 'release'
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     container:
       image: golang:1.25.5-trixie
