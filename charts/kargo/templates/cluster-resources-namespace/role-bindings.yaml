@@ -1,14 +1,14 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-cluster-secrets-reader
-  namespace: {{ .Values.global.clusterSecretsNamespace }}
+  name: kargo-cluster-resources-reader
+  namespace: {{ .Values.global.clusterResourcesNamespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kargo-cluster-secrets-reader
+  name: kargo-cluster-resources-reader
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
@@ -20,14 +20,14 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: kargo-cluster-secrets-admin
-  namespace: {{ .Values.global.clusterSecretsNamespace }}
+  name: kargo-cluster-resources-admin
+  namespace: {{ .Values.global.clusterResourcesNamespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: kargo-cluster-secrets-admin
+  name: kargo-cluster-resources-admin
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
