@@ -3,16 +3,17 @@ package secrets
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/logging"
 )
 
@@ -102,36 +103,36 @@ func (r *reconciler) Reconcile(
 		},
 		srcSecret,
 	); err != nil {
-		if apierrors.IsNotFound(err) {
-			// The source Secret no longer exists. We should delete the copy in
-			// the destination namespace if it exists.
-			logger.Debug(
-				"source Secret not found, deleting destination copy if it exists",
-			)
-			if err = r.client.Delete(
-				ctx,
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: r.cfg.DestinationNamespace,
-						Name:      req.Name,
-					},
-				},
-			); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, fmt.Errorf(
-					"error deleting copied secret %q from namespace %q: %w",
-					req.Name, r.cfg.DestinationNamespace, err,
-				)
-			}
-			logger.Debug("done reconciling Secret")
-			return ctrl.Result{}, nil
-		}
 		return ctrl.Result{}, fmt.Errorf(
 			"error getting source secret %q in namespace %q: %w",
 			req.Name, r.cfg.SourceNamespace, err,
 		)
 	}
 
+	if !srcSecret.DeletionTimestamp.IsZero() {
+		logger.Debug("source Secret is being deleted; handling deletion")
+		return ctrl.Result{}, r.handleDelete(ctx, srcSecret)
+	}
+
+	// Ensure the Secret has a finalizer and requeue if it was added.
+	// The reason to requeue is to ensure that a possible deletion of the Secret
+	// directly after the finalizer was added is handled without delay.
+	if ok, err := api.EnsureFinalizer(ctx, r.client, srcSecret); ok || err != nil {
+		logger.Debug("ensured finalizer on source Secret")
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
+	}
+
 	destSecret := srcSecret.DeepCopy()
+
+	// Remove the finalizer that was just copied over so that deletes of new
+	// secrets won't be blocked by anything.
+	if err := api.RemoveFinalizer(ctx, r.client, destSecret); err != nil {
+		return ctrl.Result{}, fmt.Errorf(
+			"error removing finalizer from destination Secret %q in namespace %q: %w",
+			req.Name, r.cfg.DestinationNamespace, err,
+		)
+	}
+
 	destSecret.Namespace = r.cfg.DestinationNamespace
 	// Clear the ResourceVersion and UID from the copy so we can create/patch it in the
 	// destination namespace.
@@ -165,4 +166,50 @@ func (r *reconciler) Reconcile(
 	logger.Debug("done reconciling Secret")
 
 	return ctrl.Result{}, nil
+}
+
+// handleDelete handles the deletion of a source Secret by deleting the
+// corresponding destination Secret and removing the finalizer from the source
+// Secret to unblock its deletion.
+func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	destSecret := new(corev1.Secret)
+	err := r.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: r.cfg.DestinationNamespace,
+			Name:      srcSecret.Name,
+		},
+		destSecret,
+	)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug(
+				"corresponding destination Secret not found; nothing to delete",
+			)
+		}
+		return fmt.Errorf(
+			"error getting destination Secret %q in namespace %q: %w",
+			srcSecret.Name, r.cfg.DestinationNamespace, err,
+		)
+	}
+
+	if err = r.client.Delete(ctx, destSecret); err != nil {
+		return fmt.Errorf(
+			"error deleting destination Secret %q in namespace %q: %w",
+			srcSecret.Name, r.cfg.DestinationNamespace, err,
+		)
+	}
+	logger.Debug("deleted corresponding destination Secret")
+
+	// Remove finalizer from source Secret to unblock it's deletion.
+	if err = api.RemoveFinalizer(ctx, r.client, srcSecret); err != nil {
+		return fmt.Errorf(
+			"error removing finalizer from source Secret %q in namespace %q: %w",
+			srcSecret.Name, r.cfg.SourceNamespace, err,
+		)
+	}
+	logger.Debug("removed finalizer from source Secret")
+	return nil
 }
