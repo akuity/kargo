@@ -908,6 +908,9 @@ func getArtifactFromDiscoveredArtifacts(
 				artifact = &result.ArtifactReferences[0]
 			}
 		}
+		if artifact == nil {
+			return nil, nil
+		}
 
 		// artifact.Metadata is just JSON. Unpack it into a map[string]any so it's
 		// easily accessible from within an expression.

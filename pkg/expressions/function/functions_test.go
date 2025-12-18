@@ -1092,8 +1092,25 @@ func Test_getArtifactFromDiscoveredArtifacts(t *testing.T) {
 			},
 		},
 		{
-			name: "no artifact found",
+			name: "artifacts nil",
 			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "requested artifact not found",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Results: []kargoapi.DiscoveryResult{{
+					SubscriptionName: "fake-sub",
+					ArtifactReferences: []kargoapi.ArtifactReference{
+						{Version: "v1.0.0"},
+						{Version: "v1.1.0"},
+					},
+				}},
+			},
+			args: []any{"wrong-sub"},
 			assertions: func(t *testing.T, result any, err error) {
 				require.NoError(t, err)
 				require.Nil(t, result)
