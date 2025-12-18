@@ -548,11 +548,11 @@ func compareFreight(existing, updated *kargoapi.Freight) (*field.Path, any, bool
 	}
 
 	if len(existing.Artifacts) != len(updated.Artifacts) {
-		return field.NewPath("otherArtifacts"), updated.Artifacts, false
+		return field.NewPath("artifacts"), updated.Artifacts, false
 	}
 	for i, artifact := range existing.Artifacts {
 		if !artifact.DeepEquals(&updated.Artifacts[i]) {
-			return field.NewPath("otherArtifacts").Index(i),
+			return field.NewPath("artifacts").Index(i),
 				updated.Artifacts[i],
 				false
 		}

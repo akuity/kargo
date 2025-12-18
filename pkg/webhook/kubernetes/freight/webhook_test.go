@@ -1281,7 +1281,7 @@ func Test_webhook_CompareFreight(t *testing.T) {
 				val any,
 				eq bool,
 			) {
-				require.Equal(t, field.NewPath("otherArtifacts"), path)
+				require.Equal(t, field.NewPath("artifacts"), path)
 				require.Equal(t, freight.Artifacts, val)
 				require.False(t, eq)
 			},
@@ -1305,7 +1305,7 @@ func Test_webhook_CompareFreight(t *testing.T) {
 				val any,
 				eq bool,
 			) {
-				require.Equal(t, field.NewPath("otherArtifacts").Index(0), path)
+				require.Equal(t, field.NewPath("artifacts").Index(0), path)
 				require.Equal(t, freight.Artifacts[0], val)
 				require.False(t, eq)
 			},
