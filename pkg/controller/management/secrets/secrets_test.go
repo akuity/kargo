@@ -127,7 +127,7 @@ func TestReconcile(t *testing.T) {
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
 				dest := &corev1.Secret{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: testDestNamespace,
 					Name:      testSecretName,
 				}, dest)
@@ -163,7 +163,7 @@ func TestReconcile(t *testing.T) {
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
 				dest := &corev1.Secret{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: testDestNamespace,
 					Name:      testSecretName,
 				}, dest)
@@ -198,7 +198,7 @@ func TestReconcile(t *testing.T) {
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
 				dest := &corev1.Secret{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: testDestNamespace,
 					Name:      testSecretName,
 				}, dest)
@@ -219,7 +219,7 @@ func TestReconcile(t *testing.T) {
 				req.Namespace = testSrcNamespace
 			}
 			rec := newReconciler(testCase.client, testCfg)
-			_, err := rec.Reconcile(context.Background(), req)
+			_, err := rec.Reconcile(t.Context(), req)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}
