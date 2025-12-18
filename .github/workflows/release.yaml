@@ -203,6 +203,7 @@ jobs:
       with:
         name: ui-dist
         path: ui/build
+        if-no-files-found: error
         retention-days: 1
 
   publish-cli:
