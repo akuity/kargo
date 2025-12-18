@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"testing"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,13 @@ func TestReconcile(t *testing.T) {
 	err := corev1.AddToScheme(testScheme)
 	require.NoError(t, err)
 
+	// some tests require a source Secret with a finalizer already present
+	withFinalizer := func(s *corev1.Secret) *corev1.Secret {
+		secretCopy := s.DeepCopy()
+		secretCopy.Finalizers = []string{kargoapi.FinalizerName}
+		return secretCopy
+	}
+
 	testSrcSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testSrcNamespace,
@@ -57,8 +65,8 @@ func TestReconcile(t *testing.T) {
 
 	testDestSecret2 := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testDestNamespace,
-			Name:      testSecretName,
+			Namespace:  testDestNamespace,
+			Name:       testSecretName,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -101,41 +109,6 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "source does not exist, destination does; error deleting destination",
-			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testDestSecret1).
-				WithInterceptorFuncs(
-					interceptor.Funcs{
-						Delete: func(
-							context.Context,
-							client.WithWatch,
-							client.Object,
-							...client.DeleteOption,
-						) error {
-							return fmt.Errorf("something went wrong")
-						},
-					},
-				).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "source does not exist, destination does; success deleting destination",
-			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testDestSecret1).Build(),
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-				dest := &corev1.Secret{}
-				err = c.Get(t.Context(), types.NamespacedName{
-					Namespace: testDestNamespace,
-					Name:      testSecretName,
-				}, dest)
-				require.Error(t, err)
-				require.True(t, apierrors.IsNotFound(err))
-			},
-		},
-		{
 			name: "source and destination both exist; error patching destination",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
 				WithObjects(testSrcSecret, testDestSecret1).
@@ -159,7 +132,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "source and destination both exist; success patching destination",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testSrcSecret, testDestSecret1).Build(),
+				WithObjects(withFinalizer(testSrcSecret), testDestSecret1).Build(),
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
 				dest := &corev1.Secret{}
@@ -174,7 +147,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "source exists, destination does not; error creating destination",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testSrcSecret).
+				WithObjects(withFinalizer(testSrcSecret)).
 				WithInterceptorFuncs(
 					interceptor.Funcs{
 						Create: func(
@@ -194,7 +167,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "source exists, destination does not; success creating destination",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testSrcSecret).Build(),
+				WithObjects(withFinalizer(testSrcSecret)).Build(),
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
 				dest := &corev1.Secret{}
@@ -219,7 +192,10 @@ func TestReconcile(t *testing.T) {
 				req.Namespace = testSrcNamespace
 			}
 			rec := newReconciler(testCase.client, testCfg)
-			_, err := rec.Reconcile(t.Context(), req)
+			l, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
+			require.NoError(t, err)
+			ctx := logging.ContextWithLogger(t.Context(), l)
+			_, err = rec.Reconcile(ctx, req)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}
