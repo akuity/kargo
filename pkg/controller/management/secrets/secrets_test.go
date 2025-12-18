@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"testing"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -16,6 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func TestReconcile(t *testing.T) {
@@ -65,8 +66,8 @@ func TestReconcile(t *testing.T) {
 
 	testDestSecret2 := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  testDestNamespace,
-			Name:       testSecretName,
+			Namespace: testDestNamespace,
+			Name:      testSecretName,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -177,6 +178,80 @@ func TestReconcile(t *testing.T) {
 				}, dest)
 				require.NoError(t, err)
 				require.Equal(t, testDestSecret2.Data, testSrcSecret.Data)
+			},
+		},
+		{
+			name: "successful delete",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(withFinalizer(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testSrcNamespace,
+						Name:      testSecretName,
+						DeletionTimestamp: &metav1.Time{
+							Time: metav1.Now().Time,
+						},
+					},
+				}), testDestSecret2).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				// Destination Secret should be deleted.
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.ErrorContains(t, err, "not found")
+				// Finalizer should be removed from source Secret.
+				src := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, src)
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "failed delete; destination does not exist error",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(withFinalizer(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testSrcNamespace,
+						Name:      testSecretName,
+						DeletionTimestamp: &metav1.Time{
+							Time: metav1.Now().Time,
+						},
+					},
+				})).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "error getting destination Secret")
+			},
+		},
+		{
+			name: "failed delete; error deleting destination",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(withFinalizer(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testSrcNamespace,
+						Name:      testSecretName,
+						DeletionTimestamp: &metav1.Time{
+							Time: metav1.Now().Time,
+						},
+					},
+				}), testDestSecret2).
+				WithInterceptorFuncs(
+					interceptor.Funcs{
+						Delete: func(
+							context.Context,
+							client.WithWatch,
+							client.Object,
+							...client.DeleteOption,
+						) error {
+							return fmt.Errorf("something went wrong")
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
 	}

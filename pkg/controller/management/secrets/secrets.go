@@ -184,11 +184,6 @@ func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret)
 		destSecret,
 	)
 	if err != nil {
-		if apierrors.IsNotFound(err) {
-			logger.Debug(
-				"corresponding destination Secret not found; nothing to delete",
-			)
-		}
 		return fmt.Errorf(
 			"error getting destination Secret %q in namespace %q: %w",
 			srcSecret.Name, r.cfg.DestinationNamespace, err,
@@ -203,7 +198,6 @@ func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret)
 	}
 	logger.Debug("deleted corresponding destination Secret")
 
-	// Remove finalizer from source Secret to unblock it's deletion.
 	if err = api.RemoveFinalizer(ctx, r.client, srcSecret); err != nil {
 		return fmt.Errorf(
 			"error removing finalizer from source Secret %q in namespace %q: %w",
