@@ -87,7 +87,7 @@ func (c *credsProvider) GetCredentials(
 // discovery is run (which is quite convenient for demo purposes).
 type subscriber struct {
 	latestVersion *semver.Version
-	artifacts     []kargoapi.ArtifactReference
+	artifacts     map[string][]kargoapi.ArtifactReference
 	credsDB       credentials.Database
 	mu            sync.Mutex
 }
@@ -98,7 +98,7 @@ func newSubscriber(_ context.Context,
 	credsDB credentials.Database,
 ) subscription.Subscriber {
 	return &subscriber{
-		artifacts: []kargoapi.ArtifactReference{},
+		artifacts: map[string][]kargoapi.ArtifactReference{},
 		credsDB:   credsDB,
 	}
 }
@@ -215,29 +215,36 @@ func (s *subscriber) DiscoverArtifacts(
 	}
 
 	// Grow the internal collection of artifacts.
-	s.artifacts = slices.Insert(s.artifacts, 0, kargoapi.ArtifactReference{
-		ArtifactType:     subscriberTypeDemo,
-		SubscriptionName: sub.Subscription.Name,
-		Version:          s.latestVersion.String(),
-		// The details are opaque to the rest of Kargo in the same way the
-		// subscription's configuration is.
-		Metadata: &v1.JSON{Raw: json.RawMessage(
-			fmt.Sprintf(
-				`{"discoveredAt":%q, "message":%q}`,
-				time.Now().String(), cfg.Message,
-			),
-		)},
-	})
+	if _, ok := s.artifacts[sub.Subscription.Name]; !ok {
+		s.artifacts[sub.Subscription.Name] = []kargoapi.ArtifactReference{}
+	}
+	s.artifacts[sub.Subscription.Name] = slices.Insert(
+		s.artifacts[sub.Subscription.Name],
+		0,
+		kargoapi.ArtifactReference{
+			ArtifactType:     subscriberTypeDemo,
+			SubscriptionName: sub.Subscription.Name,
+			Version:          s.latestVersion.String(),
+			// The details are opaque to the rest of Kargo in the same way the
+			// subscription's configuration is.
+			Metadata: &v1.JSON{Raw: json.RawMessage(
+				fmt.Sprintf(
+					`{"discoveredAt":%q, "message":%q}`,
+					time.Now().String(), cfg.Message,
+				),
+			)},
+		},
+	)
 
 	// Trim the internal collection of artifacts if it has grown very large.
 	const maxCollectionSize = 100
 	if len(s.artifacts) > maxCollectionSize {
-		s.artifacts = s.artifacts[:maxCollectionSize]
+		s.artifacts[sub.Subscription.Name] = s.artifacts[sub.Subscription.Name][:maxCollectionSize]
 	}
 
-	artifacts := s.artifacts
+	artifacts := s.artifacts[sub.Subscription.Name]
 	if len(artifacts) > int(sub.Subscription.DiscoveryLimit) {
-		artifacts = artifacts[:sub.Subscription.DiscoveryLimit]
+		artifacts = s.artifacts[sub.Subscription.Name][:sub.Subscription.DiscoveryLimit]
 	}
 
 	return kargoapi.DiscoveryResult{
