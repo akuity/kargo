@@ -108,6 +108,14 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error setting up Namespaces reconciler: %w", err)
 	}
 
+	if err := namespaces.SetupSharedResourcesReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		namespaces.SharedResourcesReconcilerConfigFromEnv(),
+	); err != nil {
+		return fmt.Errorf("error setting up Shared Resources Namespaces reconciler: %w", err)
+	}
+
 	if err := projects.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
