@@ -185,6 +185,11 @@ func (h *helmTemplateRunner) composeValues(
 		if err != nil {
 			return nil, fmt.Errorf("failed to join path %q: %w", p, err)
 		}
+		if cfg.IgnoreMissingValueFiles {
+			if _, err := os.Stat(absValuesPath); os.IsNotExist(err) {
+				continue
+			}
+		}
 		valueOpts.ValueFiles = append(valueOpts.ValueFiles, absValuesPath)
 	}
 
