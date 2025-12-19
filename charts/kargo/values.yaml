@@ -17,13 +17,13 @@ image:
 
 ## @section Global Parameters
 global:
-  ## @param global.clusterResourcesNamespace is for resources associated with cluster-scoped resources and for which no cluster-scoped analog exists.
+  ## @param global.clusterResourcesNamespace Namespace for resources (like Secrets) associated with cluster-scoped resources and for which no cluster-scoped analog exists.
   clusterResourcesNamespace: kargo-cluster-resources
-  ## @param global.clusterSecretsNamespace DEPRECATED( Use clusterResourcesNamespace instead ) Indicates a namespace where Secrets associated with cluster-scoped resources can be located. Kargo will automatically sync Secrets from one namespace to the other until v1.12.0, at which time, the migration reconciler and support for the clusterSecretsNamespace will both be removed.
+  ## @param global.clusterSecretsNamespace **Deprecated in favor of `clusterResourcesNamespace`.** Indicates a namespace where Secrets associated with cluster-scoped resources can be located. Kargo will automatically sync Secrets from one namespace to the other until v1.12.0, at which time, the migration reconciler and support for the clusterSecretsNamespace will both be removed.
   clusterSecretsNamespace: kargo-cluster-secrets
   ## @param global.createClusterResourcesNamespace Indicates whether the `clusterResourcesNamespace` should be managed by the chart.
   createClusterResourcesNamespace: true
-  ## @param global.createClusterSecretsNamespace DEPRECATED( Use createClusterResourcesNamespace ) Indicates whether the `clusterSecretsNamespace` should be managed by the chart.
+  ## @param global.createClusterSecretsNamespace **Deprecated in favor of `createClusterResourcesNamespace`.** Indicates whether the `clusterSecretsNamespace` should be managed by the chart.
   createClusterSecretsNamespace: true
   ## @param global.labels Labels to add to all resources.
   labels: {}
