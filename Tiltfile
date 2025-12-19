@@ -138,7 +138,7 @@ k8s_resource(
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
     'kargo-controller-read-secrets:rolebinding',
-    'kargo-shared-credentials:namespace'
+    'kargo-shared-credentials:namespace:kargo'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )
