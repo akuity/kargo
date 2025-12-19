@@ -177,7 +177,7 @@ func TestReconcile(t *testing.T) {
 					Name:      testSecretName,
 				}, dest)
 				require.NoError(t, err)
-				require.Equal(t, testDestSecret2.Data, testSrcSecret.Data)
+				require.Equal(t, testDestSecret2.Data, dest.Data)
 			},
 		},
 		{
