@@ -162,9 +162,6 @@ app.kubernetes.io/component: management-controller
 {{- end -}}
 {{- index . 0 -}}
 {{- else -}}
-{{- if not .Values.global.sharedResourcesNamespace -}}
-{{- fail "global.sharedResourcesNamespace must be set when controller.globalCredentials.namespaces is empty" -}}
-{{- end -}}
 {{- .Values.global.sharedResourcesNamespace -}}
 {{- end -}}
 {{- end -}}
