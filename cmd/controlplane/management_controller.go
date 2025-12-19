@@ -135,12 +135,15 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if err := secrets.SetupReconcilerWithManager(
-		ctx,
-		kargoMgr,
-		secrets.ReconcilerConfigFromEnv(),
-	); err != nil {
-		return fmt.Errorf("error setting up Secrets reconciler: %w", err)
+	secretsCfg := secrets.ReconcilerConfigFromEnv()
+	if secretsCfg.SourceNamespace != secretsCfg.DestinationNamespace {
+		if err := secrets.SetupReconcilerWithManager(
+			ctx,
+			kargoMgr,
+			secretsCfg,
+		); err != nil {
+			return fmt.Errorf("error setting up Secrets reconciler: %w", err)
+		}
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {
@@ -176,7 +179,7 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			err,
 		)
 	}
-
+	secretsCfg := secrets.ReconcilerConfigFromEnv()
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -194,8 +197,8 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 					},
 					&corev1.Secret{}: {
 						Namespaces: map[string]cache.Config{
-							os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "kargo-cluster-secrets"):     {},
-							os.GetEnv("CLUSTER_RESOURCES_NAMESPACE", "kargo-cluster-resources"): {},
+							secretsCfg.SourceNamespace:      {},
+							secretsCfg.DestinationNamespace: {},
 						},
 					},
 				},
