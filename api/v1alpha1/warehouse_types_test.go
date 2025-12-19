@@ -146,38 +146,117 @@ func TestArtifactReference_DeepEquals(t *testing.T) {
 			expectedResult: false,
 		},
 		{
-			name: "subscription name differs",
+			name: "artifact type differs",
 			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
 			},
 			b: &ArtifactReference{
+				ArtifactType:     "wrong-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name: "subscription name differs",
+			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
+			},
+			b: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "bar",
 				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
 			},
 			expectedResult: false,
 		},
 		{
 			name: "version differs",
 			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
 			},
 			b: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "foo",
 				Version:          "v1.1.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
 			},
 			expectedResult: false,
 		},
 		{
-			name: "perfect match",
+			name: "metadata differs",
 			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
+			},
+			b: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value2"}`),
+				},
+			},
+			expectedResult: false,
+		},
+		{
+			name: "perfect match without metadata",
+			// This is to verify the short-circuiting when both Metadata are nil
+			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
 			},
 			b: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
 				SubscriptionName: "foo",
 				Version:          "v1.0.0",
+			},
+			expectedResult: true,
+		},
+		{
+			name: "perfect match with metadata",
+			a: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
+			},
+			b: &ArtifactReference{
+				ArtifactType:     "fake-artifact-type",
+				SubscriptionName: "foo",
+				Version:          "v1.0.0",
+				Metadata: &apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value1"}`),
+				},
 			},
 			expectedResult: true,
 		},

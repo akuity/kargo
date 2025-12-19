@@ -555,10 +555,16 @@ func (g *ArtifactReference) DeepEquals(
 	if g == nil || other == nil {
 		return false
 	}
+	if (g.Metadata == nil) != (other.Metadata == nil) {
+		return false
+	}
 	return g.ArtifactType == other.ArtifactType &&
 		g.SubscriptionName == other.SubscriptionName &&
 		g.Version == other.Version &&
-		g.Metadata == other.Metadata
+		// If we got to here and one Metadata is nil, the other must be nil too, so
+		// we only need to look at one before knowing it's safe to compare Raw
+		// values.
+		(g.Metadata == nil || string(g.Metadata.Raw) == string(other.Metadata.Raw))
 }
 
 // +kubebuilder:object:root=true
