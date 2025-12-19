@@ -44,6 +44,11 @@ const (
 	LabelKeyProject = "kargo.akuity.io/project"
 	// LabelKeyShard is used to identify the shard of a resource.
 	LabelKeyShard = "kargo.akuity.io/shard"
+	// LabelKeyArgoCDShard is used to identify a Secret that contains ArgoCD
+	// shard URL configuration. Secrets with this label set to "true" are
+	// discovered dynamically and used to configure ArgoCD shard URLs without
+	// requiring Helm chart redeployment.
+	LabelKeyArgoCDShard = "kargo.akuity.io/argocd-shard"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"

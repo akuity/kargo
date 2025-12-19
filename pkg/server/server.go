@@ -30,6 +30,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	libargocd "github.com/akuity/kargo/pkg/server/argocd"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -51,6 +52,7 @@ type server struct {
 	rolesDB           rbac.RolesDatabase
 	serviceAccountsDB rbac.ServiceAccountsDatabase
 	sender            event.Sender
+	argoCDURLStore    libargocd.URLStore
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -169,6 +171,7 @@ func NewServer(
 	rolesDB rbac.RolesDatabase,
 	serviceAccountsDB rbac.ServiceAccountsDatabase,
 	sender event.Sender,
+	argoCDURLStore libargocd.URLStore,
 ) Server {
 	s := &server{
 		cfg:               cfg,
@@ -176,6 +179,7 @@ func NewServer(
 		rolesDB:           rolesDB,
 		serviceAccountsDB: serviceAccountsDB,
 		sender:            sender,
+		argoCDURLStore:    argoCDURLStore,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists
