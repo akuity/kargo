@@ -31,14 +31,14 @@ All the steps above support different record types in ServiceNow including manag
 Problems etc.,. This integration also provides condition tracking through `snow-wait-for-condition`, making it a powerful tool 
 for promotion workflows that require coordination with project management systems.
 
-#### Using the API
+## Finding field values for step configuration
 
-Most of the time you cannot use the field labels you see in the ServiceNow UI as keys in the REST API. 
+Most of the time you cannot use the field labels you see in the ServiceNow UI as keys in the step configuration. 
 For example, if you want to set the value for the “Short description” field:
 
 ![](./images/snow-short-des.png)
 
-You can't use `Short description` in the REST API. You need to use `short_description` as the key and set the value via REST API parameters.
+You can't use `Short description` in the step configuration parameters. You need to use `short_description` as the key.
 To find the correct key for a field, right-click on the field and click `Configure Dictionary`:
 
 ![](./images/snow-configure-dict.png)
@@ -48,15 +48,14 @@ To find the correct key for a field, right-click on the field and click `Configu
 ![](./images/snow-col-name.png)
 
 To see choices available for a particular field e.g., `State`, right click on the field and click on `Show Choice List` to see the available choices for use in the steps:
+
 ![](./images/show-choices.png)
 
 For example `New` is `-1` and `Scheduled` is `-2`
 
 ![](./images/choice-list.png)
 
-## Configuration
-
-### Credentials
+## Credentials
 
 All ServiceNow operations require proper authentication credentials stored in a Kubernetes
 `Secret`.
@@ -79,7 +78,7 @@ For `credentials.type: basic` the referenced `Secret` should contain the followi
 - `password`: Password of the ServiceNow user (for how to set the password for a user, see [this](https://www.servicenow.com/docs/bundle/zurich-platform-security/page/integrate/authentication/task/reset-your-password.html)).
 - `instanceURL`: Your ServiceNow instance URL.
 
-### Record
+## Configuration
 
 | Name        | Type     | Required | Description                                                                                                                     |
 | ----------- | -------- | -------- | ------------------------------------------------------------------------------------------------------------------------------- |
@@ -186,57 +185,6 @@ These examples demonstrate the different steps supported for ServiceNow integrat
 ```
 
 ### Table API Workflow
-
-```yaml
-  - as: snowcreate
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        impact: "3"
-        short_description: Deploy to ${{ ctx.stage }} complete for ${{ vars.imageRepo }}:${{ imageFrom(vars.imageRepo).Tag }}
-        urgency: "3"
-      tableName: incident
-    uses: snow-create
-  - as: snowquery
-    config:
-      credentials:
-        namespace: kargo-demo
-        secretName: snow-creds
-        type: api-token
-      query:
-        number: ${{ task.outputs.snowcreate.number }}
-      tableName: incident
-    uses: snow-query-records
-  - config:
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      parameters:
-        short_description: Update deployment for ${{ vars.imageRepo }}:${{ imageFrom(vars.imageRepo).Tag }} to resolved
-      tableName: incident
-    uses: snow-update
-  - as: snow-wait-for-condition
-    config:
-      condition: state=6
-      credentials:
-        namespace: kargo-demo
-        secretName: snow-creds
-        type: api-token
-      tableName: incident
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-    uses: snow-wait-for-condition
-  - as: snowdelete
-    config:
-      credentials:
-        secretName: snow-creds
-        type: api-token
-      tableName: incident
-      ticketId: ${{ task.outputs.snowquery.sys_id }}
-    uses: snow-delete
-```
 
 Here's a Table API workflow with Change Request:
 
