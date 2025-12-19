@@ -1,21 +1,29 @@
 package expressions
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
 	"github.com/expr-lang/expr"
-	"github.com/valyala/fasttemplate"
 )
 
+type supportedDelimiterSet struct {
+	start string
+	end   string
+}
+
+var supportedDelimiters = []supportedDelimiterSet{
+	{start: "${{", end: "}}"},
+	{start: "${%", end: "%}"},
+}
+
 // EvaluateJSONTemplate evaluates a JSON byte slice, which is presumed to be a
-// template containing expr-lang expressions offset by ${{ and }}, using the
-// provided environment as context. The evaluated JSON is returned as a new byte
-// slice, ready for unmarshaling.
+// template containing expr-lang expressions, offset by supported delimiters,
+// using the provided environment as context. Multiple (different) supported
+// delimiters can be used within a single template. The evaluated JSON is
+// returned as a new byte slice, ready for unmarshaling.
 //
 // Only expressions contained within values are evaluated. i.e. Any expressions
 // within keys are NOT evaluated.
@@ -30,8 +38,9 @@ import (
 // that expressions must, themselves, be contained within a string value. This
 // does mean that for expressions which may evaluate as something resembling a
 // valid non-string JSON value, the user must take care to ensure that the
-// expression evaluates to a string enclosed in quotes. e.g. ${{ true }} will
-// evaluated as a bool, but ${{ quote(true) }} will be evaluated as a string.
+// expression evaluates to a string enclosed in quotes. For example, an
+// expression evaluating to true will result in a bool, but quote(true) will
+// result in a string.
 // This behavior should be intuitive to anyone familiar with YAML.
 func EvaluateJSONTemplate(jsonBytes []byte, env map[string]any, exprOpts ...expr.Option) ([]byte, error) {
 	if _, ok := env["quote"]; ok {
@@ -97,16 +106,24 @@ func evaluateExpressions(collection any, env map[string]any, exprOpts ...expr.Op
 }
 
 // EvaluateTemplate evaluates a single template string with the provided
-// environment. Note that a single template string can contain multiple
-// expressions.
+// environment. A single template string can contain multiple expressions offset
+// by any of the supported delimiters.
 func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Option) (any, error) {
-	if !strings.Contains(template, "${{") {
+	hasDelim := false
+	for _, d := range supportedDelimiters {
+		if strings.Contains(template, d.start) {
+			hasDelim = true
+			break
+		}
+	}
+	if !hasDelim {
 		// Don't do anything fancy if the "template" doesn't contain any
 		// expressions. If we did, a simple string like "42" would be evaluated as
 		// the number 42. That would force users to use ${{ quote(42) }} when it
 		// would be more intuitive to just use "42".
 		return template, nil
 	}
+
 	if exprOpts == nil {
 		exprOpts = make([]expr.Option, 0, 2)
 	}
@@ -123,21 +140,17 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 			new(func(any) string),
 		),
 	)
-	t, err := fasttemplate.NewTemplate(template, "${{", "}}")
+
+	result, err := evaluateTemplate(template, env, exprOpts...)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing template: %w", err)
-	}
-	out := &bytes.Buffer{}
-	if _, err := t.ExecuteFunc(out, getExpressionEvaluator(env, exprOpts...)); err != nil {
 		return nil, err
 	}
 	// If there is a trailing newline, remove it. If the | operator was used in
 	// the original YAML, the result will have a trailing newline, which can
 	// cause problems with the logic that follows.
-	result := out.String()
 	var removedNewline bool
 	if strings.HasSuffix(result, "\n") {
-		result = strings.TrimSuffix(out.String(), "\n")
+		result = strings.TrimSuffix(result, "\n")
 		removedNewline = true
 	}
 	// If the result is enclosed in quotes, this is probably the result of an
@@ -182,31 +195,96 @@ func EvaluateTemplate(template string, env map[string]any, exprOpts ...expr.Opti
 	return result, nil
 }
 
-// getExpressionEvaluator returns a fasttemplate.TagFunc that evaluates input
-// as a single expr-lang expression with the provided map as the environment.
-func getExpressionEvaluator(env map[string]any, exprOpts ...expr.Option) fasttemplate.TagFunc {
-	return func(out io.Writer, expression string) (int, error) {
-		program, err := expr.Compile(expression, exprOpts...)
+func evaluateTemplate(
+	template string,
+	env map[string]any,
+	exprOpts ...expr.Option,
+) (string, error) {
+	var result strings.Builder
+
+	for {
+		before, expression, after, err := nextExpression(template)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-		result, err := expr.Run(program, env)
+
+		result.WriteString(before)
+
+		if expression == "" {
+			// No more expressions found
+			result.WriteString(after)
+			break
+		}
+
+		evaluated, err := evaluateExpression(expression, env, exprOpts...)
 		if err != nil {
-			return 0, err
+			return "", err
 		}
-		if resStr, ok := result.(string); ok {
-			// A string result can be written directly to the output as is.
-			return out.Write([]byte(resStr))
-		}
-		// For non-string results, which could include nils, bools, numbers of any
-		// type, structs, collections, etc. the result must be marshaled to JSON
-		// before being written to the output.
-		resJSON, err := json.Marshal(result)
-		if err != nil {
-			return 0, err
-		}
-		return out.Write(resJSON)
+		result.WriteString(evaluated)
+
+		template = after
 	}
+
+	return result.String(), nil
+}
+
+// nextExpression finds the next expression in the template string, returning
+// the part of the template before the expression, the expression itself, and
+// the part after the expression. If no expression is found, the entire template
+// is returned as the "after" part, with empty strings for the "before" and
+// "expression" parts.
+func nextExpression(template string) (string, string, string, error) {
+	var delim *supportedDelimiterSet
+	delimStartIdx := -1
+	for _, d := range supportedDelimiters {
+		if i := strings.Index(template, d.start); i >= 0 {
+			if delimStartIdx < 0 || i < delimStartIdx {
+				delimStartIdx = i
+				delim = &d
+			}
+		}
+	}
+	if delim == nil {
+		return "", "", template, nil
+	}
+	exprStartIdx := delimStartIdx + len(delim.start)
+	exprRelDelimEndIdx := strings.Index(template[exprStartIdx:], delim.end)
+	if exprRelDelimEndIdx < 0 {
+		return "", "", "", fmt.Errorf(
+			"unclosed expression: expected %q but reached end of template",
+			delim.end,
+		)
+	}
+	exprEndIdx := exprStartIdx + exprRelDelimEndIdx
+	delimEndIdx := exprStartIdx + exprRelDelimEndIdx + len(delim.end)
+	return template[:delimStartIdx], // Template part preceding the expression
+		template[exprStartIdx:exprEndIdx], // The expression itself
+		template[delimEndIdx:], // Template part following the expression
+		nil
+}
+
+// evaluateExpression evaluates input as a single expr-lang expression with the
+// provided map as the environment.
+func evaluateExpression(expression string, env map[string]any, exprOpts ...expr.Option) (string, error) {
+	program, err := expr.Compile(expression, exprOpts...)
+	if err != nil {
+		return "", err
+	}
+	result, err := expr.Run(program, env)
+	if err != nil {
+		return "", err
+	}
+	if resStr, ok := result.(string); ok {
+		// A string result can be returned directly
+		return resStr, nil
+	}
+	// For non-string results, which could include nils, bools, numbers of any
+	// type, structs, collections, etc. the result must be marshaled to JSON
+	resJSON, err := json.Marshal(result)
+	if err != nil {
+		return "", err
+	}
+	return string(resJSON), nil
 }
 
 // quoteFunc formats a value as a quoted string, with special handling for

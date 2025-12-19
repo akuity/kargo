@@ -15,6 +15,7 @@ referenced by the `Application`. This step is commonly the last step in a
 promotion process.
 
 :::note
+
 For an Argo CD `Application` resource to be managed by a Kargo `Stage`,
 the `Application` _must_ have an annotation of the following form:
 
@@ -40,9 +41,11 @@ metadata:
 spec:
   # Application specifications go here
 ```
+
 :::
 
 :::info
+
 Enforcement of Argo CD
 [sync windows](https://argo-cd.readthedocs.io/en/stable/user-guide/sync_windows/)
 was improved substantially in Argo CD v2.11.0. If you wish for the `argocd-update`
@@ -53,6 +56,7 @@ sometimes encounter an active deny window, the `argocd-update` step should be
 configured with a timeout that is at least as long as the longest expected deny
 window. The step's default timeout of five minutes can be overridden using the
 [`retry.timeout`](../15-promotion-templates.md#step-retries) field.
+
 :::
 
 ## Application Selection
@@ -108,10 +112,12 @@ changes:
 This ensures that bulk updates are applied consistently and prevents partial
 updates that could leave `Application`s in inconsistent states.
 
-:::tip
+:::info
+
 When using selectors without source updates (for hard refreshes), validation is
 not performed since no source changes are being made. This allows you to safely
 refresh groups of `Application`s with heterogeneous configurations.
+
 :::
 
 ## Configuration
@@ -154,6 +160,7 @@ sync state of Argo CD `Application` resources into the overall health of a
 `Stage` without requiring Kargo to understand `Application` health directly.
 
 :::info
+
 Although the `argocd-update` step is the only promotion step to currently
 utilize this health check framework, we anticipate that future built-in and
 third-party promotion steps will take advantage of it as well.
@@ -162,6 +169,7 @@ Because of this, the health of a `Stage` is not necessarily a simple
 reflection of the `Application` resource it manages. It can also be influenced
 by other `Application` resources that are updated by other promotion steps,
 or by a `Promotion` which failed to complete successfully.
+
 :::
 
 ## Examples
@@ -191,6 +199,7 @@ steps:
 ### Updating a Target Revision
 
 :::caution
+
 Without making any modifications to a Git repository, this example simply
 updates a "live" Argo CD `Application` resource to point its `targetRevision`
 field at a specific version of a Helm chart, which Argo CD will pull directly
@@ -200,6 +209,7 @@ While this can be a useful technique, it should be used with caution. This is
 not "real GitOps" since the state of the `Application` resource is not backed
 up in a Git repository. If the `Application` resource were deleted, there would
 be no remaining record of its desired state.
+
 :::
 
 ```yaml
@@ -221,6 +231,7 @@ steps:
 ### Updating an Image with Kustomize
 
 :::caution
+
 Without making any modifications to a Git repository, this example simply
 updates Kustomize-specific properties of a "live" Argo CD `Application`
 resource.
@@ -229,6 +240,7 @@ While this can be a useful technique, it should be used with caution. This is
 not "real GitOps" since the state of the `Application` resource is not backed up
 in a Git repository. If the `Application` resource were deleted, there would be
 no remaining record of its desired state.
+
 :::
 
 ```yaml
@@ -251,6 +263,7 @@ steps:
 ### Updating an Image with Helm
 
 :::caution
+
 Without making any modifications to a Git repository, this example simply
 updates Helm-specific properties of a "live" Argo CD `Application` resource.
 
@@ -258,6 +271,7 @@ While this can be a useful technique, it should be used with caution. This is
 not "real GitOps" since the state of the `Application` resource is not backed
 up in a Git repository. If the `Application` resource were deleted, there would
 be no remaining record of its desired state.
+
 :::
 
 ```yaml

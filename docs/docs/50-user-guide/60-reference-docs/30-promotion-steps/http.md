@@ -44,11 +44,13 @@ as follows:
 - All other cases result in **Running** and will be retried.
 
 :::note
+
 The key distinction is between **terminal failures** (when `failureExpression`
 evaluates to `true`) and **retried failures** (all other failure cases).
 Terminal failures stop the promotion immediately, while retried failures allow
 Kargo to retry the step according to the configured
 [retry policy](../15-promotion-templates.md#step-retries).
+
 :::
 
 ## Expressions
@@ -57,6 +59,7 @@ The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang][] expressions.
 
 :::warning
+
 Expressions in the `successExpression` and `failureExpression` fields must _not_
 be enclosed by `${{` and `}}` since all such expressions are evaluated _prior_
 to step execution. (i.e. All steps are _actually_ executed against static,
@@ -99,6 +102,7 @@ configuration:
 
 Internally, the step evaluates the `successExpression` and `failureExpression`
 exactly as if the user had written them as they now appear.
+
 :::
 
 A `response` object (a `map[string]any`) is available to these expressions. It

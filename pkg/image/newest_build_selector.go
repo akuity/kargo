@@ -139,7 +139,7 @@ func (n *newestBuildSelector) getImagesByTags(
 		go func(tag string) {
 			defer wg.Done()
 			defer metaSem.Release(1)
-			image, err := n.repoClient.getImageByTag(ctx, tag, n.platform)
+			image, err := n.repoClient.getImageByTag(ctx, tag, n.platformConstraint)
 			if err != nil {
 				// Report the error right away or not at all. errCh is a buffered
 				// channel with room for one error, so if we can't send the error

@@ -13,7 +13,6 @@ func TestNewRegistry(t *testing.T) {
 	require.Equal(t, testPrefix, r.name)
 	require.NotEmpty(t, testPrefix, r.imagePrefix)
 	require.Empty(t, r.defaultNamespace)
-	require.NotNil(t, r.imageCache)
 }
 
 func TestGetRegistry(t *testing.T) {

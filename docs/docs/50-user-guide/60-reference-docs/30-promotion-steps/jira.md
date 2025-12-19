@@ -9,8 +9,10 @@ description: Integrates with Jira to manage issues, comments, and track promotio
 <span class="tag beta"></span>
 
 :::info
+
 This promotion step is only available in Kargo on the
 [Akuity Platform](https://akuity.io/akuity-platform), versions v1.6 and above.
+
 :::
 
 The `jira` promotion step provides comprehensive integration with Jira, allowing you
@@ -350,13 +352,15 @@ steps:
       environment: "${{ ctx.stage }}"
 ```
 
-:::info Content Formatting
+:::info[Content Formatting]
+
 The Jira configuration supports setting issue and comment content using `description`
 or `body` fields. These are plain text fields that do not support special formatting
 such as Markdown. For rich formatting capabilities, use the ADF (Atlassian Document
 Format) alternatives `adfDescription` or `adfBody`. For more information about ADF
 structure and formatting, see the
 [Atlassian Document Format documentation](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure/).
+
 :::
 
 ## Multi-Stage Workflow

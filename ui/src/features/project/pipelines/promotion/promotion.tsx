@@ -23,7 +23,7 @@ import {
   abortPromotion,
   getPromotion,
   promoteToStage,
-  refreshStage
+  refreshResource
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
 import { Freight, Promotion as TPromotion } from '@ui/gen/api/v1alpha1/generated_pb';
@@ -64,7 +64,8 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
     }
   });
 
-  const refreshStageMutation = useMutation(refreshStage);
+  const refreshResouceTypeStage = 'Stage';
+  const refreshResourceMutation = useMutation(refreshResource);
 
   const promotion = props.promotion;
   const affiliatedStage = getPromotionStage(promotion);
@@ -199,12 +200,13 @@ const Content = (props: { promotion: TPromotion; yaml: string }) => {
             size='small'
             icon={<FontAwesomeIcon icon={faRefresh} size='1x' />}
             onClick={() =>
-              refreshStageMutation.mutate({
+              refreshResourceMutation.mutate({
                 project: promotion?.metadata?.namespace,
-                name: affiliatedStage
+                name: affiliatedStage,
+                resourceType: refreshResouceTypeStage
               })
             }
-            loading={refreshStageMutation.isPending}
+            loading={refreshResourceMutation.isPending}
           >
             Refresh
           </Button>

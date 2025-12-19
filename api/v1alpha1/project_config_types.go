@@ -132,6 +132,8 @@ type WebhookReceiverConfig struct {
 	// Gitea contains the configuration for a webhook receiver that is compatible
 	// with Gitea payloads.
 	Gitea *GiteaWebhookReceiverConfig `json:"gitea,omitempty" protobuf:"bytes,7,opt,name=gitea"`
+	// Generic contains the configuration for a generic webhook receiver.
+	Generic *GenericWebhookReceiverConfig `json:"generic,omitempty" protobuf:"bytes,11,opt,name=generic"`
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible
@@ -341,6 +343,147 @@ type AzureWebhookReceiverConfig struct {
 	// +kubebuilder:validation:Required
 	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
 }
+
+// GenericWebhookReceiverConfig describes a generic webhook receiver that can be
+// configured to respond to any arbitrary POST by applying user-defined actions
+// on user-defined sets of resources selected by name, labels and/or values in pre-built indices.
+// Both types of selectors support using values extracted from the request by
+// means of expressions. Currently, refreshing resources is the only supported
+// action and Warehouse is the only supported kind. "Refreshing" means
+// immediately enqueuing the target resource for reconciliation by its
+// controller. The practical effect of refreshing a Warehouses is triggering its
+// artifact discovery process.
+type GenericWebhookReceiverConfig struct {
+	// SecretRef contains a reference to a Secret. For Project-scoped webhook
+	// receivers, the referenced Secret must be in the same namespace as the
+	// ProjectConfig.
+	//
+	// For cluster-scoped webhook receivers, the referenced Secret must be in the
+	// designated "cluster Secrets" namespace.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value
+	// does NOT need to be shared directly with the sender. It is used only by
+	// Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
+	// shared secret.
+	//
+	// +kubebuilder:validation:Required
+	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+
+	// Actions is a list of actions to be performed when a webhook event is received.
+	//
+	// +kubebuilder:validation:MinItems=1
+	Actions []GenericWebhookAction `json:"actions,omitempty" protobuf:"bytes,2,rep,name=actions"`
+}
+
+// GenericWebhookAction describes an action to be performed on a resource
+// and the conditions under which it should be performed.
+type GenericWebhookAction struct {
+	// ActionType indicates the type of action to be performed. `Refresh` is the
+	// only currently supported action.
+	//
+	// +kubebuilder:validation:Enum=Refresh;
+	ActionType GenericWebhookActionType `json:"action" protobuf:"bytes,1,opt,name=action"`
+
+	// WhenExpression defines criteria that a request must meet to run this
+	// action.
+	//
+	// +optional
+	WhenExpression string `json:"whenExpression,omitempty" protobuf:"bytes,2,opt,name=whenExpression"`
+
+	// Parameters contains additional, action-specific parameters. Values may be
+	// static or extracted from the request using expressions.
+	//
+	// +optional
+	Parameters map[string]string `json:"parameters,omitempty" protobuf:"bytes,3,rep,name=parameters" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+
+	// TargetSelectionCriteria is a list of selection criteria for the resources on which the
+	// action should be performed.
+	//
+	// +kubebuilder:validation:MinItems=1
+	TargetSelectionCriteria []GenericWebhookTargetSelectionCriteria `json:"targetSelectionCriteria,omitempty" protobuf:"bytes,4,rep,name=targets"`
+}
+
+// GenericWebhookActionType represents the type of action to be performed on a resource.
+type GenericWebhookActionType string
+
+const (
+	// GenericWebhookActionTypeRefresh indicates a request to refresh the resource.
+	GenericWebhookActionTypeRefresh GenericWebhookActionType = "Refresh"
+)
+
+// GenericWebhookTargetSelectionCriteria describes selection criteria for resources to which some
+// action is to be applied. Name, LabelSelector, and IndexSelector are all optional
+// however, at least one must be specified. When multiple criteria are specified, the
+// results are the combined (logical AND) of the criteria.
+type GenericWebhookTargetSelectionCriteria struct {
+	// Kind is the kind of the target resource.
+	//
+	// +kubebuilder:validation:Enum=Warehouse;
+	Kind GenericWebhookTargetKind `json:"kind" protobuf:"bytes,1,opt,name=kind"`
+
+	// Name is the name of the target resource. If LabelSelector and/or IndexSelectors
+	// are also specified, the results are the combined (logical AND) of the criteria.
+	//
+	// +optional
+	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
+
+	// LabelSelector is a label selector to identify the target resources.
+	// If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+	//
+	// +optional
+	LabelSelector metav1.LabelSelector `json:"labelSelector,omitempty" protobuf:"bytes,3,opt,name=labelSelector"`
+
+	// IndexSelector is a selector used to identify cached target resources by cache key.
+	// If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.
+	//
+	// +optional
+	IndexSelector IndexSelector `json:"indexSelector,omitempty" protobuf:"bytes,4,opt,name=indexSelector"`
+}
+
+// GenericWebhookTargetKind represents the kind of a target resource.
+type GenericWebhookTargetKind string
+
+const (
+	GenericWebhookTargetKindWarehouse GenericWebhookTargetKind = "Warehouse"
+)
+
+// IndexSelector defines selection criteria that match resources on the basis of
+// values in pre-built, well-known indices.
+type IndexSelector struct {
+	// MatchIndices is a list of index selector requirements.
+	//
+	// +kubebuilder:validation:MinItems=1
+	MatchIndices []IndexSelectorRequirement `json:"matchIndices,omitempty" protobuf:"bytes,1,rep,name=matchIndices"`
+}
+
+// IndexSelectorRequirement encapsulates a requirement used to select indexes
+// based on specific criteria.
+type IndexSelectorRequirement struct {
+	// Key is the key of the index.
+	//
+	// +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
+	Key string `json:"key" protobuf:"bytes,1,opt,name=key"`
+
+	// Operator indicates the operation that should be used to evaluate
+	// whether the selection requirement is satisfied.
+	//
+	// kubebuilder:validation:Enum=Equal;NotEqual;
+	Operator IndexSelectorOperator `json:"operator" protobuf:"bytes,2,opt,name=operator"`
+
+	// Value can be a static string or an expression that will be evaluated.
+	//
+	// kubebuilder:validation:Required
+	Value string `json:"value" protobuf:"bytes,3,opt,name=value"`
+}
+
+// IndexSelectorOperator represents a set of operators that can be
+// used in an index selector requirement.
+type IndexSelectorOperator string
+
+const (
+	IndexSelectorOperatorEqual    IndexSelectorOperator = "Equals"
+	IndexSelectorOperatorNotEqual IndexSelectorOperator = "NotEquals"
+)
 
 // WebhookReceiverDetails encapsulates the details of a webhook receiver.
 type WebhookReceiverDetails struct {

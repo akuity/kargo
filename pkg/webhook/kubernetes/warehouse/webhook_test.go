@@ -13,12 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/warehouses"
 	"github.com/akuity/kargo/pkg/urls"
+	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(kubeClient)
+	w := newWebhook(libWebhook.Config{}, kubeClient)
 	// Assert that all overridable behaviors were initialized to a default:
 	require.NotNil(t, w.validateProjectFn)
 	require.NotNil(t, w.validateSpecFn)
@@ -579,6 +581,7 @@ func TestValidateImageSub(t *testing.T) {
 				RepoURL:    "bogus",
 				Constraint: "bogus",
 				Platform:   "bogus",
+				CacheByTag: false,
 			},
 			seen: uniqueSubSet{
 				subscriptionKey{
@@ -602,6 +605,15 @@ func TestValidateImageSub(t *testing.T) {
 						},
 						{
 							Type:     field.ErrorTypeInvalid,
+							Field:    "image.cacheByTag",
+							BadValue: false,
+							Detail: "caching image metadata by tag is required by " +
+								"controller configuration; enable with caution as this " +
+								"feature is safe only for subscriptions not involving " +
+								"\"mutable\" tags",
+						},
+						{
+							Type:     field.ErrorTypeInvalid,
 							Field:    "image",
 							BadValue: "bogus",
 							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
@@ -611,16 +623,22 @@ func TestValidateImageSub(t *testing.T) {
 				)
 			},
 		},
-
 		{
 			name: "valid",
+			sub: kargoapi.ImageSubscription{
+				CacheByTag: true,
+			},
 			seen: uniqueSubSet{},
 			assertions: func(t *testing.T, errs field.ErrorList) {
 				require.Nil(t, errs)
 			},
 		},
 	}
-	w := &webhook{}
+	w := &webhook{
+		cfg: libWebhook.Config{
+			CacheByTagPolicy: warehouses.CacheByTagPolicyRequire,
+		},
+	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
