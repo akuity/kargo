@@ -88,7 +88,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
-	kargoMgr, err := o.setupManager(ctx)
+	secretsCfg := secrets.ReconcilerConfigFromEnv()
+	kargoMgr, err := o.setupManager(ctx, secretsCfg)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -135,7 +136,6 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	secretsCfg := secrets.ReconcilerConfigFromEnv()
 	if secretsCfg.SourceNamespace != secretsCfg.DestinationNamespace {
 		if err := secrets.SetupReconcilerWithManager(
 			ctx,
@@ -152,7 +152,10 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	return nil
 }
 
-func (o *managementControllerOptions) setupManager(ctx context.Context) (manager.Manager, error) {
+func (o *managementControllerOptions) setupManager(
+	ctx context.Context,
+	secretsCfg secrets.ReconcilerConfig,
+) (manager.Manager, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
@@ -179,7 +182,6 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			err,
 		)
 	}
-	secretsCfg := secrets.ReconcilerConfigFromEnv()
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
