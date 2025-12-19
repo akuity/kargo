@@ -185,7 +185,7 @@ func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret)
 		)
 	}
 
-	if err = r.client.Delete(ctx, destSecret); err != nil {
+	if err = r.client.Delete(ctx, destSecret); client.IgnoreNotFound(err) != nil {
 		return fmt.Errorf(
 			"error deleting destination Secret %q in namespace %q: %w",
 			srcSecret.Name, r.cfg.DestinationNamespace, err,
