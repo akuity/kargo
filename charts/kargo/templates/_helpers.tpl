@@ -154,3 +154,17 @@ app.kubernetes.io/component: kubernetes-webhooks-server
 {{- define "kargo.managementController.labels" -}}
 app.kubernetes.io/component: management-controller
 {{- end -}}
+
+{{- define "sharedResources.namespace" -}}
+{{- with .Values.controller.globalCredentials.namespaces -}}
+{{- if gt (len .) 1 -}}
+{{- fail "controller.globalCredentials.namespaces must not contain more than one element" -}}
+{{- end -}}
+{{- index . 0 -}}
+{{- else -}}
+{{- if not .Values.global.sharedResourcesNamespace -}}
+{{- fail "global.sharedResourcesNamespace must be set when controller.globalCredentials.namespaces is empty" -}}
+{{- end -}}
+{{- .Values.global.sharedResourcesNamespace -}}
+{{- end -}}
+{{- end -}}
