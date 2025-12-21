@@ -20,9 +20,9 @@ type (
 )
 
 const (
-	// Note(krancour): We can actually initialize zap.Loggers with levels above
-	// or below those they officially support and except for the absence of
-	// conveniently named methods like Trace(), they'll work as expected.
+	// Note(krancour): Numerically speaking, zap supports levels above or below
+	// those for it has defined constants. This is how we implement our own
+	// Discard and Trace levels.
 	DiscardLevel Level = Level(zapcore.FatalLevel + 1)
 	ErrorLevel   Level = Level(zapcore.ErrorLevel)
 	InfoLevel    Level = Level(zapcore.InfoLevel)
@@ -36,8 +36,6 @@ const (
 	LogLevelEnvVar  = "LOG_LEVEL"
 	LogFormatEnvVar = "LOG_FORMAT"
 )
-
-type loggerContextKey struct{}
 
 var (
 	writer       zapcore.WriteSyncer
@@ -86,14 +84,18 @@ func init() {
 
 	// Configure controller-runtime to use our globalLogger's underlying
 	// zap.Logger wrapped as a logr.Logger.
-	runtimelog.SetLogger(zapr.NewLoggerWithOptions(globalLogger.logger))
+	runtimelog.SetLogger(
+		zapr.NewLoggerWithOptions(
+			// Reverse the skip we added in Wrap()
+			globalLogger.logger.Desugar().WithOptions(zap.AddCallerSkip(-1)),
+		),
+	)
 }
 
 // Logger is a simple wrapper around zap.Logger that provides a more ergonomic
 // API.
 type Logger struct {
-	logger  *zap.Logger
-	skipped *zap.Logger // logger with caller skip applied
+	logger *zap.SugaredLogger
 }
 
 // NewDiscardLoggerOrDie returns a new *Logger that discards all log output or
@@ -137,9 +139,11 @@ func newLoggerInternal(level Level, format Format) (*Logger, error) {
 	) {
 		zapcore.RFC3339TimeEncoder(time.UTC(), encoder)
 	}
-	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
 	cfg.DisableStacktrace = false
 	cfg.Level = zap.NewAtomicLevelAt(zapcore.Level(level))
+
+	// Add custom encoding for our Trace level
+	cfg.EncoderConfig.EncodeLevel = traceEncoder
 
 	var encoder zapcore.Encoder
 	switch format { // format was already validated above
@@ -161,72 +165,60 @@ func newLoggerInternal(level Level, format Format) (*Logger, error) {
 	return Wrap(logger), nil
 }
 
+func traceEncoder(
+	level zapcore.Level,
+	enc zapcore.PrimitiveArrayEncoder,
+) {
+	if level == zapcore.Level(TraceLevel) {
+		enc.AppendString("TRACE")
+	} else {
+		zapcore.CapitalLevelEncoder(level, enc)
+	}
+}
+
 // Wrap returns a new *Logger that wraps the provided zap.Logger.
 func Wrap(zapLogger *zap.Logger) *Logger {
 	return &Logger{
-		logger:  zapLogger,
-		skipped: zapLogger.WithOptions(zap.AddCallerSkip(1)),
+		logger: zapLogger.Sugar().WithOptions(zap.AddCallerSkip(1)),
 	}
 }
 
 // WithValues adds key-value pairs to a logger's context.
 func (l *Logger) WithValues(keysAndValues ...any) *Logger {
-	logger := l.logger.With(toZapFields(keysAndValues...)...)
 	return &Logger{
-		logger:  logger,
-		skipped: logger.WithOptions(zap.AddCallerSkip(1)),
+		logger: l.logger.With(keysAndValues...),
 	}
 }
 
 // Error logs a message at the error level.
 func (l *Logger) Error(err error, msg string, keysAndValues ...any) {
-	msg = fmt.Sprintf("%s: %v", msg, err)
-	l.skipped.Error(msg, toZapFields(keysAndValues...)...)
+	l.logger.Errorw(fmt.Sprintf("%s: %v", msg, err), keysAndValues...,
+	)
 }
 
 // Info logs a message at the info level.
 func (l *Logger) Info(msg string, keysAndValues ...any) {
-	l.skipped.Info(msg, toZapFields(keysAndValues...)...)
+	l.logger.Infow(msg, keysAndValues...)
 }
 
 // Debug logs a message at the debug level.
 func (l *Logger) Debug(msg string, keysAndValues ...any) {
-	l.skipped.Debug(msg, toZapFields(keysAndValues...)...)
+	l.logger.Debugw(msg, keysAndValues...)
 }
 
 // Trace logs a message at the trace level.
 func (l *Logger) Trace(msg string, keysAndValues ...any) {
-	// Note(krancour): Zap doesn't actually have a trace level, but WE have a
-	// trace level that is numerically below debug. A zap.Logger that was
-	// initialized with that numeric level WILL answer true to
-	// Enabled(zapcore.Level(TraceLevel)). Neat, right? So if this pseudo-trace
-	// level is enabled, we log at debug level with a "TRACE: " prefix.
-	if l.skipped.Core().Enabled(zapcore.Level(TraceLevel)) {
-		l.skipped.Debug("TRACE: "+msg, toZapFields(keysAndValues...)...)
-	}
+	// Note(krancour): Zap doesn't have a Trace method, but numerically speaking,
+	// does support arbitrary levels. We've defined TraceLevel as one less than
+	// DebugLevel and, assuming the logger is one whose core was created using
+	// newLoggerInternal() and not a wrapped user-supplied zap.Logger, a log entry
+	// written as follows will be logged as `TRACE`. Rad, huh?
+	l.logger.With(keysAndValues...).Log(zapcore.Level(TraceLevel), msg)
 }
 
 // Logr returns a logr.Logger wrapped in this Logger's underlying zap.Logger for
 // cases where one needs to to pass the a logr.Logger to another library that
 // obviously doesn't know how to work with our custom one.
 func (l *Logger) Logr() logr.Logger {
-	return zapr.NewLoggerWithOptions(l.logger)
-}
-
-func toZapFields(keysAndValues ...any) []zap.Field {
-	fields := make([]zap.Field, 0, len(keysAndValues)/2)
-	for i := 0; i < len(keysAndValues); i += 2 {
-		key, ok := keysAndValues[i].(string)
-		if !ok {
-			key = fmt.Sprintf("non_string_key_%d", i)
-		}
-		var value any
-		if i+1 < len(keysAndValues) {
-			value = keysAndValues[i+1]
-		} else {
-			value = "<missing>"
-		}
-		fields = append(fields, zap.Any(key, value))
-	}
-	return fields
+	return zapr.NewLoggerWithOptions(l.logger.Desugar().WithOptions(zap.AddCallerSkip(-1)))
 }

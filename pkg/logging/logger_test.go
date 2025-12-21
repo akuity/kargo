@@ -220,14 +220,24 @@ func TestLogger_Debug(t *testing.T) {
 }
 
 func TestLogger_Trace(t *testing.T) {
-	core, logs := observer.New(zapcore.Level(TraceLevel))
+	// Build a logger with an observable core that ALSO uses outr custom
+	// traceEncoder.
+	observableCore, logs := observer.New(zapcore.Level(TraceLevel))
+	cfg := zap.NewProductionConfig()
+	cfg.EncoderConfig.EncodeLevel = traceEncoder
+	logger, err := cfg.Build(
+		zap.WrapCore(func(zapcore.Core) zapcore.Core {
+			return observableCore
+		}),
+	)
+	require.NoError(t, err)
 	// Wrap() has its own tests, so here we assume it works.
-	Wrap(zap.New(core)).Trace("test message", "component", "test")
+	Wrap(logger).Trace("test message", "component", "test")
 	require.Len(t, logs.All(), 1)
 	// Examine captured logs...
 	entry := logs.All()[0]
-	require.Equal(t, zapcore.DebugLevel, entry.Level)
-	require.Equal(t, "TRACE: test message", entry.Message)
+	require.Equal(t, zapcore.Level(TraceLevel), entry.Level)
+	require.Equal(t, "test message", entry.Message)
 	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
 }
 
@@ -247,36 +257,4 @@ func TestLogger_Logr(t *testing.T) {
 	require.Equal(t, "test message", entry.Message)
 	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
 
-}
-
-func Test_toZapFields(t *testing.T) {
-	testCases := []struct {
-		name  string
-		input []any
-		want  []zap.Field
-	}{
-		{
-			name:  "with non-string key",
-			input: []any{123, "value"},
-			want:  []zap.Field{zap.Any("non_string_key_0", "value")},
-		},
-		{
-			name:  "with missing value",
-			input: []any{"key1"},
-			want:  []zap.Field{zap.Any("key1", "<missing>")},
-		},
-		{
-			name:  "normal case",
-			input: []any{"key1", "value1", "key2", 42},
-			want: []zap.Field{
-				zap.Any("key1", "value1"),
-				zap.Any("key2", 42),
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			require.Equal(t, testCase.want, toZapFields(testCase.input...))
-		})
-	}
 }
