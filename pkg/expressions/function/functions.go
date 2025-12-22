@@ -106,7 +106,7 @@ func StatusOperations(
 	}
 }
 
-func SharedOperations(ctx context.Context, c client.Client) []expr.Option {
+func SharedResourceOperations(ctx context.Context, c client.Client) []expr.Option {
 	return []expr.Option{
 		SharedSecret(ctx, c),
 		SharedConfigMap(ctx, c),
