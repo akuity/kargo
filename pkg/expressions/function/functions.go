@@ -78,7 +78,9 @@ func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []ex
 func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
+		SharedConfigMap(ctx, c),
 		Secret(ctx, c, cache, project),
+		SharedSecret(ctx, c),
 		FreightMetadata(ctx, c, project),
 		StageMetadata(ctx, c, project),
 	}
@@ -104,13 +106,6 @@ func StatusOperations(
 		Failure(stepExecMetas),
 		Success(stepExecMetas),
 		Status(currentStepAlias, stepExecMetas),
-	}
-}
-
-func SharedResourceOperations(ctx context.Context, c client.Client) []expr.Option {
-	return []expr.Option{
-		SharedSecret(ctx, c),
-		SharedConfigMap(ctx, c),
 	}
 }
 
