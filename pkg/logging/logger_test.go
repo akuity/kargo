@@ -2,6 +2,7 @@ package logging
 
 import (
 	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,7 +18,11 @@ func TestGlobalLogger(t *testing.T) {
 func TestNewDiscardLoggerOrDie(t *testing.T) {
 	logger := NewDiscardLoggerOrDie()
 	require.NotNil(t, logger)
-	require.Equal(t, zapcore.FatalLevel+1, logger.logger.Level())
+	require.Equal(
+		t,
+		"zapcore.nopCore",
+		reflect.TypeOf(logger.logger.Desugar().Core()).String(),
+	)
 }
 
 func TestNewLoggerOrDie(t *testing.T) {

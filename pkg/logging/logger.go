@@ -95,6 +95,10 @@ func init() {
 // Logger is a simple wrapper around zap.Logger that provides a more ergonomic
 // API.
 type Logger struct {
+	// Note(krancour): Carrying around a zap.SugaredLogger may possibly incur a
+	// very small performance penalty, but it spares us from having to duplicate
+	// some of that type's functionality, such as the conversion of context in the
+	// form of []any to []zap.Field. I consider this a worthwhile trade-off.
 	logger *zap.SugaredLogger
 }
 
@@ -121,7 +125,18 @@ func NewLogger(level Level, format Format) (*Logger, error) {
 }
 
 func newLoggerInternal(level Level, format Format) (*Logger, error) {
-	if level < TraceLevel || level > DiscardLevel {
+	if level == DiscardLevel {
+		// Note(krancour): Building a leveled logger with the level set higher than
+		// LevelFatal may actually work, but comments within zap's source code
+		// suggest that was intended to be invalid. Rather than relying on the
+		// observed behavior to never change, we take zap at its word and just
+		// return a no-op logger here when the caller has requested a logger of
+		// DiscardLevel.
+		return &Logger{
+			logger: zap.NewNop().Sugar(),
+		}, nil
+	}
+	if level < TraceLevel || level > ErrorLevel {
 		return nil, fmt.Errorf("invalid log level: %d", level)
 	}
 	// Re-parsing the format we were given has the side effects of validating and
