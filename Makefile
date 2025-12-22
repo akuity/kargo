@@ -215,7 +215,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-proto codegen-controller codegen-directive-configs codegen-ui codegen-docs
+codegen: codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
@@ -233,10 +233,11 @@ codegen-controller: install-controller-gen
 		object:headerFile=hack/boilerplate.go.txt \
 		paths=./...
 
-.PHONY: codegen-directive-configs
-codegen-directive-configs:
+.PHONY: codegen-schema-to-go
+codegen-schema-to-go:
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
+	./hack/codegen/subscriptions.sh
 
 .PHONY: codegen-ui
 codegen-ui:

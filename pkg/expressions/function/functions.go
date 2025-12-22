@@ -44,6 +44,7 @@ func FreightOperations(
 		CommitFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ImageFromFreight(ctx, c, project, freightRequests, freightRefs),
 		ChartFromFreight(ctx, c, project, freightRequests, freightRefs),
+		ArtifactFromFreight(ctx, c, project, freightRequests, freightRefs),
 		FreightMetadata(ctx, c, project),
 	}
 }
@@ -62,6 +63,7 @@ func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []ex
 		CommitFromDiscoveredArtifacts(artifacts),
 		ImageFromDiscoveredArtifacts(artifacts),
 		ChartFromDiscoveredArtifacts(artifacts),
+		ArtifactFromDiscoveredArtifacts(artifacts),
 	}
 }
 
@@ -218,6 +220,43 @@ func ChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) expr.
 		getChartFromDiscoveredArtifacts(artifacts),
 		new(func(repoURL string, chartName string) kargoapi.Chart),
 		new(func(repoURL string) kargoapi.Chart),
+	)
+}
+
+// ArtifactFromFreight returns an expr.Option that provides an `artifactFrom()`
+// function for use in expressions.
+//
+// The artifactFrom() function finds artifacts based on the provided
+// subscription name and optional origin, using the provided freight requests
+// and references within the project context.
+func ArtifactFromFreight(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
+	freightRefs []kargoapi.FreightReference,
+) expr.Option {
+	return expr.Function(
+		"artifactFrom",
+		getArtifactFromFreight(ctx, c, project, freightReqs, freightRefs),
+		new(func(name string, origin kargoapi.FreightOrigin) expressionFriendlyArtifactReference),
+		new(func(name string) expressionFriendlyArtifactReference),
+	)
+}
+
+// ArtifactFromDiscoveredArtifacts returns an expr.Option that provides an
+// `artifactFrom()` function for use, specifically, in expressions that define
+// criteria that permit or block automatic Freight creation after artifact
+// discovery.
+//
+// The artifactFrom() function finds artifacts based on the subscription name.
+func ArtifactFromDiscoveredArtifacts(
+	artifacts *kargoapi.DiscoveredArtifacts,
+) expr.Option {
+	return expr.Function(
+		"artifactFrom",
+		getArtifactFromDiscoveredArtifacts(artifacts),
+		new(func(name string) expressionFriendlyArtifactReference),
 	)
 }
 
@@ -769,6 +808,134 @@ func getChartFromDiscoveredArtifacts(artifacts *kargoapi.DiscoveredArtifacts) ex
 	}
 }
 
+// getArtifactFromFreight returns a function that finds an artifact based on the
+// provided subscription name and optional origin.
+//
+// The returned function uses freight requests and references to locate the
+// appropriate artifact within the project context.
+func getArtifactFromFreight(
+	ctx context.Context,
+	c client.Client,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
+	freightRefs []kargoapi.FreightReference,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) == 0 || len(a) > 2 {
+			return nil, fmt.Errorf("expected 1-2 arguments, got %d", len(a))
+		}
+
+		subName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		var desiredOrigin *kargoapi.FreightOrigin
+		if len(a) == 2 {
+			origin, ok := a[1].(kargoapi.FreightOrigin)
+			if !ok {
+				return nil,
+					fmt.Errorf("second argument must be FreightOrigin, got %T", a[1])
+			}
+			desiredOrigin = &origin
+		}
+
+		artifact, err := freight.FindArtifact(
+			ctx,
+			c,
+			project,
+			freightReqs,
+			desiredOrigin,
+			freightRefs,
+			subName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error finding artifact from subscription %s: %w", subName, err)
+		}
+		if artifact == nil {
+			return nil, nil
+		}
+
+		// artifact.Metadata is just JSON. Unpack it into a map[string]any so it's
+		// easily accessible from within an expression.
+		exprArtifact := expressionFriendlyArtifactReference{
+			ArtifactType:     artifact.ArtifactType,
+			SubscriptionName: artifact.SubscriptionName,
+			Version:          artifact.Version,
+			Metadata:         map[string]any{},
+		}
+		if artifact.Metadata != nil {
+			if err := json.Unmarshal(
+				artifact.Metadata.Raw,
+				&exprArtifact.Metadata,
+			); err != nil {
+				return nil, fmt.Errorf(
+					"error unmarshaling metadata for artifact from subscription %s: %w",
+					subName, err,
+				)
+			}
+		}
+
+		return exprArtifact, nil
+	}
+}
+
+// getArtifactFromDiscoveredArtifacts returns a function that finds an artifact
+// based on the provided subscription name.
+func getArtifactFromDiscoveredArtifacts(
+	artifacts *kargoapi.DiscoveredArtifacts,
+) exprFn {
+	return func(a ...any) (any, error) {
+		if len(a) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
+		}
+
+		subName, ok := a[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("first argument must be string, got %T", a[0])
+		}
+
+		if artifacts == nil {
+			return nil, nil
+		}
+
+		var artifact *kargoapi.ArtifactReference
+		for _, result := range artifacts.Results {
+			if result.SubscriptionName != subName {
+				continue
+			}
+			if len(result.ArtifactReferences) > 0 {
+				artifact = &result.ArtifactReferences[0]
+			}
+		}
+		if artifact == nil {
+			return nil, nil
+		}
+
+		// artifact.Metadata is just JSON. Unpack it into a map[string]any so it's
+		// easily accessible from within an expression.
+		exprArtifact := expressionFriendlyArtifactReference{
+			ArtifactType:     artifact.ArtifactType,
+			SubscriptionName: artifact.SubscriptionName,
+			Version:          artifact.Version,
+			Metadata:         map[string]any{},
+		}
+		if artifact.Metadata != nil {
+			if err := json.Unmarshal(
+				artifact.Metadata.Raw,
+				&exprArtifact.Metadata,
+			); err != nil {
+				return nil, fmt.Errorf(
+					"error unmarshaling artifact details for subscription %s: %w",
+					subName, err,
+				)
+			}
+		}
+
+		return exprArtifact, nil
+	}
+}
+
 // getConfigMap returns a function that retrieves a ConfigMap by its name
 // within the specified project namespace. If the ConfigMap is not found,
 // it returns an empty map.
@@ -1004,4 +1171,16 @@ const (
 // The cache key is a string formatted as "<prefix>/<project>/<name>".
 func getCacheKey(prefix, project, name string) string {
 	return fmt.Sprintf("%s/%s/%s", prefix, project, name)
+}
+
+// expressionFriendlyArtifactReference exists because the Metadata field of an
+// actual kargoapi.ArtifactReference is of type *apiextensionsv1.JSON and its
+// contents are not easy to access within an expression. This similar type has a
+// Metadata field of type map[string]any instead, which IS easy to access within
+// an expression.
+type expressionFriendlyArtifactReference struct {
+	ArtifactType     string
+	SubscriptionName string
+	Version          string
+	Metadata         map[string]any
 }

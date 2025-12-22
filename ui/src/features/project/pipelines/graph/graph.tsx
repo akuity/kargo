@@ -10,8 +10,9 @@ import {
 } from '@xyflow/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 import { GraphContext } from '../context/graph-context';
@@ -25,7 +26,7 @@ import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
-  warehouses: Warehouse[];
+  warehouses: WarehouseExpanded[];
   stages: Stage[];
   project: string;
 };
@@ -131,7 +132,7 @@ export const Graph = (props: GraphProps) => {
   });
 
   const warehouseByName = useMemo(() => {
-    const warehouseByName: Record<string, Warehouse> = {};
+    const warehouseByName: Record<string, WarehouseExpanded> = {};
 
     for (const warehouse of props.warehouses) {
       warehouseByName[warehouse.metadata?.name || ''] = warehouse;

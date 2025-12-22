@@ -65,7 +65,7 @@ func (s *server) WatchWarehouses(
 				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
 			var warehouse *kargoapi.Warehouse
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &warehouse); err != nil {
+			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, warehouse); err != nil {
 				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
