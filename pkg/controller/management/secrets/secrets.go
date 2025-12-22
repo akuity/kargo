@@ -12,7 +12,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -113,7 +115,7 @@ func (r *reconciler) Reconcile(
 		},
 		srcSecret,
 	); err != nil {
-    // Ignore if not found. This can happen if the Secret was deleted after the
+		// Ignore if not found. This can happen if the Secret was deleted after the
 		// current reconciliation request was issued.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

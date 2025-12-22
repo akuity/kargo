@@ -110,6 +110,13 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "source does not exist",
+			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "source and destination both exist; error patching destination",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
 				WithObjects(testSrcSecret, testDestSecret1).
