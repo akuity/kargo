@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"os"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -15,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -101,6 +103,71 @@ func StatusOperations(
 		Failure(stepExecMetas),
 		Success(stepExecMetas),
 		Status(currentStepAlias, stepExecMetas),
+	}
+}
+
+func SharedOperations(ctx context.Context, c client.Client) []expr.Option {
+	return []expr.Option{
+		SharedSecret(ctx, c),
+		SharedConfigMap(ctx, c),
+	}
+}
+
+func SharedSecret(ctx context.Context, c client.Client) expr.Option {
+	return expr.Function(
+		"sharedSecret",
+		sharedSecret(ctx, c),
+		new(func(name string) *corev1.Secret),
+	)
+}
+
+func SharedConfigMap(ctx context.Context, c client.Client) expr.Option {
+	return expr.Function(
+		"sharedConfigMap",
+		sharedConfigMap(ctx, c),
+		new(func(name string) *corev1.ConfigMap),
+	)
+}
+
+func sharedSecret(ctx context.Context, c client.Client) exprFn {
+	return func(params ...any) (any, error) {
+		if len(params) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(params))
+		}
+		name, ok := params[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", params[0])
+		}
+		sharedNs, ok := os.LookupEnv("SHARED_RESOURCES_NAMESPACE")
+		if !ok {
+			return nil, fmt.Errorf("SHARED_RESOURCES_NAMESPACE environment variable is not set")
+		}
+		secret := new(corev1.Secret)
+		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, secret); err != nil {
+			return nil, fmt.Errorf("failed to get shared secret %s: %w", name, err)
+		}
+		return secret, nil
+	}
+}
+
+func sharedConfigMap(ctx context.Context, c client.Client) exprFn {
+	return func(params ...any) (any, error) {
+		if len(params) != 1 {
+			return nil, fmt.Errorf("expected 1 argument, got %d", len(params))
+		}
+		name, ok := params[0].(string)
+		if !ok {
+			return nil, fmt.Errorf("argument must be string, got %T", params[0])
+		}
+		sharedNs, ok := os.LookupEnv("SHARED_RESOURCES_NAMESPACE")
+		if !ok {
+			return nil, fmt.Errorf("SHARED_RESOURCES_NAMESPACE environment variable is not set")
+		}
+		cm := new(corev1.ConfigMap)
+		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, cm); err != nil {
+			return nil, fmt.Errorf("failed to get shared config map %s: %w", name, err)
+		}
+		return cm, nil
 	}
 }
 
