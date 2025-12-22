@@ -22,7 +22,6 @@ data:
   {{- if .Values.api.secretManagementEnabled }}
   SECRET_MANAGEMENT_ENABLED: "true"
   {{- end }}
-  CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
   CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
   PERMISSIVE_CORS_POLICY_ENABLED: {{ quote .Values.api.permissiveCORSPolicyEnabled }}
   {{- if .Values.api.adminAccount.enabled }}

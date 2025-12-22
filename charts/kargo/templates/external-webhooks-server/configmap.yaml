@@ -10,7 +10,6 @@ metadata:
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
-  CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
   CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
   LOG_LEVEL: {{ quote .Values.externalWebhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.externalWebhooksServer.logFormat }}
