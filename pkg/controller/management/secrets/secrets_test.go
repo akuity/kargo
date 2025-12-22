@@ -158,14 +158,14 @@ func TestReconcile(t *testing.T) {
 				WithScheme(testScheme).
 				WithObjects(testSrcSecret).
 				Build(),
-			assertions: func(t *testing.T, c client.Client, err error) {
+			assertions: func(t *testing.T, c client.Client, _ error) {
 				// make sure source secret now has finalizer
 				secret := new(corev1.Secret)
-				err = c.Get(t.Context(), types.NamespacedName{
+				getErr := c.Get(t.Context(), types.NamespacedName{
 					Namespace: testSrcNamespace,
 					Name:      testSecretName,
 				}, secret)
-				require.NoError(t, err)
+				require.NoError(t, getErr)
 				require.Len(t, secret.Finalizers, 1)
 				require.Equal(t, secret.Finalizers[0], kargoapi.FinalizerName)
 			},
