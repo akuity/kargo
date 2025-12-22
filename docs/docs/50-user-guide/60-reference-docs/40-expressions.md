@@ -333,6 +333,20 @@ config:
   repoURL: ${{ configMap('my-config').repoURL }}
 ```
 
+### `sharedConfigMap(name)`
+
+The `sharedConfigMap()` function returns the `Data` field 
+(a `map[string]string`) of a Kubernetes `ConfigMap` with the specified name from 
+the `SHARED_RESOURCES_NAMESPACE`. If no such `ConfigMap` exists, an empty map is 
+returned.
+
+Example:
+
+```yaml
+config:
+  repoURL: ${{ sharedConfigMap('my-config').repoURL }}
+```
+
 ### `secret(name)`
 
 The `secret()` function returns the `Data` field of a Kubernetes `Secret` with
@@ -350,7 +364,18 @@ config:
 
 ### `sharedSecret(name)`
 
-The `sharedSecret` functions returns the `Data
+The `sharedSecret()` function returns the `Data` field of a Kubernetes `Secret` 
+with the specified name from the `SHARED_RESOURCES_NAMESPACE` decoded into a
+`map[string]string`. If no such `Secret` exists, an empty map is returned.
+
+Examples:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ sharedSecret('slack').token }}
+```
 
 ### `warehouse(name)`
 
