@@ -110,7 +110,7 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "source does not exist",
+			name:   "source does not exist",
 			client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
 				require.NoError(t, err)
@@ -153,23 +153,21 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "source exists, destination does not; error creating destination",
-			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(withFinalizer(testSrcSecret)).
-				WithInterceptorFuncs(
-					interceptor.Funcs{
-						Create: func(
-							context.Context,
-							client.WithWatch,
-							client.Object,
-							...client.CreateOption,
-						) error {
-							return fmt.Errorf("something went wrong")
-						},
-					},
-				).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "something went wrong")
+			name: "source with no finalizer gets finalizer added",
+			client: fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(testSrcSecret).
+				Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				// make sure source secret now has finalizer
+				secret := new(corev1.Secret)
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, secret)
+				require.NoError(t, err)
+				require.Len(t, secret.Finalizers, 1)
+				require.Equal(t, secret.Finalizers[0], kargoapi.FinalizerName)
 			},
 		},
 		{
