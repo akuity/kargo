@@ -2,6 +2,7 @@ package function
 
 import (
 	"context"
+	"os"
 	"testing"
 	"time"
 
@@ -1925,6 +1926,147 @@ func Test_semverParse(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			result, err := semverParse(testCase.args...)
 			testCase.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getSharedResource(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		resourceType client.Object
+		kClient      client.Client
+		args         []any
+		setup        func()
+		assertions   func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "wrong number of arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1 argument")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "empty resource name",
+			args: []any{""},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "name must not be empty")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "shared-resources-namespace not set",
+			kClient: fake.NewClientBuilder().
+				WithScheme(func() *runtime.Scheme {
+					scheme := runtime.NewScheme()
+					assert.NoError(t, corev1.AddToScheme(scheme))
+					return scheme
+				}()).
+				Build(),
+			args: []any{"my-secret"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "SHARED_RESOURCES_NAMESPACE environment variable is not set")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name:         "resource does not exist",
+			resourceType: new(corev1.Secret),
+			kClient: fake.NewClientBuilder().
+				WithScheme(func() *runtime.Scheme {
+					scheme := runtime.NewScheme()
+					assert.NoError(t, corev1.AddToScheme(scheme))
+					return scheme
+				}()).
+				Build(),
+			args: []any{"non-existent-secret"},
+			setup: func() {
+				os.Setenv("SHARED_RESOURCES_NAMESPACE", "shared-resources-namespace")
+			},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.Error(t, err)
+				assert.Nil(t, result)
+				assert.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name:         "success - secret",
+			resourceType: new(corev1.Secret),
+			kClient: fake.NewClientBuilder().
+				WithScheme(func() *runtime.Scheme {
+					scheme := runtime.NewScheme()
+					assert.NoError(t, corev1.AddToScheme(scheme))
+					return scheme
+				}()).
+				WithObjects(&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "shared-resources-namespace",
+						Name:      "my-secret",
+					},
+					Data: map[string][]byte{
+						"key": []byte("expected-value"),
+					},
+				}).
+				Build(),
+			args: []any{"my-secret"},
+			setup: func() {
+				os.Setenv("SHARED_RESOURCES_NAMESPACE", "shared-resources-namespace")
+			},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				s, ok := result.(*corev1.Secret)
+				require.True(t, ok)
+				require.NotNil(t, s)
+				require.Equal(t, []byte("expected-value"), s.Data["key"])
+			},
+		},
+		{
+			name:         "success - config map",
+			resourceType: new(corev1.ConfigMap),
+			kClient: fake.NewClientBuilder().
+				WithScheme(func() *runtime.Scheme {
+					scheme := runtime.NewScheme()
+					assert.NoError(t, corev1.AddToScheme(scheme))
+					return scheme
+				}()).
+				WithObjects(&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "shared-resources-namespace",
+						Name:      "my-configmap",
+					},
+					Data: map[string]string{
+						"key": "expected-value",
+					},
+				}).
+				Build(),
+			args: []any{"my-configmap"},
+			setup: func() {
+				os.Setenv("SHARED_RESOURCES_NAMESPACE", "shared-resources-namespace")
+			},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				s, ok := result.(*corev1.ConfigMap)
+				require.True(t, ok)
+				require.NotNil(t, s)
+				require.Equal(t, "expected-value", s.Data["key"])
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setup != nil {
+				tt.setup()
+			}
+			result, err := getSharedResource(t.Context(), tt.kClient, tt.resourceType)(tt.args...)
+			tt.assertions(t, result, err)
 		})
 	}
 }

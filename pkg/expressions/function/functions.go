@@ -3,6 +3,7 @@ package function
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -116,7 +117,7 @@ func SharedResourceOperations(ctx context.Context, c client.Client) []expr.Optio
 func SharedSecret(ctx context.Context, c client.Client) expr.Option {
 	return expr.Function(
 		"sharedSecret",
-		sharedSecret(ctx, c),
+		getSharedResource(ctx, c, new(corev1.Secret)),
 		new(func(name string) *corev1.Secret),
 	)
 }
@@ -124,12 +125,12 @@ func SharedSecret(ctx context.Context, c client.Client) expr.Option {
 func SharedConfigMap(ctx context.Context, c client.Client) expr.Option {
 	return expr.Function(
 		"sharedConfigMap",
-		sharedConfigMap(ctx, c),
+		getSharedResource(ctx, c, new(corev1.ConfigMap)),
 		new(func(name string) *corev1.ConfigMap),
 	)
 }
 
-func sharedSecret(ctx context.Context, c client.Client) exprFn {
+func getSharedResource(ctx context.Context, c client.Client, o client.Object) exprFn {
 	return func(params ...any) (any, error) {
 		if len(params) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(params))
@@ -138,36 +139,17 @@ func sharedSecret(ctx context.Context, c client.Client) exprFn {
 		if !ok {
 			return nil, fmt.Errorf("argument must be string, got %T", params[0])
 		}
-		sharedNs, ok := os.LookupEnv("SHARED_RESOURCES_NAMESPACE")
-		if !ok {
-			return nil, fmt.Errorf("SHARED_RESOURCES_NAMESPACE environment variable is not set")
+		if name == "" {
+			return nil, errors.New("name must not be empty")
 		}
-		secret := new(corev1.Secret)
-		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, secret); err != nil {
-			return nil, fmt.Errorf("failed to get shared secret %s: %w", name, err)
+		sharedNs := os.Getenv("SHARED_RESOURCES_NAMESPACE")
+		if sharedNs == "" {
+			return nil, errors.New("SHARED_RESOURCES_NAMESPACE environment variable is not set")
 		}
-		return secret, nil
-	}
-}
-
-func sharedConfigMap(ctx context.Context, c client.Client) exprFn {
-	return func(params ...any) (any, error) {
-		if len(params) != 1 {
-			return nil, fmt.Errorf("expected 1 argument, got %d", len(params))
+		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, o); err != nil {
+			return nil, fmt.Errorf("failed to get shared resource %T %s: %w", o, name, err)
 		}
-		name, ok := params[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("argument must be string, got %T", params[0])
-		}
-		sharedNs, ok := os.LookupEnv("SHARED_RESOURCES_NAMESPACE")
-		if !ok {
-			return nil, fmt.Errorf("SHARED_RESOURCES_NAMESPACE environment variable is not set")
-		}
-		cm := new(corev1.ConfigMap)
-		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, cm); err != nil {
-			return nil, fmt.Errorf("failed to get shared config map %s: %w", name, err)
-		}
-		return cm, nil
+		return o, nil
 	}
 }
 
