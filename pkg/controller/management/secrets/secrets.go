@@ -53,6 +53,14 @@ func SetupReconcilerWithManager(
 ) error {
 	err := ctrl.NewControllerManagedBy(kargoMgr).
 		For(&corev1.Secret{}).
+		WithEventFilter(
+			predicate.Funcs{
+				DeleteFunc: func(event.DeleteEvent) bool {
+					// We're not interested in any deletes
+					return false
+				},
+			},
+		).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
 	if err == nil {
 		logging.LoggerFromContext(ctx).Info(
@@ -105,6 +113,8 @@ func (r *reconciler) Reconcile(
 		},
 		srcSecret,
 	); err != nil {
+    // Ignore if not found. This can happen if the Secret was deleted after the
+		// current reconciliation request was issued.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -167,6 +177,11 @@ func (r *reconciler) Reconcile(
 // corresponding destination Secret and removing the finalizer from the source
 // Secret to unblock its deletion.
 func (r *reconciler) handleDelete(ctx context.Context, srcSecret *corev1.Secret) error {
+	// If the Secret does not have the finalizer, there is nothing to do.
+	if !controllerutil.ContainsFinalizer(srcSecret, kargoapi.FinalizerName) {
+		return nil
+	}
+
 	logger := logging.LoggerFromContext(ctx)
 
 	destSecret := new(corev1.Secret)
