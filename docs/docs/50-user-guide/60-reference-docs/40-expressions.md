@@ -348,6 +348,10 @@ config:
     value: Bearer ${{ secret('slack').token }}
 ```
 
+### `sharedSecret(name)`
+
+The `sharedSecret` functions returns the `Data
+
 ### `warehouse(name)`
 
 The `warehouse()` function returns a `FreightOrigin` object representing a

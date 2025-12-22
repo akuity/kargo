@@ -3,7 +3,6 @@ package function
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"maps"
 	"os"
@@ -17,7 +16,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -78,9 +76,9 @@ func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []ex
 func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
-		SharedConfigMap(ctx, c),
+		SharedConfigMap(ctx, c, cache),
 		Secret(ctx, c, cache, project),
-		SharedSecret(ctx, c),
+		SharedSecret(ctx, c, cache),
 		FreightMetadata(ctx, c, project),
 		StageMetadata(ctx, c, project),
 	}
@@ -109,43 +107,20 @@ func StatusOperations(
 	}
 }
 
-func SharedSecret(ctx context.Context, c client.Client) expr.Option {
+func SharedSecret(ctx context.Context, c client.Client, cache *gocache.Cache) expr.Option {
 	return expr.Function(
 		"sharedSecret",
-		getSharedResource(ctx, c, new(corev1.Secret)),
+		getSecret(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
 		new(func(name string) *corev1.Secret),
 	)
 }
 
-func SharedConfigMap(ctx context.Context, c client.Client) expr.Option {
+func SharedConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache) expr.Option {
 	return expr.Function(
 		"sharedConfigMap",
-		getSharedResource(ctx, c, new(corev1.ConfigMap)),
+		getConfigMap(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
 		new(func(name string) *corev1.ConfigMap),
 	)
-}
-
-func getSharedResource(ctx context.Context, c client.Client, o client.Object) exprFn {
-	return func(params ...any) (any, error) {
-		if len(params) != 1 {
-			return nil, fmt.Errorf("expected 1 argument, got %d", len(params))
-		}
-		name, ok := params[0].(string)
-		if !ok {
-			return nil, fmt.Errorf("argument must be string, got %T", params[0])
-		}
-		if name == "" {
-			return nil, errors.New("name must not be empty")
-		}
-		sharedNs := os.Getenv("SHARED_RESOURCES_NAMESPACE")
-		if sharedNs == "" {
-			return nil, errors.New("SHARED_RESOURCES_NAMESPACE environment variable is not set")
-		}
-		if err := c.Get(ctx, types.NamespacedName{Namespace: sharedNs, Name: name}, o); err != nil {
-			return nil, fmt.Errorf("failed to get shared resource %T %s: %w", o, name, err)
-		}
-		return o, nil
-	}
 }
 
 // Warehouse returns an expr.Option that provides a `warehouse()` function
