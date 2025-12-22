@@ -228,7 +228,7 @@ func TestReconcile(t *testing.T) {
 					},
 				})).Build(),
 			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "error getting destination Secret")
+				require.NoError(t, err)
 			},
 		},
 		{
