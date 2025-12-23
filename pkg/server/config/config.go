@@ -32,6 +32,7 @@ type ServerConfig struct {
 	AnalysisRunLogToken         string
 	AnalysisRunLogHTTPHeaders   map[string]string
 	ClusterSecretNamespace      string
+	SharedResourcesNamespace    string
 }
 
 func ServerConfigFromEnv() ServerConfig {
@@ -76,6 +77,10 @@ func ServerConfigFromEnv() ServerConfig {
 	}
 	if cfg.SecretManagementEnabled {
 		cfg.ClusterSecretNamespace = os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "")
+		cfg.SharedResourcesNamespace = os.GetEnv(
+			"SHARED_RESOURCES_NAMESPACE",
+			"kargo-shared-resources",
+		)
 	}
 	return cfg
 }

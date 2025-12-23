@@ -23,6 +23,8 @@ global:
   createClusterSecretsNamespace: true
   ## @param global.sharedResourcesNamespace Indicates a namespace where shared resources can be located.
   sharedResourcesNamespace: kargo-shared-resources
+  ## @param global.createSharedResourcesNamespace Indicates whether the `sharedResourcesNamespace` should be managed by the chart.
+  createSharedResourcesNamespace: true
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.

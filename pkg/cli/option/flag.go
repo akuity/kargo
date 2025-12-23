@@ -100,6 +100,9 @@ const (
 	// RoleFlag is the flag name for the role flag.
 	RoleFlag = "role"
 
+	// SharedFlag is the flag name for the shared flag.
+	SharedFlag = "shared"
+
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
 
@@ -280,6 +283,11 @@ func ResourceType(fs *pflag.FlagSet, repoType *string, usage string) {
 // Role adds the RoleFlag to the provided flag set.
 func Role(fs *pflag.FlagSet, role *string, usage string) {
 	fs.StringVar(role, RoleFlag, "", usage)
+}
+
+// Shared adds the SharedFlag to the provided flag set.
+func Shared(fs *pflag.FlagSet, shared *bool, defaultShared bool, usage string) {
+	fs.BoolVar(shared, SharedFlag, defaultShared, usage)
 }
 
 // Stage adds the StageFlag to the provided flag set.
