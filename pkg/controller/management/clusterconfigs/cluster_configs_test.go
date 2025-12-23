@@ -3,11 +3,14 @@ package clusterconfigs
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -185,6 +188,81 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 				testCase.clusterCfg,
 			)
 			testCase.assertions(t, status, err)
+		})
+	}
+}
+
+func TestReconciler_Reconcile(t *testing.T) {
+	testScheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(testScheme))
+
+	testCases := []struct {
+		name            string
+		requeueInterval time.Duration
+		clusterCfg      *kargoapi.ClusterConfig
+		assertions      func(*testing.T, ctrl.Result, error)
+	}{
+		{
+			name:            "successful reconciliation uses default requeue interval",
+			requeueInterval: 5 * time.Minute,
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 5*time.Minute, result.RequeueAfter)
+			},
+		},
+		{
+			name:            "successful reconciliation uses custom requeue interval",
+			requeueInterval: 10 * time.Minute,
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 10*time.Minute, result.RequeueAfter)
+			},
+		},
+		{
+			name:            "successful reconciliation uses short requeue interval",
+			requeueInterval: 30 * time.Second,
+			clusterCfg: &kargoapi.ClusterConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "cluster",
+				},
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(t, 30*time.Second, result.RequeueAfter)
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(testScheme).
+				WithObjects(testCase.clusterCfg).
+				WithStatusSubresource(&kargoapi.ClusterConfig{}).
+				Build()
+
+			r := &reconciler{
+				cfg: ReconcilerConfig{
+					ExternalWebhookServerBaseURL: "https://example.com",
+					RequeueInterval:              testCase.requeueInterval,
+				},
+				client: c,
+			}
+
+			result, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: client.ObjectKeyFromObject(testCase.clusterCfg),
+			})
+			testCase.assertions(t, result, err)
 		})
 	}
 }

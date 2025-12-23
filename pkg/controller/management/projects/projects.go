@@ -42,10 +42,11 @@ const (
 )
 
 type ReconcilerConfig struct {
-	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
-	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
-	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+	ManageControllerRoleBindings bool          `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
+	KargoNamespace               string        `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+	MaxConcurrentReconciles      int           `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
+	ClusterSecretsNamespace      string        `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+	RequeueInterval              time.Duration `envconfig:"PROJECT_REQUEUE_INTERVAL" default:"5m"`
 
 	ManageExtendedPermissions bool `envconfig:"MANAGE_EXTENDED_PERMISSIONS" default:"false"`
 
@@ -325,8 +326,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, reconcileErr
 	}
 	// Otherwise, requeue after a delay.
-	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	return ctrl.Result{RequeueAfter: r.cfg.RequeueInterval}, nil
 }
 
 func (r *reconciler) reconcile(

@@ -26,8 +26,9 @@ import (
 )
 
 type ReconcilerConfig struct {
-	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+	ExternalWebhookServerBaseURL string        `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
+	ClusterSecretsNamespace      string        `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+	RequeueInterval              time.Duration `envconfig:"CLUSTER_CONFIG_REQUEUE_INTERVAL" default:"5m"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -137,8 +138,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, reconcileErr
 	}
 
-	// TODO: Make the requeue delay configurable.
-	return ctrl.Result{RequeueAfter: 5 * time.Minute}, nil
+	return ctrl.Result{RequeueAfter: r.cfg.RequeueInterval}, nil
 }
 
 func (r *reconciler) reconcile(

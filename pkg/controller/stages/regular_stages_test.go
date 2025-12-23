@@ -419,6 +419,9 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
+				cfg: ReconcilerConfig{
+					RequeueInterval: 5 * time.Minute,
+				},
 				client:      c,
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
