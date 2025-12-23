@@ -89,14 +89,11 @@ changed by the operator at the time of installation. (Refer to the
 
 :::warning
 
-Prior to `v1.9`, _cluster-scoped_ resources lived in `kargo-cluster-secrets`(
-  or the namespace designated by`global.clusterSecretsNamespace` if the default
-  was overwritten
-). Now, _cluster-scoped_ resources live in `kargo-cluster-resources` by default.
-In addition to this change, a migration reconciler has been introduced to move 
-any existing `Secret` resources from `kargo-cluster-secrets` to 
-`kargo-cluster-resources`. `kargo-cluster-secrets` will be deprecated entirely
-in a future release.
+Prior to `v1.9`, `Secret`s referenced by `ClusterConfig` were contained in the namespace designated by`global.clusterSecretsNamespace`, with a default of `kargo-cluster-secrets`.
+
+Kargo v1.9.0 changed the name of the setting to `global.clusterResourcesNamespace` and its default value to `kargo-cluster-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog.
+
+Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their `ClusterConfig` will need to have updated their manifests accordingly. Upgrades to v1.12.0 will **fail** if `global.clusterSecretsNamespace` remains defined.
 
 :::
 
