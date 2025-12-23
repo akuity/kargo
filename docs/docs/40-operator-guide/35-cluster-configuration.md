@@ -80,10 +80,23 @@ receiver vary, and are documented on
 Because `ClusterConfig` resources are _cluster-scoped_ resources and Kubernetes
 has no such thing as a "`ClusterSecret`" resource type (i.e. a cluster-scoped
 analog to `Secret`), Kargo will look for the referenced `Secret` in a designated
-namespace. By default, that namespace is `kargo-cluster-secrets`, but can be
+namespace. By default, that namespace is `kargo-cluster-resources`, but can be
 changed by the operator at the time of installation. (Refer to the
 [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
 )
+
+:::
+
+:::warning
+
+Prior to `v1.9`, _cluster-scoped_ resources lived in `kargo-cluster-secrets`(
+  or the namespace designated by`global.clusterSecretsNamespace` if the default
+  was overwritten
+). Now, _cluster-scoped_ resources live in `kargo-cluster-resources` by default.
+In addition to this change, a migration reconciler has been introduced to move 
+any existing `Secret` resources from `kargo-cluster-secrets` to 
+`kargo-cluster-resources`. `kargo-cluster-secrets` will be deprecated entirely
+in a future release.
 
 :::
 
