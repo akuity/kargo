@@ -45,6 +45,9 @@ spec:
       {{- end }}
     spec:
       serviceAccount: kargo-webhooks-server
+      {{- with .Values.webhooksServer.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.webhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

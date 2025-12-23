@@ -45,6 +45,9 @@ spec:
       {{- end }}
     spec:
       serviceAccount: kargo-management-controller
+      {{- with .Values.managementController.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.managementController.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}
