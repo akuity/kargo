@@ -239,7 +239,7 @@ api:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
         ## @param api.oidc.dex.image.tag Image tag for Dex.
-        tag: v2.37.0
+        tag: v2.44.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
         ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
