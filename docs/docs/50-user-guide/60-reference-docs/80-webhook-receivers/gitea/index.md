@@ -9,13 +9,17 @@ repositories by _refreshing_ all `Warehouse` resources subscribed to those
 repositories.
 
 :::info
+
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of
 new artifacts from all repositories to which that `Warehouse` subscribes.
+
 :::
 
 :::info
+
 The Gitea webhook receiver also works with Gitea Enterprise and Gitea Cloud.
+
 :::
 
 ## Configuring the Receiver
@@ -26,6 +30,7 @@ A Gitea webhook receiver must reference a Kubernetes `Secret` resource with a
 Gitea to sign requests and by the receiver to verify those signatures.
 
 :::note
+
 The following commands are suggested for generating and base64-encoding a
 complex secret:
 
@@ -34,6 +39,7 @@ secret=$(openssl rand -base64 48 | tr -d '=+/' | head -c 32)
 echo "Secret: $secret"
 echo "Encoded secret: $(echo -n $secret | base64)"
 ```
+
 :::
 
 ```yaml
@@ -131,6 +137,8 @@ kubectl get projectconfigs kargo-demo \
        selected scope.
 
 :::info
+
 For additional information on configuring Gitea webhooks, refer directly to the
 [Gitea Docs](https://docs.gitea.com/usage/webhooks).
+
 :::

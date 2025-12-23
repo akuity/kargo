@@ -15,7 +15,7 @@ import { transportWithAuth } from '@ui/config/transport';
 import {
   abortVerification,
   queryFreight,
-  refreshStage,
+  refreshResource,
   reverify
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ArgoCDShard } from '@ui/gen/api/service/v1alpha1/service_pb';
@@ -36,9 +36,15 @@ export const StageActions = ({
   const queryClient = useQueryClient();
   const [shouldRefetchFreights, setShouldRefetchFreights] = React.useState(false);
 
-  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshStage);
+  const { mutate: refresh, isPending: isRefreshLoading } = useMutation(refreshResource);
 
-  const onRefresh = () => refresh({ name: stageName, project: projectName });
+  const refreshResourceTypeStage = 'Stage';
+  const onRefresh = () =>
+    refresh({
+      name: stageName,
+      project: projectName,
+      resourceType: refreshResourceTypeStage
+    });
 
   // Once the Refresh process is done, refetch Freight list
   React.useEffect(() => {

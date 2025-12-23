@@ -67,10 +67,11 @@ vars:
 - name: targetBranch
   value: main
 ```
-
 :::info
+
 Variables without a default value are required and must be provided when the task
 is referenced in a Promotion Template.
+
 :::
 
 Variables can be referenced throughout the task using `${{ vars.<variable-name> }}`:
@@ -130,9 +131,11 @@ steps:
 ```
 
 :::note
+
 Unlike Promotion Templates, task steps cannot reference other Promotion Tasks.
 This prevents circular dependencies and keeps tasks focused on a specific
 workflow.
+
 :::
 
 #### Task Context
@@ -155,6 +158,7 @@ steps:
 ```
 
 :::info
+
 The `task.outputs` variable is required when referencing outputs from previous
 steps within the same task.
 
@@ -163,6 +167,7 @@ This requirement exists because tasks are inflated during the creation of a
 to avoid conflicts with other steps in the template. This means that the
 alias of a task step at runtime is not known to the `PromotionTask` definition,
 so it cannot be used to reference outputs.
+
 :::
 
 ### Task Outputs
@@ -219,9 +224,10 @@ steps:
     name: global-task
     kind: ClusterPromotionTask
 ```
-
 :::info
+
 `ClusterPromotionTasks` are perfect for standardizing promotion workflows across
 your organization, such as promotion patterns that should be consistently applied
 across all projects.
+
 :::

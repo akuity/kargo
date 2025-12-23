@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"helm.sh/helm/v3/pkg/repo"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
@@ -168,6 +169,35 @@ func Test_kustomizeBuilder_convert(t *testing.T) {
 			},
 			expectedProblems: nil,
 		},
+		{
+			name: "invalid outputFormat",
+			config: promotion.Config{
+				"path":         "/kustomization/path",
+				"outPath":      "/output/",
+				"outputFormat": "invalid",
+			},
+			expectedProblems: []string{
+				"outputFormat: outputFormat must be one of the following:",
+			},
+		},
+		{
+			name: "valid config with kargo outputFormat",
+			config: promotion.Config{
+				"path":         "/kustomization/path",
+				"outPath":      "/output/",
+				"outputFormat": "kargo",
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with kustomize outputFormat",
+			config: promotion.Config{
+				"path":         "/kustomization/path",
+				"outPath":      "/output/",
+				"outputFormat": "kustomize",
+			},
+			expectedProblems: nil,
+		},
 	}
 
 	r := newKustomizeBuilder(promotion.StepRunnerCapabilities{})
@@ -297,6 +327,70 @@ metadata:
 
 				assert.DirExists(t, filepath.Join(dir, "output"))
 				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(b), "test-deployment")
+			},
+		},
+		{
+			name: "successful build with kargo output format",
+			setupFiles: func(t *testing.T, dir string) {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(`---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`), 0o600))
+			},
+			config: builtin.KustomizeBuildConfig{
+				Path:         ".",
+				OutPath:      "output/",
+				OutputFormat: ptr.To(builtin.Kargo),
+			},
+			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				assert.DirExists(t, filepath.Join(dir, "output"))
+				// Kargo format: kind-name.yaml (lowercase)
+				b, err := os.ReadFile(filepath.Join(dir, "output", "deployment-test-deployment.yaml"))
+				require.NoError(t, err)
+				assert.Contains(t, string(b), "test-deployment")
+			},
+		},
+		{
+			name: "successful build with kustomize output format",
+			setupFiles: func(t *testing.T, dir string) {
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "kustomization.yaml"), []byte(`
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- deployment.yaml
+`), 0o600))
+				require.NoError(t, os.WriteFile(filepath.Join(dir, "deployment.yaml"), []byte(`---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-deployment
+`), 0o600))
+			},
+			config: builtin.KustomizeBuildConfig{
+				Path:         ".",
+				OutPath:      "output/",
+				OutputFormat: ptr.To(builtin.Kustomize),
+			},
+			assertions: func(t *testing.T, dir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				assert.DirExists(t, filepath.Join(dir, "output"))
+				// Kustomize format: group_version_kind_name.yaml
+				b, err := os.ReadFile(filepath.Join(dir, "output", "apps_v1_deployment_test-deployment.yaml"))
 				require.NoError(t, err)
 				assert.Contains(t, string(b), "test-deployment")
 			},

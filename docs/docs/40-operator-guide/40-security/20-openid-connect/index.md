@@ -27,6 +27,7 @@ Like many modern applications, Kargo uses the
 [authorization code flow](https://auth0.com/docs/get-started/authentication-and-authorization-flow/authorization-code-flow).
 
 :::info
+
 Briefly, PKCE is an extension to the authorization code flow that does not
 require clients to be issued a secret, which they must then protect. This is
 useful for "public clients" such as single-page applications (SPAs) and mobile
@@ -35,6 +36,7 @@ apps, which cannot reliably protect a secret from intrepid users.
 Historically, public clients have either utilized the less secure implicit flow
 or used their own API server (which _can_ protect a client secret) as a
 middleman. With PKCE, a client can securely interact with an IDP directly.
+
 :::
 
 Many IDPs support both OIDC and PKCE and Kargo can be integrated directly with
@@ -43,11 +45,13 @@ whether it supports _both_ of these standards. _If it does not, read on
 regardless. We will show how to work around such a constraint._
 
 :::info
+
 Whether you're installing Kargo
 [using Helm](../../20-advanced-installation/10-advanced-with-helm.md) or
 [via Argo CD](../../20-advanced-installation/20-advanced-with-argocd.md), the
 next two sections assume familiarity with procedures for configuring that
 installation.
+
 :::
 
 ## Configuration
@@ -64,11 +68,12 @@ supports both OIDC and PKCE:
 **With a compatible identity provider:**
 
   - `https://<hostname for api server>/login` (for the UI)
-  - `https://localhost/auth/callback` (for the CLI)
+  - `http://localhost/auth/callback` (for the CLI)
 
     <br/>
 
     :::info
+
     If your IDP does not permit you to register multiple callback URLs, you
     may need to register two clients -- one each for the UI and the CLI.
     :::
@@ -90,6 +95,7 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 1. Only if your IDP supports _both_ OIDC and PKCE:
 
     :::caution
+
     If your IDP does not support _both_ OIDC and PKCE, the
     [Adapting Incompatible IDPs](#adapting-incompatible-idps) section provides
     alternate instructions for this step.
@@ -174,6 +180,7 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
     section of the access controls page.
 
     :::caution
+
     Most assignments of users to roles is accomplished at the _project level_
     since individual users' permissions are likely to vary from project to
     project. `api.oidc.admins` and `api.oidc.viewers` are strictly for mapping
@@ -183,7 +190,9 @@ When installing Kargo with Helm, all options related to OIDC are grouped under
 ### Adapting Incompatible IDPs
 
 :::note
+
 If your IDP supports both OIDC and PKCE, you can skip this section entirely.
+
 :::
 
 So your IDP does not support both OIDC and PKCE? In most cases, Kargo can work
@@ -232,6 +241,7 @@ To configure Kargo to use Dex, set:
     ```
 
     :::info
+
     The Kargo chart will generate all the remaining Dex configuration for you.
     Only the `connectors` section needs to be provided.
     :::

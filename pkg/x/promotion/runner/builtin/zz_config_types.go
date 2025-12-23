@@ -11,13 +11,43 @@ type ArgoCDUpdateConfig struct {
 }
 
 type ArgoCDAppUpdate struct {
-	// Specifies the name of an Argo CD Application resource to be updated.
-	Name string `json:"name"`
+	// Specifies the exact name of an Argo CD Application resource to be updated. Mutually
+	// exclusive with 'selector'.
+	Name string `json:"name,omitempty"`
 	// Specifies the namespace of an Argo CD Application resource to be updated. If left
 	// unspecified, the namespace will be the controller's configured default.
 	Namespace string `json:"namespace,omitempty"`
+	// Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+	// exclusive with 'name'.
+	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
 	// Describes updates to be applied to various sources of an Argo CD Application resource.
 	Sources []ArgoCDAppSourceUpdate `json:"sources,omitempty"`
+}
+
+// Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+// exclusive with 'name'.
+//
+// Selector to match Argo CD Application resources by labels. Must contain at least one
+// selection criterion.
+type ArgoCDAppSelector struct {
+	// matchExpressions is a list of label selector requirements. The requirements are ANDed.
+	MatchExpressions []MatchExpression `json:"matchExpressions,omitempty"`
+	// matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels map is
+	// equivalent to an element of matchExpressions, whose key field is 'key', the operator is
+	// 'In', and the values array contains only 'value'. The requirements are ANDed.
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+}
+
+type MatchExpression struct {
+	// key is the label key that the selector applies to.
+	Key string `json:"key"`
+	// operator represents a key's relationship to a set of values. Valid operators are In,
+	// NotIn, Exists and DoesNotExist.
+	Operator Operator `json:"operator"`
+	// values is an array of string values. If the operator is In or NotIn, the values array
+	// must be non-empty. If the operator is Exists or DoesNotExist, the values array must be
+	// empty. This array is replaced during a strategic merge patch.
+	Values []string `json:"values,omitempty"`
 }
 
 type ArgoCDAppSourceUpdate struct {
@@ -114,6 +144,9 @@ type GitCloneConfig struct {
 	Checkout []Checkout `json:"checkout"`
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// Indicates whether to recursively clone submodules. Default is false. Note that any
+	// provided credentials must also be valid for the submodules.
+	RecurseSubmodules bool `json:"recurseSubmodules,omitempty"`
 	// The URL of a remote Git repository to clone. Required.
 	RepoURL string `json:"repoURL"`
 }
@@ -303,6 +336,9 @@ type SetValues struct {
 	// The key whose value should be set. For nested values, use dots to delimit key parts. e.g.
 	// `image.tag`.
 	Key string `json:"key"`
+	// Whether to force the value to be treated as a literal string. When true, uses
+	// --set-literal instead of --set.
+	Literal bool `json:"literal,omitempty"`
 	// The new value for the key.
 	Value string `json:"value"`
 }
@@ -339,6 +375,10 @@ type HTTPConfig struct {
 	Outputs []HTTPOutput `json:"outputs,omitempty"`
 	// Query parameters to include in the HTTP request.
 	QueryParams []HTTPConfigQueryParam `json:"queryParams,omitempty"`
+	// Optionally overrides the Content-Type header for response parsing. Accepts MIME media
+	// type values: 'application/json', 'application/yaml', or 'text/plain'. If not set, uses
+	// the Content-Type header from the response with JSON fallback.
+	ResponseContentType string `json:"responseContentType,omitempty"`
 	// An expression to evaluate to determine if the request was successful.
 	SuccessExpression string `json:"successExpression,omitempty"`
 	// The maximum time to wait for the request to complete. If not specified, the default is 10
@@ -433,6 +473,11 @@ type JSONUpdate struct {
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`
+	// Specifies the naming convention for output files when writing to a directory. 'kargo'
+	// (default) uses '[namespace-]kind-name.yaml' format (e.g., 'deployment-myapp.yaml').
+	// 'kustomize' matches the naming convention of 'kustomize build -o dir/', using
+	// '[namespace_]group_version_kind_name.yaml' format (e.g., 'apps_v1_deployment_myapp.yaml').
+	OutputFormat *OutputFormat `json:"outputFormat,omitempty"`
 	// Path to the directory containing the Kustomization file.
 	Path string `json:"path"`
 	// Plugin contains configuration for customizing the behavior of builtin Kustomize plugins.
@@ -561,6 +606,17 @@ type YAMLUpdate struct {
 	Value interface{} `json:"value"`
 }
 
+// operator represents a key's relationship to a set of values. Valid operators are In,
+// NotIn, Exists and DoesNotExist.
+type Operator string
+
+const (
+	DoesNotExist Operator = "DoesNotExist"
+	Exists       Operator = "Exists"
+	In           Operator = "In"
+	NotIn        Operator = "NotIn"
+)
+
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 // and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 // specified.
@@ -583,6 +639,17 @@ type OutLayout string
 const (
 	Flat OutLayout = "flat"
 	Helm OutLayout = "helm"
+)
+
+// Specifies the naming convention for output files when writing to a directory. 'kargo'
+// (default) uses '[namespace-]kind-name.yaml' format (e.g., 'deployment-myapp.yaml').
+// 'kustomize' matches the naming convention of 'kustomize build -o dir/', using
+// '[namespace_]group_version_kind_name.yaml' format (e.g., 'apps_v1_deployment_myapp.yaml').
+type OutputFormat string
+
+const (
+	Kargo     OutputFormat = "kargo"
+	Kustomize OutputFormat = "kustomize"
 )
 
 // Kind of resource to update metadata for

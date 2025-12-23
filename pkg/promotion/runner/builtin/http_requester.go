@@ -8,11 +8,13 @@ import (
 	"fmt"
 	"mime"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/expr-lang/expr"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
+	"sigs.k8s.io/yaml"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io"
@@ -24,10 +26,16 @@ import (
 const (
 	stepKindHTTP = "http"
 
-	contentTypeHeader     = "Content-Type"
-	contentTypeJSON       = "application/json"
 	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
+
+	contentTypeHeader = "Content-Type"
+
+	contentTypeJSON      = "application/json"
+	contentTypeYAML      = "application/yaml"
+	contentTypeYAMLAlt   = "text/yaml"
+	contentTypeYAMLX     = "application/x-yaml"
+	contentTypeTextPlain = "text/plain"
 )
 
 func init() {
@@ -93,7 +101,7 @@ func (h *httpRequester) run(
 			fmt.Errorf("error sending HTTP request: %w", err)
 	}
 	defer resp.Body.Close()
-	env, err := h.buildExprEnv(ctx, resp)
+	env, err := h.buildExprEnv(ctx, resp, cfg.ResponseContentType)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error building expression context from HTTP response: %w", err)
@@ -262,6 +270,7 @@ func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) 
 func (h *httpRequester) buildExprEnv(
 	ctx context.Context,
 	resp *http.Response,
+	contentType string,
 ) (map[string]any, error) {
 	// Early check of Content-Length if available
 	if contentLength := resp.ContentLength; contentLength > maxResponseBytes {
@@ -286,34 +295,53 @@ func (h *httpRequester) buildExprEnv(
 		"body", string(bodyBytes),
 	)
 
-	env := map[string]any{
-		"response": map[string]any{
-			// TODO(krancour): Casting as an int64 is a short-term fix here because
-			// deep copy of the output map will panic if any value is an int. This is
-			// a near-term fix and a better solution will be PR'ed soon.
-			"status":  int64(resp.StatusCode),
-			"header":  resp.Header.Get,
-			"headers": resp.Header,
-			"body":    map[string]any{},
-		},
-	}
-	contentType, _, _ := mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
-	if len(bodyBytes) > 0 && (contentType == contentTypeJSON || json.Valid(bodyBytes)) {
-		var parsedBody any
-		if err := json.Unmarshal(bodyBytes, &parsedBody); err != nil {
-			return nil, fmt.Errorf("failed to parse response: %w", err)
-		}
-
-		// Unmarshal into map[string]any or []any
-		switch parsedBody.(type) {
-		case map[string]any, []any:
-			env["response"].(map[string]any)["body"] = parsedBody // nolint: forcetypeassert
-		default:
-			return nil, fmt.Errorf("unexpected type when unmarshaling response: %T", parsedBody)
-		}
+	response := map[string]any{
+		// TODO(krancour): Casting as an int64 is a short-term fix here because
+		// deep copy of the output map will panic if any value is an int. This is
+		// a near-term fix and a better solution will be PR'ed soon.
+		"status":  int64(resp.StatusCode),
+		"header":  resp.Header.Get,
+		"headers": resp.Header,
+		"body":    map[string]any{},
 	}
 
-	return env, nil
+	if contentType == "" {
+		contentType, _, _ = mime.ParseMediaType(resp.Header.Get(contentTypeHeader))
+	}
+
+	if len(bodyBytes) > 0 {
+		parseMode := h.determineResponseParseMode(contentType)
+
+		switch parseMode {
+		case httpParseModeJSON:
+			if contentType != contentTypeJSON {
+				if !json.Valid(bodyBytes) {
+					logging.LoggerFromContext(ctx).Debug(
+						"unrecognized content type is not valid JSON, ignoring response body",
+						"contentType", contentType,
+					)
+					break
+				}
+			}
+			var parsedBody any
+			if err = json.Unmarshal(bodyBytes, &parsedBody); err != nil {
+				return nil, fmt.Errorf("failed to parse JSON response: %w", err)
+			}
+			response["body"] = parsedBody
+		case httpParseModeYAML:
+			var parsedBody any
+			if err = yaml.Unmarshal(bodyBytes, &parsedBody); err != nil {
+				return nil, fmt.Errorf("failed to parse YAML response: %w", err)
+			}
+			response["body"] = parsedBody
+		case httpParseModeText:
+			response["body"] = string(bodyBytes)
+		}
+	}
+
+	return map[string]any{
+		"response": response,
+	}, nil
 }
 
 func (h *httpRequester) buildOutputs(
@@ -333,4 +361,31 @@ func (h *httpRequester) buildOutputs(
 		}
 	}
 	return outputs, nil
+}
+
+// httpResponseParseMode identifies how an HTTP response should be parsed.
+type httpResponseParseMode string
+
+const (
+	httpParseModeJSON httpResponseParseMode = "JSON"
+	httpParseModeYAML httpResponseParseMode = "YAML"
+	httpParseModeText httpResponseParseMode = "text"
+)
+
+// determineResponseParseMode determines how to parse the response body based on
+// the provided MIME media type.
+func (h *httpRequester) determineResponseParseMode(contentType string) httpResponseParseMode {
+	switch {
+	case strings.EqualFold(contentType, contentTypeJSON):
+		return httpParseModeJSON
+	case strings.EqualFold(contentType, contentTypeYAML),
+		strings.EqualFold(contentType, contentTypeYAMLAlt),
+		strings.EqualFold(contentType, contentTypeYAMLX):
+		return httpParseModeYAML
+	case strings.EqualFold(contentType, contentTypeTextPlain):
+		return httpParseModeText
+	default:
+		// Fallback: try to parse as JSON
+		return httpParseModeJSON
+	}
 }

@@ -4,7 +4,7 @@
 {{- range .Files}}
 {{$file_name := .Name}}
 <a name="{{.Name | anchor}}"></a>
-<p align="right"><a href="#top">Top</a></p>
+<p class="text--right"><a href="#top">Top</a></p>
 
 ## {{ .Name | trimPrefix "api/" | trimSuffix "/service.proto" | trimSuffix "/generated.proto" }}
 
@@ -12,7 +12,9 @@
 <a name="{{.FullName | anchor}}"></a>
 
 :::warning
+
 Stability is not guaranteed.
+
 :::
 
 | Method Name | Request Type | Response Type |

@@ -23,6 +23,7 @@ with a wide variety of external services.
 | `body` | `string` | N | The body of the request. __Note:__ As this field is a `string`, take care to utilize [`quote()`](../40-expressions.md#quotevalue) if the body is a valid JSON `object`. Refer to the example below of posting a message to a Slack channel. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when making the request. Setting this to `true` is highly discouraged. |
 | `timeout` | `string` | N | A string representation of the maximum time interval to wait for a request to complete. _This is the timeout for an individual HTTP request. If a request is retried, each attempt is independently subject to this timeout._ See Go's [`time` package docs](https://pkg.go.dev/time#ParseDuration) for a description of the accepted format. |
+| `responseContentType` | `string` | N | Overrides automatic content-type detection for response parsing. Accepts `application/json`, `application/yaml`, or `text/plain`. When not set, the step uses the response's `Content-Type` header, falling back to JSON parsing for unrecognized types. |
 | `successExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine success. When defined, the step succeeds only when this expression evaluates to `true`. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence and the step fails terminally. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `failureExpression` | `string` | N | An [expr-lang] expression that can evaluate the response to determine failure. When defined and evaluates to `true`, the step fails terminally. If both `successExpression` and `failureExpression` are defined and both evaluate to `true`, the failure takes precedence. Note that this expression should _not_ be offset by `${{` and `}}`. See examples for more details. |
 | `outputs` | `[]object` | N | A list of rules for extracting outputs from the HTTP response. These are only applied to responses deemed successful. |
@@ -43,11 +44,13 @@ as follows:
 - All other cases result in **Running** and will be retried.
 
 :::note
+
 The key distinction is between **terminal failures** (when `failureExpression`
 evaluates to `true`) and **retried failures** (all other failure cases).
 Terminal failures stop the promotion immediately, while retried failures allow
 Kargo to retry the step according to the configured
 [retry policy](../15-promotion-templates.md#step-retries).
+
 :::
 
 ## Expressions
@@ -56,6 +59,7 @@ The `successExpression`, `failureExpression`, and `outputs[].fromExpression`
 fields all support [expr-lang][] expressions.
 
 :::warning
+
 Expressions in the `successExpression` and `failureExpression` fields must _not_
 be enclosed by `${{` and `}}` since all such expressions are evaluated _prior_
 to step execution. (i.e. All steps are _actually_ executed against static,
@@ -85,7 +89,7 @@ steps:
 ```
 
 After expressions enclosed within `${{` and `}}` have been pre-evaluated, the
-`http` step defined above is execute against the following _now static_
+`http` step defined above is executed against the following _now static_
 configuration:
 
 ```yaml
@@ -98,6 +102,7 @@ configuration:
 
 Internally, the step evaluates the `successExpression` and `failureExpression`
 exactly as if the user had written them as they now appear.
+
 :::
 
 A `response` object (a `map[string]any`) is available to these expressions. It
@@ -108,7 +113,7 @@ is structured as follows:
 | `status` | `int` | The HTTP status code of the response. |
 | `headers` | `http.Header` | The headers of the response. See applicable [Go documentation](https://pkg.go.dev/net/http#Header). |
 | `header` | `func(string) string` | `headers` can be inconvenient to work with directly. This function allows you to access a header by name. |
-| `body` | `map[string]any` | The body of the response, if any, unmarshaled into a map. If the response body is empty, this map will also be empty. |
+| `body` | `any` | The parsed response body. For JSON responses (`application/json`), this can be any valid JSON value: objects, arrays, strings, numbers, booleans, or `null`. For YAML responses (`application/yaml`, `text/yaml`, `application/x-yaml`), this is the unmarshaled YAML structure. For `text/plain` responses, this is the raw string. For unrecognized content types, the step attempts JSON parsing and falls back to an empty map if the content is not valid JSON. Empty responses result in an empty map. |
 
 ## Outputs
 
@@ -236,6 +241,57 @@ steps:
           }
         ]
       }) }}
+```
+
+### YAML Responses
+
+This example demonstrates working with an API that returns YAML-formatted data.
+
+```yaml
+steps:
+# ...
+- uses: http
+  as: config-fetch
+  config:
+    method: GET
+    url: https://api.example.com/config.yaml
+    successExpression: response.status == 200
+    outputs:
+    - name: version
+      fromExpression: response.body.version
+    - name: features
+      fromExpression: response.body.features
+```
+
+If the server returns a `200` response with `Content-Type: application/yaml` and
+the following body:
+
+```yaml
+version: "2.0"
+features:
+  - name: feature-a
+    enabled: true
+  - name: feature-b
+    enabled: false
+```
+
+The step would succeed and produce structured outputs that can be accessed in
+subsequent steps.
+
+#### Overriding Content-Type Detection
+
+Some APIs return structured data with incorrect or generic content types. Use
+`responseContentType` to explicitly specify how to parse the response:
+
+```yaml
+steps:
+- uses: http
+  config:
+    url: https://api.example.com/data
+    responseContentType: application/yaml  # Force YAML parsing
+    outputs:
+    - name: value
+      fromExpression: response.body.key
 ```
 
 [expr-lang]: https://expr-lang.org/

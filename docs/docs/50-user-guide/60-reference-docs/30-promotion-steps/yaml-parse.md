@@ -22,9 +22,11 @@ using [expr-lang] expressions.
 The `fromExpression` field supports [expr-lang] expressions.
 
 :::note
+
 Expressions should _not_ be offset by `${{` and `}}` to prevent pre-processing
 evaluation by Kargo. The `yaml-parse` step itself will evaluate these
 expressions.
+
 :::
 
 An `outputs` object (a `map[string]any`) is available to these expressions. It

@@ -19,7 +19,8 @@ type Repo interface {
 	// HomeDir returns an absolute path to the home directory of the system user
 	// who has cloned this repo.
 	HomeDir() string
-	// URL returns the remote URL of the repository.
+	// URL returns the remote URL of the repository as it was originally provided
+	// when the repository was cloned.
 	URL() string
 	WorkTree
 }
@@ -86,10 +87,11 @@ func Clone(
 			fmt.Errorf("error resolving symlinks in path %s: %w", homeDir, err)
 	}
 	baseRepo := &baseRepo{
-		creds:   clientOpts.Credentials,
-		dir:     filepath.Join(homeDir, "repo"),
-		homeDir: homeDir,
-		url:     repoURL,
+		creds:       clientOpts.Credentials,
+		dir:         filepath.Join(homeDir, "repo"),
+		homeDir:     homeDir,
+		originalURL: repoURL,
+		accessURL:   repoURL,
 	}
 	r := &repo{
 		baseRepo: baseRepo,
@@ -104,6 +106,9 @@ func Clone(
 		return nil, err
 	}
 	if err = r.saveDirs(); err != nil {
+		return nil, err
+	}
+	if err = r.saveOriginalURL(); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -123,11 +128,11 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	args = append(args, r.url, r.dir)
+	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error cloning repo %q into %q: %w", r.url, r.dir, err)
+		return fmt.Errorf("error cloning repo %q into %q: %w", r.originalURL, r.dir, err)
 	}
 	return nil
 }
@@ -153,7 +158,7 @@ func LoadRepo(path string, opts *LoadRepoOptions) (Repo, error) {
 	if err := r.loadHomeDir(); err != nil {
 		return nil, fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
-	if err := r.loadURL(); err != nil {
+	if err := r.loadURLs(); err != nil {
 		return nil,
 			fmt.Errorf(`error reading URL of remote "origin" from config: %w`, err)
 	}

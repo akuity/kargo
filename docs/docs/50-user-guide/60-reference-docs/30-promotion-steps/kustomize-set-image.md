@@ -41,8 +41,10 @@ This pattern is commonly used when you want to update the version of a container
 image that will be deployed to a specific stage.
 
 :::info
+
 For more information on `imageFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ```yaml

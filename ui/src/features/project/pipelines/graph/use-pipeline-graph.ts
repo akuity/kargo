@@ -56,7 +56,8 @@ export const useReactFlowPipelineGraph = (
         }
       },
       dimensionState,
-      warehouseColorMap
+      warehouseColorMap,
+      hideSubscriptions
     );
 
     const stackedNodes = stackNodes(stack?.afterNodes || [], graph, stageByName);
@@ -85,12 +86,6 @@ export const useReactFlowPipelineGraph = (
             parentNodeId: dagreNode?.parentNodeId
           }
         });
-        continue;
-      }
-
-      const subscriptionParent = dagreNode?.subscriptionParent?.metadata?.name || '';
-
-      if (hideSubscriptions?.[subscriptionParent]) {
         continue;
       }
 
