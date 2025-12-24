@@ -10,7 +10,9 @@ integration with external file repositories, CDNs, and other web-based file
 sources.
 
 :::note
+
 Downloads are limited to 100MB to prevent resource exhaustion.
+
 :::
 
 ## Configuration

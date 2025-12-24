@@ -193,6 +193,11 @@
                     },
                     "type": "array"
                   },
+                  "cacheByTag": {
+                    "default": false,
+                    "description": "CacheByTag specifies whether to use image metadata cached by tag when\ndiscovering new image revisions. When set to true, image metadata cached by\ntag will be used when available, which can help reduce the number of\nrequests made to the image repository and dramatically improve performance.\nWhen set to false, image metadata is only ever cached by digest. This\nsetting is only safe to enable when it's known with certainty that relevant\ntags are \"immutable\" (i.e. the exact images referenced by tags remain\nconstant over time and tags are never \"re-used\" to point to new/different\nimages). This setting will automatically be ignored by the Digest selection\nstrategy, which assumes that tags are mutable. Note that the Kargo\nadministrator may choose to either disallow the use of this setting OR\nrequire that it be used (for non-Digest selection strategies). When\nconfiguration disagrees with the administrator's policy, artifact discovery\nwill FAIL.",
+                    "type": "boolean"
+                  },
                   "constraint": {
                     "description": "Constraint specifies ImageSelectionStrategy-specific constraints on what\nnew image revisions are permissible. Acceptable values for this field vary\ncontextually by ImageSelectionStrategy. The field is optional for some\nstrategies. Others either require it or ignore it. For strategies that\ntreat this field as optional, specifying no value means \"no constraints.\"\nRefer to the descriptions of individual strategies to learn if or how they\nuse this field.",
                     "type": "string"

@@ -586,6 +586,58 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 					"cannot define a receiver that is of more than one type, found 3: [GitHub GitLab Quay]")
 			},
 		},
+		{
+			name: "generic webhook receiver misconfiguration",
+			projectConfig: &kargoapi.ProjectConfig{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      testProjectName,
+					Namespace: testProjectName,
+				},
+				Spec: kargoapi.ProjectConfigSpec{
+					WebhookReceivers: []kargoapi.WebhookReceiverConfig{
+						{
+							Name: "my-generic-webhook-receiver",
+							Generic: &kargoapi.GenericWebhookReceiverConfig{
+								Actions: []kargoapi.GenericWebhookAction{
+									{
+										TargetSelectionCriteria: []kargoapi.GenericWebhookTargetSelectionCriteria{
+											{
+												Kind: kargoapi.GenericWebhookTargetKindWarehouse,
+												// Name, Label Selector, and Index Selector
+												// are all optional but at least one must be set.
+												// Here, none are set, so this should trigger a validation error.
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			objects: []client.Object{testNs},
+			assertions: func(t *testing.T, warnings admission.Warnings, err error) {
+				assert.Empty(t, warnings)
+				require.Error(t, err)
+
+				var statusErr *apierrors.StatusError
+				require.True(t, errors.As(err, &statusErr))
+
+				assert.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
+				assert.Equal(t, 1, len(statusErr.ErrStatus.Details.Causes))
+
+				// Sort errors for consistent testing
+				sort.Slice(statusErr.ErrStatus.Details.Causes, func(i, j int) bool {
+					return statusErr.ErrStatus.Details.Causes[i].Field < statusErr.ErrStatus.Details.Causes[j].Field
+				})
+
+				assert.Equal(t, "spec.webhookReceivers[0].generic.actions[0].targetSelectionCriteria[0]",
+					statusErr.ErrStatus.Details.Causes[0].Field)
+				assert.Equal(t, metav1.CauseTypeFieldValueInvalid, statusErr.ErrStatus.Details.Causes[0].Type)
+				assert.Contains(t, statusErr.ErrStatus.Details.Causes[0].Message,
+					"at least one of name, labelSelector, or indexSelector must be specified for target")
+			},
+		},
 	}
 
 	for _, tt := range tests {

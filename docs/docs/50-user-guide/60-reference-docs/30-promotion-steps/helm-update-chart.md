@@ -78,13 +78,16 @@ steps:
 ```
 
 :::info
+
 For more information on `chartFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ### OCI Chart Repository
 
 :::caution
+
 Classic (HTTP/HTTPS) Helm chart repositories can contain many differently named
 charts. A specific chart, therefore, can be identified by a repository URL and
 a chart name.
@@ -131,12 +134,15 @@ dependencies:
 __When using `helm-update-chart` to update the dependencies in a `Chart.yaml`
 file, you must play by Helm's rules and use the _registry_ URL in the
 `repository` field and the _repository_ name (chart name) in the `name` field.__
+
 :::
 
 :::info
+
 As a general rule, when configuring Kargo to update something, observe the
 conventions of the thing being updated, even if those conventions differ from
 Kargo's own. Kargo is aware of such differences and will adapt accordingly.
+
 :::
 
 Given a `Chart.yaml` file such as the following:
@@ -187,8 +193,10 @@ steps:
 ```
 
 :::info
+
 For more information on `chartFrom` and expressions, see the
 [Expressions](../40-expressions.md#functions) documentation.
+
 :::
 
 ### `Chart.yaml` SemVer ranges

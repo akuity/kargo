@@ -33,9 +33,6 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
-  globalCredentials:
-    namespaces:
-    - kargo-shared-credentials
 crds:
   install: true
 externalWebhooksServer:

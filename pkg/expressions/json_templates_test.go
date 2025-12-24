@@ -284,6 +284,52 @@ value13: | # This is a string
 				require.Equal(t, "42\n", parsed["value13"])
 			},
 		},
+		{
+			name:         "missing closing delimiter",
+			jsonTemplate: `{ "AString": "${{ aString " }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "unclosed expression")
+			},
+		},
+		{
+			name: "closing delimiter in expression body terminates early",
+			// This test is a control to validate it is a problem when the same
+			// character sequence as the closing delimiter is meant to appear in
+			// the body of an expression. Such a sequence should be misinterpreted
+			// as terminating the expression, which having been cut short, will lead
+			// to an error (or at least an unanticipated result) when evaluated.
+			jsonTemplate: `{ "AString": "${{ '{{.domain}}' }}" }`,
+			assertions: func(t *testing.T, _ []byte, err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "literal not terminated")
+			},
+		},
+		{
+			name: "alternative delimiters allow other end delimiter characters " +
+				"within expression",
+			// This test asserts that choosing an alternative delimiter for an
+			// expression solves the problem of another end delimiter characters
+			// sequence needing to appear within the expression.
+			jsonTemplate: `{ "AString": "${% '{{.domain}}' %}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := map[string]any{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				require.Equal(t, "{{.domain}}", parsed["AString"])
+			},
+		},
+		{
+			name:         "multiple delimiters can coexist in the same template",
+			jsonTemplate: `{ "AString": "foo ${{ aString }} and ${% 'bar' %}" }`,
+			assertions: func(t *testing.T, jsonOutput []byte, err error) {
+				require.NoError(t, err)
+				parsed := testStruct{}
+				require.NoError(t, json.Unmarshal(jsonOutput, &parsed))
+				// Both expressions are evaluated
+				require.Equal(t, "foo hello and bar", parsed.AString)
+			},
+		},
 	}
 
 	for _, testCase := range testCases {

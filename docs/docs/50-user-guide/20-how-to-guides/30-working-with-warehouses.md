@@ -18,9 +18,11 @@ collection of artifact revisions that can be promoted from `Stage` to `Stage`
 _as a unit_.
 
 :::info
+
 For a broader, conceptual understanding of warehouses and their relation
 to other Kargo concepts, refer to
 [Core Concepts](./../10-core-concepts/index.md).
+
 :::
 
 ## The `Warehouse` Resource Type
@@ -76,6 +78,7 @@ fields:
   e.g., `linux/amd64`.
 
   :::note
+
   It is seldom necessary to specify this field.
   :::
 
@@ -87,6 +90,7 @@ fields:
   The default is `20`.
 
   :::note
+
   For poorly performing `Warehouse`s -- for instance ones frequently
   encountering rate limits -- decreasing this limit may improve performance.
   :::
@@ -95,6 +99,7 @@ fields:
   repository's TLS certificate.
 
   :::warning
+
   This is a security risk and should only be used in development environments.
   :::
 
@@ -107,6 +112,33 @@ fields:
   with short Git commit hashes, which have the potential to contain numeric
   characters only and could be mistaken for a semver string containing the
   major version number only.
+
+- `cacheByTag`: Set to `true` to enable more aggressive caching of image
+  metadata using tags as keys. This can significantly reduce the number of API
+  calls to the registry and improve performance.
+
+  The default is `false`.
+
+  :::warning[Use with caution!]
+
+  This setting is safest if your tags are known to be "immutable" (i.e., tag
+  always references the same image and is never updated to point to a different
+  image).
+
+  This setting does NOT apply to the `Digest` selection strategy, which assumes
+  the one tag it subscribes to is a mutable one.
+
+  :::
+
+  :::warning
+
+  Operators may also choose from a number of policies regarding the caching of
+  image metadata using tags as keys. Some of these policies (`Forbid` and
+  `Force`) can override an individual container image subscription's choice to
+  cache metadata by tag or not. See
+  [common configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md) for further details.
+
+  :::
 
 #### Image Selection Strategies
 
@@ -129,6 +161,7 @@ strategies are:
   **`SemVer` is the default strategy if one is not specified.**
 
   :::info
+
   Kargo uses the [semver](https://github.com/masterminds/semver) package for
   parsing and comparing semantic versions and semantic version constraints.
   Refer to
@@ -171,6 +204,7 @@ strategies are:
   (such as `latest`) specified by the `constraint` field.
 
   :::warning
+
   "Mutable tags": Tags like `latest` that are sometimes, perhaps frequently,
   updated to point to a different, presumably newer image.
 
@@ -204,6 +238,7 @@ strategies are:
   of the image.
 
   :::warning
+
   `NewestBuild` requires retrieving metadata for every eligible tag, which can
   be slow and is likely to exceed the registry's rate limits. **This can
   result in system-wide performance degradation.**
@@ -223,6 +258,35 @@ strategies are:
         allowTagsRegexes:
         - ^nightly
   ```
+
+  :::tip
+
+  If your tags are known to be **immutable** (i.e., a tag always references the
+  same image and is never updated to point to a different image), you can use
+  the `cacheByTag` field to enable more aggressive caching of image metadata by
+  tag. This can significantly reduce the number of API calls to the registry and
+  improve performance.
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        imageSelectionStrategy: NewestBuild
+        cacheByTag: true
+        allowTagsRegexes:
+        - ^nightly
+  ```
+
+  :::
+
+  :::warning[Use with caution!]
+
+  Only enable `cacheByTag` if you are certain that all relevant tags are
+  **immutable**. Using this with mutable tags (like `latest`) can cause Kargo
+  to select stale images indefinitely.
+
+  :::
 
 ### Git Repository Subscriptions
 
@@ -259,6 +323,7 @@ Git repository subscriptions can be defined using the following fields:
   The default is `20`.
 
   :::note
+
   Lowering this limit for a Git repository subscription does not improve
   performance by the margins that it does for a container image repository
   subscription.
@@ -268,6 +333,7 @@ Git repository subscriptions can be defined using the following fields:
   repository's TLS certificate.
 
   :::warning
+
   This is a security risk and should only be used in development environments.
   :::
 
@@ -314,6 +380,7 @@ strategies are:
   semantic version (containing only the major element).
 
   :::info
+
   Kargo uses the [semver](https://github.com/masterminds/semver) package for
   parsing and comparing semantic versions and semantic version constraints.
   Refer to
@@ -377,23 +444,29 @@ expressions allow you to filter commits and tags based on their metadata using
 [expr-lang](https://expr-lang.org) syntax.
 
 :::info
+
 The expressions must evaluate to a boolean value (`true` or `false`). If an
 expression evaluates to a non-boolean value, an attempt will be made to
 convert it to a boolean (e.g., `0` to `false`, `1` to `true`).
+
 :::
 
 :::warning
+
 Invalid expressions will cause the subscription to fail. Always test your
 expressions to ensure they evaluate correctly with your repository's data.
+
 :::
 
-:::tip
+:::info
+
 You can test your expressions using the
 [expr-lang playground](https://expr-lang.org/playground).
 
 The playground allows you to evaluate expressions against sample data and
 see the results in real-time. This is especially useful for debugging and
 validating your expressions before applying them to your `Warehouse` resources.
+
 :::
 
 The `expressionFilter` field provides a unified way to filter commits or tags
@@ -605,6 +678,7 @@ spec:
 ```
 
 :::note
+
 It is important to understand that new `Freight` will be produced when the
 latest commit (selected by the applicable commit selection strategy) contains
 _even a single change_ that is:
@@ -622,6 +696,7 @@ _even a single change_ that is:
 :::
 
 :::note
+
 By default, the strings in the `includePaths` and `excludePaths` fields are
 treated as exact paths to files or directories. (Selecting a directory will
 implicitly select all paths within that directory.)
@@ -629,6 +704,7 @@ implicitly select all paths within that directory.)
 Paths may _also_ be specified using glob patterns (by prefixing the string with
 `glob:`) or regular expressions (by prefixing the string with `regex:` or
 `regexp:`).
+
 :::
 
 ### Helm Chart Repository Subscriptions
@@ -652,10 +728,12 @@ Helm chart repository subscriptions can be defined using the following fields:
   greatest version of the chart.
 
   :::info
+
   Helm _requires_ charts to be semantically versioned.
   :::
 
   :::info
+
   Kargo uses the [semver](https://github.com/masterminds/semver) package for
   parsing and comparing semantic versions and semantic version constraints.
   Refer to
@@ -725,6 +803,8 @@ For more information on `Freight Creation Criteria` refer to the
 
 ## Performance Considerations
 
+### Polling Frequency
+
 `Warehouse` resources periodically poll the repositories to which they subscribe
 in an attempt to discover new artifact revisions. By default, and under nominal
 conditions, this discovery process occurs at an interval configured at the
@@ -732,6 +812,7 @@ system-level, however, the effective interval can be much longer if the system
 is under heavy load or `Warehouse`s are poorly configured.
 
 :::info
+
 Discovery of container images, in particular, can be time-consuming.
 
 Both the [`NewestBuild` selection strategy](#newest-build) and any
@@ -756,6 +837,7 @@ your credentials. (i.e. Rate limits are not enforced on a
 selection criteria may experience large intervals between executions of its
 discovery process (or slow discovery) if _other_ `Warehouse`s are configured
 inefficiently.**
+
 :::
 
 With the goal of less frequent polling to reduce load on registries, avoid
@@ -766,18 +848,22 @@ the system-wide default. (i.e. You may wish to _increase_ the polling interval.)
 This can be done by tuning the `spec.interval` field of any `Warehouse`.
 
 :::note
+
 The effective polling interval is the _greater_ of a system-wide minimum and
 any interval specified by `spec.interval`. i.e. You can configure a `Warehouse`
 to execute its artifact discovery process _less_ frequently than the system-wide
 minimum, _but not more frequently._
+
 :::
 
 :::info
+
 If you're an operator wishing to reduce the frequency with which _all_
 `Warehouse`s execute their discovery processes (increase the minimum polling
 interval), refer to the
 [Common Configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#tuning-warehouse-reconciliation-intervals)
 section of the of the Operator's Guide for more information.
+
 :::
 
 With reduced polling frequency, overall system performance may improve, but will
@@ -785,6 +871,44 @@ be accompanied by the undesired side effect of increasing the average time
 required for `Warehouse`s to notice new artifacts (of any kind; not just
 container images). _This can be overcome by configuring repositories to alert
 Kargo to the presence of new artifacts via webhooks._
+
+### Caching Image Metadata by Tag
+
+When using image selection strategies that require fetching image metadata
+(such as [`NewestBuild`](#newest-build) or when using
+[`platform`](#platform-constraint) constraints), a significant bottleneck can be
+the number of API calls required to the container image registry.
+
+If your image tags are **guaranteed to be immutable** (i.e., a tag always
+references the exact same image and is never updated to point to a different
+image), you can enable the [`cacheByTag`](#cacheByTag) option on individual
+image subscriptions:
+
+```yaml
+spec:
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/myapp
+      imageSelectionStrategy: NewestBuild
+      cacheByTag: true
+      allowTagsRegexes:
+      - ^v\d+\.\d+\.\d+$
+```
+
+This enables significantly more aggressive caching of image metadata, which can
+reduce API calls and improve performance by orders of magnitude in repositories
+with large numbers of tags.
+
+:::warning[Use with caution!]
+
+Only enable this option if your tags are known to be **immutable**
+(i.e., a tag always references the same image and is never updated to point
+to a different image).
+
+This setting does not apply to the `Digest` selection strategy, which always
+assumes tags are mutable.
+
+:::
 
 ## Triggering Artifact Discovery Using Webhooks
 
@@ -796,14 +920,14 @@ or at the Project level by a Project admin.
 The remainder of this section focuses on configuring webhook receivers at the
 Project level.
 
-:::info
-**Not what you were looking for?**
+:::info[Not what you were looking for?]
 
 If you're an operator looking to understand how you can configure Kargo to
 listen for inbound webhook requests to trigger the discovery processes of all
 applicable `Warehouse`s across all Projects, refer to the
 [Cluster Level Configuration](../../40-operator-guide/35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks)
 section of the Operator's Guide.
+
 :::
 
 ### Configuring a Receiver
@@ -814,6 +938,7 @@ your Project does not already have a `ProjectConfig` resource, you can create
 one.
 
 :::note
+
 Every Kargo Project is permitted to have at most _one_ `ProjectConfig` resource.
 This limit is enforced by requiring all `ProjectConfig` resources to be named
 _the same_ as the Project / `Project` resource / namespace to which they belong.
@@ -821,6 +946,7 @@ _the same_ as the Project / `Project` resource / namespace to which they belong.
 For a Project `kargo-demo`, for example, the corresponding `ProjectConfig` must
 be contained within the Project's namespace (`kargo-demo`) and must, itself, be
 named `kargo-demo`.
+
 :::
 
 A `ProjectConfig` resource's `spec.webhookReceivers` field may define one or
@@ -836,6 +962,7 @@ each kind of webhook receiver vary, and are documented on
 [each receiver type's own page](../60-reference-docs/80-webhook-receivers/index.md).
 
 :::info
+
 `Secret`s referenced by a webhook receiver typically serve _two_ purposes.
 
 1. _Often_, some value(s) from the `Secret`'s data map are shared with the
@@ -912,9 +1039,11 @@ data:
 ```
 
 :::note
+
 The `kargo.akuity.io/cred-type: generic` label on `Secret`s referenced by
 webhook receivers is not strictly required, but we _strongly_ recommend
 including it.
+
 :::
 
 For each properly configured webhook receiver, Kargo will update the
@@ -952,12 +1081,15 @@ Above, you can see the URLs that can be registered with GitHub and GitLab as
 endpoints to receive webhook requests from those platforms.
 
 :::info
+
 For more information about registering these endpoints with specific senders,
 refer to
 [each receiver type's own page](../60-reference-docs/80-webhook-receivers/index.md).
+
 :::
 
 :::info
+
 If you're working with a large number of Kargo Projects and/or repositories and
 wish for `Warehouse`s in all Projects to execute their discovery processes in
 response to applicable events, it will likely be impractical to configure webhook
@@ -968,6 +1100,7 @@ Refer to
 section of the Operator's Guide to learn how to register cluster-scoped webhook
 receivers that can trigger discovery for all applicable `Warehouse`s across all
 Projects.
+
 :::
 
 ### Receivers in Action

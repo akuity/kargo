@@ -14,45 +14,15 @@ import (
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/server"
 )
-
-const (
-	refreshResourceTypeClusterConfig refreshResourceType = "clusterconfig"
-	refreshResourceTypeProjectConfig refreshResourceType = "projectconfig"
-	refreshResourceTypeStage         refreshResourceType = "stage"
-	refreshResourceTypeWarehouse     refreshResourceType = "warehouse"
-)
-
-type refreshResourceType string
-
-func (t refreshResourceType) String() string {
-	return string(t)
-}
-
-func (t refreshResourceType) requiresName() bool {
-	switch t {
-	case refreshResourceTypeStage, refreshResourceTypeWarehouse:
-		return true
-	default:
-		return false
-	}
-}
-
-func (t refreshResourceType) requiresProject() bool {
-	switch t {
-	case refreshResourceTypeProjectConfig, refreshResourceTypeStage, refreshResourceTypeWarehouse:
-		return true
-	default:
-		return false
-	}
-}
 
 type refreshOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
 	Project      string
-	ResourceType refreshResourceType
+	ResourceType server.RefreshResourceType
 	Name         string
 	Wait         bool
 }
@@ -90,7 +60,7 @@ kargo refresh projectconfig --project=my-project
 func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 
-	if o.ResourceType.requiresProject() {
+	if o.ResourceType.IsNamespaced() {
 		option.Project(cmd.Flags(), &o.Project, o.Config.Project,
 			"The Project the resource belongs to. If not set, the default project will be used.")
 	}
@@ -100,7 +70,7 @@ func (o *refreshOptions) addFlags(cmd *cobra.Command) {
 // complete sets the resource type for the refresh options, and further parses
 // the command arguments to set the resource name.
 func (o *refreshOptions) complete(args []string) {
-	if o.ResourceType.requiresName() {
+	if o.ResourceType.IsNamespaced() && !o.ResourceType.NameEqualsProject() {
 		o.Name = strings.TrimSpace(args[0])
 	}
 }
@@ -114,14 +84,13 @@ func (o *refreshOptions) validate() error {
 		errs = append(errs, errors.New("resource type is required"))
 	}
 
-	if o.ResourceType.requiresProject() && o.Project == "" {
+	if o.ResourceType.IsNamespaced() && o.Project == "" {
 		errs = append(errs, errors.New("project is required"))
 	}
 
-	if o.ResourceType.requiresName() && o.Name == "" {
+	if (o.ResourceType.IsNamespaced() && !o.ResourceType.NameEqualsProject()) && o.Name == "" {
 		errs = append(errs, errors.New("name is required"))
 	}
-
 	return errors.Join(errs...)
 }
 
@@ -132,37 +101,24 @@ func (o *refreshOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	switch o.ResourceType {
-	case refreshResourceTypeClusterConfig:
-		_, err = kargoSvcCli.RefreshClusterConfig(ctx, connect.NewRequest(&v1alpha1.RefreshClusterConfigRequest{}))
-	case refreshResourceTypeProjectConfig:
-		_, err = kargoSvcCli.RefreshProjectConfig(ctx, connect.NewRequest(&v1alpha1.RefreshProjectConfigRequest{
-			Project: o.Project,
-		}))
-	case refreshResourceTypeStage:
-		_, err = kargoSvcCli.RefreshStage(ctx, connect.NewRequest(&v1alpha1.RefreshStageRequest{
-			Project: o.Project,
-			Name:    o.Name,
-		}))
-	case refreshResourceTypeWarehouse:
-		_, err = kargoSvcCli.RefreshWarehouse(ctx, connect.NewRequest(&v1alpha1.RefreshWarehouseRequest{
-			Project: o.Project,
-			Name:    o.Name,
-		}))
-	}
-	if err != nil {
+	req := connect.NewRequest(&v1alpha1.RefreshResourceRequest{
+		Project:      o.Project,
+		Name:         o.Name,
+		ResourceType: o.ResourceType.String(),
+	})
+	if _, err = kargoSvcCli.RefreshResource(ctx, req); err != nil {
 		return fmt.Errorf("refresh %s: %w", o.ResourceType, err)
 	}
 
 	if o.Wait {
 		switch o.ResourceType {
-		case refreshResourceTypeClusterConfig:
+		case server.RefreshResourceTypeClusterConfig:
 			err = waitForClusterConfig(ctx, kargoSvcCli)
-		case refreshResourceTypeProjectConfig:
+		case server.RefreshResourceTypeProjectConfig:
 			err = waitForProjectConfig(ctx, kargoSvcCli, o.Project)
-		case refreshResourceTypeStage:
+		case server.RefreshResourceTypeStage:
 			err = waitForStage(ctx, kargoSvcCli, o.Project, o.Name)
-		case refreshResourceTypeWarehouse:
+		case server.RefreshResourceTypeWarehouse:
 			err = waitForWarehouse(ctx, kargoSvcCli, o.Project, o.Name)
 		}
 		if err != nil {

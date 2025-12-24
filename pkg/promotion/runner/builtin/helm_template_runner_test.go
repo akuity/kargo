@@ -230,6 +230,26 @@ func Test_helmTemplateRunner_convert(t *testing.T) {
 			expectedProblems: nil,
 		},
 		{
+			name: "valid config with setValues using literal",
+			config: promotion.Config{
+				"outPath":     "/output/path",
+				"path":        "/chart/path",
+				"releaseName": "my-release",
+				"setValues": []promotion.Config{
+					{
+						"key":     "image.tag",
+						"value":   "v1.2.3",
+						"literal": true,
+					},
+					{
+						"key":   "replicaCount",
+						"value": "3",
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
 			name: "valid config with apiVersions",
 			config: promotion.Config{
 				"outPath":     "/output/path",
@@ -484,6 +504,46 @@ data:
   value1: value1
   value2: value2
 `, string(content))
+			},
+		},
+		{
+			name: "successful run with literal set values",
+			files: map[string]string{
+				"charts/test-chart/Chart.yaml": `apiVersion: v1
+name: test-chart
+version: 0.1.0`,
+				"charts/test-chart/templates/test.yaml": `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Release.Name }}-configmap
+  namespace: {{ .Release.Namespace }}
+data:
+  literalValue: {{ .Values.literalKey }}
+  normalValue: {{ .Values.normalKey }}
+`,
+			},
+			cfg: builtin.HelmTemplateConfig{
+				Path: "charts/test-chart",
+				SetValues: []builtin.SetValues{
+					{Key: "literalKey", Value: "foo,bar,baz", Literal: true},
+					{Key: "normalKey", Value: "normal-string", Literal: false},
+				},
+				OutPath:     "output.yaml",
+				ReleaseName: "test-release",
+				Namespace:   "test-namespace",
+			},
+			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSucceeded}, result)
+
+				outPath := filepath.Join(workDir, "output.yaml")
+				require.FileExists(t, outPath)
+				content, err := os.ReadFile(outPath)
+				require.NoError(t, err)
+				// Both literal and non-literal values should be present in output
+				assert.Contains(t, string(content), "literalValue: foo,bar,baz")
+				assert.Contains(t, string(content), "normalValue: normal-string")
 			},
 		},
 		{
@@ -767,6 +827,43 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			assertions: func(t *testing.T, result map[string]any, err error) {
 				assert.Error(t, err)
 				assert.Nil(t, result)
+			},
+		},
+		{
+			name:    "composition with literal values",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{},
+				SetValues: []builtin.SetValues{
+					{Key: "normalKey", Value: "normalValue", Literal: false},
+					{Key: "literalKey", Value: "foo,bar,baz", Literal: true},
+				},
+			},
+			valuesContents: map[string]string{},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				// Both values should be present in the merged result
+				assert.Equal(t, "normalValue", result["normalKey"])
+				assert.Equal(t, "foo,bar,baz", result["literalKey"])
+			},
+		},
+		{
+			name:    "composition with only literal values",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles: []string{},
+				SetValues: []builtin.SetValues{
+					{Key: "key1", Value: "foo,bar,baz", Literal: true},
+					{Key: "key2", Value: "baz,bar,foo", Literal: true},
+				},
+			},
+			valuesContents: map[string]string{},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key1": "foo,bar,baz",
+					"key2": "baz,bar,foo",
+				}, result)
 			},
 		},
 	}

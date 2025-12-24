@@ -28,11 +28,37 @@ import (
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
 )
 
+// CacheByTagPolicy represents a policy regarding caching of container image
+// metadata using image tags as keys.
+type CacheByTagPolicy string
+
+const (
+	// CacheByTagPolicyForbid indicates that caching by tag is forbidden. This
+	// is silently enforced. Any container image subscription that opts into
+	// caching by tag will be treated as if it does not.
+	CacheByTagPolicyForbid CacheByTagPolicy = "Forbid"
+	// CacheByTagPolicyAllow indicates that caching by tag is allowed. Container
+	// image subscriptions may opt into caching by tag.
+	CacheByTagPolicyAllow CacheByTagPolicy = "Allow"
+	// CacheByTagPolicyRequire indicates that caching by tag is required.
+	// Container image subscriptions must explicitly opt into caching by tag or
+	// their artifact discovery processes will fail. Requiring the explicit opt-in
+	// is tantamount to acknowledging the cache by tag behavior to minimize the
+	// potential for developers to be taken by surprise. This option sacrifices
+	// some small degree of usability for safety.
+	CacheByTagPolicyRequire CacheByTagPolicy = "Require"
+	// CacheByTagPolicyForce indicates that caching by tag is forced. This is
+	// silently enforced. Any container image subscription that does not opt into
+	// caching by tag will be treated as if it does.
+	CacheByTagPolicyForce CacheByTagPolicy = "Force"
+)
+
 type ReconcilerConfig struct {
-	IsDefaultController       bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
-	ShardName                 string        `envconfig:"SHARD_NAME"`
-	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
-	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
+	IsDefaultController       bool             `envconfig:"IS_DEFAULT_CONTROLLER"`
+	ShardName                 string           `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles   int              `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	MinReconciliationInterval time.Duration    `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
+	CacheByTagPolicy          CacheByTagPolicy `envconfig:"CACHE_BY_TAG_POLICY" default:"Allow"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {

@@ -1,7 +1,6 @@
 package rbac
 
 import (
-	"context"
 	"maps"
 	"testing"
 	"time"
@@ -41,7 +40,7 @@ func init() {
 	}
 }
 
-func TestCreate(t *testing.T) {
+func Test_rolesDatabase_Create(t *testing.T) {
 	t.Run("ServiceAccount already exists", func(t *testing.T) {
 		testKargoRole := &rbacapi.Role{
 			ObjectMeta: metav1.ObjectMeta{
@@ -53,7 +52,7 @@ func TestCreate(t *testing.T) {
 			plainServiceAccount(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		role, err := db.Create(context.Background(), testKargoRole)
+		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
@@ -69,7 +68,7 @@ func TestCreate(t *testing.T) {
 			plainRole(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		role, err := db.Create(context.Background(), testKargoRole)
+		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
@@ -85,7 +84,7 @@ func TestCreate(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		role, err := db.Create(context.Background(), testKargoRole)
+		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
 	})
@@ -122,13 +121,13 @@ func TestCreate(t *testing.T) {
 		}
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
-		role, err := db.Create(context.Background(), testKargoRole)
+		role, err := db.Create(t.Context(), testKargoRole)
 		require.NoError(t, err)
 		require.NotNil(t, role)
 
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(
-			context.Background(),
+			t.Context(),
 			client.ObjectKey{Namespace: testKargoRole.Namespace, Name: testKargoRole.Name},
 			sa,
 		)
@@ -146,7 +145,7 @@ func TestCreate(t *testing.T) {
 
 		roleBinding := &rbacv1.RoleBinding{}
 		err = c.Get(
-			context.Background(),
+			t.Context(),
 			client.ObjectKey{Namespace: testKargoRole.Namespace, Name: testKargoRole.Name},
 			roleBinding,
 		)
@@ -179,11 +178,11 @@ func TestCreate(t *testing.T) {
 	})
 }
 
-func TestDelete(t *testing.T) {
+func Test_rolesDatabase_Delete(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
-		err := db.Delete(context.Background(), testProject, testKargoRoleName)
+		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -192,7 +191,7 @@ func TestDelete(t *testing.T) {
 			plainServiceAccount(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		err := db.Delete(context.Background(), testProject, testKargoRoleName)
+		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
@@ -203,25 +202,25 @@ func TestDelete(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		err := db.Delete(context.Background(), testProject, testKargoRoleName)
+		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.True(t, apierrors.IsNotFound(err))
 		roleBinding := &rbacv1.RoleBinding{}
-		err = c.Get(context.Background(), objKey, roleBinding)
+		err = c.Get(t.Context(), objKey, roleBinding)
 		require.True(t, apierrors.IsNotFound(err))
 		sa := &corev1.ServiceAccount{}
-		err = c.Get(context.Background(), objKey, sa)
+		err = c.Get(t.Context(), objKey, sa)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 }
 
-func TestGet(t *testing.T) {
+func Test_rolesDatabase_Get(t *testing.T) {
 	t.Run("ServiceAccount does not exist", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRole, err := db.Get(context.Background(), testProject, testKargoRoleName)
+		kargoRole, err := db.Get(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 		require.Nil(t, kargoRole)
 	})
@@ -250,7 +249,7 @@ func TestGet(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRole, err := db.Get(context.Background(), testProject, testKargoRoleName)
+		kargoRole, err := db.Get(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
 		now := metav1.NewTime(time.Now())
@@ -278,6 +277,7 @@ func TestGet(t *testing.T) {
 						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
+				ServiceAccounts: []rbacapi.ServiceAccountReference{},
 				// There should have been no attempt to normalize these rules
 				Rules: []rbacv1.PolicyRule{
 					{
@@ -311,7 +311,7 @@ func TestGet(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRole, err := db.Get(context.Background(), testProject, testKargoRoleName)
+		kargoRole, err := db.Get(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
 		now := metav1.NewTime(time.Now())
@@ -339,6 +339,7 @@ func TestGet(t *testing.T) {
 						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
+				ServiceAccounts: []rbacapi.ServiceAccountReference{},
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -357,11 +358,11 @@ func TestGet(t *testing.T) {
 	})
 }
 
-func TestGetAsResources(t *testing.T) {
+func Test_rolesDatabase_GetAsResources(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
-		_, _, _, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
+		_, _, _, err := db.GetAsResources(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -370,7 +371,7 @@ func TestGetAsResources(t *testing.T) {
 			plainServiceAccount(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		sa, roles, rbs, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
+		sa, roles, rbs, err := db.GetAsResources(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		require.NotNil(t, sa)
 		require.Nil(t, roles)
@@ -383,7 +384,7 @@ func TestGetAsResources(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		_, _, _, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
+		_, _, _, err := db.GetAsResources(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -394,7 +395,7 @@ func TestGetAsResources(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		sa, roles, rbs, err := db.GetAsResources(context.Background(), testProject, testKargoRoleName)
+		sa, roles, rbs, err := db.GetAsResources(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		require.NotNil(t, sa)
 		require.NotNil(t, roles)
@@ -402,12 +403,12 @@ func TestGetAsResources(t *testing.T) {
 	})
 }
 
-func TestGrantPermissionToRole(t *testing.T) {
+func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.GrantPermissionsToRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -424,7 +425,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.GrantPermissionsToRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -441,7 +442,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.GrantPermissionsToRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -452,7 +453,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kargoRole)
 		rb := &rbacv1.RoleBinding{}
-		err = c.Get(context.Background(), objKey, rb)
+		err = c.Get(t.Context(), objKey, rb)
 		require.NoError(t, err)
 		require.True(t, isKargoManaged(rb))
 		require.Equal(
@@ -474,7 +475,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 			rb.RoleRef,
 		)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.NoError(t, err)
 		require.True(t, isKargoManaged(rb))
 		require.Equal(
@@ -500,7 +501,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.GrantPermissionsToRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -511,7 +512,7 @@ func TestGrantPermissionToRole(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kargoRole)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.NoError(t, err)
 		require.Equal(
 			t,
@@ -532,12 +533,12 @@ func TestGrantPermissionToRole(t *testing.T) {
 	})
 }
 
-func TestGrantRoleToUsers(t *testing.T) {
+func Test_rolesDatabase_GrantRoleToUsers(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.GrantRoleToUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -555,7 +556,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.GrantRoleToUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -578,7 +579,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.GrantRoleToUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -600,7 +601,7 @@ func TestGrantRoleToUsers(t *testing.T) {
 		require.NotNil(t, kargoRole)
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(
-			context.Background(),
+			t.Context(),
 			client.ObjectKey{Namespace: testProject, Name: testKargoRoleName},
 			sa,
 		)
@@ -617,7 +618,474 @@ func TestGrantRoleToUsers(t *testing.T) {
 	})
 }
 
-func TestList(t *testing.T) {
+func Test_rolesDatabase_GrantRoleToServiceAccounts(t *testing.T) {
+	t.Run("ServiceAccount not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "fake-sa",
+			}},
+		)
+		require.True(t, apierrors.IsNotFound(err))
+	})
+
+	t.Run("resources aren't manageable", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			plainServiceAccount(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "fake-sa",
+			}},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+	})
+
+	t.Run("target ServiceAccount not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "non-existent-sa",
+			}},
+		)
+		require.True(t, apierrors.IsNotFound(err))
+	})
+
+	t.Run("target ServiceAccount not labeled as Kargo ServiceAccount", func(t *testing.T) {
+		targetSA := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa",
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			targetSA,
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "target-sa",
+			}},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.Contains(t, err.Error(), "not a Kargo ServiceAccount")
+	})
+
+	t.Run("target ServiceAccount not annotated as Kargo-managed", func(t *testing.T) {
+		targetSA := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa",
+				Labels: map[string]string{
+					rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
+				},
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			targetSA,
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "target-sa",
+			}},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.Contains(t, err.Error(), "not annotated as Kargo-managed")
+	})
+
+	t.Run("success with RoleBinding creation", func(t *testing.T) {
+		targetSA := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa",
+				Labels: map[string]string{
+					rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
+				},
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			targetSA,
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "target-sa",
+			}},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify RoleBinding was created with target ServiceAccount
+		rb := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, rb)
+		require.NoError(t, err)
+		require.True(t, isKargoManaged(rb))
+		require.Len(t, rb.Subjects, 2) // Role SA + target SA
+
+		subjectNames := []string{rb.Subjects[0].Name, rb.Subjects[1].Name}
+		require.Contains(t, subjectNames, testKargoRoleName)
+		require.Contains(t, subjectNames, "target-sa")
+	})
+
+	t.Run("success with existing RoleBinding", func(t *testing.T) {
+		targetSA := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa",
+				Labels: map[string]string{
+					rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
+				},
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			managedRoleBinding(),
+			managedRole(nil),
+			targetSA,
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "target-sa",
+			}},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify RoleBinding was updated with target ServiceAccount
+		rb := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, rb)
+		require.NoError(t, err)
+		require.Len(t, rb.Subjects, 2) // Role SA + target SA
+
+		subjectNames := []string{rb.Subjects[0].Name, rb.Subjects[1].Name}
+		require.Contains(t, subjectNames, testKargoRoleName)
+		require.Contains(t, subjectNames, "target-sa")
+	})
+
+	t.Run("success with multiple ServiceAccounts", func(t *testing.T) {
+		targetSA1 := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa-1",
+				Labels: map[string]string{
+					rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
+				},
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+		}
+		targetSA2 := &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      "target-sa-2",
+				Labels: map[string]string{
+					rbacapi.LabelKeyServiceAccount: rbacapi.LabelValueTrue,
+				},
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			targetSA1,
+			targetSA2,
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.GrantRoleToServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{
+				{
+					Namespace: testProject,
+					Name:      "target-sa-1",
+				},
+				{
+					Namespace: testProject,
+					Name:      "target-sa-2",
+				},
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify RoleBinding has all ServiceAccounts
+		rb := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, rb)
+		require.NoError(t, err)
+		require.Len(t, rb.Subjects, 3) // Role SA + 2 target SAs
+
+		subjectNames := []string{rb.Subjects[0].Name, rb.Subjects[1].Name, rb.Subjects[2].Name}
+		require.Contains(t, subjectNames, testKargoRoleName)
+		require.Contains(t, subjectNames, "target-sa-1")
+		require.Contains(t, subjectNames, "target-sa-2")
+	})
+}
+
+func Test_rolesDatabase_RevokeRoleFromServiceAccounts(t *testing.T) {
+	t.Run("ServiceAccount not found", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "fake-sa",
+			}},
+		)
+		require.True(t, apierrors.IsNotFound(err))
+	})
+
+	t.Run("resources aren't manageable", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			plainServiceAccount(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		_, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "fake-sa",
+			}},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+	})
+
+	t.Run("success with no RoleBinding", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "some-sa",
+			}},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+	})
+
+	t.Run("success removing single ServiceAccount", func(t *testing.T) {
+		// Create RoleBinding with multiple subjects
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      testKargoRoleName,
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "target-sa-1",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "target-sa-2",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     testKargoRoleName,
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			rb,
+			managedRole(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "target-sa-1",
+			}},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify ServiceAccount was removed from RoleBinding
+		updatedRB := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, updatedRB)
+		require.NoError(t, err)
+		require.Len(t, updatedRB.Subjects, 2) // Role SA + remaining target SA
+
+		subjectNames := []string{updatedRB.Subjects[0].Name, updatedRB.Subjects[1].Name}
+		require.Contains(t, subjectNames, testKargoRoleName)
+		require.Contains(t, subjectNames, "target-sa-2")
+		require.NotContains(t, subjectNames, "target-sa-1")
+	})
+
+	t.Run("success removing multiple ServiceAccounts", func(t *testing.T) {
+		// Create RoleBinding with multiple subjects
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+				Annotations: map[string]string{
+					rbacapi.AnnotationKeyManaged: rbacapi.AnnotationValueTrue,
+				},
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      testKargoRoleName,
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "target-sa-1",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "target-sa-2",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "target-sa-3",
+				},
+			},
+			RoleRef: rbacv1.RoleRef{
+				APIGroup: rbacv1.GroupName,
+				Kind:     "Role",
+				Name:     testKargoRoleName,
+			},
+		}
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			rb,
+			managedRole(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{
+				{
+					Namespace: testProject,
+					Name:      "target-sa-1",
+				},
+				{
+					Namespace: testProject,
+					Name:      "target-sa-3",
+				},
+			},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify ServiceAccounts were removed from RoleBinding
+		updatedRB := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, updatedRB)
+		require.NoError(t, err)
+		require.Len(t, updatedRB.Subjects, 2) // Role SA + remaining target SA
+
+		subjectNames := []string{updatedRB.Subjects[0].Name, updatedRB.Subjects[1].Name}
+		require.Contains(t, subjectNames, testKargoRoleName)
+		require.Contains(t, subjectNames, "target-sa-2")
+		require.NotContains(t, subjectNames, "target-sa-1")
+		require.NotContains(t, subjectNames, "target-sa-3")
+	})
+
+	t.Run("success removing non-existent ServiceAccount", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			managedRoleBinding(),
+			managedRole(nil),
+		).Build()
+		db := NewKubernetesRolesDatabase(c)
+		kargoRole, err := db.RevokeRoleFromServiceAccounts(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.ServiceAccountReference{{
+				Namespace: testProject,
+				Name:      "non-existent-sa",
+			}},
+		)
+		require.NoError(t, err)
+		require.NotNil(t, kargoRole)
+
+		// Verify RoleBinding unchanged
+		rb := &rbacv1.RoleBinding{}
+		err = c.Get(t.Context(), objKey, rb)
+		require.NoError(t, err)
+		require.Len(t, rb.Subjects, 1) // Only role SA
+		require.Equal(t, testKargoRoleName, rb.Subjects[0].Name)
+	})
+}
+
+func Test_rolesDatabase_List(t *testing.T) {
 	t.Run("with only kargo-managed roles", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
@@ -635,7 +1103,7 @@ func TestList(t *testing.T) {
 			managedRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRoles, err := db.List(context.Background(), testProject)
+		kargoRoles, err := db.List(t.Context(), testProject)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
 		now := metav1.NewTime(time.Now())
@@ -665,6 +1133,7 @@ func TestList(t *testing.T) {
 						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
+				ServiceAccounts: []rbacapi.ServiceAccountReference{},
 				Rules: []rbacv1.PolicyRule{
 					{
 						APIGroups: []string{kargoapi.GroupVersion.Group},
@@ -706,7 +1175,7 @@ func TestList(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
-		kargoRoles, err := db.List(context.Background(), testProject)
+		kargoRoles, err := db.List(t.Context(), testProject)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
 		now := metav1.NewTime(time.Now())
@@ -736,6 +1205,7 @@ func TestList(t *testing.T) {
 						Values: []string{"bar-sub", "foo-sub"},
 					},
 				},
+				ServiceAccounts: []rbacapi.ServiceAccountReference{},
 				// There should have been no attempt to normalize these rules
 				Rules: []rbacv1.PolicyRule{
 					{
@@ -755,12 +1225,12 @@ func TestList(t *testing.T) {
 	})
 }
 
-func TestRevokePermissionsFromRole(t *testing.T) {
+func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.RevokePermissionsFromRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -777,7 +1247,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.RevokePermissionsFromRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -794,7 +1264,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.RevokePermissionsFromRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -818,7 +1288,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.RevokePermissionsFromRole(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			&rbacapi.ResourceDetails{
@@ -829,7 +1299,7 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kargoRole)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.NoError(t, err)
 		require.Equal(
 			t,
@@ -843,12 +1313,12 @@ func TestRevokePermissionsFromRole(t *testing.T) {
 	})
 }
 
-func TestRevokeRoleFromUsers(t *testing.T) {
+func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.RevokeRoleFromUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -867,7 +1337,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.RevokeRoleFromUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -890,7 +1360,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.RevokeRoleFromUsers(
-			context.Background(),
+			t.Context(),
 			testProject,
 			testKargoRoleName,
 			[]rbacapi.Claim{
@@ -912,7 +1382,7 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 		require.NotNil(t, kargoRole)
 		sa := &corev1.ServiceAccount{}
 		err = c.Get(
-			context.Background(),
+			t.Context(),
 			client.ObjectKey{Namespace: testProject, Name: testKargoRoleName},
 			sa,
 		)
@@ -928,12 +1398,12 @@ func TestRevokeRoleFromUsers(t *testing.T) {
 	})
 }
 
-func TestUpdate(t *testing.T) {
+func Test_rolesDatabase_Update(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.Update(
-			context.Background(),
+			t.Context(),
 			&rbacapi.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -950,7 +1420,7 @@ func TestUpdate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		_, err := db.Update(
-			context.Background(),
+			t.Context(),
 			&rbacapi.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -967,7 +1437,7 @@ func TestUpdate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.Update(
-			context.Background(),
+			t.Context(),
 			&rbacapi.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -996,7 +1466,7 @@ func TestUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kargoRole)
 		sa := &corev1.ServiceAccount{}
-		err = c.Get(context.Background(), objKey, sa)
+		err = c.Get(t.Context(), objKey, sa)
 		require.NoError(t, err)
 		expected := `{"email":["bar-email","foo-email"],"groups":["bar-group","foo-group"],"sub":["bar-sub","foo-sub"]}`
 		require.Equal(
@@ -1008,7 +1478,7 @@ func TestUpdate(t *testing.T) {
 			sa.Annotations,
 		)
 		rb := &rbacv1.RoleBinding{}
-		err = c.Get(context.Background(), objKey, rb)
+		err = c.Get(t.Context(), objKey, rb)
 		require.NoError(t, err)
 		require.True(t, isKargoManaged(rb))
 		require.Equal(
@@ -1030,7 +1500,7 @@ func TestUpdate(t *testing.T) {
 			rb.RoleRef,
 		)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.NoError(t, err)
 		require.True(t, isKargoManaged(role))
 		require.Equal(
@@ -1067,7 +1537,7 @@ func TestUpdate(t *testing.T) {
 		).Build()
 		db := NewKubernetesRolesDatabase(c)
 		kargoRole, err := db.Update(
-			context.Background(),
+			t.Context(),
 			&rbacapi.Role{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -1099,7 +1569,7 @@ func TestUpdate(t *testing.T) {
 		require.NoError(t, err)
 		require.NotNil(t, kargoRole)
 		sa := &corev1.ServiceAccount{}
-		err = c.Get(context.Background(), objKey, sa)
+		err = c.Get(t.Context(), objKey, sa)
 		require.NoError(t, err)
 		require.Equal(
 			t,
@@ -1111,7 +1581,7 @@ func TestUpdate(t *testing.T) {
 			sa.Annotations,
 		)
 		role := &rbacv1.Role{}
-		err = c.Get(context.Background(), objKey, role)
+		err = c.Get(t.Context(), objKey, role)
 		require.NoError(t, err)
 		require.Equal(
 			t,
@@ -1132,7 +1602,7 @@ func TestUpdate(t *testing.T) {
 	})
 }
 
-func TestManageableResources(t *testing.T) {
+func Test_manageableResources(t *testing.T) {
 	t.Run("ServiceAccount is not annotated correctly", func(t *testing.T) {
 		_, _, err := manageableResources(
 			*plainServiceAccount(nil),
@@ -1377,6 +1847,7 @@ func TestResourcesToRole(t *testing.T) {
 		name           string
 		sa             *corev1.ServiceAccount
 		roles          []rbacv1.Role
+		roleBindings   []rbacv1.RoleBinding
 		expectedClaims []rbacapi.Claim
 		assertions     func(t *testing.T, role *rbacapi.Role, err error)
 	}{
@@ -1494,6 +1965,65 @@ func TestResourcesToRole(t *testing.T) {
 			},
 		},
 		{
+			name: "with ServiceAccount bindings",
+			sa: &corev1.ServiceAccount{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      testKargoRoleName,
+				},
+			},
+			roleBindings: []rbacv1.RoleBinding{{
+				Subjects: []rbacv1.Subject{
+					{
+						Kind:      rbacv1.ServiceAccountKind,
+						Namespace: testProject,
+						Name:      testKargoRoleName,
+					},
+					{
+						Kind:      rbacv1.ServiceAccountKind,
+						Namespace: testProject,
+						Name:      "test-sa-1",
+					},
+					{
+						Kind:      rbacv1.ServiceAccountKind,
+						Namespace: testProject,
+						Name:      "test-sa-2",
+					},
+					{
+						Kind:      rbacv1.ServiceAccountKind,
+						Namespace: "other-project",
+						Name:      "test-sa-3",
+					},
+					{
+						Kind: rbacv1.UserKind,
+						Name: "test-sa-4",
+					},
+				},
+			}},
+			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
+				require.NoError(t, err)
+				require.Empty(t, role.Claims)
+				require.Equal(
+					t,
+					[]rbacapi.ServiceAccountReference{
+						{
+							Namespace: testProject,
+							Name:      "test-sa-1",
+						},
+						{
+							Namespace: testProject,
+							Name:      "test-sa-2",
+						},
+						{
+							Namespace: "other-project",
+							Name:      "test-sa-3",
+						},
+					},
+					role.ServiceAccounts,
+				)
+			},
+		},
+		{
 			name: "policy rules",
 			sa:   new(corev1.ServiceAccount),
 			roles: []rbacv1.Role{
@@ -1515,8 +2045,268 @@ func TestResourcesToRole(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			role, err := ResourcesToRole(tc.sa, tc.roles, nil)
+			role, err := ResourcesToRole(tc.sa, tc.roles, tc.roleBindings)
 			tc.assertions(t, role, err)
 		})
 	}
+}
+
+func Test_addServiceAccountToRoleBinding(t *testing.T) {
+	t.Run("service account already in subjects", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "existing-sa",
+				},
+			},
+		}
+
+		addServiceAccountToRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "existing-sa",
+		})
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, "existing-sa", rb.Subjects[0].Name)
+	})
+
+	t.Run("add new service account", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "existing-sa",
+				},
+			},
+		}
+
+		addServiceAccountToRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "new-sa",
+		})
+
+		require.Len(t, rb.Subjects, 2)
+		require.Equal(t, "existing-sa", rb.Subjects[0].Name)
+		require.Equal(t, "new-sa", rb.Subjects[1].Name)
+		require.Equal(t, rbacv1.ServiceAccountKind, rb.Subjects[1].Kind)
+		require.Equal(t, testProject, rb.Subjects[1].Namespace)
+	})
+
+	t.Run("add to empty subjects list", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{},
+		}
+
+		addServiceAccountToRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "new-sa",
+		})
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, "new-sa", rb.Subjects[0].Name)
+		require.Equal(t, rbacv1.ServiceAccountKind, rb.Subjects[0].Kind)
+		require.Equal(t, testProject, rb.Subjects[0].Namespace)
+	})
+
+	t.Run("does not add duplicate with different kind", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.UserKind,
+					Namespace: testProject,
+					Name:      "test-sa",
+				},
+			},
+		}
+
+		addServiceAccountToRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "test-sa",
+		})
+
+		require.Len(t, rb.Subjects, 2)
+		require.Equal(t, rbacv1.UserKind, rb.Subjects[0].Kind)
+		require.Equal(t, rbacv1.ServiceAccountKind, rb.Subjects[1].Kind)
+	})
+}
+
+func Test_dropServiceAccountFromRoleBinding(t *testing.T) {
+	t.Run("drop existing service account", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "sa-1",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "sa-2",
+				},
+			},
+		}
+
+		dropServiceAccountFromRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "sa-1",
+		})
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, "sa-2", rb.Subjects[0].Name)
+	})
+
+	t.Run("drop non-existent service account", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "existing-sa",
+				},
+			},
+		}
+
+		dropServiceAccountFromRoleBinding(
+			rb,
+			rbacapi.ServiceAccountReference{
+				Namespace: testProject,
+				Name:      "non-existent-sa",
+			},
+		)
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, "existing-sa", rb.Subjects[0].Name)
+	})
+
+	t.Run("drop all service accounts", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "only-sa",
+				},
+			},
+		}
+
+		dropServiceAccountFromRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "only-sa",
+		})
+
+		require.Len(t, rb.Subjects, 0)
+	})
+
+	t.Run("drop from empty subjects list", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{},
+		}
+
+		dropServiceAccountFromRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "sa-name",
+		})
+
+		require.Len(t, rb.Subjects, 0)
+	})
+
+	t.Run("does not drop user with same name", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.UserKind,
+					Namespace: testProject,
+					Name:      "test-name",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "test-name",
+				},
+			},
+		}
+
+		dropServiceAccountFromRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "test-name",
+		})
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, rbacv1.UserKind, rb.Subjects[0].Kind)
+		require.Equal(t, "test-name", rb.Subjects[0].Name)
+	})
+
+	t.Run("drop multiple service accounts with same name", func(t *testing.T) {
+		rb := &rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: testProject,
+				Name:      testKargoRoleName,
+			},
+			Subjects: []rbacv1.Subject{
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "duplicate-sa",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "other-sa",
+				},
+				{
+					Kind:      rbacv1.ServiceAccountKind,
+					Namespace: testProject,
+					Name:      "duplicate-sa",
+				},
+			},
+		}
+
+		dropServiceAccountFromRoleBinding(rb, rbacapi.ServiceAccountReference{
+			Namespace: testProject,
+			Name:      "duplicate-sa",
+		})
+
+		require.Len(t, rb.Subjects, 1)
+		require.Equal(t, "other-sa", rb.Subjects[0].Name)
+	})
 }

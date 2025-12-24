@@ -100,6 +100,11 @@
       "pattern": "(?:\\d+(ns|us|µs|ms|s|m|h))+",
       "description": "The maximum time to wait for the request to complete. If not specified, the default is 10 seconds."
     },
+    "responseContentType": {
+      "type": "string",
+      "description": "Optionally overrides the Content-Type header for response parsing. Accepts MIME media type values: 'application/json', 'application/yaml', or 'text/plain'. If not set, uses the Content-Type header from the response with JSON fallback.",
+      "pattern": "^(application/json|application/yaml|text/plain)$"
+    },
     "outputs": {
       "type": "array",
       "items": {

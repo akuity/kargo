@@ -28,7 +28,8 @@ export const layoutGraph = (
     ignore?: (w: Warehouse) => boolean;
   },
   dimensionState: DimensionState,
-  warehouseColorMap?: ColorMap
+  warehouseColorMap?: ColorMap,
+  hideSubscriptions?: Record<string, boolean>
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
@@ -56,6 +57,10 @@ export const layoutGraph = (
       ...warehouseLabelling.label(w),
       ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {})
     });
+
+    if (hideSubscriptions?.[w?.metadata?.name || '']) {
+      continue;
+    }
 
     for (const s of w.spec?.subscriptions || []) {
       const subscriptionNodeIndex = repoSubscriptionIndexer.index(w, s);

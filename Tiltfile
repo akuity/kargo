@@ -77,12 +77,17 @@ k8s_resource(
   objects = [
     'kargo-admin:clusterrole',
     'kargo-admin:clusterrolebinding',
+    'kargo-admin:role',
+    'kargo-admin:rolebinding',
     'kargo-admin:serviceaccount',
     'kargo-project-admin:clusterrole',
     'kargo-project-creator:clusterrole',
     'kargo-project-creator:clusterrolebinding',
     'kargo-project-creator:serviceaccount',
     'kargo-project-secrets-reader:clusterrole',
+    'kargo-shared-resources:namespace',
+    'kargo-shared-resources-admin:role',
+    'kargo-shared-resources-admin:rolebinding',
     'kargo-user:clusterrole',
     'kargo-user:clusterrolebinding',
     'kargo-user:serviceaccount',
@@ -137,8 +142,7 @@ k8s_resource(
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
-    'kargo-controller-read-secrets:rolebinding',
-    'kargo-shared-credentials:namespace:kargo'
+    'kargo-controller-read-secrets:rolebinding'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )

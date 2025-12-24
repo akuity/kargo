@@ -22,8 +22,10 @@ This guide presents a basic introduction to Kargo. Together, we will:
 1. Clean up.
 
 :::info
+
 If you're looking to contribute to Kargo, you may wish to consult the
 [contributor guide](../60-contributor-guide/index.md) instead.
+
 :::
 
 ## Starting a Local Cluster
@@ -41,10 +43,12 @@ user, you can follow
 its built-in Kubernetes support.
 
 :::info
+
 Although this is one of the fastest paths to a local Kubernetes cluster, be
 aware that Docker Desktop supports only a _single_ Kubernetes cluster. If
 that cluster reaches a state you are dissatisfied with, resetting it will
 remove not just Kargo-related resources, but _all_ your workloads and data.
+
 :::
 
 ```shell
@@ -60,10 +64,12 @@ for Docker Desktop for Mac OS only. You can follow
 built-in Kubernetes support.
 
 :::info
+
 Although this is one of the fastest paths to a local Kubernetes cluster, be
 aware that OrbStack supports only a _single_ Kubernetes cluster. If
 that cluster reaches a state you are dissatisfied with, resetting it will
 remove not just Kargo-related resources, but _all_ your workloads and data.
+
 :::
 
 ```shell
@@ -83,10 +89,12 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind
 ```
 
 :::info
+
 While this option is a bit more complex than using Docker Desktop or OrbStack
 directly, it offers the advantage of being fully-disposable. If your cluster
 reaches a state you are dissatisfied with, you can simply destroy it and
 launch a new one.
+
 :::
 
 </TabItem>
@@ -101,16 +109,19 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.
 ```
 
 :::info
+
 While this option is a bit more complex than using Docker Desktop or OrbStack
 directly, it offers the advantage of being fully-disposable. If your cluster
 reaches a state you are dissatisfied with, you can simply destroy it and
 launch a new one.
+
 :::
 
 </TabItem>
 <TabItem value="more-info" label="More Info">
 
 :::info
+
 If you are averse to piping a downloaded script directly into a shell, please
 feel free to download the applicable script and inspect its contents prior to
 execution.
@@ -129,6 +140,7 @@ Any approach you select should only:
 </Tabs>
 
 :::note
+
 If Kargo installation fails with a `401`, verify that you are using Helm v3.13.1
 or greater.
 
@@ -168,11 +180,13 @@ UAT, and production.
    paths of the form `stages/<stage name>/`.
 
     :::note
+
     This layout is typical of a GitOps repository using
     [Kustomize](https://kustomize.io/) for configuration management and is not
     at all Kargo-specific.
 
     Kargo also works just as well with [Helm](https://helm.sh).
+
     :::
 
 1. We'll be using it later, so save the location of your GitOps repository in an
@@ -266,6 +280,7 @@ the previous section.
     declaratively using either `kubectl` or the `kargo` CLI.
 
     :::info
+
     For demo purposes, using `kubectl` is the quickest way to declaratively
     define your first `Project`. The `kargo` CLI, however, does offer
     Kargo-specific functionality, and for Kargo users who lack direct access to
@@ -626,6 +641,7 @@ the previous section.
    in the freight timeline, if it isn't there already.
 
     :::info
+
     `Freight` is a set of references to one or more versioned artifacts, which
     may include:
 
@@ -699,6 +715,7 @@ Now is a good time to explore the UI some more.
   `uat`.
 
   :::note
+
   Although this simple example does not demonstrate it, it is also possible to
   perform more extensive verification of the `Freight` in any `Stage` using
   user-defined processes.
@@ -716,8 +733,10 @@ the resulting manifests to a stage-specific branch -- the same branch referenced
 by the `test` Argo CD `Application`'s `targetRevision` field.
 
 :::info
+
 Although not required for all uses cases, using stage-specific branches is a
 practice highly recommended by the Kargo team.
+
 :::
 
 ## Promote to UAT and then Production
@@ -733,17 +752,20 @@ We leave it as an exercise to the reader to use the dashboard to progress the
 `Freight` from `test` to `uat` and again from `uat` to `prod`.
 
 :::info
+
 The `uat` and `prod` instances of our site should be accessible at:
 
-* `uat`: [localhost:30082](http://localhost:30082)
-* `prod`: [localhost:30083](http://localhost:30083)
+* `uat`: [localhost:32081](http://localhost:32081)
+* `prod`: [localhost:32082](http://localhost:32082)
 :::
 
 :::info
+
 It is possible to automate promotion of new, qualified `Freight` for designated
 `Stage`s and also possible to used RBAC to limit who can trigger manual
 promotions for each `Stage`, however, both these topics are beyond the scope of
 this introduction.
+
 :::
 
 ## Cleaning up

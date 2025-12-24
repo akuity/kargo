@@ -8,8 +8,10 @@ description: Deletes a file or directory.
 `delete` deletes a file or directory.
 
 :::note
+
 If you need to delete the entire contents of a Git working tree, consider using
 the [`git-clear` step](git-clear.md) instead.
+
 :::
 
 ## Configuration

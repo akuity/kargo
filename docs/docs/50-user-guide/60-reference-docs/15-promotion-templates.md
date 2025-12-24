@@ -87,20 +87,22 @@ steps:
     - branch: ${{ vars.targetBranch }}
       path: ./target
 ```
-
 :::info
+
 Global variables can use [expressions](40-expressions.md) within `${{ }}` to
 compute values dynamically, including references to context variables like
 `ctx.stage`.
 
 They **do not** support referencing outputs from steps. To reference outputs,
 use [step-specific variables](#step-variables).
-:::
 
+:::
 :::info
+
 Variables defined at the template level are available to all steps within the
 template. You can override these values within individual steps by defining
 [step-specific variables](#step-variables).
+
 :::
 
 ### Steps
@@ -121,10 +123,11 @@ whose value is the name of the step.
 steps:
 - uses: step-name
 ```
-
 :::info
+
 For a list of built-in promotion steps and configuration options, see the
 [Promotion Steps Reference](30-promotion-steps/index.md).
+
 :::
 
 #### Promotion Task Steps
@@ -143,10 +146,12 @@ steps:
 ```
 
 :::note
+
 Steps referencing `PromotionTask` or `ClusterPromotionTask` __do not__ support
 any configuration option other than an `alias` and `vars`, as the steps within
 the task define their own configuration. For more information, see the
 [Promotion Tasks Reference](20-promotion-tasks.md).
+
 :::
 
 #### Step Variables
@@ -183,10 +188,11 @@ steps:
   - name: var1
     value: ${{ outputs.step1.someOutput }}
 ```
-
 :::info
+
 Step variables with the same name as global variables will override the global
 value for that step.
+
 :::
 
 #### Step Configuration
@@ -326,12 +332,15 @@ steps:
 # This Promotion will succeed
 ```
 
-:::tip
+:::info
+
 Using the primitives described above, it is possible to create robust error-handling
 logic in your promotion templates.
+
 :::
 
-:::tip
+:::info
+
 Conditional steps can be used in [Promotion Tasks](20-promotion-tasks.md) to
 conditionally execute a task step based on provided
 [task variables](20-promotion-tasks.md#task-variables).
@@ -341,6 +350,7 @@ does not affect the execution of the task, as the steps of the `PromotionTask`
 are inflated into the `Promotion` at creation time. Because of this, the `if`
 condition would be evaluated at creation time rather than execution time,
 preventing it from accessing the status or outputs of previous steps.
+
 :::
 
 #### Step Retries
@@ -379,8 +389,10 @@ steps:
 ```
 
 :::info
+
 This feature was introduced in Kargo v1.1.0, and is still undergoing refinements
 and improvements to better distinguish between transient and non-transient
 errors, and to provide more control over retry behavior like backoff strategies
 or time limits.
+
 :::

@@ -8,6 +8,7 @@ This guide explains how to configure AWS Cognito as an OIDC identity provider
 for Kargo.
 
 :::important
+
 The forms you will complete to enable Kargo to authenticate users against
 Cognito are _different_ depending on whether you are:
 
@@ -16,6 +17,7 @@ Cognito are _different_ depending on whether you are:
 * Creating a brand new user pool.
 
 Be certain to follow the steps below that are appropriate to your scenario.
+
 :::
 
 ## Using an Existing User Pool
@@ -71,6 +73,7 @@ Be certain to follow the steps below that are appropriate to your scenario.
     ![Create User Pool and App Client](./img/create-pool-and-client.png)
 
     :::important
+
     This single form asks you to _both_ configure the user pool _and_ register
     an app client.
 
@@ -88,6 +91,7 @@ Be certain to follow the steps below that are appropriate to your scenario.
        identifiers for users to use when signing in.
 
         :::note
+
         This is a feature of the _user pool_ and not the client app.
         :::
 
@@ -96,6 +100,7 @@ Be certain to follow the steps below that are appropriate to your scenario.
        minimum, <Hlt>email</Hlt> must be selected.
 
         :::info
+
         Kargo is unopinionated about _how_ users actually authenticate to OIDC,
         identity providers (e.g. with username/email and password, social login,
         etc.) however, Kargo _does_ depend on the user's email address being
@@ -146,7 +151,7 @@ After completing the steps from either the
           This is where users of the Kargo UI will be redirected to after
           logging in.
 
-        * `https://localhost/auth/callback`
+        * `http://localhost/auth/callback`
 
            This is where users of the `kargo` CLI will be redirected to
            redirected to after logging in. (The CLI launches a server to serve
@@ -185,8 +190,10 @@ updating Kargo using its Helm chart
 [as documented here](../../20-openid-connect/index.md#configuring-kargo).
 
 :::info
+
 Using Cognito as an identity provider, there is no need to create separate
 client apps for the Kargo UI and the `kargo` CLI, and as such, the _same_ client
 ID should be used for _both_ the `api.oidc.clientID` and `api.oidc.cliClientID`
 settings.
+
 :::

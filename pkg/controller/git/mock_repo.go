@@ -30,6 +30,7 @@ type MockRepo struct {
 	RemoteBranchExistsFn      func(branch string) (bool, error)
 	ResetHardFn               func() error
 	URLFn                     func() string
+	UpdateSubmodulesFn        func() error
 }
 
 func (m *MockRepo) AddAll() error {
@@ -145,4 +146,8 @@ func (m *MockRepo) ResetHard() error {
 
 func (m *MockRepo) URL() string {
 	return m.URLFn()
+}
+
+func (m *MockRepo) UpdateSubmodules() error {
+	return m.UpdateSubmodulesFn()
 }
