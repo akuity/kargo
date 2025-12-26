@@ -48,6 +48,9 @@ spec:
           {{- end }}
         spec:
           serviceAccountName: kargo-garbage-collector
+          {{- with .Values.garbageCollector.priorityClassName | default .Values.global.priorityClassName }}
+          priorityClassName: {{ . }}
+          {{- end }}
           {{- with .Values.garbageCollector.affinity | default .Values.global.affinity }}
           affinity:
             {{- toYaml . | nindent 12 }}
