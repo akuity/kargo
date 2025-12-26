@@ -19,18 +19,18 @@ func (s *server) ListClusterSecrets(
 ) (*connect.Response[svcv1alpha1.ListClusterSecretsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
 	}
 
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+	if s.cfg.ClusterResourcesNamespace == "" {
+		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
 	}
 
 	var secretsList corev1.SecretList
 	if err := s.client.List(
 		ctx,
 		&secretsList,
-		client.InNamespace(s.cfg.ClusterSecretNamespace),
+		client.InNamespace(s.cfg.ClusterResourcesNamespace),
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}

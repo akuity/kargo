@@ -25,7 +25,7 @@
                 "description": "Artifactory contains the configuration for a webhook receiver that is\ncompatible with JFrog Artifactory payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret-token` key whose\nvalue is the shared secret used to authenticate the webhook requests sent\nby JFrog Artifactory. For more information please refer to the JFrog\nArtifactory documentation:\n  https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret-token` key whose\nvalue is the shared secret used to authenticate the webhook requests sent\nby JFrog Artifactory. For more information please refer to the JFrog\nArtifactory documentation:\n  https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks",
                     "properties": {
                       "name": {
                         "default": "",
@@ -50,7 +50,7 @@
                 "description": "Azure contains the configuration for a webhook receiver that is compatible\nwith Azure Container Registry (ACR) and Azure DevOps payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Azure when registering a webhook.\nIt is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nAzure webhooks, please refer to the Azure documentation:\n\n Azure Container Registry:\n\thttps://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories\n\n Azure DevOps:\n\thttp://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Azure when registering a webhook.\nIt is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nAzure webhooks, please refer to the Azure documentation:\n\n Azure Container Registry:\n\thttps://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories\n\n Azure DevOps:\n\thttp://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops",
                     "properties": {
                       "name": {
                         "default": "",
@@ -71,7 +71,7 @@
                 "description": "Bitbucket contains the configuration for a webhook receiver that is\ncompatible with Bitbucket payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose\nvalue is the shared secret used to authenticate the webhook requests sent\nby Bitbucket. For more information please refer to the Bitbucket\ndocumentation:\n  https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose\nvalue is the shared secret used to authenticate the webhook requests sent\nby Bitbucket. For more information please refer to the Bitbucket\ndocumentation:\n  https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/",
                     "properties": {
                       "name": {
                         "default": "",
@@ -253,7 +253,7 @@
                     "type": "array"
                   },
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with the sender. It is used only by\nKargo to create a complex, hard-to-guess URL, which implicitly serves as a\nshared secret.",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with the sender. It is used only by\nKargo to create a complex, hard-to-guess URL, which implicitly serves as a\nshared secret.",
                     "properties": {
                       "name": {
                         "default": "",
@@ -274,7 +274,7 @@
                 "description": "Gitea contains the configuration for a webhook receiver that is compatible\nwith Gitea payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by Gitea.\nFor more information please refer to the Gitea documentation:\n  https://docs.gitea.io/en-us/webhooks/",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by Gitea.\nFor more information please refer to the Gitea documentation:\n  https://docs.gitea.io/en-us/webhooks/",
                     "properties": {
                       "name": {
                         "default": "",
@@ -295,7 +295,7 @@
                 "description": "GitHub contains the configuration for a webhook receiver that is compatible\nwith GitHub payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value is\nthe shared secret used to authenticate the webhook requests sent by GitHub.\nFor more information please refer to GitHub documentation:\n  https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries",
                     "properties": {
                       "name": {
                         "default": "",
@@ -316,7 +316,7 @@
                 "description": "GitLab contains the configuration for a webhook receiver that is compatible\nwith GitLab payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe secret is expected to contain a `secret-token` key containing the\nshared secret specified when registering the webhook in GitLab. For more\ninformation about this token, please refer to the GitLab documentation:\n  https://docs.gitlab.com/user/project/integrations/webhooks/",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe secret is expected to contain a `secret-token` key containing the\nshared secret specified when registering the webhook in GitLab. For more\ninformation about this token, please refer to the GitLab documentation:\n  https://docs.gitlab.com/user/project/integrations/webhooks/",
                     "properties": {
                       "name": {
                         "default": "",
@@ -337,7 +337,7 @@
                 "description": "Harbor contains the configuration for a webhook receiver that is compatible\nwith Harbor payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe secret is expected to contain an `auth-header` key containing the \"auth\nheader\" specified when registering the webhook in Harbor. For more\ninformation, please refer to the Harbor documentation:\n  https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe secret is expected to contain an `auth-header` key containing the \"auth\nheader\" specified when registering the webhook in Harbor. For more\ninformation, please refer to the Harbor documentation:\n  https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/",
                     "properties": {
                       "name": {
                         "default": "",
@@ -365,7 +365,7 @@
                 "description": "Quay contains the configuration for a webhook receiver that is compatible\nwith Quay payloads.",
                 "properties": {
                   "secretRef": {
-                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster Secrets\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Quay when registering a\nwebhook. It is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nQuay webhooks, please refer to the Quay documentation:\n  https://docs.quay.io/guides/notifications.html",
+                    "description": "SecretRef contains a reference to a Secret. For Project-scoped webhook\nreceivers, the referenced Secret must be in the same namespace as the\nProjectConfig.\n\nFor cluster-scoped webhook receivers, the referenced Secret must be in the\ndesignated \"cluster resources\" namespace.\n\nThe Secret's data map is expected to contain a `secret` key whose value\ndoes NOT need to be shared directly with Quay when registering a\nwebhook. It is used only by Kargo to create a complex, hard-to-guess URL,\nwhich implicitly serves as a shared secret. For more information about\nQuay webhooks, please refer to the Quay documentation:\n  https://docs.quay.io/guides/notifications.html",
                     "properties": {
                       "name": {
                         "default": "",
