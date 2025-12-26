@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -42,6 +43,9 @@ func TestCreateCredentials(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg:    config.ServerConfig{SecretManagementEnabled: true},
+		externalValidateProjectFn: func(context.Context, client.Client, string) error {
+			return nil
+		},
 	}
 
 	resp, err := s.CreateCredentials(
@@ -89,23 +93,25 @@ func TestCreateCredentials(t *testing.T) {
 }
 
 func TestValidateCredentials(t *testing.T) {
-	s := &server{}
+	const testProject = "fake-project"
+
+	s := &server{
+		externalValidateProjectFn: func(
+			_ context.Context,
+			_ client.Client,
+			project string,
+		) error {
+			if project != testProject {
+				return errors.New("invalid project")
+			}
+			return nil
+		},
+	}
 
 	err := s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "",
-			name:     "test",
-			credType: "git",
-			repoURL:  "abc",
-			username: "test",
-			password: "test",
-		},
-	)
-	require.Error(t, err)
-
-	err = s.validateCredentials(
-		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "",
 			credType: "git",
 			repoURL:  "abc",
@@ -116,8 +122,9 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "test",
 			credType: "",
 			repoURL:  "abc",
@@ -128,8 +135,9 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "test",
 			credType: "invalid",
 			repoURL:  "abc",
@@ -140,8 +148,9 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "test",
 			credType: "git",
 			repoURL:  "",
@@ -152,8 +161,9 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "test",
 			credType: "git",
 			repoURL:  "https://github.com/akuity/kargo",
@@ -164,8 +174,9 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  testProject,
 			name:     "test",
 			credType: "git",
 			repoURL:  "https://github.com/akuity/kargo",
@@ -176,8 +187,35 @@ func TestValidateCredentials(t *testing.T) {
 	require.Error(t, err)
 
 	err = s.validateCredentials(
+		t.Context(),
 		credentials{
-			project:  "kargo-demo",
+			project:  "", // Project not specified == shared resources namespace
+			name:     "test",
+			credType: "git",
+			repoURL:  "https://github.com/akuity/kargo",
+			username: "test",
+			password: "test",
+		},
+	)
+	require.NoError(t, err)
+
+	err = s.validateCredentials(
+		t.Context(),
+		credentials{
+			project:  "invalid-project",
+			name:     "test",
+			credType: "git",
+			repoURL:  "https://github.com/akuity/kargo",
+			username: "test",
+			password: "test",
+		},
+	)
+	require.Error(t, err)
+
+	err = s.validateCredentials(
+		t.Context(),
+		credentials{
+			project:  testProject,
 			name:     "test",
 			credType: "git",
 			repoURL:  "https://github.com/akuity/kargo",

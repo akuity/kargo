@@ -28,20 +28,6 @@ func TestGetCredentials(t *testing.T) {
 		objects    []client.Object
 		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetCredentialsResponse], error)
 	}{
-		"empty project": {
-			req: &svcv1alpha1.GetCredentialsRequest{
-				Project: "",
-				Name:    "",
-			},
-			objects: []client.Object{
-				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
-				require.Error(t, err)
-				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.Nil(t, c)
-			},
-		},
 		"empty name": {
 			req: &svcv1alpha1.GetCredentialsRequest{
 				Project: "kargo-demo",
@@ -90,7 +76,50 @@ func TestGetCredentials(t *testing.T) {
 				require.Nil(t, c)
 			},
 		},
-		"existing Credentials": {
+		"existing shared Credentials": {
+			req: &svcv1alpha1.GetCredentialsRequest{
+				Project: "",
+				Name:    "test",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kargo-shared-resources",
+						Name:      "test",
+						Labels: map[string]string{
+							kargoapi.LabelKeyCredentialType: "repository",
+						},
+						Annotations: map[string]string{
+							"last-applied-configuration": "fake-configuration",
+						},
+					},
+					Data: map[string][]byte{
+						libCreds.FieldRepoURL: []byte("fake-url"),
+						"random-key":          []byte("random-value"),
+					},
+				},
+			},
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+				require.NoError(t, err)
+
+				require.NotNil(t, c)
+				require.Nil(t, c.Msg.GetRaw())
+
+				require.NotNil(t, c.Msg.GetCredentials())
+				require.Equal(t, "kargo-shared-resources", c.Msg.GetCredentials().Namespace)
+				require.Equal(t, "test", c.Msg.GetCredentials().Name)
+
+				require.Equal(t, map[string]string{
+					"last-applied-configuration": redacted,
+				}, c.Msg.GetCredentials().Annotations)
+				require.Equal(t, map[string]string{
+					libCreds.FieldRepoURL: "fake-url",
+					"random-key":          redacted,
+				}, c.Msg.GetCredentials().StringData)
+			},
+		},
+		"existing Project Credentials": {
 			req: &svcv1alpha1.GetCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "test",
@@ -276,7 +305,8 @@ func TestGetCredentials(t *testing.T) {
 				client:                    client,
 				externalValidateProjectFn: validation.ValidateProject,
 				cfg: config.ServerConfig{
-					SecretManagementEnabled: true,
+					SecretManagementEnabled:  true,
+					SharedResourcesNamespace: "kargo-shared-resources",
 				},
 			}
 			res, err := (svr).GetCredentials(ctx, connect.NewRequest(testCase.req))

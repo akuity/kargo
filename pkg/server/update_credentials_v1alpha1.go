@@ -48,15 +48,22 @@ func (s *server) UpdateCredentials(
 		return nil, err
 	}
 
-	if err := validateFieldNotEmpty("name", credsUpdate.name); err != nil {
-		return nil, err
+	project := req.Msg.GetProject()
+	if project != "" {
+		if err := s.validateProjectExists(ctx, project); err != nil {
+			return nil, err
+		}
+	}
+	namespace := project
+	if namespace == "" {
+		namespace = s.cfg.SharedResourcesNamespace
 	}
 
 	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: credsUpdate.project,
+			Namespace: namespace,
 			Name:      credsUpdate.name,
 		},
 		&secret,

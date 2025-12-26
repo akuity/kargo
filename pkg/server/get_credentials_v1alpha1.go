@@ -24,25 +24,27 @@ func (s *server) GetCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
 	name := req.Msg.GetName()
 	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	project := req.Msg.GetProject()
+	if project != "" {
+		if err := s.validateProjectExists(ctx, project); err != nil {
+			return nil, err
+		}
+	}
+	namespace := project
+	if namespace == "" {
+		namespace = s.cfg.SharedResourcesNamespace
 	}
 
 	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: project,
+			Namespace: namespace,
 			Name:      name,
 		},
 		&secret,

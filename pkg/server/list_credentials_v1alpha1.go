@@ -26,12 +26,14 @@ func (s *server) ListCredentials(
 	}
 
 	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
+	if project != "" {
+		if err := s.validateProjectExists(ctx, project); err != nil {
+			return nil, err
+		}
 	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	namespace := project
+	if namespace == "" {
+		namespace = s.cfg.SharedResourcesNamespace
 	}
 
 	credsLabelSelector := labels.NewSelector()
@@ -55,7 +57,7 @@ func (s *server) ListCredentials(
 	if err := s.client.List(
 		ctx,
 		&secretsList,
-		client.InNamespace(req.Msg.GetProject()),
+		client.InNamespace(namespace),
 		&client.ListOptions{
 			LabelSelector: credsLabelSelector,
 		},

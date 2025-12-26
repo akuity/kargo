@@ -35,6 +35,7 @@ type getCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	Shared  bool
 	Project string
 	Names   []string
 }
@@ -68,7 +69,14 @@ kargo get credentials
 
 # Get specific credentials in the default project
 kargo config set-project my-project
-kargo get credentials my-credentials`),
+kargo get credentials my-credentials
+
+# List shared credentials
+kargo get credentials --shared
+
+# Get specific shared credentials
+kargo get credentials --shared my-credentials
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
@@ -99,6 +107,12 @@ func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list credentials. If not set, the default project will be used.",
 	)
+	option.Shared(
+		cmd.Flags(), &o.Shared, false,
+		"Whether to list shared credentials instead of project-specific credentials.",
+	)
+	// project and shared flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SharedFlag)
 }
 
 // complete sets the options from the command arguments.
@@ -109,12 +123,13 @@ func (o *getCredentialsOptions) complete(args []string) {
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *getCredentialsOptions) validate() error {
-	// While the flags are marked as required, a user could still provide an empty
-	// string. This is a check to ensure that the flags are not empty.
-	if o.Project == "" {
-		return errors.New("project is required")
+	var errs []error
+	if o.Project == "" && !o.Shared {
+		errs = append(errs, fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SharedFlag,
+		))
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 // run gets the credentials from the server and prints them to the console.
@@ -124,13 +139,18 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
+	var project string
+	if !o.Shared {
+		project = o.Project
+	}
+
 	if len(o.Names) == 0 {
 		var resp *connect.Response[v1alpha1.ListCredentialsResponse]
 		if resp, err = kargoSvcCli.ListCredentials(
 			ctx,
 			connect.NewRequest(
 				&v1alpha1.ListCredentialsRequest{
-					Project: o.Project,
+					Project: project,
 				},
 			),
 		); err != nil {
@@ -147,7 +167,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 			ctx,
 			connect.NewRequest(
 				&v1alpha1.GetCredentialsRequest{
-					Project: o.Project,
+					Project: project,
 					Name:    name,
 				},
 			),

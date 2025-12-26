@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -8,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -19,7 +22,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 	testLocalClusterClient := fake.NewClientBuilder().Build()
 	testCredentialProviderRegistry := credentials.MustNewProviderRegistry()
 	testCfg := DatabaseConfig{
-		GlobalCredentialsNamespaces: []string{"fake-namespace"},
+		SharedResourcesNamespace: "fake-namespace",
 	}
 	d := NewDatabase(
 		testControlPlaneClient,
@@ -41,7 +44,7 @@ func TestNewKubernetesDatabase(t *testing.T) {
 func TestGet(t *testing.T) {
 	const (
 		testProjectNamespace = "fake-namespace"
-		testGlobalNamespace  = "another-fake-namespace"
+		testSharedNamespace  = "shared-namespace"
 
 		// This deliberately omits the trailing .git to test normalization
 		testGitRepoURL     = "https://github.com/akuity/kargo"
@@ -111,29 +114,29 @@ func TestGet(t *testing.T) {
 		},
 	}
 
-	globalGitCredentialWithRepoURL := &corev1.Secret{
+	sharedGitCredentialWithRepoURL := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-git-repo-url",
-			Namespace: testGlobalNamespace,
+			Name:      "shared-credential-git-repo-url",
+			Namespace: testSharedNamespace,
 			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
 			credentials.FieldRepoURL:  []byte(testGitRepoURL),
-			credentials.FieldUsername: []byte("global-exact"),
+			credentials.FieldUsername: []byte("shared-exact"),
 			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
-	globalGitCredentialWithRepoURLPattern := &corev1.Secret{
+	sharedGitCredentialWithRepoURLPattern := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-git-repo-url-pattern",
-			Namespace: testGlobalNamespace,
+			Name:      "shared-credential-git-repo-url-pattern",
+			Namespace: testSharedNamespace,
 			Labels:    testGitLabels,
 		},
 		Data: map[string][]byte{
 			credentials.FieldRepoURL:        []byte(testGitRepoURL),
 			credentials.FieldRepoURLIsRegex: []byte("true"),
-			credentials.FieldUsername:       []byte("global-pattern"),
+			credentials.FieldUsername:       []byte("shared-pattern"),
 			credentials.FieldPassword:       []byte("fake-password"),
 		},
 	}
@@ -165,29 +168,29 @@ func TestGet(t *testing.T) {
 		},
 	}
 
-	globalImageCredentialWithRepoURL := &corev1.Secret{
+	sharedImageCredentialWithRepoURL := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-image-repo-url",
-			Namespace: testGlobalNamespace,
+			Name:      "shared-credential-image-repo-url",
+			Namespace: testSharedNamespace,
 			Labels:    testImageLabels,
 		},
 		Data: map[string][]byte{
 			credentials.FieldRepoURL:  []byte(testImageURL),
-			credentials.FieldUsername: []byte("global-exact"),
+			credentials.FieldUsername: []byte("shared-exact"),
 			credentials.FieldPassword: []byte("fake-password"),
 		},
 	}
 
-	globalImageCredentialWithRepoURLPattern := &corev1.Secret{
+	sharedImageCredentialWithRepoURLPattern := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "global-credential-image-repo-url-pattern",
-			Namespace: testGlobalNamespace,
+			Name:      "shared-credential-image-repo-url-pattern",
+			Namespace: testSharedNamespace,
 			Labels:    testImageLabels,
 		},
 		Data: map[string][]byte{
 			credentials.FieldRepoURL:        []byte(testImageURL),
 			credentials.FieldRepoURLIsRegex: []byte("true"),
-			credentials.FieldUsername:       []byte("global-pattern"),
+			credentials.FieldUsername:       []byte("shared-pattern"),
 			credentials.FieldPassword:       []byte("fake-password"),
 		},
 	}
@@ -207,46 +210,67 @@ func TestGet(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name     string
-		secrets  []client.Object
-		cfg      DatabaseConfig
-		credType credentials.Type
-		repoURL  string
-		expected *corev1.Secret
+		name         string
+		namespace    string
+		interceptors *interceptor.Funcs
+		secrets      []client.Object
+		cfg          DatabaseConfig
+		credType     credentials.Type
+		repoURL      string
+		assertions   func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
-			name:     "git URL exact match in project namespace",
-			secrets:  []client.Object{projectGitCredentialWithRepoURL},
-			credType: credentials.TypeGit,
-			repoURL:  testGitRepoURL,
-			expected: projectGitCredentialWithRepoURL,
+			name:      "git URL exact match in project namespace",
+			namespace: testProjectNamespace,
+			secrets:   []client.Object{projectGitCredentialWithRepoURL},
+			credType:  credentials.TypeGit,
+			repoURL:   testGitRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectGitCredentialWithRepoURL, creds)
+			},
 		},
 		{
-			name:     "git URL pattern match in project namespace",
-			secrets:  []client.Object{projectGitCredentialWithRepoURLPattern},
-			credType: credentials.TypeGit,
-			repoURL:  testGitRepoURL,
-			expected: projectGitCredentialWithRepoURLPattern,
+			name:      "git URL pattern match in project namespace",
+			namespace: testProjectNamespace,
+			secrets:   []client.Object{projectGitCredentialWithRepoURLPattern},
+			credType:  credentials.TypeGit,
+			repoURL:   testGitRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectGitCredentialWithRepoURLPattern, creds)
+			},
 		},
 		{
-			name:    "git URL exact match in global namespace",
-			secrets: []client.Object{globalGitCredentialWithRepoURL},
+			name:      "git URL exact match in shared namespace",
+			namespace: testSharedNamespace,
+			secrets:   []client.Object{sharedGitCredentialWithRepoURL},
 			cfg: DatabaseConfig{
-				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+				SharedResourcesNamespace: testSharedNamespace,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
-			expected: globalGitCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, sharedGitCredentialWithRepoURL, creds)
+			},
 		},
 		{
-			name:    "git URL pattern match in global namespace",
-			secrets: []client.Object{globalGitCredentialWithRepoURLPattern},
+			name:    "git URL pattern match in shared namespace",
+			secrets: []client.Object{sharedGitCredentialWithRepoURLPattern},
 			cfg: DatabaseConfig{
-				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+				SharedResourcesNamespace: testSharedNamespace,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
-			expected: globalGitCredentialWithRepoURLPattern,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, sharedGitCredentialWithRepoURLPattern, creds)
+			},
 		},
 		// Image URLs of the form host:port/image can be mistaken for SCP-style Git
 		// URLs. The next several test cases verify that Git URL normalization is
@@ -257,34 +281,50 @@ func TestGet(t *testing.T) {
 			secrets:  []client.Object{projectImageCredentialWithRepoURL},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
-			expected: projectImageCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectImageCredentialWithRepoURL, creds)
+			},
 		},
 		{
 			name:     "image URL pattern match in project namespace",
 			secrets:  []client.Object{projectImageCredentialWithRepoURLPattern},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
-			expected: projectImageCredentialWithRepoURLPattern,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectImageCredentialWithRepoURLPattern, creds)
+			},
 		},
 		{
-			name:    "image URL exact match in global namespace",
-			secrets: []client.Object{globalImageCredentialWithRepoURL},
+			name:    "image URL exact match in shared namespace",
+			secrets: []client.Object{sharedImageCredentialWithRepoURL},
 			cfg: DatabaseConfig{
-				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+				SharedResourcesNamespace: testSharedNamespace,
 			},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
-			expected: globalImageCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, sharedImageCredentialWithRepoURL, creds)
+			},
 		},
 		{
-			name:    "image URL pattern match in global namespace",
-			secrets: []client.Object{globalImageCredentialWithRepoURLPattern},
+			name:    "image URL pattern match in shared namespace",
+			secrets: []client.Object{sharedImageCredentialWithRepoURLPattern},
 			cfg: DatabaseConfig{
-				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+				SharedResourcesNamespace: testSharedNamespace,
 			},
 			credType: credentials.TypeImage,
 			repoURL:  testImageURL,
-			expected: globalImageCredentialWithRepoURLPattern,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, sharedImageCredentialWithRepoURLPattern, creds)
+			},
 		},
 		// The next several tests cases confirm the precedence rules for credential
 		// matching.
@@ -296,42 +336,57 @@ func TestGet(t *testing.T) {
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
-			expected: projectGitCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectGitCredentialWithRepoURL, creds)
+			},
 		},
 		{
-			name: "precedence: exact match in global namespace over pattern match",
+			name: "precedence: exact match in shared namespace over pattern match",
 			secrets: []client.Object{
-				globalGitCredentialWithRepoURL,
-				globalGitCredentialWithRepoURLPattern,
+				sharedGitCredentialWithRepoURL,
+				sharedGitCredentialWithRepoURLPattern,
 			},
 			cfg: DatabaseConfig{
-				GlobalCredentialsNamespaces: []string{testGlobalNamespace},
+				SharedResourcesNamespace: testSharedNamespace,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
-			expected: globalGitCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, sharedGitCredentialWithRepoURL, creds)
+			},
 		},
 		{
-			name: "precedence: match in project namespace over match in global namespace",
+			name: "precedence: match in project namespace over match in shared namespace",
 			secrets: []client.Object{
 				projectGitCredentialWithRepoURL,
-				globalGitCredentialWithRepoURL,
+				sharedGitCredentialWithRepoURL,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testGitRepoURL,
-			expected: projectGitCredentialWithRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectGitCredentialWithRepoURL, creds)
+			},
 		},
 		{
 			name: "no match",
 			secrets: []client.Object{
 				projectGitCredentialWithRepoURL,
 				projectGitCredentialWithRepoURLPattern,
-				globalGitCredentialWithRepoURL,
-				globalGitCredentialWithRepoURLPattern,
+				sharedGitCredentialWithRepoURL,
+				sharedGitCredentialWithRepoURLPattern,
 			},
 			credType: credentials.TypeGit,
 			repoURL:  "http://github.com/no/secrets/should/match/this.git",
-			expected: nil,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
 		},
 		{
 			name: "insecure HTTP endpoint",
@@ -339,7 +394,10 @@ func TestGet(t *testing.T) {
 			secrets:  []client.Object{projectGitCredentialWithInsecureRepoURL},
 			credType: credentials.TypeGit,
 			repoURL:  testInsecureGitURL,
-			expected: nil,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.Nil(t, creds)
+			},
 		},
 		{
 			name: "insecure HTTP endpoint allowed",
@@ -350,22 +408,89 @@ func TestGet(t *testing.T) {
 			},
 			credType: credentials.TypeGit,
 			repoURL:  testInsecureGitURL,
-			expected: projectGitCredentialWithInsecureRepoURL,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectGitCredentialWithInsecureRepoURL, creds)
+			},
 		},
 		{
 			name:     "regex normalization",
 			secrets:  []client.Object{projectChartCredentialWithRepoURLPattern},
 			credType: credentials.TypeHelm,
 			repoURL:  ociRepoURL,
-			expected: projectChartCredentialWithRepoURLPattern,
+			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, creds)
+				requireSecretMatchesCreds(t, projectChartCredentialWithRepoURLPattern, creds)
+			},
+		},
+		{
+			name:      "error getting namespace secret",
+			namespace: testProjectNamespace,
+			interceptors: &interceptor.Funcs{
+				List: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectList,
+					_ ...client.ListOption,
+				) error {
+					return errors.New("something went wrong")
+				},
+			},
+			secrets:  nil,
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			assertions: func(t *testing.T, _ *credentials.Credentials, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err,
+					"failed to get git creds for https://github.com/akuity/kargo in namespace \"fake-namespace\"",
+				)
+			},
+		},
+		{
+			name:      "error getting shared namespace secret",
+			namespace: testProjectNamespace,
+			cfg: DatabaseConfig{
+				SharedResourcesNamespace: testSharedNamespace,
+			},
+			interceptors: &interceptor.Funcs{
+				List: func(
+					_ context.Context,
+					_ client.WithWatch,
+					_ client.ObjectList,
+					opts ...client.ListOption,
+				) error {
+					o := opts[0]
+					var list client.ListOptions
+					o.ApplyToList(&list)
+					if list.Namespace == testSharedNamespace {
+						return errors.New("something went wrong")
+					}
+					return nil
+				},
+			},
+			secrets:  nil,
+			credType: credentials.TypeGit,
+			repoURL:  testGitRepoURL,
+			assertions: func(t *testing.T, _ *credentials.Credentials, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err,
+					"failed to get git creds for https://github.com/akuity/kargo in shared namespace \"shared-namespace\"",
+				)
+			},
 		},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			provider := &basic.CredentialProvider{}
+			c := fake.NewClientBuilder().WithObjects(testCase.secrets...)
+			if testCase.interceptors != nil {
+				c.WithInterceptorFuncs(*testCase.interceptors)
+			}
 			creds, err := NewDatabase(
-				fake.NewClientBuilder().WithObjects(testCase.secrets...).Build(),
+				c.Build(),
 				nil,
 				credentials.MustNewProviderRegistry(credentials.ProviderRegistration{
 					Predicate: provider.Supports,
@@ -374,23 +499,19 @@ func TestGet(t *testing.T) {
 				testCase.cfg,
 			).Get(
 				t.Context(),
-				testProjectNamespace,
+				testCase.namespace,
 				testCase.credType,
 				testCase.repoURL,
 			)
-			require.NoError(t, err)
-
-			if testCase.expected == nil {
-				require.Nil(t, creds)
-				return
-			}
-
-			require.NotNil(t, creds)
-			require.Equal(
-				t,
-				string(testCase.expected.Data["username"]),
-				creds.Username,
-			)
+			testCase.assertions(t, creds, err)
 		})
 	}
+}
+
+func requireSecretMatchesCreds(t *testing.T, s *corev1.Secret, creds *credentials.Credentials) {
+	t.Helper()
+	require.NotNil(t, s)
+	require.NotNil(t, creds)
+	require.Equal(t, string(s.Data[credentials.FieldUsername]), creds.Username)
+	require.Equal(t, string(s.Data[credentials.FieldPassword]), creds.Password)
 }
