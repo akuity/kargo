@@ -384,6 +384,77 @@ func TestMergePullRequest(t *testing.T) {
 	}
 }
 
+func TestConvertGitlabMR_MergeCommitSelection(t *testing.T) {
+	testCases := []struct {
+		name                string
+		glMR                gitlab.BasicMergeRequest
+		expectedMerged      bool
+		expectedMergeCommit string
+	}{
+		{
+			name: "merged - prefers MergeCommitSHA when present",
+			glMR: gitlab.BasicMergeRequest{
+				IID:             1,
+				State:           "merged",
+				MergeCommitSHA:  "merge_sha",
+				SquashCommitSHA: "squash_sha",
+				SHA:             "head_sha",
+				WebURL:          "https://gitlab.com/group/project/-/merge_requests/1",
+			},
+			expectedMerged:      true,
+			expectedMergeCommit: "merge_sha",
+		},
+		{
+			name: "merged - falls back to SquashCommitSHA when MergeCommitSHA is empty",
+			glMR: gitlab.BasicMergeRequest{
+				IID:             2,
+				State:           "merged",
+				SquashCommitSHA: "squash_sha",
+				SHA:             "head_sha",
+				WebURL:          "https://gitlab.com/group/project/-/merge_requests/2",
+			},
+			expectedMerged:      true,
+			expectedMergeCommit: "squash_sha",
+		},
+		{
+			name: "merged - falls back to SHA when both MergeCommitSHA and SquashCommitSHA are empty",
+			glMR: gitlab.BasicMergeRequest{
+				IID:    3,
+				State:  "merged",
+				SHA:    "head_sha",
+				WebURL: "https://gitlab.com/group/project/-/merge_requests/3",
+			},
+			expectedMerged:      true,
+			expectedMergeCommit: "head_sha",
+		},
+		{
+			name: "not merged - merge commit is empty regardless of fields",
+			glMR: gitlab.BasicMergeRequest{
+				IID:             4,
+				State:           "opened",
+				MergeCommitSHA:  "merge_sha",
+				SquashCommitSHA: "squash_sha",
+				SHA:             "head_sha",
+				WebURL:          "https://gitlab.com/group/project/-/merge_requests/4",
+			},
+			expectedMerged:      false,
+			expectedMergeCommit: "",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			pr := convertGitlabMR(tc.glMR)
+
+			require.Equal(t, tc.expectedMerged, pr.Merged)
+			require.Equal(t, tc.expectedMergeCommit, pr.MergeCommitSHA)
+			require.Equal(t, tc.glMR.IID, pr.Number)
+			require.Equal(t, tc.glMR.WebURL, pr.URL)
+			require.Equal(t, tc.glMR.SHA, pr.HeadSHA)
+		})
+	}
+}
+
 func TestParseGitLabURL(t *testing.T) {
 	const expectedProjectName = "akuity/kargo"
 	testCases := []struct {
