@@ -830,6 +830,55 @@ func Test_helmTemplateRunner_composeValues(t *testing.T) {
 			},
 		},
 		{
+			name:    "ignore missing value files - file missing",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles:             []string{"non_existent.yaml"},
+				IgnoreMissingValueFiles: true,
+				SetValues:               []builtin.SetValues{{Key: "key1", Value: "value1"}},
+			},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key1": "value1",
+				}, result)
+			},
+		},
+		{
+			name:    "ignore missing value files - file exists",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles:             []string{"values.yaml"},
+				IgnoreMissingValueFiles: true,
+			},
+			valuesContents: map[string]string{
+				"values.yaml": "key1: value1",
+			},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key1": "value1",
+				}, result)
+			},
+		},
+		{
+			name:    "ignore missing value files - mixed existing and missing",
+			workDir: t.TempDir(),
+			cfg: builtin.HelmTemplateConfig{
+				ValuesFiles:             []string{"values.yaml", "missing.yaml"},
+				IgnoreMissingValueFiles: true,
+			},
+			valuesContents: map[string]string{
+				"values.yaml": "key1: value1",
+			},
+			assertions: func(t *testing.T, result map[string]any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]any{
+					"key1": "value1",
+				}, result)
+			},
+		},
+		{
 			name:    "composition with literal values",
 			workDir: t.TempDir(),
 			cfg: builtin.HelmTemplateConfig{
