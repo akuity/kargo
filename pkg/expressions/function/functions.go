@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"os"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -75,7 +76,9 @@ func DiscoveredArtifactsOperations(artifacts *kargoapi.DiscoveredArtifacts) []ex
 func DataOperations(ctx context.Context, c client.Client, cache *gocache.Cache, project string) []expr.Option {
 	return []expr.Option{
 		ConfigMap(ctx, c, cache, project),
+		SharedConfigMap(ctx, c, cache),
 		Secret(ctx, c, cache, project),
+		SharedSecret(ctx, c, cache),
 		FreightMetadata(ctx, c, project),
 		StageMetadata(ctx, c, project),
 	}
@@ -102,6 +105,22 @@ func StatusOperations(
 		Success(stepExecMetas),
 		Status(currentStepAlias, stepExecMetas),
 	}
+}
+
+func SharedSecret(ctx context.Context, c client.Client, cache *gocache.Cache) expr.Option {
+	return expr.Function(
+		"sharedSecret",
+		getSecret(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
+		new(func(name string) *corev1.Secret),
+	)
+}
+
+func SharedConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache) expr.Option {
+	return expr.Function(
+		"sharedConfigMap",
+		getConfigMap(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
+		new(func(name string) *corev1.ConfigMap),
+	)
 }
 
 // Warehouse returns an expr.Option that provides a `warehouse()` function
