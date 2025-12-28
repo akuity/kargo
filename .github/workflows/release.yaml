@@ -105,7 +105,7 @@ jobs:
           ${{ steps.repo.outputs.repo}}@${{ steps.image.outputs.digest}}
     - name: Publish SBOM
       if: github.event_name == 'release'
-      uses: anchore/sbom-action@43a17d6e7add2b5535efe4dcae9952337c479a93 # v0.20.11
+      uses: anchore/sbom-action@a930d0ac434e3182448fe678398ba5713717112a # v0.21.0
       with:
         image: ${{ steps.meta.outputs.tags }}
 
