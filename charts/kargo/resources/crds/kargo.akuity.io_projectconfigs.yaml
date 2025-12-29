@@ -70,6 +70,26 @@ spec:
                         users to define Stages that are automatically updated as soon as new
                         artifacts are detected.
                       type: boolean
+                    promotionWindows:
+                      description: |-
+                        PromotionWindows defines time windows during which automatic promotions
+                        are allowed to occur. If not specified, automatic promotions can occur at
+                        any time.
+                      items:
+                        properties:
+                          kind:
+                            description: Kind is the kind of the time window
+                            enum:
+                            - PromotionWindow
+                            - ClusterPromotionWindow
+                            type: string
+                          name:
+                            description: Name is the name of the time window.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      type: array
                     stage:
                       description: |-
                         Stage is the name of the Stage to which this policy applies.

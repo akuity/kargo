@@ -83,7 +83,7 @@ type PromotionPolicy struct {
 	Stage string `json:"stage,omitempty" protobuf:"bytes,1,opt,name=stage"`
 	// StageSelector is a selector that matches the Stage resource to which
 	// this policy applies.
-	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty" protobuf:"bytes,3,opt,name=stageSelector"`
+	StageSelector *PromotionPolicySelector `json:"stageSelector,omitempty" protobuf:"bytes,2,opt,name=stageSelector"`
 	// AutoPromotionEnabled indicates whether new Freight can automatically be
 	// promoted into the Stage referenced by the Stage field. Note: There are may
 	// be other conditions also required for an auto-promotion to occur. This
@@ -91,7 +91,11 @@ type PromotionPolicy struct {
 	// subscribe to Warehouses instead of other, upstream Stages. This allows
 	// users to define Stages that are automatically updated as soon as new
 	// artifacts are detected.
-	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,2,opt,name=autoPromotionEnabled"`
+	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty" protobuf:"varint,3,opt,name=autoPromotionEnabled"`
+	// PromotionWindows defines time windows during which automatic promotions
+	// are allowed to occur. If not specified, automatic promotions can occur at
+	// any time.
+	PromotionWindows []PromotionWindowReference `json:"promotionWindows,omitempty" protobuf:"bytes,4,rep,name=promotionWindows"`
 }
 
 // WebhookReceiverConfig describes the configuration for a single webhook
