@@ -15,7 +15,11 @@ export const repoSubscriptionIndexer = {
   index: (wh: WarehouseExpanded, subscription: RepoSubscription) => {
     const warehouseIndex = warehouseIndexer.index(wh);
     const subscriptionRepoURL =
-      subscription?.image?.repoURL || subscription?.git?.repoURL || subscription?.chart?.repoURL;
+      subscription?.image?.repoURL ||
+      subscription?.git?.repoURL ||
+      subscription?.chart?.repoURL ||
+      `${subscription?.subscription?.name}${subscription?.subscription?.subscriptionType}` ||
+      'unknown';
 
     return `subscription/${warehouseIndex}/${subscriptionRepoURL}`;
   },
