@@ -1499,7 +1499,7 @@ message PromotionPolicy {
 
   // StageSelector is a selector that matches the Stage resource to which
   // this policy applies.
-  optional PromotionPolicySelector stageSelector = 3;
+  optional PromotionPolicySelector stageSelector = 2;
 
   // AutoPromotionEnabled indicates whether new Freight can automatically be
   // promoted into the Stage referenced by the Stage field. Note: There are may
@@ -1508,7 +1508,12 @@ message PromotionPolicy {
   // subscribe to Warehouses instead of other, upstream Stages. This allows
   // users to define Stages that are automatically updated as soon as new
   // artifacts are detected.
-  optional bool autoPromotionEnabled = 2;
+  optional bool autoPromotionEnabled = 3;
+
+  // PromotionWindows defines time windows during which automatic promotions
+  // are allowed to occur. If not specified, automatic promotions can occur at
+  // any time.
+  repeated PromotionWindowReference promotionWindows = 4;
 }
 
 // PromotionPolicySelector is a selector that matches the resource to which
@@ -1809,6 +1814,59 @@ message PromotionTemplateSpec {
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set continueOnError",rule="!has(self.task) || !has(self.continueOnError)"
   // +kubebuilder:validation:items:XValidation:message="PromotionTemplate step referencing a task cannot set retry",rule="!has(self.task) || !has(self.retry)"
   repeated PromotionStep steps = 1;
+}
+
+message PromotionWindow {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta metadata = 1;
+
+  // Spec describes the composition of an AutoPromotionWindow, including the
+  // recurring time window and time zone.
+  //
+  // +kubebuilder:validation:Required
+  optional PromotionWindowSpec spec = 2;
+}
+
+// PromotionWindowList contains a list of PromotionWindows.
+message PromotionWindowList {
+  optional .k8s.io.apimachinery.pkg.apis.meta.v1.ListMeta metadata = 1;
+
+  repeated PromotionWindow items = 2;
+}
+
+message PromotionWindowReference {
+  // Name is the name of the time window.
+  //
+  // +kubebuilder:validation:Required
+  optional string name = 1;
+
+  // Kind is the kind of the time window
+  //
+  // +kubebuilder:validation:Enum=PromotionWindow;ClusterPromotionWindow;
+  optional string kind = 2;
+}
+
+message PromotionWindowSpec {
+  // Kind is either "deny" or "allow", indicating whether the time window
+  // represents a period during which promotions are denied or allowed.
+  //
+  // +kubebuilder:validation:Enum=deny;allow;
+  optional string kind = 1;
+
+  // Schedule describes a recurring time window.
+  // Example: "0 0 * * 1-5" means every weekday at midnight.
+  //
+  // +kubebuilder:validation:Required
+  optional string schedule = 2;
+
+  // Duration is the length of time that the window lasts after the start
+  // time defined by the Schedule.
+  //
+  // +kubebuilder:validation:Required
+  optional string duration = 3;
+
+  // TimeZone is the IANA time zone name that applies to the time window.
+  // If not specified, UTC is assumed.
+  optional string timeZone = 4;
 }
 
 // QuayWebhookReceiverConfig describes a webhook receiver that is compatible
