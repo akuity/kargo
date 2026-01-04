@@ -429,6 +429,39 @@
             "freight": {
               "description": "Freight is the freight being promoted.",
               "properties": {
+                "artifacts": {
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "items": {
+                    "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                    "properties": {
+                      "artifactType": {
+                        "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version identifies a specific revision of this artifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionName",
+                      "version"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
                   "items": {
@@ -568,6 +601,39 @@
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {
+                    "artifacts": {
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "items": {
+                        "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                        "properties": {
+                          "artifactType": {
+                            "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                            "x-kubernetes-preserve-unknown-fields": true
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "version": {
+                            "description": "Version identifies a specific revision of this artifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "subscriptionName",
+                          "version"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "charts": {
                       "description": "Charts describes specific versions of specific Helm charts.",
                       "items": {
@@ -696,6 +762,39 @@
                       "additionalProperties": {
                         "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                         "properties": {
+                          "artifacts": {
+                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                            "items": {
+                              "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                              "properties": {
+                                "artifactType": {
+                                  "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "metadata": {
+                                  "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                                  "x-kubernetes-preserve-unknown-fields": true
+                                },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "description": "Version identifies a specific revision of this artifact.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "subscriptionName",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "charts": {
                             "description": "Charts describes specific versions of specific Helm charts.",
                             "items": {
@@ -989,6 +1088,39 @@
                 "additionalProperties": {
                   "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                   "properties": {
+                    "artifacts": {
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "items": {
+                        "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                        "properties": {
+                          "artifactType": {
+                            "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                            "x-kubernetes-preserve-unknown-fields": true
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "version": {
+                            "description": "Version identifies a specific revision of this artifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "subscriptionName",
+                          "version"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "charts": {
                       "description": "Charts describes specific versions of specific Helm charts.",
                       "items": {
@@ -1220,6 +1352,39 @@
             "freight": {
               "description": "Freight is the freight being promoted.",
               "properties": {
+                "artifacts": {
+                  "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                  "items": {
+                    "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                    "properties": {
+                      "artifactType": {
+                        "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "metadata": {
+                        "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                        "x-kubernetes-preserve-unknown-fields": true
+                      },
+                      "subscriptionName": {
+                        "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      },
+                      "version": {
+                        "description": "Version identifies a specific revision of this artifact.",
+                        "minLength": 1,
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "subscriptionName",
+                      "version"
+                    ],
+                    "type": "object"
+                  },
+                  "type": "array"
+                },
                 "charts": {
                   "description": "Charts describes specific versions of specific Helm charts.",
                   "items": {
@@ -1359,6 +1524,39 @@
                 "freight": {
                   "description": "Freight is the detail of the piece of freight that was referenced by this promotion.",
                   "properties": {
+                    "artifacts": {
+                      "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                      "items": {
+                        "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                        "properties": {
+                          "artifactType": {
+                            "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "metadata": {
+                            "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                            "x-kubernetes-preserve-unknown-fields": true
+                          },
+                          "subscriptionName": {
+                            "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          },
+                          "version": {
+                            "description": "Version identifies a specific revision of this artifact.",
+                            "minLength": 1,
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "subscriptionName",
+                          "version"
+                        ],
+                        "type": "object"
+                      },
+                      "type": "array"
+                    },
                     "charts": {
                       "description": "Charts describes specific versions of specific Helm charts.",
                       "items": {
@@ -1487,6 +1685,39 @@
                       "additionalProperties": {
                         "description": "FreightReference is a simplified representation of a piece of Freight -- not\na root resource type.",
                         "properties": {
+                          "artifacts": {
+                            "description": "Artifacts describes specific versions of artifacts other\nthan Git repository commits, container images, and Helm charts.",
+                            "items": {
+                              "description": "ArtifactReference is a reference to a specific version of an artifact.",
+                              "properties": {
+                                "artifactType": {
+                                  "description": "ArtifactType specifies the type of artifact this is. Often, but not always,\nit will be the media type (MIME type) of the artifact referenced by this\nArtifactReference.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "metadata": {
+                                  "description": "Metadata is a JSON object containing a mostly opaque collection of artifact\nattributes. (It must be an object. It may not be a list or a scalar value.)\n\"Mostly\" because Kargo may understand how to interpret some documented,\nwell-known, top-level keys. Those aside, this metadata is only understood\nby a corresponding Subscriber implementation that created it.",
+                                  "x-kubernetes-preserve-unknown-fields": true
+                                },
+                                "subscriptionName": {
+                                  "description": "SubscriptionName is the name of the Subscription that discovered this\nartifact.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "description": "Version identifies a specific revision of this artifact.",
+                                  "minLength": 1,
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "subscriptionName",
+                                "version"
+                              ],
+                              "type": "object"
+                            },
+                            "type": "array"
+                          },
                           "charts": {
                             "description": "Charts describes specific versions of specific Helm charts.",
                             "items": {

@@ -895,7 +895,7 @@ func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "fake-repo-url",
@@ -923,7 +923,7 @@ func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "fake-repo-url",
@@ -955,7 +955,7 @@ func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL: "fake-repo-url",
@@ -989,7 +989,7 @@ func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL: "fake-repo-url",
@@ -1101,7 +1101,7 @@ func Test_webhook_ValidateFreightArtifacts(t *testing.T) {
 			},
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "fake-git-repo-url",
@@ -1163,7 +1163,7 @@ func Test_webhook_CompareFreight(t *testing.T) {
 		assertions func(*testing.T, *kargoapi.Freight, *field.Path, any, bool)
 	}{
 		{
-			name: "Equal Freights",
+			name: "Equal Freight",
 			old: &kargoapi.Freight{
 				Origin: kargoapi.FreightOrigin{
 					Kind: kargoapi.FreightOriginKindWarehouse,
@@ -1263,6 +1263,50 @@ func Test_webhook_CompareFreight(t *testing.T) {
 			assertions: func(t *testing.T, freight *kargoapi.Freight, path *field.Path, val any, eq bool) {
 				require.Equal(t, field.NewPath("charts").Index(2), path)
 				require.Equal(t, freight.Charts[2], val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different number of generic artifacts",
+			old: &kargoapi.Freight{
+				Artifacts: []kargoapi.ArtifactReference{{}},
+			},
+			new: &kargoapi.Freight{
+				Artifacts: []kargoapi.ArtifactReference{{}, {}},
+			},
+			assertions: func(
+				t *testing.T,
+				freight *kargoapi.Freight,
+				path *field.Path,
+				val any,
+				eq bool,
+			) {
+				require.Equal(t, field.NewPath("artifacts"), path)
+				require.Equal(t, freight.Artifacts, val)
+				require.False(t, eq)
+			},
+		},
+		{
+			name: "different generic artifacts",
+			old: &kargoapi.Freight{
+				Artifacts: []kargoapi.ArtifactReference{{
+					SubscriptionName: "my-subscription",
+				}},
+			},
+			new: &kargoapi.Freight{
+				Artifacts: []kargoapi.ArtifactReference{{
+					SubscriptionName: "your-subscription",
+				}},
+			},
+			assertions: func(
+				t *testing.T,
+				freight *kargoapi.Freight,
+				path *field.Path,
+				val any,
+				eq bool,
+			) {
+				require.Equal(t, field.NewPath("artifacts").Index(0), path)
+				require.Equal(t, freight.Artifacts[0], val)
 				require.False(t, eq)
 			},
 		},

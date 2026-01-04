@@ -2,6 +2,7 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,39 +27,14 @@ import (
 	"github.com/akuity/kargo/pkg/kubeclient"
 	"github.com/akuity/kargo/pkg/logging"
 	intpredicate "github.com/akuity/kargo/pkg/predicate"
-)
-
-// CacheByTagPolicy represents a policy regarding caching of container image
-// metadata using image tags as keys.
-type CacheByTagPolicy string
-
-const (
-	// CacheByTagPolicyForbid indicates that caching by tag is forbidden. This
-	// is silently enforced. Any container image subscription that opts into
-	// caching by tag will be treated as if it does not.
-	CacheByTagPolicyForbid CacheByTagPolicy = "Forbid"
-	// CacheByTagPolicyAllow indicates that caching by tag is allowed. Container
-	// image subscriptions may opt into caching by tag.
-	CacheByTagPolicyAllow CacheByTagPolicy = "Allow"
-	// CacheByTagPolicyRequire indicates that caching by tag is required.
-	// Container image subscriptions must explicitly opt into caching by tag or
-	// their artifact discovery processes will fail. Requiring the explicit opt-in
-	// is tantamount to acknowledging the cache by tag behavior to minimize the
-	// potential for developers to be taken by surprise. This option sacrifices
-	// some small degree of usability for safety.
-	CacheByTagPolicyRequire CacheByTagPolicy = "Require"
-	// CacheByTagPolicyForce indicates that caching by tag is forced. This is
-	// silently enforced. Any container image subscription that does not opt into
-	// caching by tag will be treated as if it does.
-	CacheByTagPolicyForce CacheByTagPolicy = "Force"
+	"github.com/akuity/kargo/pkg/subscription"
 )
 
 type ReconcilerConfig struct {
-	IsDefaultController       bool             `envconfig:"IS_DEFAULT_CONTROLLER"`
-	ShardName                 string           `envconfig:"SHARD_NAME"`
-	MaxConcurrentReconciles   int              `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
-	MinReconciliationInterval time.Duration    `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
-	CacheByTagPolicy          CacheByTagPolicy `envconfig:"CACHE_BY_TAG_POLICY" default:"Allow"`
+	IsDefaultController       bool          `envconfig:"IS_DEFAULT_CONTROLLER"`
+	ShardName                 string        `envconfig:"SHARD_NAME"`
+	MaxConcurrentReconciles   int           `envconfig:"MAX_CONCURRENT_WAREHOUSE_RECONCILES" default:"4"`
+	MinReconciliationInterval time.Duration `envconfig:"MIN_WAREHOUSE_RECONCILIATION_INTERVAL"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -69,20 +45,19 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 
 // reconciler reconciles Warehouse resources.
 type reconciler struct {
-	client         client.Client
-	credentialsDB  credentials.Database
-	cfg            ReconcilerConfig
-	shardPredicate controller.ResponsibleFor[kargoapi.Warehouse]
+	client             client.Client
+	credentialsDB      credentials.Database
+	subscriberRegistry subscription.SubscriberRegistry
+	cfg                ReconcilerConfig
+	shardPredicate     controller.ResponsibleFor[kargoapi.Warehouse]
 
 	// The following behaviors are overridable for testing purposes:
 
-	discoverArtifactsFn func(context.Context, *kargoapi.Warehouse) (*kargoapi.DiscoveredArtifacts, error)
-
-	discoverCommitsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.GitDiscoveryResult, error)
-
-	discoverImagesFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ImageDiscoveryResult, error)
-
-	discoverChartsFn func(context.Context, string, []kargoapi.RepoSubscription) ([]kargoapi.ChartDiscoveryResult, error)
+	discoverArtifactsFn func(
+		ctx context.Context,
+		project string,
+		subs []kargoapi.RepoSubscription,
+	) (*kargoapi.DiscoveredArtifacts, error)
 
 	buildFreightFromLatestArtifactsFn func(string, *kargoapi.DiscoveredArtifacts) (*kargoapi.Freight, error)
 
@@ -97,6 +72,7 @@ func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
+	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
 ) error {
 	if err := ctrl.NewControllerManagedBy(mgr).
@@ -113,7 +89,12 @@ func SetupReconcilerWithManager(
 			),
 		).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
-		Complete(newReconciler(mgr.GetClient(), credentialsDB, cfg)); err != nil {
+		Complete(newReconciler(
+			mgr.GetClient(),
+			credentialsDB,
+			subscriberRegistry,
+			cfg,
+		)); err != nil {
 		return fmt.Errorf("error building Warehouse reconciler: %w", err)
 	}
 
@@ -128,23 +109,21 @@ func SetupReconcilerWithManager(
 func newReconciler(
 	kubeClient client.Client,
 	credentialsDB credentials.Database,
+	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
-		client:        kubeClient,
-		credentialsDB: credentialsDB,
-		cfg:           cfg,
+		client:             kubeClient,
+		credentialsDB:      credentialsDB,
+		subscriberRegistry: subscriberRegistry,
+		cfg:                cfg,
 		shardPredicate: controller.ResponsibleFor[kargoapi.Warehouse]{
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		},
 		createFreightFn: kubeClient.Create,
 	}
-
 	r.discoverArtifactsFn = r.discoverArtifacts
-	r.discoverCommitsFn = r.discoverCommits
-	r.discoverImagesFn = r.discoverImages
-	r.discoverChartsFn = r.discoverCharts
 	r.buildFreightFromLatestArtifactsFn = r.buildFreightFromLatestArtifacts
 	r.patchStatusFn = r.patchStatus
 	return r
@@ -242,7 +221,7 @@ func (r *reconciler) syncWarehouse(
 				Reason: "ScheduledDiscovery",
 				Message: fmt.Sprintf(
 					"Discovering artifacts for %d subscriptions",
-					len(warehouse.Spec.Subscriptions),
+					len(warehouse.Spec.InternalSubscriptions),
 				),
 				ObservedGeneration: warehouse.GetGeneration(),
 			},
@@ -270,7 +249,11 @@ func (r *reconciler) syncWarehouse(
 		}
 
 		// Discover the latest artifacts.
-		discoveredArtifacts, err := r.discoverArtifactsFn(ctx, warehouse)
+		discoveredArtifacts, err := r.discoverArtifactsFn(
+			ctx,
+			warehouse.Namespace,
+			warehouse.Spec.InternalSubscriptions,
+		)
 		if err != nil {
 			// Mark the Warehouse as unhealthy and not ready if we failed to
 			// discover artifacts.
@@ -506,7 +489,7 @@ func (r *reconciler) syncWarehouse(
 	// Make all conditions reflect success
 	msg := fmt.Sprintf(
 		"Successfully discovered artifacts from %d subscriptions",
-		len(warehouse.Spec.Subscriptions),
+		len(warehouse.Spec.InternalSubscriptions),
 	)
 	conditions.Set(
 		&status,
@@ -534,29 +517,47 @@ func (r *reconciler) syncWarehouse(
 
 func (r *reconciler) discoverArtifacts(
 	ctx context.Context,
-	warehouse *kargoapi.Warehouse,
+	project string,
+	subs []kargoapi.RepoSubscription,
 ) (*kargoapi.DiscoveredArtifacts, error) {
-	commits, err := r.discoverCommitsFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
-	if err != nil {
-		return nil, fmt.Errorf("error discovering commits: %w", err)
+	discovered := &kargoapi.DiscoveredArtifacts{
+		Charts:  []kargoapi.ChartDiscoveryResult{},
+		Git:     []kargoapi.GitDiscoveryResult{},
+		Images:  []kargoapi.ImageDiscoveryResult{},
+		Results: []kargoapi.DiscoveryResult{},
 	}
-
-	images, err := r.discoverImagesFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
-	if err != nil {
-		return nil, fmt.Errorf("error discovering images: %w", err)
+	for _, sub := range subs {
+		subReg, err := r.subscriberRegistry.Get(ctx, sub)
+		if err != nil {
+			return nil,
+				fmt.Errorf("error finding subscriber for subscription: %w", err)
+		}
+		// The registration's value is a factory function
+		subscriber, err := subReg.Value(ctx, r.credentialsDB)
+		if err != nil {
+			return nil, fmt.Errorf("error instantiating subscriber: %w", err)
+		}
+		res, err := subscriber.DiscoverArtifacts(ctx, project, sub)
+		if err != nil {
+			return nil, fmt.Errorf("error discovering artifacts: %w", err)
+		}
+		switch typedRes := res.(type) {
+		case kargoapi.ChartDiscoveryResult:
+			discovered.Charts = append(discovered.Charts, typedRes)
+		case kargoapi.GitDiscoveryResult:
+			discovered.Git = append(discovered.Git, typedRes)
+		case kargoapi.ImageDiscoveryResult:
+			discovered.Images = append(discovered.Images, typedRes)
+		case kargoapi.DiscoveryResult:
+			discovered.Results = append(discovered.Results, typedRes)
+		default:
+			return nil, fmt.Errorf(
+				"subscriber returned unrecognized result type %T", typedRes,
+			)
+		}
 	}
-
-	charts, err := r.discoverChartsFn(ctx, warehouse.Namespace, warehouse.Spec.Subscriptions)
-	if err != nil {
-		return nil, fmt.Errorf("error discovering charts: %w", err)
-	}
-
-	return &kargoapi.DiscoveredArtifacts{
-		DiscoveredAt: metav1.Now(),
-		Git:          commits,
-		Images:       images,
-		Charts:       charts,
-	}, nil
+	discovered.DiscoveredAt = metav1.Now()
+	return discovered, nil
 }
 
 func (r *reconciler) buildFreightFromLatestArtifacts(
@@ -618,6 +619,16 @@ func (r *reconciler) buildFreightFromLatestArtifacts(
 		})
 	}
 
+	for _, result := range artifacts.Results {
+		if len(result.ArtifactReferences) == 0 {
+			return nil, errors.New("no versions discovered for subscription")
+		}
+		freight.Artifacts = append(
+			freight.Artifacts,
+			result.ArtifactReferences[0],
+		)
+	}
+
 	// Generate a unique ID for the Freight based on its contents.
 	freight.Name = api.GenerateFreightID(freight)
 
@@ -641,7 +652,11 @@ func validateDiscoveredArtifacts(
 ) bool {
 	artifacts := newStatus.DiscoveredArtifacts
 
-	if artifacts == nil || len(artifacts.Git)+len(artifacts.Images)+len(artifacts.Charts) == 0 {
+	if artifacts == nil ||
+		len(artifacts.Git)+
+			len(artifacts.Images)+
+			len(artifacts.Charts)+
+			len(artifacts.Results) == 0 {
 		message := "No artifacts discovered"
 		conditions.Set(
 			newStatus,

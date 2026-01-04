@@ -58,7 +58,7 @@ func FindCommit(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Git != nil && urls.NormalizeGit(sub.Git.RepoURL) == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -128,7 +128,7 @@ func FindImage(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Image != nil && sub.Image.RepoURL == repoURL {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -193,7 +193,7 @@ func HasAmbiguousImageRequest(
 			)
 		}
 
-		for _, sub := range warehouse.Spec.Subscriptions {
+		for _, sub := range warehouse.Spec.InternalSubscriptions {
 			if sub.Image != nil {
 				if _, ok := subscribedRepositories[sub.Image.RepoURL]; ok {
 					return true, fmt.Errorf(
@@ -244,7 +244,7 @@ func FindChart(
 					requestedFreight.Origin.Name, project,
 				)
 			}
-			for _, sub := range warehouse.Spec.Subscriptions {
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
 				if sub.Chart != nil && sub.Chart.RepoURL == repoURL && sub.Chart.Name == chartName {
 					if desiredOrigin != nil {
 						return nil, fmt.Errorf(
@@ -275,6 +275,79 @@ func FindChart(
 			for _, c := range f.Charts {
 				if c.RepoURL == repoURL && c.Name == chartName {
 					return &c, nil
+				}
+			}
+		}
+	}
+	// If we get to here, we looked at all the FreightReferences and didn't find
+	// any that came from the desired origin. This could be because no Freight
+	// from the desired origin has been promoted yet.
+	return nil, nil
+}
+
+func FindArtifact(
+	ctx context.Context,
+	cl client.Client,
+	project string,
+	freightReqs []kargoapi.FreightRequest,
+	desiredOrigin *kargoapi.FreightOrigin,
+	freight []kargoapi.FreightReference,
+	subName string,
+) (*kargoapi.ArtifactReference, error) {
+	// If no origin was explicitly identified, we need to look at all possible
+	// origins. If there's only one that could provide the artifact we're looking
+	// for, great. If there's more than one, there's ambiguity, and we need to
+	// return an error.
+	if desiredOrigin == nil {
+		for i := range freightReqs {
+			requestedFreight := freightReqs[i]
+			warehouse, err := api.GetWarehouse(
+				ctx,
+				cl,
+				types.NamespacedName{
+					Name:      requestedFreight.Origin.Name,
+					Namespace: project,
+				},
+			)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"error getting Warehouse %q in namespace %q: %w",
+					requestedFreight.Origin.Name, project, err,
+				)
+			}
+			if warehouse == nil {
+				// nolint:staticcheck
+				return nil, fmt.Errorf(
+					"Warehouse %q not found in namespace %q",
+					requestedFreight.Origin.Name, project,
+				)
+			}
+			for _, sub := range warehouse.Spec.InternalSubscriptions {
+				if sub.Subscription != nil && sub.Subscription.Name == subName {
+					if desiredOrigin != nil {
+						return nil, fmt.Errorf(
+							"multiple requested Freight could potentially provide a "+
+								"%q artifact; please update promotion steps to "+
+								"disambiguate",
+							subName,
+						)
+					}
+					desiredOrigin = &requestedFreight.Origin
+				}
+			}
+		}
+	}
+	if desiredOrigin == nil {
+		return nil, nil
+	}
+	// We know exactly what we're after, so this should be easy
+	for i := range freight {
+		f := &freight[i]
+		if f.Origin.Equals(desiredOrigin) {
+			for j := range f.Artifacts {
+				a := &f.Artifacts[j]
+				if a.SubscriptionName == subName {
+					return a, nil
 				}
 			}
 		}

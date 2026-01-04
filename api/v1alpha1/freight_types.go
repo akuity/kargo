@@ -40,6 +40,9 @@ type Freight struct {
 	Images []Image `json:"images,omitempty" protobuf:"bytes,4,rep,name=images"`
 	// Charts describes specific versions of specific Helm charts.
 	Charts []Chart `json:"charts,omitempty" protobuf:"bytes,5,rep,name=charts"`
+	// Artifacts describes specific versions of artifacts other
+	// than Git repository commits, container images, and Helm charts.
+	Artifacts []ArtifactReference `json:"artifacts,omitempty" protobuf:"bytes,10,rep,name=artifacts"`
 	// Status describes the current status of this Freight.
 	Status FreightStatus `json:"status,omitempty" protobuf:"bytes,6,opt,name=status"`
 }

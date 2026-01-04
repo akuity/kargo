@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -56,6 +57,14 @@ func (s *server) GetWarehouse(
 	if err != nil {
 		return nil, err
 	}
+	if w != nil {
+		// Necessary because serializing a Warehouse as part of a protobuf message
+		// does not apply custom marshaling. The call to this helper compensates for
+		// that.
+		if err := prepareOutboundWarehouse(w); err != nil {
+			return nil, err
+		}
+	}
 	if raw != nil {
 		return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
 			Result: &svcv1alpha1.GetWarehouseResponse_Raw{Raw: raw},
@@ -64,4 +73,20 @@ func (s *server) GetWarehouse(
 	return connect.NewResponse(&svcv1alpha1.GetWarehouseResponse{
 		Result: &svcv1alpha1.GetWarehouseResponse_Warehouse{Warehouse: w},
 	}), nil
+}
+
+// custom marshaling is not applied when serializing a Warehouse as part of
+// a protobuf message, so this helper can be used to compensate for that.
+func prepareOutboundWarehouse(w *kargoapi.Warehouse) error {
+	type specAlias kargoapi.WarehouseSpec
+	specJSON, err := json.Marshal(w.Spec)
+	if err != nil {
+		return err
+	}
+	newSpec := specAlias{}
+	if err = json.Unmarshal(specJSON, &newSpec); err != nil {
+		return err
+	}
+	w.Spec = kargoapi.WarehouseSpec(newSpec)
+	return nil
 }

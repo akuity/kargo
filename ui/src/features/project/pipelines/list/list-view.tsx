@@ -2,9 +2,10 @@ import { Card, Table } from 'antd';
 import classNames from 'classnames';
 import { useMemo, useState } from 'react';
 
+import { WarehouseExpanded } from '@ui/extend/types';
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useEventsWatcher } from '@ui/features/project/pipelines/graph/use-events-watcher';
-import { Freight, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { useFreightTimelineControllerContext } from '../context/freight-timeline-controller-context';
 
@@ -19,7 +20,7 @@ import { Filter, FilterContext } from './context/filter-context';
 
 type PipelineListViewProps = {
   stages: Stage[];
-  warehouses: Warehouse[];
+  warehouses: WarehouseExpanded[];
   freights: Freight[];
   className?: string;
   project: string;

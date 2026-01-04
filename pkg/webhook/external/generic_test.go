@@ -328,7 +328,7 @@ func TestGenericHandler(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
 							},
@@ -346,7 +346,7 @@ func TestGenericHandler(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "http://github.com/example/other-repo.git", // does NOT satisfy index selector
 							},
@@ -365,7 +365,7 @@ func TestGenericHandler(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "http://github.com/example/repo.git",
 							},
@@ -383,7 +383,7 @@ func TestGenericHandler(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
 							},
@@ -528,7 +528,7 @@ func TestGenericHandler(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "http://github.com/example/repo.git", // satisfies index selector
 							},

@@ -291,6 +291,10 @@ export const FreightCard = (props: FreightCardProps) => {
               <FreightArtifact key={image?.repoURL} artifact={image} />
             ))}
 
+            {props.freight?.artifacts?.slice(0, 2).map((other) => (
+              <FreightArtifact key={other?.version} artifact={other} />
+            ))}
+
             {noOfGitCommits + noOfHelmReleases + noOfContainerImages > 6 && (
               <Typography.Text type='secondary' className='text-[10px]'>
                 +

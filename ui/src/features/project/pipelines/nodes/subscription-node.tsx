@@ -17,20 +17,20 @@ import {
 import styles from './node-size-source-of-truth.module.less';
 
 export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
-  const { title, base, link } = useMemo(() => {
+  const { title, base, link, repoURL } = useMemo(() => {
     const repoURL =
       props.subscription?.git?.repoURL ||
       props.subscription?.chart?.repoURL ||
       props.subscription?.image?.repoURL ||
       '';
-    const title = humanComprehendableArtifact(repoURL);
+    const title = humanComprehendableArtifact(repoURL) || props.subscription.subscription?.name;
     const base = artifactBase(repoURL) || repoURL;
     const link = artifactURL(repoURL);
 
     return { title, repoURL, base, link };
   }, [props.subscription]);
 
-  let icon: IconProp = faQuestion;
+  let icon: IconProp | null = faQuestion;
 
   if (props.subscription?.chart) {
     icon = faAnchor;
@@ -38,6 +38,8 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
     icon = faGitAlt;
   } else if (props.subscription?.image) {
     icon = faDocker;
+  } else if (props.subscription?.subscription) {
+    icon = null;
   }
 
   return (
@@ -46,19 +48,27 @@ export const SubscriptionNode = (props: { subscription: RepoSubscription }) => {
       className={styles['subscription-node-size']}
       title={
         <Flex align='center' gap={16}>
-          <FontAwesomeIcon icon={icon} />
+          {icon && <FontAwesomeIcon icon={icon} />}
           <span className='text-xs'>{title}</span>
         </Flex>
       }
       variant='borderless'
     >
-      <Link href={link} target='_blank'>
-        <Tag className='text-[9px] text-wrap' color='blue' bordered={false}>
-          {base}
+      {!!repoURL && (
+        <Link href={link} target='_blank'>
+          <Tag className='text-[9px] text-wrap' color='blue' bordered={false}>
+            {base}
 
-          <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
+            <FontAwesomeIcon icon={faExternalLink} className='ml-1' />
+          </Tag>
+        </Link>
+      )}
+
+      {!!props.subscription?.subscription?.subscriptionType && (
+        <Tag color='blue' className='text-[9px] text-wrap' bordered={false}>
+          kind: {props.subscription.subscription?.subscriptionType}
         </Tag>
-      </Link>
+      )}
     </Card>
   );
 };
