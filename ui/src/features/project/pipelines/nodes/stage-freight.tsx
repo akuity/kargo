@@ -110,8 +110,10 @@ export const StageFreight = (props: { stage: Stage }) => {
   const noOfGitCommits = selectedFreight?.commits?.length || 0;
   const noOfHelmReleases = selectedFreight?.charts?.length || 0;
   const noOfContainerImages = selectedFreight?.images?.length || 0;
+  const noOfGenericArtifacts = selectedFreight?.artifacts?.length || 0;
 
-  const totalArtifacts = noOfContainerImages + noOfGitCommits + noOfHelmReleases;
+  const totalArtifacts =
+    noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
 
   return (
     <>

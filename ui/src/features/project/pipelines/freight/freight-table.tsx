@@ -72,7 +72,7 @@ export const FreightTable = (props: FreightTableProps) => {
                   case 'image':
                     return record.tag;
                   default:
-                    return '-';
+                    return record.version || '-';
                 }
               }
             },
