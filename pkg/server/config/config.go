@@ -76,7 +76,10 @@ func ServerConfigFromEnv() ServerConfig {
 		}
 	}
 	if cfg.SecretManagementEnabled {
-		cfg.ClusterSecretNamespace = os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "")
+		cfg.ClusterResourcesNamespace = os.GetEnv(
+			"CLUSTER_RESOURCES_NAMESPACE",
+			"kargo-cluster-resources",
+		)
 		cfg.SharedResourcesNamespace = os.GetEnv(
 			"SHARED_RESOURCES_NAMESPACE",
 			"kargo-shared-resources",
