@@ -333,8 +333,8 @@ message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
   // secret_management_enabled indicates if secret management features are available.
   bool secret_management_enabled = 2;
-  // cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
-  string cluster_secrets_namespace = 3;
+  // cluster_resources_namespace is the namespace used for cluster-scoped secrets.
+  string cluster_resources_namespace = 3;
   // has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
   bool has_analysis_run_logs_url_template = 4;
 }

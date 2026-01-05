@@ -31,8 +31,8 @@ type ServerConfig struct {
 	AnalysisRunLogURLTemplate   string
 	AnalysisRunLogToken         string
 	AnalysisRunLogHTTPHeaders   map[string]string
-	ClusterSecretNamespace      string
 	SharedResourcesNamespace    string
+	ClusterResourcesNamespace   string
 }
 
 func ServerConfigFromEnv() ServerConfig {

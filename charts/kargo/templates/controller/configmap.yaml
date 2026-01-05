@@ -13,7 +13,7 @@ data:
   {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   LOG_FORMAT: {{ quote .Values.controller.logFormat }}
-  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
   {{- if or (not .Values.controller.shardName) .Values.controller.isDefault }}
   IS_DEFAULT_CONTROLLER: "true"
   {{- end }}

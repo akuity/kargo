@@ -20,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
+	"github.com/akuity/kargo/pkg/controller/management/secrets"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
@@ -87,7 +88,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
-	kargoMgr, err := o.setupManager(ctx)
+	secretsCfg := secrets.ReconcilerConfigFromEnv()
+	kargoMgr, err := o.setupManager(ctx, secretsCfg)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -134,13 +136,26 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
+	if secretsCfg.SourceNamespace != secretsCfg.DestinationNamespace {
+		if err := secrets.SetupReconcilerWithManager(
+			ctx,
+			kargoMgr,
+			secretsCfg,
+		); err != nil {
+			return fmt.Errorf("error setting up Secrets reconciler: %w", err)
+		}
+	}
+
 	if err := kargoMgr.Start(ctx); err != nil {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
 	return nil
 }
 
-func (o *managementControllerOptions) setupManager(ctx context.Context) (manager.Manager, error) {
+func (o *managementControllerOptions) setupManager(
+	ctx context.Context,
+	secretsCfg secrets.ReconcilerConfig,
+) (manager.Manager, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
 		return nil, fmt.Errorf("error loading REST config for Kargo controller manager: %w", err)
@@ -167,7 +182,6 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 			err,
 		)
 	}
-
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -181,6 +195,12 @@ func (o *managementControllerOptions) setupManager(ctx context.Context) (manager
 					&corev1.ServiceAccount{}: {
 						Namespaces: map[string]cache.Config{
 							o.KargoNamespace: {},
+						},
+					},
+					&corev1.Secret{}: {
+						Namespaces: map[string]cache.Config{
+							secretsCfg.SourceNamespace:      {},
+							secretsCfg.DestinationNamespace: {},
 						},
 					},
 				},
