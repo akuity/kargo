@@ -103,21 +103,23 @@ contain the following keys:
 
 Credentials are generally managed at the project level by project admins, but
 in cases where one or more sets of credentials are needed widely across many or
-all Kargo projects, an operator may opt into designating one or more namespaces
-as containing "global" credentials, accessible to all projects. It is then the
-operator's responsibility to create and manage such credentials as well.
+all Kargo projects, an operator may opt into designating a dedicated namespace
+for "global" credentials (and other resources), accessible to all projects.
+This namespace is referred to as the `shared-resources-namespace`. 
+It is then the operator's responsibility to create and manage such credentials 
+as well.
 
-When Kargo searches for repository credentials, these additional namespaces are
-searched only _after_ finding no matching credentials in the project's own
+When Kargo searches for repository credentials, the `shared-resources-namespace`
+is searched only _after_ finding no matching credentials in the project's own
 namespace.
 
 
 :::info[Precedence]
 
-When Kargo searches for repository credentials in a "global" namespace, it
-_first_ iterates over all appropriately labeled `Secret`s _without_
-`repoURLIsRegex` set to `true` looking for a `repoURL` value matching the
-repository URL exactly.
+When Kargo searches for repository credentials in the 
+`shared-resources-namespace`, it_first_ iterates over all appropriately labeled 
+`Secret`s _without_ `repoURLIsRegex` set to `true` looking for a `repoURL` value 
+matching the repository URL exactly.
 
 Only if no exact match is found does it iterate over all
 appropriately labeled `Secret`s with `repoURLIsRegex` set to `true` looking for
@@ -138,14 +140,13 @@ credentials, except possibly that they exist.
 
 ### Enabling Global Credentials
 
-To designate one or more namespaces as containing "global" credentials, list
-them under the Kargo Helm chart's `controller.globalCredentials.namespaces`
-option at installation time.
+A `shared-resources-namespace` can be designated under the Kargo Helm chart's 
+`global.sharedResourcesNamespace` option at installation time.
 
 Operators must also manually ensure Kargo controllers receive read-only access
-to `Secret`s in the designated namespaces. For example, if `kargo-global-creds`
-is designated as a global credentials namespace, the following `RoleBinding`
-should be created within that namespace:
+to `Secret`s in the designated `shared-resources-namespace`. For example, 
+if `kargo-global-creds` is designated as the `shared-resources-namespace`, 
+the following `RoleBinding` should be created within that namespace:
 
 ```yaml
 apiVersion: rbac.authorization.k8s.io/v1
