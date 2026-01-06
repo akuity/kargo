@@ -89,11 +89,13 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 	)
 
 	clusterResourcesCfg := secrets.ReconcilerConfig{
+		ControllerName:       "cluster-resources-migration-controller",
 		SourceNamespace:      os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "kargo-cluster-secrets"),
 		DestinationNamespace: os.GetEnv("CLUSTER_RESOURCES_NAMESPACE", "kargo-cluster-resources"),
 	}
 
 	sharedResourcesCfg := secrets.ReconcilerConfig{
+		ControllerName:       "shared-resources-migration-controller",
 		SourceNamespace:      os.GetEnv("GLOBAL_CREDENTIALS_NAMESPACES", ""),
 		DestinationNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
 	}

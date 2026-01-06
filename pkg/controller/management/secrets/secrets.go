@@ -21,6 +21,7 @@ import (
 )
 
 type ReconcilerConfig struct {
+	ControllerName       string
 	SourceNamespace      string
 	DestinationNamespace string
 }
@@ -47,6 +48,7 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	err := ctrl.NewControllerManagedBy(kargoMgr).
+		Named(cfg.ControllerName).
 		For(&corev1.Secret{}).
 		WithEventFilter(
 			predicate.Funcs{

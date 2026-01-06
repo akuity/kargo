@@ -15,6 +15,10 @@ data:
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
+  {{- with .Values.controller.globalCredentials.namespaces }}
+  GLOBAL_CREDENTIALS_NAMESPACES: "{{ first . }}"
+  {{- end }}
+  SHARED_RESOURCES_NAMESPACE: {{ include "sharedResources.namespace" . | quote }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
