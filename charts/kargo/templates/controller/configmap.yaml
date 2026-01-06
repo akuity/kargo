@@ -23,6 +23,9 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
+  {{- with .Values.controller.globalCredentials.namespaces }}
+  GLOBAL_CREDENTIALS_NAMESPACES: "{{ first . }}"
+  {{- end }}
   SHARED_RESOURCES_NAMESPACE: {{ include "sharedResources.namespace" . | quote }}
   ALLOW_CREDENTIALS_OVER_HTTP: {{ quote .Values.controller.allowCredentialsOverHTTP }}
   GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}

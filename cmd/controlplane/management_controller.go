@@ -88,8 +88,17 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		"GOMEMLIMIT", os.GetEnv("GOMEMLIMIT", ""),
 	)
 
-	secretsCfg := secrets.ReconcilerConfigFromEnv()
-	kargoMgr, err := o.setupManager(ctx, secretsCfg)
+	clusterResourcesCfg := secrets.ReconcilerConfig{
+		SourceNamespace:      os.GetEnv("CLUSTER_SECRETS_NAMESPACE", "kargo-cluster-secrets"),
+		DestinationNamespace: os.GetEnv("CLUSTER_RESOURCES_NAMESPACE", "kargo-cluster-resources"),
+	}
+
+	sharedResourcesCfg := secrets.ReconcilerConfig{
+		SourceNamespace:      os.GetEnv("GLOBAL_CREDENTIALS_NAMESPACES", ""),
+		DestinationNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+	}
+
+	kargoMgr, err := o.setupManager(ctx, clusterResourcesCfg, sharedResourcesCfg)
 	if err != nil {
 		return fmt.Errorf("error initializing Kargo controller manager: %w", err)
 	}
@@ -136,13 +145,23 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if secretsCfg.SourceNamespace != secretsCfg.DestinationNamespace {
+	if clusterResourcesCfg.SourceNamespace != clusterResourcesCfg.DestinationNamespace {
 		if err := secrets.SetupReconcilerWithManager(
 			ctx,
 			kargoMgr,
-			secretsCfg,
+			clusterResourcesCfg,
 		); err != nil {
-			return fmt.Errorf("error setting up Secrets reconciler: %w", err)
+			return fmt.Errorf("error setting up Secrets reconciler for cluster resources namespace: %w", err)
+		}
+	}
+
+	if sharedResourcesCfg.SourceNamespace != sharedResourcesCfg.DestinationNamespace {
+		if err := secrets.SetupReconcilerWithManager(
+			ctx,
+			kargoMgr,
+			sharedResourcesCfg,
+		); err != nil {
+			return fmt.Errorf("error setting up Secrets reconciler for shared resources namespace: %w", err)
 		}
 	}
 
@@ -154,7 +173,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 
 func (o *managementControllerOptions) setupManager(
 	ctx context.Context,
-	secretsCfg secrets.ReconcilerConfig,
+	clusterResourcesCfg secrets.ReconcilerConfig,
+	sharedResourcesCfg secrets.ReconcilerConfig,
 ) (manager.Manager, error) {
 	restCfg, err := kubernetes.GetRestConfig(ctx, o.KubeConfig)
 	if err != nil {
@@ -182,6 +202,15 @@ func (o *managementControllerOptions) setupManager(
 			err,
 		)
 	}
+	namespaceCacheConfigs := map[string]cache.Config{
+		clusterResourcesCfg.SourceNamespace:      {},
+		clusterResourcesCfg.DestinationNamespace: {},
+		sharedResourcesCfg.DestinationNamespace:  {},
+	}
+	// Only add if GLOBAL_CREDENTIALS_NAMESPACES is set.
+	if sharedResourcesCfg.SourceNamespace != "" {
+		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
+	}
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -198,10 +227,7 @@ func (o *managementControllerOptions) setupManager(
 						},
 					},
 					&corev1.Secret{}: {
-						Namespaces: map[string]cache.Config{
-							secretsCfg.SourceNamespace:      {},
-							secretsCfg.DestinationNamespace: {},
-						},
+						Namespaces: namespaceCacheConfigs,
 					},
 				},
 			},

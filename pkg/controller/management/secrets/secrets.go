@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,14 +21,8 @@ import (
 )
 
 type ReconcilerConfig struct {
-	SourceNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE" default:"kargo-cluster-secrets"`
-	DestinationNamespace string `envconfig:"CLUSTER_RESOURCES_NAMESPACE" default:"kargo-cluster-resources"`
-}
-
-func ReconcilerConfigFromEnv() ReconcilerConfig {
-	cfg := ReconcilerConfig{}
-	envconfig.MustProcess("", &cfg)
-	return cfg
+	SourceNamespace      string
+	DestinationNamespace string
 }
 
 // reconciler copies Secret resources from a source namespace to a destination
