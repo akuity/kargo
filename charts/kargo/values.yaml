@@ -23,7 +23,7 @@ global:
   clusterSecretsNamespace: kargo-cluster-secrets
   ## @param global.createClusterResourcesNamespace Indicates whether the namespace specified by `clusterResourcesNamespace` should be managed be created when installing the chart.
   createClusterResourcesNamespace: true
-  ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be managed be created when installing the chart.
+  ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
   createClusterSecretsNamespace: true
   ## @param global.sharedResourcesNamespace Indicates a namespace where shared resources can be located.
   sharedResourcesNamespace: kargo-shared-resources
