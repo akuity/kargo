@@ -18,7 +18,7 @@ data:
   {{- with .Values.controller.globalCredentials.namespaces }}
   GLOBAL_CREDENTIALS_NAMESPACES: "{{ first . }}"
   {{- end }}
-  SHARED_RESOURCES_NAMESPACE: {{ include "sharedResources.namespace" . | quote }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResourcesNamespace }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
