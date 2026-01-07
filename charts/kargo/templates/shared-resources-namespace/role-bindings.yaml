@@ -14,4 +14,7 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-admin
+- kind: ServiceAccount
+  name: kargo-controller
+  namespace: kargo
 {{- end }}
