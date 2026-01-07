@@ -110,7 +110,7 @@ func StatusOperations(
 func SharedSecret(ctx context.Context, c client.Client, cache *gocache.Cache) expr.Option {
 	return expr.Function(
 		"sharedSecret",
-		getSecret(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
+		getSecret(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE"), false),
 		new(func(name string) *corev1.Secret),
 	)
 }
@@ -430,7 +430,7 @@ func ConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, proje
 func Secret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) expr.Option {
 	return expr.Function(
 		"secret",
-		getSecret(ctx, c, cache, project),
+		getSecret(ctx, c, cache, project, true),
 		new(func(name string) map[string]string),
 	)
 }
@@ -852,7 +852,13 @@ func getConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache, pr
 // project name, and Secret name. Because of this, the same cache can be shared
 // with other functions that accept a cache parameter (e.g., getConfigMap)
 // without worrying about key collisions.
-func getSecret(ctx context.Context, c client.Client, cache *gocache.Cache, project string) exprFn {
+func getSecret(
+	ctx context.Context,
+	c client.Client,
+	cache *gocache.Cache,
+	project string,
+	hasDirectAccess bool,
+) exprFn {
 	return func(a ...any) (any, error) {
 		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
@@ -891,17 +897,23 @@ func getSecret(ctx context.Context, c client.Client, cache *gocache.Cache, proje
 			return nil, fmt.Errorf("failed to get secret %s: %w", name, err)
 		}
 
-		data := make(map[string]string)
-		for k, v := range secret.Data {
-			data[k] = string(v)
+		// limit shared secret access to generic credentials only
+		if hasDirectAccess || isGenericSecretType(secret) {
+			data := make(map[string]string)
+			for k, v := range secret.Data {
+				data[k] = string(v)
+			}
+			if cache != nil {
+				cache.Set(cacheKey, maps.Clone(data), gocache.NoExpiration)
+			}
+			return data, nil
 		}
-
-		if cache != nil {
-			cache.Set(cacheKey, maps.Clone(data), gocache.NoExpiration)
-		}
-
-		return data, nil
+		return map[string]string{}, nil
 	}
+}
+
+func isGenericSecretType(secret corev1.Secret) bool {
+	return secret.Labels[kargoapi.LabelKeyCredentialType] == kargoapi.LabelValueCredentialTypeGeneric
 }
 
 func hasFailure(stepExecMetas kargoapi.StepExecutionMetadataList) exprFn {

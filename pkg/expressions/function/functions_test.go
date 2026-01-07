@@ -1052,11 +1052,12 @@ func Test_getSecret(t *testing.T) {
 	assert.NoError(t, corev1.AddToScheme(scheme))
 
 	tests := []struct {
-		name       string
-		objects    []client.Object
-		args       []any
-		cache      *cache.Cache
-		assertions func(t *testing.T, cache *cache.Cache, result any, err error)
+		name            string
+		objects         []client.Object
+		args            []any
+		cache           *cache.Cache
+		hasDirectAccess bool
+		assertions      func(t *testing.T, cache *cache.Cache, result any, err error)
 	}{
 		{
 			name: "no arguments",
@@ -1094,7 +1095,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name:            "success",
+			hasDirectAccess: true,
 			objects: []client.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1114,7 +1116,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success with cache",
+			name:            "success with cache",
+			hasDirectAccess: true,
 			objects: []client.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1139,7 +1142,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success from cache",
+			name:            "success from cache",
+			hasDirectAccess: true,
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
 				getCacheKey(cacheKeyPrefixSecret, testProject, testSecret): {
 					Object: map[string]string{"foo": "bar"},
@@ -1168,6 +1172,49 @@ func Test_getSecret(t *testing.T) {
 				assert.Equal(t, map[string]string{"foo": "bar"}, data)
 			},
 		},
+		{
+			name:            "success with no direct access but is generic",
+			hasDirectAccess: false,
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+						Labels: map[string]string{
+							kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+						},
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+			},
+		},
+		{
+			name:            "no direct access and not generic returns empty data",
+			hasDirectAccess: false,
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{}, result)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1179,7 +1226,7 @@ func Test_getSecret(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getSecret(ctx, c, tt.cache, testProject)
+			fn := getSecret(ctx, c, tt.cache, testProject, tt.hasDirectAccess)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
@@ -1251,7 +1298,7 @@ func Test_getConfigMap_getSecret_no_cache_key_collision(t *testing.T) {
 			_, err := cfgFn(tt.args...)
 			assert.NoError(t, err)
 
-			secretFn := getSecret(ctx, c, tt.cache, testProject)
+			secretFn := getSecret(ctx, c, tt.cache, testProject, true)
 			_, err = secretFn(tt.args...)
 			assert.NoError(t, err)
 
