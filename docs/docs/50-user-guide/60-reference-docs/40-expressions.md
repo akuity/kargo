@@ -410,6 +410,13 @@ config:
     value: Bearer ${{ sharedSecret('slack').token }}
 ```
 
+:::note
+
+`sharedSecret()` can only be used to retrieve shared `Secret`s whose 
+`kargo.akuity.io/cred-type` label is `generic`.
+
+:::
+
 ### `warehouse(name)`
 
 The `warehouse()` function returns a `FreightOrigin` object representing a
