@@ -308,18 +308,18 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	_ context.Context,
-	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
 	// Get the PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(id, 10),
+		ID:       strconv.FormatInt(opts.Number, 10),
 	}
 
 	prResp, err := p.client.GetPullRequest(prOpts)
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
 	}
 
 	bbPR, err := toBitbucketPR(prResp)
@@ -336,7 +336,7 @@ func (p *provider) MergePullRequest(
 	if bbPR.State != prStateOpen {
 		// If it's not open and not merged, then it's closed
 		return nil, false, fmt.Errorf(
-			"pull request %d is closed but not merged (state: %s)", id, bbPR.State,
+			"pull request %d is closed but not merged (state: %s)", opts.Number, bbPR.State,
 		)
 	}
 
@@ -359,13 +359,13 @@ func (p *provider) MergePullRequest(
 	mergeOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(id, 10),
+		ID:       strconv.FormatInt(opts.Number, 10),
 	}
 
 	// Perform the merge
 	mergeResp, err := p.client.MergePullRequest(mergeOpts)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
 	}
 
 	// Parse the merged PR response

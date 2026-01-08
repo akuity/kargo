@@ -571,7 +571,8 @@ func TestMergePullRequest(t *testing.T) {
 
 			tt.setupMock(mockClient)
 
-			pr, merged, err := p.MergePullRequest(context.Background(), tt.prNumber)
+			pr, merged, err := p.MergePullRequest(context.Background(),
+				&gitprovider.MergePullRequestOpts{Number: tt.prNumber})
 
 			if tt.expectError {
 				require.Error(t, err)
