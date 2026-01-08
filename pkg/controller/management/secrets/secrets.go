@@ -51,12 +51,18 @@ func SetupReconcilerWithManager(
 		Named(cfg.ControllerName).
 		For(&corev1.Secret{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any deletes
-					return false
+			predicate.And(
+				predicate.Funcs{
+					DeleteFunc: func(event.DeleteEvent) bool {
+						// We're not interested in any deletes
+						return false
+					},
 				},
-			},
+				// Only reconcile Secrets from the source namespace
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return obj.GetNamespace() == cfg.SourceNamespace
+				}),
+			),
 		).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
 	if err == nil {
