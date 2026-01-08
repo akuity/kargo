@@ -15,6 +15,9 @@ data:
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
+  {{- if gt (len .Values.globalCredentialsNamespaces) 1 }}
+  {{- fail "globalCredentialsNamespaces must not contain more than one element" }}
+  {{- end }}
   {{- with .Values.controller.globalCredentials.namespaces }}
   GLOBAL_CREDENTIALS_NAMESPACE: "{{ first . }}"
   {{- end }}
