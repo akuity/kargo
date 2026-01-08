@@ -184,7 +184,7 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
-	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
 	var pr *gitprovider.PullRequest
 
@@ -197,13 +197,13 @@ func (p *provider) MergePullRequest(
 	adoPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
-		PullRequestId: ptr.To(int(id)),
+		PullRequestId: ptr.To(int(opts.Number)),
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
 	}
 	if adoPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
 	}
 
 	status := ptr.Deref(adoPR.Status, adogit.PullRequestStatusValues.NotSet)
@@ -213,11 +213,11 @@ func (p *provider) MergePullRequest(
 	case adogit.PullRequestStatusValues.Completed:
 		pr, err = convertADOPullRequest(adoPR)
 		if err != nil {
-			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, err)
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", opts.Number, err)
 		}
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
-		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
+		return nil, false, fmt.Errorf("pull request %d is abandoned", opts.Number)
 	case adogit.PullRequestStatusValues.Active:
 		// Draft PRs can have a merge status of `succeeded`, but aren't actually
 		// mergable, so we explicitly check for draft status.
@@ -233,28 +233,46 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Try to merge
+	prUpdate := &adogit.GitPullRequest{
+		Status: ptr.To(adogit.PullRequestStatusValues.Completed),
+		// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
+		// If the PR was amended between our validation and merge attempt, Azure DevOps
+		// will reject the merge operation, preventing race conditions.
+		LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
+	}
+	if opts.MergeMethod != "" {
+		// Azure DevOps merge strategies
+		var strategy adogit.GitPullRequestMergeStrategy
+		switch opts.MergeMethod {
+		case gitprovider.MergeMethodMerge:
+			strategy = adogit.GitPullRequestMergeStrategyValues.NoFastForward
+		case gitprovider.MergeMethodSquash:
+			strategy = adogit.GitPullRequestMergeStrategyValues.Squash
+		case gitprovider.MergeMethodRebase:
+			strategy = adogit.GitPullRequestMergeStrategyValues.Rebase
+		default:
+			strategy = adogit.GitPullRequestMergeStrategyValues.NoFastForward
+		}
+		prUpdate.CompletionOptions = &adogit.GitPullRequestCompletionOptions{
+			MergeStrategy: &strategy,
+		}
+	}
 	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
-		Project:       &p.project,
-		RepositoryId:  &p.repo,
-		PullRequestId: ptr.To(int(id)),
-		GitPullRequestToUpdate: &adogit.GitPullRequest{
-			Status: ptr.To(adogit.PullRequestStatusValues.Completed),
-			// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
-			// If the PR was amended between our validation and merge attempt, Azure DevOps
-			// will reject the merge operation, preventing race conditions.
-			LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
-		},
+		Project:                &p.project,
+		RepositoryId:           &p.repo,
+		PullRequestId:          ptr.To(int(opts.Number)),
+		GitPullRequestToUpdate: prUpdate,
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
 	}
 	if updatedPR == nil {
-		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
+		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", opts.Number)
 	}
 
 	pr, err = convertADOPullRequest(updatedPR)
 	if err != nil {
-		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", opts.Number, err)
 	}
 	return pr, true, nil
 }
