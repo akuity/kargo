@@ -147,7 +147,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if clusterResourcesCfg.SourceNamespace != clusterResourcesCfg.DestinationNamespace {
+	if clusterResourcesCfg.SourceNamespace != "" &&
+		clusterResourcesCfg.SourceNamespace != clusterResourcesCfg.DestinationNamespace {
 		if err := secrets.SetupReconcilerWithManager(
 			ctx,
 			kargoMgr,
@@ -157,7 +158,8 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if sharedResourcesCfg.SourceNamespace != sharedResourcesCfg.DestinationNamespace {
+	if sharedResourcesCfg.SourceNamespace != "" &&
+		sharedResourcesCfg.SourceNamespace != sharedResourcesCfg.DestinationNamespace {
 		if err := secrets.SetupReconcilerWithManager(
 			ctx,
 			kargoMgr,
