@@ -99,12 +99,12 @@ contain the following keys:
     repositories using SSH-style URLs -- for instance
     `git@github.com:example/repo.git`.
 
-## Global Credentials
+## Shared Credentials
 
 Credentials are generally managed at the project level by project admins, but
 in cases where one or more sets of credentials are needed widely across many or
-all Kargo projects, an operator may opt into designating a dedicated namespace
-for "global" credentials (and other resources), accessible to all projects.
+all Kargo projects, an operator nust opt into  designating a dedicated namespace
+for "shared" credentials (and other resources), accessible to all projects.
 This namespace is referred to as the _**shared resources namespace**_. 
 It is then the operator's responsibility to create and manage such credentials 
 as well.
@@ -140,46 +140,13 @@ credentials, except possibly that they exist.
 
 ### Enabling Shared Credentials
 
-A `shared-resources-namespace` can be designated under the Kargo Helm chart's 
+A `shared-resources-namespace` must be designated under the Kargo Helm chart's 
 `global.sharedResourcesNamespace` option at installation time.
-
-Operators must also manually ensure Kargo controllers receive read-only access
-to `Secret`s in the designated `shared-resources-namespace`. For example, 
-if `kargo-global-creds` is designated as the `shared-resources-namespace`, 
-the following `RoleBinding` should be created within that namespace:
-
-```yaml
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-    name: kargo-controller-read-secrets
-    namespace: kargo-global-creds
-subjects:
-    - kind: ServiceAccount
-      name: kargo-controller
-      namespace: kargo
-roleRef:
-    kind: ClusterRole
-    name: kargo-controller-read-secrets
-    apiGroup: rbac.authorization.k8s.io
-```
 
 :::note
 
-The `kargo-controller-read-secrets` `ClusterRole` is predefined by the Kargo
-Helm chart and grants read-only access to `Secret` resources.
-
-:::
-
-:::info
-
-By default, Kargo controllers _lack_ cluster-wide permissions on `Secret`
-resources. Instead, the Kargo _management controller_ dynamically expands and
-contracts controller access to `Secret`s on a namespace-by-namespace basis as
-new `Project`s are created and deleted.
-
-_It is because this process does not account for "global" credential namespaces
-that these bindings must be created manually by an operator._
+`global.sharedResourcesNamespace` defaults to `kargo-shared-resources`. It's
+creation is handled by the Helm chart.
 
 :::
 
