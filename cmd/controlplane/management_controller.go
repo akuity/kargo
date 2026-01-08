@@ -206,16 +206,15 @@ func (o *managementControllerOptions) setupManager(
 			err,
 		)
 	}
-	namespaceCacheConfigs := map[string]cache.Config{
-		clusterResourcesCfg.DestinationNamespace: {},
-		sharedResourcesCfg.DestinationNamespace:  {},
-	}
+	namespaceCacheConfigs := make(map[string]cache.Config)
 	if clusterResourcesCfg.SourceNamespace != "" {
 		namespaceCacheConfigs[clusterResourcesCfg.SourceNamespace] = cache.Config{}
+		namespaceCacheConfigs[clusterResourcesCfg.DestinationNamespace] = cache.Config{}
 	}
 	// Only add if GLOBAL_CREDENTIALS_NAMESPACE is set.
 	if sharedResourcesCfg.SourceNamespace != "" {
 		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
+		namespaceCacheConfigs[sharedResourcesCfg.DestinationNamespace] = cache.Config{}
 	}
 	return ctrl.NewManager(
 		restCfg,
