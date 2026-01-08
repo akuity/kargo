@@ -207,9 +207,11 @@ func (o *managementControllerOptions) setupManager(
 		)
 	}
 	namespaceCacheConfigs := map[string]cache.Config{
-		clusterResourcesCfg.SourceNamespace:      {},
 		clusterResourcesCfg.DestinationNamespace: {},
 		sharedResourcesCfg.DestinationNamespace:  {},
+	}
+	if clusterResourcesCfg.SourceNamespace != "" {
+		namespaceCacheConfigs[clusterResourcesCfg.SourceNamespace] = cache.Config{}
 	}
 	// Only add if GLOBAL_CREDENTIALS_NAMESPACE is set.
 	if sharedResourcesCfg.SourceNamespace != "" {
