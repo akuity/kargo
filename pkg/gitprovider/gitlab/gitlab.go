@@ -208,14 +208,14 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	_ context.Context,
-	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, opts.Number, nil)
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting merge request %d: %w", opts.Number, err)
 	}
 	if glMR == nil {
-		return nil, false, fmt.Errorf("merge request %d not found", id)
+		return nil, false, fmt.Errorf("merge request %d not found", opts.Number)
 	}
 
 	switch {
@@ -224,18 +224,25 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case glMR.State != "opened":
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
 
 	case glMR.Draft || glMR.DetailedMergeStatus != "mergeable":
 		return nil, false, nil
 	}
 
 	// Merge the MR
+	mrOpts := &gitlab.AcceptMergeRequestOptions{}
+	// GitLab only supports Squash merging as a boolean
+	// Rebases have to be done via a different API call/manually
+	if opts.MergeMethod == gitprovider.MergeMethodSquash {
+		squash := true
+		mrOpts.Squash = &squash
+	}
 	updatedMR, _, err := p.client.AcceptMergeRequest(
-		p.projectName, id, &gitlab.AcceptMergeRequestOptions{},
+		p.projectName, opts.Number, mrOpts,
 	)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging merge request %d: %w", opts.Number, err)
 	}
 	if updatedMR == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge request after merge")

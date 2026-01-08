@@ -298,14 +298,14 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
-	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
 	}
 	if ghPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
 	}
 
 	switch {
@@ -314,31 +314,35 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
 
 	case ptr.Deref(ghPR.Draft, false) || !ptr.Deref(ghPR.Mergeable, false):
 		return nil, false, nil
 	}
 
 	// Merge the PR
+	prOpts := &github.PullRequestOptions{}
+	if opts.MergeMethod != "" {
+		prOpts.MergeMethod = string(opts.MergeMethod)
+	}
 	mergeResult, _, err := p.client.MergePullRequest(
 		ctx,
 		p.owner,
 		p.repo,
-		int(id),
+		int(opts.Number),
 		"", // Use default commit message
-		&github.PullRequestOptions{},
+		prOpts,
 	)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
 	}
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
 	}
 
-	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", opts.Number, err)
 	}
 	if updatedPR == nil {
 		return nil, false, fmt.Errorf("unexpected nil pull request after merge")

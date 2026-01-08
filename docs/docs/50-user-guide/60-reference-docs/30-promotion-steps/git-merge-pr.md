@@ -39,6 +39,7 @@ to merge will fail.
 | `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
 | `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                   |
 | `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
+| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. Options are `merge` (traditional merge commit), `squash` (squash all commits into one), or `rebase` (rebase and merge). If not specified, the default merge method configured on the repository will be used. |
 | `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
 
 :::warning
@@ -82,4 +83,19 @@ steps:
     repoURL: https://github.com/example/repo.git
     prNumber: 42
     wait: true
+```
+
+### Squash Merge
+
+This example demonstrates using a squash merge, which combines all commits from
+the pull request into a single commit. This is useful for maintaining a clean
+commit history.
+
+```yaml
+steps:
+- uses: git-merge-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: 42
+    mergeMethod: squash
 ```
