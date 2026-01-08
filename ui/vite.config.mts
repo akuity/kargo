@@ -35,7 +35,7 @@ export default defineConfig({
   plugins: [
     tsConfigPaths(),
     viteCompression(),
-    react(),
+    react({ exclude: [/\/node_modules\//] }),
     // https://github.com/vdesjs/vite-plugin-monaco-editor/issues/21
     (monacoEditorPlugin as unknown as { default: typeof monacoEditorPlugin }).default({
       customWorkers: [
