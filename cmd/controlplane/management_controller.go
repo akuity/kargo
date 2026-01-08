@@ -96,7 +96,7 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 
 	sharedResourcesCfg := secrets.ReconcilerConfig{
 		ControllerName:       "shared-resources-migration-controller",
-		SourceNamespace:      os.GetEnv("GLOBAL_CREDENTIALS_NAMESPACES", ""),
+		SourceNamespace:      os.GetEnv("GLOBAL_CREDENTIALS_NAMESPACE", ""),
 		DestinationNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
 	}
 
@@ -209,7 +209,7 @@ func (o *managementControllerOptions) setupManager(
 		clusterResourcesCfg.DestinationNamespace: {},
 		sharedResourcesCfg.DestinationNamespace:  {},
 	}
-	// Only add if GLOBAL_CREDENTIALS_NAMESPACES is set.
+	// Only add if GLOBAL_CREDENTIALS_NAMESPACE is set.
 	if sharedResourcesCfg.SourceNamespace != "" {
 		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
 	}
