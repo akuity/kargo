@@ -99,6 +99,7 @@ export const file_k8s_io_apimachinery_pkg_api_resource_generated: GenFile = /*@_
  * +protobuf.options.(gogoproto.goproto_stringer)=false
  * +k8s:deepcopy-gen=true
  * +k8s:openapi-gen=true
+ * +k8s:openapi-model-package=io.k8s.apimachinery.pkg.api.resource
  *
  * @generated from message k8s.io.apimachinery.pkg.api.resource.Quantity
  */
@@ -125,6 +126,7 @@ export const QuantitySchema: GenMessage<Quantity> = /*@__PURE__*/
  * +protobuf.options.marshal=false
  * +protobuf.options.(gogoproto.goproto_stringer)=false
  * +k8s:deepcopy-gen=true
+ * +k8s:openapi-model-package=io.k8s.apimachinery.pkg.api.resource
  *
  * @generated from message k8s.io.apimachinery.pkg.api.resource.QuantityValue
  */

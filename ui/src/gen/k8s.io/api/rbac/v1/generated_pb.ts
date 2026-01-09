@@ -413,6 +413,8 @@ export type RoleRef = Message<"k8s.io.api.rbac.v1.RoleRef"> & {
 
   /**
    * Name is the name of resource being referenced
+   * +required
+   * +k8s:required
    *
    * @generated from field: optional string name = 3;
    */
@@ -454,6 +456,8 @@ export type Subject = Message<"k8s.io.api.rbac.v1.Subject"> & {
 
   /**
    * Name of the object being referenced.
+   * +required
+   * +k8s:required
    *
    * @generated from field: optional string name = 3;
    */

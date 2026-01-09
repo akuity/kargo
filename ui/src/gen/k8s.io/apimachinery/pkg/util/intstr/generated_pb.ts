@@ -39,6 +39,7 @@ export const file_k8s_io_apimachinery_pkg_util_intstr_generated: GenFile = /*@__
  * +protobuf=true
  * +protobuf.options.(gogoproto.goproto_stringer)=false
  * +k8s:openapi-gen=true
+ * +k8s:openapi-model-package=io.k8s.apimachinery.pkg.util.intstr
  *
  * @generated from message k8s.io.apimachinery.pkg.util.intstr.IntOrString
  */

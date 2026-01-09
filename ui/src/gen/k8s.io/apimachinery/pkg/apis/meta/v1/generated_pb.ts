@@ -1916,7 +1916,6 @@ export type Status = Message<"k8s.io.apimachinery.pkg.apis.meta.v1.Status"> & {
    * is not guaranteed to conform to any schema except that defined by
    * the reason type.
    * +optional
-   * +listType=atomic
    *
    * @generated from field: optional k8s.io.apimachinery.pkg.apis.meta.v1.StatusDetails details = 5;
    */
@@ -2065,6 +2064,7 @@ export const StatusDetailsSchema: GenMessage<StatusDetails> = /*@__PURE__*/
 
 /**
  * TableOptions are used when a Table is requested by the caller.
+ * +k8s:conversion-gen:explicit-from=net/url.Values
  * +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
  *
  * @generated from message k8s.io.apimachinery.pkg.apis.meta.v1.TableOptions
