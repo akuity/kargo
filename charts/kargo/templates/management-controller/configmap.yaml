@@ -11,7 +11,7 @@ data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
   CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
-  CLUSTER_RESOURCES_NAMESPACE: {{ quote .Values.global.clusterResourcesNamespace }}
+  SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
@@ -23,7 +23,7 @@ data:
   {{- with .Values.controller.globalCredentials.namespaces }}
   GLOBAL_CREDENTIALS_NAMESPACE: "{{ first . }}"
   {{- end }}
-  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResourcesNamespace }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}

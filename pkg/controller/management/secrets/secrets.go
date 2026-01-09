@@ -27,10 +27,15 @@ type ReconcilerConfig struct {
 }
 
 // reconciler copies Secret resources from a source namespace to a destination
-// namespace on a continuous basis. This is to ease the transition from a
-// conceptual "cluster secrets namespace" with a default value of
-// "kargo-cluster-secrets" to a more broadly purposed "cluster resources
-// namespace" with a default value of "kargo-cluster-resources".
+// namespace on a continuous basis. This is to ease the transition from:
+//
+//   - A conceptual "cluster secrets namespace" with a default value of
+//     "kargo-cluster-secrets" to a more broadly purposed "system resources
+//     namespace" with a default value of "kargo-system-resources".
+//
+//   - Conceptual "global credentials namespace(s)" to a more broadly purposed
+//     "shared resources namespace" with a default value of
+//     "kargo-shared-resources".
 //
 // TODO(krancour): Remove this reconciler in v1.12.0. By that time, affected
 // users are expected to have made any necessary configuration to obviate the

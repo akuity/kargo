@@ -1,9 +1,9 @@
-{{- if .Values.global.createSharedResourcesNamespace }}
+{{- if .Values.global.sharedResources.createNamespace }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: kargo-shared-resources-admin
-  namespace: {{ .Values.global.sharedResourcesNamespace }}
+  namespace: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 roleRef:

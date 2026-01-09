@@ -1,8 +1,8 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: kargo-cluster-resources-reader
-  namespace: {{ .Values.global.clusterResourcesNamespace }}
+  name: kargo-system-resources-reader
+  namespace: {{ .Values.global.systemResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 rules:
@@ -18,8 +18,8 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: kargo-cluster-resources-admin
-  namespace: {{ .Values.global.clusterResourcesNamespace }}
+  name: kargo-system-resources-admin
+  namespace: {{ .Values.global.systemResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
 rules:
