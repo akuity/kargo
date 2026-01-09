@@ -368,9 +368,9 @@ config:
 
 ### `sharedConfigMap(name)`
 
-The `sharedConfigMap()` function returns the `Data` field 
-(a `map[string]string`) of a Kubernetes `ConfigMap` with the specified name from 
-the `SHARED_RESOURCES_NAMESPACE`. If no such `ConfigMap` exists, an empty map is 
+The `sharedConfigMap()` function returns the `Data` field (a
+`map[string]string`) of a Kubernetes `ConfigMap` with the specified name from 
+the shared resources namespace. If no such `ConfigMap` exists, an empty map is 
 returned.
 
 Example:
@@ -398,8 +398,11 @@ config:
 ### `sharedSecret(name)`
 
 The `sharedSecret()` function returns the `Data` field of a Kubernetes `Secret` 
-with the specified name from the `SHARED_RESOURCES_NAMESPACE` decoded into a
+with the specified name from the shared resources namespace decoded into a
 `map[string]string`. If no such `Secret` exists, an empty map is returned.
+
+**By design, this function only works for "generic credentials" (i.e. `Secret`s
+labeled with `kargo.akuity.io/cred-type: generic`).**
 
 Examples:
 
