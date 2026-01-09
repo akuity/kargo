@@ -13,24 +13,20 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) ListClusterSecrets(
+func (s *server) ListSystemSecrets(
 	ctx context.Context,
-	_ *connect.Request[svcv1alpha1.ListClusterSecretsRequest],
-) (*connect.Response[svcv1alpha1.ListClusterSecretsResponse], error) {
+	_ *connect.Request[svcv1alpha1.ListSystemSecretsRequest],
+) (*connect.Response[svcv1alpha1.ListSystemSecretsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
-	}
-
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
 	var secretsList corev1.SecretList
 	if err := s.client.List(
 		ctx,
 		&secretsList,
-		client.InNamespace(s.cfg.ClusterSecretNamespace),
+		client.InNamespace(s.cfg.SystemResourcesNamespace),
 	); err != nil {
 		return nil, fmt.Errorf("list secrets: %w", err)
 	}
@@ -46,7 +42,7 @@ func (s *server) ListClusterSecrets(
 		sanitizedSecrets[i] = sanitizeProjectSecret(secret)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListClusterSecretsResponse{
+	return connect.NewResponse(&svcv1alpha1.ListSystemSecretsResponse{
 		Secrets: sanitizedSecrets,
 	}), nil
 }

@@ -10,10 +10,20 @@ metadata:
 data:
   EXTERNAL_WEBHOOK_SERVER_BASE_URL: {{ include "kargo.externalWebhooksServer.baseURL" . }}
   KARGO_NAMESPACE: {{ .Release.Namespace }}
-  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  CLUSTER_SECRETS_NAMESPACE: {{ quote .Values.global.clusterSecretsNamespace }}
+  SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if .Values.controller.serviceAccount.clusterWideSecretReadingEnabled }}
   MANAGE_CONTROLLER_ROLE_BINDINGS: "false"
   {{- end }}
+  {{- if .Values.globalCredentialsNamespaces }}
+  {{- if gt (len .Values.globalCredentialsNamespaces) 1 }}
+  {{- fail "globalCredentialsNamespaces must not contain more than one element" }}
+  {{- end }}
+  {{- end }}
+  {{- with .Values.controller.globalCredentials.namespaces }}
+  GLOBAL_CREDENTIALS_NAMESPACE: "{{ first . }}"
+  {{- end }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   LOG_LEVEL: {{ quote .Values.managementController.logLevel }}
   LOG_FORMAT: {{ quote .Values.managementController.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}

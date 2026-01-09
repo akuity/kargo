@@ -268,15 +268,15 @@ service KargoService {
   // with a specified Kargo ServiceAccount.
   rpc ListServiceAccountTokens(ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
 
-  /* Cluster Secrets APIs */
-  // ListClusterSecrets retrieves all cluster-scoped secrets.
-  rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
-  // CreateClusterSecret creates a new cluster-scoped secret.
-  rpc CreateClusterSecret(CreateClusterSecretRequest) returns (CreateClusterSecretResponse);
-  // UpdateClusterSecret modifies an existing cluster-scoped secret.
-  rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
-  // DeleteClusterSecret removes a cluster-scoped secret.
-  rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
+  /* System Secrets APIs */
+  // ListSystemSecrets retrieves all "cluster-scoped" system secrets.
+  rpc ListSystemSecrets(ListSystemSecretsRequest) returns (ListSystemSecretsResponse);
+  // CreateSystemSecret creates a new "cluster-scoped" system secret.
+  rpc CreateSystemSecret(CreateSystemSecretRequest) returns (CreateSystemSecretResponse);
+  // UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
+  rpc UpdateSystemSecret(UpdateSystemSecretRequest) returns (UpdateSystemSecretResponse);
+  // DeleteSystemSecret removes a "cluster-scoped" system secret.
+  rpc DeleteSystemSecret(DeleteSystemSecretRequest) returns (DeleteSystemSecretResponse);
 }
 
 /* Version and Configuration Messages */
@@ -333,8 +333,8 @@ message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
   // secret_management_enabled indicates if secret management features are available.
   bool secret_management_enabled = 2;
-  // cluster_secrets_namespace is the namespace used for cluster-scoped secrets.
-  string cluster_secrets_namespace = 3;
+  // system_resources_namespace is the namespace used for "cluster-scoped" system secrets.
+  string system_resources_namespace = 3;
   // has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
   bool has_analysis_run_logs_url_template = 4;
 }
@@ -1736,53 +1736,53 @@ message ListServiceAccountTokensResponse {
   repeated k8s.io.api.core.v1.Secret token_secrets = 1;
 }
 
-// ListClusterSecretsRequest is the request for listing all cluster-level secrets.
-message ListClusterSecretsRequest {
+// ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.
+message ListSystemSecretsRequest {
   /* explicitly empty */
 }
 
-// ListClusterSecretsResponse contains a list of cluster-level secrets.
-message ListClusterSecretsResponse {
-  // secrets is the list of cluster-level Kubernetes Secrets.
+// ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
+message ListSystemSecretsResponse {
+  // secrets is the list of "cluster-scoped" system-level Kubernetes Secrets.
   repeated k8s.io.api.core.v1.Secret secrets = 1;
 }
 
-// CreateClusterSecretRequest is the request for creating a new cluster-level secret.
-message CreateClusterSecretRequest {
-  // name is the name of the cluster secret to create.
+// CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
+message CreateSystemSecretRequest {
+  // name is the name of the "cluster-scoped" system secret to create.
   string name = 1;
   // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 2;
 }
 
-// CreateClusterSecretResponse contains the newly created cluster secret.
-message CreateClusterSecretResponse {
-  // secret is the created cluster-level Kubernetes Secret.
+// CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
+message CreateSystemSecretResponse {
+  // secret is the created "cluster-scoped" system-level Kubernetes Secret.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
-// UpdateClusterSecretRequest is the request for updating an existing cluster secret.
-message UpdateClusterSecretRequest {
-  // name is the name of the cluster secret to update.
+// UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
+message UpdateSystemSecretRequest {
+  // name is the name of the "cluster-scoped" system secret to update.
   string name = 1;
   // data contains the key-value pairs that make up the secret data.
   map<string, string> data = 2;
 }
 
-// UpdateClusterSecretResponse contains the updated cluster secret information.
-message UpdateClusterSecretResponse {
-  // secret is the updated cluster-level Kubernetes Secret.
+// UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
+message UpdateSystemSecretResponse {
+  // secret is the updated "cluster-scoped" system-level Kubernetes Secret.
   k8s.io.api.core.v1.Secret secret = 1;
 }
 
-// DeleteClusterSecretRequest is the request for deleting a cluster secret.
-message DeleteClusterSecretRequest {
-  // name is the name of the cluster secret to delete.
+// DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
+message DeleteSystemSecretRequest {
+  // name is the name of the "cluster-scoped" system secret to delete.
   string name = 1;
 }
 
-// DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
-message DeleteClusterSecretResponse {
+// DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.
+message DeleteSystemSecretResponse {
   /* explicitly empty */
 }
 

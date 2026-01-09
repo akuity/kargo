@@ -189,7 +189,7 @@ configuration for this option (`false`).__
 The likely impetus for enabling cluster-scoped `Secret` access is to eliminate
 the need for manually managing `RoleBinding`s that grant the controller
 read-only access to `Secret` resources in specially designated "global
-credential namespaces" as described [here](40-managing-credentials.md). __We
+credential namespaces" as described [here](40-managing-secrets.md). __We
 still do not recommend this.__
 
 :::

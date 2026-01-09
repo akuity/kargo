@@ -533,29 +533,29 @@ export const getServiceAccountToken = KargoService.method.getServiceAccountToken
 export const listServiceAccountTokens = KargoService.method.listServiceAccountTokens;
 
 /**
- * ListClusterSecrets retrieves all cluster-scoped secrets.
+ * ListSystemSecrets retrieves all "cluster-scoped" system secrets.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListSystemSecrets
  */
-export const listClusterSecrets = KargoService.method.listClusterSecrets;
+export const listSystemSecrets = KargoService.method.listSystemSecrets;
 
 /**
- * CreateClusterSecret creates a new cluster-scoped secret.
+ * CreateSystemSecret creates a new "cluster-scoped" system secret.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateSystemSecret
  */
-export const createClusterSecret = KargoService.method.createClusterSecret;
+export const createSystemSecret = KargoService.method.createSystemSecret;
 
 /**
- * UpdateClusterSecret modifies an existing cluster-scoped secret.
+ * UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateSystemSecret
  */
-export const updateClusterSecret = KargoService.method.updateClusterSecret;
+export const updateSystemSecret = KargoService.method.updateSystemSecret;
 
 /**
- * DeleteClusterSecret removes a cluster-scoped secret.
+ * DeleteSystemSecret removes a "cluster-scoped" system secret.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteSystemSecret
  */
-export const deleteClusterSecret = KargoService.method.deleteClusterSecret;
+export const deleteSystemSecret = KargoService.method.deleteSystemSecret;

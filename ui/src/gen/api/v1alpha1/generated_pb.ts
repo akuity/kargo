@@ -283,7 +283,7 @@ export type ArtifactoryWebhookReceiverConfig = Message<"github.com.akuity.kargo.
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret-token` key whose
    * value is the shared secret used to authenticate the webhook requests sent
@@ -383,7 +383,7 @@ export type AzureWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose value
    * does NOT need to be shared directly with Azure when registering a webhook.
@@ -424,7 +424,7 @@ export type BitbucketWebhookReceiverConfig = Message<"github.com.akuity.kargo.ap
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose
    * value is the shared secret used to authenticate the webhook requests sent
@@ -1547,7 +1547,7 @@ export type GenericWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose value
    * does NOT need to be shared directly with the sender. It is used only by
@@ -1749,7 +1749,7 @@ export type GitHubWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose value is
    * the shared secret used to authenticate the webhook requests sent by GitHub.
@@ -1783,7 +1783,7 @@ export type GitLabWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The secret is expected to contain a `secret-token` key containing the
    * shared secret specified when registering the webhook in GitLab. For more
@@ -2094,7 +2094,7 @@ export type GiteaWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose value is
    * the shared secret used to authenticate the webhook requests sent by Gitea.
@@ -2128,7 +2128,7 @@ export type HarborWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The secret is expected to contain an `auth-header` key containing the "auth
    * header" specified when registering the webhook in Harbor. For more
@@ -3588,7 +3588,7 @@ export type QuayWebhookReceiverConfig = Message<"github.com.akuity.kargo.api.v1a
    * ProjectConfig.
    *
    * For cluster-scoped webhook receivers, the referenced Secret must be in the
-   * designated "cluster Secrets" namespace.
+   * designated "system resources" namespace.
    *
    * The Secret's data map is expected to contain a `secret` key whose value
    * does NOT need to be shared directly with Quay when registering a

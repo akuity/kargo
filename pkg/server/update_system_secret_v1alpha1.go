@@ -12,17 +12,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) UpdateClusterSecret(
+func (s *server) UpdateSystemSecret(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.UpdateClusterSecretRequest],
-) (*connect.Response[svcv1alpha1.UpdateClusterSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.UpdateSystemSecretRequest],
+) (*connect.Response[svcv1alpha1.UpdateSystemSecretResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
-	}
-
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
 	name := req.Msg.GetName()
@@ -35,7 +31,7 @@ func (s *server) UpdateClusterSecret(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: s.cfg.ClusterSecretNamespace,
+			Namespace: s.cfg.SystemResourcesNamespace,
 			Name:      name,
 		},
 		&secret,
@@ -43,41 +39,40 @@ func (s *server) UpdateClusterSecret(
 		return nil, fmt.Errorf("get secret: %w", err)
 	}
 
-	clusterSecretUpdate := clusterSecret{
+	systemSecretUpdate := systemSecret{
 		data: req.Msg.GetData(),
 	}
 
-	if len(clusterSecretUpdate.data) == 0 {
+	if len(systemSecretUpdate.data) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
 	}
 
-	applyClusterSecretUpdateToK8sSecret(&secret, clusterSecretUpdate)
-
+	applySystemSecretUpdateToK8sSecret(&secret, systemSecretUpdate)
 	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, fmt.Errorf("update secret: %w", err)
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.UpdateClusterSecretResponse{
+		&svcv1alpha1.UpdateSystemSecretResponse{
 			Secret: sanitizeProjectSecret(secret),
 		},
 	), nil
 }
 
-func applyClusterSecretUpdateToK8sSecret(secret *corev1.Secret, clusterSecretUpdate clusterSecret) {
+func applySystemSecretUpdateToK8sSecret(secret *corev1.Secret, systemSecretUpdate systemSecret) {
 	// Delete any keys in the secret that are not in the update
 	for key := range secret.Data {
-		if _, ok := clusterSecretUpdate.data[key]; !ok {
+		if _, ok := systemSecretUpdate.data[key]; !ok {
 			delete(secret.Data, key)
 		}
 	}
 
 	// Add or update the keys in the secret with the values from the update
 	if secret.Data == nil {
-		secret.Data = make(map[string][]byte, len(clusterSecretUpdate.data))
+		secret.Data = make(map[string][]byte, len(systemSecretUpdate.data))
 	}
 
-	for key, value := range clusterSecretUpdate.data {
+	for key, value := range systemSecretUpdate.data {
 		if value != "" {
 			secret.Data[key] = []byte(value)
 		}

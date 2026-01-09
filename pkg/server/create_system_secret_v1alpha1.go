@@ -12,46 +12,42 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-type clusterSecret struct {
+type systemSecret struct {
 	name string
 	data map[string]string
 }
 
-func (s *server) CreateClusterSecret(
+func (s *server) CreateSystemSecret(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateClusterSecretRequest],
-) (*connect.Response[svcv1alpha1.CreateClusterSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.CreateSystemSecretRequest],
+) (*connect.Response[svcv1alpha1.CreateSystemSecretResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	if s.cfg.ClusterSecretNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterSecretNamespaceNotDefined)
-	}
-
-	clsSecret := clusterSecret{
+	clsSecret := systemSecret{
 		name: req.Msg.GetName(),
 		data: req.Msg.GetData(),
 	}
 
-	if err := s.validateClusterSecret(clsSecret); err != nil {
+	if err := s.validateSystemSecret(clsSecret); err != nil {
 		return nil, err
 	}
 
-	secret := s.clusterSecretToK8sSecret(clsSecret)
+	secret := s.systemSecretToK8sSecret(clsSecret)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.CreateClusterSecretResponse{
+		&svcv1alpha1.CreateSystemSecretResponse{
 			Secret: sanitizeProjectSecret(*secret),
 		},
 	), nil
 }
 
-func (s *server) validateClusterSecret(clsSecret clusterSecret) error {
+func (s *server) validateSystemSecret(clsSecret systemSecret) error {
 	if err := validateFieldNotEmpty("name", clsSecret.name); err != nil {
 		return err
 	}
@@ -63,7 +59,7 @@ func (s *server) validateClusterSecret(clsSecret clusterSecret) error {
 	return nil
 }
 
-func (s *server) clusterSecretToK8sSecret(clsSecret clusterSecret) *corev1.Secret {
+func (s *server) systemSecretToK8sSecret(clsSecret systemSecret) *corev1.Secret {
 	secretsData := map[string][]byte{}
 
 	for key, value := range clsSecret.data {
@@ -72,7 +68,7 @@ func (s *server) clusterSecretToK8sSecret(clsSecret clusterSecret) *corev1.Secre
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: s.cfg.ClusterSecretNamespace,
+			Namespace: s.cfg.SystemResourcesNamespace,
 			Name:      clsSecret.name,
 		},
 		Data: secretsData,

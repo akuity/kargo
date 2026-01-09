@@ -20,7 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestUpdateClusterSecret(t *testing.T) {
+func TestUpdateSystemSecret(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -32,10 +32,10 @@ func TestUpdateClusterSecret(t *testing.T) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
 					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/cluster-secret-namespace.yaml"),
+						mustNewObject[corev1.Namespace]("testdata/system-resources-namespace.yaml"),
 						&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-cluster-secrts",
+								Namespace: "kargo-system-resources",
 								Name:      "secret",
 							},
 							StringData: map[string]string{
@@ -53,13 +53,13 @@ func TestUpdateClusterSecret(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg: config.ServerConfig{
-			SecretManagementEnabled: true,
-			ClusterSecretNamespace:  "kargo-cluster-secrts",
+			SecretManagementEnabled:  true,
+			SystemResourcesNamespace: "kargo-system-resources",
 		},
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	_, err = s.UpdateClusterSecret(ctx, connect.NewRequest(&svcv1alpha1.UpdateClusterSecretRequest{
+	_, err = s.UpdateSystemSecret(ctx, connect.NewRequest(&svcv1alpha1.UpdateSystemSecretRequest{
 		Name: "secret",
 		Data: map[string]string{
 			"TOKEN_3": "bar",
@@ -70,7 +70,7 @@ func TestUpdateClusterSecret(t *testing.T) {
 	secret := corev1.Secret{}
 
 	require.NoError(t, s.client.Get(ctx, types.NamespacedName{
-		Namespace: "kargo-cluster-secrts",
+		Namespace: "kargo-system-resources",
 		Name:      "secret",
 	}, &secret))
 
@@ -82,10 +82,10 @@ func TestUpdateClusterSecret(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestApplyClusterSecretUpdateToK8sSecret(t *testing.T) {
+func TestApplySystemSecretUpdateToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "kargo-cluter-secrts",
+			Namespace: "kargo-system-resources",
 			Name:      "secret",
 		},
 		Data: map[string][]byte{
@@ -94,13 +94,13 @@ func TestApplyClusterSecretUpdateToK8sSecret(t *testing.T) {
 		},
 	}
 
-	t.Run("remove key from cluster secret", func(t *testing.T) {
+	t.Run("remove key from system secret", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		delete(expectedSecret.Data, "TOKEN_1")
 		secret := baseSecret.DeepCopy()
-		applyClusterSecretUpdateToK8sSecret(
+		applySystemSecretUpdateToK8sSecret(
 			secret,
-			clusterSecret{
+			systemSecret{
 				data: map[string]string{
 					"TOKEN_2": "bar",
 				},
@@ -109,11 +109,11 @@ func TestApplyClusterSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("add key in cluster secret", func(t *testing.T) {
+	t.Run("add key in system secret", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_3"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applyClusterSecretUpdateToK8sSecret(secret, clusterSecret{
+		applySystemSecretUpdateToK8sSecret(secret, systemSecret{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "",
@@ -123,11 +123,11 @@ func TestApplyClusterSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("edit key in cluster secret", func(t *testing.T) {
+	t.Run("edit key in system secret", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_2"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applyClusterSecretUpdateToK8sSecret(secret, clusterSecret{
+		applySystemSecretUpdateToK8sSecret(secret, systemSecret{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "baz",

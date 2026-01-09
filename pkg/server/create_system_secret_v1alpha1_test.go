@@ -19,7 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
-func TestCreateClusterSecret(t *testing.T) {
+func TestCreateSystemSecret(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -40,30 +40,15 @@ func TestCreateClusterSecret(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg: config.ServerConfig{
-			SecretManagementEnabled: true,
-			ClusterSecretNamespace:  "",
+			SecretManagementEnabled:  true,
+			SystemResourcesNamespace: "kargo-system-resources",
 		},
 	}
 
-	payload := connect.NewRequest(
-		&svcv1alpha1.CreateClusterSecretRequest{
-			Name: "secret-1",
-			Data: map[string]string{
-				"foo": "bar",
-				"baz": "bax",
-			},
-		},
-	)
-
-	_, err = s.CreateClusterSecret(ctx, payload)
-	require.Error(t, err)
-
-	s.cfg.ClusterSecretNamespace = "kargo-cluster-secrts"
-
-	resp, err := s.CreateClusterSecret(
+	resp, err := s.CreateSystemSecret(
 		ctx,
 		connect.NewRequest(
-			&svcv1alpha1.CreateClusterSecretRequest{
+			&svcv1alpha1.CreateSystemSecretRequest{
 				Name: "secret-1",
 				Data: map[string]string{
 					"foo": "bar",
@@ -75,7 +60,7 @@ func TestCreateClusterSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	secret := resp.Msg.GetSecret()
-	assert.Equal(t, "kargo-cluster-secrts", secret.Namespace)
+	assert.Equal(t, "kargo-system-resources", secret.Namespace)
 	assert.Equal(t, "secret-1", secret.Name)
 	assert.Equal(t, redacted, secret.StringData["foo"])
 	assert.Equal(t, redacted, secret.StringData["baz"])
@@ -84,7 +69,7 @@ func TestCreateClusterSecret(t *testing.T) {
 	err = cl.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: "kargo-cluster-secrts",
+			Namespace: "kargo-system-resources",
 			Name:      "secret-1",
 		},
 		&k8sSecret,
@@ -99,18 +84,18 @@ func TestCreateClusterSecret(t *testing.T) {
 func TestValidateSecrets(t *testing.T) {
 	s := &server{}
 
-	err := s.validateClusterSecret(clusterSecret{
+	err := s.validateSystemSecret(systemSecret{
 		name: "",
 	})
 	require.Error(t, err)
 
-	err = s.validateClusterSecret(clusterSecret{
+	err = s.validateSystemSecret(systemSecret{
 		name: "foo",
 		data: map[string]string{},
 	})
 	require.Error(t, err)
 
-	err = s.validateClusterSecret(clusterSecret{
+	err = s.validateSystemSecret(systemSecret{
 		name: "foo",
 		data: map[string]string{
 			"foo": "bar",

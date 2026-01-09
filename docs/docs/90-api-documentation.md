@@ -96,10 +96,10 @@ Stability is not guaranteed.
 | DeleteServiceAccountToken | [DeleteServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenRequest) | [DeleteServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenResponse) |
 | GetServiceAccountToken | [GetServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest) | [GetServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenResponse) |
 | ListServiceAccountTokens | [ListServiceAccountTokensRequest](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensRequest) | [ListServiceAccountTokensResponse](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensResponse) |
-| ListClusterSecrets | [ListClusterSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest) | [ListClusterSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse) |
-| CreateClusterSecret | [CreateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest) | [CreateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse) |
-| UpdateClusterSecret | [UpdateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest) | [UpdateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse) |
-| DeleteClusterSecret | [DeleteClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest) | [DeleteClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse) |
+| ListSystemSecrets | [ListSystemSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest) | [ListSystemSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse) |
+| CreateSystemSecret | [CreateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest) | [CreateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse) |
+| UpdateSystemSecret | [UpdateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest) | [UpdateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse) |
+| DeleteSystemSecret | [DeleteSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest) | [DeleteSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse) |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
@@ -183,32 +183,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | server | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  server contains version information for the Kargo server. |
 | cli | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  cli contains version information for the Kargo CLI. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest"></a>
-
-### CreateClusterSecretRequest
- CreateClusterSecretRequest is the request for creating a new cluster-level secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to create. |
-| data | [CreateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry"></a>
-
-### CreateClusterSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse"></a>
-
-### CreateClusterSecretResponse
- CreateClusterSecretResponse contains the newly created cluster secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created cluster-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
 
@@ -363,6 +337,32 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
 
+<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest"></a>
+
+### CreateSystemSecretRequest
+ CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to create. |
+| data | [CreateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry"></a>
+
+### CreateSystemSecretRequest.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse"></a>
+
+### CreateSystemSecretResponse
+ CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| secret | k8s.io.api.core.v1.Secret |  secret is the created "cluster-scoped" system-level Kubernetes Secret. |
+
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest"></a>
 
 ### DeleteAnalysisTemplateRequest
@@ -396,18 +396,6 @@ Stability is not guaranteed.
 
 ### DeleteClusterConfigResponse
  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest"></a>
-
-### DeleteClusterSecretRequest
- DeleteClusterSecretRequest is the request for deleting a cluster secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse"></a>
-
-### DeleteClusterSecretResponse
- DeleteClusterSecretResponse is the response returned after deleting a cluster secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
 
 ### DeleteCredentialsRequest
@@ -550,6 +538,18 @@ Stability is not guaranteed.
 
 ### DeleteStageResponse
  DeleteStageResponse is the response after deleting a stage.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest"></a>
+
+### DeleteSystemSecretRequest
+ DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse"></a>
+
+### DeleteSystemSecretResponse
+ DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
@@ -712,7 +712,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |  argocd_shards maps shard names to their ArgoCD configuration. |
 | secret_management_enabled | [bool](#bool) |  secret_management_enabled indicates if secret management features are available. |
-| cluster_secrets_namespace | [string](#string) |  cluster_secrets_namespace is the namespace used for cluster-scoped secrets. |
+| system_resources_namespace | [string](#string) |  system_resources_namespace is the namespace used for "cluster-scoped" system secrets. |
 | has_analysis_run_logs_url_template | [bool](#bool) |  has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
@@ -1039,18 +1039,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | cluster_promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |  cluster_promotion_tasks is the list of ClusterPromotionTask resources. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest"></a>
-
-### ListClusterSecretsRequest
- ListClusterSecretsRequest is the request for listing all cluster-level secrets.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse"></a>
-
-### ListClusterSecretsResponse
- ListClusterSecretsResponse contains a list of cluster-level secrets.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of cluster-level Kubernetes Secrets. |
-
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
@@ -1262,6 +1250,18 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
 
+<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest"></a>
+
+### ListSystemSecretsRequest
+ ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse"></a>
+
+### ListSystemSecretsResponse
+ ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of "cluster-scoped" system-level Kubernetes Secrets. |
+
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
 ### ListWarehousesRequest
@@ -1434,32 +1434,6 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [ImageStageMap](#akuity-io-kargo-service-v1alpha1-ImageStageMap) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest"></a>
-
-### UpdateClusterSecretRequest
- UpdateClusterSecretRequest is the request for updating an existing cluster secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to update. |
-| data | [UpdateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry"></a>
-
-### UpdateClusterSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse"></a>
-
-### UpdateClusterSecretResponse
- UpdateClusterSecretResponse contains the updated cluster secret information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated cluster-level Kubernetes Secret. |
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest"></a>
 
 ### UpdateCredentialsRequest
@@ -1566,6 +1540,32 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the updated Kargo Role virtual resource. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest"></a>
+
+### UpdateSystemSecretRequest
+ UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to update. |
+| data | [UpdateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry"></a>
+
+### UpdateSystemSecretRequest.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse"></a>
+
+### UpdateSystemSecretResponse
+ UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| secret | k8s.io.api.core.v1.Secret |  secret is the updated "cluster-scoped" system-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-VersionInfo"></a>
 
@@ -1874,7 +1874,7 @@ RawFormat specifies the format for raw resource representation.
  ArtifactoryWebhookReceiverConfig describes a webhook receiver that is compatible with JFrog Artifactory payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
 | virtualRepoName | [string](#string) |  VirtualRepoName is the name of an Artifactory virtual repository.  When unspecified, the Artifactory webhook receiver depends on the value of the webhook payload's `data.repo_key` field when inferring the URL of the repository from which the webhook originated, which will always be an Artifactory "local repository." In cases where a Warehouse subscribes to such a repository indirectly via a "virtual repository," there will be a discrepancy between the inferred (local) repository URL and the URL actually used by the subscription, which can prevent the receiver from identifying such a Warehouse as one in need of refreshing. When specified, the value of the VirtualRepoName field supersedes the value of the webhook payload's `data.repo_key` field to compensate for that discrepancy.  In practice, when using virtual repositories, a separate Artifactory webhook receiver should be configured for each, but one such receiver can handle inbound webhooks from any number of local repositories that are aggregated by that virtual repository. For example, if a virtual repository `proj-virtual` aggregates container images from all of the `proj` Artifactory project's local image repositories, with a single webhook configured to post to a single receiver configured for the `proj-virtual` virtual repository, an image pushed to `example.frog.io/proj-&lt;local-repo-name&gt;/&lt;path&gt;/image`, will cause that receiver to refresh all Warehouses subscribed to `example.frog.io/proj-virtual/&lt;path&gt;/image`.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions"></a>
@@ -1891,7 +1891,7 @@ RawFormat specifies the format for raw resource representation.
  AzureWebhookReceiverConfig describes a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Azure when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Azure webhooks, please refer to the Azure documentation:   Azure Container Registry: 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories   Azure DevOps: 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Azure when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Azure webhooks, please refer to the Azure documentation:   Azure Container Registry: 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories   Azure DevOps: 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-BitbucketWebhookReceiverConfig"></a>
 
@@ -1899,7 +1899,7 @@ RawFormat specifies the format for raw resource representation.
  BitbucketWebhookReceiverConfig describes a webhook receiver that is compatible with Bitbucket payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Bitbucket. For more information please refer to the Bitbucket documentation:   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Bitbucket. For more information please refer to the Bitbucket documentation:   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Chart"></a>
 
@@ -2224,7 +2224,7 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookReceiverConfig describes a generic webhook receiver that can be configured to respond to any arbitrary POST by applying user-defined actions on user-defined sets of resources selected by name, labels and/or values in pre-built indices. Both types of selectors support using values extracted from the request by means of expressions. Currently, refreshing resources is the only supported action and Warehouse is the only supported kind. "Refreshing" means immediately enqueuing the target resource for reconciliation by its controller. The practical effect of refreshing a Warehouses is triggering its artifact discovery process.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
 | actions | [GenericWebhookAction](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction) |  Actions is a list of actions to be performed when a webhook event is received.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria"></a>
@@ -2267,7 +2267,7 @@ RawFormat specifies the format for raw resource representation.
  GitHubWebhookReceiverConfig describes a webhook receiver that is compatible with GitHub payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by GitHub. For more information please refer to GitHub documentation:   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by GitHub. For more information please refer to GitHub documentation:   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitLabWebhookReceiverConfig"></a>
 
@@ -2275,7 +2275,7 @@ RawFormat specifies the format for raw resource representation.
  GitLabWebhookReceiverConfig describes a webhook receiver that is compatible with GitLab payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain a `secret-token` key containing the shared secret specified when registering the webhook in GitLab. For more information about this token, please refer to the GitLab documentation:   https://docs.gitlab.com/user/project/integrations/webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The secret is expected to contain a `secret-token` key containing the shared secret specified when registering the webhook in GitLab. For more information about this token, please refer to the GitLab documentation:   https://docs.gitlab.com/user/project/integrations/webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitSubscription"></a>
 
@@ -2304,7 +2304,7 @@ RawFormat specifies the format for raw resource representation.
  GiteaWebhookReceiverConfig describes a webhook receiver that is compatible with Gitea payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Gitea. For more information please refer to the Gitea documentation:   https://docs.gitea.io/en-us/webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Gitea. For more information please refer to the Gitea documentation:   https://docs.gitea.io/en-us/webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig"></a>
 
@@ -2312,7 +2312,7 @@ RawFormat specifies the format for raw resource representation.
  HarborWebhookReceiverConfig describes a webhook receiver that is compatible with Harbor payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation:   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation:   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Health"></a>
 
@@ -2645,7 +2645,7 @@ RawFormat specifies the format for raw resource representation.
  QuayWebhookReceiverConfig describes a webhook receiver that is compatible with Quay.io payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Quay when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Quay webhooks, please refer to the Quay documentation:   https://docs.quay.io/guides/notifications.html   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Quay when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Quay webhooks, please refer to the Quay documentation:   https://docs.quay.io/guides/notifications.html   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-RepoSubscription"></a>
 
