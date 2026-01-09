@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kargo-ui
+  namespace: kargo
+  labels:
+    app.kubernetes.io/component: ui
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/name: kargo
+spec:
+  type: NodePort
+  ports:
+  - name: http
+    port: 3333
+    targetPort: 3333
+    nodePort: 30082
+    protocol: TCP
+  selector:
+    app.kubernetes.io/component: ui
+    app.kubernetes.io/instance: kargo
+    app.kubernetes.io/name: kargo

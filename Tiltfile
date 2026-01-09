@@ -67,6 +67,7 @@ k8s_yaml(
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 k8s_yaml('hack/tilt/ui.yaml')
+k8s_yaml('hack/tilt/ui-service.yaml')
 
 # Setup a namespace and controller permissions for shared credentials.
 k8s_yaml('hack/tilt/shared-creds.yaml')
