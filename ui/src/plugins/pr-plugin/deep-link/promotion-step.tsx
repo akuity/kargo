@@ -8,11 +8,23 @@ import { PromotionDirectiveStepStatus } from '@ui/features/common/promotion-dire
 import { getPromotionStepConfig } from '@ui/plugins/atoms/plugin-helper';
 import { DeepLinkPluginsInstallation } from '@ui/plugins/atoms/plugin-interfaces';
 
-import { getGitProviderLink, getPullRequestLink } from '../get-pr-link';
+import { getGitProviderLink, getPullRequestLink, PR_STEP_TYPES } from '../get-pr-link';
 
 const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
   shouldRender({ step, result }) {
-    return result === PromotionDirectiveStepStatus.SUCCESS && step?.uses === 'git-open-pr';
+    const isPRStep = PR_STEP_TYPES.includes(step?.uses || '');
+    if (!isPRStep) {
+      return false;
+    }
+    // git-open-pr: show link on success
+    // git-wait-for-pr: show link on success OR running (since it outputs PR metadata while waiting)
+    if (step?.uses === 'git-wait-for-pr') {
+      return (
+        result === PromotionDirectiveStepStatus.SUCCESS ||
+        result === PromotionDirectiveStepStatus.RUNNING
+      );
+    }
+    return result === PromotionDirectiveStepStatus.SUCCESS;
   },
   render(props) {
     const stepConfig = useMemo(() => getPromotionStepConfig(props.step), [props.step]);
@@ -24,13 +36,13 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
 
     const nodes: ReactNode[] = [];
 
-    if (provider === 'github') {
+    if (repoURL && provider === 'github') {
       nodes.push(
         <a href={repoURL} target='_blank'>
           <FontAwesomeIcon icon={faGithub} />
         </a>
       );
-    } else if (provider === 'gitlab') {
+    } else if (repoURL && provider === 'gitlab') {
       nodes.push(
         <a href={repoURL} target='_blank'>
           <FontAwesomeIcon icon={faGitlab} />
@@ -40,11 +52,15 @@ const plugin: DeepLinkPluginsInstallation['PromotionStep'] = {
 
     const url = getPullRequestLink(props.output || {});
 
-    nodes.push(
-      <a href={url} target='_blank'>
-        <FontAwesomeIcon icon={faCodePullRequest} />
-      </a>
-    );
+    if (url) {
+      nodes.push(
+        <a href={url} target='_blank'>
+          <FontAwesomeIcon icon={faCodePullRequest} />
+        </a>
+      );
+    }
+
+    if (nodes.length === 0) return null;
 
     return <Flex gap={8}>{nodes}</Flex>;
   }
