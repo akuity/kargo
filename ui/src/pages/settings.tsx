@@ -31,10 +31,10 @@ const settingsViews = {
     component: ClusterPromotionTasks
   },
   clusterSecret: {
-    label: 'Cluster Secrets',
+    label: 'System Secrets',
     icon: faAsterisk,
     component: ClusterSecret,
-    path: 'cluster-secrets'
+    path: 'system-secrets'
   }
 };
 
