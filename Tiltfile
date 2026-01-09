@@ -47,7 +47,9 @@ k8s_resource(
   new_name = 'namespaces',
   objects = [
     'kargo:namespace',
-    'kargo-cluster-secrets:namespace'
+    'kargo-cluster-secrets:namespace',
+    'kargo-shared-resources:namespace',
+    'kargo-system-resources:namespace'
   ],
   labels = ['kargo']
 )
@@ -77,32 +79,28 @@ k8s_resource(
     'kargo-admin:role',
     'kargo-admin:rolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-cluster-secrets-admin:role',
+    'kargo-cluster-secrets-admin:rolebinding',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding',
     'kargo-project-admin:clusterrole',
     'kargo-project-creator:clusterrole',
     'kargo-project-creator:clusterrolebinding',
     'kargo-project-creator:serviceaccount',
     'kargo-project-secrets-reader:clusterrole',
-    'kargo-shared-resources:namespace',
+    'kargo-selfsigned-cert-issuer:issuer',
     'kargo-shared-resources-admin:role',
     'kargo-shared-resources-admin:rolebinding',
+    'kargo-system-resources-reader:role',
+    'kargo-system-resources-admin:role',
+    'kargo-system-resources-reader:rolebinding',
+    'kargo-system-resources-admin:rolebinding',
     'kargo-user:clusterrole',
     'kargo-user:clusterrolebinding',
     'kargo-user:serviceaccount',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
-    'kargo-viewer:clusterrolebinding',
-    'kargo-selfsigned-cert-issuer:issuer'
-  ]
-)
-
-k8s_resource(
-  new_name = 'cluster-secrets',
-  labels = ['kargo'],
-  objects = [
-    'kargo-cluster-secrets-admin:role',
-    'kargo-cluster-secrets-admin:rolebinding',
-    'kargo-cluster-secrets-reader:role',
-    'kargo-cluster-secrets-reader:rolebinding'
+    'kargo-viewer:clusterrolebinding'
   ]
 )
 
@@ -136,6 +134,7 @@ k8s_resource(
     'kargo-controller:serviceaccount',
     'kargo-controller-argocd:clusterrole',
     'kargo-controller-argocd:clusterrolebinding',
+    'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
   ],

@@ -226,7 +226,7 @@ not required to conform to any specific structure. This makes them suitable for
 storing any arbitrary secret data that Projects may depend upon. Projects can
 access such secrets within expressions used by their promotion processes by
 utilizing the
-[`sharedSecret()`](../../50-user-guide/60-reference-docs/40-expressions.md#secretname)
+[`sharedSecret()`](../../50-user-guide/60-reference-docs/40-expressions.md#sharedsecretname)
 expression function.
 
 :::caution

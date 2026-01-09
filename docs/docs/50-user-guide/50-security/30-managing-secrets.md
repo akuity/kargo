@@ -126,20 +126,22 @@ treatment of the secrets topic.
 ### Using Repository Credentials
 
 A unique property of `Secret` resources representing repository credentials is
-that Projects do not (and cannot) reference them directly. Any time Kargo
-accesses a repository, it _automatically_ attempts to locate suitable
-credentials, searching by _repository type and URL._
+is that there is no need to reference them directly. Any time Kargo accesses a
+repository, it _automatically_ attempts to locate suitable credentials,
+searching by _repository type and URL._
 
-:::tip
+Project-level repository credentials _can_ be referenced directly from within an
+expression by utilizing the
+[`secret()`](../../50-user-guide/60-reference-docs/40-expressions.md#secretname)
+expression function.
 
-Because of the above, operators managing a Kargo instance can place repository
-credentials in the **shared resources namespace**, knowing that they can be used
-by all Projects _without their values ever being exposed to users._
+::info
 
-Similarly, a user managing a Project can place repository credentials in a
-Project's own namespace, knowing that elements of the Project, such as
-`Warehouse`s and promotion processes can use those credentials _without their
-values being exposed to users._
+This is in contrast to _shared_ repository credentials from the shared resources
+namespace, which by design, _cannot_ be referenced directly. This limitation
+permits operators managing a Kargo instance to place repository credentials in
+the **shared resources namespace**, knowing that they can be used by all
+Projects _without their values ever being exposed to users._
 
 :::
 
@@ -160,7 +162,8 @@ _Within_ each namespace searched, Kargo considers credentials in this order:
 
 Within each category, `Secret`s are considered in lexical order by name.
 
-The credentials used by Kargo will be the _first_ to match the repository type and URL.
+The credentials used by Kargo will be the _first_ to match the repository type
+and URL.
 
 :::
 
@@ -184,15 +187,22 @@ generic secrets.
 
 ### Using Generic Credentials
 
-In contrast to repository credentials, `Secret` resources representing
-Project-level generic credentials can be accessed directly by name and their
-`data` blocks are not required to conform to any specific structure. This makes
-them suitable for storing any arbitrary secret data a Project may depend upon.
-Elements of a Project that support expressions, such as a promotion process, can
-access such secrets by
-utilizing the
+Generic credentials can be accessed directly by name and their `data` blocks are
+not required to conform to any specific structure. This makes them suitable for
+storing any arbitrary secret data a Project may depend upon. Elements of a
+Project that support expressions, such as a promotion process, can access such
+secrets by utilizing the
 [`secret()`](../../50-user-guide/60-reference-docs/40-expressions.md#secretname)
 expression function.
+
+:::tip
+
+Generic credentials from the shared resources namespace can be accessed using
+the
+[`sharedSecret()`](../../50-user-guide/60-reference-docs/40-expressions.md#sharedsecretname)
+expression function instead.
+
+:::
 
 ## Managing Credentials with the CLI
 
