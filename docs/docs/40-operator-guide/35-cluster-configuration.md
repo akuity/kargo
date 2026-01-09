@@ -80,7 +80,7 @@ receiver vary, and are documented on
 Because `ClusterConfig` resources are _cluster-scoped_ resources and Kubernetes
 has no such thing as a "`ClusterSecret`" resource type (i.e. a cluster-scoped
 analog to `Secret`), Kargo will look for the referenced `Secret` in a designated
-namespace. By default, that namespace is `kargo-cluster-resources`, but can be
+namespace. By default, that namespace is `kargo-system-resources`, but can be
 changed by the operator at the time of installation. (Refer to the
 [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
 )
@@ -91,7 +91,7 @@ changed by the operator at the time of installation. (Refer to the
 
 Prior to `v1.9`, `Secret`s referenced by `ClusterConfig` were contained in the namespace designated by`global.clusterSecretsNamespace`, with a default of `kargo-cluster-secrets`.
 
-Kargo v1.9.0 changed the name of the setting to `global.clusterResourcesNamespace` and its default value to `kargo-cluster-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog.
+Kargo v1.9.0 changed the name of the setting to `global.systemResources.namespace` and its default value to `kargo-system-resources` to better reflect the intent to use the namespace not only for `Secret`s, but for _all_ types of namespaced resources that lack a cluster-scoped analog.
 
 Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync `Secret`s from the namespace specified by `global.clusterSecretsNamespace` to the namespace specified by `global.clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their `ClusterConfig` will need to have updated their manifests accordingly. Upgrades to v1.12.0 will **fail** if `global.clusterSecretsNamespace` remains defined.
 

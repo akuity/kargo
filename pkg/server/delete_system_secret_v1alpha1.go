@@ -11,17 +11,13 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) DeleteClusterSecret(
+func (s *server) DeleteSystemSecret(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteClusterSecretRequest],
-) (*connect.Response[svcv1alpha1.DeleteClusterSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.DeleteSystemSecretRequest],
+) (*connect.Response[svcv1alpha1.DeleteSystemSecretResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
-	}
-
-	if s.cfg.ClusterResourcesNamespace == "" {
-		return nil, connect.NewError(connect.CodeUnimplemented, errClusterResourcesNamespaceNotDefined)
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
 	name := req.Msg.GetName()
@@ -33,7 +29,7 @@ func (s *server) DeleteClusterSecret(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: s.cfg.ClusterResourcesNamespace,
+			Namespace: s.cfg.SystemResourcesNamespace,
 			Name:      name,
 		},
 		secret,
@@ -45,5 +41,5 @@ func (s *server) DeleteClusterSecret(
 		return nil, fmt.Errorf("delete secret: %w", err)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.DeleteClusterSecretResponse{}), nil
+	return connect.NewResponse(&svcv1alpha1.DeleteSystemSecretResponse{}), nil
 }

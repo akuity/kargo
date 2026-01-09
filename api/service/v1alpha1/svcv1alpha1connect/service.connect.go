@@ -261,18 +261,18 @@ const (
 	// KargoServiceListServiceAccountTokensProcedure is the fully-qualified name of the KargoService's
 	// ListServiceAccountTokens RPC.
 	KargoServiceListServiceAccountTokensProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListServiceAccountTokens"
-	// KargoServiceListClusterSecretsProcedure is the fully-qualified name of the KargoService's
-	// ListClusterSecrets RPC.
-	KargoServiceListClusterSecretsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListClusterSecrets"
-	// KargoServiceCreateClusterSecretProcedure is the fully-qualified name of the KargoService's
-	// CreateClusterSecret RPC.
-	KargoServiceCreateClusterSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateClusterSecret"
-	// KargoServiceUpdateClusterSecretProcedure is the fully-qualified name of the KargoService's
-	// UpdateClusterSecret RPC.
-	KargoServiceUpdateClusterSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateClusterSecret"
-	// KargoServiceDeleteClusterSecretProcedure is the fully-qualified name of the KargoService's
-	// DeleteClusterSecret RPC.
-	KargoServiceDeleteClusterSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteClusterSecret"
+	// KargoServiceListSystemSecretsProcedure is the fully-qualified name of the KargoService's
+	// ListSystemSecrets RPC.
+	KargoServiceListSystemSecretsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListSystemSecrets"
+	// KargoServiceCreateSystemSecretProcedure is the fully-qualified name of the KargoService's
+	// CreateSystemSecret RPC.
+	KargoServiceCreateSystemSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateSystemSecret"
+	// KargoServiceUpdateSystemSecretProcedure is the fully-qualified name of the KargoService's
+	// UpdateSystemSecret RPC.
+	KargoServiceUpdateSystemSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateSystemSecret"
+	// KargoServiceDeleteSystemSecretProcedure is the fully-qualified name of the KargoService's
+	// DeleteSystemSecret RPC.
+	KargoServiceDeleteSystemSecretProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteSystemSecret"
 )
 
 // These variables are the protoreflect.Descriptor objects for the RPCs defined in this package.
@@ -359,10 +359,10 @@ var (
 	kargoServiceDeleteServiceAccountTokenMethodDescriptor     = kargoServiceServiceDescriptor.Methods().ByName("DeleteServiceAccountToken")
 	kargoServiceGetServiceAccountTokenMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("GetServiceAccountToken")
 	kargoServiceListServiceAccountTokensMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("ListServiceAccountTokens")
-	kargoServiceListClusterSecretsMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("ListClusterSecrets")
-	kargoServiceCreateClusterSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("CreateClusterSecret")
-	kargoServiceUpdateClusterSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("UpdateClusterSecret")
-	kargoServiceDeleteClusterSecretMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("DeleteClusterSecret")
+	kargoServiceListSystemSecretsMethodDescriptor             = kargoServiceServiceDescriptor.Methods().ByName("ListSystemSecrets")
+	kargoServiceCreateSystemSecretMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("CreateSystemSecret")
+	kargoServiceUpdateSystemSecretMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("UpdateSystemSecret")
+	kargoServiceDeleteSystemSecretMethodDescriptor            = kargoServiceServiceDescriptor.Methods().ByName("DeleteSystemSecret")
 )
 
 // KargoServiceClient is a client for the akuity.io.kargo.service.v1alpha1.KargoService service.
@@ -544,14 +544,14 @@ type KargoServiceClient interface {
 	// ListServiceAccountTokens lists bearer tokens associated with
 	// with a specified Kargo ServiceAccount.
 	ListServiceAccountTokens(context.Context, *connect.Request[v1alpha1.ListServiceAccountTokensRequest]) (*connect.Response[v1alpha1.ListServiceAccountTokensResponse], error)
-	// ListClusterSecrets retrieves all cluster-scoped secrets.
-	ListClusterSecrets(context.Context, *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error)
-	// CreateClusterSecret creates a new cluster-scoped secret.
-	CreateClusterSecret(context.Context, *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error)
-	// UpdateClusterSecret modifies an existing cluster-scoped secret.
-	UpdateClusterSecret(context.Context, *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error)
-	// DeleteClusterSecret removes a cluster-scoped secret.
-	DeleteClusterSecret(context.Context, *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error)
+	// ListSystemSecrets retrieves all "cluster-scoped" system secrets.
+	ListSystemSecrets(context.Context, *connect.Request[v1alpha1.ListSystemSecretsRequest]) (*connect.Response[v1alpha1.ListSystemSecretsResponse], error)
+	// CreateSystemSecret creates a new "cluster-scoped" system secret.
+	CreateSystemSecret(context.Context, *connect.Request[v1alpha1.CreateSystemSecretRequest]) (*connect.Response[v1alpha1.CreateSystemSecretResponse], error)
+	// UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
+	UpdateSystemSecret(context.Context, *connect.Request[v1alpha1.UpdateSystemSecretRequest]) (*connect.Response[v1alpha1.UpdateSystemSecretResponse], error)
+	// DeleteSystemSecret removes a "cluster-scoped" system secret.
+	DeleteSystemSecret(context.Context, *connect.Request[v1alpha1.DeleteSystemSecretRequest]) (*connect.Response[v1alpha1.DeleteSystemSecretResponse], error)
 }
 
 // NewKargoServiceClient constructs a client for the akuity.io.kargo.service.v1alpha1.KargoService
@@ -1050,28 +1050,28 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceListServiceAccountTokensMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		listClusterSecrets: connect.NewClient[v1alpha1.ListClusterSecretsRequest, v1alpha1.ListClusterSecretsResponse](
+		listSystemSecrets: connect.NewClient[v1alpha1.ListSystemSecretsRequest, v1alpha1.ListSystemSecretsResponse](
 			httpClient,
-			baseURL+KargoServiceListClusterSecretsProcedure,
-			connect.WithSchema(kargoServiceListClusterSecretsMethodDescriptor),
+			baseURL+KargoServiceListSystemSecretsProcedure,
+			connect.WithSchema(kargoServiceListSystemSecretsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		createClusterSecret: connect.NewClient[v1alpha1.CreateClusterSecretRequest, v1alpha1.CreateClusterSecretResponse](
+		createSystemSecret: connect.NewClient[v1alpha1.CreateSystemSecretRequest, v1alpha1.CreateSystemSecretResponse](
 			httpClient,
-			baseURL+KargoServiceCreateClusterSecretProcedure,
-			connect.WithSchema(kargoServiceCreateClusterSecretMethodDescriptor),
+			baseURL+KargoServiceCreateSystemSecretProcedure,
+			connect.WithSchema(kargoServiceCreateSystemSecretMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		updateClusterSecret: connect.NewClient[v1alpha1.UpdateClusterSecretRequest, v1alpha1.UpdateClusterSecretResponse](
+		updateSystemSecret: connect.NewClient[v1alpha1.UpdateSystemSecretRequest, v1alpha1.UpdateSystemSecretResponse](
 			httpClient,
-			baseURL+KargoServiceUpdateClusterSecretProcedure,
-			connect.WithSchema(kargoServiceUpdateClusterSecretMethodDescriptor),
+			baseURL+KargoServiceUpdateSystemSecretProcedure,
+			connect.WithSchema(kargoServiceUpdateSystemSecretMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
-		deleteClusterSecret: connect.NewClient[v1alpha1.DeleteClusterSecretRequest, v1alpha1.DeleteClusterSecretResponse](
+		deleteSystemSecret: connect.NewClient[v1alpha1.DeleteSystemSecretRequest, v1alpha1.DeleteSystemSecretResponse](
 			httpClient,
-			baseURL+KargoServiceDeleteClusterSecretProcedure,
-			connect.WithSchema(kargoServiceDeleteClusterSecretMethodDescriptor),
+			baseURL+KargoServiceDeleteSystemSecretProcedure,
+			connect.WithSchema(kargoServiceDeleteSystemSecretMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 	}
@@ -1160,10 +1160,10 @@ type kargoServiceClient struct {
 	deleteServiceAccountToken     *connect.Client[v1alpha1.DeleteServiceAccountTokenRequest, v1alpha1.DeleteServiceAccountTokenResponse]
 	getServiceAccountToken        *connect.Client[v1alpha1.GetServiceAccountTokenRequest, v1alpha1.GetServiceAccountTokenResponse]
 	listServiceAccountTokens      *connect.Client[v1alpha1.ListServiceAccountTokensRequest, v1alpha1.ListServiceAccountTokensResponse]
-	listClusterSecrets            *connect.Client[v1alpha1.ListClusterSecretsRequest, v1alpha1.ListClusterSecretsResponse]
-	createClusterSecret           *connect.Client[v1alpha1.CreateClusterSecretRequest, v1alpha1.CreateClusterSecretResponse]
-	updateClusterSecret           *connect.Client[v1alpha1.UpdateClusterSecretRequest, v1alpha1.UpdateClusterSecretResponse]
-	deleteClusterSecret           *connect.Client[v1alpha1.DeleteClusterSecretRequest, v1alpha1.DeleteClusterSecretResponse]
+	listSystemSecrets             *connect.Client[v1alpha1.ListSystemSecretsRequest, v1alpha1.ListSystemSecretsResponse]
+	createSystemSecret            *connect.Client[v1alpha1.CreateSystemSecretRequest, v1alpha1.CreateSystemSecretResponse]
+	updateSystemSecret            *connect.Client[v1alpha1.UpdateSystemSecretRequest, v1alpha1.UpdateSystemSecretResponse]
+	deleteSystemSecret            *connect.Client[v1alpha1.DeleteSystemSecretRequest, v1alpha1.DeleteSystemSecretResponse]
 }
 
 // GetVersionInfo calls akuity.io.kargo.service.v1alpha1.KargoService.GetVersionInfo.
@@ -1582,24 +1582,24 @@ func (c *kargoServiceClient) ListServiceAccountTokens(ctx context.Context, req *
 	return c.listServiceAccountTokens.CallUnary(ctx, req)
 }
 
-// ListClusterSecrets calls akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets.
-func (c *kargoServiceClient) ListClusterSecrets(ctx context.Context, req *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error) {
-	return c.listClusterSecrets.CallUnary(ctx, req)
+// ListSystemSecrets calls akuity.io.kargo.service.v1alpha1.KargoService.ListSystemSecrets.
+func (c *kargoServiceClient) ListSystemSecrets(ctx context.Context, req *connect.Request[v1alpha1.ListSystemSecretsRequest]) (*connect.Response[v1alpha1.ListSystemSecretsResponse], error) {
+	return c.listSystemSecrets.CallUnary(ctx, req)
 }
 
-// CreateClusterSecret calls akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret.
-func (c *kargoServiceClient) CreateClusterSecret(ctx context.Context, req *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error) {
-	return c.createClusterSecret.CallUnary(ctx, req)
+// CreateSystemSecret calls akuity.io.kargo.service.v1alpha1.KargoService.CreateSystemSecret.
+func (c *kargoServiceClient) CreateSystemSecret(ctx context.Context, req *connect.Request[v1alpha1.CreateSystemSecretRequest]) (*connect.Response[v1alpha1.CreateSystemSecretResponse], error) {
+	return c.createSystemSecret.CallUnary(ctx, req)
 }
 
-// UpdateClusterSecret calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret.
-func (c *kargoServiceClient) UpdateClusterSecret(ctx context.Context, req *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error) {
-	return c.updateClusterSecret.CallUnary(ctx, req)
+// UpdateSystemSecret calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateSystemSecret.
+func (c *kargoServiceClient) UpdateSystemSecret(ctx context.Context, req *connect.Request[v1alpha1.UpdateSystemSecretRequest]) (*connect.Response[v1alpha1.UpdateSystemSecretResponse], error) {
+	return c.updateSystemSecret.CallUnary(ctx, req)
 }
 
-// DeleteClusterSecret calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret.
-func (c *kargoServiceClient) DeleteClusterSecret(ctx context.Context, req *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error) {
-	return c.deleteClusterSecret.CallUnary(ctx, req)
+// DeleteSystemSecret calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteSystemSecret.
+func (c *kargoServiceClient) DeleteSystemSecret(ctx context.Context, req *connect.Request[v1alpha1.DeleteSystemSecretRequest]) (*connect.Response[v1alpha1.DeleteSystemSecretResponse], error) {
+	return c.deleteSystemSecret.CallUnary(ctx, req)
 }
 
 // KargoServiceHandler is an implementation of the akuity.io.kargo.service.v1alpha1.KargoService
@@ -1782,14 +1782,14 @@ type KargoServiceHandler interface {
 	// ListServiceAccountTokens lists bearer tokens associated with
 	// with a specified Kargo ServiceAccount.
 	ListServiceAccountTokens(context.Context, *connect.Request[v1alpha1.ListServiceAccountTokensRequest]) (*connect.Response[v1alpha1.ListServiceAccountTokensResponse], error)
-	// ListClusterSecrets retrieves all cluster-scoped secrets.
-	ListClusterSecrets(context.Context, *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error)
-	// CreateClusterSecret creates a new cluster-scoped secret.
-	CreateClusterSecret(context.Context, *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error)
-	// UpdateClusterSecret modifies an existing cluster-scoped secret.
-	UpdateClusterSecret(context.Context, *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error)
-	// DeleteClusterSecret removes a cluster-scoped secret.
-	DeleteClusterSecret(context.Context, *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error)
+	// ListSystemSecrets retrieves all "cluster-scoped" system secrets.
+	ListSystemSecrets(context.Context, *connect.Request[v1alpha1.ListSystemSecretsRequest]) (*connect.Response[v1alpha1.ListSystemSecretsResponse], error)
+	// CreateSystemSecret creates a new "cluster-scoped" system secret.
+	CreateSystemSecret(context.Context, *connect.Request[v1alpha1.CreateSystemSecretRequest]) (*connect.Response[v1alpha1.CreateSystemSecretResponse], error)
+	// UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
+	UpdateSystemSecret(context.Context, *connect.Request[v1alpha1.UpdateSystemSecretRequest]) (*connect.Response[v1alpha1.UpdateSystemSecretResponse], error)
+	// DeleteSystemSecret removes a "cluster-scoped" system secret.
+	DeleteSystemSecret(context.Context, *connect.Request[v1alpha1.DeleteSystemSecretRequest]) (*connect.Response[v1alpha1.DeleteSystemSecretResponse], error)
 }
 
 // NewKargoServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -2284,28 +2284,28 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceListServiceAccountTokensMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	kargoServiceListClusterSecretsHandler := connect.NewUnaryHandler(
-		KargoServiceListClusterSecretsProcedure,
-		svc.ListClusterSecrets,
-		connect.WithSchema(kargoServiceListClusterSecretsMethodDescriptor),
+	kargoServiceListSystemSecretsHandler := connect.NewUnaryHandler(
+		KargoServiceListSystemSecretsProcedure,
+		svc.ListSystemSecrets,
+		connect.WithSchema(kargoServiceListSystemSecretsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	kargoServiceCreateClusterSecretHandler := connect.NewUnaryHandler(
-		KargoServiceCreateClusterSecretProcedure,
-		svc.CreateClusterSecret,
-		connect.WithSchema(kargoServiceCreateClusterSecretMethodDescriptor),
+	kargoServiceCreateSystemSecretHandler := connect.NewUnaryHandler(
+		KargoServiceCreateSystemSecretProcedure,
+		svc.CreateSystemSecret,
+		connect.WithSchema(kargoServiceCreateSystemSecretMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	kargoServiceUpdateClusterSecretHandler := connect.NewUnaryHandler(
-		KargoServiceUpdateClusterSecretProcedure,
-		svc.UpdateClusterSecret,
-		connect.WithSchema(kargoServiceUpdateClusterSecretMethodDescriptor),
+	kargoServiceUpdateSystemSecretHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateSystemSecretProcedure,
+		svc.UpdateSystemSecret,
+		connect.WithSchema(kargoServiceUpdateSystemSecretMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
-	kargoServiceDeleteClusterSecretHandler := connect.NewUnaryHandler(
-		KargoServiceDeleteClusterSecretProcedure,
-		svc.DeleteClusterSecret,
-		connect.WithSchema(kargoServiceDeleteClusterSecretMethodDescriptor),
+	kargoServiceDeleteSystemSecretHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteSystemSecretProcedure,
+		svc.DeleteSystemSecret,
+		connect.WithSchema(kargoServiceDeleteSystemSecretMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	return "/akuity.io.kargo.service.v1alpha1.KargoService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -2472,14 +2472,14 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceGetServiceAccountTokenHandler.ServeHTTP(w, r)
 		case KargoServiceListServiceAccountTokensProcedure:
 			kargoServiceListServiceAccountTokensHandler.ServeHTTP(w, r)
-		case KargoServiceListClusterSecretsProcedure:
-			kargoServiceListClusterSecretsHandler.ServeHTTP(w, r)
-		case KargoServiceCreateClusterSecretProcedure:
-			kargoServiceCreateClusterSecretHandler.ServeHTTP(w, r)
-		case KargoServiceUpdateClusterSecretProcedure:
-			kargoServiceUpdateClusterSecretHandler.ServeHTTP(w, r)
-		case KargoServiceDeleteClusterSecretProcedure:
-			kargoServiceDeleteClusterSecretHandler.ServeHTTP(w, r)
+		case KargoServiceListSystemSecretsProcedure:
+			kargoServiceListSystemSecretsHandler.ServeHTTP(w, r)
+		case KargoServiceCreateSystemSecretProcedure:
+			kargoServiceCreateSystemSecretHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateSystemSecretProcedure:
+			kargoServiceUpdateSystemSecretHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteSystemSecretProcedure:
+			kargoServiceDeleteSystemSecretHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -2813,18 +2813,18 @@ func (UnimplementedKargoServiceHandler) ListServiceAccountTokens(context.Context
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) ListClusterSecrets(context.Context, *connect.Request[v1alpha1.ListClusterSecretsRequest]) (*connect.Response[v1alpha1.ListClusterSecretsResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets is not implemented"))
+func (UnimplementedKargoServiceHandler) ListSystemSecrets(context.Context, *connect.Request[v1alpha1.ListSystemSecretsRequest]) (*connect.Response[v1alpha1.ListSystemSecretsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListSystemSecrets is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) CreateClusterSecret(context.Context, *connect.Request[v1alpha1.CreateClusterSecretRequest]) (*connect.Response[v1alpha1.CreateClusterSecretResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret is not implemented"))
+func (UnimplementedKargoServiceHandler) CreateSystemSecret(context.Context, *connect.Request[v1alpha1.CreateSystemSecretRequest]) (*connect.Response[v1alpha1.CreateSystemSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateSystemSecret is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) UpdateClusterSecret(context.Context, *connect.Request[v1alpha1.UpdateClusterSecretRequest]) (*connect.Response[v1alpha1.UpdateClusterSecretResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret is not implemented"))
+func (UnimplementedKargoServiceHandler) UpdateSystemSecret(context.Context, *connect.Request[v1alpha1.UpdateSystemSecretRequest]) (*connect.Response[v1alpha1.UpdateSystemSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateSystemSecret is not implemented"))
 }
 
-func (UnimplementedKargoServiceHandler) DeleteClusterSecret(context.Context, *connect.Request[v1alpha1.DeleteClusterSecretRequest]) (*connect.Response[v1alpha1.DeleteClusterSecretResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret is not implemented"))
+func (UnimplementedKargoServiceHandler) DeleteSystemSecret(context.Context, *connect.Request[v1alpha1.DeleteSystemSecretRequest]) (*connect.Response[v1alpha1.DeleteSystemSecretResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteSystemSecret is not implemented"))
 }

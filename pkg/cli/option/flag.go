@@ -106,6 +106,9 @@ const (
 	// RoleFlag is the flag name for the role flag.
 	RoleFlag = "role"
 
+	// SharedFlag is the flag name for the shared flag.
+	SharedFlag = "shared"
+
 	// ServiceAccountFlag is the flag name for the service-account flag.
 	ServiceAccountFlag = "service-account"
 
@@ -296,6 +299,11 @@ func ResourceType(fs *pflag.FlagSet, repoType *string, usage string) {
 // Role adds the RoleFlag to the provided flag set.
 func Role(fs *pflag.FlagSet, role *string, usage string) {
 	fs.StringVar(role, RoleFlag, "", usage)
+}
+
+// Shared adds the SharedFlag to the provided flag set.
+func Shared(fs *pflag.FlagSet, shared *bool, defaultShared bool, usage string) {
+	fs.BoolVar(shared, SharedFlag, defaultShared, usage)
 }
 
 // ServiceAccount adds the ServiceAccountFlag to the provided flag set.

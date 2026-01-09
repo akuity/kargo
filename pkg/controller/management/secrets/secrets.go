@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -22,21 +21,21 @@ import (
 )
 
 type ReconcilerConfig struct {
-	SourceNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE" default:"kargo-cluster-secrets"`
-	DestinationNamespace string `envconfig:"CLUSTER_RESOURCES_NAMESPACE" default:"kargo-cluster-resources"`
-}
-
-func ReconcilerConfigFromEnv() ReconcilerConfig {
-	cfg := ReconcilerConfig{}
-	envconfig.MustProcess("", &cfg)
-	return cfg
+	ControllerName       string
+	SourceNamespace      string
+	DestinationNamespace string
 }
 
 // reconciler copies Secret resources from a source namespace to a destination
-// namespace on a continuous basis. This is to ease the transition from a
-// conceptual "cluster secrets namespace" with a default value of
-// "kargo-cluster-secrets" to a more broadly purposed "cluster resources
-// namespace" with a default value of "kargo-cluster-resources".
+// namespace on a continuous basis. This is to ease the transition from:
+//
+//   - A conceptual "cluster secrets namespace" with a default value of
+//     "kargo-cluster-secrets" to a more broadly purposed "system resources
+//     namespace" with a default value of "kargo-system-resources".
+//
+//   - Conceptual "global credentials namespace(s)" to a more broadly purposed
+//     "shared resources namespace" with a default value of
+//     "kargo-shared-resources".
 //
 // TODO(krancour): Remove this reconciler in v1.12.0. By that time, affected
 // users are expected to have made any necessary configuration to obviate the
@@ -54,14 +53,21 @@ func SetupReconcilerWithManager(
 	cfg ReconcilerConfig,
 ) error {
 	err := ctrl.NewControllerManagedBy(kargoMgr).
+		Named(cfg.ControllerName).
 		For(&corev1.Secret{}).
 		WithEventFilter(
-			predicate.Funcs{
-				DeleteFunc: func(event.DeleteEvent) bool {
-					// We're not interested in any deletes
-					return false
+			predicate.And(
+				predicate.Funcs{
+					DeleteFunc: func(event.DeleteEvent) bool {
+						// We're not interested in any deletes
+						return false
+					},
 				},
-			},
+				// Only reconcile Secrets from the source namespace
+				predicate.NewPredicateFuncs(func(obj client.Object) bool {
+					return obj.GetNamespace() == cfg.SourceNamespace
+				}),
+			),
 		).
 		Complete(newReconciler(kargoMgr.GetClient(), cfg))
 	if err == nil {

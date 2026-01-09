@@ -1,4 +1,4 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kargo-cluster-secrts
+  name: kargo-system-resources

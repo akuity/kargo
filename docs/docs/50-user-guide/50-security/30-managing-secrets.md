@@ -1,32 +1,52 @@
 ---
-description: Learn to manage repository credentials used by your projects
-sidebar_label: Managing Credentials
+description: Learn to manage secrets used by your projects
+sidebar_label: Managing Secrets
 ---
 
-# Managing Credentials
+# Managing Secrets
 
-Kargo `Warehouse`s frequently require read-only access to private repositories.
-Promotion processes often require this as well, and may also require read/write
-access to Git repositories.
+Kargo Projects use Kubernetes `Secret` resources to store repository credentials
+and other types of sensitive data, such as API keys for third-party services.
 
-This section presents an overview of how users can manage and use such
-credentials within their Kargo Projects.
+It is crucial that users managing Kargo Projects understand how `Secret`s are
+organized and accessed.
 
 :::info[Not what you were looking for?]
 
-If you're an operator looking to understand your role in managing
-credentials, you may find a some value in this document, but should
-refer also to the
-[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+If you're an operator looking to understand your role in managing repository
+credentials and other secrets, you may find a some value in this document, but
+should refer primarily to the
+[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
 section of the Operator's Guide.
 
 :::
 
-## Repository Credentials as `Secret` Resources
+## Overview
 
-Kargo expects repository credentials it uses to have been stored as specially
-labeled Kubernetes `Secret` resources containing specially-formatted data. These
-`Secret`s generally take the following form:
+Users managing Kargo Projects will find themselves concerned with secrets
+falling into one of two broad categories:
+
+* **Repository credentials:** Secrets specifically representing credentials for
+  the three types of repositories supported by Kargo: Git repositories,
+  container image repositories, and Helm chart repositories.
+
+* **"Generic credentials":** Any secrets that are not specifically repository
+  credentials.
+
+:::info
+
+The misnomer "generic _credentials_" is used for historical reasons, but nothing
+limits these to storing _only_ credentials. In actuality, they can be any sort
+of sensitive information. So although they are called "generic credentials,"
+they are best thought of in more general terms as, simply, generic secrets.
+
+:::
+
+## Repository Credentials
+
+Kargo expects `Secret` resources representing repository credentials to be
+labeled in specific ways and to conform to a specific format. Such `Secret`s
+generally take the following form:
 
 ```yaml
 apiVersion: v1
@@ -36,121 +56,152 @@ metadata:
   namespace: <project namespace>
   labels:
     kargo.akuity.io/cred-type: <type>
-stringData:
+data: # base64 encoded
   repoURL: <repo url>
   username: <username>
   password: <password>
 ```
 
+The label key `kargo.akuity.io/cred-type`, together with its value, specify the
+_type_ of the repository accessed with the credential:
+
+* `git`: Credentials for Git repositories
+* `helm`: Credentials for Helm chart repositories
+* `image`: Credentials for container image repositories
+
+`Secret`s representing repository credentials MUST include the key `repoURL` in
+their `data` block. Its value may be either a full, exact URL **OR** a regular
+expression matching the URLs of multiple repositories for which the credentials
+are valid, in which case, the `data` block must also contain the key/value pair
+`repoURLIsRegex: "true"`.
+
+The remaining key/value pairs in such a `Secret`'s `data` block are dependent
+upon exactly what kind of credential the `Secret` represents. Commonly, they may
+be:
+
+* `username`: The username to use when authenticating to the repository
+
+* `password`: A password or **personal access token**
+
+  :::info
+
+  If the value of the `password` key is a **personal access token**, the value
+  of the `username` field is often inconsequential. You should consult your
+  repository's documentation for more information.
+
+  :::
+
+Alternatively, for Git repositories only (and specifically ones that support
+SSH-style URLs of the form `git@github.com:example/repo.git`), the key
+`sshPrivateKey` in the `Secret`'s `data` block may have as its value a
+PEM-encoded SSH private key.
+
+:::warning[Not Recommended]
+
+While an SSH private key is an adequate credential for basic Git operations that
+are formally part of the Git specification (i.e. `clone`, `checkout`, etc.), the
+proprietary APIs offered by the major git hosting platforms (e.g. GitHub or
+GitLab) to enable actions such as opening or closing pull requests are
+invariably HTTP-based and therefore cannot use an SSH private key for
+authentication.
+
+If your Project will create or merge pull request, which is common, rather than
+using an SSH private key for basic Git operations and a second credential, such
+as a personal access token, for API calls, the Kargo team recommends using a
+single credential that works for both -- and an SSH private key is not such a
+credential.
+
+:::
+
+:::info[Credential Shapes]
+
+`Secret` resources representing repository credentials come in a wide variety of
+other "shapes" (different keys in the `data` block) for use with various
+authentication mechanisms. The details of each are covered in their own,
+dedicated sections toward the end of this document, following a more general
+treatment of the secrets topic.
+
+:::
+
+### Using Repository Credentials
+
+A unique property of `Secret` resources representing repository credentials is
+that Projects do not (and cannot) reference them directly. Any time Kargo
+accesses a repository, it _automatically_ attempts to locate suitable
+credentials, searching by _repository type and URL._
+
+:::tip
+
+Because of the above, operators managing a Kargo instance can place repository
+credentials in the **shared resources namespace**, knowing that they can be used
+by all Projects _without their values ever being exposed to users._
+
+Similarly, a user managing a Project can place repository credentials in a
+Project's own namespace, knowing that elements of the Project, such as
+`Warehouse`s and promotion processes can use those credentials _without their
+values being exposed to users._
+
+:::
+
+When Kargo needs repository credentials, it searches for `Secret`s in _two_
+specific namespaces, in the following order:
+
+1. **Project namespace**: Kargo searches the Project's own namespace first.
+
+2. **Shared resources namespace**: If no match is found in the Project's own
+   namespace, Kargo searches the **shared resources namespace.**
+
+:::info[Credential Matching Precedence]
+
+_Within_ each namespace searched, Kargo considers credentials in this order:
+
+1. Exact `repoURL` matches (where `repoURLIsRegex` is `"false"` or unspecified)
+2. Pattern matches using regex (where `repoURLIsRegex` is `"true"`)
+
+Within each category, `Secret`s are considered in lexical order by name.
+
+The credentials used by Kargo will be the _first_ to match the repository type and URL.
+
+:::
+
+## Generic Credentials
+
+"Generic credentials" (a misnomer) are any secrets that are not specifically
+repository credentials.
+
+`Secret` resources representing generic credentials MUST be labeled with
+`kargo.akuity.io/cred-type: generic`.
+
 :::info
 
-`Secret`s defined within a project's namespace are accessible only to
-`Warehouse`s and `Promotion`s within that project.
+The misnomer "generic _credentials_" is used for historical reasons, but
+nothing limits these to storing _only_ credentials. In actuality, they can
+be any sort of sensitive information. So although they are called "generic
+credentials," they are best thought of in more general terms as, simply,
+generic secrets.
 
 :::
 
-The names of `Secret` resources are inconsequential because Kargo matches
-credentials to repositories by repository type and URL. `Secret` names may
-therefore observe any naming convention preferred by the user.
+### Using Generic Credentials
 
-The label key `kargo.akuity.io/cred-type` and its value, one of `git`, `helm`,
-`image`, or `generic` are important, as they designates a `Secret` as
-representing credentials for a Git, Helm chart, or container image repository,
-or _something else_, respectively.
-
-:::info
-
-Despite the appearance of "cred-type" in the label key, `Secret`s labeled as
-`generic` do not actually need to represent credentials. They could contain
-_any_ kind of sensitive information used in your promotion processes. Managing
-such `Secret`s is covered separately in
-[Managing Other Secrets](../50-security/40-managing-other-secrets.md).
-
-:::
-
-`Secret`s labeled as `git`, `image`, or `helm` credentials must generally
-contain the following keys:
-
-* `repoURL`:
-  
-  * The full URL of the repository the credentials are for.
-
-  OR
-
-  * A regular expression matching the URLs of multiple repositories for which
-    the credentials may be used, with the `repoURLIsRegex` key additionally set
-    to `true`.
-
-    :::info
-
-    This is useful if, for example, your project accesses many GitHub
-    repositories, all beginning with `https://github.com/example-org`, and can
-    use the same token for accessing all of them.
-
-    :::
-
-* Either:
-
-  * `username`: The username to use when authenticating to the repository.
-
-  * `password`: A password or personal access token.
-
-  OR:
-
-  * `sshPrivateKey`: A PEM-encoded SSH private key. Applicable only to Git
-    repositories using SSH-style URLs -- for instance
-    `git@github.com:example/repo.git`.
-
-:::info
-
-Exceptions to the formatting discussed above are covered in later sections.
-
-:::
-
-
-:::info[Precedence]
-
-When Kargo searches for repository credentials in a project's namespace, it
-_first_ iterates over all appropriately labeled `Secret`s _without_
-`repoURLIsRegex` set to `true` looking for a `repoURL` value matching the
-repository URL exactly.
-
-Only if no exact match is found does it iterate over all
-appropriately labeled `Secret`s with `repoURLIsRegex` set to `true` looking for
-a regular expression matching the repository URL.
-
-When searching for an exact match, and then again when searching for a pattern
-match, appropriately labeled `Secret`s are considered in lexical order by name.
-
-:::
-
-## Global Credentials
-
-In cases where one or more sets of credentials are needed widely across many or
-all Kargo projects, an operator may opt into designating one or more namespaces
-as containing "global" credentials, accessible to all projects. If you are an
-operator looking for more information on this topic, please refer to the
-[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
-section of the Operator Guide.
-
-When Kargo searches for repository credentials, these additional namespaces are
-searched only _after_ finding no matching credentials in the project's own
-namespace.
+In contrast to repository credentials, `Secret` resources representing
+Project-level generic credentials can be accessed directly by name and their
+`data` blocks are not required to conform to any specific structure. This makes
+them suitable for storing any arbitrary secret data a Project may depend upon.
+Elements of a Project that support expressions, such as a promotion process, can
+access such secrets by
+utilizing the
+[`secret()`](../../50-user-guide/60-reference-docs/40-expressions.md#secretname)
+expression function.
 
 ## Managing Credentials with the CLI
 
 Unless the operator has disabled it, users with the appropriate permissions can
-manage project-level credentials using either the UI or CLI.
-
-:::info
-
-UI-based instructions coming soon.
-
-:::
+manage Project-level credentials using either the UI or CLI.
 
 :::caution
 
-While the UI or CLI may be a fine way of managing project-level credentials
+While the UI or CLI may be a fine way of managing Project-level credentials
 whilst getting to know Kargo, it is unquestionably more secure to use other
 means to ensure the existence of these specially-formatted `Secret`s.
 
@@ -158,7 +209,7 @@ For precisely this reason, the operator managing your Kargo installation may
 very well have disabled the ability to manage credentials using the UI and CLI.
 
 If this is the case, managing your credentials is likely to involve GitOps'ing
-your Kargo projects and also leveraging additional tools such as
+your Kargo Projects and also leveraging additional tools such as
 [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) or the
 [External Secrets Operator](https://external-secrets.io/latest/).
 
@@ -291,7 +342,7 @@ GitHub supports authentication using a
 which can be used in place of a password. The corresponding username must be
 the GitHub handle of the user who created the token. These can be stored in
 the `username` and `password` fields of a `Secret` resource as described
-[in the first section](#repository-credentials-as-secret-resources) of this
+[in the first section](#repository-credentials) of this
 document.
 
 :::info
@@ -418,30 +469,31 @@ App is that the App's permissions are not tied to a specific GitHub user.
 It is easy to violate the principle of least privilege when authenticating using
 GitHub Apps.
 
-For convenience’s sake, it may be tempting to register a single GitHub App,
+For convenience's sake, it may be tempting to register a single GitHub App,
 select a broad set of repositories when installing that App, then create a
-single set of [global credentials](#global-credentials), _however_, this will
-have the undesirable effect of granting _all_ Kargo projects access to _all_ of
-the selected repositories.
+single set of
+[shared credentials](../../40-operator-guide/40-security/40-managing-secrets.md#repository-credentials),
+_however_, this will have the undesirable effect of granting _all_ Kargo
+Projects access to _all_ of the selected repositories.
 
 Alternatively, you might consider registering a _separate_ GitHub App for each
-Kargo project, selecting a narrower set of repositories when installing each
-App, then creating corresponding Secrets in individual project namespaces.
+Kargo Project, selecting a narrower set of repositories when installing each
+App, then creating corresponding Secrets in individual Project namespaces.
 While this better adheres to the principle of least privilege, it can be
 onerous to manage. Worse, because GitHub organizations are limited to
 registering 100 GitHub Apps each, the approach does not scale beyond 100
-projects.
+Projects.
 
 Beginning with Kargo v1.8.0, a third, experimental (stability not guaranteed)
 approach builds upon the first, by adding an optional annotation to the
-[global credentials](#global-credentials) `Secret` containing a map that
-constrains the scopes (repositories) available to each project.
+[shared credentials](../../40-operator-guide/40-security/40-managing-secrets.md#repository-credentials) `Secret` containing a map that
+constrains the scopes (repositories) available to each Project.
 
 In the following example, the credentials defined by the `github` `Secret` in
-the `shared-credentials` namespace are available to all Kargo projects, however,
-the `kargo-demo-1` project is able to obtain access tokens scoped to either
-`repo-a` or `repo-b` only, while the `kargo-demo-2` project is able to obtain
-access tokens scoped to `repo-c` only. No other project is able to obtain access
+the shared credentials namespace are available to all Kargo Projects, however,
+the `kargo-demo-1` Project is able to obtain access tokens scoped to either
+`repo-a` or `repo-b` only, while the `kargo-demo-2` Project is able to obtain
+access tokens scoped to `repo-c` only. No other Project is able to obtain access
 tokens scoped to _any_ repository.
 
 ```yaml
@@ -449,7 +501,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: github
-  namespace: shared-credentials
+  namespace: kargo-shared-credentials
   labels:
     kargo.akuity.io/cred-type: git
     annotations:
@@ -538,7 +590,7 @@ in a `Secret` resource.
 Both of these options rely upon extensive external configuration that likely
 requires the assistance of Kargo's operator and an AWS account administrator,
 and as such, further details are covered in the
-[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
 section of the Operator Guide.
 
 :::
@@ -557,11 +609,11 @@ Google Artifact Registry does _directly_ support long-lived credentials
 [as described here](https://cloud.google.com/artifact-registry/docs/docker/authentication#json-key).
 The username `_json_key_base64` and the base64-encoded service account key
 may be stored in the `username` and `password` fields of a `Secret` resource as
-described [in the first section](#repository-credentials-as-secret-resources) of
+described [in the first section](#repository-credentials) of
 this document.
 
-__Google strongly discourages this method of authentication however, and so do
-we.__
+**Google strongly discourages this method of authentication however, and so do
+we.**
 
 :::
 
@@ -645,7 +697,7 @@ option eliminates the need to store credentials in a `Secret` resource.
 This option relies upon extensive external configuration that likely requires
 the assistance of Kargo's operator and a GCP project administrator, and as such,
 further coverage is delegated to the
-[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
 section of the Operator Guide.
 
 :::
@@ -663,7 +715,7 @@ It is possible to
 [create tokens with repository-scoped permissions](https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repository-scoped-permissions),
 with or without an expiration date. These tokens can be stored in the
 `username` and `password` fields of a `Secret` resource as described
-[in the first section](#repository-credentials-as-secret-resources) of this
+[in the first section](#repository-credentials) of this
 document.
 
 :::caution
@@ -698,7 +750,7 @@ in a `Secret` resource.
 This option relies upon extensive external configuration that likely requires
 the assistance of Kargo's operator and an Azure administrator, and as such,
 further coverage is delegated to the
-[Managing Credentials](../../40-operator-guide/40-security/40-managing-credentials.md)
+[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
 section of the Operator Guide.
 
 :::

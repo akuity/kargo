@@ -45,11 +45,11 @@ func (s *server) CreateCredentials(
 		password:       req.Msg.GetPassword(),
 	}
 
-	if err := s.validateCredentials(creds); err != nil {
+	if err := s.validateCredentials(ctx, creds); err != nil {
 		return nil, err
 	}
 
-	secret := credentialsToK8sSecret(creds)
+	secret := s.credentialsToK8sSecret(creds)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
@@ -61,9 +61,11 @@ func (s *server) CreateCredentials(
 	), nil
 }
 
-func (s *server) validateCredentials(creds credentials) error {
-	if err := validateFieldNotEmpty("project", creds.project); err != nil {
-		return err
+func (s *server) validateCredentials(ctx context.Context, creds credentials) error {
+	if creds.project != "" {
+		if err := s.validateProjectExists(ctx, creds.project); err != nil {
+			return err
+		}
 	}
 	if err := validateFieldNotEmpty("name", creds.name); err != nil {
 		return err
@@ -93,10 +95,14 @@ func (s *server) validateCredentials(creds credentials) error {
 	return validateFieldNotEmpty("password", creds.password)
 }
 
-func credentialsToK8sSecret(creds credentials) *corev1.Secret {
-	s := &corev1.Secret{
+func (s *server) credentialsToK8sSecret(creds credentials) *corev1.Secret {
+	namespace := creds.project
+	if namespace == "" {
+		namespace = s.cfg.SharedResourcesNamespace
+	}
+	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: creds.project,
+			Namespace: namespace,
 			Name:      creds.name,
 			Labels: map[string]string{
 				kargoapi.LabelKeyCredentialType: creds.credType,
@@ -109,12 +115,12 @@ func credentialsToK8sSecret(creds credentials) *corev1.Secret {
 		},
 	}
 	if creds.description != "" {
-		s.Annotations = map[string]string{
+		secret.Annotations = map[string]string{
 			kargoapi.AnnotationKeyDescription: creds.description,
 		}
 	}
 	if creds.repoURLIsRegex {
-		s.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
+		secret.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
 	}
-	return s
+	return secret
 }

@@ -19,11 +19,11 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestListClusterSecrets(t *testing.T) {
+func TestListSystemSecrets(t *testing.T) {
 	ctx := context.Background()
 
 	testData := map[string][]byte{
-		"CLUSTER_SECRET": []byte("Soylent Green is people!"),
+		"SYSTEM_SECRET": []byte("Soylent Green is people!"),
 	}
 
 	cl, err := kubernetes.NewClient(
@@ -35,16 +35,16 @@ func TestListClusterSecrets(t *testing.T) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
 					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/cluster-secret-namespace.yaml"),
+						mustNewObject[corev1.Namespace]("testdata/system-resources-namespace.yaml"),
 						&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-cluster-secrts",
+								Namespace: "kargo-system-resources",
 								Name:      "secret-a",
 							},
 						},
 						&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-cluster-secrts",
+								Namespace: "kargo-system-resources",
 								Name:      "secret-b",
 							},
 							Data: testData,
@@ -59,14 +59,14 @@ func TestListClusterSecrets(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg: config.ServerConfig{
-			SecretManagementEnabled:   true,
-			ClusterResourcesNamespace: "kargo-cluster-secrts"},
+			SecretManagementEnabled:  true,
+			SystemResourcesNamespace: "kargo-system-resources"},
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	resp, err := s.ListClusterSecrets(
+	resp, err := s.ListSystemSecrets(
 		ctx,
-		connect.NewRequest(&svcv1alpha1.ListClusterSecretsRequest{}),
+		connect.NewRequest(&svcv1alpha1.ListSystemSecretsRequest{}),
 	)
 	require.NoError(t, err)
 
@@ -75,5 +75,5 @@ func TestListClusterSecrets(t *testing.T) {
 
 	require.Equal(t, "secret-a", secrets[0].Name)
 	require.Equal(t, "secret-b", secrets[1].Name)
-	require.Equal(t, redacted, secrets[1].StringData["CLUSTER_SECRET"])
+	require.Equal(t, redacted, secrets[1].StringData["SYSTEM_SECRET"])
 }
