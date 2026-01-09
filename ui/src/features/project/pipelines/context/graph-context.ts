@@ -1,9 +1,9 @@
 import { createContext, useContext } from 'react';
 
-import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
 
 export type GraphContextType = {
-  warehouseByName: Record<string, Warehouse>;
+  warehouseByName: Record<string, WarehouseExpanded>;
 
   // stacking
   stackedNodesParents: string[];

@@ -1,5 +1,6 @@
 import { graphlib } from '@dagrejs/dagre';
 
+import { WarehouseExpanded } from '@ui/extend/types';
 import { ColorMap } from '@ui/features/stage/utils';
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
@@ -9,7 +10,7 @@ import { pickMaxSize, repoSubscriptionSizer, stageSizer, warehouseSizer } from '
 import { DimensionState } from './use-node-dimension-state';
 
 export type GraphMeta = {
-  warehouse?: Warehouse;
+  warehouse?: WarehouseExpanded;
   subscription?: RepoSubscription;
   stage?: Stage;
   subscriptionParent?: Warehouse;
@@ -24,8 +25,8 @@ export const layoutGraph = (
     ignore?: (s: Stage) => boolean;
   },
   warehouse: {
-    warehouses: Warehouse[];
-    ignore?: (w: Warehouse) => boolean;
+    warehouses: WarehouseExpanded[];
+    ignore?: (w: WarehouseExpanded) => boolean;
   },
   dimensionState: DimensionState,
   warehouseColorMap?: ColorMap,
@@ -36,7 +37,7 @@ export const layoutGraph = (
   graph.setGraph({ rankdir: 'LR' });
   graph.setDefaultEdgeLabel(() => ({}));
 
-  const warehouseByName: Record<string, Warehouse> = {};
+  const warehouseByName: Record<string, WarehouseExpanded> = {};
   const stageByName: Record<string, Stage> = {};
 
   for (const w of warehouse.warehouses) {

@@ -192,7 +192,7 @@ func TestHandleAction(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/repo.git",
 							},
@@ -207,7 +207,7 @@ func TestHandleAction(t *testing.T) {
 						Labels:    map[string]string{"doesnt": "match"},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/repo.git",
 							},
@@ -225,7 +225,7 @@ func TestHandleAction(t *testing.T) {
 						},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/wrong-repo.git",
 							},
@@ -310,7 +310,7 @@ func TestHandleAction(t *testing.T) {
 						Labels:    map[string]string{"tier": "frontend"},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/frontend-repo.git",
 							},
@@ -325,7 +325,7 @@ func TestHandleAction(t *testing.T) {
 						Labels:    map[string]string{"tier": "backend"},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/backend-repo.git",
 							},
@@ -467,7 +467,7 @@ func TestHandleAction(t *testing.T) {
 						Labels:    map[string]string{"tier": "frontend"},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/frontend-repo.git",
 							},
@@ -482,7 +482,7 @@ func TestHandleAction(t *testing.T) {
 						Labels:    map[string]string{"tier": "backend"},
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/example/backend-repo.git",
 							},

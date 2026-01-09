@@ -41,15 +41,16 @@ These fields are included in all Kargo events:
 
 Freight payloads describe the collection of artifacts under evaluation or promotion.
 
-| Field Name   | Type               | Description                                                                       | Optional         |
-| ------------ | ------------------ | --------------------------------------------------------------------------------- | ---------------- |
-| `name`       | String             | Name of the freight object.                                                       | No               |
-| `stageName`  | String             | Stage associated with the freight when the event fired.                           | No               |
-| `createTime` | String (RFC3339)   | Creation timestamp of the freight object.                                         | No               |
-| `alias`      | String             | Human-friendly alias assigned to the freight.                                     | Yes (is pointer) |
-| `commits`    | Array\<GitCommit\> | Git commits that compose the freight (see [GitCommit fields](#gitcommit-fields)). | Yes              |
-| `images`     | Array\<Image\>     | Container images included in the freight (see [Image fields](#image-fields)).     | Yes              |
-| `charts`     | Array\<Chart\>     | Helm charts included in the freight (see [Chart fields](#chart-fields)).          | Yes              |
+| Field Name   | Type                       | Description                                                                                                         | Optional         |
+| ------------ | -------------------------- | ------------------------------------------------------------------------------------------------------------------- | ---------------- |
+| `name`       | String                     | Name of the freight object.                                                                                         | No               |
+| `stageName`  | String                     | Stage associated with the freight when the event fired.                                                             | No               |
+| `createTime` | String (RFC3339)           | Creation timestamp of the freight object.                                                                           | No               |
+| `alias`      | String                     | Human-friendly alias assigned to the freight.                                                                       | Yes (is pointer) |
+| `commits`    | Array\<GitCommit\>         | Git commits that compose the freight (see [GitCommit fields](#gitcommit-fields)).                                   | Yes              |
+| `images`     | Array\<Image\>             | Container images included in the freight (see [Image fields](#image-fields)).                                       | Yes              |
+| `charts`     | Array\<Chart\>             | Helm charts included in the freight (see [Chart fields](#chart-fields)).                                            | Yes              |
+| `artifacts`  | Array\<ArtifactReference\> | Additional arbitrary artifacts included in the freight (see [ArtifactReference fields](#artifactreference-fields)). | Yes              |
 
 #### `GitCommit` Fields
 
@@ -79,6 +80,15 @@ Freight payloads describe the collection of artifacts under evaluation or promot
 | `repoURL`  | String | Helm chart repository URL.                                            | Yes      |
 | `name`     | String | Chart name within the repository (empty for OCI-style references).    | Yes      |
 | `version`  | String | Specific chart version selected for inclusion in the freight payload. | Yes      |
+
+#### `ArtifactReference` Fields
+
+| Field Name         | Type                 | Description                                                                                                                                                                                                                                                                                                       | Optional |
+| ------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- |
+| `artifactType`     | String               | Unique type of the artifact.                                                                                                                                                                                                                                                                                      | No       |
+| `subscriptionName` | String               | Name of the subscription that discovered the artifact.                                                                                                                                                                                                                                                            | No       |
+| `version`          | String               | Version identifies a specific revision of this artifact.                                                                                                                                                                                                                                                          | No       |
+| `metadata`         | Map\<String,Object\> | Additional metadata associated with the artifact. It is a mostly opaque collection of attributes. "Mostly" because Kargo may understand how to interpret some documented, well-known, top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it. | Yes      |
 
 ### Freight Verification Fields
 

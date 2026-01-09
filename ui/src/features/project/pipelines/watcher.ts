@@ -4,6 +4,8 @@ import { createConnectQueryKey } from '@connectrpc/connect-query';
 import { QueryClient } from '@tanstack/react-query';
 
 import { transportWithAuth } from '@ui/config/transport';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { warehouseExpand } from '@ui/extend/warehouse-expand';
 import {
   getStage,
   getWarehouse,
@@ -19,7 +21,7 @@ import {
   ListWarehousesRequestSchema,
   ListWarehousesResponse
 } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
@@ -127,7 +129,7 @@ export class Watcher {
 
   async watchWarehouses(opts?: {
     refreshHook?: () => void;
-    onWarehouseEvent?: (warehouse: Warehouse) => void;
+    onWarehouseEvent?: (warehouse: WarehouseExpanded) => void;
   }) {
     const stream = this.promiseClient.watchWarehouses(
       { project: this.project },
@@ -147,9 +149,9 @@ export class Watcher {
           })
         );
 
-        return (data as ListWarehousesResponse)?.warehouses || [];
+        return (data as ListWarehousesResponse)?.warehouses?.map((w) => warehouseExpand(w)) || [];
       },
-      (e) => e.warehouse as Warehouse,
+      (e) => e.warehouse as WarehouseExpanded,
       (warehouse, data) => {
         // refetch freight if necessary
         const refreshRequest = warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
@@ -172,6 +174,7 @@ export class Watcher {
           transport: transportWithAuth
         });
         this.client.setQueryData(listWarehousesQueryKey, {
+          // @ts-expect-error warehouse expanded
           warehouses: data,
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListWarehousesResponse'
         });
@@ -189,6 +192,7 @@ export class Watcher {
         this.client.setQueryData(getWarehouseQueryKey, {
           $typeName: 'akuity.io.kargo.service.v1alpha1.GetWarehouseResponse',
           result: {
+            // @ts-expect-error warehouse expanded
             value: warehouse,
             case: 'warehouse'
           }
