@@ -92,7 +92,7 @@ func (s *server) UpdateRepoCredentials(
 
 	return connect.NewResponse(
 		&svcv1alpha1.UpdateRepoCredentialsResponse{
-			Credentials: sanitizeCredentialSecret(secret),
+			Credentials: svcv1alpha1.FromK8sSecret(sanitizeCredentialSecret(secret)),
 		},
 	), nil
 }

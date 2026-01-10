@@ -43,6 +43,6 @@ func (s *server) CreateAPIToken(
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.CreateAPITokenResponse{TokenSecret: tokenSecret},
+		&svcv1alpha1.CreateAPITokenResponse{TokenSecret: svcv1alpha1.FromK8sSecret(tokenSecret)},
 	), nil
 }

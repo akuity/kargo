@@ -70,9 +70,9 @@ func (s *server) ListRepoCredentials(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	secrets := make([]*corev1.Secret, len(secretsList.Items))
+	secrets := make([]*svcv1alpha1.Secret, len(secretsList.Items))
 	for i, secret := range secretsList.Items {
-		secrets[i] = sanitizeCredentialSecret(secret)
+		secrets[i] = svcv1alpha1.FromK8sSecret(sanitizeCredentialSecret(secret))
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListRepoCredentialsResponse{

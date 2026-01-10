@@ -224,5 +224,7 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	return printer.PrintObj(resp.Msg.GetCredentials(), o.Out)
+	// Convert proto secret to k8s secret before printing
+	k8sSecret := resp.Msg.GetCredentials().ToK8sSecret()
+	return printer.PrintObj(k8sSecret, o.Out)
 }

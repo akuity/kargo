@@ -991,7 +991,7 @@ message ListConfigMapsRequest {
 // ListConfigMapsResponse contains the list of ConfigMaps in a project.
 message ListConfigMapsResponse {
   // config_maps is the list of ConfigMaps found in the project.
-  repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
+  repeated ConfigMap config_maps = 1;
 }
 
 // GetConfigMapRequest is the request for retrieving a specific ConfigMap.
@@ -1013,7 +1013,7 @@ message GetConfigMapRequest {
 message GetConfigMapResponse {
   oneof result {
     // config_map is the structured Kubernetes ConfigMap object.
-    k8s.io.api.core.v1.ConfigMap config_map = 1;
+    ConfigMap config_map = 1;
     // raw is the raw YAML representation of the ConfigMap.
     bytes raw = 2;
   }
@@ -1044,7 +1044,7 @@ message CreateRepoCredentialsRequest {
 // CreateRepoCredentialsResponse contains the newly created repository credentials.
 message CreateRepoCredentialsResponse {
   // credentials is the created Kubernetes Secret containing the credentials.
-  k8s.io.api.core.v1.Secret credentials = 1;
+  Secret credentials = 1;
 }
 
 // DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
@@ -1074,7 +1074,7 @@ message GetRepoCredentialsRequest {
 message GetRepoCredentialsResponse {
   oneof result {
     // credentials is the structured Kubernetes Secret containing the credentials.
-    k8s.io.api.core.v1.Secret credentials = 1;
+    Secret credentials = 1;
     // raw is the raw YAML representation of the credentials.
     bytes raw = 2;
   }
@@ -1089,7 +1089,7 @@ message ListRepoCredentialsRequest {
 // ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
 message ListRepoCredentialsResponse {
   // credentials is the list of Kubernetes Secrets containing the credentials.
-  repeated k8s.io.api.core.v1.Secret credentials = 1;
+  repeated Secret credentials = 1;
 }
 
 // UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
@@ -1115,7 +1115,7 @@ message UpdateRepoCredentialsRequest {
 // UpdateRepoCredentialsResponse contains the updated repository credentials information.
 message UpdateRepoCredentialsResponse {
   // credentials is the updated Kubernetes Secret containing the credentials.
-  k8s.io.api.core.v1.Secret credentials = 1;
+  Secret credentials = 1;
 }
 
 /* Generic Credentials Messages */
@@ -1135,7 +1135,7 @@ message ListGenericCredentialsRequest {
 // ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
 message ListGenericCredentialsResponse {
   // credentials is the list of Kubernetes Secrets containing generic credentials within the project.
-  repeated k8s.io.api.core.v1.Secret credentials = 1;
+  repeated Secret credentials = 1;
 }
 
 // CreateGenericCredentialsRequest is the request for creating new generic
@@ -1159,7 +1159,7 @@ message CreateGenericCredentialsRequest {
 // CreateGenericCredentialsResponse contains the newly created generic credentials.
 message CreateGenericCredentialsResponse {
   // credentials is the created Kubernetes Secret containing generic credentials within the project.
-  k8s.io.api.core.v1.Secret credentials = 1;
+  Secret credentials = 1;
 }
 
 // UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
@@ -1182,7 +1182,7 @@ message UpdateGenericCredentialsRequest {
 // UpdateGenericCredentialsResponse contains the updated generic credentials information.
 message UpdateGenericCredentialsResponse {
   // credentials is the updated Kubernetes Secret containing generic credentials within the project.
-  k8s.io.api.core.v1.Secret credentials = 1;
+  Secret credentials = 1;
 }
 
 // DeleteGenericCredentialsRequest is the request for deleting generic
@@ -1587,7 +1587,7 @@ message CreateAPITokenRequest {
 // a Kubernetes Secret.
 message CreateAPITokenResponse {
   // token_secret is a Kubernetes Secret containing the token.
-  k8s.io.api.core.v1.Secret token_secret = 1;
+  Secret token_secret = 1;
 }
 
 // DeleteAPITokenRequest is a request to delete a bearer token associated with a
@@ -1632,7 +1632,7 @@ message GetAPITokenResponse {
   oneof result {
     // token_secret is a Kubernetes Secrets containing a redacted token
     // associated with a Kargo Role virtual resource.
-    k8s.io.api.core.v1.Secret token_secret = 1;
+    Secret token_secret = 1;
     // raw is a raw YAML or JSON representation of the requested resource.
     bytes raw = 2;
   }
@@ -1656,7 +1656,7 @@ message ListAPITokensRequest {
 message ListAPITokensResponse {
   // token_secrets is the list of Kubernetes Secrets containing redacted tokens
   // associated with a Kargo Role virtual resource.
-  repeated k8s.io.api.core.v1.Secret token_secrets = 1;
+  repeated Secret token_secrets = 1;
 }
 
 message RefreshResourceRequest {
@@ -1673,4 +1673,121 @@ message RefreshResourceRequest {
 
 message RefreshResourceResponse {
   google.protobuf.Any resource = 1;
+}
+
+// =============================================================================
+// WORKAROUND: Kubernetes Core Types Copied Inline
+// =============================================================================
+//
+// The following message definitions are copied from k8s.io/api/core/v1 and
+// k8s.io/apimachinery/pkg/apis/meta/v1 to avoid dependency issues with the
+// Kubernetes API types in our gRPC service definitions. These types are used
+// in API methods above and will be converted to/from the actual Kubernetes
+// types at runtime using conversion methods.
+//
+// Original sources:
+// - k8s.io/api@v0.35.0/core/v1/generated.proto
+// - k8s.io/apimachinery@v0.35.0/pkg/apis/meta/v1/generated.proto
+//
+// Note: ObjectMeta is simplified to include only essential fields for marshaling.
+// Full raw objects can be fetched via the raw format option.
+//
+// =============================================================================
+
+// ObjectMeta is metadata that all persisted resources must have.
+// Simplified version containing only essential fields.
+message ObjectMeta {
+  // Name must be unique within a namespace.
+  // +optional
+  optional string name = 1;
+
+  // Namespace defines the space within which each name must be unique.
+  // +optional
+  optional string namespace = 3;
+
+  // UID is the unique in time and space value for this object.
+  // +optional
+  optional string uid = 5;
+
+  // An opaque value that represents the internal version of this object.
+  // +optional
+  optional string resourceVersion = 6;
+
+  // A sequence number representing a specific generation of the desired state.
+  // +optional
+  optional int64 generation = 7;
+
+  // Map of string keys and values that can be used to organize and categorize objects.
+  // +optional
+  map<string, string> labels = 11;
+
+  // Annotations is an unstructured key value map stored with a resource.
+  // +optional
+  map<string, string> annotations = 12;
+}
+
+// ConfigMap holds configuration data for pods to consume.
+message ConfigMap {
+  // Standard object's metadata.
+  // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+  ObjectMeta metadata = 1;
+
+  // Immutable, if set to true, ensures that data stored in the ConfigMap cannot
+  // be updated (only object metadata can be modified).
+  // If not set to true, the field can be modified at any time.
+  // Defaulted to nil.
+  // +optional
+  optional bool immutable = 4;
+
+  // Data contains the configuration data.
+  // Each key must consist of alphanumeric characters, '-', '_' or '.'.
+  // Values with non-UTF-8 byte sequences must use the BinaryData field.
+  // The keys stored in Data must not overlap with the keys in
+  // the BinaryData field, this is enforced during validation process.
+  // +optional
+  map<string, string> data = 2;
+
+  // BinaryData contains the binary data.
+  // Each key must consist of alphanumeric characters, '-', '_' or '.'.
+  // BinaryData can contain byte sequences that are not in the UTF-8 range.
+  // The keys stored in BinaryData must not overlap with the ones in
+  // the Data field, this is enforced during validation process.
+  // Using this field will require 1.10+ apiserver and
+  // kubelet.
+  // +optional
+  map<string, bytes> binaryData = 3;
+}
+
+// Secret holds secret data of a certain type.
+message Secret {
+  // Standard object's metadata.
+  // More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata
+  ObjectMeta metadata = 1;
+
+  // Immutable, if set to true, ensures that data stored in the Secret cannot
+  // be updated (only object metadata can be modified).
+  // If not set to true, the field can be modified at any time.
+  // Defaulted to nil.
+  // +optional
+  optional bool immutable = 5;
+
+  // Data contains the secret data. Each key must consist of alphanumeric
+  // characters, '-', '_' or '.'. The serialized form of the secret data is a
+  // base64 encoded string, representing the arbitrary (possibly non-string)
+  // data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
+  // +optional
+  map<string, bytes> data = 2;
+
+  // stringData allows specifying non-binary secret data in string form.
+  // It is provided as a write-only input field for convenience.
+  // All keys and values are merged into the data field on write, overwriting any existing values.
+  // The stringData field is never output when reading from the API.
+  // +k8s:conversion-gen=false
+  // +optional
+  map<string, string> stringData = 4;
+
+  // Used to facilitate programmatic handling of secret data.
+  // More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
+  // +optional
+  optional string type = 3;
 }

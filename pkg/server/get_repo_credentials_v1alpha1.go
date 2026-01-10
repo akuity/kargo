@@ -83,7 +83,7 @@ func (s *server) GetRepoCredentials(
 	}
 	return connect.NewResponse(&svcv1alpha1.GetRepoCredentialsResponse{
 		Result: &svcv1alpha1.GetRepoCredentialsResponse_Credentials{
-			Credentials: creds,
+			Credentials: svcv1alpha1.FromK8sSecret(creds),
 		},
 	}), nil
 }

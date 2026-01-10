@@ -77,8 +77,8 @@ func TestGetConfigMap(t *testing.T) {
 
 				require.NotNil(t, r.Msg.GetConfigMap())
 
-				require.Equal(t, "kargo-demo", r.Msg.GetConfigMap().Namespace)
-				require.Equal(t, "cm-1", r.Msg.GetConfigMap().Name)
+				require.Equal(t, "kargo-demo", *r.Msg.GetConfigMap().Metadata.Namespace)
+				require.Equal(t, "cm-1", *r.Msg.GetConfigMap().Metadata.Name)
 			},
 		},
 		"raw format JSON": {

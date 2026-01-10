@@ -161,7 +161,12 @@ func (o *getTokensOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list API tokens: %w", err)
 		}
-		return PrintObjects(resp.Msg.GetTokenSecrets(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		secrets := resp.Msg.GetTokenSecrets()
+		k8sSecrets := make([]*corev1.Secret, len(secrets))
+		for i, secret := range secrets {
+			k8sSecrets[i] = secret.ToK8sSecret()
+		}
+		return PrintObjects(k8sSecrets, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
@@ -181,7 +186,7 @@ func (o *getTokensOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetTokenSecret())
+		res = append(res, resp.Msg.GetTokenSecret().ToK8sSecret())
 	}
 
 	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {

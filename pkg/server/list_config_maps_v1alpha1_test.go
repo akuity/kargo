@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -63,12 +62,10 @@ func TestListConfigMaps(t *testing.T) {
 
 				cms := r.Msg.GetConfigMaps()
 
-				fmt.Println(cms)
-
 				require.Equal(t, 2, len(cms))
-				require.Equal(t, "cm-1", cms[0].Name)
+				require.Equal(t, "cm-1", cms[0].GetMetadata().GetName())
 				require.Equal(t, "bar", cms[0].Data["foo"])
-				require.Equal(t, "cm-2", cms[1].Name)
+				require.Equal(t, "cm-2", cms[1].GetMetadata().GetName())
 				require.Equal(t, "baz", cms[1].Data["bar"])
 			},
 		},

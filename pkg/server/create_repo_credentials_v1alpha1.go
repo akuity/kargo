@@ -56,7 +56,7 @@ func (s *server) CreateRepoCredentials(
 
 	return connect.NewResponse(
 		&svcv1alpha1.CreateRepoCredentialsResponse{
-			Credentials: sanitizeCredentialSecret(*secret),
+			Credentials: svcv1alpha1.FromK8sSecret(sanitizeCredentialSecret(*secret)),
 		},
 	), nil
 }

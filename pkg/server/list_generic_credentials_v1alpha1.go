@@ -58,9 +58,9 @@ func (s *server) ListGenericCredentials(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	sanitizedSecrets := make([]*corev1.Secret, len(secrets))
+	sanitizedSecrets := make([]*svcv1alpha1.Secret, len(secrets))
 	for i, secret := range secrets {
-		sanitizedSecrets[i] = sanitizeGenericCredentials(secret)
+		sanitizedSecrets[i] = svcv1alpha1.FromK8sSecret(sanitizeGenericCredentials(secret))
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListGenericCredentialsResponse{

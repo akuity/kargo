@@ -156,7 +156,7 @@ func (o *createTokenOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("new printer: %w", err)
 		}
-		return printer.PrintObj(resp.Msg.TokenSecret, o.Out)
+		return printer.PrintObj(resp.Msg.TokenSecret.ToK8sSecret(), o.Out)
 	}
 
 	// Otherwise, print the token value clearly so users don't miss it

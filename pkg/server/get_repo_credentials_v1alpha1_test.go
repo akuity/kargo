@@ -107,12 +107,13 @@ func TestGetRepoCredentials(t *testing.T) {
 				require.Nil(t, c.Msg.GetRaw())
 
 				require.NotNil(t, c.Msg.GetCredentials())
-				require.Equal(t, "kargo-shared-resources", c.Msg.GetCredentials().Namespace)
-				require.Equal(t, "test", c.Msg.GetCredentials().Name)
+				credsMeta := c.Msg.GetCredentials().Metadata
+				require.Equal(t, "kargo-shared-resources", *credsMeta.Namespace)
+				require.Equal(t, "test", *credsMeta.Name)
 
 				require.Equal(t, map[string]string{
 					"last-applied-configuration": redacted,
-				}, c.Msg.GetCredentials().Annotations)
+				}, credsMeta.Annotations)
 				require.Equal(t, map[string]string{
 					libCreds.FieldRepoURL: "fake-url",
 					"random-key":          redacted,
@@ -150,12 +151,13 @@ func TestGetRepoCredentials(t *testing.T) {
 				require.Nil(t, c.Msg.GetRaw())
 
 				require.NotNil(t, c.Msg.GetCredentials())
-				require.Equal(t, "kargo-demo", c.Msg.GetCredentials().Namespace)
-				require.Equal(t, "test", c.Msg.GetCredentials().Name)
+				credsMeta := c.Msg.GetCredentials().Metadata
+				require.Equal(t, "kargo-demo", *credsMeta.Namespace)
+				require.Equal(t, "test", *credsMeta.Name)
 
 				require.Equal(t, map[string]string{
 					"last-applied-configuration": redacted,
-				}, c.Msg.GetCredentials().Annotations)
+				}, credsMeta.Annotations)
 				require.Equal(t, map[string]string{
 					libCreds.FieldRepoURL: "fake-url",
 					"random-key":          redacted,

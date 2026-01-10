@@ -58,9 +58,9 @@ func TestCreateGenericCredentials(t *testing.T) {
 	require.NoError(t, err)
 
 	genCreds := resp.Msg.GetCredentials()
-	assert.Equal(t, "kargo-demo", genCreds.Namespace)
-	assert.Equal(t, "secret", genCreds.Name)
-	assert.Equal(t, "my secret", genCreds.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "kargo-demo", *genCreds.Metadata.Namespace)
+	assert.Equal(t, "secret", *genCreds.Metadata.Name)
+	assert.Equal(t, "my secret", genCreds.Metadata.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, redacted, genCreds.StringData["TOKEN_1"])
 	assert.Equal(t, redacted, genCreds.StringData["TOKEN_2"])
 

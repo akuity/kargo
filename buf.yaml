@@ -8,6 +8,10 @@ modules:
     - FIELD_NOT_REQUIRED
     - PACKAGE_DIRECTORY_MATCH
     - PACKAGE_NO_IMPORT_CYCLE
+    # This is ignored because we are matching the k8s proto fields
+    ignore_only:
+      FIELD_LOWER_SNAKE_CASE:
+      - api/service/v1alpha1/service.proto
     disallow_comment_ignores: true
   breaking:
     use:

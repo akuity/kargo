@@ -254,5 +254,5 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	return printer.PrintObj(resp.Msg.GetCredentials(), o.Out)
+	return printer.PrintObj(resp.Msg.GetCredentials().ToK8sSecret(), o.Out)
 }

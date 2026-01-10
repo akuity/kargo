@@ -47,12 +47,12 @@ func (s *server) ListConfigMaps(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	cmPtrs := []*corev1.ConfigMap{}
+	protoConfigMaps := make([]*svcv1alpha1.ConfigMap, 0, len(configMaps))
 	for _, cm := range configMaps {
-		cmPtrs = append(cmPtrs, cm.DeepCopy())
+		protoConfigMaps = append(protoConfigMaps, svcv1alpha1.FromK8sConfigMap(cm.DeepCopy()))
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListConfigMapsResponse{
-		ConfigMaps: cmPtrs,
+		ConfigMaps: protoConfigMaps,
 	}), nil
 }
