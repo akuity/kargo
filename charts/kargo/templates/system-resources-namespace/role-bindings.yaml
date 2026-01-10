@@ -31,4 +31,7 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
+  name: kargo-api
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
   name: kargo-admin
