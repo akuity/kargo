@@ -439,9 +439,9 @@ export const deleteRole = KargoService.method.deleteRole;
 export const getRole = KargoService.method.getRole;
 
 /**
- * Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
- * or users having specific OIDC claims to a Kargo Role by updating its
- * underlying Kubernetes resources.
+ * Grant assigns permissions to a Kargo Role virtual resource or binds users
+ * having specific OIDC claims to a Kargo Role virtual resource by updating
+ * its underlying Kubernetes resources.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Grant
  */
@@ -456,8 +456,8 @@ export const grant = KargoService.method.grant;
 export const listRoles = KargoService.method.listRoles;
 
 /**
- * Revoke removes permissions from a Kargo Role; or unbinds a Kargo
- * ServiceAccount or users having specific OIDC claims from a Kargo Role by
+ * Revoke removes permissions from a Kargo Role virtual resource or unbinds
+ * users having specific OIDC claims from a Kargo Role virtual resource by
  * updating its underlying Kubernetes resources.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Revoke
@@ -473,64 +473,36 @@ export const revoke = KargoService.method.revoke;
 export const updateRole = KargoService.method.updateRole;
 
 /**
- * CreateServiceAccount creates a new Kargo ServiceAccount.
+ * CreateAPIToken generates and returns a new bearer token associated with a
+ * Kargo Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateAPIToken
  */
-export const createServiceAccount = KargoService.method.createServiceAccount;
+export const createAPIToken = KargoService.method.createAPIToken;
 
 /**
- * DeleteServiceAccount removes a Kargo ServiceAccount.
+ * DeleteToken deletes a bearer token associated with a Kargo Role virtual
+ * resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteAPIToken
  */
-export const deleteServiceAccount = KargoService.method.deleteServiceAccount;
+export const deleteAPIToken = KargoService.method.deleteAPIToken;
 
 /**
- * GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
+ * GetAPIToken retrieves details of a specific bearer token associated with a
+ * Kargo Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAPIToken
  */
-export const getServiceAccount = KargoService.method.getServiceAccount;
+export const getAPIToken = KargoService.method.getAPIToken;
 
 /**
- * ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
+ * ListAPITokens lists bearer tokens associated with with a specified Kargo
+ * Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccounts
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAPITokens
  */
-export const listServiceAccounts = KargoService.method.listServiceAccounts;
-
-/**
- * CreateServiceAccountToken generates and returns a new bearer token
- * associated with a Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccountToken
- */
-export const createServiceAccountToken = KargoService.method.createServiceAccountToken;
-
-/**
- * DeleteServiceAccountToken deletes a bearer token associated with a
- * Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccountToken
- */
-export const deleteServiceAccountToken = KargoService.method.deleteServiceAccountToken;
-
-/**
- * GetServiceAccountToken retrieves details of a specific bearer token
- * associated with a Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccountToken
- */
-export const getServiceAccountToken = KargoService.method.getServiceAccountToken;
-
-/**
- * ListServiceAccountTokens lists bearer tokens associated with
- * with a specified Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens
- */
-export const listServiceAccountTokens = KargoService.method.listServiceAccountTokens;
+export const listAPITokens = KargoService.method.listAPITokens;
 
 /**
  * ListSystemSecrets retrieves all "cluster-scoped" system secrets.

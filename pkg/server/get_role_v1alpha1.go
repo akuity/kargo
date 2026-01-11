@@ -18,8 +18,9 @@ func (s *server) GetRole(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetRoleRequest],
 ) (*connect.Response[svcv1alpha1.GetRoleResponse], error) {
+	systemLevel := req.Msg.SystemLevel
 	project := req.Msg.Project
-	if err := validateFieldNotEmpty("project", project); err != nil {
+	if err := s.validateSystemLevelOrProject(systemLevel, project); err != nil {
 		return nil, err
 	}
 
@@ -28,12 +29,20 @@ func (s *server) GetRole(
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	if !systemLevel {
+		if err := s.validateProjectExists(ctx, project); err != nil {
+			return nil, err
+		}
 	}
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, systemLevel, project, name)
 	if err != nil {
+		if systemLevel {
+			return nil, fmt.Errorf(
+				"error getting Kubernetes resources for system-level Kargo Role %q: %w",
+				name, err,
+			)
+		}
 		return nil, fmt.Errorf(
 			"error getting Kubernetes resources for Kargo Role %q in project %q: %w",
 			name, project, err,

@@ -22,40 +22,46 @@ import (
 	"github.com/akuity/kargo/pkg/cli/templates"
 )
 
-type deleteServiceAccountOptions struct {
+type deleteTokenOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project string
-	Names   []string
+	SystemLevel bool
+	Project     string
+	Names       []string
 }
 
-func newServiceAccountCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
-	cmdOpts := &deleteServiceAccountOptions{
+func newTokenCommand(
+	cfg config.CLIConfig,
+	streams genericiooptions.IOStreams,
+) *cobra.Command {
+	cmdOpts := &deleteTokenOptions{
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("deleted").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:     "serviceaccount [--project=project] (NAME ...)",
-		Aliases: []string{"serviceaccounts", "sa", "sas"},
-		Short:   "Delete service account by name",
+		Use:     "token [--project=project] (NAME ...)",
+		Aliases: []string{"tokens"},
+		Short:   "Delete API tokens by name",
 		Args:    option.MinimumNArgs(1),
 		Example: templates.Example(`
-# Delete a service account
-kargo delete serviceaccount --project=my-project my-service-account
+# Delete an API token in my-project
+kargo delete token --project=my-project my-token
 
-# Delete multiple service accounts
-kargo delete serviceaccount --project=my-project \
-  my-service-account your-service-account
+# Delete multiple API tokens
+kargo delete token --project=my-project my-token1 my-token2
 
-# Delete a service account in the default project
+# Delete an API token in the default project
 kargo config set-project my-project
-kargo delete serviceaccount my-serviceaccount
+kargo delete token my-token
+
+# Delete a system-level API token
+kargo delete token --system my-token
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -77,28 +83,37 @@ kargo delete serviceaccount my-serviceaccount
 	return cmd
 }
 
-// addFlags adds the flags for the delete service account options to the
+// addFlags adds the flags for the delete API token options to the
 // provided command.
-func (o *deleteServiceAccountOptions) addFlags(cmd *cobra.Command) {
+func (o *deleteTokenOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
 
 	option.Project(cmd.Flags(), &o.Project, o.Config.Project,
-		"The Project for which to delete service accounts. If not set, the "+
-			"default project will be used.")
+		"The Project for which to delete API tokens. If not set, the default "+
+			"project will be used.")
+	option.System(
+		cmd.Flags(), &o.SystemLevel, false,
+		"Whether to delete system-level API tokens instead of project-level API "+
+			"tokens.",
+	)
+	// project and system flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SystemFlag)
 }
 
 // complete sets the options from the command arguments.
-func (o *deleteServiceAccountOptions) complete(args []string) {
+func (o *deleteTokenOptions) complete(args []string) {
 	o.Names = slices.Compact(args)
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
-func (o *deleteServiceAccountOptions) validate() error {
+func (o *deleteTokenOptions) validate() error {
 	var errs []error
-	if o.Project == "" {
-		errs = append(errs, fmt.Errorf("%s is required", option.ProjectFlag))
+	if o.Project == "" && !o.SystemLevel {
+		errs = append(errs, fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SystemFlag,
+		))
 	}
 	if len(o.Names) == 0 {
 		errs = append(errs, errors.New("at least one argument is required"))
@@ -106,8 +121,8 @@ func (o *deleteServiceAccountOptions) validate() error {
 	return errors.Join(errs...)
 }
 
-// run removes the service accounts(s) from the project based on the options.
-func (o *deleteServiceAccountOptions) run(ctx context.Context) error {
+// run removes the API token(s) from the project based on the options.
+func (o *deleteTokenOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
@@ -120,25 +135,23 @@ func (o *deleteServiceAccountOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteServiceAccount(
+		if _, err := kargoSvcCli.DeleteAPIToken(
 			ctx,
-			connect.NewRequest(&v1alpha1.DeleteServiceAccountRequest{
-				Project: o.Project,
-				Name:    name,
+			connect.NewRequest(&v1alpha1.DeleteAPITokenRequest{
+				SystemLevel: o.SystemLevel,
+				Project:     o.Project,
+				Name:        name,
 			}),
 		); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		_ = printer.PrintObj(
-			&corev1.ServiceAccount{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: o.Project,
-					Name:      name,
-				},
+		_ = printer.PrintObj(&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      name,
+				Namespace: o.Project,
 			},
-			o.Out,
-		)
+		}, o.Out)
 	}
 	return errors.Join(errs...)
 }

@@ -15,27 +15,44 @@ func (s *server) ListRoles(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListRolesRequest],
 ) (*connect.Response[svcv1alpha1.ListRolesResponse], error) {
+	systemLevel := req.Msg.SystemLevel
 	project := req.Msg.Project
-	if err := validateFieldNotEmpty("project", project); err != nil {
+	if err := s.validateSystemLevelOrProject(systemLevel, project); err != nil {
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	if !systemLevel {
+		if err := s.validateProjectExists(ctx, project); err != nil {
+			return nil, err
+		}
 	}
 
-	kargoRoleNames, err := s.rolesDB.ListNames(ctx, project)
+	kargoRoleNames, err := s.rolesDB.ListNames(ctx, systemLevel, project)
 	if err != nil {
+		if systemLevel {
+			return nil, fmt.Errorf("error listing system-level Kargo Roles: %w", err)
+		}
 		return nil, fmt.Errorf(
-			"error listing Kargo Roles name in project %q: %w", project, err,
+			"error listing Kargo Roles in project %q: %w", project, err,
 		)
 	}
 
 	if req.Msg.AsResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, project, kargoRoleName)
+			sa, roles, rbs, err := s.rolesDB.GetAsResources(
+				ctx,
+				systemLevel,
+				project,
+				kargoRoleName,
+			)
 			if err != nil {
+				if systemLevel {
+					return nil, fmt.Errorf(
+						"error getting Kubernetes resources for system-level Kargo Role %q: %w",
+						kargoRoleName, err,
+					)
+				}
 				return nil, fmt.Errorf(
 					"error getting Kubernetes resources for Kargo Role %q in project %q: %w",
 					kargoRoleName, project, err,
@@ -60,10 +77,16 @@ func (s *server) ListRoles(
 
 	kargoRoles := make([]*rbacapi.Role, len(kargoRoleNames))
 	for i, kargoRoleName := range kargoRoleNames {
-		kargoRole, err := s.rolesDB.Get(ctx, project, kargoRoleName)
+		kargoRole, err := s.rolesDB.Get(ctx, systemLevel, project, kargoRoleName)
 		if err != nil {
+			if systemLevel {
+				return nil, fmt.Errorf(
+					"error getting system-level Kargo Role %q: %w", kargoRoleName, err,
+				)
+			}
 			return nil, fmt.Errorf(
-				"error getting Kargo Role %q in project %q: %w", kargoRoleName, project, err,
+				"error getting Kargo Role %q in project %q: %w",
+				kargoRoleName, project, err,
 			)
 		}
 		kargoRoles[i] = kargoRole

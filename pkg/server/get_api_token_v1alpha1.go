@@ -11,10 +11,10 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) GetServiceAccountToken(
+func (s *server) GetAPIToken(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetServiceAccountTokenRequest],
-) (*connect.Response[svcv1alpha1.GetServiceAccountTokenResponse], error) {
+	req *connect.Request[svcv1alpha1.GetAPITokenRequest],
+) (*connect.Response[svcv1alpha1.GetAPITokenResponse], error) {
 	systemLevel := req.Msg.SystemLevel
 	project := req.Msg.Project
 	if err := s.validateSystemLevelOrProject(systemLevel, project); err != nil {
@@ -32,11 +32,11 @@ func (s *server) GetServiceAccountToken(
 		}
 	}
 
-	tokenSecret, err := s.serviceAccountsDB.GetToken(
+	tokenSecret, err := s.rolesDB.GetAPIToken(
 		ctx, systemLevel, project, name,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("error getting ServiceAccount token Secret: %w", err)
+		return nil, fmt.Errorf("error getting API token Secret: %w", err)
 	}
 
 	var rawBytes []byte
@@ -44,23 +44,23 @@ func (s *server) GetServiceAccountToken(
 	case svcv1alpha1.RawFormat_RAW_FORMAT_JSON:
 		if rawBytes, err = json.Marshal(tokenSecret); err != nil {
 			return nil,
-				fmt.Errorf("error marshaling ServiceAccount token Secret to raw JSON: %w", err)
+				fmt.Errorf("error marshaling API token Secret to raw JSON: %w", err)
 		}
 	case svcv1alpha1.RawFormat_RAW_FORMAT_YAML:
 		if rawBytes, err = sigyaml.Marshal(tokenSecret); err != nil {
 			return nil,
-				fmt.Errorf("error marshaling ServiceAccount token Secret to raw YAML: %w", err)
+				fmt.Errorf("error marshaling API token Secret to raw YAML: %w", err)
 		}
 	default:
-		return connect.NewResponse(&svcv1alpha1.GetServiceAccountTokenResponse{
-			Result: &svcv1alpha1.GetServiceAccountTokenResponse_TokenSecret{
+		return connect.NewResponse(&svcv1alpha1.GetAPITokenResponse{
+			Result: &svcv1alpha1.GetAPITokenResponse_TokenSecret{
 				TokenSecret: tokenSecret,
 			},
 		}), nil
 	}
 
-	return connect.NewResponse(&svcv1alpha1.GetServiceAccountTokenResponse{
-		Result: &svcv1alpha1.GetServiceAccountTokenResponse_Raw{
+	return connect.NewResponse(&svcv1alpha1.GetAPITokenResponse{
+		Result: &svcv1alpha1.GetAPITokenResponse_Raw{
 			Raw: rawBytes,
 		},
 	}), nil

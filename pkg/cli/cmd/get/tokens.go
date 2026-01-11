@@ -25,7 +25,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/templates"
 )
 
-type getServiceAccountTokensOptions struct {
+type getTokensOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
@@ -34,18 +34,18 @@ type getServiceAccountTokensOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	SystemLevel        bool
-	Project            string
-	ServiceAccountName string
-	Names              []string
+	SystemLevel bool
+	Project     string
+	RoleName    string
+	Names       []string
 }
 
-func newGetServiceAccountTokensCommand(
+func newGetTokensCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
 	getOptions *getOptions,
 ) *cobra.Command {
-	cmdOpts := &getServiceAccountTokensOptions{
+	cmdOpts := &getTokensOptions{
 		Config:     cfg,
 		IOStreams:  streams,
 		getOptions: getOptions,
@@ -53,31 +53,29 @@ func newGetServiceAccountTokensCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "serviceaccounttoken [--project=project] [--serviceaccount=serviceaccount] [NAME ...] [--no-headers]",
-		Aliases: []string{"serviceaccounttokens", "satoken", "satokens", "sat", "sats"},
+		Use:     "token [--project=project] [--role=role] [NAME ...] [--no-headers]",
+		Aliases: []string{"tokens"},
 		Short:   "List tokens associated with a service account",
 		Example: templates.Example(`
 # Get the token named my-token in my-project
-kargo get serviceaccounttoken --project=my-project my-token
+kargo get token --project=my-project my-token
 
-# List all tokens for service account my-service-account in my-project
-kargo get serviceaccounttokens --project=my-project \
-  --serviceaccount=my-serviceaccount
+# List all tokens for role my-role in my-project
+kargo get token --project=my-project --role=my-role
 
-# List all tokens for service account my-service-account in my-project in JSON
+# List all tokens for role my-role in my-project in JSON
 # output format
-kargo get serviceaccounttokens --project=my-project \
-  --serviceaccount=my-serviceaccount -o json
+kargo get tokens --project=my-project --role=my-role -o json
 
-# List all tokens for service account my-service-account in the default project
+# List all tokens for role my-role in the default project
 kargo config set-project my-project
-kargo get serviceaccounttokens --serviceaccount=my-serviceaccount
+kargo get tokens --role=my-role
 
-# List all tokens for system-level service accounts
-kargo get serviceaccounttokens --system
+# List all tokens for system-level roles
+kargo get tokens --system
 
-# List all tokens for the system-level kargo-admin service accounts
-kargo get serviceaccounttokens --system --serviceaccount=kargo-admin
+# List all tokens for the system-level kargo-admin role
+kargo get tokens --system --role=kargo-admin
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -99,42 +97,41 @@ kargo get serviceaccounttokens --system --serviceaccount=kargo-admin
 	return cmd
 }
 
-// addFlags adds the flags for the get service account tokens options to the
-// provided command.
-func (o *getServiceAccountTokensOptions) addFlags(cmd *cobra.Command) {
+// addFlags adds the flags for the get API tokens options to the provided
+// command.
+func (o *getTokensOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
 
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
-		"The project for which to list service account tokens. If not set, the "+
-			"default project will be used.",
+		"The project for which to list API tokens. If not set, the default "+
+			"project will be used.",
 	)
 	option.System(
 		cmd.Flags(), &o.SystemLevel, false,
-		"Whether to list tokens for system-level service accounts instead of "+
-			"project-level service accounts.",
+		"Whether to list tokens for system-level role instead of project-level "+
+			"roles.",
 	)
 	// project and system flags are mutually exclusive
 	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SystemFlag)
 
-	option.ServiceAccount(
+	option.Role(
 		cmd.Flags(),
-		&o.ServiceAccountName,
-		"The service account for which to list tokens. If not set, tokens for all "+
-			"service accounts in the project (or system, if --system is set) will "+
-			"be listed.",
+		&o.RoleName,
+		"The role for which to list tokens. If not set, tokens for all roles in "+
+			"the project (or system, if --system is set) will be listed.",
 	)
 }
 
 // complete sets the options from the command arguments.
-func (o *getServiceAccountTokensOptions) complete(args []string) {
+func (o *getTokensOptions) complete(args []string) {
 	o.Names = slices.Compact(args)
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
-func (o *getServiceAccountTokensOptions) validate() error {
+func (o *getTokensOptions) validate() error {
 	if o.Project == "" && !o.SystemLevel {
 		return fmt.Errorf(
 			"either %s or %s is required", option.ProjectFlag, option.SystemFlag,
@@ -144,25 +141,25 @@ func (o *getServiceAccountTokensOptions) validate() error {
 }
 
 // run gets the tokens from the server and prints them to the console.
-func (o *getServiceAccountTokensOptions) run(ctx context.Context) error {
+func (o *getTokensOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListServiceAccountTokensResponse]
-		if resp, err = kargoSvcCli.ListServiceAccountTokens(
+		var resp *connect.Response[v1alpha1.ListAPITokensResponse]
+		if resp, err = kargoSvcCli.ListAPITokens(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.ListServiceAccountTokensRequest{
-					SystemLevel:        o.SystemLevel,
-					Project:            o.Project,
-					ServiceAccountName: o.ServiceAccountName,
+				&v1alpha1.ListAPITokensRequest{
+					SystemLevel: o.SystemLevel,
+					Project:     o.Project,
+					RoleName:    o.RoleName,
 				},
 			),
 		); err != nil {
-			return fmt.Errorf("list service account tokens: %w", err)
+			return fmt.Errorf("list API tokens: %w", err)
 		}
 		return PrintObjects(resp.Msg.GetTokenSecrets(), o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
@@ -170,11 +167,11 @@ func (o *getServiceAccountTokensOptions) run(ctx context.Context) error {
 	res := make([]*corev1.Secret, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetServiceAccountTokenResponse]
-		if resp, err = kargoSvcCli.GetServiceAccountToken(
+		var resp *connect.Response[v1alpha1.GetAPITokenResponse]
+		if resp, err = kargoSvcCli.GetAPIToken(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.GetServiceAccountTokenRequest{
+				&v1alpha1.GetAPITokenRequest{
 					SystemLevel: o.SystemLevel,
 					Project:     o.Project,
 					Name:        name,
@@ -188,12 +185,12 @@ func (o *getServiceAccountTokensOptions) run(ctx context.Context) error {
 	}
 
 	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-		return fmt.Errorf("print service account tokens: %w", err)
+		return fmt.Errorf("print API tokens: %w", err)
 	}
 	return errors.Join(errs...)
 }
 
-func newServiceAccountTokensTable(list *metav1.List) *metav1.Table {
+func newAPITokensTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		tokenSecret := item.Object.(*corev1.Secret) // nolint: forcetypeassert
@@ -210,7 +207,7 @@ func newServiceAccountTokensTable(list *metav1.List) *metav1.Table {
 	return &metav1.Table{
 		ColumnDefinitions: []metav1.TableColumnDefinition{
 			{Name: "Name", Type: "string"},
-			{Name: "Service Account", Type: "string"},
+			{Name: "Role", Type: "string"},
 			{Name: "Kargo Managed", Type: "bool"},
 			{Name: "Age", Type: "string"},
 		},

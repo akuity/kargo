@@ -69,8 +69,7 @@ kargo create project my-project
 	cmd.AddCommand(newCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newRoleCommand(cfg, streams))
-	cmd.AddCommand(newServiceAccountCommand(cfg, streams))
-	cmd.AddCommand(newServiceAccountTokenCommand(cfg, streams))
+	cmd.AddCommand(newTokenCommand(cfg, streams))
 
 	return cmd
 }
