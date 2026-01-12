@@ -23,13 +23,20 @@ func (s *server) ListGenericCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
 	// List secrets having the label that indicates this is a generic secret.
@@ -37,7 +44,7 @@ func (s *server) ListGenericCredentials(
 	if err := s.client.List(
 		ctx,
 		&secretsList,
-		client.InNamespace(req.Msg.GetProject()),
+		client.InNamespace(namespace),
 		client.MatchingLabels{
 			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 		},

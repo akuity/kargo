@@ -14,6 +14,7 @@ import (
 )
 
 type genericCredentials struct {
+	systemLevel bool
 	project     string
 	name        string
 	description string
@@ -30,13 +31,14 @@ func (s *server) CreateGenericCredentials(
 	}
 
 	genCreds := genericCredentials{
-		project:     req.Msg.GetProject(),
-		name:        req.Msg.GetName(),
-		data:        req.Msg.GetData(),
-		description: req.Msg.GetDescription(),
+		systemLevel: req.Msg.SystemLevel,
+		project:     req.Msg.Project,
+		name:        req.Msg.Name,
+		data:        req.Msg.Data,
+		description: req.Msg.Description,
 	}
 
-	if err := s.validateGenericCredentials(genCreds); err != nil {
+	if err := s.validateGenericCredentials(ctx, genCreds); err != nil {
 		return nil, err
 	}
 
@@ -52,9 +54,14 @@ func (s *server) CreateGenericCredentials(
 	), nil
 }
 
-func (s *server) validateGenericCredentials(genCreds genericCredentials) error {
-	if err := validateFieldNotEmpty("project", genCreds.project); err != nil {
-		return err
+func (s *server) validateGenericCredentials(
+	ctx context.Context,
+	genCreds genericCredentials,
+) error {
+	if !genCreds.systemLevel && genCreds.project != "" {
+		if err := s.validateProjectExists(ctx, genCreds.project); err != nil {
+			return err
+		}
 	}
 
 	if err := validateFieldNotEmpty("name", genCreds.name); err != nil {
@@ -76,9 +83,19 @@ func (s *server) genericCredentialsToK8sSecret(genCreds genericCredentials) *cor
 		secretsData[key] = []byte(value)
 	}
 
+	var namespace string
+	if genCreds.systemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		namespace = genCreds.project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
+	}
+
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: genCreds.project,
+			Namespace: namespace,
 			Name:      genCreds.name,
 			Labels: map[string]string{
 				kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,

@@ -225,10 +225,11 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
 ### CreateGenericCredentialsRequest
- CreateGenericCredentialsRequest is the request for creating new generic credentials within a project.
+ CreateGenericCredentialsRequest is the request for creating new generic credentials within a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the generic credentials will be created. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project where the generic credentials will be created. If empty and system_level is false, creates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the generic credentials to create. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
@@ -423,7 +424,8 @@ Stability is not guaranteed.
  DeleteGenericCredentialsRequest is the request for deleting generic credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the generic credentials. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, deletes generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the generic credentials to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse"></a>
@@ -1039,10 +1041,11 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
 ### ListGenericCredentialsRequest
- ListGenericCredentialsRequest is the request for listing all generic credentials in a project.
+ ListGenericCredentialsRequest is the request for listing all generic credentials in a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose generic credentials will be listed. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project whose generic credentials will be listed. If empty and system_level is false, lists generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse"></a>
 
@@ -1400,7 +1403,8 @@ Stability is not guaranteed.
  UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the generic credentials. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to update generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, updates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the generic credentials to update. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |

@@ -41,6 +41,9 @@ func TestCreateGenericCredentials(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg:    config.ServerConfig{SecretManagementEnabled: true},
+		externalValidateProjectFn: func(context.Context, client.Client, string) error {
+			return nil
+		},
 	}
 
 	resp, err := s.CreateGenericCredentials(ctx, connect.NewRequest(&svcv1alpha1.CreateGenericCredentialsRequest{

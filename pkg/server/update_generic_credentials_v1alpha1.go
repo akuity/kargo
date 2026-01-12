@@ -22,13 +22,23 @@ func (s *server) UpdateGenericCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	project := req.Msg.GetProject()
-
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
-	name := req.Msg.GetName()
+	name := req.Msg.Name
 
 	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
@@ -38,7 +48,7 @@ func (s *server) UpdateGenericCredentials(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: project,
+			Namespace: namespace,
 			Name:      name,
 		},
 		&secret,
@@ -61,8 +71,8 @@ func (s *server) UpdateGenericCredentials(
 	}
 
 	genericCredsUpdate := genericCredentials{
-		data:        req.Msg.GetData(),
-		description: req.Msg.GetDescription(),
+		data:        req.Msg.Data,
+		description: req.Msg.Description,
 	}
 
 	if len(genericCredsUpdate.data) == 0 {
