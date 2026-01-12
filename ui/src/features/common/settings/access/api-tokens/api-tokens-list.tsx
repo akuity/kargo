@@ -35,7 +35,7 @@ export const APITokensList = ({ project = '', systemLevel = false }: Props) => {
         </Button>
       }
     >
-      <Table
+      <Table<Secret>
         className='my-2 overflow-x-auto'
         dataSource={listAPITokensQuery.data?.tokenSecrets?.sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
@@ -44,7 +44,7 @@ export const APITokensList = ({ project = '', systemLevel = false }: Props) => {
             return 0;
           }
         })}
-        // rowKey={(record: Role) => record?.metadata?.name || ''}
+        rowKey={(record: Secret) => record?.metadata?.name || ''}
         pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
       >
         <Table.Column
