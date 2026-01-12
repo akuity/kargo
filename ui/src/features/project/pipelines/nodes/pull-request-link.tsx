@@ -53,7 +53,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     return null;
   }
 
-  if (!indexOfPullRequest || indexOfPullRequest < 0) {
+  if (indexOfPullRequest === undefined || indexOfPullRequest < 0) {
     return null;
   }
 
