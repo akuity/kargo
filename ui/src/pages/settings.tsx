@@ -1,4 +1,4 @@
-import { faAsterisk, faBarChart, faGear, faTasks } from '@fortawesome/free-solid-svg-icons';
+import { faAsterisk, faBarChart, faGear, faKey, faTasks } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu, Typography } from 'antd';
 import React from 'react';
@@ -6,6 +6,7 @@ import { NavLink, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
+import { AccessSettings } from '@ui/features/settings/access/accecss';
 import { ClusterAnalysisTemplatesList } from '@ui/features/settings/analysis-templates/analysis-templates';
 import { ClusterConfig } from '@ui/features/settings/cluster-config/cluster-config';
 import { ClusterPromotionTasks } from '@ui/features/settings/cluster-promotion-tasks/cluster-promotion-tasks';
@@ -35,6 +36,12 @@ const settingsViews = {
     icon: faAsterisk,
     component: ClusterSecret,
     path: 'system-secrets'
+  },
+  access: {
+    label: 'Access',
+    icon: faKey,
+    component: AccessSettings,
+    path: 'access'
   }
 };
 

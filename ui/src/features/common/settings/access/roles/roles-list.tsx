@@ -10,7 +10,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Space, Table } from 'antd';
 import classNames from 'classnames';
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
 
 import { ConfirmModal } from '@ui/features/common/confirm-modal/confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
@@ -43,9 +42,13 @@ const renderColumn = (key: string) => {
   };
 };
 
-export const RolesSettings = () => {
-  const { name } = useParams();
-  const { data, refetch } = useQuery(listRoles, { project: name });
+type Props = {
+  project?: string;
+  systemLevel?: boolean;
+};
+
+export const RolesList = ({ project = '', systemLevel = false }: Props) => {
+  const { data, refetch } = useQuery(listRoles, { project, systemLevel });
 
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | undefined>();
@@ -65,20 +68,22 @@ export const RolesSettings = () => {
       type='inner'
       className='min-h-full'
       extra={
-        <Button
-          icon={<FontAwesomeIcon icon={faPlus} />}
-          onClick={() => {
-            setShowCreateRole(true);
-            setEditingRole(undefined);
-          }}
-        >
-          Create Role
-        </Button>
+        systemLevel ? null : (
+          <Button
+            icon={<FontAwesomeIcon icon={faPlus} />}
+            onClick={() => {
+              setShowCreateRole(true);
+              setEditingRole(undefined);
+            }}
+          >
+            Create Role
+          </Button>
+        )
       }
     >
       {(showCreateRole || editingRole) && (
         <CreateRole
-          project={name || ''}
+          project={project}
           onSuccess={refetch}
           hide={() => {
             setShowCreateRole(false);
@@ -88,7 +93,7 @@ export const RolesSettings = () => {
         />
       )}
       <Table
-        className='my-2 overflow-x-scroll'
+        className='my-2 overflow-x-auto'
         key={data?.roles?.length}
         dataSource={(data?.roles || []).sort((a, b) => {
           if (a.metadata?.name && b.metadata?.name) {
@@ -162,7 +167,7 @@ export const RolesSettings = () => {
                               onOk={() => {
                                 deleteRoleAction({
                                   name: record.metadata?.name || '',
-                                  project: name
+                                  project
                                 });
                                 refetch();
                               }}
