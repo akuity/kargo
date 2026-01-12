@@ -554,16 +554,18 @@ subscriptions to cache image metadata by tag:
 
 ```yaml
 controller:
-  imageCache:
-    cacheByTagPolicy: Allow
+  images:
+    cache:
+      cacheByTagPolicy: Allow
 ```
 
 Example configuration to silently enforce caching image metadata by tag:
 
 ```yaml
 controller:
-  imageCache:
-    cacheByTagPolicy: Force
+  images:
+    cache:
+      cacheByTagPolicy: Force
 ```
 
 For more information on how to use this feature, see the
