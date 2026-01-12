@@ -21,7 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestUpdateProjectSecret(t *testing.T) {
+func TestUpdateGenericCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -60,7 +60,7 @@ func TestUpdateProjectSecret(t *testing.T) {
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	_, err = s.UpdateProjectSecret(ctx, connect.NewRequest(&svcv1alpha1.UpdateProjectSecretRequest{
+	_, err = s.UpdateGenericCredentials(ctx, connect.NewRequest(&svcv1alpha1.UpdateGenericCredentialsRequest{
 		Project: "kargo-demo",
 		Name:    "secret",
 		Data: map[string]string{
@@ -84,7 +84,7 @@ func TestUpdateProjectSecret(t *testing.T) {
 	require.False(t, ok)
 }
 
-func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
+func TestApplyGenericCredentialsUpdateToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: "kargo-demo",
@@ -96,13 +96,13 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 		},
 	}
 
-	t.Run("remove key from project secret", func(t *testing.T) {
+	t.Run("remove key from generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		delete(expectedSecret.Data, "TOKEN_1")
 		secret := baseSecret.DeepCopy()
-		applyProjectSecretUpdateToK8sSecret(
+		applyGenericCredentialsUpdateToK8sSecret(
 			secret,
-			projectSecret{
+			genericCredentials{
 				data: map[string]string{
 					"TOKEN_2": "bar",
 				},
@@ -111,11 +111,11 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("add key in project secret", func(t *testing.T) {
+	t.Run("add key in generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_3"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applyProjectSecretUpdateToK8sSecret(secret, projectSecret{
+		applyGenericCredentialsUpdateToK8sSecret(secret, genericCredentials{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "",
@@ -125,11 +125,11 @@ func TestApplyProjectSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("edit key in project secret", func(t *testing.T) {
+	t.Run("edit key in generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_2"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applyProjectSecretUpdateToK8sSecret(secret, projectSecret{
+		applyGenericCredentialsUpdateToK8sSecret(secret, genericCredentials{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "baz",

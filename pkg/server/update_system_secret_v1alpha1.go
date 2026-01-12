@@ -54,7 +54,7 @@ func (s *server) UpdateSystemSecret(
 
 	return connect.NewResponse(
 		&svcv1alpha1.UpdateSystemSecretResponse{
-			Secret: sanitizeProjectSecret(secret),
+			Secret: sanitizeGenericCredentials(secret),
 		},
 	), nil
 }

@@ -15,9 +15,9 @@ import { descriptionExpandable } from '@ui/features/common/description-expandabl
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
   deleteCredentials,
-  deleteProjectSecret,
+  deleteGenericCredentials,
   listCredentials,
-  listProjectSecrets
+  listGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
@@ -31,7 +31,7 @@ export const CredentialsSettings = () => {
 
   const listCredentialsQuery = useQuery(listCredentials, { project: name });
 
-  const listSecretsQuery = useQuery(listProjectSecrets, { project: name });
+  const listSecretsQuery = useQuery(listGenericCredentials, { project: name });
 
   const deleteCredentialsMutation = useMutation(deleteCredentials, {
     onSuccess: () => {
@@ -39,12 +39,12 @@ export const CredentialsSettings = () => {
     }
   });
 
-  const deleteSecretsMutation = useMutation(deleteProjectSecret, {
+  const deleteSecretsMutation = useMutation(deleteGenericCredentials, {
     onSuccess: () => listSecretsQuery.refetch()
   });
 
   const specificCredentials: Secret[] = listCredentialsQuery.data?.credentials || [];
-  const genericCredentials: Secret[] = listSecretsQuery.data?.secrets || [];
+  const genericCredentials: Secret[] = listSecretsQuery.data?.credentials || [];
 
   const { show: showCreate } = useModal((p) => (
     <CreateCredentialsModal

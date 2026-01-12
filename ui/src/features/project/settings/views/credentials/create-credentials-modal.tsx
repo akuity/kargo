@@ -10,9 +10,9 @@ import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import {
   createCredentials,
-  createProjectSecret,
+  createGenericCredentials,
   updateCredentials,
-  updateProjectSecret
+  updateGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
@@ -77,14 +77,14 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     }
   });
 
-  const createSecretsMutation = useMutation(createProjectSecret, {
+  const createSecretsMutation = useMutation(createGenericCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();
     }
   });
 
-  const updateSecretsMutation = useMutation(updateProjectSecret, {
+  const updateSecretsMutation = useMutation(updateGenericCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();

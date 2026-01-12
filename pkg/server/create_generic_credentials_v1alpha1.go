@@ -13,55 +13,55 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-type projectSecret struct {
+type genericCredentials struct {
 	project     string
 	name        string
 	description string
 	data        map[string]string
 }
 
-func (s *server) CreateProjectSecret(
+func (s *server) CreateGenericCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateProjectSecretRequest],
-) (*connect.Response[svcv1alpha1.CreateProjectSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.CreateGenericCredentialsRequest],
+) (*connect.Response[svcv1alpha1.CreateGenericCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	projSecret := projectSecret{
+	genCreds := genericCredentials{
 		project:     req.Msg.GetProject(),
 		name:        req.Msg.GetName(),
 		data:        req.Msg.GetData(),
 		description: req.Msg.GetDescription(),
 	}
 
-	if err := s.validateProjectSecret(projSecret); err != nil {
+	if err := s.validateGenericCredentials(genCreds); err != nil {
 		return nil, err
 	}
 
-	secret := s.projectSecretToK8sSecret(projSecret)
+	secret := s.genericCredentialsToK8sSecret(genCreds)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.CreateProjectSecretResponse{
-			Secret: sanitizeProjectSecret(*secret),
+		&svcv1alpha1.CreateGenericCredentialsResponse{
+			Credentials: sanitizeGenericCredentials(*secret),
 		},
 	), nil
 }
 
-func (s *server) validateProjectSecret(projSecret projectSecret) error {
-	if err := validateFieldNotEmpty("project", projSecret.project); err != nil {
+func (s *server) validateGenericCredentials(genCreds genericCredentials) error {
+	if err := validateFieldNotEmpty("project", genCreds.project); err != nil {
 		return err
 	}
 
-	if err := validateFieldNotEmpty("name", projSecret.name); err != nil {
+	if err := validateFieldNotEmpty("name", genCreds.name); err != nil {
 		return err
 	}
 
-	if len(projSecret.data) == 0 {
+	if len(genCreds.data) == 0 {
 		return connect.NewError(connect.CodeInvalidArgument,
 			errors.New("cannot create empty secret"))
 	}
@@ -69,17 +69,17 @@ func (s *server) validateProjectSecret(projSecret projectSecret) error {
 	return nil
 }
 
-func (s *server) projectSecretToK8sSecret(projSecret projectSecret) *corev1.Secret {
+func (s *server) genericCredentialsToK8sSecret(genCreds genericCredentials) *corev1.Secret {
 	secretsData := map[string][]byte{}
 
-	for key, value := range projSecret.data {
+	for key, value := range genCreds.data {
 		secretsData[key] = []byte(value)
 	}
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: projSecret.project,
-			Name:      projSecret.name,
+			Namespace: genCreds.project,
+			Name:      genCreds.name,
 			Labels: map[string]string{
 				kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 			},
@@ -87,9 +87,9 @@ func (s *server) projectSecretToK8sSecret(projSecret projectSecret) *corev1.Secr
 		Data: secretsData,
 	}
 
-	if projSecret.description != "" {
+	if genCreds.description != "" {
 		secret.Annotations = map[string]string{
-			kargoapi.AnnotationKeyDescription: projSecret.description,
+			kargoapi.AnnotationKeyDescription: genCreds.description,
 		}
 	}
 

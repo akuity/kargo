@@ -7,8 +7,10 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -20,12 +22,8 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestListProjectSecrets(t *testing.T) {
+func TestDeleteGenericCredentials(t *testing.T) {
 	ctx := context.Background()
-
-	testData := map[string][]byte{
-		"PROJECT_SECRET": []byte("Soylent Green is people!"),
-	}
 
 	cl, err := kubernetes.NewClient(
 		ctx,
@@ -37,24 +35,16 @@ func TestListProjectSecrets(t *testing.T) {
 					WithScheme(s).
 					WithObjects(
 						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
-						&corev1.Secret{ // Should not be in the list (not labeled as a project secret)
+						&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
 								Namespace: "kargo-demo",
 								Name:      "secret-a",
-							},
-						},
-						&corev1.Secret{ // Labeled as a project secret; should be in the list
-							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-demo",
-								Name:      "secret-b",
 								Labels: map[string]string{
 									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
 								},
 							},
-							Data: testData,
 						},
-					).
-					Build(), nil
+					).Build(), nil
 			},
 		},
 	)
@@ -66,16 +56,25 @@ func TestListProjectSecrets(t *testing.T) {
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	resp, err := s.ListProjectSecrets(
+	_, err = s.DeleteGenericCredentials(
 		ctx,
-		connect.NewRequest(&svcv1alpha1.ListProjectSecretsRequest{Project: "kargo-demo"}),
+		connect.NewRequest(
+			&svcv1alpha1.DeleteGenericCredentialsRequest{
+				Project: "kargo-demo",
+				Name:    "secret-a",
+			},
+		),
 	)
 	require.NoError(t, err)
 
-	secrets := resp.Msg.GetSecrets()
-	require.Len(t, secrets, 1)
-	require.Equal(t, "secret-b", secrets[0].Name)
-	for _, secret := range secrets {
-		require.Equal(t, redacted, secret.StringData["PROJECT_SECRET"])
-	}
+	secret := corev1.Secret{}
+	err = s.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: "kargo-demo",
+			Name:      "secret-a",
+		},
+		&secret,
+	)
+	require.True(t, apierrors.IsNotFound(err))
 }

@@ -39,7 +39,7 @@ func (s *server) ListSystemSecrets(
 
 	sanitizedSecrets := make([]*corev1.Secret, len(secrets))
 	for i, secret := range secrets {
-		sanitizedSecrets[i] = sanitizeProjectSecret(secret)
+		sanitizedSecrets[i] = sanitizeGenericCredentials(secret)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.ListSystemSecretsResponse{

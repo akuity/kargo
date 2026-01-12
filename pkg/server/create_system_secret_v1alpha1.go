@@ -42,7 +42,7 @@ func (s *server) CreateSystemSecret(
 
 	return connect.NewResponse(
 		&svcv1alpha1.CreateSystemSecretResponse{
-			Secret: sanitizeProjectSecret(*secret),
+			Secret: sanitizeGenericCredentials(*secret),
 		},
 	), nil
 }

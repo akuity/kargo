@@ -289,32 +289,32 @@ export const listCredentials = KargoService.method.listCredentials;
 export const updateCredentials = KargoService.method.updateCredentials;
 
 /**
- * ListProjectSecrets retrieves all secrets within a project.
+ * ListGenericCredentials retrieves all generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListGenericCredentials
  */
-export const listProjectSecrets = KargoService.method.listProjectSecrets;
+export const listGenericCredentials = KargoService.method.listGenericCredentials;
 
 /**
- * CreateProjectSecret creates a new secret within a project.
+ * CreateGenericCredentials creates new generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateGenericCredentials
  */
-export const createProjectSecret = KargoService.method.createProjectSecret;
+export const createGenericCredentials = KargoService.method.createGenericCredentials;
 
 /**
- * UpdateProjectSecret modifies an existing project secret.
+ * UpdateGenericCredentials modifies existing generic credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateGenericCredentials
  */
-export const updateProjectSecret = KargoService.method.updateProjectSecret;
+export const updateGenericCredentials = KargoService.method.updateGenericCredentials;
 
 /**
- * DeleteProjectSecret removes a secret from a project.
+ * DeleteGenericCredentials removes generic credentials from a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteGenericCredentials
  */
-export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
+export const deleteGenericCredentials = KargoService.method.deleteGenericCredentials;
 
 /**
  * ListConfigMaps retrieves all ConfigMaps within a project.

@@ -6,8 +6,8 @@ import { parse, stringify } from 'yaml';
 import { queryCache } from '@ui/features/utils/cache';
 import {
   createOrUpdateResource,
-  createProjectSecret,
-  deleteProjectSecret
+  createGenericCredentials,
+  deleteGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ProjectConfig } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PartialRecursive } from '@ui/utils/connectrpc-utils';
@@ -25,8 +25,8 @@ type createWebhookPayload = {
 
 export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
   const createOrUpdateMutation = useMutation(createOrUpdateResource);
-  const createProjectSecretMutation = useMutation(createProjectSecret);
-  const deleteProjectSecretMutation = useMutation(deleteProjectSecret);
+  const createProjectSecretMutation = useMutation(createGenericCredentials);
+  const deleteProjectSecretMutation = useMutation(deleteGenericCredentials);
 
   return useReactQueryMutation({
     mutationFn: async (payload: createWebhookPayload) => {

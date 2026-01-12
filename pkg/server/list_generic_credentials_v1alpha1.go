@@ -14,10 +14,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func (s *server) ListProjectSecrets(
+func (s *server) ListGenericCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListProjectSecretsRequest],
-) (*connect.Response[svcv1alpha1.ListProjectSecretsResponse], error) {
+	req *connect.Request[svcv1alpha1.ListGenericCredentialsRequest],
+) (*connect.Response[svcv1alpha1.ListGenericCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -53,22 +53,22 @@ func (s *server) ListProjectSecrets(
 
 	sanitizedSecrets := make([]*corev1.Secret, len(secrets))
 	for i, secret := range secrets {
-		sanitizedSecrets[i] = sanitizeProjectSecret(secret)
+		sanitizedSecrets[i] = sanitizeGenericCredentials(secret)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListProjectSecretsResponse{
-		Secrets: sanitizedSecrets,
+	return connect.NewResponse(&svcv1alpha1.ListGenericCredentialsResponse{
+		Credentials: sanitizedSecrets,
 	}), nil
 }
 
-// sanitizeProjectSecret returns a copy of the secret with all values in the
+// sanitizeGenericCredentials returns a copy of the secret with all values in the
 // stringData map redacted. All annotations are also redacted because AT LEAST
 // "last-applied-configuration" is a known vector for leaking sensitive
 // information and unknown configuration management tools may use other
 // annotations in a manner similar to "last-applied-configuration". There is no
 // concern over labels because the constraints on label values rule out use in a
 // manner similar to that of the "last-applied-configuration" annotation.
-func sanitizeProjectSecret(secret corev1.Secret) *corev1.Secret {
+func sanitizeGenericCredentials(secret corev1.Secret) *corev1.Secret {
 	s := secret.DeepCopy()
 	s.StringData = make(map[string]string, len(s.Data))
 	for k, v := range s.Annotations {
