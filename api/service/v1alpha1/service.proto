@@ -981,11 +981,11 @@ message DeleteWarehouseResponse {
 message ListConfigMapsRequest {
   // system_level indicates whether the request is to list ConfigMaps
   // from the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 2;
   // project is the name of the project to list ConfigMaps from.
   // If empty and system_level is false, lists ConfigMaps from the shared resources namespace.
   // This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
 }
 
 // ListConfigMapsResponse contains the list of ConfigMaps in a project.
@@ -998,15 +998,15 @@ message ListConfigMapsResponse {
 message GetConfigMapRequest {
   // system_level indicates whether the request is to get a ConfigMap
   // from the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 4;
   // project is the name of the project containing the ConfigMap.
   // If empty and system_level is false, gets the ConfigMap from the shared resources namespace.
   // This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
   // name is the name of the ConfigMap to retrieve.
-  string name = 3;
+  string name = 2;
   // format specifies the desired response format (structured object or raw YAML).
-  RawFormat format = 4;
+  RawFormat format = 3;
 }
 
 // GetConfigMapResponse contains the requested ConfigMap information.
@@ -1125,11 +1125,11 @@ message UpdateCredentialsResponse {
 message ListGenericCredentialsRequest {
   // system_level indicates whether the request is to list generic credentials
   // from the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 2;
   // project is the name of the project whose generic credentials will be listed.
   // If empty and system_level is false, lists generic credentials from the shared resources namespace.
   // This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
 }
 
 // ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
@@ -1143,17 +1143,17 @@ message ListGenericCredentialsResponse {
 message CreateGenericCredentialsRequest {
   // system_level indicates whether the request is to create generic credentials
   // in the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 6;
   // project is the name of the project where the generic credentials will be
   // created. If empty and system_level is false, creates generic credentials in the shared resources
   // namespace. This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
   // name is the name of the generic credentials to create.
-  string name = 3;
+  string name = 2;
   // description is a human-readable description of the generic credentials.
-  string description = 4;
+  string description = 3;
   // data contains the key-value pairs that make up the generic credentials data.
-  map<string, string> data = 5;
+  map<string, string> data = 4;
 }
 
 // CreateGenericCredentialsResponse contains the newly created generic credentials.
@@ -1166,17 +1166,17 @@ message CreateGenericCredentialsResponse {
 message UpdateGenericCredentialsRequest {
   // system_level indicates whether the request is to update generic credentials
   // in the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 6;
   // project is the name of the project containing the generic credentials. If
   // empty and system_level is false, updates generic credentials in the shared resources namespace.
   // This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
   // name is the name of the generic credentials to update.
-  string name = 3;
+  string name = 2;
   // description is a human-readable description of the generic credentials.
-  string description = 4;
+  string description = 3;
   // data contains the key-value pairs that make up the generic credentials data.
-  map<string, string> data = 5;
+  map<string, string> data = 4;
 }
 
 // UpdateGenericCredentialsResponse contains the updated generic credentials information.
@@ -1190,13 +1190,13 @@ message UpdateGenericCredentialsResponse {
 message DeleteGenericCredentialsRequest {
   // system_level indicates whether the request is to delete generic credentials
   // from the system-level namespace instead of a project-level or shared namespace.
-  bool system_level = 1;
+  bool system_level = 3;
   // project is the name of the project containing the generic credentials. If
   // empty and system_level is false, deletes generic credentials from the shared resources namespace.
   // This value is ignored if system_level is true.
-  string project = 2;
+  string project = 1;
   // name is the name of the generic credentials to delete.
-  string name = 3;
+  string name = 2;
 }
 
 // DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.
