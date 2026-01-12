@@ -985,10 +985,16 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
-// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project,
+// shared namespace, or system namespace.
 message ListConfigMapsRequest {
+  // system_level indicates whether the request is to list ConfigMaps
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 1;
   // project is the name of the project to list ConfigMaps from.
-  string project = 1;
+  // If empty and system_level is false, lists ConfigMaps from the shared resources namespace.
+  // This value is ignored if system_level is true.
+  string project = 2;
 }
 
 // ListConfigMapsResponse contains the list of ConfigMaps in a project.
@@ -999,12 +1005,17 @@ message ListConfigMapsResponse {
 
 // GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 message GetConfigMapRequest {
+  // system_level indicates whether the request is to get a ConfigMap
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 1;
   // project is the name of the project containing the ConfigMap.
-  string project = 1;
+  // If empty and system_level is false, gets the ConfigMap from the shared resources namespace.
+  // This value is ignored if system_level is true.
+  string project = 2;
   // name is the name of the ConfigMap to retrieve.
-  string name = 2;
+  string name = 3;
   // format specifies the desired response format (structured object or raw YAML).
-  RawFormat format = 3;
+  RawFormat format = 4;
 }
 
 // GetConfigMapResponse contains the requested ConfigMap information.

@@ -676,7 +676,8 @@ Stability is not guaranteed.
  GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the ConfigMap. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to get a ConfigMap from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the ConfigMap. If empty and system_level is false, gets the ConfigMap from the shared resources namespace. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the ConfigMap to retrieve. |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
@@ -1009,10 +1010,11 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
- ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+ ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project to list ConfigMaps from. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list ConfigMaps from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project to list ConfigMaps from. If empty and system_level is false, lists ConfigMaps from the shared resources namespace. This value is ignored if system_level is true. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
