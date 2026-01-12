@@ -503,31 +503,3 @@ export const getAPIToken = KargoService.method.getAPIToken;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAPITokens
  */
 export const listAPITokens = KargoService.method.listAPITokens;
-
-/**
- * ListSystemSecrets retrieves all "cluster-scoped" system secrets.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListSystemSecrets
- */
-export const listSystemSecrets = KargoService.method.listSystemSecrets;
-
-/**
- * CreateSystemSecret creates a new "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateSystemSecret
- */
-export const createSystemSecret = KargoService.method.createSystemSecret;
-
-/**
- * UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateSystemSecret
- */
-export const updateSystemSecret = KargoService.method.updateSystemSecret;
-
-/**
- * DeleteSystemSecret removes a "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteSystemSecret
- */
-export const deleteSystemSecret = KargoService.method.deleteSystemSecret;

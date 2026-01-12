@@ -248,15 +248,6 @@ service KargoService {
   // Role virtual resource.
   rpc ListAPITokens(ListAPITokensRequest) returns (ListAPITokensResponse);
 
-  /* System Secrets APIs */
-  // ListSystemSecrets retrieves all "cluster-scoped" system secrets.
-  rpc ListSystemSecrets(ListSystemSecretsRequest) returns (ListSystemSecretsResponse);
-  // CreateSystemSecret creates a new "cluster-scoped" system secret.
-  rpc CreateSystemSecret(CreateSystemSecretRequest) returns (CreateSystemSecretResponse);
-  // UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
-  rpc UpdateSystemSecret(UpdateSystemSecretRequest) returns (UpdateSystemSecretResponse);
-  // DeleteSystemSecret removes a "cluster-scoped" system secret.
-  rpc DeleteSystemSecret(DeleteSystemSecretRequest) returns (DeleteSystemSecretResponse);
 }
 
 /* Version and Configuration Messages */
@@ -1666,56 +1657,6 @@ message ListAPITokensResponse {
   // token_secrets is the list of Kubernetes Secrets containing redacted tokens
   // associated with a Kargo Role virtual resource.
   repeated k8s.io.api.core.v1.Secret token_secrets = 1;
-}
-
-// ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.
-message ListSystemSecretsRequest {
-  /* explicitly empty */
-}
-
-// ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
-message ListSystemSecretsResponse {
-  // secrets is the list of "cluster-scoped" system-level Kubernetes Secrets.
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
-// CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
-message CreateSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to create.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
-message CreateSystemSecretResponse {
-  // secret is the created "cluster-scoped" system-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
-message UpdateSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to update.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
-message UpdateSystemSecretResponse {
-  // secret is the updated "cluster-scoped" system-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
-message DeleteSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to delete.
-  string name = 1;
-}
-
-// DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.
-message DeleteSystemSecretResponse {
-  /* explicitly empty */
 }
 
 message RefreshResourceRequest {

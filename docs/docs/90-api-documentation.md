@@ -92,10 +92,6 @@ Stability is not guaranteed.
 | DeleteAPIToken | [DeleteAPITokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest) | [DeleteAPITokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenResponse) |
 | GetAPIToken | [GetAPITokenRequest](#akuity-io-kargo-service-v1alpha1-GetAPITokenRequest) | [GetAPITokenResponse](#akuity-io-kargo-service-v1alpha1-GetAPITokenResponse) |
 | ListAPITokens | [ListAPITokensRequest](#akuity-io-kargo-service-v1alpha1-ListAPITokensRequest) | [ListAPITokensResponse](#akuity-io-kargo-service-v1alpha1-ListAPITokensResponse) |
-| ListSystemSecrets | [ListSystemSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest) | [ListSystemSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse) |
-| CreateSystemSecret | [CreateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest) | [CreateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse) |
-| UpdateSystemSecret | [UpdateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest) | [UpdateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse) |
-| DeleteSystemSecret | [DeleteSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest) | [DeleteSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse) |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
@@ -318,32 +314,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the newly created Kargo Role virtual resource. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest"></a>
-
-### CreateSystemSecretRequest
- CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to create. |
-| data | [CreateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry"></a>
-
-### CreateSystemSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse"></a>
-
-### CreateSystemSecretResponse
- CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created "cluster-scoped" system-level Kubernetes Secret. |
-
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest"></a>
 
 ### DeleteAPITokenRequest
@@ -507,18 +477,6 @@ Stability is not guaranteed.
 
 ### DeleteStageResponse
  DeleteStageResponse is the response after deleting a stage.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest"></a>
-
-### DeleteSystemSecretRequest
- DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse"></a>
-
-### DeleteSystemSecretResponse
- DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
@@ -1186,18 +1144,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest"></a>
-
-### ListSystemSecretsRequest
- ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse"></a>
-
-### ListSystemSecretsResponse
- ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of "cluster-scoped" system-level Kubernetes Secrets. |
-
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
 ### ListWarehousesRequest
@@ -1468,32 +1414,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the updated Kargo Role virtual resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest"></a>
-
-### UpdateSystemSecretRequest
- UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to update. |
-| data | [UpdateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry"></a>
-
-### UpdateSystemSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse"></a>
-
-### UpdateSystemSecretResponse
- UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated "cluster-scoped" system-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-VersionInfo"></a>
 

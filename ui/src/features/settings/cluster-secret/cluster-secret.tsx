@@ -6,15 +6,15 @@ import { Button, Card, Flex, Table, Tag } from 'antd';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
-  deleteSystemSecret,
+  deleteGenericCredentials,
   getConfig,
-  listSystemSecrets
+  listGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
 import { CreateSystemSecretModal } from './create-system-secret-modal';
 
 export const ClusterSecret = () => {
-  const listSystemSecretsQuery = useQuery(listSystemSecrets);
+  const listSystemSecretsQuery = useQuery(listGenericCredentials, { systemLevel: true });
   const confirm = useConfirmModal();
 
   const getConfigQuery = useQuery(getConfig);
@@ -24,7 +24,7 @@ export const ClusterSecret = () => {
     <CreateSystemSecretModal {...p} onSuccess={listSystemSecretsQuery.refetch} />
   ));
 
-  const deleteSecretsMutation = useMutation(deleteSystemSecret, {
+  const deleteSecretsMutation = useMutation(deleteGenericCredentials, {
     onSuccess: () => listSystemSecretsQuery.refetch()
   });
 
@@ -48,7 +48,7 @@ export const ClusterSecret = () => {
       <Table
         className='my-2'
         scroll={{ x: 'max-content' }}
-        dataSource={listSystemSecretsQuery.data?.secrets || []}
+        dataSource={listSystemSecretsQuery.data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
         loading={listSystemSecretsQuery.isLoading}
         pagination={{ defaultPageSize: 10, hideOnSinglePage: true }}
@@ -111,6 +111,7 @@ export const ClusterSecret = () => {
                       ),
                       onOk: () =>
                         deleteSecretsMutation.mutate({
+                          systemLevel: true,
                           name: record?.metadata?.name
                         })
                     });

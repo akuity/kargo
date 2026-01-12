@@ -9,8 +9,8 @@ import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { dnsRegex } from '@ui/features/common/utils';
 import { SecretEditor } from '@ui/features/project/settings/views/credentials/secret-editor';
 import {
-  createSystemSecret,
-  updateSystemSecret
+  createGenericCredentials,
+  updateGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 import { zodValidators } from '@ui/utils/validators';
@@ -36,14 +36,14 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
 
   const editing = !!props.init;
 
-  const createSystemSecretsMutation = useMutation(createSystemSecret, {
+  const createSystemSecretsMutation = useMutation(createGenericCredentials, {
     onSuccess: () => {
       props.hide();
       props.onSuccess?.();
     }
   });
 
-  const updateSystemSecretMutation = useMutation(updateSystemSecret, {
+  const updateSystemSecretMutation = useMutation(updateGenericCredentials, {
     onSuccess: () => {
       props.hide();
       props.onSuccess?.();
@@ -61,12 +61,14 @@ export const CreateSystemSecretModal = (props: CreateSystemSecretModalProps) => 
 
     if (editing) {
       return updateSystemSecretMutation.mutate({
+        systemLevel: true,
         ...values,
         data
       });
     }
 
     return createSystemSecretsMutation.mutate({
+      systemLevel: true,
       ...values,
       data
     });
