@@ -15,10 +15,10 @@ import (
 
 const redacted = "*** REDACTED ***"
 
-func (s *server) GetCredentials(
+func (s *server) GetRepoCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.GetCredentialsRequest],
-) (*connect.Response[svcv1alpha1.GetCredentialsResponse], error) {
+	req *connect.Request[svcv1alpha1.GetRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.GetRepoCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -75,14 +75,14 @@ func (s *server) GetCredentials(
 		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	if raw != nil {
-		return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
-			Result: &svcv1alpha1.GetCredentialsResponse_Raw{
+		return connect.NewResponse(&svcv1alpha1.GetRepoCredentialsResponse{
+			Result: &svcv1alpha1.GetRepoCredentialsResponse_Raw{
 				Raw: raw,
 			},
 		}), nil
 	}
-	return connect.NewResponse(&svcv1alpha1.GetCredentialsResponse{
-		Result: &svcv1alpha1.GetCredentialsResponse_Credentials{
+	return connect.NewResponse(&svcv1alpha1.GetRepoCredentialsResponse{
+		Result: &svcv1alpha1.GetRepoCredentialsResponse_Credentials{
 			Credentials: creds,
 		},
 	}), nil

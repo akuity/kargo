@@ -137,18 +137,18 @@ service KargoService {
   // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
 
-  /* Credential APIs */
+  /* Repo Credentials APIs */
 
-  // CreateCredentials creates new credentials for accessing external resources.
-  rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
-  // DeleteCredentials removes credentials from the system.
-  rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
-  // GetCredentials retrieves details of specific credentials.
-  rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
-  // ListCredentials retrieves all credentials within a project.
-  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
-  // UpdateCredentials modifies existing credentials.
-  rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
+  // CreateRepoCredentials creates new credentials for accessing external repositories.
+  rpc CreateRepoCredentials(CreateRepoCredentialsRequest) returns (CreateRepoCredentialsResponse);
+  // DeleteRepoCredentials removes repository credentials from the system.
+  rpc DeleteRepoCredentials(DeleteRepoCredentialsRequest) returns (DeleteRepoCredentialsResponse);
+  // GetRepoCredentials retrieves details of specific repository credentials.
+  rpc GetRepoCredentials(GetRepoCredentialsRequest) returns (GetRepoCredentialsResponse);
+  // ListRepoCredentials retrieves all repository credentials within a project.
+  rpc ListRepoCredentials(ListRepoCredentialsRequest) returns (ListRepoCredentialsResponse);
+  // UpdateRepoCredentials modifies existing repository credentials.
+  rpc UpdateRepoCredentials(UpdateRepoCredentialsRequest) returns (UpdateRepoCredentialsResponse);
 
   /* Generic Credentials APIs */
 
@@ -1019,10 +1019,10 @@ message GetConfigMapResponse {
   }
 }
 
-/* Credential Messages */
+/* Repo Credentials Messages */
 
-// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
-message CreateCredentialsRequest {
+// CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
+message CreateRepoCredentialsRequest {
   // project is the name of the project where the credentials will be stored.
   string project = 1;
   // name is the name of the credentials.
@@ -1041,27 +1041,27 @@ message CreateCredentialsRequest {
   string password = 7;
 }
 
-// CreateCredentialsResponse contains the newly created credentials.
-message CreateCredentialsResponse {
+// CreateRepoCredentialsResponse contains the newly created repository credentials.
+message CreateRepoCredentialsResponse {
   // credentials is the created Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// DeleteCredentialsRequest is the request for deleting existing credentials.
-message DeleteCredentialsRequest {
+// DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
+message DeleteRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to delete.
   string name = 2;
 }
 
-// DeleteCredentialsResponse is the response returned after deleting credentials.
-message DeleteCredentialsResponse {
+// DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.
+message DeleteRepoCredentialsResponse {
   /* explicitly empty */
 }
 
-// GetCredentialsRequest is the request for retrieving existing credentials.
-message GetCredentialsRequest {
+// GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+message GetRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to retrieve.
@@ -1070,8 +1070,8 @@ message GetCredentialsRequest {
   RawFormat format = 3;
 }
 
-// GetCredentialsResponse contains the requested credentials information.
-message GetCredentialsResponse {
+// GetRepoCredentialsResponse contains the requested repository credentials information.
+message GetRepoCredentialsResponse {
   oneof result {
     // credentials is the structured Kubernetes Secret containing the credentials.
     k8s.io.api.core.v1.Secret credentials = 1;
@@ -1080,20 +1080,20 @@ message GetCredentialsResponse {
   }
 }
 
-// ListCredentialsRequest is the request for listing all credentials in a project.
-message ListCredentialsRequest {
+// ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+message ListRepoCredentialsRequest {
   // project is the name of the project whose credentials will be listed.
   string project = 1;
 }
 
-// ListCredentialsResponse contains a list of credentials for the specified project.
-message ListCredentialsResponse {
+// ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+message ListRepoCredentialsResponse {
   // credentials is the list of Kubernetes Secrets containing the credentials.
   repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// UpdateCredentialsRequest is the request for updating existing credentials.
-message UpdateCredentialsRequest {
+// UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+message UpdateRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to update.
@@ -1112,8 +1112,8 @@ message UpdateCredentialsRequest {
   string password = 7;
 }
 
-// UpdateCredentialsResponse contains the updated credentials information.
-message UpdateCredentialsResponse {
+// UpdateRepoCredentialsResponse contains the updated repository credentials information.
+message UpdateRepoCredentialsResponse {
   // credentials is the updated Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }

@@ -201,10 +201,10 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		project = o.Project
 	}
 
-	resp, err := kargoSvcCli.UpdateCredentials(
+	resp, err := kargoSvcCli.UpdateRepoCredentials(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.UpdateCredentialsRequest{
+			&v1alpha1.UpdateRepoCredentialsRequest{
 				Project:        project,
 				Name:           o.Name,
 				Description:    o.Description,

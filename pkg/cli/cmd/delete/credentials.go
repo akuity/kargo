@@ -140,10 +140,10 @@ func (o *deleteCredentialsOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteCredentials(
+		if _, err := kargoSvcCli.DeleteRepoCredentials(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.DeleteCredentialsRequest{
+				&v1alpha1.DeleteRepoCredentialsRequest{
 					Project: project,
 					Name:    name,
 				},

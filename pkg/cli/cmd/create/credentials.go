@@ -231,10 +231,10 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		project = o.Project
 	}
 
-	resp, err := kargoSvcCli.CreateCredentials(
+	resp, err := kargoSvcCli.CreateRepoCredentials(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.CreateCredentialsRequest{
+			&v1alpha1.CreateRepoCredentialsRequest{
 				Project:        project,
 				Name:           o.Name,
 				Description:    o.Description,

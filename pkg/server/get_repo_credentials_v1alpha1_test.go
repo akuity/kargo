@@ -22,42 +22,42 @@ import (
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestGetCredentials(t *testing.T) {
+func TestGetRepoCredentials(t *testing.T) {
 	testCases := map[string]struct {
-		req        *svcv1alpha1.GetCredentialsRequest
+		req        *svcv1alpha1.GetRepoCredentialsRequest
 		objects    []client.Object
-		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetCredentialsResponse], error)
+		assertions func(*testing.T, *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], error)
 	}{
 		"empty name": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "",
 			},
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
 				require.Nil(t, c)
 			},
 		},
 		"non-existing project": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-x",
 				Name:    "test",
 			},
 			objects: []client.Object{
 				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 				require.Nil(t, c)
 			},
 		},
 		"non-credential Secret": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 			},
@@ -70,14 +70,14 @@ func TestGetCredentials(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeNotFound, connect.CodeOf(err))
 				require.Nil(t, c)
 			},
 		},
 		"existing shared Credentials": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "",
 				Name:    "test",
 			},
@@ -100,7 +100,7 @@ func TestGetCredentials(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.NoError(t, err)
 
 				require.NotNil(t, c)
@@ -120,7 +120,7 @@ func TestGetCredentials(t *testing.T) {
 			},
 		},
 		"existing Project Credentials": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 			},
@@ -143,7 +143,7 @@ func TestGetCredentials(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.NoError(t, err)
 
 				require.NotNil(t, c)
@@ -163,7 +163,7 @@ func TestGetCredentials(t *testing.T) {
 			},
 		},
 		"raw format JSON": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
@@ -191,7 +191,7 @@ func TestGetCredentials(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.NoError(t, err)
 
 				require.NotNil(t, c)
@@ -219,7 +219,7 @@ func TestGetCredentials(t *testing.T) {
 			},
 		},
 		"raw format YAML": {
-			req: &svcv1alpha1.GetCredentialsRequest{
+			req: &svcv1alpha1.GetRepoCredentialsRequest{
 				Project: "kargo-demo",
 				Name:    "test",
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
@@ -247,7 +247,7 @@ func TestGetCredentials(t *testing.T) {
 					},
 				},
 			},
-			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetCredentialsResponse], err error) {
+			assertions: func(t *testing.T, c *connect.Response[svcv1alpha1.GetRepoCredentialsResponse], err error) {
 				require.NoError(t, err)
 
 				require.NotNil(t, c)
@@ -309,7 +309,7 @@ func TestGetCredentials(t *testing.T) {
 					SharedResourcesNamespace: "kargo-shared-resources",
 				},
 			}
-			res, err := (svr).GetCredentials(ctx, connect.NewRequest(testCase.req))
+			res, err := (svr).GetRepoCredentials(ctx, connect.NewRequest(testCase.req))
 			testCase.assertions(t, res, err)
 		})
 	}

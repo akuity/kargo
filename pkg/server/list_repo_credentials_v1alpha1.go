@@ -16,10 +16,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func (s *server) ListCredentials(
+func (s *server) ListRepoCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.ListCredentialsRequest],
-) (*connect.Response[svcv1alpha1.ListCredentialsResponse], error) {
+	req *connect.Request[svcv1alpha1.ListRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.ListRepoCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -75,7 +75,7 @@ func (s *server) ListCredentials(
 		secrets[i] = sanitizeCredentialSecret(secret)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.ListCredentialsResponse{
+	return connect.NewResponse(&svcv1alpha1.ListRepoCredentialsResponse{
 		Credentials: secrets,
 	}), nil
 }

@@ -145,11 +145,11 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListCredentialsResponse]
-		if resp, err = kargoSvcCli.ListCredentials(
+		var resp *connect.Response[v1alpha1.ListRepoCredentialsResponse]
+		if resp, err = kargoSvcCli.ListRepoCredentials(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.ListCredentialsRequest{
+				&v1alpha1.ListRepoCredentialsRequest{
 					Project: project,
 				},
 			),
@@ -162,11 +162,11 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 	res := make([]*corev1.Secret, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetCredentialsResponse]
-		if resp, err = kargoSvcCli.GetCredentials(
+		var resp *connect.Response[v1alpha1.GetRepoCredentialsResponse]
+		if resp, err = kargoSvcCli.GetRepoCredentials(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.GetCredentialsRequest{
+				&v1alpha1.GetRepoCredentialsRequest{
 					Project: project,
 					Name:    name,
 				},

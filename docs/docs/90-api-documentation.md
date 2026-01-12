@@ -57,11 +57,11 @@ Stability is not guaranteed.
 | GetWarehouse | [GetWarehouseRequest](#akuity-io-kargo-service-v1alpha1-GetWarehouseRequest) | [GetWarehouseResponse](#akuity-io-kargo-service-v1alpha1-GetWarehouseResponse) |
 | WatchWarehouses | [WatchWarehousesRequest](#akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest) | [WatchWarehousesResponse](#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse)(stream) |
 | DeleteWarehouse | [DeleteWarehouseRequest](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest) | [DeleteWarehouseResponse](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse) |
-| CreateCredentials | [CreateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest) | [CreateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse) |
-| DeleteCredentials | [DeleteCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest) | [DeleteCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse) |
-| GetCredentials | [GetCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetCredentialsRequest) | [GetCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetCredentialsResponse) |
-| ListCredentials | [ListCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListCredentialsResponse) |
-| UpdateCredentials | [UpdateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest) | [UpdateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse) |
+| CreateRepoCredentials | [CreateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest) | [CreateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse) |
+| DeleteRepoCredentials | [DeleteRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest) | [DeleteRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse) |
+| GetRepoCredentials | [GetRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest) | [GetRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse) |
+| ListRepoCredentials | [ListRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest) | [ListRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse) |
+| UpdateRepoCredentials | [UpdateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest) | [UpdateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse) |
 | ListGenericCredentials | [ListGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest) | [ListGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse) |
 | CreateGenericCredentials | [CreateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest) | [CreateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse) |
 | UpdateGenericCredentials | [UpdateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest) | [UpdateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse) |
@@ -195,29 +195,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
-
-### CreateCredentialsRequest
- CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
-| name | [string](#string) |  name is the name of the credentials. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
-
-### CreateCredentialsResponse
- CreateCredentialsResponse contains the newly created credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
-
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
 ### CreateGenericCredentialsRequest
@@ -272,6 +249,29 @@ Stability is not guaranteed.
 | created_resource_manifest | [bytes](#bytes) |  created_resource_manifest contains the newly created resource manifest. |
 | updated_resource_manifest | [bytes](#bytes) |  updated_resource_manifest contains the updated existing resource manifest. |
 | error | [string](#string) |  error contains the error message if the operation failed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest"></a>
+
+### CreateRepoCredentialsRequest
+ CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
+| name | [string](#string) |  name is the name of the credentials. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse"></a>
+
+### CreateRepoCredentialsResponse
+ CreateRepoCredentialsResponse contains the newly created repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
@@ -361,19 +361,6 @@ Stability is not guaranteed.
 
 ### DeleteClusterConfigResponse
  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
-
-### DeleteCredentialsRequest
- DeleteCredentialsRequest is the request for deleting existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse"></a>
-
-### DeleteCredentialsResponse
- DeleteCredentialsResponse is the response returned after deleting credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -426,6 +413,19 @@ Stability is not guaranteed.
 
 ### DeleteProjectResponse
  DeleteProjectResponse is the response after deleting a project.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest"></a>
+
+### DeleteRepoCredentialsRequest
+ DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse"></a>
+
+### DeleteRepoCredentialsResponse
+ DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
@@ -672,25 +672,6 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [ArgoCDShard](#akuity-io-kargo-service-v1alpha1-ArgoCDShard) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsRequest"></a>
-
-### GetCredentialsRequest
- GetCredentialsRequest is the request for retrieving existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to retrieve. |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsResponse"></a>
-
-### GetCredentialsResponse
- GetCredentialsResponse contains the requested credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
-| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
-
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightRequest"></a>
 
 ### GetFreightRequest
@@ -798,6 +779,25 @@ Stability is not guaranteed.
 | oidc_config | [OIDCConfig](#akuity-io-kargo-service-v1alpha1-OIDCConfig) |  oidc_config contains OpenID Connect configuration for authentication. |
 | admin_account_enabled | [bool](#bool) |  admin_account_enabled indicates if admin account authentication is available. |
 | skip_auth | [bool](#bool) |  skip_auth indicates if authentication should be bypassed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest"></a>
+
+### GetRepoCredentialsRequest
+ GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse"></a>
+
+### GetRepoCredentialsResponse
+ GetRepoCredentialsResponse contains the requested repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
 
@@ -982,22 +982,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsRequest"></a>
-
-### ListCredentialsRequest
- ListCredentialsRequest is the request for listing all credentials in a project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsResponse"></a>
-
-### ListCredentialsResponse
- ListCredentialsResponse contains a list of credentials for the specified project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
-
 <a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
 ### ListGenericCredentialsRequest
@@ -1108,6 +1092,22 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotions is the list of Promotion resources found in the project. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest"></a>
+
+### ListRepoCredentialsRequest
+ ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse"></a>
+
+### ListRepoCredentialsResponse
+ ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
@@ -1307,29 +1307,6 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [ImageStageMap](#akuity-io-kargo-service-v1alpha1-ImageStageMap) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest"></a>
-
-### UpdateCredentialsRequest
- UpdateCredentialsRequest is the request for updating existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to update. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
-
-### UpdateCredentialsResponse
- UpdateCredentialsResponse contains the updated credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 
 ### UpdateFreightAliasRequest
@@ -1373,6 +1350,29 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing generic credentials within the project. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest"></a>
+
+### UpdateRepoCredentialsRequest
+ UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse"></a>
+
+### UpdateRepoCredentialsResponse
+ UpdateRepoCredentialsResponse contains the updated repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 

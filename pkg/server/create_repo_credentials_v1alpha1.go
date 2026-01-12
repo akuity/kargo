@@ -25,10 +25,10 @@ type credentials struct {
 	description    string
 }
 
-func (s *server) CreateCredentials(
+func (s *server) CreateRepoCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.CreateCredentialsRequest],
-) (*connect.Response[svcv1alpha1.CreateCredentialsResponse], error) {
+	req *connect.Request[svcv1alpha1.CreateRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.CreateRepoCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -55,7 +55,7 @@ func (s *server) CreateCredentials(
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.CreateCredentialsResponse{
+		&svcv1alpha1.CreateRepoCredentialsResponse{
 			Credentials: sanitizeCredentialSecret(*secret),
 		},
 	), nil

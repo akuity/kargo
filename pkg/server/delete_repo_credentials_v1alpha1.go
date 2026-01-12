@@ -12,10 +12,10 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func (s *server) DeleteCredentials(
+func (s *server) DeleteRepoCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteCredentialsRequest],
-) (*connect.Response[svcv1alpha1.DeleteCredentialsResponse], error) {
+	req *connect.Request[svcv1alpha1.DeleteRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.DeleteRepoCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -70,5 +70,5 @@ func (s *server) DeleteCredentials(
 		return nil, fmt.Errorf("delete secret: %w", err)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.DeleteCredentialsResponse{}), nil
+	return connect.NewResponse(&svcv1alpha1.DeleteRepoCredentialsResponse{}), nil
 }

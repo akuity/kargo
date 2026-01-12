@@ -9,9 +9,9 @@ import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import {
-  createCredentials,
+  createRepoCredentials,
   createGenericCredentials,
-  updateCredentials,
+  updateRepoCredentials,
   updateGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
@@ -63,14 +63,14 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
     resolver: zodResolver(createFormSchema(props.type === 'generic', editing))
   });
 
-  const createCredentialsMutation = useMutation(createCredentials, {
+  const createCredentialsMutation = useMutation(createRepoCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();
     }
   });
 
-  const updateCredentialsMutation = useMutation(updateCredentials, {
+  const updateCredentialsMutation = useMutation(updateRepoCredentials, {
     onSuccess: () => {
       props.hide();
       onSuccess();
