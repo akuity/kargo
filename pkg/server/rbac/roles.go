@@ -6,7 +6,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/davecgh/go-spew/spew"
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -1017,22 +1016,15 @@ func (c *rolesDatabase) CreateAPIToken(
 	roleName string,
 	tokenName string,
 ) (*corev1.Secret, error) {
-	fmt.Printf("----> 1: %s", roleName)
 	namespace := project
 	if systemLevel {
-		fmt.Println("----> 2")
 		namespace = c.cfg.KargoNamespace
 	}
-	fmt.Println("----> 3")
 	sa, _, _, err := c.GetAsResources(ctx, systemLevel, project, roleName)
 	if err != nil {
-		fmt.Println("----> 4")
 		return nil, err
 	}
-	spew.Dump(sa)
-	fmt.Println("----> 5")
 	if systemLevel && sa.Labels[rbacapi.LabelKeySystemRole] != rbacapi.LabelValueTrue {
-		fmt.Println("----> 6")
 		return nil, apierrors.NewBadRequest(
 			fmt.Sprintf(
 				"ServiceAccount %q in namespace %q is not labeled as a system-level Kargo role",
@@ -1040,7 +1032,6 @@ func (c *rolesDatabase) CreateAPIToken(
 			),
 		)
 	}
-	fmt.Println("----> 7")
 	tokenSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -1064,14 +1055,11 @@ func (c *rolesDatabase) CreateAPIToken(
 	}
 	fmt.Println(tokenSecret.OwnerReferences)
 	if err = c.client.Create(ctx, tokenSecret); err != nil {
-		fmt.Println("----> 8")
 		return nil, fmt.Errorf(
 			"error creating token Secret %q for ServiceAccount %q in namespace %q: %w",
 			tokenName, roleName, namespace, err,
 		)
 	}
-
-	fmt.Println("----> 9")
 
 	// Retrieve Secret -- this is necessary to actually get the token. We wrap
 	// this in a retry because token data is created asynchronously and we don't
@@ -1083,11 +1071,8 @@ func (c *rolesDatabase) CreateAPIToken(
 		5, // Up to five attempts
 	)
 	if err != nil {
-		fmt.Println("----> 10")
 		return nil, err
 	}
-
-	fmt.Println("----> 11")
 
 	return tokenSecret, nil
 }
