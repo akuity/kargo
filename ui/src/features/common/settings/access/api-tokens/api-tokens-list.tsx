@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { listAPITokens } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+import { Secret } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { CreateAPITokenModal } from './create-api-token-modal';
 import { DeleteAPITokenButton } from './delete-api-token-button';

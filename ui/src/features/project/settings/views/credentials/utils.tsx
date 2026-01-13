@@ -3,7 +3,7 @@ import { faAnchor, faDharmachakra, faQuestionCircle } from '@fortawesome/free-so
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
 import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+import { Secret } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
 
