@@ -6,8 +6,8 @@ import { z } from 'zod';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { dnsRegex } from '@ui/features/common/utils';
 import { SecretEditor } from '@ui/features/common/settings/secrets/secret-editor';
+import { dnsRegex } from '@ui/features/common/utils';
 import {
   createGenericCredentials,
   updateGenericCredentials
