@@ -2,7 +2,6 @@ import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Flex, Table, Tag } from 'antd';
-import { useParams } from 'react-router-dom';
 import { stringify } from 'yaml';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -15,12 +14,15 @@ import { ConfigMap } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
 import { UpsertConfigMapsModal } from './upsert-config-maps';
 
-export const ConfigMaps = () => {
-  const { name } = useParams();
+type Props = {
+  systemLevel?: boolean;
+  project?: string;
+};
 
+export const ConfigMaps = ({ systemLevel = false, project = '' }: Props) => {
   const confirm = useConfirmModal();
 
-  const listProjectConfigMapsQuery = useQuery(listConfigMaps, { project: name });
+  const listProjectConfigMapsQuery = useQuery(listConfigMaps, { project, systemLevel });
 
   const deleteResourceMutation = useMutation(deleteResource, {
     onSuccess: () => listProjectConfigMapsQuery.refetch()
@@ -66,7 +68,7 @@ export const ConfigMaps = () => {
             actionModal.show((p) => (
               <UpsertConfigMapsModal
                 {...p}
-                project={name || ''}
+                project={project}
                 onSuccess={() => {
                   listProjectConfigMapsQuery.refetch();
                 }}
@@ -123,7 +125,7 @@ export const ConfigMaps = () => {
                     actionModal.show((p) => (
                       <UpsertConfigMapsModal
                         {...p}
-                        project={name || ''}
+                        project={project}
                         editing={record?.metadata?.name}
                         onSuccess={() => listProjectConfigMapsQuery.refetch()}
                       />
