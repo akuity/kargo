@@ -4,7 +4,7 @@ import {
   faChartBar,
   faGear,
   faGears,
-  faPeopleGroup,
+  faKey,
   faScrewdriverWrench,
   faTasks
 } from '@fortawesome/free-solid-svg-icons';
@@ -19,13 +19,13 @@ import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_con
 
 import { useProjectBreadcrumbs } from '../project-utils';
 
+import { AccessSettings } from './views/access/access-settings';
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
 import { ConfigMaps } from './views/config-maps/config-maps';
 import { CredentialsSettings } from './views/credentials/credentials';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
-import { RolesSettings } from './views/roles/roles';
 
 export const ProjectSettings = () => {
   const location = useLocation();
@@ -72,10 +72,10 @@ export const ProjectSettings = () => {
         component: ConfigMaps
       },
       roles: {
-        label: 'Roles',
-        icon: faPeopleGroup,
-        path: 'roles',
-        component: RolesSettings
+        label: 'Access',
+        icon: faKey,
+        path: 'access',
+        component: AccessSettings
       },
       promotionTasks: {
         label: 'Promotion Tasks',

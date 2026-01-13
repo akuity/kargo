@@ -9,17 +9,22 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
 
-func (s *server) DeleteServiceAccountToken(
+func (s *server) CreateAPIToken(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteServiceAccountTokenRequest],
-) (*connect.Response[svcv1alpha1.DeleteServiceAccountTokenResponse], error) {
+	req *connect.Request[svcv1alpha1.CreateAPITokenRequest],
+) (*connect.Response[svcv1alpha1.CreateAPITokenResponse], error) {
 	systemLevel := req.Msg.SystemLevel
 	project := req.Msg.Project
 	if err := s.validateSystemLevelOrProject(systemLevel, project); err != nil {
 		return nil, err
 	}
 
-	name := req.Msg.GetName()
+	roleName := req.Msg.RoleName
+	if err := validateFieldNotEmpty("role_name", roleName); err != nil {
+		return nil, err
+	}
+
+	name := req.Msg.Name
 	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
@@ -30,12 +35,14 @@ func (s *server) DeleteServiceAccountToken(
 		}
 	}
 
-	if err := s.serviceAccountsDB.DeleteToken(
-		ctx, systemLevel, project, name,
-	); err != nil {
-		return nil, fmt.Errorf("error deleting ServiceAccount token Secret: %w", err)
+	tokenSecret, err := s.rolesDB.CreateAPIToken(
+		ctx, systemLevel, project, roleName, name,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("error creating new token Secret: %w", err)
 	}
+
 	return connect.NewResponse(
-		&svcv1alpha1.DeleteServiceAccountTokenResponse{},
+		&svcv1alpha1.CreateAPITokenResponse{TokenSecret: tokenSecret},
 	), nil
 }

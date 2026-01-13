@@ -20,45 +20,44 @@ import (
 	"github.com/akuity/kargo/pkg/cli/templates"
 )
 
-type createServiceAccountTokenOptions struct {
+type createTokenOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	SystemLevel        bool
-	Project            string
-	ServiceAccountName string
-	Name               string
+	SystemLevel bool
+	Project     string
+	RoleName    string
+	Name        string
 }
 
-func newServiceAccountTokenCommand(
+func newTokenCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
 ) *cobra.Command {
-	cmdOpts := &createServiceAccountTokenOptions{
+	cmdOpts := &createTokenOptions{
 		Config:     cfg,
 		IOStreams:  streams,
 		PrintFlags: genericclioptions.NewPrintFlags("created").WithTypeSetter(kubernetes.GetScheme()),
 	}
 
 	cmd := &cobra.Command{
-		Use:     "serviceaccounttoken [--project=project] --service-account=service-account NAME",
-		Aliases: []string{"satoken", "sat"},
-		Short:   "Generate and retrieve a token for the specified service account",
+		Use:     "token [--project=project] --role=role NAME",
+		Aliases: []string{"token"},
+		Short:   "Generate and retrieve a token for the specified role",
 		Args:    option.ExactArgs(1),
 		Example: templates.Example(`
-# Create a token for service account my-service-account in my-project
-kargo create serviceaccounttoken --project=my-project \
-  --service-account=my-service-account my-token
+# Create a token for role my-role in my-project
+kargo create token --project=my-project --role=my-role my-token
 
-# Create a token for service account my-service-account in the default project
+# Create a token for role my-role in the default project
 kargo config set-project my-project
-kargo create serviceaccounttoken --service-account=my-service-account my-token
+kargo create token --role=my-role my-token
 
-# Create a token for system-level service account kargo-admin
-kargo create serviceaccounttoken --system --service-account=kargo-admin my-token
+# Create a token for system-level role kargo-admin
+kargo create token --system --role=kargo-admin my-token
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -80,9 +79,9 @@ kargo create serviceaccounttoken --system --service-account=kargo-admin my-token
 	return cmd
 }
 
-// addFlags adds the flags for the create service account token options to the
-// provided command.
-func (o *createServiceAccountTokenOptions) addFlags(cmd *cobra.Command) {
+// addFlags adds the flags for the create API token options to the provided
+// command.
+func (o *createTokenOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
 
@@ -93,32 +92,28 @@ func (o *createServiceAccountTokenOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.System(
 		cmd.Flags(), &o.SystemLevel, false,
-		"Whether to create a token for a system-level service account instead of "+
-			"a project-level service account.",
+		"Whether to create a token for a system-level role instead of a "+
+			"project-level role.",
 	)
 	// project and system flags are mutually exclusive
 	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SystemFlag)
 
-	option.ServiceAccount(
-		cmd.Flags(),
-		&o.ServiceAccountName,
-		"The service account for which to create a token.",
-	)
-	if err := cmd.MarkFlagRequired(option.ServiceAccountFlag); err != nil {
+	option.Role(cmd.Flags(), &o.RoleName, "The role for which to create a token.")
+	if err := cmd.MarkFlagRequired(option.RoleFlag); err != nil {
 		panic(fmt.Errorf(
-			"could not mark %s flag as required: %w", option.ServiceAccountFlag, err,
+			"could not mark %s flag as required: %w", option.RoleFlag, err,
 		))
 	}
 }
 
 // complete sets the options from the command arguments.
-func (o *createServiceAccountTokenOptions) complete(args []string) {
+func (o *createTokenOptions) complete(args []string) {
 	o.Name = strings.TrimSpace(args[0])
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
-func (o *createServiceAccountTokenOptions) validate() error {
+func (o *createTokenOptions) validate() error {
 	var errs []error
 	if o.Project == "" && !o.SystemLevel {
 		errs = append(errs, fmt.Errorf(
@@ -127,32 +122,32 @@ func (o *createServiceAccountTokenOptions) validate() error {
 	}
 	// This flag is marked as required, but a user could still have provide an
 	// empty string as the flag's value.
-	if o.ServiceAccountName == "" {
-		errs = append(errs, fmt.Errorf("%s is required", option.ServiceAccountFlag))
+	if o.RoleName == "" {
+		errs = append(errs, fmt.Errorf("%s is required", option.RoleFlag))
 	}
 	return errors.Join(errs...)
 }
 
-// run creates a service account token and prints it to the console.
-func (o *createServiceAccountTokenOptions) run(ctx context.Context) error {
+// run creates an API token and prints it to the console.
+func (o *createTokenOptions) run(ctx context.Context) error {
 	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	resp, err := kargoSvcCli.CreateServiceAccountToken(
+	resp, err := kargoSvcCli.CreateAPIToken(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.CreateServiceAccountTokenRequest{
-				SystemLevel:        o.SystemLevel,
-				Project:            o.Project,
-				ServiceAccountName: o.ServiceAccountName,
-				Name:               o.Name,
+			&v1alpha1.CreateAPITokenRequest{
+				SystemLevel: o.SystemLevel,
+				Project:     o.Project,
+				RoleName:    o.RoleName,
+				Name:        o.Name,
 			},
 		),
 	)
 	if err != nil {
-		return fmt.Errorf("get service account token: %w", err)
+		return fmt.Errorf("get API token: %w", err)
 	}
 
 	// If user specified an output format (yaml, json, etc.), use it

@@ -109,9 +109,6 @@ const (
 	// SharedFlag is the flag name for the shared flag.
 	SharedFlag = "shared"
 
-	// ServiceAccountFlag is the flag name for the service-account flag.
-	ServiceAccountFlag = "service-account"
-
 	// StageFlag is the flag name for the stage flag.
 	StageFlag = "stage"
 
@@ -304,16 +301,6 @@ func Role(fs *pflag.FlagSet, role *string, usage string) {
 // Shared adds the SharedFlag to the provided flag set.
 func Shared(fs *pflag.FlagSet, shared *bool, defaultShared bool, usage string) {
 	fs.BoolVar(shared, SharedFlag, defaultShared, usage)
-}
-
-// ServiceAccount adds the ServiceAccountFlag to the provided flag set.
-func ServiceAccount(fs *pflag.FlagSet, serviceAccount *string, usage string) {
-	fs.StringVar(serviceAccount, ServiceAccountFlag, "", usage)
-}
-
-// Claims adds a multi-value ServiceAccountFlag to the provided flag set.
-func ServiceAccounts(fs *pflag.FlagSet, serviceAccounts *[]string, usage string) {
-	fs.StringSliceVar(serviceAccounts, ServiceAccountFlag, nil, usage)
 }
 
 // Stage adds the StageFlag to the provided flag set.

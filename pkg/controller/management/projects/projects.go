@@ -803,7 +803,7 @@ func (r *reconciler) ensureControllerPermissions(
 		roleBindingName := getRoleBindingName(sa.Name)
 		saLogger := logger.WithValues(
 			"serviceAccount", sa.Name,
-			"serviceAccount.namespace", sa.Namespace,
+			corev1.ServiceAccountNameKey, sa.Namespace,
 			"roleBinding", roleBindingName,
 		)
 
