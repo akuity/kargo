@@ -129,7 +129,7 @@ CLI users the convenience of a simplified interface for managing
 user-to-`ServiceAccount` mappings and the permissions associated with those
 `ServiceAccount` resources.
 
-Four such "Kargo roles" are pre-defined in a project's namespace when a new
+There are several "Kargo roles" pre-defined in a project's namespace when a new
 `Project` resource is created:
 
 1. `default`: This Kargo role exists by virtue of the existence of the `default`
