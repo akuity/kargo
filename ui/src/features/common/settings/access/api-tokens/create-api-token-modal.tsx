@@ -1,8 +1,6 @@
 import { createConnectQueryKey, useMutation, useQuery } from '@connectrpc/connect-query';
-import { faCopy } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Button, Input, Modal, Row, Select, Typography } from 'antd';
+import { Input, Modal, Select, Typography } from 'antd';
 import React from 'react';
 import { useForm } from 'react-hook-form';
 import z from 'zod';
@@ -65,16 +63,11 @@ export const CreateAPITokenModal = ({ hide, visible, systemLevel, project }: Pro
           The API Token has been created successfully. Please copy the token below as it will not be
           shown again.
         </Typography.Paragraph>
-        <Input.TextArea readOnly value={token} autoSize />
-        <Row justify='end' className='mt-4'>
-          <Button
-            icon={<FontAwesomeIcon icon={faCopy} />}
-            onClick={() => navigator.clipboard.writeText(token)}
-            size='small'
-          >
-            Copy To Clipboard
-          </Button>
-        </Row>
+        <Typography.Paragraph>
+          <pre>
+            <Typography.Text copyable>{token}</Typography.Text>
+          </pre>
+        </Typography.Paragraph>
       </Modal>
     );
   }

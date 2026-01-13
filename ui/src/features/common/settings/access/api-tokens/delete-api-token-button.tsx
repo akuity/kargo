@@ -1,7 +1,7 @@
 import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button } from 'antd';
+import { Button, Typography } from 'antd';
 
 import { queryClient } from '@ui/config/query-client';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
@@ -37,7 +37,13 @@ export const DeleteAPITokenButton = ({ name, project, systemLevel }: Props) => {
           }
         );
       },
-      title: 'Are you sure you want to delete this API Token?'
+      title: 'Delete API Token',
+      content: (
+        <>
+          Are you sure you want to delete the <Typography.Text strong>{name}</Typography.Text> API
+          token? This action cannot be undone, and any services using this token will stop working.
+        </>
+      )
     });
   };
 

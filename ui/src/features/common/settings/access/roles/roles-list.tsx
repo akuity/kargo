@@ -48,7 +48,7 @@ type Props = {
 };
 
 export const RolesList = ({ project = '', systemLevel = false }: Props) => {
-  const { data, refetch } = useQuery(listRoles, { project, systemLevel });
+  const { data, refetch, isLoading } = useQuery(listRoles, { project, systemLevel });
 
   const [showCreateRole, setShowCreateRole] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | undefined>();
@@ -68,6 +68,7 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
       type='inner'
       className='min-h-full'
       extra={
+        // System-level roles are read-only
         systemLevel ? null : (
           <Button
             icon={<FontAwesomeIcon icon={faPlus} />}
@@ -102,6 +103,7 @@ export const RolesList = ({ project = '', systemLevel = false }: Props) => {
             return 0;
           }
         })}
+        loading={isLoading}
         rowKey={(record: Role) => record?.metadata?.name || ''}
         columns={[
           {

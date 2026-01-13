@@ -37,15 +37,10 @@ export const APITokensList = ({ project = '', systemLevel = false }: Props) => {
     >
       <Table<Secret>
         className='my-2 overflow-x-auto'
-        dataSource={listAPITokensQuery.data?.tokenSecrets?.sort((a, b) => {
-          if (a.metadata?.name && b.metadata?.name) {
-            return a.metadata?.name.localeCompare(b.metadata?.name);
-          } else {
-            return 0;
-          }
-        })}
+        dataSource={listAPITokensQuery.data?.tokenSecrets || []}
         rowKey={(record: Secret) => record?.metadata?.name || ''}
         pagination={{ defaultPageSize: 5, hideOnSinglePage: true }}
+        loading={listAPITokensQuery.isLoading}
       >
         <Table.Column
           title='Creation Date'
