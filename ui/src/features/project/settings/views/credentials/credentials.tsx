@@ -14,10 +14,10 @@ import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-m
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
-  deleteCredentials,
-  deleteProjectSecret,
-  listCredentials,
-  listProjectSecrets
+  deleteRepoCredentials,
+  deleteGenericCredentials,
+  listRepoCredentials,
+  listGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
 
@@ -29,22 +29,22 @@ export const CredentialsSettings = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
-  const listCredentialsQuery = useQuery(listCredentials, { project: name });
+  const listCredentialsQuery = useQuery(listRepoCredentials, { project: name });
 
-  const listSecretsQuery = useQuery(listProjectSecrets, { project: name });
+  const listSecretsQuery = useQuery(listGenericCredentials, { project: name });
 
-  const deleteCredentialsMutation = useMutation(deleteCredentials, {
+  const deleteCredentialsMutation = useMutation(deleteRepoCredentials, {
     onSuccess: () => {
       listCredentialsQuery.refetch();
     }
   });
 
-  const deleteSecretsMutation = useMutation(deleteProjectSecret, {
+  const deleteSecretsMutation = useMutation(deleteGenericCredentials, {
     onSuccess: () => listSecretsQuery.refetch()
   });
 
   const specificCredentials: Secret[] = listCredentialsQuery.data?.credentials || [];
-  const genericCredentials: Secret[] = listSecretsQuery.data?.secrets || [];
+  const genericCredentials: Secret[] = listSecretsQuery.data?.credentials || [];
 
   const { show: showCreate } = useModal((p) => (
     <CreateCredentialsModal

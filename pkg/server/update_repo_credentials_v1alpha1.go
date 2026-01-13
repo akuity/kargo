@@ -24,10 +24,10 @@ type credentialsUpdate struct {
 	password       string
 }
 
-func (s *server) UpdateCredentials(
+func (s *server) UpdateRepoCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.UpdateCredentialsRequest],
-) (*connect.Response[svcv1alpha1.UpdateCredentialsResponse], error) {
+	req *connect.Request[svcv1alpha1.UpdateRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.UpdateRepoCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
@@ -91,7 +91,7 @@ func (s *server) UpdateCredentials(
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.UpdateCredentialsResponse{
+		&svcv1alpha1.UpdateRepoCredentialsResponse{
 			Credentials: sanitizeCredentialSecret(secret),
 		},
 	), nil

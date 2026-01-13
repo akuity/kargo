@@ -254,67 +254,67 @@ export const getWarehouse = KargoService.method.getWarehouse;
 export const deleteWarehouse = KargoService.method.deleteWarehouse;
 
 /**
- * CreateCredentials creates new credentials for accessing external resources.
+ * CreateRepoCredentials creates new credentials for accessing external repositories.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateRepoCredentials
  */
-export const createCredentials = KargoService.method.createCredentials;
+export const createRepoCredentials = KargoService.method.createRepoCredentials;
 
 /**
- * DeleteCredentials removes credentials from the system.
+ * DeleteRepoCredentials removes repository credentials from the system.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteRepoCredentials
  */
-export const deleteCredentials = KargoService.method.deleteCredentials;
+export const deleteRepoCredentials = KargoService.method.deleteRepoCredentials;
 
 /**
- * GetCredentials retrieves details of specific credentials.
+ * GetRepoCredentials retrieves details of specific repository credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetRepoCredentials
  */
-export const getCredentials = KargoService.method.getCredentials;
+export const getRepoCredentials = KargoService.method.getRepoCredentials;
 
 /**
- * ListCredentials retrieves all credentials within a project.
+ * ListRepoCredentials retrieves all repository credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListRepoCredentials
  */
-export const listCredentials = KargoService.method.listCredentials;
+export const listRepoCredentials = KargoService.method.listRepoCredentials;
 
 /**
- * UpdateCredentials modifies existing credentials.
+ * UpdateRepoCredentials modifies existing repository credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateRepoCredentials
  */
-export const updateCredentials = KargoService.method.updateCredentials;
+export const updateRepoCredentials = KargoService.method.updateRepoCredentials;
 
 /**
- * ListProjectSecrets retrieves all secrets within a project.
+ * ListGenericCredentials retrieves all generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListGenericCredentials
  */
-export const listProjectSecrets = KargoService.method.listProjectSecrets;
+export const listGenericCredentials = KargoService.method.listGenericCredentials;
 
 /**
- * CreateProjectSecret creates a new secret within a project.
+ * CreateGenericCredentials creates new generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateGenericCredentials
  */
-export const createProjectSecret = KargoService.method.createProjectSecret;
+export const createGenericCredentials = KargoService.method.createGenericCredentials;
 
 /**
- * UpdateProjectSecret modifies an existing project secret.
+ * UpdateGenericCredentials modifies existing generic credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateGenericCredentials
  */
-export const updateProjectSecret = KargoService.method.updateProjectSecret;
+export const updateGenericCredentials = KargoService.method.updateGenericCredentials;
 
 /**
- * DeleteProjectSecret removes a secret from a project.
+ * DeleteGenericCredentials removes generic credentials from a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteGenericCredentials
  */
-export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
+export const deleteGenericCredentials = KargoService.method.deleteGenericCredentials;
 
 /**
  * ListConfigMaps retrieves all ConfigMaps within a project.
@@ -503,31 +503,3 @@ export const getAPIToken = KargoService.method.getAPIToken;
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAPITokens
  */
 export const listAPITokens = KargoService.method.listAPITokens;
-
-/**
- * ListSystemSecrets retrieves all "cluster-scoped" system secrets.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListSystemSecrets
- */
-export const listSystemSecrets = KargoService.method.listSystemSecrets;
-
-/**
- * CreateSystemSecret creates a new "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateSystemSecret
- */
-export const createSystemSecret = KargoService.method.createSystemSecret;
-
-/**
- * UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateSystemSecret
- */
-export const updateSystemSecret = KargoService.method.updateSystemSecret;
-
-/**
- * DeleteSystemSecret removes a "cluster-scoped" system secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteSystemSecret
- */
-export const deleteSystemSecret = KargoService.method.deleteSystemSecret;

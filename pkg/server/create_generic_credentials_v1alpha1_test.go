@@ -20,7 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
-func TestCreateProjectSecret(t *testing.T) {
+func TestCreateGenericCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -41,9 +41,12 @@ func TestCreateProjectSecret(t *testing.T) {
 	s := &server{
 		client: cl,
 		cfg:    config.ServerConfig{SecretManagementEnabled: true},
+		externalValidateProjectFn: func(context.Context, client.Client, string) error {
+			return nil
+		},
 	}
 
-	resp, err := s.CreateProjectSecret(ctx, connect.NewRequest(&svcv1alpha1.CreateProjectSecretRequest{
+	resp, err := s.CreateGenericCredentials(ctx, connect.NewRequest(&svcv1alpha1.CreateGenericCredentialsRequest{
 		Project:     "kargo-demo",
 		Name:        "secret",
 		Description: "my secret",
@@ -54,12 +57,12 @@ func TestCreateProjectSecret(t *testing.T) {
 	}))
 	require.NoError(t, err)
 
-	projSecret := resp.Msg.GetSecret()
-	assert.Equal(t, "kargo-demo", projSecret.Namespace)
-	assert.Equal(t, "secret", projSecret.Name)
-	assert.Equal(t, "my secret", projSecret.Annotations[kargoapi.AnnotationKeyDescription])
-	assert.Equal(t, redacted, projSecret.StringData["TOKEN_1"])
-	assert.Equal(t, redacted, projSecret.StringData["TOKEN_2"])
+	genCreds := resp.Msg.GetCredentials()
+	assert.Equal(t, "kargo-demo", genCreds.Namespace)
+	assert.Equal(t, "secret", genCreds.Name)
+	assert.Equal(t, "my secret", genCreds.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, redacted, genCreds.StringData["TOKEN_1"])
+	assert.Equal(t, redacted, genCreds.StringData["TOKEN_2"])
 
 	secret := corev1.Secret{}
 	err = cl.Get(ctx, types.NamespacedName{

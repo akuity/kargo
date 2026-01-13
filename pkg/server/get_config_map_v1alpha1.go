@@ -16,12 +16,23 @@ func (s *server) GetConfigMap(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.GetConfigMapRequest],
 ) (*connect.Response[svcv1alpha1.GetConfigMapResponse], error) {
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
-	name := req.Msg.GetName()
+	name := req.Msg.Name
 	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
 	}
@@ -36,7 +47,7 @@ func (s *server) GetConfigMap(
 		},
 	}
 	if err := s.client.Get(
-		ctx, client.ObjectKey{Name: name, Namespace: project}, u,
+		ctx, client.ObjectKey{Name: name, Namespace: namespace}, u,
 	); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			err = fmt.Errorf("ConfigMap %q not found", name)

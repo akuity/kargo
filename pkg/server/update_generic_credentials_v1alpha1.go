@@ -13,22 +13,32 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func (s *server) UpdateProjectSecret(
+func (s *server) UpdateGenericCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.UpdateProjectSecretRequest],
-) (*connect.Response[svcv1alpha1.UpdateProjectSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.UpdateGenericCredentialsRequest],
+) (*connect.Response[svcv1alpha1.UpdateGenericCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	project := req.Msg.GetProject()
-
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
-	name := req.Msg.GetName()
+	name := req.Msg.Name
 
 	if err := validateFieldNotEmpty("name", name); err != nil {
 		return nil, err
@@ -38,7 +48,7 @@ func (s *server) UpdateProjectSecret(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: project,
+			Namespace: namespace,
 			Name:      name,
 		},
 		&secret,
@@ -60,51 +70,51 @@ func (s *server) UpdateProjectSecret(
 		)
 	}
 
-	projectSecretUpdate := projectSecret{
-		data:        req.Msg.GetData(),
-		description: req.Msg.GetDescription(),
+	genericCredsUpdate := genericCredentials{
+		data:        req.Msg.Data,
+		description: req.Msg.Description,
 	}
 
-	if len(projectSecretUpdate.data) == 0 {
+	if len(genericCredsUpdate.data) == 0 {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
 	}
 
-	applyProjectSecretUpdateToK8sSecret(&secret, projectSecretUpdate)
+	applyGenericCredentialsUpdateToK8sSecret(&secret, genericCredsUpdate)
 
 	if err := s.client.Update(ctx, &secret); err != nil {
 		return nil, fmt.Errorf("update secret: %w", err)
 	}
 
 	return connect.NewResponse(
-		&svcv1alpha1.UpdateProjectSecretResponse{
-			Secret: sanitizeProjectSecret(secret),
+		&svcv1alpha1.UpdateGenericCredentialsResponse{
+			Credentials: sanitizeGenericCredentials(secret),
 		},
 	), nil
 }
 
-func applyProjectSecretUpdateToK8sSecret(secret *corev1.Secret, projectSecretUpdate projectSecret) {
+func applyGenericCredentialsUpdateToK8sSecret(secret *corev1.Secret, genericCredsUpdate genericCredentials) {
 	// Set the description annotation if provided
-	if projectSecretUpdate.description != "" {
+	if genericCredsUpdate.description != "" {
 		if secret.Annotations == nil {
 			secret.Annotations = make(map[string]string, 1)
 		}
-		secret.Annotations[kargoapi.AnnotationKeyDescription] = projectSecretUpdate.description
+		secret.Annotations[kargoapi.AnnotationKeyDescription] = genericCredsUpdate.description
 	} else {
 		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
 	}
 
 	// Delete any keys in the secret that are not in the update
 	for key := range secret.Data {
-		if _, ok := projectSecretUpdate.data[key]; !ok {
+		if _, ok := genericCredsUpdate.data[key]; !ok {
 			delete(secret.Data, key)
 		}
 	}
 
 	// Add or update the keys in the secret with the values from the update
 	if secret.Data == nil {
-		secret.Data = make(map[string][]byte, len(projectSecretUpdate.data))
+		secret.Data = make(map[string][]byte, len(genericCredsUpdate.data))
 	}
-	for key, value := range projectSecretUpdate.data {
+	for key, value := range genericCredsUpdate.data {
 		if value != "" {
 			secret.Data[key] = []byte(value)
 		}

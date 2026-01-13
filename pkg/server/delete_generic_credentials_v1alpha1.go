@@ -12,26 +12,33 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
-func (s *server) DeleteProjectSecret(
+func (s *server) DeleteGenericCredentials(
 	ctx context.Context,
-	req *connect.Request[svcv1alpha1.DeleteProjectSecretRequest],
-) (*connect.Response[svcv1alpha1.DeleteProjectSecretResponse], error) {
+	req *connect.Request[svcv1alpha1.DeleteGenericCredentialsRequest],
+) (*connect.Response[svcv1alpha1.DeleteGenericCredentialsResponse], error) {
 	// Check if secret management is enabled
 	if !s.cfg.SecretManagementEnabled {
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
-	name := req.Msg.GetName()
+	name := req.Msg.Name
 	if err := validateFieldNotEmpty("name", name); err != nil {
-		return nil, err
-	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
 		return nil, err
 	}
 
@@ -39,7 +46,7 @@ func (s *server) DeleteProjectSecret(
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: project,
+			Namespace: namespace,
 			Name:      name,
 		},
 		secret,
@@ -65,5 +72,5 @@ func (s *server) DeleteProjectSecret(
 		return nil, fmt.Errorf("delete secret: %w", err)
 	}
 
-	return connect.NewResponse(&svcv1alpha1.DeleteProjectSecretResponse{}), nil
+	return connect.NewResponse(&svcv1alpha1.DeleteGenericCredentialsResponse{}), nil
 }

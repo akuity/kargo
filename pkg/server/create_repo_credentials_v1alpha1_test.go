@@ -22,7 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
 
-func TestCreateCredentials(t *testing.T) {
+func TestCreateRepoCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -48,10 +48,10 @@ func TestCreateCredentials(t *testing.T) {
 		},
 	}
 
-	resp, err := s.CreateCredentials(
+	resp, err := s.CreateRepoCredentials(
 		ctx,
 		connect.NewRequest(
-			&svcv1alpha1.CreateCredentialsRequest{
+			&svcv1alpha1.CreateRepoCredentialsRequest{
 				Project:     "kargo-demo",
 				Name:        "creds",
 				Description: "my credentials",

@@ -5,9 +5,9 @@ import { parse, stringify } from 'yaml';
 
 import { queryCache } from '@ui/features/utils/cache';
 import {
-  createSystemSecret,
+  createGenericCredentials,
   createOrUpdateResource,
-  deleteSystemSecret
+  deleteGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { ClusterConfig } from '@ui/gen/api/v1alpha1/generated_pb';
 import { PartialRecursive } from '@ui/utils/connectrpc-utils';
@@ -24,12 +24,13 @@ type createWebhookPayload = {
 
 export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
   const createOrUpdateMutation = useMutation(createOrUpdateResource);
-  const createSystemSecretMutation = useMutation(createSystemSecret);
-  const deleteSystemSecretMutation = useMutation(deleteSystemSecret);
+  const createSystemSecretMutation = useMutation(createGenericCredentials);
+  const deleteSystemSecretMutation = useMutation(deleteGenericCredentials);
 
   return useReactQueryMutation({
     mutationFn: async (payload: createWebhookPayload) => {
       await createSystemSecretMutation.mutateAsync({
+        systemLevel: true,
         name: payload.secret.name,
         data: payload.secret.data
       });
@@ -77,6 +78,7 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
         });
       } catch (e) {
         await deleteSystemSecretMutation.mutateAsync({
+          systemLevel: true,
           name: payload.secret.name
         });
 

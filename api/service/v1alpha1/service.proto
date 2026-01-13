@@ -137,29 +137,29 @@ service KargoService {
   // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
 
-  /* Credential APIs */
+  /* Repo Credentials APIs */
 
-  // CreateCredentials creates new credentials for accessing external resources.
-  rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
-  // DeleteCredentials removes credentials from the system.
-  rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
-  // GetCredentials retrieves details of specific credentials.
-  rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
-  // ListCredentials retrieves all credentials within a project.
-  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
-  // UpdateCredentials modifies existing credentials.
-  rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
+  // CreateRepoCredentials creates new credentials for accessing external repositories.
+  rpc CreateRepoCredentials(CreateRepoCredentialsRequest) returns (CreateRepoCredentialsResponse);
+  // DeleteRepoCredentials removes repository credentials from the system.
+  rpc DeleteRepoCredentials(DeleteRepoCredentialsRequest) returns (DeleteRepoCredentialsResponse);
+  // GetRepoCredentials retrieves details of specific repository credentials.
+  rpc GetRepoCredentials(GetRepoCredentialsRequest) returns (GetRepoCredentialsResponse);
+  // ListRepoCredentials retrieves all repository credentials within a project.
+  rpc ListRepoCredentials(ListRepoCredentialsRequest) returns (ListRepoCredentialsResponse);
+  // UpdateRepoCredentials modifies existing repository credentials.
+  rpc UpdateRepoCredentials(UpdateRepoCredentialsRequest) returns (UpdateRepoCredentialsResponse);
 
-  /* Project Secrets APIs */
+  /* Generic Credentials APIs */
 
-  // ListProjectSecrets retrieves all secrets within a project.
-  rpc ListProjectSecrets(ListProjectSecretsRequest) returns (ListProjectSecretsResponse);
-  // CreateProjectSecret creates a new secret within a project.
-  rpc CreateProjectSecret(CreateProjectSecretRequest) returns (CreateProjectSecretResponse);
-  // UpdateProjectSecret modifies an existing project secret.
-  rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
-  // DeleteProjectSecret removes a secret from a project.
-  rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
+  // ListGenericCredentials retrieves all generic credentials within a project.
+  rpc ListGenericCredentials(ListGenericCredentialsRequest) returns (ListGenericCredentialsResponse);
+  // CreateGenericCredentials creates new generic credentials within a project.
+  rpc CreateGenericCredentials(CreateGenericCredentialsRequest) returns (CreateGenericCredentialsResponse);
+  // UpdateGenericCredentials modifies existing generic credentials.
+  rpc UpdateGenericCredentials(UpdateGenericCredentialsRequest) returns (UpdateGenericCredentialsResponse);
+  // DeleteGenericCredentials removes generic credentials from a project.
+  rpc DeleteGenericCredentials(DeleteGenericCredentialsRequest) returns (DeleteGenericCredentialsResponse);
 
   /* ConfigMaps APIs */
 
@@ -248,15 +248,6 @@ service KargoService {
   // Role virtual resource.
   rpc ListAPITokens(ListAPITokensRequest) returns (ListAPITokensResponse);
 
-  /* System Secrets APIs */
-  // ListSystemSecrets retrieves all "cluster-scoped" system secrets.
-  rpc ListSystemSecrets(ListSystemSecretsRequest) returns (ListSystemSecretsResponse);
-  // CreateSystemSecret creates a new "cluster-scoped" system secret.
-  rpc CreateSystemSecret(CreateSystemSecretRequest) returns (CreateSystemSecretResponse);
-  // UpdateSystemSecret modifies an existing "cluster-scoped" system secret.
-  rpc UpdateSystemSecret(UpdateSystemSecretRequest) returns (UpdateSystemSecretResponse);
-  // DeleteSystemSecret removes a "cluster-scoped" system secret.
-  rpc DeleteSystemSecret(DeleteSystemSecretRequest) returns (DeleteSystemSecretResponse);
 }
 
 /* Version and Configuration Messages */
@@ -985,9 +976,15 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
-// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project,
+// shared namespace, or system namespace.
 message ListConfigMapsRequest {
+  // system_level indicates whether the request is to list ConfigMaps
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 2;
   // project is the name of the project to list ConfigMaps from.
+  // If empty and system_level is false, lists ConfigMaps from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
 }
 
@@ -999,7 +996,12 @@ message ListConfigMapsResponse {
 
 // GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 message GetConfigMapRequest {
+  // system_level indicates whether the request is to get a ConfigMap
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 4;
   // project is the name of the project containing the ConfigMap.
+  // If empty and system_level is false, gets the ConfigMap from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
   // name is the name of the ConfigMap to retrieve.
   string name = 2;
@@ -1017,10 +1019,10 @@ message GetConfigMapResponse {
   }
 }
 
-/* Credential Messages */
+/* Repo Credentials Messages */
 
-// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
-message CreateCredentialsRequest {
+// CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
+message CreateRepoCredentialsRequest {
   // project is the name of the project where the credentials will be stored.
   string project = 1;
   // name is the name of the credentials.
@@ -1039,27 +1041,27 @@ message CreateCredentialsRequest {
   string password = 7;
 }
 
-// CreateCredentialsResponse contains the newly created credentials.
-message CreateCredentialsResponse {
+// CreateRepoCredentialsResponse contains the newly created repository credentials.
+message CreateRepoCredentialsResponse {
   // credentials is the created Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// DeleteCredentialsRequest is the request for deleting existing credentials.
-message DeleteCredentialsRequest {
+// DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
+message DeleteRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to delete.
   string name = 2;
 }
 
-// DeleteCredentialsResponse is the response returned after deleting credentials.
-message DeleteCredentialsResponse {
+// DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.
+message DeleteRepoCredentialsResponse {
   /* explicitly empty */
 }
 
-// GetCredentialsRequest is the request for retrieving existing credentials.
-message GetCredentialsRequest {
+// GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+message GetRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to retrieve.
@@ -1068,8 +1070,8 @@ message GetCredentialsRequest {
   RawFormat format = 3;
 }
 
-// GetCredentialsResponse contains the requested credentials information.
-message GetCredentialsResponse {
+// GetRepoCredentialsResponse contains the requested repository credentials information.
+message GetRepoCredentialsResponse {
   oneof result {
     // credentials is the structured Kubernetes Secret containing the credentials.
     k8s.io.api.core.v1.Secret credentials = 1;
@@ -1078,20 +1080,20 @@ message GetCredentialsResponse {
   }
 }
 
-// ListCredentialsRequest is the request for listing all credentials in a project.
-message ListCredentialsRequest {
+// ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+message ListRepoCredentialsRequest {
   // project is the name of the project whose credentials will be listed.
   string project = 1;
 }
 
-// ListCredentialsResponse contains a list of credentials for the specified project.
-message ListCredentialsResponse {
+// ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+message ListRepoCredentialsResponse {
   // credentials is the list of Kubernetes Secrets containing the credentials.
   repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// UpdateCredentialsRequest is the request for updating existing credentials.
-message UpdateCredentialsRequest {
+// UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+message UpdateRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to update.
@@ -1110,72 +1112,95 @@ message UpdateCredentialsRequest {
   string password = 7;
 }
 
-// UpdateCredentialsResponse contains the updated credentials information.
-message UpdateCredentialsResponse {
+// UpdateRepoCredentialsResponse contains the updated repository credentials information.
+message UpdateRepoCredentialsResponse {
   // credentials is the updated Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-/* Project Secrets Messages */
+/* Generic Credentials Messages */
 
-// ListProjectSecretsRequest is the request for listing all secrets in a project.
-message ListProjectSecretsRequest {
-  // project is the name of the project whose secrets will be listed.
+// ListGenericCredentialsRequest is the request for listing all generic
+// credentials in a project, shared namespace, or system namespace.
+message ListGenericCredentialsRequest {
+  // system_level indicates whether the request is to list generic credentials
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 2;
+  // project is the name of the project whose generic credentials will be listed.
+  // If empty and system_level is false, lists generic credentials from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
 }
 
-// ListProjectSecretsResponse contains a list of secrets for the specified project.
-message ListProjectSecretsResponse {
-  // secrets is the list of Kubernetes Secrets within the project.
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
+// ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
+message ListGenericCredentialsResponse {
+  // credentials is the list of Kubernetes Secrets containing generic credentials within the project.
+  repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// CreateProjectSecretRequest is the request for creating a new secret within a project.
-message CreateProjectSecretRequest {
-  // project is the name of the project where the secret will be created.
+// CreateGenericCredentialsRequest is the request for creating new generic
+// credentials within a project, shared namespace, or system namespace.
+message CreateGenericCredentialsRequest {
+  // system_level indicates whether the request is to create generic credentials
+  // in the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 6;
+  // project is the name of the project where the generic credentials will be
+  // created. If empty and system_level is false, creates generic credentials in the shared resources
+  // namespace. This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to create.
+  // name is the name of the generic credentials to create.
   string name = 2;
-  // description is a human-readable description of the secret.
+  // description is a human-readable description of the generic credentials.
   string description = 3;
-  // data contains the key-value pairs that make up the secret data.
+  // data contains the key-value pairs that make up the generic credentials data.
   map<string, string> data = 4;
 }
 
-// CreateProjectSecretResponse contains the newly created project secret.
-message CreateProjectSecretResponse {
-  // secret is the created Kubernetes Secret within the project.
-  k8s.io.api.core.v1.Secret secret = 1;
+// CreateGenericCredentialsResponse contains the newly created generic credentials.
+message CreateGenericCredentialsResponse {
+  // credentials is the created Kubernetes Secret containing generic credentials within the project.
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// UpdateProjectSecretRequest is the request for updating an existing project secret.
-message UpdateProjectSecretRequest {
-  // project is the name of the project containing the secret.
+// UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
+message UpdateGenericCredentialsRequest {
+  // system_level indicates whether the request is to update generic credentials
+  // in the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 6;
+  // project is the name of the project containing the generic credentials. If
+  // empty and system_level is false, updates generic credentials in the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to update.
+  // name is the name of the generic credentials to update.
   string name = 2;
-  // description is a human-readable description of the secret.
+  // description is a human-readable description of the generic credentials.
   string description = 3;
-  // data contains the key-value pairs that make up the secret data.
+  // data contains the key-value pairs that make up the generic credentials data.
   map<string, string> data = 4;
 }
 
-// UpdateProjectSecretResponse contains the updated project secret information.
-message UpdateProjectSecretResponse {
-  // secret is the updated Kubernetes Secret within the project.
-  k8s.io.api.core.v1.Secret secret = 1;
+// UpdateGenericCredentialsResponse contains the updated generic credentials information.
+message UpdateGenericCredentialsResponse {
+  // credentials is the updated Kubernetes Secret containing generic credentials within the project.
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// DeleteProjectSecretRequest is the request for deleting a project secret.
-message DeleteProjectSecretRequest {
-  // project is the name of the project containing the secret.
+// DeleteGenericCredentialsRequest is the request for deleting generic
+// credentials.
+message DeleteGenericCredentialsRequest {
+  // system_level indicates whether the request is to delete generic credentials
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 3;
+  // project is the name of the project containing the generic credentials. If
+  // empty and system_level is false, deletes generic credentials from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to delete.
+  // name is the name of the generic credentials to delete.
   string name = 2;
 }
 
-// DeleteProjectSecretResponse is the response returned after deleting a project secret.
-message DeleteProjectSecretResponse {
+// DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.
+message DeleteGenericCredentialsResponse {
   /* explicitly empty */
 }
 
@@ -1632,56 +1657,6 @@ message ListAPITokensResponse {
   // token_secrets is the list of Kubernetes Secrets containing redacted tokens
   // associated with a Kargo Role virtual resource.
   repeated k8s.io.api.core.v1.Secret token_secrets = 1;
-}
-
-// ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.
-message ListSystemSecretsRequest {
-  /* explicitly empty */
-}
-
-// ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
-message ListSystemSecretsResponse {
-  // secrets is the list of "cluster-scoped" system-level Kubernetes Secrets.
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
-// CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
-message CreateSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to create.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
-message CreateSystemSecretResponse {
-  // secret is the created "cluster-scoped" system-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
-message UpdateSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to update.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
-message UpdateSystemSecretResponse {
-  // secret is the updated "cluster-scoped" system-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
-message DeleteSystemSecretRequest {
-  // name is the name of the "cluster-scoped" system secret to delete.
-  string name = 1;
-}
-
-// DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.
-message DeleteSystemSecretResponse {
-  /* explicitly empty */
 }
 
 message RefreshResourceRequest {

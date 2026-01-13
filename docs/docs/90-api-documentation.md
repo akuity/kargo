@@ -57,15 +57,15 @@ Stability is not guaranteed.
 | GetWarehouse | [GetWarehouseRequest](#akuity-io-kargo-service-v1alpha1-GetWarehouseRequest) | [GetWarehouseResponse](#akuity-io-kargo-service-v1alpha1-GetWarehouseResponse) |
 | WatchWarehouses | [WatchWarehousesRequest](#akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest) | [WatchWarehousesResponse](#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse)(stream) |
 | DeleteWarehouse | [DeleteWarehouseRequest](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest) | [DeleteWarehouseResponse](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse) |
-| CreateCredentials | [CreateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest) | [CreateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse) |
-| DeleteCredentials | [DeleteCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest) | [DeleteCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse) |
-| GetCredentials | [GetCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetCredentialsRequest) | [GetCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetCredentialsResponse) |
-| ListCredentials | [ListCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListCredentialsResponse) |
-| UpdateCredentials | [UpdateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest) | [UpdateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse) |
-| ListProjectSecrets | [ListProjectSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest) | [ListProjectSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse) |
-| CreateProjectSecret | [CreateProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest) | [CreateProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretResponse) |
-| UpdateProjectSecret | [UpdateProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest) | [UpdateProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretResponse) |
-| DeleteProjectSecret | [DeleteProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest) | [DeleteProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse) |
+| CreateRepoCredentials | [CreateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest) | [CreateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse) |
+| DeleteRepoCredentials | [DeleteRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest) | [DeleteRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse) |
+| GetRepoCredentials | [GetRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest) | [GetRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse) |
+| ListRepoCredentials | [ListRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest) | [ListRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse) |
+| UpdateRepoCredentials | [UpdateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest) | [UpdateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse) |
+| ListGenericCredentials | [ListGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest) | [ListGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse) |
+| CreateGenericCredentials | [CreateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest) | [CreateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse) |
+| UpdateGenericCredentials | [UpdateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest) | [UpdateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse) |
+| DeleteGenericCredentials | [DeleteGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest) | [DeleteGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse) |
 | ListConfigMaps | [ListConfigMapsRequest](#akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest) | [ListConfigMapsResponse](#akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse) |
 | GetConfigMap | [GetConfigMapRequest](#akuity-io-kargo-service-v1alpha1-GetConfigMapRequest) | [GetConfigMapResponse](#akuity-io-kargo-service-v1alpha1-GetConfigMapResponse) |
 | ListAnalysisTemplates | [ListAnalysisTemplatesRequest](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest) | [ListAnalysisTemplatesResponse](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesResponse) |
@@ -92,10 +92,6 @@ Stability is not guaranteed.
 | DeleteAPIToken | [DeleteAPITokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest) | [DeleteAPITokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenResponse) |
 | GetAPIToken | [GetAPITokenRequest](#akuity-io-kargo-service-v1alpha1-GetAPITokenRequest) | [GetAPITokenResponse](#akuity-io-kargo-service-v1alpha1-GetAPITokenResponse) |
 | ListAPITokens | [ListAPITokensRequest](#akuity-io-kargo-service-v1alpha1-ListAPITokensRequest) | [ListAPITokensResponse](#akuity-io-kargo-service-v1alpha1-ListAPITokensResponse) |
-| ListSystemSecrets | [ListSystemSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest) | [ListSystemSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse) |
-| CreateSystemSecret | [CreateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest) | [CreateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse) |
-| UpdateSystemSecret | [UpdateSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest) | [UpdateSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse) |
-| DeleteSystemSecret | [DeleteSystemSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest) | [DeleteSystemSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse) |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
@@ -199,28 +195,34 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
-### CreateCredentialsRequest
- CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
+### CreateGenericCredentialsRequest
+ CreateGenericCredentialsRequest is the request for creating new generic credentials within a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
-| name | [string](#string) |  name is the name of the credentials. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project where the generic credentials will be created. If empty and system_level is false, creates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to create. |
+| description | [string](#string) |  description is a human-readable description of the generic credentials. |
+| data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
-### CreateCredentialsResponse
- CreateCredentialsResponse contains the newly created credentials.
+### CreateGenericCredentialsRequest.DataEntry
+ 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse"></a>
+
+### CreateGenericCredentialsResponse
+ CreateGenericCredentialsResponse contains the newly created generic credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest"></a>
 
@@ -248,33 +250,28 @@ Stability is not guaranteed.
 | updated_resource_manifest | [bytes](#bytes) |  updated_resource_manifest contains the updated existing resource manifest. |
 | error | [string](#string) |  error contains the error message if the operation failed. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest"></a>
 
-### CreateProjectSecretRequest
- CreateProjectSecretRequest is the request for creating a new secret within a project.
+### CreateRepoCredentialsRequest
+ CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the secret will be created. |
-| name | [string](#string) |  name is the name of the secret to create. |
-| description | [string](#string) |  description is a human-readable description of the secret. |
-| data | [CreateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
+| name | [string](#string) |  name is the name of the credentials. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse"></a>
 
-### CreateProjectSecretRequest.DataEntry
- 
+### CreateRepoCredentialsResponse
+ CreateRepoCredentialsResponse contains the newly created repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretResponse"></a>
-
-### CreateProjectSecretResponse
- CreateProjectSecretResponse contains the newly created project secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created Kubernetes Secret within the project. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
@@ -316,32 +313,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the newly created Kargo Role virtual resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest"></a>
-
-### CreateSystemSecretRequest
- CreateSystemSecretRequest is the request for creating a new "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to create. |
-| data | [CreateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretRequest-DataEntry"></a>
-
-### CreateSystemSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateSystemSecretResponse"></a>
-
-### CreateSystemSecretResponse
- CreateSystemSecretResponse contains the newly created "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created "cluster-scoped" system-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest"></a>
 
@@ -390,19 +361,6 @@ Stability is not guaranteed.
 
 ### DeleteClusterConfigResponse
  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
-
-### DeleteCredentialsRequest
- DeleteCredentialsRequest is the request for deleting existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse"></a>
-
-### DeleteCredentialsResponse
- DeleteCredentialsResponse is the response returned after deleting credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -417,6 +375,20 @@ Stability is not guaranteed.
 
 ### DeleteFreightResponse
  DeleteFreightResponse is the response after deleting freight.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest"></a>
+
+### DeleteGenericCredentialsRequest
+ DeleteGenericCredentialsRequest is the request for deleting generic credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, deletes generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse"></a>
+
+### DeleteGenericCredentialsResponse
+ DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
 
 ### DeleteProjectConfigRequest
@@ -441,19 +413,19 @@ Stability is not guaranteed.
 
 ### DeleteProjectResponse
  DeleteProjectResponse is the response after deleting a project.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest"></a>
 
-### DeleteProjectSecretRequest
- DeleteProjectSecretRequest is the request for deleting a project secret.
+### DeleteRepoCredentialsRequest
+ DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the secret. |
-| name | [string](#string) |  name is the name of the secret to delete. |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to delete. |
 
-<a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse"></a>
 
-### DeleteProjectSecretResponse
- DeleteProjectSecretResponse is the response returned after deleting a project secret.  explicitly empty
+### DeleteRepoCredentialsResponse
+ DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
@@ -505,18 +477,6 @@ Stability is not guaranteed.
 
 ### DeleteStageResponse
  DeleteStageResponse is the response after deleting a stage.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretRequest"></a>
-
-### DeleteSystemSecretRequest
- DeleteSystemSecretRequest is the request for deleting a "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteSystemSecretResponse"></a>
-
-### DeleteSystemSecretResponse
- DeleteSystemSecretResponse is the response returned after deleting a "cluster-scoped" system secret.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest"></a>
 
 ### DeleteWarehouseRequest
@@ -674,7 +634,8 @@ Stability is not guaranteed.
  GetConfigMapRequest is the request for retrieving a specific ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the ConfigMap. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to get a ConfigMap from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the ConfigMap. If empty and system_level is false, gets the ConfigMap from the shared resources namespace. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the ConfigMap to retrieve. |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
@@ -710,25 +671,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [ArgoCDShard](#akuity-io-kargo-service-v1alpha1-ArgoCDShard) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsRequest"></a>
-
-### GetCredentialsRequest
- GetCredentialsRequest is the request for retrieving existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to retrieve. |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsResponse"></a>
-
-### GetCredentialsResponse
- GetCredentialsResponse contains the requested credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
-| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightRequest"></a>
 
@@ -837,6 +779,25 @@ Stability is not guaranteed.
 | oidc_config | [OIDCConfig](#akuity-io-kargo-service-v1alpha1-OIDCConfig) |  oidc_config contains OpenID Connect configuration for authentication. |
 | admin_account_enabled | [bool](#bool) |  admin_account_enabled indicates if admin account authentication is available. |
 | skip_auth | [bool](#bool) |  skip_auth indicates if authentication should be bypassed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest"></a>
+
+### GetRepoCredentialsRequest
+ GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse"></a>
+
+### GetRepoCredentialsResponse
+ GetRepoCredentialsResponse contains the requested repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
 
@@ -1007,10 +968,11 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
- ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+ ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project to list ConfigMaps from. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list ConfigMaps from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project to list ConfigMaps from. If empty and system_level is false, lists ConfigMaps from the shared resources namespace. This value is ignored if system_level is true. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
@@ -1020,21 +982,22 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
-### ListCredentialsRequest
- ListCredentialsRequest is the request for listing all credentials in a project.
+### ListGenericCredentialsRequest
+ ListGenericCredentialsRequest is the request for listing all generic credentials in a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project whose generic credentials will be listed. If empty and system_level is false, lists generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse"></a>
 
-### ListCredentialsResponse
- ListCredentialsResponse contains a list of credentials for the specified project.
+### ListGenericCredentialsResponse
+ ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesRequest"></a>
 
@@ -1076,22 +1039,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | events | k8s.io.api.core.v1.Event |  events is the list of Kubernetes Events within the project. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest"></a>
-
-### ListProjectSecretsRequest
- ListProjectSecretsRequest is the request for listing all secrets in a project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose secrets will be listed. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse"></a>
-
-### ListProjectSecretsResponse
- ListProjectSecretsResponse contains a list of secrets for the specified project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of Kubernetes Secrets within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsRequest"></a>
 
@@ -1146,6 +1093,22 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotions is the list of Promotion resources found in the project. |
 
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest"></a>
+
+### ListRepoCredentialsRequest
+ ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse"></a>
+
+### ListRepoCredentialsResponse
+ ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
+
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
 ### ListRolesRequest
@@ -1180,18 +1143,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | stages | [github.com.akuity.kargo.api.v1alpha1.Stage](#github-com-akuity-kargo-api-v1alpha1-Stage) |  stages is the list of Stage resources found in the project. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsRequest"></a>
-
-### ListSystemSecretsRequest
- ListSystemSecretsRequest is the request for listing all "cluster-scoped" system secrets.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-ListSystemSecretsResponse"></a>
-
-### ListSystemSecretsResponse
- ListSystemSecretsResponse contains a list of "cluster-scoped" system secrets.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of "cluster-scoped" system-level Kubernetes Secrets. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListWarehousesRequest"></a>
 
@@ -1356,29 +1307,6 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [ImageStageMap](#akuity-io-kargo-service-v1alpha1-ImageStageMap) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest"></a>
-
-### UpdateCredentialsRequest
- UpdateCredentialsRequest is the request for updating existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to update. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
-
-### UpdateCredentialsResponse
- UpdateCredentialsResponse contains the updated credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
-
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 
 ### UpdateFreightAliasRequest
@@ -1394,33 +1322,57 @@ Stability is not guaranteed.
 
 ### UpdateFreightAliasResponse
  UpdateFreightAliasResponse is the response after updating a freight's alias.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest"></a>
 
-### UpdateProjectSecretRequest
- UpdateProjectSecretRequest is the request for updating an existing project secret.
+### UpdateGenericCredentialsRequest
+ UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the secret. |
-| name | [string](#string) |  name is the name of the secret to update. |
-| description | [string](#string) |  description is a human-readable description of the secret. |
-| data | [UpdateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to update generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, updates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the generic credentials. |
+| data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 
-### UpdateProjectSecretRequest.DataEntry
+### UpdateGenericCredentialsRequest.DataEntry
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse"></a>
 
-### UpdateProjectSecretResponse
- UpdateProjectSecretResponse contains the updated project secret information.
+### UpdateGenericCredentialsResponse
+ UpdateGenericCredentialsResponse contains the updated generic credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated Kubernetes Secret within the project. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing generic credentials within the project. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest"></a>
+
+### UpdateRepoCredentialsRequest
+ UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse"></a>
+
+### UpdateRepoCredentialsResponse
+ UpdateRepoCredentialsResponse contains the updated repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 
@@ -1462,32 +1414,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the updated Kargo Role virtual resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest"></a>
-
-### UpdateSystemSecretRequest
- UpdateSystemSecretRequest is the request for updating an existing "cluster-scoped" system secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the "cluster-scoped" system secret to update. |
-| data | [UpdateSystemSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretRequest-DataEntry"></a>
-
-### UpdateSystemSecretRequest.DataEntry
- 
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateSystemSecretResponse"></a>
-
-### UpdateSystemSecretResponse
- UpdateSystemSecretResponse contains the updated "cluster-level" system secret information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated "cluster-scoped" system-level Kubernetes Secret. |
 
 <a name="akuity-io-kargo-service-v1alpha1-VersionInfo"></a>
 

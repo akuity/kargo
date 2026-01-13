@@ -15,12 +15,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
 
-func TestUpdateSystemSecret(t *testing.T) {
+func TestUpdateGenericCredentials(t *testing.T) {
 	ctx := context.Background()
 
 	cl, err := kubernetes.NewClient(
@@ -32,11 +33,14 @@ func TestUpdateSystemSecret(t *testing.T) {
 				return fake.NewClientBuilder().
 					WithScheme(s).
 					WithObjects(
-						mustNewObject[corev1.Namespace]("testdata/system-resources-namespace.yaml"),
+						mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 						&corev1.Secret{
 							ObjectMeta: metav1.ObjectMeta{
-								Namespace: "kargo-system-resources",
+								Namespace: "kargo-demo",
 								Name:      "secret",
+								Labels: map[string]string{
+									kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+								},
 							},
 							StringData: map[string]string{
 								"TOKEN_1": "foo",
@@ -51,18 +55,16 @@ func TestUpdateSystemSecret(t *testing.T) {
 	require.NoError(t, err)
 
 	s := &server{
-		client: cl,
-		cfg: config.ServerConfig{
-			SecretManagementEnabled:  true,
-			SystemResourcesNamespace: "kargo-system-resources",
-		},
+		client:                    cl,
+		cfg:                       config.ServerConfig{SecretManagementEnabled: true},
 		externalValidateProjectFn: validation.ValidateProject,
 	}
 
-	_, err = s.UpdateSystemSecret(ctx, connect.NewRequest(&svcv1alpha1.UpdateSystemSecretRequest{
-		Name: "secret",
+	_, err = s.UpdateGenericCredentials(ctx, connect.NewRequest(&svcv1alpha1.UpdateGenericCredentialsRequest{
+		Project: "kargo-demo",
+		Name:    "secret",
 		Data: map[string]string{
-			"TOKEN_3": "bar",
+			"TOKEN_1": "bar",
 		},
 	}))
 	require.NoError(t, err)
@@ -70,22 +72,22 @@ func TestUpdateSystemSecret(t *testing.T) {
 	secret := corev1.Secret{}
 
 	require.NoError(t, s.client.Get(ctx, types.NamespacedName{
-		Namespace: "kargo-system-resources",
+		Namespace: "kargo-demo",
 		Name:      "secret",
 	}, &secret))
 
-	secret1, ok := secret.Data["TOKEN_3"]
+	secret1, ok := secret.Data["TOKEN_1"]
 	require.True(t, ok)
 	require.Equal(t, "bar", string(secret1))
 
-	_, ok = secret.Data["TOKEN_1"]
+	_, ok = secret.Data["TOKEN_2"]
 	require.False(t, ok)
 }
 
-func TestApplySystemSecretUpdateToK8sSecret(t *testing.T) {
+func TestApplyGenericCredentialsUpdateToK8sSecret(t *testing.T) {
 	baseSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "kargo-system-resources",
+			Namespace: "kargo-demo",
 			Name:      "secret",
 		},
 		Data: map[string][]byte{
@@ -94,13 +96,13 @@ func TestApplySystemSecretUpdateToK8sSecret(t *testing.T) {
 		},
 	}
 
-	t.Run("remove key from system secret", func(t *testing.T) {
+	t.Run("remove key from generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		delete(expectedSecret.Data, "TOKEN_1")
 		secret := baseSecret.DeepCopy()
-		applySystemSecretUpdateToK8sSecret(
+		applyGenericCredentialsUpdateToK8sSecret(
 			secret,
-			systemSecret{
+			genericCredentials{
 				data: map[string]string{
 					"TOKEN_2": "bar",
 				},
@@ -109,11 +111,11 @@ func TestApplySystemSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("add key in system secret", func(t *testing.T) {
+	t.Run("add key in generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_3"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applySystemSecretUpdateToK8sSecret(secret, systemSecret{
+		applyGenericCredentialsUpdateToK8sSecret(secret, genericCredentials{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "",
@@ -123,11 +125,11 @@ func TestApplySystemSecretUpdateToK8sSecret(t *testing.T) {
 		require.Equal(t, expectedSecret, secret)
 	})
 
-	t.Run("edit key in system secret", func(t *testing.T) {
+	t.Run("edit key in generic credentials", func(t *testing.T) {
 		expectedSecret := baseSecret.DeepCopy()
 		expectedSecret.Data["TOKEN_2"] = []byte("baz")
 		secret := baseSecret.DeepCopy()
-		applySystemSecretUpdateToK8sSecret(secret, systemSecret{
+		applyGenericCredentialsUpdateToK8sSecret(secret, genericCredentials{
 			data: map[string]string{
 				"TOKEN_1": "",
 				"TOKEN_2": "baz",
