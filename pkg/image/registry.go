@@ -3,10 +3,11 @@ package image
 import (
 	"sync"
 
-	"github.com/akuity/kargo/pkg/os"
-	"github.com/akuity/kargo/pkg/types"
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/ratelimit"
+
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/types"
 )
 
 var (
