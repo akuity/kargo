@@ -129,7 +129,7 @@ CLI users the convenience of a simplified interface for managing
 user-to-`ServiceAccount` mappings and the permissions associated with those
 `ServiceAccount` resources.
 
-Three such "Kargo roles" are pre-defined in a project's namespace when a new
+Four such "Kargo roles" are pre-defined in a project's namespace when a new
 `Project` resource is created:
 
 1. `default`: This Kargo role exists by virtue of the existence of the `default`
@@ -145,6 +145,15 @@ Three such "Kargo roles" are pre-defined in a project's namespace when a new
    project. It is not initially mapped to any users. All three resources are
    annotated as being Kargo-managed, and as such, the "Kargo role" that
    abstracts them can be modified or deleted via the UI or CLI.
+
+1. `kargo-promoter`: This Kargo role is a trio of `ServiceAccount`, `Role`, and
+   `RoleBinding` resources created by the Kargo management controller. Its
+   permissions are pre-defined as those necessary to promote `Stage`s and create
+   `Promotion`s, but not to create, update, or delete core pipeline resources
+   such as `Stage`s and `Warehouse`s. It is not
+   initially mapped to any users. All three resources are annotated as being
+   Kargo-managed, and as such, the "Kargo role" that abstracts them can be
+   modified or deleted via the UI or CLI.
 
 1. `kargo-viewer`: This Kargo role is a trio of `ServiceAccount`, `Role`, and
    `RoleBinding` resources created by the Kargo management controller. Its
@@ -186,10 +195,11 @@ into the appropriate actions on the underlying `ServiceAccount`, `Role`, and
   ```
 
   ```shell
-  NAME           KARGO MANAGED   AGE
-  default        false           18h
-  kargo-admin    true            18h
-  kargo-viewer   true            18h
+  NAME             KARGO MANAGED   AGE
+  default          false           18h
+  kargo-admin      true            18h
+  kargo-promoter   true            18h
+  kargo-viewer     true            18h
   ```
 
 * The details of a specific role can be examined by naming the role and
