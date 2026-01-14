@@ -69,6 +69,11 @@ type BareCloneOptions struct {
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
 	InsecureSkipTLSVerify bool
+	// Filter specifies a partial clone filter (e.g., "blob:none"). When combined
+	// with sparse checkout, this avoids downloading blobs for directories that
+	// won't be checked out, significantly reducing clone time and disk usage for
+	// large repositories.
+	Filter string
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -108,7 +113,7 @@ func CloneBare(
 	if err = b.setupClient(homeDir, clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.clone(); err != nil {
+	if err = b.clone(cloneOpts); err != nil {
 		return nil, err
 	}
 	if err = b.saveDirs(); err != nil {
@@ -120,8 +125,13 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone() error {
-	cmd := b.buildGitCommand("clone", "--bare", b.accessURL, b.dir)
+func (b *bareRepo) clone(opts *BareCloneOptions) error {
+	args := []string{"clone", "--bare"}
+	if opts.Filter != "" {
+		args = append(args, "--filter", opts.Filter)
+	}
+	args = append(args, b.accessURL, b.dir)
+	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.originalURL, b.dir, err)
@@ -165,6 +175,11 @@ type AddWorkTreeOptions struct {
 	// Ref specifies the branch or commit to check out in the working tree. Will
 	// be ignored if Orphan is true.
 	Ref string
+	// Sparse specifies directory patterns for sparse checkout using cone mode.
+	// When specified, only the listed directories (and their contents) will be
+	// checked out. Patterns should be directory paths relative to the repository
+	// root (e.g., "src/app", "configs/prod").
+	Sparse []string
 }
 
 func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree, error) {
@@ -194,7 +209,7 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	if path, err = filepath.EvalSymlinks(path); err != nil {
 		return nil, fmt.Errorf("error resolving symlinks in path %s: %w", path, err)
 	}
-	return &workTree{
+	wt := &workTree{
 		baseRepo: &baseRepo{
 			creds:       b.creds,
 			dir:         path,
@@ -203,7 +218,16 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 			accessURL:   b.accessURL,
 		},
 		bareRepo: b,
-	}, nil
+	}
+	// Configure sparse checkout if patterns are specified
+	if len(opts.Sparse) > 0 {
+		if err = wt.configureSparseCheckout(opts.Sparse); err != nil {
+			// Clean up the worktree on failure
+			_ = b.RemoveWorkTree(path)
+			return nil, fmt.Errorf("error configuring sparse checkout for %q: %w", path, err)
+		}
+	}
+	return wt, nil
 }
 
 func (b *bareRepo) Close() error {

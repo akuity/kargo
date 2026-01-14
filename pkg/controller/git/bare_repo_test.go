@@ -322,3 +322,295 @@ func Test_bareRepo_filterNonBarePaths(t *testing.T) {
 		})
 	}
 }
+
+func TestBareRepo_SparseCheckout(t *testing.T) {
+	testRepoCreds := RepoCredentials{
+		Username: "fake-username",
+		Password: "fake-password",
+	}
+
+	var useAuth bool
+	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
+		useAuth = types.MustParseBool(useAuthStr)
+	}
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+			Auth:       useAuth,
+		},
+	)
+	require.NoError(t, service.Setup())
+	service.AuthFunc =
+		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
+			return cred.Username == testRepoCreds.Username &&
+				cred.Password == testRepoCreds.Password, nil
+		}
+	server := httptest.NewServer(service)
+	defer server.Close()
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Create a repo with multiple directories
+	setupRep, err := Clone(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, setupRep)
+
+	// Create directory structure: dir1/, dir2/, dir3/
+	for _, dir := range []string{"dir1", "dir2", "dir3"} {
+		dirPath := filepath.Join(setupRep.Dir(), dir)
+		require.NoError(t, os.MkdirAll(dirPath, 0755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dirPath, "file.txt"),
+			[]byte(fmt.Sprintf("content in %s", dir)),
+			0600,
+		))
+	}
+
+	err = setupRep.AddAllAndCommit(fmt.Sprintf("add directories %s", uuid.NewString()), nil)
+	require.NoError(t, err)
+	err = setupRep.Push(nil)
+	require.NoError(t, err)
+	err = setupRep.Close()
+	require.NoError(t, err)
+
+	// Clone as bare repo
+	rep, err := CloneBare(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	t.Run("sparse checkout includes only specified directories", func(t *testing.T) {
+		workingTreePath := filepath.Join(rep.HomeDir(), "sparse-worktree")
+		workTree, err := rep.AddWorkTree(
+			workingTreePath,
+			&AddWorkTreeOptions{
+				Ref:    "master",
+				Sparse: []string{"dir1", "dir2"},
+			},
+		)
+		require.NoError(t, err)
+		defer workTree.Close()
+
+		// Verify dir1 and dir2 exist
+		_, err = os.Stat(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
+		require.NoError(t, err, "dir1/file.txt should exist")
+
+		_, err = os.Stat(filepath.Join(workTree.Dir(), "dir2", "file.txt"))
+		require.NoError(t, err, "dir2/file.txt should exist")
+
+		// Verify dir3 does NOT exist (sparse checkout should exclude it)
+		_, err = os.Stat(filepath.Join(workTree.Dir(), "dir3", "file.txt"))
+		require.Error(t, err, "dir3/file.txt should NOT exist")
+		require.True(t, os.IsNotExist(err))
+	})
+
+	t.Run("worktree without sparse includes all directories", func(t *testing.T) {
+		workingTreePath := filepath.Join(rep.HomeDir(), "full-worktree")
+		workTree, err := rep.AddWorkTree(
+			workingTreePath,
+			&AddWorkTreeOptions{
+				Ref: "master",
+			},
+		)
+		require.NoError(t, err)
+		defer workTree.Close()
+
+		// Verify all directories exist
+		for _, dir := range []string{"dir1", "dir2", "dir3"} {
+			_, err = os.Stat(filepath.Join(workTree.Dir(), dir, "file.txt"))
+			require.NoError(t, err, "%s/file.txt should exist", dir)
+		}
+	})
+
+	t.Run("pattern validation rejects absolute paths", func(t *testing.T) {
+		workingTreePath := filepath.Join(rep.HomeDir(), "invalid-abs-worktree")
+		_, err := rep.AddWorkTree(
+			workingTreePath,
+			&AddWorkTreeOptions{
+				Ref:    "master",
+				Sparse: []string{"/absolute/path"},
+			},
+		)
+		require.ErrorContains(t, err, "must be relative")
+	})
+
+	t.Run("pattern validation rejects path traversal", func(t *testing.T) {
+		workingTreePath := filepath.Join(rep.HomeDir(), "invalid-traverse-worktree")
+		_, err := rep.AddWorkTree(
+			workingTreePath,
+			&AddWorkTreeOptions{
+				Ref:    "master",
+				Sparse: []string{"../escape"},
+			},
+		)
+		require.ErrorContains(t, err, "cannot escape")
+	})
+
+	t.Run("glob patterns are rejected", func(t *testing.T) {
+		workingTreePath := filepath.Join(rep.HomeDir(), "glob-worktree")
+		_, err := rep.AddWorkTree(
+			workingTreePath,
+			&AddWorkTreeOptions{
+				Ref:    "master",
+				Sparse: []string{"dir*"},
+			},
+		)
+		require.ErrorContains(t, err, "glob characters")
+	})
+}
+
+func Test_validateSparsePatterns(t *testing.T) {
+	tests := []struct {
+		name     string
+		patterns []string
+		errorMsg string
+	}{
+		{
+			name:     "valid simple patterns",
+			patterns: []string{"dir1", "dir2/subdir"},
+		},
+		{
+			name:     "valid nested patterns",
+			patterns: []string{"apps/backend/services", "configs/prod"},
+		},
+		{
+			name:     "absolute path rejected",
+			patterns: []string{"/absolute/path"},
+			errorMsg: "must be relative",
+		},
+		{
+			name:     "path traversal rejected",
+			patterns: []string{"../parent"},
+			errorMsg: "cannot escape",
+		},
+		{
+			name:     "glob asterisk rejected",
+			patterns: []string{"dir*"},
+			errorMsg: "glob characters",
+		},
+		{
+			name:     "glob question mark rejected",
+			patterns: []string{"dir?"},
+			errorMsg: "glob characters",
+		},
+		{
+			name:     "glob brackets rejected",
+			patterns: []string{"dir[12]"},
+			errorMsg: "glob characters",
+		},
+		{
+			name:     "mixed valid and invalid",
+			patterns: []string{"valid", "../invalid"},
+			errorMsg: "cannot escape",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateSparsePatterns(tt.patterns)
+			if tt.errorMsg != "" {
+				require.ErrorContains(t, err, tt.errorMsg)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestBareRepo_WithFilter(t *testing.T) {
+	testRepoCreds := RepoCredentials{
+		Username: "fake-username",
+		Password: "fake-password",
+	}
+
+	var useAuth bool
+	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
+		useAuth = types.MustParseBool(useAuthStr)
+	}
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+			Auth:       useAuth,
+		},
+	)
+	require.NoError(t, service.Setup())
+	service.AuthFunc =
+		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
+			return cred.Username == testRepoCreds.Username &&
+				cred.Password == testRepoCreds.Password, nil
+		}
+	server := httptest.NewServer(service)
+	defer server.Close()
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Create a repo with content
+	setupRep, err := Clone(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, setupRep)
+
+	// Create directory structure
+	for _, dir := range []string{"dir1", "dir2"} {
+		dirPath := filepath.Join(setupRep.Dir(), dir)
+		require.NoError(t, os.MkdirAll(dirPath, 0755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dirPath, "file.txt"),
+			[]byte(fmt.Sprintf("content in %s", dir)),
+			0600,
+		))
+	}
+
+	err = setupRep.AddAllAndCommit(fmt.Sprintf("add directories %s", uuid.NewString()), nil)
+	require.NoError(t, err)
+	err = setupRep.Push(nil)
+	require.NoError(t, err)
+	err = setupRep.Close()
+	require.NoError(t, err)
+
+	rep, err := CloneBare(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		&BareCloneOptions{
+			Filter: FilterBlobless,
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	// Verify clone is functional by adding a worktree
+	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
+	workTree, err := rep.AddWorkTree(
+		workingTreePath,
+		&AddWorkTreeOptions{Ref: "master"},
+	)
+	require.NoError(t, err)
+	defer workTree.Close()
+
+	// Verify content can be checked out on-demand (blobs fetched lazily)
+	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "content in dir1", string(content))
+}
