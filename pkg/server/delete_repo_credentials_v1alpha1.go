@@ -24,15 +24,16 @@ func (s *server) DeleteRepoCredentials(
 
 	logger := logging.LoggerFromContext(ctx)
 	project := req.Msg.GetProject()
-	if project != "" {
-		logger.Info("validating project exists", "project", project)
+	if project == "" {
+		logger.Info("no project specified, defaulting to shared resources namespace",
+			"sharedResourcesNamespace", s.cfg.SharedResourcesNamespace,
+		)
+		project = s.cfg.SharedResourcesNamespace
+	} else {
 		if err := s.validateProjectExists(ctx, project); err != nil {
+			logger.Error(err, "project does not exist", "project", project)
 			return nil, err
 		}
-	}
-	namespace := project
-	if namespace == "" {
-		namespace = s.cfg.SharedResourcesNamespace
 	}
 
 	name := req.Msg.GetName()
@@ -40,15 +41,11 @@ func (s *server) DeleteRepoCredentials(
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
-	}
-
 	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: namespace,
+			Namespace: project,
 			Name:      name,
 		},
 		&secret,
