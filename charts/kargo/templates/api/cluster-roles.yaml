@@ -19,7 +19,6 @@ rules:
       - ""
     resources:
       - serviceaccounts
-      - secrets
     verbs:
       - get
       - list
