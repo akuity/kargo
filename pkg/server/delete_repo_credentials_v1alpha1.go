@@ -10,6 +10,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) DeleteRepoCredentials(
@@ -21,8 +22,10 @@ func (s *server) DeleteRepoCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
+	logger := logging.LoggerFromContext(ctx)
 	project := req.Msg.GetProject()
 	if project != "" {
+		logger.Info("validating project exists", "project", project)
 		if err := s.validateProjectExists(ctx, project); err != nil {
 			return nil, err
 		}
