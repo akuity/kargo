@@ -2757,6 +2757,7 @@ export const CreateRepoCredentialsResponseSchema: GenMessage<CreateRepoCredentia
 export type DeleteRepoCredentialsRequest = Message<"akuity.io.kargo.service.v1alpha1.DeleteRepoCredentialsRequest"> & {
   /**
    * project is the name of the project containing the credentials.
+   * If project is left empty, it will default to the "shared resources" namespace.
    *
    * @generated from field: string project = 1;
    */
