@@ -25,7 +25,7 @@ func (s *server) DeleteRepoCredentials(
 	logger := logging.LoggerFromContext(ctx)
 	project := req.Msg.GetProject()
 	if project == "" {
-		logger.Info("no project specified, defaulting to shared resources namespace",
+		logger.Debug("no project specified, defaulting to shared resources namespace",
 			"sharedResourcesNamespace", s.cfg.SharedResourcesNamespace,
 		)
 		project = s.cfg.SharedResourcesNamespace
