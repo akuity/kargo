@@ -9,7 +9,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Space, Table } from 'antd';
 import Card from 'antd/es/card/Card';
-import { useParams } from 'react-router-dom';
 
 import {
   deleteRepoCredentials,
@@ -25,16 +24,20 @@ import { CreateCredentialsModal } from './create-credentials-modal';
 import { CredentialsDataKey, CredentialsType, CredentialTypeLabelKey } from './types';
 import { iconForCredentialsType } from './utils';
 
-export const CredentialsList = () => {
-  const { name = '' } = useParams();
+type Props = {
+  // empty means shared
+  project?: string;
+};
+
+export const CredentialsList = ({ project = '' }: Props) => {
   const confirm = useConfirmModal();
 
-  const listCredentialsQuery = useQuery(listRepoCredentials, { project: name });
+  const listCredentialsQuery = useQuery(listRepoCredentials, { project });
 
   const { show: showCreate } = useModal((p) => (
     <CreateCredentialsModal
       type='repo'
-      project={name || ''}
+      project={project}
       onSuccess={listCredentialsQuery.refetch}
       {...p}
     />
@@ -126,7 +129,7 @@ export const CredentialsList = () => {
                     showCreate((p) => (
                       <CreateCredentialsModal
                         type='repo'
-                        project={name || ''}
+                        project={project}
                         onSuccess={listCredentialsQuery.refetch}
                         editing
                         init={record}
@@ -158,7 +161,7 @@ export const CredentialsList = () => {
                       ),
                       onOk: () => {
                         deleteCredentialsMutation.mutate({
-                          project: name || '',
+                          project,
                           name: record?.metadata?.name || ''
                         });
                       },
