@@ -664,3 +664,46 @@ func (w *workTree) UpdateSubmodules() error {
 	}
 	return nil
 }
+
+// validateSparsePatterns validates sparse checkout patterns for cone mode.
+func validateSparsePatterns(patterns []string) error {
+	for _, p := range patterns {
+		if filepath.IsAbs(p) {
+			return fmt.Errorf("sparse checkout pattern must be relative: %s", p)
+		}
+		if strings.HasPrefix(p, "..") {
+			return fmt.Errorf("sparse checkout pattern cannot escape repository: %s", p)
+		}
+		// Cone mode only supports directory patterns, not globs
+		if strings.ContainsAny(p, "*?[") {
+			return fmt.Errorf(
+				"sparse checkout pattern cannot contain glob characters (*, ?, [): %s; "+
+					"use directory paths like 'src/app' instead",
+				p,
+			)
+		}
+	}
+	return nil
+}
+
+// configureSparseCheckout configures sparse checkout in cone mode for the
+// working tree with the specified directory patterns.
+func (w *workTree) configureSparseCheckout(patterns []string) error {
+	if err := validateSparsePatterns(patterns); err != nil {
+		return err
+	}
+
+	// Initialize sparse checkout in cone mode (fast, directory-based)
+	if _, err := libExec.Exec(
+		w.buildGitCommand("sparse-checkout", "init", "--cone"),
+	); err != nil {
+		return fmt.Errorf("error initializing sparse checkout: %w", err)
+	}
+
+	// Set the sparse checkout patterns
+	setArgs := append([]string{"sparse-checkout", "set"}, patterns...)
+	if _, err := libExec.Exec(w.buildGitCommand(setArgs...)); err != nil {
+		return fmt.Errorf("error setting sparse checkout patterns %v: %w", patterns, err)
+	}
+	return nil
+}

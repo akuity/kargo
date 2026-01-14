@@ -178,6 +178,10 @@ type Checkout struct {
 	Create bool `json:"create,omitempty"`
 	// The path where the repository should be checked out.
 	Path string `json:"path"`
+	// Directory paths for sparse checkout. Only the specified directories (and their contents)
+	// will be checked out. Paths must be relative to the repository root (e.g., 'src/app',
+	// 'configs/prod'). Glob patterns are not supported.
+	Sparse []string `json:"sparse,omitempty"`
 	// The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are
 	// specified, the default branch is checked out.
 	Tag string `json:"tag,omitempty"`

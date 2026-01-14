@@ -178,7 +178,10 @@ func (g *gitCloner) run(
 		}
 		worktree, err := repo.AddWorkTree(
 			path,
-			&git.AddWorkTreeOptions{Ref: ref},
+			&git.AddWorkTreeOptions{
+				Ref:    ref,
+				Sparse: checkout.Sparse,
+			},
 		)
 		if err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
