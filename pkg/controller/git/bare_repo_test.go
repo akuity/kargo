@@ -529,3 +529,88 @@ func Test_validateSparsePatterns(t *testing.T) {
 		})
 	}
 }
+
+func TestBareRepo_WithFilter(t *testing.T) {
+	testRepoCreds := RepoCredentials{
+		Username: "fake-username",
+		Password: "fake-password",
+	}
+
+	var useAuth bool
+	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
+		useAuth = types.MustParseBool(useAuthStr)
+	}
+	service := gitkit.New(
+		gitkit.Config{
+			Dir:        t.TempDir(),
+			AutoCreate: true,
+			Auth:       useAuth,
+		},
+	)
+	require.NoError(t, service.Setup())
+	service.AuthFunc =
+		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
+			return cred.Username == testRepoCreds.Username &&
+				cred.Password == testRepoCreds.Password, nil
+		}
+	server := httptest.NewServer(service)
+	defer server.Close()
+
+	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+
+	// Create a repo with content
+	setupRep, err := Clone(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, setupRep)
+
+	// Create directory structure
+	for _, dir := range []string{"dir1", "dir2"} {
+		dirPath := filepath.Join(setupRep.Dir(), dir)
+		require.NoError(t, os.MkdirAll(dirPath, 0755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dirPath, "file.txt"),
+			[]byte(fmt.Sprintf("content in %s", dir)),
+			0600,
+		))
+	}
+
+	err = setupRep.AddAllAndCommit(fmt.Sprintf("add directories %s", uuid.NewString()), nil)
+	require.NoError(t, err)
+	err = setupRep.Push(nil)
+	require.NoError(t, err)
+	err = setupRep.Close()
+	require.NoError(t, err)
+
+	rep, err := CloneBare(
+		testRepoURL,
+		&ClientOptions{
+			Credentials: &testRepoCreds,
+		},
+		&BareCloneOptions{
+			Filter: FilterBlobless,
+		},
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	// Verify clone is functional by adding a worktree
+	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
+	workTree, err := rep.AddWorkTree(
+		workingTreePath,
+		&AddWorkTreeOptions{Ref: "master"},
+	)
+	require.NoError(t, err)
+	defer workTree.Close()
+
+	// Verify content can be checked out on-demand (blobs fetched lazily)
+	content, err := os.ReadFile(filepath.Join(workTree.Dir(), "dir1", "file.txt"))
+	require.NoError(t, err)
+	require.Equal(t, "content in dir1", string(content))
+}
