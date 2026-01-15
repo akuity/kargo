@@ -28,6 +28,8 @@ PROTOC_VERSION			?= v25.3
 BUF_VERSION				?= $(shell grep github.com/bufbuild/buf $(TOOLS_MOD_FILE) | awk '{print $$2}')
 QUILL_VERSION			?= v0.5.1
 PROTOC_GEN_DOC_VERSION	?= v1.5.1
+SWAG_VERSION			?= $(shell grep github.com/swaggo/swag $(TOOLS_MOD_FILE) | awk '{print $$2}')
+GO_SWAGGER_VERSION		?= $(shell grep github.com/go-swagger/go-swagger $(TOOLS_MOD_FILE) | awk '{print $$2}')
 
 ################################################################################
 # Tool targets                                                                 #
@@ -43,6 +45,8 @@ PROTOC          := $(BIN_DIR)/protoc-$(OS)-$(ARCH)-$(PROTOC_VERSION)
 BUF             := $(BIN_DIR)/buf-$(OS)-$(ARCH)-$(BUF_VERSION)
 QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 PROTOC_GEN_DOC  := $(BIN_DIR)/protoc-gen-doc-$(OS)-$(ARCH)-$(PROTOC_GEN_DOC_VERSION)
+SWAG            := $(BIN_DIR)/swag-$(OS)-$(ARCH)-$(SWAG_VERSION)
+GO_SWAGGER      := $(BIN_DIR)/go-swagger-$(OS)-$(ARCH)-$(GO_SWAGGER_VERSION)
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -74,6 +78,12 @@ $(QUILL):
 $(PROTOC_GEN_DOC):
 	$(call go-install-tool,$@,github.com/pseudomuto/protoc-gen-doc/cmd/protoc-gen-doc,$(PROTOC_GEN_DOC_VERSION))
 
+$(SWAG):
+	$(call go-install-tool,$@,github.com/swaggo/swag/cmd/swag,$(SWAG_VERSION))
+
+$(GO_SWAGGER):
+	$(call go-install-tool,$@,github.com/go-swagger/go-swagger/cmd/swagger,$(GO_SWAGGER_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -88,6 +98,8 @@ PROTOC_LINK			:= $(BIN_DIR)/protoc
 BUF_LINK			:= $(BIN_DIR)/buf
 QUILL_LINK			:= $(BIN_DIR)/quill
 PROTOC_GEN_DOC_LINK	:= $(BIN_DIR)/protoc-gen-doc
+SWAG_LINK			:= $(BIN_DIR)/swag
+GO_SWAGGER_LINK		:= $(BIN_DIR)/go-swagger
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -129,11 +141,19 @@ $(QUILL_LINK): $(QUILL)
 $(PROTOC_GEN_DOC_LINK): $(PROTOC_GEN_DOC)
 	$(call create-symlink,$(PROTOC_GEN_DOC),$(PROTOC_GEN_DOC_LINK))
 
+.PHONY: $(SWAG_LINK)
+$(SWAG_LINK): $(SWAG)
+	$(call create-symlink,$(SWAG),$(SWAG_LINK))
+
+.PHONY: $(GO_SWAGGER_LINK)
+$(GO_SWAGGER_LINK): $(GO_SWAGGER)
+	$(call create-symlink,$(GO_SWAGGER),$(GO_SWAGGER_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -167,6 +187,12 @@ install-quill: $(QUILL) $(QUILL_LINK)
 
 .PHONY: install-protoc-gen-doc
 install-protoc-gen-doc: $(PROTOC_GEN_DOC) $(PROTOC_GEN_DOC_LINK)
+
+.PHONY: install-swag
+install-swag: $(SWAG) $(SWAG_LINK)
+
+.PHONY: install-go-swagger
+install-go-swagger: $(GO_SWAGGER) $(GO_SWAGGER_LINK)
 
 ################################################################################
 # Clean up targets                                                             #

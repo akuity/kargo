@@ -215,7 +215,30 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+
+.PHONY: codegen-openapi
+codegen-openapi: install-swag install-go-swagger
+	rm -f swagger.yaml swagger.json
+	rm -rf pkg/client/generated
+	rm -rf /tmp/swagger-build
+	mkdir -p /tmp/swagger-build
+	$(SWAG_LINK) init \
+		--generalInfo pkg/server/rest_router.go \
+		--output /tmp/swagger-build \
+		--parseDependency \
+		--parseInternal \
+		--outputTypes yaml,json
+	mv /tmp/swagger-build/swagger.yaml .
+	mv /tmp/swagger-build/swagger.json .
+	rm -rf /tmp/swagger-build
+	mkdir -p pkg/client/generated
+	$(GO_SWAGGER_LINK) generate client \
+		-f swagger.json \
+		-t pkg \
+		--client-package client/generated \
+		--model-package client/generated/models \
+		--skip-validation
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
@@ -445,3 +468,9 @@ hack-serve-docs: hack-build-dev-tools
 .PHONY: serve-docs
 serve-docs:
 	cd docs && pnpm install && pnpm start
+
+################################################################################
+# Swagger/OpenAPI Documentation                                                #
+################################################################################
+
+
