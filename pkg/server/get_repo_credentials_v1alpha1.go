@@ -3,10 +3,13 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -86,6 +89,78 @@ func (s *server) GetRepoCredentials(
 			Credentials: creds,
 		},
 	}), nil
+}
+
+// @id GetProjectRepoCredentials
+// @Summary Retrieve project-level repository credentials
+// @Description Retrieve project-level repository credentials by name. Returns a
+// @Description heavily redacted Kubernetes Secret resource.
+// @Tags Credentials, Repo Credentials, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param repo-credentials path string true "Credentials name"
+// @Produce json
+// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Router /v2/projects/{project}/repo-credentials/{repo-credentials} [get]
+func (s *server) getProjectRepoCredentials(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("repo-credentials")
+
+	if !s.validateProjectExistsForGin(c, project) {
+		return
+	}
+
+	secret := &corev1.Secret{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{Namespace: project, Name: name},
+		secret,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	if err := validateRepoCredentialSecret(secret); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, sanitizeCredentialSecret(*secret))
+}
+
+// @id GetSharedRepoCredentials
+// @Summary Retrieve shared repository credentials
+// @Description Retrieve shared repository credentials by name. Returns a
+// @Description heavily redacted Kubernetes Secret resource.
+// @Tags Credentials, Repo Credentials, Shared
+// @Security BearerAuth
+// @Param repo-credentials path string true "Credentials name"
+// @Produce json
+// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Router /v2/shared/repo-credentials/{repo-credentials} [get]
+func (s *server) getSharedRepoCredentials(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	name := c.Param("repo-credentials")
+
+	secret := &corev1.Secret{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{Namespace: s.cfg.SharedResourcesNamespace, Name: name},
+		secret,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	if err := validateRepoCredentialSecret(secret); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, sanitizeCredentialSecret(*secret))
 }
 
 // sanitizeCredentialSecret returns a copy of the secret with all values in the

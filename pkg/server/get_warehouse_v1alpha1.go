@@ -4,13 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"time"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) GetWarehouse(
@@ -89,4 +95,97 @@ func prepareOutboundWarehouse(w *kargoapi.Warehouse) error {
 	}
 	w.Spec = kargoapi.WarehouseSpec(newSpec)
 	return nil
+}
+
+// @id GetWarehouse
+// @Summary Retrieve a Warehouse
+// @Description Retrieve a Warehouse resource from a project's namespace.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param warehouse path string true "Warehouse name"
+// @Produce json
+// @Success 200 {object} object "Warehouse custom resource (github.com/akuity/kargo/api/v1alpha1.Warehouse)"
+// @Router /v2/projects/{project}/warehouses/{warehouse} [get]
+func (s *server) getWarehouse(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("warehouse")
+
+	if !s.validateProjectExistsForGin(c, project) {
+		return
+	}
+
+	if watchMode := c.Query("watch") == trueStr; watchMode {
+		s.watchWarehouse(c, project, name)
+		return
+	}
+
+	warehouse := &kargoapi.Warehouse{}
+	if err := s.client.Get(
+		ctx,
+		client.ObjectKey{Name: name, Namespace: project},
+		warehouse,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, warehouse)
+}
+
+func (s *server) watchWarehouse(c *gin.Context, project, name string) {
+	ctx := c.Request.Context()
+	logger := logging.LoggerFromContext(ctx)
+
+	// Validate that the warehouse exists
+	if err := s.client.Get(ctx, client.ObjectKey{
+		Namespace: project,
+		Name:      name,
+	}, &kargoapi.Warehouse{}); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	setSSEHeaders(c)
+
+	opts := metav1.ListOptions{
+		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
+	}
+
+	w, err := s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
+	if err != nil {
+		logger.Error(err, "failed to start watch")
+		_ = c.Error(fmt.Errorf("watch warehouse: %w", err))
+		return
+	}
+	defer w.Stop()
+
+	c.Writer.Flush()
+
+	keepaliveTicker := time.NewTicker(30 * time.Second)
+	defer keepaliveTicker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+			logger.Debug("watch context done", "error", ctx.Err())
+			return
+
+		case <-keepaliveTicker.C:
+			if !writeSSEKeepalive(c) {
+				return
+			}
+
+		case e, ok := <-w.ResultChan():
+			if !ok {
+				logger.Debug("watch channel closed")
+				return
+			}
+			if !convertAndSendWatchEvent(c, e, (*kargoapi.Warehouse)(nil)) {
+				return
+			}
+		}
+	}
 }

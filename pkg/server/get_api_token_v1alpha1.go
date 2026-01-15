@@ -4,8 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	sigyaml "sigs.k8s.io/yaml"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -64,4 +66,58 @@ func (s *server) GetAPIToken(
 			Raw: rawBytes,
 		},
 	}), nil
+}
+
+// @id GetProjectAPIToken
+// @Summary Retrieve a project-level API token
+// @Description Retrieve a project-level API token by name. Returns a heavily
+// @Description redacted Kubernetes Secret resource.
+// @Tags Rbac, Credentials, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param apitoken path string true "API token name"
+// @Produce json
+// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Router /v2/projects/{project}/apitokens/{apitoken} [get]
+func (s *server) getProjectAPIToken(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("apitoken")
+
+	if !s.validateProjectExistsForGin(c, project) {
+		return
+	}
+
+	tokenSecret, err := s.rolesDB.GetAPIToken(ctx, false, project, name)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, tokenSecret)
+}
+
+// @id GetSystemAPIToken
+// @Summary Retrieve a system-level API token
+// @Description Retrieve a system-level API token by name. Returns a heavily
+// @Description redacted Kubernetes Secret resource.
+// @Tags Rbac, Credentials, System-Level
+// @Security BearerAuth
+// @Param apitoken path string true "API token name"
+// @Produce json
+// @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
+// @Router /v2/system/apitokens/{apitoken} [get]
+func (s *server) getSystemAPIToken(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	name := c.Param("apitoken")
+
+	tokenSecret, err := s.rolesDB.GetAPIToken(ctx, true, "", name)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, tokenSecret)
 }

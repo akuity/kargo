@@ -17,7 +17,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -62,14 +61,7 @@ type ClientOptions struct {
 		context.Context,
 		*rest.Config,
 		*runtime.Scheme,
-	) (libClient.Client, error)
-	// NewInternalDynamicClient may be used to take control of how the client's
-	// own internal/underlying client-go dynamic client is created. This is mainly
-	// useful for tests wherein one may wish to inject a custom implementation of
-	// that interface. Ordinarily, the value of this field should be left as
-	// nil/unspecified, in which case, the NewClient function to which this struct
-	// is passed will supply its own default implementation.
-	NewInternalDynamicClient func(*rest.Config) (dynamic.Interface, error)
+	) (libClient.WithWatch, error)
 	// Scheme may be used to take control of the scheme used by the client's own
 	// internal/underlying controller-runtime client. Ordinarily, the value of
 	// this field should be left as nil/unspecified, in which case, the NewClient
@@ -98,11 +90,6 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	}
 	if opts.NewInternalClient == nil {
 		opts.NewInternalClient = newDefaultInternalClient
-	}
-	if opts.NewInternalDynamicClient == nil {
-		opts.NewInternalDynamicClient = func(c *rest.Config) (dynamic.Interface, error) {
-			return dynamic.NewForConfig(c)
-		}
 	}
 	return opts, nil
 }
@@ -141,9 +128,8 @@ type Client interface {
 
 // client implements Client.
 type client struct {
-	internalClient        libClient.Client
-	internalDynamicClient dynamic.Interface
-	opts                  ClientOptions
+	internalClient libClient.WithWatch
+	opts           ClientOptions
 
 	getAuthorizedClientFn func(
 		ctx context.Context,
@@ -180,14 +166,9 @@ func NewClient(
 	if err != nil {
 		return nil, fmt.Errorf("error building internal client: %w", err)
 	}
-	internalDynamicClient, err := opts.NewInternalDynamicClient(restCfg)
-	if err != nil {
-		return nil, fmt.Errorf("error building internal dynamic client: %w", err)
-	}
 	c := &client{
-		internalClient:        internalClient,
-		internalDynamicClient: internalDynamicClient,
-		opts:                  opts,
+		internalClient: internalClient,
+		opts:           opts,
 	}
 	if opts.SkipAuthorization {
 		c.getAuthorizedClientFn = func(
@@ -209,11 +190,33 @@ func NewClient(
 	return c, nil
 }
 
+// watchableClient wraps a client and adds Watch functionality
+type watchableClient struct {
+	libClient.Client
+}
+
+func (w *watchableClient) Watch(
+	ctx context.Context,
+	list libClient.ObjectList,
+	opts ...libClient.ListOption,
+) (watch.Interface, error) {
+	// TODO(krancour): Claude did this and I don't entirely trust it. It seems a
+	// rather hacky workaround for a client that wasn't implementing WithWatch.
+	// I frankly do not think this works.
+	//
+	// Use the cluster client's watch capability directly through the REST client
+	// This delegates to the underlying cached client's watch implementation
+	if wc, ok := w.Client.(libClient.WithWatch); ok {
+		return wc.Watch(ctx, list, opts...)
+	}
+	return nil, errors.New("underlying client does not support watch")
+}
+
 func newDefaultInternalClient(
 	ctx context.Context,
 	restCfg *rest.Config,
 	scheme *runtime.Scheme,
-) (libClient.Client, error) {
+) (libClient.WithWatch, error) {
 	cluster, err := libCluster.New(
 		restCfg,
 		func(clusterOptions *libCluster.Options) {
@@ -290,7 +293,10 @@ func newDefaultInternalClient(
 	if err != nil {
 		return nil, fmt.Errorf("error starting cluster: %w", err)
 	}
-	return cluster.GetClient(), nil
+	// Return the cluster's client directly - it implements WithWatch through delegation
+	return &watchableClient{
+		Client: cluster.GetClient(),
+	}, nil
 }
 
 func (c *client) Get(
@@ -679,13 +685,43 @@ func (c *client) Watch(
 	); err != nil {
 		return nil, err
 	}
-	var ri dynamic.ResourceInterface
+
+	// Convert metav1.ListOptions to controller-runtime ListOptions
+	listOpts := []libClient.ListOption{}
 	if namespace != "" {
-		ri = c.internalDynamicClient.Resource(gvr).Namespace(namespace)
-	} else {
-		ri = c.internalDynamicClient.Resource(gvr)
+		listOpts = append(listOpts, libClient.InNamespace(namespace))
 	}
-	return ri.Watch(ctx, opts)
+	if opts.FieldSelector != "" {
+		// Parse the field selector and convert to MatchingFields
+		// For now, we only support the metadata.name field selector
+		if strings.HasPrefix(opts.FieldSelector, "metadata.name=") {
+			name := strings.TrimPrefix(opts.FieldSelector, "metadata.name=")
+			listOpts = append(listOpts, libClient.MatchingFields{metav1.ObjectNameField: name})
+		}
+	}
+
+	// We need to pass an ObjectList, not an Object
+	// Get the GVK from the scheme (works even if TypeMeta isn't set on the object)
+	gvk, err := c.internalClient.GroupVersionKindFor(obj)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get GVK for object: %w", err)
+	}
+
+	// Create the corresponding list type
+	listGVK := gvk
+	listGVK.Kind = listGVK.Kind + "List"
+
+	list, err := c.internalClient.Scheme().New(listGVK)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create list object for watch: %w", err)
+	}
+
+	objectList, ok := list.(libClient.ObjectList)
+	if !ok {
+		return nil, fmt.Errorf("object is not an ObjectList: %T", list)
+	}
+
+	return c.internalClient.Watch(ctx, objectList, listOpts...)
 }
 
 func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {

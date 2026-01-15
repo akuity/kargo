@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
@@ -19,4 +21,16 @@ func (s *server) GetVersionInfo(
 			VersionInfo: api.ToVersionProto(version.GetVersion()),
 		},
 	), nil
+}
+
+// @id GetVersionInfo
+// @Summary Retrieve API Server version information
+// @Description Retrieve API Server version information.
+// @Tags System
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} version.Version
+// @Router /v2/system/server-version [get]
+func (s *server) getVersionInfo(c *gin.Context) {
+	c.JSON(http.StatusOK, version.GetVersion())
 }

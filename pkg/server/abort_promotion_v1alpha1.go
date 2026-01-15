@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -36,4 +38,36 @@ func (s *server) AbortPromotion(
 		return nil, err
 	}
 	return connect.NewResponse(&svcv1alpha1.AbortPromotionResponse{}), nil
+}
+
+// @id AbortPromotion
+// @Summary Abort a Promotion
+// @Description Abort a running Promotion.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Produce json
+// @Param project path string true "Project name"
+// @Param promotion path string true "Promotion name"
+// @Success 200 "Success"
+// @Router /v2/projects/{project}/promotions/{promotion}/abort [post]
+func (s *server) abortPromotion(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("promotion")
+
+	if !s.validateProjectExistsForGin(c, project) {
+		return
+	}
+
+	objKey := client.ObjectKey{
+		Namespace: project,
+		Name:      name,
+	}
+	if err := api.AbortPromotion(ctx, s.client, objKey, kargoapi.AbortActionTerminate); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.Status(http.StatusOK)
 }

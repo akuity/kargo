@@ -12,8 +12,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/dynamic"
-	fakeDynamic "k8s.io/client-go/dynamic/fake"
 	"k8s.io/client-go/rest"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -25,7 +23,6 @@ func TestSetOptionsDefaults(t *testing.T) {
 	opts, err := setOptionsDefaults(ClientOptions{})
 	require.NoError(t, err)
 	require.NotNil(t, opts.NewInternalClient)
-	require.NotNil(t, opts.NewInternalDynamicClient)
 	require.NotNil(t, opts.Scheme)
 }
 
@@ -41,7 +38,7 @@ func TestNewClient(t *testing.T) {
 				context.Context,
 				*rest.Config,
 				*runtime.Scheme,
-			) (libClient.Client, error) {
+			) (libClient.WithWatch, error) {
 				return testInternalClient, nil
 			},
 		},
@@ -51,7 +48,6 @@ func TestNewClient(t *testing.T) {
 	client, ok := c.(*client)
 	require.True(t, ok)
 	require.Equal(t, testInternalClient, client.internalClient)
-	require.NotNil(t, client.internalDynamicClient)
 	require.NotNil(t, client.getAuthorizedClientFn)
 }
 
@@ -363,13 +359,8 @@ func TestAllClientOperations(t *testing.T) {
 						context.Context,
 						*rest.Config,
 						*runtime.Scheme,
-					) (libClient.Client, error) {
+					) (libClient.WithWatch, error) {
 						return fake.NewClientBuilder().Build(), nil
-					},
-					NewInternalDynamicClient: func(
-						*rest.Config,
-					) (dynamic.Interface, error) {
-						return fakeDynamic.NewSimpleDynamicClient(runtime.NewScheme()), nil
 					},
 				},
 			)

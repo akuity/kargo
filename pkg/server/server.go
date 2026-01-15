@@ -207,6 +207,11 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
+
+	// Add Gin REST router
+	ginRouter := s.setupRESTRouter(ctx)
+	mux.Handle("/v2/", ginRouter)
+
 	dashboardHandler, err := newDashboardRequestHandler()
 	if err != nil {
 		return fmt.Errorf("error initializing dashboard handler: %w", err)

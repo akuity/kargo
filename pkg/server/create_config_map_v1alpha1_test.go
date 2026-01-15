@@ -1,13 +1,18 @@
 package server
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -180,7 +185,7 @@ func TestCreateConfigMap(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
@@ -280,4 +285,309 @@ func TestConfigMapToK8sConfigMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+func Test_server_createProjectConfigMap(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-configmap",
+		},
+	}
+	const testDescription = "fake description"
+	testData := map[string]string{"foo": "bar", "bat": "baz"}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodPost, "/v2/projects/"+testProject.Name+"/configmaps",
+		[]restTestCase{
+			{
+				name: "Project does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "invalid JSON in request body",
+				body:          bytes.NewBufferString("{invalid json"),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "missing name in request body",
+				body: mustJSONBody(createConfigMapRequest{
+					Data: testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "empty data in request body",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: map[string]string{},
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "ConfigMap already exists",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testConfigMap,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "creates ConfigMap",
+				body: mustJSONBody(createConfigMapRequest{
+					Name:        testConfigMap.Name,
+					Description: testDescription,
+					Data:        testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Examine the ConfigMap in the response
+					resCM := &corev1.ConfigMap{}
+					err := json.Unmarshal(w.Body.Bytes(), resCM)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, resCM.Namespace)
+					require.Equal(t, testConfigMap.Name, resCM.Name)
+					require.Equal(
+						t,
+						testDescription,
+						resCM.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, resCM.Data)
+
+					// Verify the ConfigMap was created in the cluster
+					cm := &corev1.ConfigMap{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(resCM),
+						cm,
+					)
+					require.NoError(t, err)
+					require.Equal(
+						t,
+						testDescription,
+						cm.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, cm.Data)
+				},
+			},
+		},
+	)
+}
+
+func Test_server_createSystemConfigMap(t *testing.T) {
+	testConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testSystemResourcesNamespace,
+			Name:      "fake-configmap",
+		},
+	}
+	const testDescription = "fake description"
+	testData := map[string]string{"foo": "bar", "bat": "baz"}
+	testRESTEndpoint(
+		t, &config.ServerConfig{SystemResourcesNamespace: testSystemResourcesNamespace},
+		http.MethodPost, "/v2/system/configmaps",
+		[]restTestCase{
+			{
+				name: "invalid JSON in request body",
+				body: bytes.NewBufferString("{invalid json"),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "missing name in request body",
+				body: mustJSONBody(createConfigMapRequest{Data: testData}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "missing data in request body",
+				body: mustJSONBody(createConfigMapRequest{Name: testConfigMap.Name}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "empty data in request body",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: map[string]string{},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "ConfigMap already exists",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testConfigMap),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "creates ConfigMap",
+				body: mustJSONBody(createConfigMapRequest{
+					Name:        testConfigMap.Name,
+					Description: testDescription,
+					Data:        testData,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Examine the ConfigMap in the response
+					resCM := &corev1.ConfigMap{}
+					err := json.Unmarshal(w.Body.Bytes(), resCM)
+					require.NoError(t, err)
+					require.Equal(t, testSystemResourcesNamespace, resCM.Namespace)
+					require.Equal(t, testConfigMap.Name, resCM.Name)
+					require.Equal(
+						t,
+						testDescription,
+						resCM.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, resCM.Data)
+
+					// Verify the ConfigMap was created in the cluster
+					cm := &corev1.ConfigMap{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(resCM),
+						cm,
+					)
+					require.NoError(t, err)
+					require.Equal(
+						t,
+						testDescription,
+						cm.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, cm.Data)
+				},
+			},
+		},
+	)
+}
+
+func Test_server_createSharedConfigMap(t *testing.T) {
+	testConfigMap := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testSharedResourcesNamespace,
+			Name:      "fake-configmap",
+		},
+	}
+	const testDescription = "fake description"
+	testData := map[string]string{"foo": "bar", "bat": "baz"}
+	testRESTEndpoint(
+		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
+		http.MethodPost, "/v2/shared/configmaps",
+		[]restTestCase{
+			{
+				name: "invalid JSON in request body",
+				body: bytes.NewBufferString("{invalid json"),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "missing name in request body",
+				body: mustJSONBody(createConfigMapRequest{Data: testData}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "missing data in request body",
+				body: mustJSONBody(createConfigMapRequest{Name: testConfigMap.Name}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "empty data in request body",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: map[string]string{},
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name: "ConfigMap already exists",
+				body: mustJSONBody(createConfigMapRequest{
+					Name: testConfigMap.Name,
+					Data: testData,
+				}),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testConfigMap),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "creates ConfigMap",
+				body: mustJSONBody(createConfigMapRequest{
+					Name:        testConfigMap.Name,
+					Description: testDescription,
+					Data:        testData,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Examine the ConfigMap in the response
+					resCM := &corev1.ConfigMap{}
+					err := json.Unmarshal(w.Body.Bytes(), resCM)
+					require.NoError(t, err)
+					require.Equal(t, testSharedResourcesNamespace, resCM.Namespace)
+					require.Equal(t, testConfigMap.Name, resCM.Name)
+					require.Equal(
+						t,
+						testDescription,
+						resCM.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, resCM.Data)
+
+					// Verify the ConfigMap was created in the cluster
+					cm := &corev1.ConfigMap{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(resCM),
+						cm,
+					)
+					require.NoError(t, err)
+					require.Equal(
+						t,
+						testDescription,
+						cm.Annotations[kargoapi.AnnotationKeyDescription],
+					)
+					require.Equal(t, testData, cm.Data)
+				},
+			},
+		},
+	)
 }

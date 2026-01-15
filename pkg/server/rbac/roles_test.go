@@ -1722,7 +1722,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
-		require.True(t, apierrors.IsBadRequest(err))
+		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not labeled as a Kargo API token")
 	})
 
@@ -1753,7 +1753,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
-		require.True(t, apierrors.IsBadRequest(err))
+		require.True(t, apierrors.IsConflict(err))
 		require.Contains(t, err.Error(), "not annotated as Kargo-managed")
 	})
 
