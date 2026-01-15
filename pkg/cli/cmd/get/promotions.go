@@ -2,19 +2,18 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -22,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getPromotionsOptions struct {
@@ -130,47 +130,61 @@ func (o *getPromotionsOptions) validate() error {
 
 // run gets the promotions from the server and prints them to the console.
 func (o *getPromotionsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListPromotionsResponse]
-		if resp, err = kargoSvcCli.ListPromotions(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.ListPromotionsRequest{
-					Project: o.Project,
-					Stage:   &o.Stage,
-				},
-			),
+		var res *core.ListPromotionsOK
+		if res, err = apiClient.Core.ListPromotions(
+			core.NewListPromotionsParams().
+				WithProject(o.Project).
+				WithStage(&o.Stage),
+			nil,
 		); err != nil {
 			return fmt.Errorf("list promotions: %w", err)
 		}
-		return PrintObjects(resp.Msg.GetPromotions(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		var promosJSON []byte
+		if promosJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		promos := struct {
+			Items []*kargoapi.Promotion `json:"items"`
+		}{}
+		if err = json.Unmarshal(promosJSON, &promos); err != nil {
+			return err
+		}
+		return PrintObjects(promos.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
-	res := make([]*kargoapi.Promotion, 0, len(o.Names))
+	promos := make([]*kargoapi.Promotion, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetPromotionResponse]
-		if resp, err = kargoSvcCli.GetPromotion(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetPromotionRequest{
-					Project: o.Project,
-					Name:    name,
-				},
-			),
+		var res *core.GetPromotionOK
+		if res, err = apiClient.Core.GetPromotion(
+			core.NewGetPromotionParams().
+				WithProject(o.Project).
+				WithPromotion(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetPromotion())
+		var promoJSON []byte
+		if promoJSON, err = json.Marshal(res.Payload); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		var promo *kargoapi.Promotion
+		if err = json.Unmarshal(promoJSON, &promo); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		promos = append(promos, promo)
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(promos, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print promotions: %w", err)
 	}
 	return errors.Join(errs...)

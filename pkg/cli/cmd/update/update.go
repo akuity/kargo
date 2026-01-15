@@ -16,7 +16,9 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 	}
 
 	// Register subcommands.
-	cmd.AddCommand(newUpdateCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newUpdateConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newUpdateGenericCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newUpdateRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newUpdateFreightAliasCommand(cfg))
 
 	return cmd

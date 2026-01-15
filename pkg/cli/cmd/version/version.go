@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -22,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 	versionpkg "github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -124,20 +124,30 @@ func getServerVersion(
 		return nil, nil
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, cfg, opts)
+	apiClient, err := client.GetClientFromConfig(ctx, cfg, opts)
 	if err != nil {
 		return nil, fmt.Errorf("get client from config: %w", err)
 	}
 
-	resp, err := kargoSvcCli.GetVersionInfo(
-		ctx,
-		connect.NewRequest(&svcv1alpha1.GetVersionInfoRequest{}),
+	res, err := apiClient.System.GetVersionInfo(
+		system.NewGetVersionInfoParams(),
+		nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("get version info from server: %w", err)
 	}
 
-	return resp.Msg.GetVersionInfo(), nil
+	// Convert response payload to typed struct
+	respBytes, err := json.Marshal(res.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal response: %w", err)
+	}
+	var versionInfo svcv1alpha1.VersionInfo
+	if err := json.Unmarshal(respBytes, &versionInfo); err != nil {
+		return nil, fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	return &versionInfo, nil
 }
 
 func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {

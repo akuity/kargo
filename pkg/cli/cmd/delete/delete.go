@@ -2,10 +2,10 @@ package delete
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -19,6 +19,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type deleteOptions struct {
@@ -76,7 +77,9 @@ kargo delete warehouse --project=my-project my-warehouse
 
 	// Register subcommands.
 	cmd.AddCommand(newClusterConfigCommand(cfg, streams))
-	cmd.AddCommand(newCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newGenericCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newProjectConfigCommand(cfg, streams))
 	cmd.AddCommand(newRoleCommand(cfg, streams))
@@ -125,22 +128,34 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	resp, err := kargoSvcCli.DeleteResource(ctx, connect.NewRequest(&kargosvcapi.DeleteResourceRequest{
-		Manifest: manifest,
-	}))
+	res, err := apiClient.Resources.DeleteResource(
+		resources.NewDeleteResourceParams().
+			WithManifest(string(manifest)),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("delete resource: %w", err)
 	}
 
-	resCap := len(resp.Msg.GetResults())
+	// Convert response payload to typed struct
+	respBytes, err := json.Marshal(res.Payload)
+	if err != nil {
+		return fmt.Errorf("marshal response: %w", err)
+	}
+	var deleteResp kargosvcapi.DeleteResourceResponse
+	if err = json.Unmarshal(respBytes, &deleteResp); err != nil {
+		return fmt.Errorf("unmarshal response: %w", err)
+	}
+
+	resCap := len(deleteResp.GetResults())
 	successRes := make([]*kargosvcapi.DeleteResourceResult_DeletedResourceManifest, 0, resCap)
 	deleteErrs := make([]error, 0, resCap)
-	for _, r := range resp.Msg.GetResults() {
+	for _, r := range deleteResp.GetResults() {
 		switch typedRes := r.GetResult().(type) {
 		case *kargosvcapi.DeleteResourceResult_DeletedResourceManifest:
 			successRes = append(successRes, typedRes)

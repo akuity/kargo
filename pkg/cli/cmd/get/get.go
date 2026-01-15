@@ -45,7 +45,9 @@ kargo get promotions --project=my-project --stage=my-stage
 
 	// Register subcommands.
 	cmd.AddCommand(newGetClusterConfigCommand(cfg, streams, cmdOpts))
-	cmd.AddCommand(newGetCredentialsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetConfigMapsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetGenericCredentialsCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetRepoCredentialsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetFreightCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetProjectConfigCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
@@ -94,17 +96,21 @@ func PrintObjects[T runtime.Object](
 	var t T
 	var printObj runtime.Object
 	switch any(t).(type) {
+	case *corev1.ConfigMap:
+		printObj = newConfigMapsTable(list)
 	case *corev1.Secret:
 		// TODO(krancour): This is hacky and I don't love it
 		if len(list.Items) > 0 {
-			if secret, ok := list.Items[0].Object.(*corev1.Secret); ok &&
-				secret.GetLabels()[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue {
+			secret := list.Items[0].Object.(*corev1.Secret) // nolint: forcetypeassert
+			if secret.GetLabels()[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue {
 				printObj = newAPITokensTable(list)
+			} else if secret.GetLabels()[kargoapi.LabelKeyCredentialType] == kargoapi.LabelValueCredentialTypeGeneric {
+				printObj = newGenericCredentialsTable(list)
+			} else if _, ok := secret.GetLabels()[kargoapi.LabelKeyCredentialType]; ok {
+				printObj = newRepoCredentialsTable(list)
 			} else {
-				printObj = newCredentialsTable(list)
+				printObj = list
 			}
-		} else {
-			printObj = list
 		}
 	case *kargoapi.ClusterConfig:
 		printObj = newClusterConfigTable(list)

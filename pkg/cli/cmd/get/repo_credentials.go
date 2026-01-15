@@ -2,12 +2,12 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +15,6 @@ import (
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -23,10 +22,11 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/credentials"
 	libCreds "github.com/akuity/kargo/pkg/credentials"
 )
 
-type getCredentialsOptions struct {
+type getRepoCredentialsOptions struct {
 	genericiooptions.IOStreams
 	*genericclioptions.PrintFlags
 
@@ -40,12 +40,12 @@ type getCredentialsOptions struct {
 	Names   []string
 }
 
-func newGetCredentialsCommand(
+func newGetRepoCredentialsCommand(
 	cfg config.CLIConfig,
 	streams genericiooptions.IOStreams,
 	getOptions *getOptions,
 ) *cobra.Command {
-	cmdOpts := &getCredentialsOptions{
+	cmdOpts := &getRepoCredentialsOptions{
 		Config:     cfg,
 		IOStreams:  streams,
 		getOptions: getOptions,
@@ -53,29 +53,37 @@ func newGetCredentialsCommand(
 	}
 
 	cmd := &cobra.Command{
-		Use:     "credentials [--project=project] [NAME ...] [--no-headers]",
-		Aliases: []string{"credential", "creds", "cred"},
-		Short:   "Display one or many credentials",
+		Use: "repo-credentials [--project=project] [NAME ...] [--no-headers]",
+		Aliases: []string{
+			"repo-credential",
+			"repo-creds",
+			"repo-cred",
+			"repocredentials",
+			"repocredential",
+			"repocreds",
+			"repocred",
+		},
+		Short: "Display one or many repository credentials",
 		Example: templates.Example(`
-# List all credentials in my-project
-kargo get credentials --project=my-project
+# List all repository credentials in my-project
+kargo get repo-credentials --project=my-project
 
-# Get specific credentials in my-project
-kargo get credentials --project=my-project my-credentials
+# Get specific repository credentials in my-project
+kargo get repo-credentials --project=my-project my-credentials
 
-# List all credentials in the default project
+# List all repository credentials in the default project
 kargo config set-project my-project
-kargo get credentials
+kargo get repo-credentials
 
-# Get specific credentials in the default project
+# Get specific repository credentials in the default project
 kargo config set-project my-project
-kargo get credentials my-credentials
+kargo get repo-credentials my-credentials
 
-# List shared credentials
-kargo get credentials --shared
+# List shared repository credentials
+kargo get repo-credentials --shared
 
-# Get specific shared credentials
-kargo get credentials --shared my-credentials
+# Get specific shared repository credentials
+kargo get repo-credentials --shared my-credentials
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -97,9 +105,9 @@ kargo get credentials --shared my-credentials
 	return cmd
 }
 
-// addFlags adds the flags for the get credentials options to the provided
+// addFlags adds the flags for the get repo-credentials options to the provided
 // command.
-func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
+func (o *getRepoCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
 
@@ -116,13 +124,13 @@ func (o *getCredentialsOptions) addFlags(cmd *cobra.Command) {
 }
 
 // complete sets the options from the command arguments.
-func (o *getCredentialsOptions) complete(args []string) {
+func (o *getRepoCredentialsOptions) complete(args []string) {
 	o.Names = slices.Compact(args)
 }
 
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
-func (o *getCredentialsOptions) validate() error {
+func (o *getRepoCredentialsOptions) validate() error {
 	var errs []error
 	if o.Project == "" && !o.Shared {
 		errs = append(errs, fmt.Errorf(
@@ -133,58 +141,96 @@ func (o *getCredentialsOptions) validate() error {
 }
 
 // run gets the credentials from the server and prints them to the console.
-func (o *getCredentialsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+func (o *getRepoCredentialsOptions) run(ctx context.Context) error {
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var project string
-	if !o.Shared {
-		project = o.Project
-	}
-
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListRepoCredentialsResponse]
-		if resp, err = kargoSvcCli.ListRepoCredentials(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.ListRepoCredentialsRequest{
-					Project: project,
-				},
-			),
-		); err != nil {
-			return fmt.Errorf("list credentials: %w", err)
+		var payload any
+		switch {
+		case o.Shared:
+			var res *credentials.ListSharedRepoCredentialsOK
+			if res, err = apiClient.Credentials.ListSharedRepoCredentials(
+				credentials.NewListSharedRepoCredentialsParams(),
+				nil,
+			); err != nil {
+				return fmt.Errorf("list shared credentials: %w", err)
+			}
+			payload = res.Payload
+		default:
+			var res *credentials.ListProjectRepoCredentialsOK
+			if res, err = apiClient.Credentials.ListProjectRepoCredentials(
+				credentials.NewListProjectRepoCredentialsParams().WithProject(o.Project),
+				nil,
+			); err != nil {
+				return fmt.Errorf("list project credentials: %w", err)
+			}
+			payload = res.Payload
 		}
-		return PrintObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		var credsJSON []byte
+		if credsJSON, err = json.Marshal(payload); err != nil {
+			return err
+		}
+		creds := struct {
+			Items []*corev1.Secret `json:"items"`
+		}{}
+		if err = json.Unmarshal(credsJSON, &creds); err != nil {
+			return err
+		}
+		return PrintObjects(creds.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetRepoCredentialsResponse]
-		if resp, err = kargoSvcCli.GetRepoCredentials(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetRepoCredentialsRequest{
-					Project: project,
-					Name:    name,
-				},
-			),
-		); err != nil {
+		var payload any
+		switch {
+		case o.Shared:
+			var res *credentials.GetSharedRepoCredentialsOK
+			if res, err = apiClient.Credentials.GetSharedRepoCredentials(
+				credentials.NewGetSharedRepoCredentialsParams().
+					WithRepoCredentials(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			payload = res.Payload
+		default:
+			var res *credentials.GetProjectRepoCredentialsOK
+			if res, err = apiClient.Credentials.GetProjectRepoCredentials(
+				credentials.NewGetProjectRepoCredentialsParams().
+					WithProject(o.Project).
+					WithRepoCredentials(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			payload = res.Payload
+		}
+		var credJSON []byte
+		if credJSON, err = json.Marshal(payload); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetCredentials())
+		var cred *corev1.Secret
+		if err = json.Unmarshal(credJSON, &cred); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		res = append(res, cred)
 	}
 
 	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-		return fmt.Errorf("print stages: %w", err)
+		return fmt.Errorf("print credentials: %w", err)
 	}
 	return errors.Join(errs...)
 }
 
-func newCredentialsTable(list *metav1.List) *metav1.Table {
+func newRepoCredentialsTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
 		secret := item.Object.(*corev1.Secret) // nolint: forcetypeassert

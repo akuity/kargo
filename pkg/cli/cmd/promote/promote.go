@@ -5,14 +5,11 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -20,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/watch"
 )
 
 type promotionOptions struct {
@@ -174,7 +172,7 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	watchClient, err := client.GetWatchClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -186,61 +184,45 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Abort:
-		if _, err = kargoSvcCli.AbortPromotion(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.AbortPromotionRequest{
-					Project: o.Project,
-					Name:    o.Promotion,
-				},
-			),
-		); err != nil {
+		if err = watchClient.AbortPromotion(ctx, o.Project, o.Promotion); err != nil {
 			return fmt.Errorf("abort promotion: %w", err)
 		}
 		return nil
 	case o.Stage != "":
-		res, err := kargoSvcCli.PromoteToStage(
+		promotion, err := watchClient.PromoteToStage(
 			ctx,
-			connect.NewRequest(
-				&v1alpha1.PromoteToStageRequest{
-					Project:      o.Project,
-					Freight:      o.FreightName,
-					FreightAlias: o.FreightAlias,
-					Stage:        o.Stage,
-				},
-			),
+			o.Project,
+			o.Stage,
+			o.FreightName,
+			o.FreightAlias,
 		)
 		if err != nil {
 			return fmt.Errorf("promote stage: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotion(ctx, kargoSvcCli, res.Msg.GetPromotion()); err != nil {
+			if err = waitForPromotion(ctx, watchClient, promotion); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
-		_ = printer.PrintObj(res.Msg.GetPromotion(), o.Out)
+		_ = printer.PrintObj(promotion, o.Out)
 		return nil
 	case o.DownstreamFrom != "":
-		res, err := kargoSvcCli.PromoteDownstream(
+		promotions, err := watchClient.PromoteDownstream(
 			ctx,
-			connect.NewRequest(
-				&v1alpha1.PromoteDownstreamRequest{
-					Project:      o.Project,
-					Freight:      o.FreightName,
-					FreightAlias: o.FreightAlias,
-					Stage:        o.DownstreamFrom,
-				},
-			),
+			o.Project,
+			o.DownstreamFrom,
+			o.FreightName,
+			o.FreightAlias,
 		)
 		if err != nil {
 			return fmt.Errorf("promote stage subscribers: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotions(ctx, kargoSvcCli, res.Msg.GetPromotions()...); err != nil {
+			if err = waitForPromotions(ctx, watchClient, promotions...); err != nil {
 				return fmt.Errorf("wait for promotions: %w", err)
 			}
 		}
-		for _, p := range res.Msg.GetPromotions() {
+		for _, p := range promotions {
 			_ = printer.PrintObj(p, o.Out)
 		}
 		return nil
@@ -250,13 +232,13 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 func waitForPromotions(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 	p ...*kargoapi.Promotion,
 ) error {
 	g, ctx := errgroup.WithContext(ctx)
 	for _, promo := range p {
 		g.Go(func() error {
-			return waitForPromotion(ctx, kargoSvcCli, promo)
+			return waitForPromotion(ctx, watchClient, promo)
 		})
 	}
 	return g.Wait()
@@ -264,7 +246,7 @@ func waitForPromotions(
 
 func waitForPromotion(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 	p *kargoapi.Promotion,
 ) error {
 	if p == nil || p.Status.Phase.IsTerminal() {
@@ -272,28 +254,29 @@ func waitForPromotion(
 		return nil
 	}
 
-	res, err := kargoSvcCli.WatchPromotion(ctx, connect.NewRequest(&v1alpha1.WatchPromotionRequest{
-		Project: p.Namespace,
-		Name:    p.Name,
-	}))
-	if err != nil {
-		return fmt.Errorf("watch promotion: %w", err)
-	}
-	defer func() {
-		if conn, connErr := res.Conn(); connErr == nil {
-			_ = conn.CloseRequest()
-		}
-	}()
+	eventCh, errCh := watchClient.WatchPromotion(ctx, p.Namespace, p.Name)
 	for {
-		if !res.Receive() {
-			if err = res.Err(); err != nil {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				select {
+				case err := <-errCh:
+					if err != nil {
+						return fmt.Errorf("watch promotion: %w", err)
+					}
+				default:
+				}
+				return errors.New("unexpected end of watch stream")
+			}
+			if event.Object != nil && event.Object.Status.Phase.IsTerminal() {
+				return nil
+			}
+		case err := <-errCh:
+			if err != nil {
 				return fmt.Errorf("watch promotion: %w", err)
 			}
-			return errors.New("unexpected end of watch stream")
-		}
-		msg := res.Msg()
-		if msg.GetPromotion().Status.Phase.IsTerminal() {
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

@@ -6,20 +6,20 @@ import (
 	"fmt"
 	"slices"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteTokenOptions struct {
@@ -123,10 +123,16 @@ func (o *deleteTokenOptions) validate() error {
 
 // run removes the API token(s) from the project based on the options.
 func (o *deleteTokenOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
+
+	res, err := apiClient.System.GetConfig(system.NewGetConfigParams(), nil)
+	if err != nil {
+		return fmt.Errorf("get system config: %w", err)
+	}
+	systemConfig := res.Payload
 
 	printer, err := o.ToPrinter()
 	if err != nil {
@@ -135,21 +141,34 @@ func (o *deleteTokenOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteAPIToken(
-			ctx,
-			connect.NewRequest(&v1alpha1.DeleteAPITokenRequest{
-				SystemLevel: o.SystemLevel,
-				Project:     o.Project,
-				Name:        name,
-			}),
-		); err != nil {
-			errs = append(errs, err)
-			continue
+		var namespace string
+
+		if o.SystemLevel {
+			if _, err := apiClient.Rbac.DeleteSystemAPIToken(
+				rbac.NewDeleteSystemAPITokenParams().WithApitoken(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			namespace = systemConfig.SystemResourcesNamespace
+		} else {
+			if _, err := apiClient.Rbac.DeleteProjectAPIToken(
+				rbac.NewDeleteProjectAPITokenParams().
+					WithProject(o.Project).
+					WithApitoken(name),
+				nil,
+			); err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			namespace = o.Project
 		}
+
 		_ = printer.PrintObj(&corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      name,
-				Namespace: o.Project,
+				Namespace: namespace,
 			},
 		}, o.Out)
 	}
