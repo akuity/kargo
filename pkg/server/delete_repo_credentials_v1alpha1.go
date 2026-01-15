@@ -50,7 +50,15 @@ func (s *server) DeleteRepoCredentials(
 		},
 		&secret,
 	); err != nil {
-		return nil, fmt.Errorf("get secret: %w", err)
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			fmt.Errorf(
+				"get secret %s/%s: %w",
+				project,
+				name,
+				err,
+			),
+		)
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
@@ -67,7 +75,15 @@ func (s *server) DeleteRepoCredentials(
 	}
 
 	if err := s.client.Delete(ctx, &secret); err != nil {
-		return nil, fmt.Errorf("delete secret: %w", err)
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf(
+				"delete secret %s/%s: %w",
+				secret.Namespace,
+				secret.Name,
+				err,
+			),
+		)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteRepoCredentialsResponse{}), nil
