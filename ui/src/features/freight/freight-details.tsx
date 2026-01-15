@@ -15,6 +15,7 @@ import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
 import { FreightTable } from '../project/pipelines/freight/freight-table';
 
+import { FreightMetadata } from './freight-metadata';
 import { FreightStatusList } from './freight-status-list';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
@@ -99,6 +100,7 @@ export const FreightDetails = ({
                           <CopyValue label='UID:' value={freight?.metadata?.uid} />
                         )}
                         <br />
+                        <FreightMetadata freight={freight} className='mb-5' />
                         <FreightTable freight={freight} />
                       </div>
                       <FreightStatusList freight={freight} />
