@@ -66,8 +66,11 @@ Stability is not guaranteed.
 | CreateGenericCredentials | [CreateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest) | [CreateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse) |
 | UpdateGenericCredentials | [UpdateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest) | [UpdateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse) |
 | DeleteGenericCredentials | [DeleteGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest) | [DeleteGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse) |
+| CreateConfigMap | [CreateConfigMapRequest](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest) | [CreateConfigMapResponse](#akuity-io-kargo-service-v1alpha1-CreateConfigMapResponse) |
+| DeleteConfigMap | [DeleteConfigMapRequest](#akuity-io-kargo-service-v1alpha1-DeleteConfigMapRequest) | [DeleteConfigMapResponse](#akuity-io-kargo-service-v1alpha1-DeleteConfigMapResponse) |
 | ListConfigMaps | [ListConfigMapsRequest](#akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest) | [ListConfigMapsResponse](#akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse) |
 | GetConfigMap | [GetConfigMapRequest](#akuity-io-kargo-service-v1alpha1-GetConfigMapRequest) | [GetConfigMapResponse](#akuity-io-kargo-service-v1alpha1-GetConfigMapResponse) |
+| UpdateConfigMap | [UpdateConfigMapRequest](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest) | [UpdateConfigMapResponse](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapResponse) |
 | ListAnalysisTemplates | [ListAnalysisTemplatesRequest](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest) | [ListAnalysisTemplatesResponse](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesResponse) |
 | GetAnalysisTemplate | [GetAnalysisTemplateRequest](#akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateRequest) | [GetAnalysisTemplateResponse](#akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateResponse) |
 | DeleteAnalysisTemplate | [DeleteAnalysisTemplateRequest](#akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest) | [DeleteAnalysisTemplateResponse](#akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateResponse) |
@@ -194,6 +197,23 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest"></a>
+
+### CreateConfigMapRequest
+ CreateConfigMapRequest is the request for creating a project-level, system-level, or shared ConfigMap.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create a system-level ConfigMap instead of a project-level or shared one. |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap to create. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapResponse"></a>
+
+### CreateConfigMapResponse
+ CreateConfigMapResponse is the response containing the ConfigMap that was created.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap that was created. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
@@ -361,6 +381,20 @@ Stability is not guaranteed.
 
 ### DeleteClusterConfigResponse
  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteConfigMapRequest"></a>
+
+### DeleteConfigMapRequest
+ DeleteConfigMapRequest is the request for deleting a project-level, system-level, or shared ConfigMap.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project in which to delete a ConfigMap. If empty and system_level is false, deletes a shared ConfigMap. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteConfigMapResponse"></a>
+
+### DeleteConfigMapResponse
+ DeleteConfigMapResponse is the response returned after deleting a ConfigMap.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -631,18 +665,18 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapRequest"></a>
 
 ### GetConfigMapRequest
- GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+ GetConfigMapRequest is the request for getting a specific project-level, system-level, or shared ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is to get a ConfigMap from the system-level namespace instead of a project-level or shared namespace. |
-| project | [string](#string) |  project is the name of the project containing the ConfigMap. If empty and system_level is false, gets the ConfigMap from the shared resources namespace. This value is ignored if system_level is true. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to get a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project in which to get the ConfigMap. If empty and system_level is false, gets a shared ConfigMap. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the ConfigMap to retrieve. |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapResponse"></a>
 
 ### GetConfigMapResponse
- GetConfigMapResponse contains the requested ConfigMap information.
+ GetConfigMapResponse contains the requested ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the structured Kubernetes ConfigMap object. |
@@ -968,19 +1002,19 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
- ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project, shared namespace, or system namespace.
+ ListConfigMapsRequest is the request for listing all project-level, system-level, or shared ConfigMaps.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is to list ConfigMaps from the system-level namespace instead of a project-level or shared namespace. |
-| project | [string](#string) |  project is the name of the project to list ConfigMaps from. If empty and system_level is false, lists ConfigMaps from the shared resources namespace. This value is ignored if system_level is true. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list system-level ConfigMaps instead of project-level or shared ones. |
+| project | [string](#string) |  project is the name of the project in which to list ConfigMaps. If empty and system_level is false, lists shared ConfigMaps. This value is ignored if system_level is true. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
 ### ListConfigMapsResponse
- ListConfigMapsResponse contains the list of ConfigMaps in a project.
+ ListConfigMapsResponse contains the list of ConfigMaps.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
+| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
@@ -1306,6 +1340,23 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [ImageStageMap](#akuity-io-kargo-service-v1alpha1-ImageStageMap) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest"></a>
+
+### UpdateConfigMapRequest
+ UpdateConfigMapRequest is the request for updating a project-level, system-level, or shared ConfigMap.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to update a system-level ConfigMap instead of a project-level or shared one. |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap to update. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapResponse"></a>
+
+### UpdateConfigMapResponse
+ UpdateConfigMapResponse is the response containing the updated ConfigMap.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the updated ConfigMap. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 

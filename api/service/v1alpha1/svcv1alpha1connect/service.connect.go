@@ -178,12 +178,21 @@ const (
 	// KargoServiceDeleteGenericCredentialsProcedure is the fully-qualified name of the KargoService's
 	// DeleteGenericCredentials RPC.
 	KargoServiceDeleteGenericCredentialsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteGenericCredentials"
+	// KargoServiceCreateConfigMapProcedure is the fully-qualified name of the KargoService's
+	// CreateConfigMap RPC.
+	KargoServiceCreateConfigMapProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/CreateConfigMap"
+	// KargoServiceDeleteConfigMapProcedure is the fully-qualified name of the KargoService's
+	// DeleteConfigMap RPC.
+	KargoServiceDeleteConfigMapProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/DeleteConfigMap"
 	// KargoServiceListConfigMapsProcedure is the fully-qualified name of the KargoService's
 	// ListConfigMaps RPC.
 	KargoServiceListConfigMapsProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListConfigMaps"
 	// KargoServiceGetConfigMapProcedure is the fully-qualified name of the KargoService's GetConfigMap
 	// RPC.
 	KargoServiceGetConfigMapProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/GetConfigMap"
+	// KargoServiceUpdateConfigMapProcedure is the fully-qualified name of the KargoService's
+	// UpdateConfigMap RPC.
+	KargoServiceUpdateConfigMapProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/UpdateConfigMap"
 	// KargoServiceListAnalysisTemplatesProcedure is the fully-qualified name of the KargoService's
 	// ListAnalysisTemplates RPC.
 	KargoServiceListAnalysisTemplatesProcedure = "/akuity.io.kargo.service.v1alpha1.KargoService/ListAnalysisTemplates"
@@ -305,8 +314,11 @@ var (
 	kargoServiceCreateGenericCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("CreateGenericCredentials")
 	kargoServiceUpdateGenericCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("UpdateGenericCredentials")
 	kargoServiceDeleteGenericCredentialsMethodDescriptor      = kargoServiceServiceDescriptor.Methods().ByName("DeleteGenericCredentials")
+	kargoServiceCreateConfigMapMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("CreateConfigMap")
+	kargoServiceDeleteConfigMapMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("DeleteConfigMap")
 	kargoServiceListConfigMapsMethodDescriptor                = kargoServiceServiceDescriptor.Methods().ByName("ListConfigMaps")
 	kargoServiceGetConfigMapMethodDescriptor                  = kargoServiceServiceDescriptor.Methods().ByName("GetConfigMap")
+	kargoServiceUpdateConfigMapMethodDescriptor               = kargoServiceServiceDescriptor.Methods().ByName("UpdateConfigMap")
 	kargoServiceListAnalysisTemplatesMethodDescriptor         = kargoServiceServiceDescriptor.Methods().ByName("ListAnalysisTemplates")
 	kargoServiceGetAnalysisTemplateMethodDescriptor           = kargoServiceServiceDescriptor.Methods().ByName("GetAnalysisTemplate")
 	kargoServiceDeleteAnalysisTemplateMethodDescriptor        = kargoServiceServiceDescriptor.Methods().ByName("DeleteAnalysisTemplate")
@@ -439,10 +451,18 @@ type KargoServiceClient interface {
 	UpdateGenericCredentials(context.Context, *connect.Request[v1alpha1.UpdateGenericCredentialsRequest]) (*connect.Response[v1alpha1.UpdateGenericCredentialsResponse], error)
 	// DeleteGenericCredentials removes generic credentials from a project.
 	DeleteGenericCredentials(context.Context, *connect.Request[v1alpha1.DeleteGenericCredentialsRequest]) (*connect.Response[v1alpha1.DeleteGenericCredentialsResponse], error)
+	// CreateConfigMap creates a new project-level, system-level, or shared
+	// ConfigMap.
+	CreateConfigMap(context.Context, *connect.Request[v1alpha1.CreateConfigMapRequest]) (*connect.Response[v1alpha1.CreateConfigMapResponse], error)
+	// DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+	DeleteConfigMap(context.Context, *connect.Request[v1alpha1.DeleteConfigMapRequest]) (*connect.Response[v1alpha1.DeleteConfigMapResponse], error)
 	// ListConfigMaps retrieves all ConfigMaps within a project.
 	ListConfigMaps(context.Context, *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error)
-	// GetConfigMap retrieves details of a specific ConfigMap.
+	// GetConfigMap retrieves details of a specific project-level, system-level,
+	// or shared ConfigMap.
 	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
+	// UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+	UpdateConfigMap(context.Context, *connect.Request[v1alpha1.UpdateConfigMapRequest]) (*connect.Response[v1alpha1.UpdateConfigMapResponse], error)
 	// ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	// GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
@@ -822,6 +842,18 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(kargoServiceDeleteGenericCredentialsMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
+		createConfigMap: connect.NewClient[v1alpha1.CreateConfigMapRequest, v1alpha1.CreateConfigMapResponse](
+			httpClient,
+			baseURL+KargoServiceCreateConfigMapProcedure,
+			connect.WithSchema(kargoServiceCreateConfigMapMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		deleteConfigMap: connect.NewClient[v1alpha1.DeleteConfigMapRequest, v1alpha1.DeleteConfigMapResponse](
+			httpClient,
+			baseURL+KargoServiceDeleteConfigMapProcedure,
+			connect.WithSchema(kargoServiceDeleteConfigMapMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
 		listConfigMaps: connect.NewClient[v1alpha1.ListConfigMapsRequest, v1alpha1.ListConfigMapsResponse](
 			httpClient,
 			baseURL+KargoServiceListConfigMapsProcedure,
@@ -832,6 +864,12 @@ func NewKargoServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			httpClient,
 			baseURL+KargoServiceGetConfigMapProcedure,
 			connect.WithSchema(kargoServiceGetConfigMapMethodDescriptor),
+			connect.WithClientOptions(opts...),
+		),
+		updateConfigMap: connect.NewClient[v1alpha1.UpdateConfigMapRequest, v1alpha1.UpdateConfigMapResponse](
+			httpClient,
+			baseURL+KargoServiceUpdateConfigMapProcedure,
+			connect.WithSchema(kargoServiceUpdateConfigMapMethodDescriptor),
 			connect.WithClientOptions(opts...),
 		),
 		listAnalysisTemplates: connect.NewClient[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse](
@@ -1034,8 +1072,11 @@ type kargoServiceClient struct {
 	createGenericCredentials      *connect.Client[v1alpha1.CreateGenericCredentialsRequest, v1alpha1.CreateGenericCredentialsResponse]
 	updateGenericCredentials      *connect.Client[v1alpha1.UpdateGenericCredentialsRequest, v1alpha1.UpdateGenericCredentialsResponse]
 	deleteGenericCredentials      *connect.Client[v1alpha1.DeleteGenericCredentialsRequest, v1alpha1.DeleteGenericCredentialsResponse]
+	createConfigMap               *connect.Client[v1alpha1.CreateConfigMapRequest, v1alpha1.CreateConfigMapResponse]
+	deleteConfigMap               *connect.Client[v1alpha1.DeleteConfigMapRequest, v1alpha1.DeleteConfigMapResponse]
 	listConfigMaps                *connect.Client[v1alpha1.ListConfigMapsRequest, v1alpha1.ListConfigMapsResponse]
 	getConfigMap                  *connect.Client[v1alpha1.GetConfigMapRequest, v1alpha1.GetConfigMapResponse]
+	updateConfigMap               *connect.Client[v1alpha1.UpdateConfigMapRequest, v1alpha1.UpdateConfigMapResponse]
 	listAnalysisTemplates         *connect.Client[v1alpha1.ListAnalysisTemplatesRequest, v1alpha1.ListAnalysisTemplatesResponse]
 	getAnalysisTemplate           *connect.Client[v1alpha1.GetAnalysisTemplateRequest, v1alpha1.GetAnalysisTemplateResponse]
 	deleteAnalysisTemplate        *connect.Client[v1alpha1.DeleteAnalysisTemplateRequest, v1alpha1.DeleteAnalysisTemplateResponse]
@@ -1322,6 +1363,16 @@ func (c *kargoServiceClient) DeleteGenericCredentials(ctx context.Context, req *
 	return c.deleteGenericCredentials.CallUnary(ctx, req)
 }
 
+// CreateConfigMap calls akuity.io.kargo.service.v1alpha1.KargoService.CreateConfigMap.
+func (c *kargoServiceClient) CreateConfigMap(ctx context.Context, req *connect.Request[v1alpha1.CreateConfigMapRequest]) (*connect.Response[v1alpha1.CreateConfigMapResponse], error) {
+	return c.createConfigMap.CallUnary(ctx, req)
+}
+
+// DeleteConfigMap calls akuity.io.kargo.service.v1alpha1.KargoService.DeleteConfigMap.
+func (c *kargoServiceClient) DeleteConfigMap(ctx context.Context, req *connect.Request[v1alpha1.DeleteConfigMapRequest]) (*connect.Response[v1alpha1.DeleteConfigMapResponse], error) {
+	return c.deleteConfigMap.CallUnary(ctx, req)
+}
+
 // ListConfigMaps calls akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps.
 func (c *kargoServiceClient) ListConfigMaps(ctx context.Context, req *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error) {
 	return c.listConfigMaps.CallUnary(ctx, req)
@@ -1330,6 +1381,11 @@ func (c *kargoServiceClient) ListConfigMaps(ctx context.Context, req *connect.Re
 // GetConfigMap calls akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap.
 func (c *kargoServiceClient) GetConfigMap(ctx context.Context, req *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error) {
 	return c.getConfigMap.CallUnary(ctx, req)
+}
+
+// UpdateConfigMap calls akuity.io.kargo.service.v1alpha1.KargoService.UpdateConfigMap.
+func (c *kargoServiceClient) UpdateConfigMap(ctx context.Context, req *connect.Request[v1alpha1.UpdateConfigMapRequest]) (*connect.Response[v1alpha1.UpdateConfigMapResponse], error) {
+	return c.updateConfigMap.CallUnary(ctx, req)
 }
 
 // ListAnalysisTemplates calls akuity.io.kargo.service.v1alpha1.KargoService.ListAnalysisTemplates.
@@ -1565,10 +1621,18 @@ type KargoServiceHandler interface {
 	UpdateGenericCredentials(context.Context, *connect.Request[v1alpha1.UpdateGenericCredentialsRequest]) (*connect.Response[v1alpha1.UpdateGenericCredentialsResponse], error)
 	// DeleteGenericCredentials removes generic credentials from a project.
 	DeleteGenericCredentials(context.Context, *connect.Request[v1alpha1.DeleteGenericCredentialsRequest]) (*connect.Response[v1alpha1.DeleteGenericCredentialsResponse], error)
+	// CreateConfigMap creates a new project-level, system-level, or shared
+	// ConfigMap.
+	CreateConfigMap(context.Context, *connect.Request[v1alpha1.CreateConfigMapRequest]) (*connect.Response[v1alpha1.CreateConfigMapResponse], error)
+	// DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+	DeleteConfigMap(context.Context, *connect.Request[v1alpha1.DeleteConfigMapRequest]) (*connect.Response[v1alpha1.DeleteConfigMapResponse], error)
 	// ListConfigMaps retrieves all ConfigMaps within a project.
 	ListConfigMaps(context.Context, *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error)
-	// GetConfigMap retrieves details of a specific ConfigMap.
+	// GetConfigMap retrieves details of a specific project-level, system-level,
+	// or shared ConfigMap.
 	GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error)
+	// UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+	UpdateConfigMap(context.Context, *connect.Request[v1alpha1.UpdateConfigMapRequest]) (*connect.Response[v1alpha1.UpdateConfigMapResponse], error)
 	// ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
 	ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error)
 	// GetAnalysisTemplate retrieves details of a specific AnalysisTemplate.
@@ -1944,6 +2008,18 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(kargoServiceDeleteGenericCredentialsMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
+	kargoServiceCreateConfigMapHandler := connect.NewUnaryHandler(
+		KargoServiceCreateConfigMapProcedure,
+		svc.CreateConfigMap,
+		connect.WithSchema(kargoServiceCreateConfigMapMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceDeleteConfigMapHandler := connect.NewUnaryHandler(
+		KargoServiceDeleteConfigMapProcedure,
+		svc.DeleteConfigMap,
+		connect.WithSchema(kargoServiceDeleteConfigMapMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
 	kargoServiceListConfigMapsHandler := connect.NewUnaryHandler(
 		KargoServiceListConfigMapsProcedure,
 		svc.ListConfigMaps,
@@ -1954,6 +2030,12 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 		KargoServiceGetConfigMapProcedure,
 		svc.GetConfigMap,
 		connect.WithSchema(kargoServiceGetConfigMapMethodDescriptor),
+		connect.WithHandlerOptions(opts...),
+	)
+	kargoServiceUpdateConfigMapHandler := connect.NewUnaryHandler(
+		KargoServiceUpdateConfigMapProcedure,
+		svc.UpdateConfigMap,
+		connect.WithSchema(kargoServiceUpdateConfigMapMethodDescriptor),
 		connect.WithHandlerOptions(opts...),
 	)
 	kargoServiceListAnalysisTemplatesHandler := connect.NewUnaryHandler(
@@ -2204,10 +2286,16 @@ func NewKargoServiceHandler(svc KargoServiceHandler, opts ...connect.HandlerOpti
 			kargoServiceUpdateGenericCredentialsHandler.ServeHTTP(w, r)
 		case KargoServiceDeleteGenericCredentialsProcedure:
 			kargoServiceDeleteGenericCredentialsHandler.ServeHTTP(w, r)
+		case KargoServiceCreateConfigMapProcedure:
+			kargoServiceCreateConfigMapHandler.ServeHTTP(w, r)
+		case KargoServiceDeleteConfigMapProcedure:
+			kargoServiceDeleteConfigMapHandler.ServeHTTP(w, r)
 		case KargoServiceListConfigMapsProcedure:
 			kargoServiceListConfigMapsHandler.ServeHTTP(w, r)
 		case KargoServiceGetConfigMapProcedure:
 			kargoServiceGetConfigMapHandler.ServeHTTP(w, r)
+		case KargoServiceUpdateConfigMapProcedure:
+			kargoServiceUpdateConfigMapHandler.ServeHTTP(w, r)
 		case KargoServiceListAnalysisTemplatesProcedure:
 			kargoServiceListAnalysisTemplatesHandler.ServeHTTP(w, r)
 		case KargoServiceGetAnalysisTemplateProcedure:
@@ -2469,12 +2557,24 @@ func (UnimplementedKargoServiceHandler) DeleteGenericCredentials(context.Context
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteGenericCredentials is not implemented"))
 }
 
+func (UnimplementedKargoServiceHandler) CreateConfigMap(context.Context, *connect.Request[v1alpha1.CreateConfigMapRequest]) (*connect.Response[v1alpha1.CreateConfigMapResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.CreateConfigMap is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) DeleteConfigMap(context.Context, *connect.Request[v1alpha1.DeleteConfigMapRequest]) (*connect.Response[v1alpha1.DeleteConfigMapResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.DeleteConfigMap is not implemented"))
+}
+
 func (UnimplementedKargoServiceHandler) ListConfigMaps(context.Context, *connect.Request[v1alpha1.ListConfigMapsRequest]) (*connect.Response[v1alpha1.ListConfigMapsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) GetConfigMap(context.Context, *connect.Request[v1alpha1.GetConfigMapRequest]) (*connect.Response[v1alpha1.GetConfigMapResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap is not implemented"))
+}
+
+func (UnimplementedKargoServiceHandler) UpdateConfigMap(context.Context, *connect.Request[v1alpha1.UpdateConfigMapRequest]) (*connect.Response[v1alpha1.UpdateConfigMapResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("akuity.io.kargo.service.v1alpha1.KargoService.UpdateConfigMap is not implemented"))
 }
 
 func (UnimplementedKargoServiceHandler) ListAnalysisTemplates(context.Context, *connect.Request[v1alpha1.ListAnalysisTemplatesRequest]) (*connect.Response[v1alpha1.ListAnalysisTemplatesResponse], error) {
