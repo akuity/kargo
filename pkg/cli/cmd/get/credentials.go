@@ -156,7 +156,13 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("list credentials: %w", err)
 		}
-		return PrintObjects(resp.Msg.GetCredentials(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		// Convert proto secrets to k8s secrets
+		protoSecrets := resp.Msg.GetCredentials()
+		k8sSecrets := make([]*corev1.Secret, len(protoSecrets))
+		for i, protoSecret := range protoSecrets {
+			k8sSecrets[i] = protoSecret.ToK8sSecret()
+		}
+		return PrintObjects(k8sSecrets, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
 	res := make([]*corev1.Secret, 0, len(o.Names))
@@ -175,7 +181,7 @@ func (o *getCredentialsOptions) run(ctx context.Context) error {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetCredentials())
+		res = append(res, resp.Msg.GetCredentials().ToK8sSecret())
 	}
 
 	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {

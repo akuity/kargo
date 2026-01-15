@@ -74,7 +74,7 @@ func TestListGenericCredentials(t *testing.T) {
 
 	credentials := resp.Msg.GetCredentials()
 	require.Len(t, credentials, 1)
-	require.Equal(t, "secret-b", credentials[0].Name)
+	require.Equal(t, "secret-b", *credentials[0].Metadata.Name)
 	for _, creds := range credentials {
 		require.Equal(t, redacted, creds.StringData["PROJECT_SECRET"])
 	}

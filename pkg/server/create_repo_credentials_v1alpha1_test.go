@@ -65,9 +65,9 @@ func TestCreateRepoCredentials(t *testing.T) {
 	require.NoError(t, err)
 
 	creds := resp.Msg.GetCredentials()
-	assert.Equal(t, "kargo-demo", creds.Namespace)
-	assert.Equal(t, "creds", creds.Name)
-	assert.Equal(t, "my credentials", creds.Annotations[kargoapi.AnnotationKeyDescription])
+	assert.Equal(t, "kargo-demo", *creds.Metadata.Namespace)
+	assert.Equal(t, "creds", *creds.Metadata.Name)
+	assert.Equal(t, "my credentials", creds.Metadata.Annotations[kargoapi.AnnotationKeyDescription])
 	assert.Equal(t, "https://github.com/example/repo", creds.StringData[libCreds.FieldRepoURL])
 	assert.Equal(t, "username", creds.StringData[libCreds.FieldUsername])
 	assert.Equal(t, redacted, creds.StringData[libCreds.FieldPassword])

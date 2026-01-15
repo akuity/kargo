@@ -11,7 +11,7 @@ import {
   deleteResource,
   listConfigMaps
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ConfigMap } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+import { ConfigMap } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { UpsertConfigMapsModal } from './upsert-config-maps';
 

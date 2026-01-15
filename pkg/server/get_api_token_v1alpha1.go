@@ -54,7 +54,7 @@ func (s *server) GetAPIToken(
 	default:
 		return connect.NewResponse(&svcv1alpha1.GetAPITokenResponse{
 			Result: &svcv1alpha1.GetAPITokenResponse_TokenSecret{
-				TokenSecret: tokenSecret,
+				TokenSecret: svcv1alpha1.FromK8sSecret(tokenSecret),
 			},
 		}), nil
 	}

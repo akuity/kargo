@@ -70,7 +70,11 @@ func (s *server) GetConfigMap(
 			Result: &svcv1alpha1.GetConfigMapResponse_Raw{Raw: raw},
 		}), nil
 	}
+
+	// Convert k8s ConfigMap to proto ConfigMap
+	protoConfigMap := svcv1alpha1.FromK8sConfigMap(cfg)
+
 	return connect.NewResponse(&svcv1alpha1.GetConfigMapResponse{
-		Result: &svcv1alpha1.GetConfigMapResponse_ConfigMap{ConfigMap: cfg},
+		Result: &svcv1alpha1.GetConfigMapResponse_ConfigMap{ConfigMap: protoConfigMap},
 	}), nil
 }

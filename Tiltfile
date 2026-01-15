@@ -3,9 +3,12 @@ allow_k8s_contexts('orbstack')
 
 load('ext://namespace', 'namespace_create')
 
+# Build tag required for kubernetes protobuf compatibility
+GO_BUILD_TAGS = 'kubernetes_protomessage_one_more_release'
+
 local_resource(
   'back-end-compile',
-  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
+  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -tags=' + GO_BUILD_TAGS + ' -o bin/controlplane/kargo ./cmd/controlplane',
   deps=[
     'api/',
     'cmd/controlplane/',
@@ -19,7 +22,7 @@ local_resource(
 )
 local_resource(
   'credential-helper-compile',
-  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/credential-helper ./cmd/credential-helper',
+  'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -tags=' + GO_BUILD_TAGS + ' -o bin/credential-helper ./cmd/credential-helper',
   deps=['cmd/credential-helper/'],
   labels = ['native-processes'],
   trigger_mode = TRIGGER_MODE_AUTO

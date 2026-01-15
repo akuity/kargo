@@ -87,7 +87,7 @@ func (s *server) UpdateGenericCredentials(
 
 	return connect.NewResponse(
 		&svcv1alpha1.UpdateGenericCredentialsResponse{
-			Credentials: sanitizeGenericCredentials(secret),
+			Credentials: svcv1alpha1.FromK8sSecret(sanitizeGenericCredentials(secret)),
 		},
 	), nil
 }

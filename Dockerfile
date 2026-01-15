@@ -29,6 +29,9 @@ ARG VERSION_PACKAGE=github.com/akuity/kargo/pkg/x/version
 
 ARG CGO_ENABLED=0
 
+# Build tag required for kubernetes protobuf compatibility
+ARG GO_BUILD_TAGS=kubernetes_protomessage_one_more_release
+
 WORKDIR /kargo
 COPY ["api/go.mod", "api/go.sum", "api/"]
 COPY ["go.mod", "go.sum", "./"]
@@ -42,13 +45,13 @@ ARG VERSION
 ARG GIT_COMMIT
 ARG GIT_TREE_STATE
 
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags=${GO_BUILD_TAGS} \
       -trimpath \
       -ldflags "-w -s" \
       -o bin/credential-helper \
       ./cmd/credential-helper
 
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build \
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -tags=${GO_BUILD_TAGS} \
       -trimpath \
       -ldflags "-w -X ${VERSION_PACKAGE}.version=${VERSION} -X ${VERSION_PACKAGE}.buildDate=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X ${VERSION_PACKAGE}.gitCommit=${GIT_COMMIT} -X ${VERSION_PACKAGE}.gitTreeState=${GIT_TREE_STATE}" \
       -o bin/kargo \

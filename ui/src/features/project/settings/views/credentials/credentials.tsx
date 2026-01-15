@@ -19,7 +19,7 @@ import {
   listRepoCredentials,
   listGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { Secret } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
+import { Secret } from '@ui/gen/api/service/v1alpha1/service_pb';
 
 import { CreateCredentialsModal } from './create-credentials-modal';
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';

@@ -12,6 +12,9 @@ GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
 
 GO_TEST_ARGS ?=
 
+# Build tag required for kubernetes protobuf compatibility
+GO_BUILD_TAGS := kubernetes_protomessage_one_more_release
+
 VERSION_PACKAGE := github.com/akuity/kargo/pkg/x/version
 
 # Default to docker, but support alternative container runtimes that are CLI-compatible with Docker
@@ -135,6 +138,7 @@ test-unit: install-helm
 			echo "Testing $$(dirname $${mod}) ..."; \
 			cd $$(dirname $${mod}); \
 			PATH=$(EXTENDED_PATH) go test \
+				-tags=$(GO_BUILD_TAGS) \
 				-v \
 				-timeout=300s \
 				-race \
@@ -178,7 +182,7 @@ build-base-image:
 
 .PHONY: build-cli
 build-cli:
-	CGO_ENABLED=0 go build \
+	CGO_ENABLED=0 go build -tags=$(GO_BUILD_TAGS) \
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
 		-o bin/kargo-$(GOOS)-$(GOARCH)$(shell [ ${GOOS} = windows ] && echo .exe) \
 		./cmd/cli
@@ -193,7 +197,7 @@ sign-and-notarize-cli: install-quill
 
 .PHONY: build-nightly-cli
 build-nightly-cli:
-	CGO_ENABLED=0 go build \
+	CGO_ENABLED=0 go build -tags=$(GO_BUILD_TAGS) \
 		-ldflags "-w -X $(VERSION_PACKAGE).version=$(VERSION) -X $(VERSION_PACKAGE).buildDate=$$(date -u +'%Y-%m-%dT%H:%M:%SZ') -X $(VERSION_PACKAGE).gitCommit=$(GIT_COMMIT) -X $(VERSION_PACKAGE).gitTreeState=$(GIT_TREE_STATE)" \
 		-o bin/kargo-cli/${VERSION}/${GOOS}/${GOARCH}/kargo$(shell [ ${GOOS} = windows ] && echo .exe) ./cmd/cli
 

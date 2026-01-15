@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	corev1 "k8s.io/api/core/v1"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
@@ -41,9 +40,9 @@ func (s *server) ListAPITokens(
 			roleName, project, err,
 		)
 	}
-	secretPtrs := make([]*corev1.Secret, len(tokenSecrets))
+	secretPtrs := make([]*svcv1alpha1.Secret, len(tokenSecrets))
 	for i, tokenSecret := range tokenSecrets {
-		secretPtrs[i] = &tokenSecret
+		secretPtrs[i] = svcv1alpha1.FromK8sSecret(&tokenSecret)
 	}
 
 	return connect.NewResponse(

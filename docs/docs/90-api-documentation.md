@@ -176,6 +176,35 @@ Stability is not guaranteed.
 | server | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  server contains version information for the Kargo server. |
 | cli | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  cli contains version information for the Kargo CLI. |
 
+<a name="akuity-io-kargo-service-v1alpha1-ConfigMap"></a>
+
+### ConfigMap
+ ConfigMap holds configuration data for pods to consume.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | [ObjectMeta](#akuity-io-kargo-service-v1alpha1-ObjectMeta) |  Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata |
+| immutable | [bool](#bool) |  Immutable, if set to true, ensures that data stored in the ConfigMap cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil. +optional |
+| data | [ConfigMap.DataEntry](#akuity-io-kargo-service-v1alpha1-ConfigMap-DataEntry) |  Data contains the configuration data. Each key must consist of alphanumeric characters, '-', '_' or '.'. Values with non-UTF-8 byte sequences must use the BinaryData field. The keys stored in Data must not overlap with the keys in the BinaryData field, this is enforced during validation process. +optional |
+| binaryData | [ConfigMap.BinaryDataEntry](#akuity-io-kargo-service-v1alpha1-ConfigMap-BinaryDataEntry) |  BinaryData contains the binary data. Each key must consist of alphanumeric characters, '-', '_' or '.'. BinaryData can contain byte sequences that are not in the UTF-8 range. The keys stored in BinaryData must not overlap with the ones in the Data field, this is enforced during validation process. Using this field will require 1.10+ apiserver and kubelet. +optional |
+
+<a name="akuity-io-kargo-service-v1alpha1-ConfigMap-BinaryDataEntry"></a>
+
+### ConfigMap.BinaryDataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [bytes](#bytes) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-ConfigMap-DataEntry"></a>
+
+### ConfigMap.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
 <a name="akuity-io-kargo-service-v1alpha1-CreateAPITokenRequest"></a>
 
 ### CreateAPITokenRequest
@@ -193,7 +222,7 @@ Stability is not guaranteed.
  CreateAPITokenResponse contains a newly generated bearer token in the form of a Kubernetes Secret.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
+| token_secret | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  token_secret is a Kubernetes Secret containing the token. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
@@ -222,7 +251,7 @@ Stability is not guaranteed.
  CreateGenericCredentialsResponse contains the newly created generic credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing generic credentials within the project. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the created Kubernetes Secret containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest"></a>
 
@@ -271,7 +300,7 @@ Stability is not guaranteed.
  CreateRepoCredentialsResponse contains the newly created repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the created Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
@@ -515,7 +544,7 @@ Stability is not guaranteed.
  GetAPITokenResponse contains contains the details of a bearer token associated with a Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secrets containing a redacted token associated with a Kargo Role virtual resource. |
+| token_secret | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  token_secret is a Kubernetes Secrets containing a redacted token associated with a Kargo Role virtual resource. |
 | raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsRequest"></a>
@@ -645,7 +674,7 @@ Stability is not guaranteed.
  GetConfigMapResponse contains the requested ConfigMap information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the structured Kubernetes ConfigMap object. |
+| config_map | [ConfigMap](#akuity-io-kargo-service-v1alpha1-ConfigMap) |  config_map is the structured Kubernetes ConfigMap object. |
 | raw | [bytes](#bytes) |  raw is the raw YAML representation of the ConfigMap. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigRequest"></a>
@@ -796,7 +825,7 @@ Stability is not guaranteed.
  GetRepoCredentialsResponse contains the requested repository credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the structured Kubernetes Secret containing the credentials. |
 | raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
@@ -923,7 +952,7 @@ Stability is not guaranteed.
  ListAPITokensResponse contains a list of bearer tokens associated with a specified Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| token_secrets | k8s.io.api.core.v1.Secret |  token_secrets is the list of Kubernetes Secrets containing redacted tokens associated with a Kargo Role virtual resource. |
+| token_secrets | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  token_secrets is the list of Kubernetes Secrets containing redacted tokens associated with a Kargo Role virtual resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest"></a>
 
@@ -980,7 +1009,7 @@ Stability is not guaranteed.
  ListConfigMapsResponse contains the list of ConfigMaps in a project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
+| config_maps | [ConfigMap](#akuity-io-kargo-service-v1alpha1-ConfigMap) |  config_maps is the list of ConfigMaps found in the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
@@ -997,7 +1026,7 @@ Stability is not guaranteed.
  ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing generic credentials within the project. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the list of Kubernetes Secrets containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesRequest"></a>
 
@@ -1107,7 +1136,7 @@ Stability is not guaranteed.
  ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the list of Kubernetes Secrets containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
@@ -1170,6 +1199,38 @@ Stability is not guaranteed.
 | client_id | [string](#string) |  client_id is the OIDC client identifier for web applications. |
 | scopes | [string](#string) |  scopes are the OIDC scopes to request during authentication. |
 | cli_client_id | [string](#string) |  cli_client_id is the OIDC client identifier for CLI applications. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ObjectMeta"></a>
+
+### ObjectMeta
+ ObjectMeta is metadata that all persisted resources must have. Simplified version containing only essential fields.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  Name must be unique within a namespace. +optional |
+| namespace | [string](#string) |  Namespace defines the space within which each name must be unique. +optional |
+| uid | [string](#string) |  UID is the unique in time and space value for this object. +optional |
+| resourceVersion | [string](#string) |  An opaque value that represents the internal version of this object. +optional |
+| generation | [int64](#int64) |  A sequence number representing a specific generation of the desired state. +optional |
+| labels | [ObjectMeta.LabelsEntry](#akuity-io-kargo-service-v1alpha1-ObjectMeta-LabelsEntry) |  Map of string keys and values that can be used to organize and categorize objects. +optional |
+| annotations | [ObjectMeta.AnnotationsEntry](#akuity-io-kargo-service-v1alpha1-ObjectMeta-AnnotationsEntry) |  Annotations is an unstructured key value map stored with a resource. +optional |
+
+<a name="akuity-io-kargo-service-v1alpha1-ObjectMeta-AnnotationsEntry"></a>
+
+### ObjectMeta.AnnotationsEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-ObjectMeta-LabelsEntry"></a>
+
+### ObjectMeta.LabelsEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamRequest"></a>
 
@@ -1290,6 +1351,36 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Kargo Role virtual resource that was the subject of the revocation. |
 
+<a name="akuity-io-kargo-service-v1alpha1-Secret"></a>
+
+### Secret
+ Secret holds secret data of a certain type.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| metadata | [ObjectMeta](#akuity-io-kargo-service-v1alpha1-ObjectMeta) |  Standard object's metadata. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#metadata |
+| immutable | [bool](#bool) |  Immutable, if set to true, ensures that data stored in the Secret cannot be updated (only object metadata can be modified). If not set to true, the field can be modified at any time. Defaulted to nil. +optional |
+| data | [Secret.DataEntry](#akuity-io-kargo-service-v1alpha1-Secret-DataEntry) |  Data contains the secret data. Each key must consist of alphanumeric characters, '-', '_' or '.'. The serialized form of the secret data is a base64 encoded string, representing the arbitrary (possibly non-string) data value here. Described in https://tools.ietf.org/html/rfc4648#section-4 +optional |
+| stringData | [Secret.StringDataEntry](#akuity-io-kargo-service-v1alpha1-Secret-StringDataEntry) |  stringData allows specifying non-binary secret data in string form. It is provided as a write-only input field for convenience. All keys and values are merged into the data field on write, overwriting any existing values. The stringData field is never output when reading from the API. +k8s:conversion-gen=false +optional |
+| type | [string](#string) |  Used to facilitate programmatic handling of secret data. More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types +optional |
+
+<a name="akuity-io-kargo-service-v1alpha1-Secret-DataEntry"></a>
+
+### Secret.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [bytes](#bytes) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-Secret-StringDataEntry"></a>
+
+### Secret.StringDataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
 ### TagMap
@@ -1349,7 +1440,7 @@ Stability is not guaranteed.
  UpdateGenericCredentialsResponse contains the updated generic credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing generic credentials within the project. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the updated Kubernetes Secret containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest"></a>
 
@@ -1372,7 +1463,7 @@ Stability is not guaranteed.
  UpdateRepoCredentialsResponse contains the updated repository credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
+| credentials | [Secret](#akuity-io-kargo-service-v1alpha1-Secret) |  credentials is the updated Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 

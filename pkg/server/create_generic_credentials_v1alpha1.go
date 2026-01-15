@@ -49,7 +49,7 @@ func (s *server) CreateGenericCredentials(
 
 	return connect.NewResponse(
 		&svcv1alpha1.CreateGenericCredentialsResponse{
-			Credentials: sanitizeGenericCredentials(*secret),
+			Credentials: svcv1alpha1.FromK8sSecret(sanitizeGenericCredentials(*secret)),
 		},
 	), nil
 }
