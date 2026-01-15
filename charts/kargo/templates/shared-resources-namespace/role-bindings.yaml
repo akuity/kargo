@@ -22,3 +22,4 @@ subjects:
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
 {{- end }}
+{{- end }}
