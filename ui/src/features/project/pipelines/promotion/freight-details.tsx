@@ -6,6 +6,7 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { ManifestPreview } from '@ui/features/common/manifest-preview';
 import TabsWithUrl from '@ui/features/common/tabs-with-url';
+import { FreightMetadata } from '@ui/features/freight/freight-metadata';
 import { FreightStatusList } from '@ui/features/freight/freight-status-list';
 import { FreightTable } from '@ui/features/project/pipelines/freight/freight-table';
 import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/use-get-freight-creation';
@@ -69,6 +70,8 @@ export const FreightDetails = (props: FreightDetailsProps) => {
                     }
                   ]}
                 />
+
+                <FreightMetadata className='mt-5' freight={props.freight} />
 
                 <FreightTable className='mt-5' freight={props.freight} />
 
