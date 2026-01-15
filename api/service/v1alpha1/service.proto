@@ -163,10 +163,18 @@ service KargoService {
 
   /* ConfigMaps APIs */
 
+  // CreateConfigMap creates a new project-level, system-level, or shared
+  // ConfigMap.
+  rpc CreateConfigMap(CreateConfigMapRequest) returns (CreateConfigMapResponse);
+  // DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+  rpc DeleteConfigMap(DeleteConfigMapRequest) returns (DeleteConfigMapResponse);
   // ListConfigMaps retrieves all ConfigMaps within a project.
   rpc ListConfigMaps(ListConfigMapsRequest) returns (ListConfigMapsResponse);
-  // GetConfigMap retrieves details of a specific ConfigMap.
+  // GetConfigMap retrieves details of a specific project-level, system-level,
+  // or shared ConfigMap.
   rpc GetConfigMap(GetConfigMapRequest) returns (GetConfigMapResponse);
+  // UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+  rpc UpdateConfigMap(UpdateConfigMapRequest) returns (UpdateConfigMapResponse);
 
   /* Analysis APIs */
 
@@ -976,40 +984,80 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
-// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project,
-// shared namespace, or system namespace.
+/* ConfigMap Messages */
+
+// CreateConfigMapRequest is the request for creating a project-level,
+// system-level, or shared ConfigMap.
+message CreateConfigMapRequest {
+  // system_level indicates whether the request is to create a system-level
+  // ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // config_map is the ConfigMap to create.
+  k8s.io.api.core.v1.ConfigMap config_map = 2;
+}
+
+// CreateConfigMapResponse is the response containing the ConfigMap that was
+// created.
+message CreateConfigMapResponse {
+  // config_map is the ConfigMap that was created.
+  k8s.io.api.core.v1.ConfigMap config_map = 1;
+}
+
+// DeleteConfigMapRequest is the request for deleting a project-level,
+// system-level, or shared ConfigMap.
+message DeleteConfigMapRequest {
+  // system_level indicates whether the request is to delete a
+  // system-level ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // project is the name of the project in which to delete a ConfigMap. If empty
+  // and system_level is false, deletes a shared ConfigMap. This value is
+  // ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to delete.
+  string name = 3;
+}
+
+// DeleteConfigMapResponse is the response returned after deleting a ConfigMap.
+message DeleteConfigMapResponse {
+  /* explicitly empty */
+}
+
+// ListConfigMapsRequest is the request for listing all project-level,
+// system-level, or shared ConfigMaps.
 message ListConfigMapsRequest {
-  // system_level indicates whether the request is to list ConfigMaps
-  // from the system-level namespace instead of a project-level or shared namespace.
+  // system_level indicates whether the request is to list system-level
+  // ConfigMaps instead of project-level or shared ones.
   bool system_level = 2;
-  // project is the name of the project to list ConfigMaps from.
-  // If empty and system_level is false, lists ConfigMaps from the shared resources namespace.
-  // This value is ignored if system_level is true.
+  // project is the name of the project in which to list ConfigMaps. If empty
+  // and system_level is false, lists shared ConfigMaps. This value is ignored
+  // if system_level is true.
   string project = 1;
 }
 
-// ListConfigMapsResponse contains the list of ConfigMaps in a project.
+// ListConfigMapsResponse contains the list of ConfigMaps.
 message ListConfigMapsResponse {
-  // config_maps is the list of ConfigMaps found in the project.
+  // config_maps is the list of ConfigMaps.
   repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
 }
 
-// GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+// GetConfigMapRequest is the request for getting a specific project-level,
+// system-level, or shared ConfigMap.
 message GetConfigMapRequest {
-  // system_level indicates whether the request is to get a ConfigMap
-  // from the system-level namespace instead of a project-level or shared namespace.
+  // system_level indicates whether the request is to get a system-level
+  // ConfigMap instead of a project-level or shared one.
   bool system_level = 4;
-  // project is the name of the project containing the ConfigMap.
-  // If empty and system_level is false, gets the ConfigMap from the shared resources namespace.
-  // This value is ignored if system_level is true.
+  // project is the name of the project in which to get the ConfigMap. If empty
+  // and system_level is false, gets a shared ConfigMap. This value is ignored
+  // if system_level is true.
   string project = 1;
   // name is the name of the ConfigMap to retrieve.
   string name = 2;
-  // format specifies the desired response format (structured object or raw YAML).
+  // format specifies the desired response format (structured object or raw
+  // YAML).
   RawFormat format = 3;
 }
 
-// GetConfigMapResponse contains the requested ConfigMap information.
+// GetConfigMapResponse contains the requested ConfigMap.
 message GetConfigMapResponse {
   oneof result {
     // config_map is the structured Kubernetes ConfigMap object.
@@ -1017,6 +1065,22 @@ message GetConfigMapResponse {
     // raw is the raw YAML representation of the ConfigMap.
     bytes raw = 2;
   }
+}
+
+// UpdateConfigMapRequest is the request for updating a project-level,
+// system-level, or shared ConfigMap.
+message UpdateConfigMapRequest {
+  // system_level indicates whether the request is to update a system-level
+  // ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // config_map is the ConfigMap to update.
+  k8s.io.api.core.v1.ConfigMap config_map = 2;
+}
+
+// UpdateConfigMapResponse is the response containing the updated ConfigMap.
+message UpdateConfigMapResponse {
+  // config_map is the updated ConfigMap.
+  k8s.io.api.core.v1.ConfigMap config_map = 1;
 }
 
 /* Repo Credentials Messages */
