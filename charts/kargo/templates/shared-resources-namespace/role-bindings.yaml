@@ -17,6 +17,7 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-controller
+{{- if .Values.api.secretManagementEnabled }}
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
