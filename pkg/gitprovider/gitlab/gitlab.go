@@ -232,12 +232,17 @@ func (p *provider) MergePullRequest(
 
 	// Merge the MR
 	mrOpts := &gitlab.AcceptMergeRequestOptions{}
-	// GitLab only supports Squash merging as a boolean
-	// Rebases have to be done via a different API call/manually
-	if opts.MergeMethod == gitprovider.MergeMethodSquash {
+	switch opts.MergeMethod {
+	case gitprovider.MergeMethodSquash:
+		// GitLab only supports Squash merging as a boolean
 		squash := true
 		mrOpts.Squash = &squash
+	case gitprovider.MergeMethodRebase:
+		// Rebases would be done by commenting /rebase to trigger
+		// the quick action if the branch is out-of-date
+		return nil, false, fmt.Errorf("unsupported merge method '%s' for provider", opts.MergeMethod)
 	}
+
 	updatedMR, _, err := p.client.AcceptMergeRequest(
 		p.projectName, opts.Number, mrOpts,
 	)
