@@ -390,6 +390,29 @@ func TestMergePullRequest(t *testing.T) {
 			expectMerged: true,
 			expectPR:     true,
 		},
+		{
+			name: "unsupported rebase merge method",
+			id:   101,
+			mockClient: func() *mockGitLabClient {
+				mc := &mockGitLabClient{}
+				mc.getMRFunc = func(_ any, _ int64, _ *gitlab.GetMergeRequestsOptions,
+					_ ...gitlab.RequestOptionFunc,
+				) (*gitlab.MergeRequest, *gitlab.Response, error) {
+					return &gitlab.MergeRequest{
+						BasicMergeRequest: gitlab.BasicMergeRequest{
+							IID:                 101,
+							State:               "opened",
+							DetailedMergeStatus: "mergeable",
+							WebURL:              "https://gitlab.com/group/project/-/merge_requests/101",
+						},
+					}, &gitlab.Response{}, nil
+				}
+				return mc
+			}(),
+			expectErr:   true,
+			errContains: "unsupported merge method 'rebase' for provider",
+			mergeMethod: gitprovider.MergeMethodRebase,
+		},
 	}
 
 	for _, tc := range testCases {

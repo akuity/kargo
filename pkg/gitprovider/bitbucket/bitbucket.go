@@ -310,6 +310,10 @@ func (p *provider) MergePullRequest(
 	_ context.Context,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts.MergeMethod != gitprovider.MergeMethodMerge {
+		return nil, false, fmt.Errorf("unsupported merge method '%s' for provider", opts.MergeMethod)
+	}
+
 	// Get the PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
