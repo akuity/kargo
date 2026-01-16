@@ -4,10 +4,11 @@ import {
   faExternalLink,
   faPencil,
   faPlus,
+  faQuestionCircle,
   faTrash
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Space, Table } from 'antd';
+import { Button, Popover, Space, Table, Typography } from 'antd';
 import Card from 'antd/es/card/Card';
 
 import {
@@ -53,7 +54,16 @@ export const CredentialsList = ({ project = '' }: Props) => {
   return (
     <Card
       className='flex-1'
-      title='Repo Credentials'
+      title={
+        <Space size={4}>
+          Repo Credentials
+          <Popover content='These credentials are used implicitly by Warehouses and promotions steps that match the repository URL or pattern.'>
+            <Typography.Text type='secondary'>
+              <FontAwesomeIcon icon={faQuestionCircle} size='xs' />
+            </Typography.Text>
+          </Popover>
+        </Space>
+      }
       extra={
         <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={() => showCreate()}>
           Add Credentials

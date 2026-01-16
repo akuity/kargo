@@ -1,7 +1,8 @@
 import { useMutation, useQuery } from '@connectrpc/connect-query';
-import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
+import { faPencil, faPlus, faQuestionCircle, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Space, Table, Tag } from 'antd';
+import { Button, Card, Popover, Space, Table, Tag, Typography } from 'antd';
+import React from 'react';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { descriptionExpandable } from '@ui/features/common/description-expandable';
@@ -17,9 +18,10 @@ import { CreateCredentialsModal } from './create-credentials-modal';
 type Props = {
   // empty means shared
   project?: string;
+  description?: React.ReactNode;
 };
 
-export const GenericCredentialsList = ({ project = '' }: Props) => {
+export const GenericCredentialsList = ({ project = '', description }: Props) => {
   const confirm = useConfirmModal();
 
   const listSecretsQuery = useQuery(listGenericCredentials, { project });
@@ -43,7 +45,18 @@ export const GenericCredentialsList = ({ project = '' }: Props) => {
     <Card
       className='flex-1'
       type='inner'
-      title='Generic Project Secrets'
+      title={
+        <Space size={4}>
+          Generic Project Secrets
+          {description && (
+            <Popover content={description}>
+              <Typography.Text type='secondary'>
+                <FontAwesomeIcon icon={faQuestionCircle} size='xs' />
+              </Typography.Text>
+            </Popover>
+          )}
+        </Space>
+      }
       extra={
         <Button icon={<FontAwesomeIcon icon={faPlus} />} onClick={() => showCreateGeneric()}>
           Add Secret
