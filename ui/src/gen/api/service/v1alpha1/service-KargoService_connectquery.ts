@@ -317,6 +317,21 @@ export const updateGenericCredentials = KargoService.method.updateGenericCredent
 export const deleteGenericCredentials = KargoService.method.deleteGenericCredentials;
 
 /**
+ * CreateConfigMap creates a new project-level, system-level, or shared
+ * ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateConfigMap
+ */
+export const createConfigMap = KargoService.method.createConfigMap;
+
+/**
+ * DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteConfigMap
+ */
+export const deleteConfigMap = KargoService.method.deleteConfigMap;
+
+/**
  * ListConfigMaps retrieves all ConfigMaps within a project.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListConfigMaps
@@ -324,11 +339,19 @@ export const deleteGenericCredentials = KargoService.method.deleteGenericCredent
 export const listConfigMaps = KargoService.method.listConfigMaps;
 
 /**
- * GetConfigMap retrieves details of a specific ConfigMap.
+ * GetConfigMap retrieves details of a specific project-level, system-level,
+ * or shared ConfigMap.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap
  */
 export const getConfigMap = KargoService.method.getConfigMap;
+
+/**
+ * UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateConfigMap
+ */
+export const updateConfigMap = KargoService.method.updateConfigMap;
 
 /**
  * ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
