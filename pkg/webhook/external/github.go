@@ -216,7 +216,25 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			ref := e.GetRef()
 			qualifiers = []string{ref}
-			logger = logger.WithValues("ref", ref)
+
+			// Extract file paths from the push event for path-based filtering
+			var filePaths []string
+			if headCommit := e.GetHeadCommit(); headCommit != nil {
+				filePaths = append(filePaths, headCommit.Added...)
+				filePaths = append(filePaths, headCommit.Modified...)
+				filePaths = append(filePaths, headCommit.Removed...)
+			}
+			// If we have file paths, include them in logging
+			logCtx := []any{"ref", ref}
+			if len(filePaths) > 0 {
+				logCtx = append(logCtx, "fileCount", len(filePaths))
+			}
+			logger = logger.WithValues(logCtx...)
+			logger.Info("processing push event with file paths")
+			ctx = logging.ContextWithLogger(ctx, logger)
+
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, filePaths, qualifiers...)
+			return
 
 		case *gh.RegistryPackageEvent:
 			action := e.GetAction()
@@ -270,6 +288,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, qualifiers...)
 	})
 }

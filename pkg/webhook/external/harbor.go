@@ -168,6 +168,6 @@ func (h *harborWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			"tags", tags,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, h.client, h.project, repoURLs, tags...)
+		refreshWarehouses(ctx, w, h.client, h.project, repoURLs, nil, tags...)
 	})
 }

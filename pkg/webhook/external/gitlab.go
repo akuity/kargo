@@ -130,7 +130,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				"ref", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 		case *gl.TagEvent:
 			var repoURLs []string
 			if e.Repository != nil {
@@ -144,7 +144,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				"tag", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 		}
 	})
 }

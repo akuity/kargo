@@ -823,6 +823,108 @@ func TestGithubHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
 			},
 		},
+		{
+			name:       "path filtering - warehouse filtered out",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://github.com/example/repo",
+								Branch:       "main",
+								IncludePaths: []string{"apps/project-a"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				pushEventWithFiles := &gh.PushEvent{
+					Ref: gh.Ptr("refs/heads/main"),
+					Repo: &gh.PushEventRepository{
+						CloneURL: gh.Ptr("https://github.com/example/repo"),
+					},
+					HeadCommit: &gh.HeadCommit{
+						Added:    []string{"apps/project-b/deployment.yaml"},
+						Modified: []string{"apps/project-b/config.yaml"},
+					},
+				}
+				bodyBytes, err := json.Marshal(pushEventWithFiles)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "path filtering - warehouse matches",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://github.com/example/repo",
+								Branch:       "main",
+								IncludePaths: []string{"apps/project-a"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				pushEventWithFiles := &gh.PushEvent{
+					Ref: gh.Ptr("refs/heads/main"),
+					Repo: &gh.PushEventRepository{
+						CloneURL: gh.Ptr("https://github.com/example/repo"),
+					},
+					HeadCommit: &gh.HeadCommit{
+						Added:    []string{"apps/project-a/deployment.yaml"},
+						Modified: []string{"README.md"},
+					},
+				}
+				bodyBytes, err := json.Marshal(pushEventWithFiles)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
