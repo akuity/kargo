@@ -6310,6 +6310,7 @@ type DeleteRepoCredentialsRequest struct {
 	unknownFields protoimpl.UnknownFields
 
 	// project is the name of the project containing the credentials.
+	// If project is left empty, it will default to the "shared resources" namespace.
 	Project string `protobuf:"bytes,1,opt,name=project,proto3" json:"project,omitempty"`
 	// name is the name of the credentials to delete.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`

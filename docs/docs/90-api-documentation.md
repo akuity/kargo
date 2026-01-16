@@ -465,7 +465,7 @@ Stability is not guaranteed.
  DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
+| project | [string](#string) |  project is the name of the project containing the credentials. If project is left empty, it will default to the "shared resources" namespace. |
 | name | [string](#string) |  name is the name of the credentials to delete. |
 
 <a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse"></a>

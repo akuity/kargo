@@ -1130,6 +1130,7 @@ message CreateRepoCredentialsResponse {
 // DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
 message DeleteRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
+  // If project is left empty, it will default to the "shared resources" namespace.
   string project = 1;
   // name is the name of the credentials to delete.
   string name = 2;
