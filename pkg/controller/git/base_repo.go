@@ -359,7 +359,7 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 		"--heads",
 		"--exit-code", // Return 2 if not found
 		b.accessURL,
-		branch,
+		"refs/heads/"+branch,
 	))
 	var exitErr *libExec.ExitError
 	if errors.As(err, &exitErr) && exitErr.ExitCode == 2 {
