@@ -205,7 +205,19 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | system_level | [bool](#bool) |  system_level indicates whether the request is to create a system-level ConfigMap instead of a project-level or shared one. |
-| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap to create. |
+| project | [string](#string) |  project is the name of the project where the ConfigMap will be created. If empty and system_level is false, creates the ConfigMap in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to create. |
+| description | [string](#string) |  description is a human-readable description of the ConfigMap. |
+| data | [CreateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
+
+### CreateConfigMapRequest.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapResponse"></a>
 
@@ -1348,7 +1360,19 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | system_level | [bool](#bool) |  system_level indicates whether the request is to update a system-level ConfigMap instead of a project-level or shared one. |
-| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap to update. |
+| project | [string](#string) |  project is the name of the project containing the ConfigMap to be updated. If empty and system_level is false, updates the ConfigMap in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to be updated. |
+| description | [string](#string) |  description is a human-readable description of the ConfigMap. |
+| data | [UpdateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
+
+### UpdateConfigMapRequest.DataEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapResponse"></a>
 

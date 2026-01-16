@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"connectrpc.com/connect"
@@ -13,33 +14,17 @@ func (s *server) UpdateConfigMap(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.UpdateConfigMapRequest],
 ) (*connect.Response[svcv1alpha1.UpdateConfigMapResponse], error) {
-	configMap := req.Msg.ConfigMap
-	if configMap == nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument,
-			fmt.Errorf("config_map is required"))
-	}
-
-	if err := validateFieldNotEmpty("name", configMap.Name); err != nil {
+	if err := s.validateUpdateConfigMapRequest(ctx, req.Msg); err != nil {
 		return nil, err
 	}
 
-	var namespace string
-	if req.Msg.SystemLevel {
-		namespace = s.cfg.SystemResourcesNamespace
-	} else {
-		project := configMap.Namespace
-		if project != "" {
-			if err := s.validateProjectExists(ctx, project); err != nil {
-				return nil, err
-			}
-		}
-		namespace = project
-		if namespace == "" {
-			namespace = s.cfg.SharedResourcesNamespace
-		}
-	}
-
-	configMap.Namespace = namespace
+	configMap := s.configMapToK8sConfigMap(configMap{
+		systemLevel: req.Msg.SystemLevel,
+		project:     req.Msg.Project,
+		name:        req.Msg.Name,
+		data:        req.Msg.Data,
+		description: req.Msg.Description,
+	})
 
 	if err := s.client.Update(ctx, configMap); err != nil {
 		return nil, fmt.Errorf("update configmap: %w", err)
@@ -48,4 +33,26 @@ func (s *server) UpdateConfigMap(
 	return connect.NewResponse(&svcv1alpha1.UpdateConfigMapResponse{
 		ConfigMap: configMap,
 	}), nil
+}
+
+func (s *server) validateUpdateConfigMapRequest(
+	ctx context.Context,
+	req *svcv1alpha1.UpdateConfigMapRequest,
+) error {
+	if !req.SystemLevel && req.Project != "" {
+		if err := s.validateProjectExists(ctx, req.Project); err != nil {
+			return err
+		}
+	}
+
+	if err := validateFieldNotEmpty("name", req.Name); err != nil {
+		return err
+	}
+
+	if len(req.Data) == 0 {
+		return connect.NewError(connect.CodeInvalidArgument,
+			errors.New("ConfigMap data cannot be empty"))
+	}
+
+	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"connectrpc.com/connect"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/validation"
@@ -25,9 +27,10 @@ func TestUpdateConfigMap(t *testing.T) {
 		objects    []client.Object
 		assertions func(*testing.T, *connect.Response[svcv1alpha1.UpdateConfigMapResponse], error)
 	}{
-		"nil config_map": {
+		"empty name": {
 			req: &svcv1alpha1.UpdateConfigMapRequest{
-				ConfigMap: nil,
+				Name: "",
+				Data: map[string]string{"key": "value"},
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
 				require.Error(t, err)
@@ -35,28 +38,35 @@ func TestUpdateConfigMap(t *testing.T) {
 				require.Nil(t, r)
 			},
 		},
-		"empty name": {
+		"empty data": {
 			req: &svcv1alpha1.UpdateConfigMapRequest{
-				ConfigMap: &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "",
-					},
-				},
+				Name: "test-cm",
+				Data: map[string]string{},
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
 				require.Error(t, err)
 				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Contains(t, err.Error(), "ConfigMap data cannot be empty")
+				require.Nil(t, r)
+			},
+		},
+		"nil data": {
+			req: &svcv1alpha1.UpdateConfigMapRequest{
+				Name: "test-cm",
+				Data: nil,
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
+				require.Error(t, err)
+				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
+				require.Contains(t, err.Error(), "ConfigMap data cannot be empty")
 				require.Nil(t, r)
 			},
 		},
 		"non-existing project": {
 			req: &svcv1alpha1.UpdateConfigMapRequest{
-				ConfigMap: &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cm",
-						Namespace: "non-existing-project",
-					},
-				},
+				Name:    "test-cm",
+				Project: "non-existing-project",
+				Data:    map[string]string{"key": "value"},
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
 				require.Error(t, err)
@@ -66,14 +76,96 @@ func TestUpdateConfigMap(t *testing.T) {
 		},
 		"update in project namespace": {
 			req: &svcv1alpha1.UpdateConfigMapRequest{
-				ConfigMap: &corev1.ConfigMap{
+				Name:        "cm-1",
+				Project:     "kargo-demo",
+				Data:        map[string]string{"updated": "data"},
+				Description: "updated description",
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+				mustNewObject[corev1.ConfigMap]("testdata/config-map-1.yaml"),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.NotNil(t, r.Msg.ConfigMap)
+				assert.Equal(t, "cm-1", r.Msg.ConfigMap.Name)
+				assert.Equal(t, "kargo-demo", r.Msg.ConfigMap.Namespace)
+				assert.Equal(t, map[string]string{"updated": "data"}, r.Msg.ConfigMap.Data)
+				assert.Equal(t, "updated description", r.Msg.ConfigMap.Annotations[kargoapi.AnnotationKeyDescription])
+			},
+		},
+		"update in shared namespace": {
+			req: &svcv1alpha1.UpdateConfigMapRequest{
+				Name:    "shared-cm",
+				Project: "",
+				Data:    map[string]string{"updated-shared": "data"},
+			},
+			objects: []client.Object{
+				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cm-1",
-						Namespace: "kargo-demo",
+						Name:      "shared-cm",
+						Namespace: "kargo-shared-resources",
 					},
-					Data: map[string]string{
-						"foo": "updated-value",
+					Data: map[string]string{"old": "data"},
+				},
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.NotNil(t, r.Msg.ConfigMap)
+				assert.Equal(t, "shared-cm", r.Msg.ConfigMap.Name)
+				assert.Equal(t, "kargo-shared-resources", r.Msg.ConfigMap.Namespace)
+				assert.Equal(t, map[string]string{"updated-shared": "data"}, r.Msg.ConfigMap.Data)
+			},
+		},
+		"update system-level": {
+			req: &svcv1alpha1.UpdateConfigMapRequest{
+				SystemLevel: true,
+				Name:        "system-cm",
+				Data:        map[string]string{"updated-system": "config"},
+			},
+			objects: []client.Object{
+				&corev1.ConfigMap{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "system-cm",
+						Namespace: "kargo-system-resources",
 					},
+					Data: map[string]string{"old-system": "config"},
+				},
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				require.NotNil(t, r.Msg.ConfigMap)
+				assert.Equal(t, "system-cm", r.Msg.ConfigMap.Name)
+				assert.Equal(t, "kargo-system-resources", r.Msg.ConfigMap.Namespace)
+				assert.Equal(t, map[string]string{"updated-system": "config"}, r.Msg.ConfigMap.Data)
+			},
+		},
+		"update non-existing ConfigMap": {
+			req: &svcv1alpha1.UpdateConfigMapRequest{
+				Name:    "non-existing-cm",
+				Project: "kargo-demo",
+				Data:    map[string]string{"new": "data"},
+			},
+			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
+			},
+			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "update configmap")
+				require.Nil(t, r)
+			},
+		},
+		"update with multiple data keys": {
+			req: &svcv1alpha1.UpdateConfigMapRequest{
+				Name:    "cm-1",
+				Project: "kargo-demo",
+				Data: map[string]string{
+					"newKey1": "newValue1",
+					"newKey2": "newValue2",
+					"newKey3": "newValue3",
 				},
 			},
 			objects: []client.Object{
@@ -83,74 +175,45 @@ func TestUpdateConfigMap(t *testing.T) {
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
 				require.NoError(t, err)
 				require.NotNil(t, r)
-				require.NotNil(t, r.Msg.GetConfigMap())
-				require.Equal(t, "cm-1", r.Msg.GetConfigMap().Name)
-				require.Equal(t, "kargo-demo", r.Msg.GetConfigMap().Namespace)
-				require.Equal(t, "updated-value", r.Msg.GetConfigMap().Data["foo"])
+				require.NotNil(t, r.Msg.ConfigMap)
+				assert.Equal(t, "cm-1", r.Msg.ConfigMap.Name)
+				assert.Len(t, r.Msg.ConfigMap.Data, 3)
+				assert.Equal(t, "newValue1", r.Msg.ConfigMap.Data["newKey1"])
+				assert.Equal(t, "newValue2", r.Msg.ConfigMap.Data["newKey2"])
+				assert.Equal(t, "newValue3", r.Msg.ConfigMap.Data["newKey3"])
 			},
 		},
-		"update in shared namespace": {
+		"update clears old data and sets new": {
 			req: &svcv1alpha1.UpdateConfigMapRequest{
-				ConfigMap: &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shared-cm",
-						Namespace: "",
-					},
-					Data: map[string]string{
-						"shared-key": "updated-shared-value",
-					},
-				},
+				Name:    "multi-key-cm",
+				Project: "kargo-demo",
+				Data:    map[string]string{"onlyKey": "onlyValue"},
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      "shared-cm",
-						Namespace: "kargo-shared-resources",
+						Name:      "multi-key-cm",
+						Namespace: "kargo-demo",
 					},
 					Data: map[string]string{
-						"shared-key": "original-value",
+						"oldKey1": "oldValue1",
+						"oldKey2": "oldValue2",
 					},
 				},
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
 				require.NoError(t, err)
 				require.NotNil(t, r)
-				require.NotNil(t, r.Msg.GetConfigMap())
-				require.Equal(t, "shared-cm", r.Msg.GetConfigMap().Name)
-				require.Equal(t, "kargo-shared-resources", r.Msg.GetConfigMap().Namespace)
-				require.Equal(t, "updated-shared-value", r.Msg.GetConfigMap().Data["shared-key"])
-			},
-		},
-		"update system-level": {
-			req: &svcv1alpha1.UpdateConfigMapRequest{
-				SystemLevel: true,
-				ConfigMap: &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "system-cm",
-					},
-					Data: map[string]string{
-						"system-key": "updated-system-value",
-					},
-				},
-			},
-			objects: []client.Object{
-				&corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "system-cm",
-						Namespace: "kargo-system-resources",
-					},
-					Data: map[string]string{
-						"system-key": "original-value",
-					},
-				},
-			},
-			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.UpdateConfigMapResponse], err error) {
-				require.NoError(t, err)
-				require.NotNil(t, r)
-				require.NotNil(t, r.Msg.GetConfigMap())
-				require.Equal(t, "system-cm", r.Msg.GetConfigMap().Name)
-				require.Equal(t, "kargo-system-resources", r.Msg.GetConfigMap().Namespace)
-				require.Equal(t, "updated-system-value", r.Msg.GetConfigMap().Data["system-key"])
+				require.NotNil(t, r.Msg.ConfigMap)
+				assert.Equal(t, "multi-key-cm", r.Msg.ConfigMap.Name)
+				assert.Len(t, r.Msg.ConfigMap.Data, 1)
+				assert.Equal(t, "onlyValue", r.Msg.ConfigMap.Data["onlyKey"])
+				// Verify old keys are not present
+				_, hasOldKey1 := r.Msg.ConfigMap.Data["oldKey1"]
+				_, hasOldKey2 := r.Msg.ConfigMap.Data["oldKey2"]
+				assert.False(t, hasOldKey1)
+				assert.False(t, hasOldKey2)
 			},
 		},
 	}

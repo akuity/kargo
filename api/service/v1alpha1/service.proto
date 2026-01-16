@@ -992,8 +992,16 @@ message CreateConfigMapRequest {
   // system_level indicates whether the request is to create a system-level
   // ConfigMap instead of a project-level or shared one.
   bool system_level = 1;
-  // config_map is the ConfigMap to create.
-  k8s.io.api.core.v1.ConfigMap config_map = 2;
+  // project is the name of the project where the ConfigMap will be created. If
+  // empty and system_level is false, creates the ConfigMap in the shared
+  // resources namespace. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to create.
+  string name = 3;
+  // description is a human-readable description of the ConfigMap.
+  string description = 4;
+  // data contains the key-value pairs that make up the ConfigMap.
+  map<string, string> data = 5;
 }
 
 // CreateConfigMapResponse is the response containing the ConfigMap that was
@@ -1073,8 +1081,16 @@ message UpdateConfigMapRequest {
   // system_level indicates whether the request is to update a system-level
   // ConfigMap instead of a project-level or shared one.
   bool system_level = 1;
-  // config_map is the ConfigMap to update.
-  k8s.io.api.core.v1.ConfigMap config_map = 2;
+  // project is the name of the project containing the ConfigMap to be updated.
+  // If empty and system_level is false, updates the ConfigMap in the shared
+  // resources namespace. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to be updated.
+  string name = 3;
+  // description is a human-readable description of the ConfigMap.
+  string description = 4;
+  // data contains the key-value pairs that make up the ConfigMap.
+  map<string, string> data = 5;
 }
 
 // UpdateConfigMapResponse is the response containing the updated ConfigMap.
