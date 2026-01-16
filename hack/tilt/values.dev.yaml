@@ -33,8 +33,9 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
-  imageCache:
-    cacheByTagPolicy: Force
+  images:
+    cache:
+      cacheByTagPolicy: Force
 crds:
   install: true
 externalWebhooksServer:
