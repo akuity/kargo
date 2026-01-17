@@ -21,11 +21,11 @@ import { useProjectBreadcrumbs } from '../project-utils';
 
 import { AccessSettings } from './views/access/access-settings';
 import { AnalysisTemplatesSettings } from './views/analysis-templates/analysis-templates';
-import { ConfigMaps } from './views/config-maps/config-maps';
-import { CredentialsSettings } from './views/credentials/credentials';
+import { ConfigMapsSettings } from './views/config-maps/config-maps-settings';
 import { GeneralSettings } from './views/general/general-settings';
 import { ProjectConfig } from './views/project-config/project-config';
 import { PromotionTasks } from './views/promotion-tasks/promotion-tasks';
+import { SecretsSettings } from './views/secrets/secrets-settings';
 
 export const ProjectSettings = () => {
   const location = useLocation();
@@ -49,6 +49,12 @@ export const ProjectSettings = () => {
         path: 'project-config',
         component: ProjectConfig
       },
+      roles: {
+        label: 'Access',
+        icon: faKey,
+        path: 'access',
+        component: AccessSettings
+      },
       analysisTemplates: {
         label: 'Analysis Templates',
         icon: faChartBar,
@@ -61,7 +67,7 @@ export const ProjectSettings = () => {
               label: 'Secrets',
               icon: faAsterisk,
               path: 'secrets',
-              component: CredentialsSettings
+              component: SecretsSettings
             }
           }
         : {}),
@@ -69,13 +75,7 @@ export const ProjectSettings = () => {
         label: 'ConfigMaps',
         path: 'config-maps',
         icon: faScrewdriverWrench,
-        component: ConfigMaps
-      },
-      roles: {
-        label: 'Access',
-        icon: faKey,
-        path: 'access',
-        component: AccessSettings
+        component: ConfigMapsSettings
       },
       promotionTasks: {
         label: 'Promotion Tasks',
