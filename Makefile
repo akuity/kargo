@@ -333,7 +333,7 @@ hack-codegen: hack-build-dev-tools
 .PHONY: hack-build
 hack-build: build-base-image
 	{ \
-		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:2; \
+		$(CONTAINER_RUNTIME) run -d -p $(LOCAL_REG_PORT):5000 --name tmp-registry registry:3.0.0; \
 		trap '$(CONTAINER_RUNTIME) rm -f tmp-registry' EXIT; \
 		$(CONTAINER_RUNTIME) push $(BASE_IMAGE):latest-amd64; \
 		$(CONTAINER_RUNTIME) push $(BASE_IMAGE):latest-arm64; \
