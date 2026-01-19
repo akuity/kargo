@@ -85,6 +85,26 @@ func Test_gitPRMerger_convert(t *testing.T) {
 				"wait":     true,
 			},
 		},
+		{
+			name: "valid with merge method",
+			config: promotion.Config{
+				"provider":    "github",
+				"prNumber":    42,
+				"repoURL":     "https://github.com/example/repo.git",
+				"mergeMethod": "squash",
+			},
+		},
+		{
+			name: "mergeMethod is an invalid value",
+			config: promotion.Config{
+				"prNumber":    42,
+				"repoURL":     "https://github.com/example/repo.git",
+				"mergeMethod": "invalid",
+			},
+			expectedProblems: []string{
+				"mergeMethod: mergeMethod must be one of the following:",
+			},
+		},
 	}
 
 	r := newGitPRMerger(promotion.StepRunnerCapabilities{
@@ -225,6 +245,29 @@ func Test_gitPRMerger_run(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 				require.Equal(t, "abc123", res.Output[stateKeyCommit])
+			},
+		},
+		{
+			name: "successful merge with squash method",
+			provider: &gitprovider.Fake{
+				MergePullRequestFn: func(
+					_ context.Context,
+					opts *gitprovider.MergePullRequestOpts,
+				) (*gitprovider.PullRequest, bool, error) {
+					require.Equal(t, gitprovider.MergeMethodSquash, opts.MergeMethod)
+					return &gitprovider.PullRequest{
+						MergeCommitSHA: "squash123",
+					}, true, nil
+				},
+			},
+			config: builtin.GitMergePRConfig{
+				PRNumber:    42,
+				MergeMethod: ptr.To(builtin.MergeMethod("squash")),
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				require.Equal(t, "squash123", res.Output[stateKeyCommit])
 			},
 		},
 	}
