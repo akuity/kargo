@@ -241,18 +241,7 @@ func (p *provider) MergePullRequest(
 		LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
 	}
 	if opts.MergeMethod != "" {
-		// Azure DevOps merge strategies
-		var strategy adogit.GitPullRequestMergeStrategy
-		switch opts.MergeMethod {
-		case gitprovider.MergeMethodMerge:
-			strategy = adogit.GitPullRequestMergeStrategyValues.NoFastForward
-		case gitprovider.MergeMethodSquash:
-			strategy = adogit.GitPullRequestMergeStrategyValues.Squash
-		case gitprovider.MergeMethodRebase:
-			strategy = adogit.GitPullRequestMergeStrategyValues.Rebase
-		default:
-			strategy = adogit.GitPullRequestMergeStrategyValues.NoFastForward
-		}
+		strategy := mapMergeMethod(opts.MergeMethod)
 		prUpdate.CompletionOptions = &adogit.GitPullRequestCompletionOptions{
 			MergeStrategy: &strategy,
 		}
@@ -351,4 +340,17 @@ func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 		return "", "", "", fmt.Errorf("could not extract repository organization, project, and name from URL %q", u)
 	}
 	return organization, parts[1], parts[3], nil
+}
+
+func mapMergeMethod(mergeMethod gitprovider.MergeMethod) adogit.GitPullRequestMergeStrategy {
+	switch mergeMethod {
+	case gitprovider.MergeMethodMerge:
+		return adogit.GitPullRequestMergeStrategyValues.NoFastForward
+	case gitprovider.MergeMethodSquash:
+		return adogit.GitPullRequestMergeStrategyValues.Squash
+	case gitprovider.MergeMethodRebase:
+		return adogit.GitPullRequestMergeStrategyValues.Rebase
+	default:
+		return adogit.GitPullRequestMergeStrategyValues.NoFastForward
+	}
 }
