@@ -49,9 +49,7 @@ func TestRegistrationPredicate(t *testing.T) {
 			// Accessing the unexported 'registration' variable directly
 			// because we are in package 'github'
 			result := registration.Predicate(tc.url)
-			if result != tc.expected {
-				t.Errorf("Predicate(%q) = %v; want %v", tc.url, result, tc.expected)
-			}
+			require.Equal(t, tc.expected, result)
 		})
 	}
 }
