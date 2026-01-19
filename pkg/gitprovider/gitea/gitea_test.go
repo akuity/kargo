@@ -592,6 +592,59 @@ func TestMergePullRequest(t *testing.T) {
 	}
 }
 
+func TestMergePullRequestMergeMethod(t *testing.T) {
+	tests := []struct {
+		method        gitprovider.MergeMethod
+		expectedStyle gitea.MergeStyle
+	}{
+		{
+			method:        gitprovider.MergeMethodMerge,
+			expectedStyle: gitea.MergeStyleMerge,
+		},
+		{
+			method:        gitprovider.MergeMethodSquash,
+			expectedStyle: gitea.MergeStyleSquash,
+		},
+		{
+			method:        gitprovider.MergeMethodRebase,
+			expectedStyle: gitea.MergeStyleRebase,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(string(tt.method), func(t *testing.T) {
+			mockClient := &mockGiteaClient{}
+			p := provider{
+				owner:  testRepoOwner,
+				repo:   testRepoName,
+				client: mockClient,
+			}
+			mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(1234)).
+				Return(&gitea.PullRequest{
+					Index:     1234,
+					State:     gitea.StateOpen,
+					Mergeable: true,
+					Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
+					URL:       "https://gitea.com/akuity/kargo/pulls/1234",
+				}, &gitea.Response{}, nil).Once()
+			mockClient.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 1234, mock.MatchedBy(func(opts *gitea.MergePullRequestOption) bool {
+				return opts.Style == tt.expectedStyle
+			})).
+				Return(&gitea.Response{}, nil)
+			mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(1234)).
+				Return(&gitea.PullRequest{
+					Index:     1234,
+					State:     gitea.StateClosed,
+					HasMerged: true,
+					Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
+					URL:       "https://gitea.com/akuity/kargo/pulls/1234",
+				}, &gitea.Response{}, nil).Once()
+
+			p.MergePullRequest(context.Background(),
+				&gitprovider.MergePullRequestOpts{Number: 1234, MergeMethod: tt.method})
+		})
+	}
+}
+
 func TestGetCommitURL(t *testing.T) {
 	testCases := []struct {
 		repoURL           string
