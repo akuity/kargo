@@ -46,7 +46,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jferrl/go-githubauth v1.5.0
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.18.2
+	github.com/klauspost/compress v1.18.3
 	github.com/ktrysmt/go-bitbucket v0.9.87
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -74,7 +74,7 @@ require (
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
-	helm.sh/helm/v3 v3.19.4
+	helm.sh/helm/v3 v3.19.5
 	k8s.io/api v0.34.3
 	k8s.io/apiextensions-apiserver v0.34.3
 	k8s.io/apimachinery v0.34.3
