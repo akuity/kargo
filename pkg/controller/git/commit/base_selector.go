@@ -48,10 +48,10 @@ func newBaseSelector(
 			return nil, fmt.Errorf("error compiling filter expression: %w", err)
 		}
 	}
-	if s.includePaths, err = getPathSelectors(sub.IncludePaths); err != nil {
+	if s.includePaths, err = GetPathSelectors(sub.IncludePaths); err != nil {
 		return nil, fmt.Errorf("error parsing include path selectors: %w", err)
 	}
-	if s.excludePaths, err = getPathSelectors(sub.ExcludePaths); err != nil {
+	if s.excludePaths, err = GetPathSelectors(sub.ExcludePaths); err != nil {
 		return nil, fmt.Errorf("error parsing exclude path selectors: %w", err)
 	}
 	return s, nil

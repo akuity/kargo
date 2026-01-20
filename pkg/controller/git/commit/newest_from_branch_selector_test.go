@@ -313,7 +313,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 	idFilterExpression, err := expr.Compile(`id != "A"`)
 	require.NoError(t, err)
 
-	includePaths, err := getPathSelectors([]string{"some-path/"})
+	includePaths, err := GetPathSelectors([]string{"some-path/"})
 	require.NoError(t, err)
 
 	testCases := []struct {
