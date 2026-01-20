@@ -70,3 +70,19 @@ func Test_ociSelector_Select(t *testing.T) {
 	require.NoError(t, err)
 	require.NotEmpty(t, versions)
 }
+
+func Test_ociSelector_Select_WithVPrefix(t *testing.T) {
+	// Regression test for issue no. 5604: Ensure we can discover tags from OCI repositories
+	// that use v-prefixed versions (like "v1.12.0"), which were previously rejected
+	// by strict SemVer parsing.
+	s, err := newOCISelector(
+		kargoapi.ChartSubscription{
+			RepoURL: "oci://quay.io/jetstack/charts/cert-manager",
+		},
+		nil,
+	)
+	require.NoError(t, err)
+	versions, err := s.Select(context.Background())
+	require.NoError(t, err)
+	require.NotEmpty(t, versions)
+}

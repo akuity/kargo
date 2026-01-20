@@ -63,7 +63,7 @@ func (o *ociSelector) Select(ctx context.Context) ([]string, error) {
 			// OCI artifact tags are not allowed to contain the "+" character, which is
 			// used by SemVer to separate the version from the build metadata. To work
 			// around this, Helm uses "_" instead of "+".
-			if sv, err := semver.StrictNewVersion(strings.ReplaceAll(tag, "_", "+")); err == nil {
+			if sv, err := semver.NewVersion(strings.ReplaceAll(tag, "_", "+")); err == nil {
 				semvers = append(semvers, sv)
 			}
 		}
