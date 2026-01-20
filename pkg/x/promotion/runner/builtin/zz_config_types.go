@@ -304,6 +304,9 @@ type HelmTemplateConfig struct {
 	BuildDependencies bool `json:"buildDependencies,omitempty"`
 	// Whether to disable hooks in the rendered manifests.
 	DisableHooks bool `json:"disableHooks,omitempty"`
+	// Whether to skip value files that do not exist instead of returning an error. Useful for
+	// optional stage-specific overlays.
+	IgnoreMissingValueFiles bool `json:"ignoreMissingValueFiles,omitempty"`
 	// Whether to include CRDs in the rendered manifests.
 	IncludeCRDs bool `json:"includeCRDs,omitempty"`
 	// KubeVersion allows for passing a specific Kubernetes version to use when rendering the
