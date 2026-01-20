@@ -401,7 +401,7 @@ func TestWatcher_Start_ContextCancellation(t *testing.T) {
 
 func TestWatcher_Start_InitialSyncFailure(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	clientset.PrependReactor("list", "secrets", func(action k8stest.Action) (bool, runtime.Object, error) {
+	clientset.PrependReactor("list", "secrets", func(_ k8stest.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
 
@@ -418,7 +418,7 @@ func TestWatcher_Start_InitialSyncFailure(t *testing.T) {
 
 func TestWatcher_SyncSecrets_ListError(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	clientset.PrependReactor("list", "secrets", func(action k8stest.Action) (bool, runtime.Object, error) {
+	clientset.PrependReactor("list", "secrets", func(_ k8stest.Action) (bool, runtime.Object, error) {
 		return true, nil, assert.AnError
 	})
 
@@ -435,7 +435,7 @@ func TestWatcher_SyncSecrets_ListError(t *testing.T) {
 
 func TestWatcher_WatchSecrets_WatchError(t *testing.T) {
 	clientset := fake.NewSimpleClientset()
-	clientset.PrependWatchReactor("secrets", func(action k8stest.Action) (bool, watch.Interface, error) {
+	clientset.PrependWatchReactor("secrets", func(_ k8stest.Action) (bool, watch.Interface, error) {
 		return true, nil, assert.AnError
 	})
 
