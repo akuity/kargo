@@ -31,10 +31,10 @@ var registration = gitprovider.Registration{
 			return false
 		}
 		// We assume that any hostname with the word "github" in it can use this
-		// provider. NOTE: We will miss cases where the host is GitHub Enterprise
-		// but doesn't incorporate the word "github" in the hostname. e.g.
-		// 'git.mycompany.com'
-		return strings.Contains(u.Host, ProviderName)
+		// provider. We also explicitly support 'ghe.com' (GitHub Enterprise Cloud).
+		// NOTE: We will miss cases where the host is GitHub Enterprise
+		// but doesn't incorporate the word "github" or "ghe.com" (e.g. 'git.mycompany.com').
+		return strings.Contains(u.Host, ProviderName) || strings.HasSuffix(u.Host, ".ghe.com")
 	},
 	NewProvider: func(
 		repoURL string,
