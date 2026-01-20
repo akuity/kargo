@@ -26,7 +26,7 @@ func TestNewAppCredentialProvider(t *testing.T) {
 func TestAppCredentialProvider_Supports(t *testing.T) {
 	p := NewAppCredentialProvider()
 
-	const testRepoURL = "https://github.com/example/repo"
+	const testRepoURL = "https://github.com/example/repo.git"
 	// This is a control. Each test case will tweak a clone of this supported map.
 	supportedDataMap := map[string][]byte{
 		clientIDKey:       []byte("client"),
@@ -198,7 +198,7 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 	const testProject = "fake-project"
 	const testRepoName = "repo"
-	testRepoURL := fmt.Sprintf("https://github.com/example/%s", testRepoName)
+	testRepoURL := fmt.Sprintf("https://github.com/example/%s.git", testRepoName)
 	testData := map[string][]byte{
 		appIDKey:          []byte("123"),
 		installationIDKey: []byte("456"),
@@ -525,6 +525,11 @@ func TestAppCredentialProvider_extractRepoName(t *testing.T) {
 		{
 			name:     "GitHub URL",
 			repoURL:  "https://github.com/example/repo",
+			expected: "repo",
+		},
+		{
+			name:     "GitHub URL with .git suffix",
+			repoURL:  "https://github.com/example/repo.git",
 			expected: "repo",
 		},
 		{
