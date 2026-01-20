@@ -496,7 +496,7 @@ func WarehousesBySubscribedURLs(obj client.Object) []string {
 	}
 
 	var repoURLs []string
-	for _, sub := range warehouse.Spec.Subscriptions {
+	for _, sub := range warehouse.Spec.InternalSubscriptions {
 		if sub.Git != nil && sub.Git.RepoURL != "" {
 			repoURLs = append(repoURLs, urls.NormalizeGit(sub.Git.RepoURL))
 		}

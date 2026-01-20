@@ -36,8 +36,6 @@ message Role {
 
   repeated Claim claims = 7;
 
-  repeated ServiceAccountReference serviceAccounts = 8;
-
   repeated .k8s.io.api.rbac.v1.PolicyRule rules = 6;
 }
 

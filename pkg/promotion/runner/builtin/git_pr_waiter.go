@@ -117,15 +117,41 @@ func (g *gitPRWaiter) run(
 			fmt.Errorf("error getting pull request %d: %w", cfg.PRNumber, err)
 	}
 
+	// Build output with PR metadata for all states
+	output := buildPRWaiterOutput(pr)
+
 	if pr.Open {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusRunning}, nil
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusRunning,
+			Output: output,
+		}, nil
 	}
 	if !pr.Merged {
-		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
-			&promotion.TerminalError{Err: fmt.Errorf("pull request %d was closed without being merged", cfg.PRNumber)}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+			Output: output,
+		}, &promotion.TerminalError{Err: fmt.Errorf("pull request %d was closed without being merged", cfg.PRNumber)}
 	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{stateKeyCommit: pr.MergeCommitSHA},
+		Output: output,
 	}, nil
+}
+
+// buildPRWaiterOutput constructs the output map with PR metadata.
+// It always includes the pr object with id, url, open, and merged fields.
+// The commit field is only included when a merge commit SHA is available.
+func buildPRWaiterOutput(pr *gitprovider.PullRequest) map[string]any {
+	output := map[string]any{
+		"pr": map[string]any{
+			"id":     pr.Number,
+			"url":    pr.URL,
+			"open":   pr.Open,
+			"merged": pr.Merged,
+		},
+	}
+	if pr.MergeCommitSHA != "" {
+		output[stateKeyCommit] = pr.MergeCommitSHA
+	}
+	return output
 }

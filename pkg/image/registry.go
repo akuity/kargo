@@ -5,17 +5,24 @@ import (
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"go.uber.org/ratelimit"
+
+	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/types"
 )
 
-// dockerRegistry is registry configuration for Docker Hub.
-var dockerRegistry = &registry{
-	name:             "Docker Hub",
-	imagePrefix:      name.DefaultRegistry,
-	defaultNamespace: "library",
-	rateLimiter:      ratelimit.New(10),
-}
-
 var (
+	// rateLimit is the rate limit (in requests per second) to apply to all
+	// registry interactions on a per-registry basis.
+	rateLimit = types.MustParseInt(os.GetEnv("IMAGE_REGISTRY_RATE_LIMIT", "20"))
+
+	// dockerRegistry is registry configuration for Docker Hub.
+	dockerRegistry = &registry{
+		name:             "Docker Hub",
+		imagePrefix:      name.DefaultRegistry,
+		defaultNamespace: "library",
+		rateLimiter:      ratelimit.New(rateLimit),
+	}
+
 	// registries is a map of Registries indexed by image prefix and is pre-loaded
 	// with known registries whose settings cannot be inferred from an image's
 	// prefix.
@@ -41,8 +48,9 @@ func newRegistry(imagePrefix string) *registry {
 	return &registry{
 		name:        imagePrefix,
 		imagePrefix: imagePrefix,
-		// TODO: Make this configurable.
-		rateLimiter: ratelimit.New(20),
+		// TODO(krancour): We probably need to make this tunable per registry in
+		// the future.
+		rateLimiter: ratelimit.New(rateLimit),
 	}
 }
 

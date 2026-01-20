@@ -45,7 +45,6 @@ type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
 
 	ManageExtendedPermissions bool `envconfig:"MANAGE_EXTENDED_PERMISSIONS" default:"false"`
 
@@ -804,7 +803,7 @@ func (r *reconciler) ensureControllerPermissions(
 		roleBindingName := getRoleBindingName(sa.Name)
 		saLogger := logger.WithValues(
 			"serviceAccount", sa.Name,
-			"serviceAccount.namespace", sa.Namespace,
+			corev1.ServiceAccountNameKey, sa.Namespace,
 			"roleBinding", roleBindingName,
 		)
 

@@ -57,17 +57,20 @@ Stability is not guaranteed.
 | GetWarehouse | [GetWarehouseRequest](#akuity-io-kargo-service-v1alpha1-GetWarehouseRequest) | [GetWarehouseResponse](#akuity-io-kargo-service-v1alpha1-GetWarehouseResponse) |
 | WatchWarehouses | [WatchWarehousesRequest](#akuity-io-kargo-service-v1alpha1-WatchWarehousesRequest) | [WatchWarehousesResponse](#akuity-io-kargo-service-v1alpha1-WatchWarehousesResponse)(stream) |
 | DeleteWarehouse | [DeleteWarehouseRequest](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseRequest) | [DeleteWarehouseResponse](#akuity-io-kargo-service-v1alpha1-DeleteWarehouseResponse) |
-| CreateCredentials | [CreateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest) | [CreateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse) |
-| DeleteCredentials | [DeleteCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest) | [DeleteCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse) |
-| GetCredentials | [GetCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetCredentialsRequest) | [GetCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetCredentialsResponse) |
-| ListCredentials | [ListCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListCredentialsRequest) | [ListCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListCredentialsResponse) |
-| UpdateCredentials | [UpdateCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest) | [UpdateCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse) |
-| ListProjectSecrets | [ListProjectSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest) | [ListProjectSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse) |
-| CreateProjectSecret | [CreateProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest) | [CreateProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretResponse) |
-| UpdateProjectSecret | [UpdateProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest) | [UpdateProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretResponse) |
-| DeleteProjectSecret | [DeleteProjectSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest) | [DeleteProjectSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse) |
+| CreateRepoCredentials | [CreateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest) | [CreateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse) |
+| DeleteRepoCredentials | [DeleteRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest) | [DeleteRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse) |
+| GetRepoCredentials | [GetRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest) | [GetRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse) |
+| ListRepoCredentials | [ListRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest) | [ListRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse) |
+| UpdateRepoCredentials | [UpdateRepoCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest) | [UpdateRepoCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse) |
+| ListGenericCredentials | [ListGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest) | [ListGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse) |
+| CreateGenericCredentials | [CreateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest) | [CreateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse) |
+| UpdateGenericCredentials | [UpdateGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest) | [UpdateGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse) |
+| DeleteGenericCredentials | [DeleteGenericCredentialsRequest](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest) | [DeleteGenericCredentialsResponse](#akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse) |
+| CreateConfigMap | [CreateConfigMapRequest](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest) | [CreateConfigMapResponse](#akuity-io-kargo-service-v1alpha1-CreateConfigMapResponse) |
+| DeleteConfigMap | [DeleteConfigMapRequest](#akuity-io-kargo-service-v1alpha1-DeleteConfigMapRequest) | [DeleteConfigMapResponse](#akuity-io-kargo-service-v1alpha1-DeleteConfigMapResponse) |
 | ListConfigMaps | [ListConfigMapsRequest](#akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest) | [ListConfigMapsResponse](#akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse) |
 | GetConfigMap | [GetConfigMapRequest](#akuity-io-kargo-service-v1alpha1-GetConfigMapRequest) | [GetConfigMapResponse](#akuity-io-kargo-service-v1alpha1-GetConfigMapResponse) |
+| UpdateConfigMap | [UpdateConfigMapRequest](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest) | [UpdateConfigMapResponse](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapResponse) |
 | ListAnalysisTemplates | [ListAnalysisTemplatesRequest](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest) | [ListAnalysisTemplatesResponse](#akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesResponse) |
 | GetAnalysisTemplate | [GetAnalysisTemplateRequest](#akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateRequest) | [GetAnalysisTemplateResponse](#akuity-io-kargo-service-v1alpha1-GetAnalysisTemplateResponse) |
 | DeleteAnalysisTemplate | [DeleteAnalysisTemplateRequest](#akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest) | [DeleteAnalysisTemplateResponse](#akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateResponse) |
@@ -88,18 +91,10 @@ Stability is not guaranteed.
 | ListRoles | [ListRolesRequest](#akuity-io-kargo-service-v1alpha1-ListRolesRequest) | [ListRolesResponse](#akuity-io-kargo-service-v1alpha1-ListRolesResponse) |
 | Revoke | [RevokeRequest](#akuity-io-kargo-service-v1alpha1-RevokeRequest) | [RevokeResponse](#akuity-io-kargo-service-v1alpha1-RevokeResponse) |
 | UpdateRole | [UpdateRoleRequest](#akuity-io-kargo-service-v1alpha1-UpdateRoleRequest) | [UpdateRoleResponse](#akuity-io-kargo-service-v1alpha1-UpdateRoleResponse) |
-| CreateServiceAccount | [CreateServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountRequest) | [CreateServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountResponse) |
-| DeleteServiceAccount | [DeleteServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountRequest) | [DeleteServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountResponse) |
-| GetServiceAccount | [GetServiceAccountRequest](#akuity-io-kargo-service-v1alpha1-GetServiceAccountRequest) | [GetServiceAccountResponse](#akuity-io-kargo-service-v1alpha1-GetServiceAccountResponse) |
-| ListServiceAccounts | [ListServiceAccountsRequest](#akuity-io-kargo-service-v1alpha1-ListServiceAccountsRequest) | [ListServiceAccountsResponse](#akuity-io-kargo-service-v1alpha1-ListServiceAccountsResponse) |
-| CreateServiceAccountToken | [CreateServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenRequest) | [CreateServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenResponse) |
-| DeleteServiceAccountToken | [DeleteServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenRequest) | [DeleteServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenResponse) |
-| GetServiceAccountToken | [GetServiceAccountTokenRequest](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest) | [GetServiceAccountTokenResponse](#akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenResponse) |
-| ListServiceAccountTokens | [ListServiceAccountTokensRequest](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensRequest) | [ListServiceAccountTokensResponse](#akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensResponse) |
-| ListClusterSecrets | [ListClusterSecretsRequest](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest) | [ListClusterSecretsResponse](#akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse) |
-| CreateClusterSecret | [CreateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest) | [CreateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse) |
-| UpdateClusterSecret | [UpdateClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest) | [UpdateClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse) |
-| DeleteClusterSecret | [DeleteClusterSecretRequest](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest) | [DeleteClusterSecretResponse](#akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse) |
+| CreateAPIToken | [CreateAPITokenRequest](#akuity-io-kargo-service-v1alpha1-CreateAPITokenRequest) | [CreateAPITokenResponse](#akuity-io-kargo-service-v1alpha1-CreateAPITokenResponse) |
+| DeleteAPIToken | [DeleteAPITokenRequest](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest) | [DeleteAPITokenResponse](#akuity-io-kargo-service-v1alpha1-DeleteAPITokenResponse) |
+| GetAPIToken | [GetAPITokenRequest](#akuity-io-kargo-service-v1alpha1-GetAPITokenRequest) | [GetAPITokenResponse](#akuity-io-kargo-service-v1alpha1-GetAPITokenResponse) |
+| ListAPITokens | [ListAPITokensRequest](#akuity-io-kargo-service-v1alpha1-ListAPITokensRequest) | [ListAPITokensResponse](#akuity-io-kargo-service-v1alpha1-ListAPITokensResponse) |
 
 <a name="akuity-io-kargo-service-v1alpha1-AbortPromotionRequest"></a>
 
@@ -184,54 +179,82 @@ Stability is not guaranteed.
 | server | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  server contains version information for the Kargo server. |
 | cli | [VersionInfo](#akuity-io-kargo-service-v1alpha1-VersionInfo) |  cli contains version information for the Kargo CLI. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateAPITokenRequest"></a>
 
-### CreateClusterSecretRequest
- CreateClusterSecretRequest is the request for creating a new cluster-level secret.
+### CreateAPITokenRequest
+ CreateAPITokenRequest is a request to generate a new bearer token associated with a specified Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to create. |
-| data | [CreateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create a token associated with a system-level Kargo Role virtual resource instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the Kargo Role virtual resource for which a new token is being created. This value is ignored if system_level is true. |
+| role_name | [string](#string) |  role_name is the name of the Kargo Role virtual resource for which to generate a new bearer token. |
+| name | [string](#string) |  name is the name for the bearer token to be created. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateAPITokenResponse"></a>
 
-### CreateClusterSecretRequest.DataEntry
+### CreateAPITokenResponse
+ CreateAPITokenResponse contains a newly generated bearer token in the form of a Kubernetes Secret.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest"></a>
+
+### CreateConfigMapRequest
+ CreateConfigMapRequest is the request for creating a project-level, system-level, or shared ConfigMap.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project where the ConfigMap will be created. If empty and system_level is false, creates the ConfigMap in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to create. |
+| description | [string](#string) |  description is a human-readable description of the ConfigMap. |
+| data | [CreateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
+
+### CreateConfigMapRequest.DataEntry
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateClusterSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapResponse"></a>
 
-### CreateClusterSecretResponse
- CreateClusterSecretResponse contains the newly created cluster secret.
+### CreateConfigMapResponse
+ CreateConfigMapResponse is the response containing the ConfigMap that was created.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created cluster-level Kubernetes Secret. |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the ConfigMap that was created. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest"></a>
 
-### CreateCredentialsRequest
- CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
+### CreateGenericCredentialsRequest
+ CreateGenericCredentialsRequest is the request for creating new generic credentials within a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
-| name | [string](#string) |  name is the name of the credentials. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to create generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project where the generic credentials will be created. If empty and system_level is false, creates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to create. |
+| description | [string](#string) |  description is a human-readable description of the generic credentials. |
+| data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateCredentialsResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
-### CreateCredentialsResponse
- CreateCredentialsResponse contains the newly created credentials.
+### CreateGenericCredentialsRequest.DataEntry
+ 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsResponse"></a>
+
+### CreateGenericCredentialsResponse
+ CreateGenericCredentialsResponse contains the newly created generic credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateOrUpdateResourceRequest"></a>
 
@@ -259,33 +282,28 @@ Stability is not guaranteed.
 | updated_resource_manifest | [bytes](#bytes) |  updated_resource_manifest contains the updated existing resource manifest. |
 | error | [string](#string) |  error contains the error message if the operation failed. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsRequest"></a>
 
-### CreateProjectSecretRequest
- CreateProjectSecretRequest is the request for creating a new secret within a project.
+### CreateRepoCredentialsRequest
+ CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project where the secret will be created. |
-| name | [string](#string) |  name is the name of the secret to create. |
-| description | [string](#string) |  description is a human-readable description of the secret. |
-| data | [CreateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| project | [string](#string) |  project is the name of the project where the credentials will be stored. |
+| name | [string](#string) |  name is the name of the credentials. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-CreateRepoCredentialsResponse"></a>
 
-### CreateProjectSecretRequest.DataEntry
- 
+### CreateRepoCredentialsResponse
+ CreateRepoCredentialsResponse contains the newly created repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| key | [string](#string) |   |
-| value | [string](#string) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateProjectSecretResponse"></a>
-
-### CreateProjectSecretResponse
- CreateProjectSecretResponse contains the newly created project secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the created Kubernetes Secret within the project. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the created Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateResourceRequest"></a>
 
@@ -328,41 +346,20 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the newly created Kargo Role virtual resource. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteAPITokenRequest"></a>
 
-### CreateServiceAccountRequest
- CreateServiceAccountRequest is a request to create a new Kargo ServiceAccount resource.
+### DeleteAPITokenRequest
+ DeleteAPITokenRequest is a request to delete a bearer token associated with a Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is the Kargo ServiceAccount to create. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete a token associated with a system-level Kargo Role virtual resource instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the token that is to be deleted. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the token to delete. |
 
-<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteAPITokenResponse"></a>
 
-### CreateServiceAccountResponse
- CreateServiceAccountResponse contains the details of a newly created Kargo ServiceAccount resource.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is the newly created Kargo ServiceAccount resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenRequest"></a>
-
-### CreateServiceAccountTokenRequest
- CreateServiceAccountTokenRequest is a request to generate a new bearer token associated with a specified Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is to create a token associated with a system-level Kargo Service Account instead of one at the project-level. |
-| project | [string](#string) |  project is the name of the project containing the Kargo ServiceAccount resource for which a new token is being created. This value is ignored if system_level is true. |
-| service_account_name | [string](#string) |  service_account_name is the name of the Kargo ServiceAccount for which to generate a new bearer token. |
-| name | [string](#string) |  name is the name for the bearer token to be created. |
-
-<a name="akuity-io-kargo-service-v1alpha1-CreateServiceAccountTokenResponse"></a>
-
-### CreateServiceAccountTokenResponse
- CreateServiceAccountTokenResponse contains a newly generated bearer token in the form of a Kubernetes Secret.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secret containing the token. |
-
+### DeleteAPITokenResponse
+ DeleteAPITokenResponse is the response returned after deleting a bearer token associated with a Kargo Role virtual resource.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteAnalysisTemplateRequest"></a>
 
 ### DeleteAnalysisTemplateRequest
@@ -396,31 +393,20 @@ Stability is not guaranteed.
 
 ### DeleteClusterConfigResponse
  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteConfigMapRequest"></a>
 
-### DeleteClusterSecretRequest
- DeleteClusterSecretRequest is the request for deleting a cluster secret.
+### DeleteConfigMapRequest
+ DeleteConfigMapRequest is the request for deleting a project-level, system-level, or shared ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to delete. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project in which to delete a ConfigMap. If empty and system_level is false, deletes a shared ConfigMap. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to delete. |
 
-<a name="akuity-io-kargo-service-v1alpha1-DeleteClusterSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteConfigMapResponse"></a>
 
-### DeleteClusterSecretResponse
- DeleteClusterSecretResponse is the response returned after deleting a cluster secret.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsRequest"></a>
-
-### DeleteCredentialsRequest
- DeleteCredentialsRequest is the request for deleting existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteCredentialsResponse"></a>
-
-### DeleteCredentialsResponse
- DeleteCredentialsResponse is the response returned after deleting credentials.  explicitly empty
+### DeleteConfigMapResponse
+ DeleteConfigMapResponse is the response returned after deleting a ConfigMap.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteFreightRequest"></a>
 
 ### DeleteFreightRequest
@@ -435,6 +421,20 @@ Stability is not guaranteed.
 
 ### DeleteFreightResponse
  DeleteFreightResponse is the response after deleting freight.  explicitly empty
+<a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsRequest"></a>
+
+### DeleteGenericCredentialsRequest
+ DeleteGenericCredentialsRequest is the request for deleting generic credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to delete generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, deletes generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to delete. |
+
+<a name="akuity-io-kargo-service-v1alpha1-DeleteGenericCredentialsResponse"></a>
+
+### DeleteGenericCredentialsResponse
+ DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteProjectConfigRequest"></a>
 
 ### DeleteProjectConfigRequest
@@ -459,19 +459,19 @@ Stability is not guaranteed.
 
 ### DeleteProjectResponse
  DeleteProjectResponse is the response after deleting a project.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsRequest"></a>
 
-### DeleteProjectSecretRequest
- DeleteProjectSecretRequest is the request for deleting a project secret.
+### DeleteRepoCredentialsRequest
+ DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the secret. |
-| name | [string](#string) |  name is the name of the secret to delete. |
+| project | [string](#string) |  project is the name of the project containing the credentials. If project is left empty, it will default to the "shared resources" namespace. |
+| name | [string](#string) |  name is the name of the credentials to delete. |
 
-<a name="akuity-io-kargo-service-v1alpha1-DeleteProjectSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-DeleteRepoCredentialsResponse"></a>
 
-### DeleteProjectSecretResponse
- DeleteProjectSecretResponse is the response returned after deleting a project secret.  explicitly empty
+### DeleteRepoCredentialsResponse
+ DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteResourceRequest"></a>
 
 ### DeleteResourceRequest
@@ -510,33 +510,6 @@ Stability is not guaranteed.
 
 ### DeleteRoleResponse
  DeleteRoleResponse is the response returned after deleting a Kargo Role virtual resource.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountRequest"></a>
-
-### DeleteServiceAccountRequest
- DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount resource.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the Kargo ServiceAccount resource. |
-| name | [string](#string) |  name is the name of the Kargo ServiceAccount resource to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountResponse"></a>
-
-### DeleteServiceAccountResponse
- DeleteServiceAccountResponse is the response returned after deleting a Kargo ServiceAccount resource.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenRequest"></a>
-
-### DeleteServiceAccountTokenRequest
- DeleteServiceAccountTokenRequest is a request to delete a bearer token associated with a Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is to delete a token associated with a system-level Kargo Service Account instead of one at the project-level. |
-| project | [string](#string) |  project is the name of the project containing the token that is to be deleted. This value is ignored if system_level is true. |
-| name | [string](#string) |  name is the name of the token to delete. |
-
-<a name="akuity-io-kargo-service-v1alpha1-DeleteServiceAccountTokenResponse"></a>
-
-### DeleteServiceAccountTokenResponse
- DeleteServiceAccountTokenResponse is the response returned after deleting a bearer token associated with a Kargo ServiceAccount.  explicitly empty
 <a name="akuity-io-kargo-service-v1alpha1-DeleteStageRequest"></a>
 
 ### DeleteStageRequest
@@ -570,6 +543,26 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | freight | [github.com.akuity.kargo.api.v1alpha1.Freight](#github-com-akuity-kargo-api-v1alpha1-Freight) |  freight is the list of Freight resources. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetAPITokenRequest"></a>
+
+### GetAPITokenRequest
+ GetAPITokenRequest is a request to retrieve details of a bearer token associated with a Kargo Role virtual resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is for a token associated with a system-level Kargo Role virtual resource instead of one at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the requested token. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the token to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetAPITokenResponse"></a>
+
+### GetAPITokenResponse
+ GetAPITokenResponse contains contains the details of a bearer token associated with a Kargo Role virtual resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secrets containing a redacted token associated with a Kargo Role virtual resource. |
+| raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetAnalysisRunLogsRequest"></a>
 
@@ -684,17 +677,18 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapRequest"></a>
 
 ### GetConfigMapRequest
- GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+ GetConfigMapRequest is the request for getting a specific project-level, system-level, or shared ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the ConfigMap. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to get a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project in which to get the ConfigMap. If empty and system_level is false, gets a shared ConfigMap. This value is ignored if system_level is true. |
 | name | [string](#string) |  name is the name of the ConfigMap to retrieve. |
 | format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigMapResponse"></a>
 
 ### GetConfigMapResponse
- GetConfigMapResponse contains the requested ConfigMap information.
+ GetConfigMapResponse contains the requested ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the structured Kubernetes ConfigMap object. |
@@ -712,7 +706,7 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | argocd_shards | [GetConfigResponse.ArgocdShardsEntry](#akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry) |  argocd_shards maps shard names to their ArgoCD configuration. |
 | secret_management_enabled | [bool](#bool) |  secret_management_enabled indicates if secret management features are available. |
-| cluster_secrets_namespace | [string](#string) |  cluster_secrets_namespace is the namespace used for cluster-scoped secrets. |
+| system_resources_namespace | [string](#string) |  system_resources_namespace is the namespace used for "cluster-scoped" system secrets. |
 | has_analysis_run_logs_url_template | [bool](#bool) |  has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetConfigResponse-ArgocdShardsEntry"></a>
@@ -723,25 +717,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [ArgoCDShard](#akuity-io-kargo-service-v1alpha1-ArgoCDShard) |   |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsRequest"></a>
-
-### GetCredentialsRequest
- GetCredentialsRequest is the request for retrieving existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to retrieve. |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetCredentialsResponse"></a>
-
-### GetCredentialsResponse
- GetCredentialsResponse contains the requested credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
-| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetFreightRequest"></a>
 
@@ -851,12 +826,32 @@ Stability is not guaranteed.
 | admin_account_enabled | [bool](#bool) |  admin_account_enabled indicates if admin account authentication is available. |
 | skip_auth | [bool](#bool) |  skip_auth indicates if authentication should be bypassed. |
 
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsRequest"></a>
+
+### GetRepoCredentialsRequest
+ GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to retrieve. |
+| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML). |
+
+<a name="akuity-io-kargo-service-v1alpha1-GetRepoCredentialsResponse"></a>
+
+### GetRepoCredentialsResponse
+ GetRepoCredentialsResponse contains the requested repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the structured Kubernetes Secret containing the credentials. |
+| raw | [bytes](#bytes) |  raw is the raw YAML representation of the credentials. |
+
 <a name="akuity-io-kargo-service-v1alpha1-GetRoleRequest"></a>
 
 ### GetRoleRequest
  GetRoleRequest is a request to retrieve the details of a Kargo Role virtual resource or its underlying Kubernetes resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to retrieve a system-level role instead of a project-level one. |
 | project | [string](#string) |  project is the name of the project containing the Kargo Role to be retrieved. |
 | name | [string](#string) |  name is the name of the Kargo Role to retrieve. |
 | as_resources | [bool](#bool) |  as_resources indicates whether to return the Kargo Role's underlying Kubernetes resources instead of the Kargo Role virtual resource. |
@@ -871,46 +866,6 @@ Stability is not guaranteed.
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is a structured Kargo Role virtual resource. |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is a structured RoleResources object encapsulating the Kargo Role's underlying Kubernetes resources. |
 | raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource(s). |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountRequest"></a>
-
-### GetServiceAccountRequest
- GetServiceAccountRequest is a request for the details of specific Kargo ServiceAccount resource.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is for a system-level Kargo Service Account instead of one at the project-level. |
-| project | [string](#string) |  project is the name of the project containing the requested Kargo ServiceAccount resource. This value is ignored if system_level is true. |
-| name | [string](#string) |  name is the name of a Kargo ServiceAccount to retrieve. |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the desired response format (structured object or raw YAML or JSON). |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountResponse"></a>
-
-### GetServiceAccountResponse
- GetServiceAccountResponse contains the details of the requested Kargo ServiceAccount resource.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| service_account | k8s.io.api.core.v1.ServiceAccount |  service_account is a structured ServiceAccount. |
-| raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenRequest"></a>
-
-### GetServiceAccountTokenRequest
- GetServiceAccountTokenRequest is a request to retrieve details of a bearer token associated with a Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is for a token associated with a system-level Kargo Service Account instead of one at the project-level. |
-| project | [string](#string) |  project is the name of the project containing the requested token. This value is ignored if system_level is true. |
-| name | [string](#string) |  name is the name of the token to retrieve. |
-| format | [RawFormat](#akuity-io-kargo-service-v1alpha1-RawFormat) |  format specifies the format for raw resource representation. |
-
-<a name="akuity-io-kargo-service-v1alpha1-GetServiceAccountTokenResponse"></a>
-
-### GetServiceAccountTokenResponse
- GetServiceAccountTokenResponse contains contains the details of a bearer token associated with a Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| token_secret | k8s.io.api.core.v1.Secret |  token_secret is a Kubernetes Secrets containing a redacted token associated with a Kargo ServiceAccount. |
-| raw | [bytes](#bytes) |  raw is a raw YAML or JSON representation of the requested resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GetStageRequest"></a>
 
@@ -965,13 +920,12 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-GrantRequest"></a>
 
 ### GrantRequest
- GrantRequest is a request to assign permissions to a Kargo Role; or to bind a Kargo ServiceAccount or users having specific ODIC claims to a Kargo Role.
+ GrantRequest is a request to assign permissions to a Kargo Role virtual resource or to bind users having specific ODIC claims to a Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the Kargo Role that is the subject of the grant. |
 | role | [string](#string) |  role is the name of the Kargo Role that is the subject of the grant. |
 | user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |  user_claims are OIDC claims to which the Kargo Role should be mapped. |
-| service_accounts | [ServiceAccountReferences](#akuity-io-kargo-service-v1alpha1-ServiceAccountReferences) |  service_accounts is a collection of references to Kargo ServiceAccounts to be bound to this Kargo Role. |
 | resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |  resource_details are the details of permissions to be granted to the Kargo Role. |
 
 <a name="akuity-io-kargo-service-v1alpha1-GrantResponse"></a>
@@ -998,6 +952,24 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [int32](#int32) |   |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListAPITokensRequest"></a>
+
+### ListAPITokensRequest
+ ListAPITokensRequest is a request to list bearer tokens associated with a specified Kargo Role virtual resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether to list tokens associated with system-level Kargo Role virtual resources instead of ones at the project-level. |
+| project | [string](#string) |  project is the name of the project containing the tokens. |
+| role_name | [string](#string) |  role_name is the name of the Kargo Role virtual resource for which to list associated tokens. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListAPITokensResponse"></a>
+
+### ListAPITokensResponse
+ ListAPITokensResponse contains a list of bearer tokens associated with a specified Kargo Role virtual resource.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| token_secrets | k8s.io.api.core.v1.Secret |  token_secrets is the list of Kubernetes Secrets containing redacted tokens associated with a Kargo Role virtual resource. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListAnalysisTemplatesRequest"></a>
 
@@ -1039,49 +1011,39 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | cluster_promotion_tasks | [github.com.akuity.kargo.api.v1alpha1.ClusterPromotionTask](#github-com-akuity-kargo-api-v1alpha1-ClusterPromotionTask) |  cluster_promotion_tasks is the list of ClusterPromotionTask resources. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsRequest"></a>
-
-### ListClusterSecretsRequest
- ListClusterSecretsRequest is the request for listing all cluster-level secrets.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-ListClusterSecretsResponse"></a>
-
-### ListClusterSecretsResponse
- ListClusterSecretsResponse contains a list of cluster-level secrets.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of cluster-level Kubernetes Secrets. |
-
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsRequest"></a>
 
 ### ListConfigMapsRequest
- ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+ ListConfigMapsRequest is the request for listing all project-level, system-level, or shared ConfigMaps.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project to list ConfigMaps from. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list system-level ConfigMaps instead of project-level or shared ones. |
+| project | [string](#string) |  project is the name of the project in which to list ConfigMaps. If empty and system_level is false, lists shared ConfigMaps. This value is ignored if system_level is true. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListConfigMapsResponse"></a>
 
 ### ListConfigMapsResponse
- ListConfigMapsResponse contains the list of ConfigMaps in a project.
+ ListConfigMapsResponse contains the list of ConfigMaps.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps found in the project. |
+| config_maps | k8s.io.api.core.v1.ConfigMap |  config_maps is the list of ConfigMaps. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsRequest"></a>
 
-### ListCredentialsRequest
- ListCredentialsRequest is the request for listing all credentials in a project.
+### ListGenericCredentialsRequest
+ ListGenericCredentialsRequest is the request for listing all generic credentials in a project, shared namespace, or system namespace.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list generic credentials from the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project whose generic credentials will be listed. If empty and system_level is false, lists generic credentials from the shared resources namespace. This value is ignored if system_level is true. |
 
-<a name="akuity-io-kargo-service-v1alpha1-ListCredentialsResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-ListGenericCredentialsResponse"></a>
 
-### ListCredentialsResponse
- ListCredentialsResponse contains a list of credentials for the specified project.
+### ListGenericCredentialsResponse
+ ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing generic credentials within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListImagesRequest"></a>
 
@@ -1123,22 +1085,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | events | k8s.io.api.core.v1.Event |  events is the list of Kubernetes Events within the project. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsRequest"></a>
-
-### ListProjectSecretsRequest
- ListProjectSecretsRequest is the request for listing all secrets in a project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project whose secrets will be listed. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListProjectSecretsResponse"></a>
-
-### ListProjectSecretsResponse
- ListProjectSecretsResponse contains a list of secrets for the specified project.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| secrets | k8s.io.api.core.v1.Secret |  secrets is the list of Kubernetes Secrets within the project. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsRequest"></a>
 
@@ -1193,12 +1139,29 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | promotions | [github.com.akuity.kargo.api.v1alpha1.Promotion](#github-com-akuity-kargo-api-v1alpha1-Promotion) |  promotions is the list of Promotion resources found in the project. |
 
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsRequest"></a>
+
+### ListRepoCredentialsRequest
+ ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project whose credentials will be listed. |
+
+<a name="akuity-io-kargo-service-v1alpha1-ListRepoCredentialsResponse"></a>
+
+### ListRepoCredentialsResponse
+ ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the list of Kubernetes Secrets containing the credentials. |
+
 <a name="akuity-io-kargo-service-v1alpha1-ListRolesRequest"></a>
 
 ### ListRolesRequest
  ListRolesRequests is a request to retrieve the details of all Kargo Role virtual resources or their underlying Kubernetes resources.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to list system-level roles instead of project-level roles. |
 | project | [string](#string) |  project is the name of the project for which to list all Kargo Roles. |
 | as_resources | [bool](#bool) |  as_resources indicates whether to return each Kargo Role's underlying Kubernetes resources instead of the Kargo Role virtual resource(s). |
 
@@ -1210,41 +1173,6 @@ Stability is not guaranteed.
 | ----- | ---- | ----------- |
 | roles | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  Note: oneof and repeated do not work together roles is a list of Kargo Role virtual resources. |
 | resources | [github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources](#github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources) |  resources is a list of RoleResource objects encapsulating the Kargo Roles' underlying Kubernetes resources. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensRequest"></a>
-
-### ListServiceAccountTokensRequest
- ListServiceAccountTokensRequest is a request to list bearer tokens associated with a specified Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether to list tokens associated with system-level Kargo Service Accounts instead of ones at the project-level. |
-| project | [string](#string) |  project is the name of the project containing the tokens. |
-| service_account_name | [string](#string) |  service_account_name is the name of the Kargo ServiceAccount for which to list associated tokens. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountTokensResponse"></a>
-
-### ListServiceAccountTokensResponse
- ListServiceAccountTokensResponse contains a list of bearer tokens associated with a specified Kargo ServiceAccount.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| token_secrets | k8s.io.api.core.v1.Secret |  token_secrets is the list of Kubernetes Secrets containing redacted tokens associated with a Kargo ServiceAccount. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountsRequest"></a>
-
-### ListServiceAccountsRequest
- ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount resources.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| system_level | [bool](#bool) |  system_level indicates whether the request is to list Kargo ServiceAccounts at the system-level instead of the project-level. This value is ignored if system_level is true. |
-| project | [string](#string) |  project is the name of the project for which to list all Kargo ServiceAccount resources. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ListServiceAccountsResponse"></a>
-
-### ListServiceAccountsResponse
- ListServiceAccountsResponse contains a list of Kargo ServiceAccount resources.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| service_accounts | k8s.io.api.core.v1.ServiceAccount |  service_accounts is the list of Kargo ServiceAccount resources. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListStagesRequest"></a>
 
@@ -1392,13 +1320,12 @@ Stability is not guaranteed.
 <a name="akuity-io-kargo-service-v1alpha1-RevokeRequest"></a>
 
 ### RevokeRequest
- RevokeRequest is a request to remove permissions from a Kargo Role; or to unbind a Kargo ServiceAccount or users having specific OIDC claims from a Kargo Role.
+ RevokeRequest is a request to remove permissions from a Kargo Role virtual resource or to unbind users having specific OIDC claims from a Kargo Role virtual resource.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | project | [string](#string) |  project is the name of the project containing the Kargo Role that is the subject of the revocation. |
 | role | [string](#string) |  role is the name of the Kargo Role that is the subject of the revocation. |
 | user_claims | [Claims](#akuity-io-kargo-service-v1alpha1-Claims) |  user_claims are OIDC claims from which the Kargo Role virtual resource will be unmapped. |
-| service_accounts | [ServiceAccountReferences](#akuity-io-kargo-service-v1alpha1-ServiceAccountReferences) |  service_accounts is a collection of references to Kargo ServiceAccounts to be unbound from this Kargo Role. |
 | resource_details | [github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails](#github-com-akuity-kargo-api-rbac-v1alpha1-ResourceDetails) |  resource_details are the details of permissions to be revoked from the Kargo Role. |
 
 <a name="akuity-io-kargo-service-v1alpha1-RevokeResponse"></a>
@@ -1408,14 +1335,6 @@ Stability is not guaranteed.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | role | [github.com.akuity.kargo.api.rbac.v1alpha1.Role](#github-com-akuity-kargo-api-rbac-v1alpha1-Role) |  role is the Kargo Role virtual resource that was the subject of the revocation. |
-
-<a name="akuity-io-kargo-service-v1alpha1-ServiceAccountReferences"></a>
-
-### ServiceAccountReferences
- ServiceAccountReferences represents a collection of references to Kargo ServiceAccounts.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| service_accounts | [github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference](#github-com-akuity-kargo-api-rbac-v1alpha1-ServiceAccountReference) |  Note: oneof and repeated do not work together service_accounts is a list of Kargo ServiceAccounts. |
 
 <a name="akuity-io-kargo-service-v1alpha1-TagMap"></a>
 
@@ -1434,54 +1353,34 @@ Stability is not guaranteed.
 | key | [string](#string) |   |
 | value | [ImageStageMap](#akuity-io-kargo-service-v1alpha1-ImageStageMap) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest"></a>
 
-### UpdateClusterSecretRequest
- UpdateClusterSecretRequest is the request for updating an existing cluster secret.
+### UpdateConfigMapRequest
+ UpdateConfigMapRequest is the request for updating a project-level, system-level, or shared ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| name | [string](#string) |  name is the name of the cluster secret to update. |
-| data | [UpdateClusterSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to update a system-level ConfigMap instead of a project-level or shared one. |
+| project | [string](#string) |  project is the name of the project containing the ConfigMap to be updated. If empty and system_level is false, updates the ConfigMap in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the ConfigMap to be updated. |
+| description | [string](#string) |  description is a human-readable description of the ConfigMap. |
+| data | [UpdateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
 
-### UpdateClusterSecretRequest.DataEntry
+### UpdateConfigMapRequest.DataEntry
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateClusterSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapResponse"></a>
 
-### UpdateClusterSecretResponse
- UpdateClusterSecretResponse contains the updated cluster secret information.
+### UpdateConfigMapResponse
+ UpdateConfigMapResponse is the response containing the updated ConfigMap.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated cluster-level Kubernetes Secret. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsRequest"></a>
-
-### UpdateCredentialsRequest
- UpdateCredentialsRequest is the request for updating existing credentials.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the credentials. |
-| name | [string](#string) |  name is the name of the credentials to update. |
-| description | [string](#string) |  description is a human-readable description of the credentials. |
-| type | [string](#string) |  type specifies the credential type (git, helm, image). |
-| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
-| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
-| username | [string](#string) |  username is the username for authentication. |
-| password | [string](#string) |  password is the password or token for authentication. |
-
-<a name="akuity-io-kargo-service-v1alpha1-UpdateCredentialsResponse"></a>
-
-### UpdateCredentialsResponse
- UpdateCredentialsResponse contains the updated credentials information.
-| Field | Type | Description |
-| ----- | ---- | ----------- |
-| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
+| config_map | k8s.io.api.core.v1.ConfigMap |  config_map is the updated ConfigMap. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateFreightAliasRequest"></a>
 
@@ -1498,33 +1397,57 @@ Stability is not guaranteed.
 
 ### UpdateFreightAliasResponse
  UpdateFreightAliasResponse is the response after updating a freight's alias.  explicitly empty
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest"></a>
 
-### UpdateProjectSecretRequest
- UpdateProjectSecretRequest is the request for updating an existing project secret.
+### UpdateGenericCredentialsRequest
+ UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| project | [string](#string) |  project is the name of the project containing the secret. |
-| name | [string](#string) |  name is the name of the secret to update. |
-| description | [string](#string) |  description is a human-readable description of the secret. |
-| data | [UpdateProjectSecretRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry) |  data contains the key-value pairs that make up the secret data. |
+| system_level | [bool](#bool) |  system_level indicates whether the request is to update generic credentials in the system-level namespace instead of a project-level or shared namespace. |
+| project | [string](#string) |  project is the name of the project containing the generic credentials. If empty and system_level is false, updates generic credentials in the shared resources namespace. This value is ignored if system_level is true. |
+| name | [string](#string) |  name is the name of the generic credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the generic credentials. |
+| data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretRequest-DataEntry"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 
-### UpdateProjectSecretRequest.DataEntry
+### UpdateGenericCredentialsRequest.DataEntry
  
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
-<a name="akuity-io-kargo-service-v1alpha1-UpdateProjectSecretResponse"></a>
+<a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsResponse"></a>
 
-### UpdateProjectSecretResponse
- UpdateProjectSecretResponse contains the updated project secret information.
+### UpdateGenericCredentialsResponse
+ UpdateGenericCredentialsResponse contains the updated generic credentials information.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secret | k8s.io.api.core.v1.Secret |  secret is the updated Kubernetes Secret within the project. |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing generic credentials within the project. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsRequest"></a>
+
+### UpdateRepoCredentialsRequest
+ UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| project | [string](#string) |  project is the name of the project containing the credentials. |
+| name | [string](#string) |  name is the name of the credentials to update. |
+| description | [string](#string) |  description is a human-readable description of the credentials. |
+| type | [string](#string) |  type specifies the credential type (git, helm, image). |
+| repo_url | [string](#string) |  repo_url is the URL of the repository or registry these credentials apply to. |
+| repo_url_is_regex | [bool](#bool) |  repo_url_is_regex indicates whether repo_url should be treated as a regular expression. |
+| username | [string](#string) |  username is the username for authentication. |
+| password | [string](#string) |  password is the password or token for authentication. |
+
+<a name="akuity-io-kargo-service-v1alpha1-UpdateRepoCredentialsResponse"></a>
+
+### UpdateRepoCredentialsResponse
+ UpdateRepoCredentialsResponse contains the updated repository credentials information.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| credentials | k8s.io.api.core.v1.Secret |  credentials is the updated Kubernetes Secret containing the credentials. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateResourceRequest"></a>
 
@@ -1746,7 +1669,6 @@ RawFormat specifies the format for raw resource representation.
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
 | kargoManaged | [bool](#bool) |   |
 | claims | [Claim](#github-com-akuity-kargo-api-rbac-v1alpha1-Claim) |   |
-| serviceAccounts | [ServiceAccountReference](#github-com-akuity-kargo-api-rbac-v1alpha1-ServiceAccountReference) |   |
 | rules | k8s.io.api.rbac.v1.PolicyRule |   |
 
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-RoleResources"></a>
@@ -1868,13 +1790,24 @@ RawFormat specifies the format for raw resource representation.
 | revision | [string](#string) |   |
 | revisions | [string](#string) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-ArtifactReference"></a>
+
+### ArtifactReference
+ ArtifactReference is a reference to a specific version of an artifact.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| artifactType | [string](#string) |  ArtifactType specifies the type of artifact this is. Often, but not always, it will be the media type (MIME type) of the artifact referenced by this ArtifactReference.   |
+| subscriptionName | [string](#string) |  SubscriptionName is the name of the Subscription that discovered this artifact.   |
+| version | [string](#string) |  Version identifies a specific revision of this artifact.   |
+| metadata | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Metadata is a JSON object containing a mostly opaque collection of artifact attributes. (It must be an object. It may not be a list or a scalar value.) "Mostly" because Kargo may understand how to interpret some documented, well-known, top-level keys. Those aside, this metadata is only understood by a corresponding Subscriber implementation that created it.  +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-ArtifactoryWebhookReceiverConfig"></a>
 
 ### ArtifactoryWebhookReceiverConfig
  ArtifactoryWebhookReceiverConfig describes a webhook receiver that is compatible with JFrog Artifactory payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret-token` key whose value is the shared secret used to authenticate the webhook requests sent by JFrog Artifactory. For more information please refer to the JFrog Artifactory documentation:   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks   |
 | virtualRepoName | [string](#string) |  VirtualRepoName is the name of an Artifactory virtual repository.  When unspecified, the Artifactory webhook receiver depends on the value of the webhook payload's `data.repo_key` field when inferring the URL of the repository from which the webhook originated, which will always be an Artifactory "local repository." In cases where a Warehouse subscribes to such a repository indirectly via a "virtual repository," there will be a discrepancy between the inferred (local) repository URL and the URL actually used by the subscription, which can prevent the receiver from identifying such a Warehouse as one in need of refreshing. When specified, the value of the VirtualRepoName field supersedes the value of the webhook payload's `data.repo_key` field to compensate for that discrepancy.  In practice, when using virtual repositories, a separate Artifactory webhook receiver should be configured for each, but one such receiver can handle inbound webhooks from any number of local repositories that are aggregated by that virtual repository. For example, if a virtual repository `proj-virtual` aggregates container images from all of the `proj` Artifactory project's local image repositories, with a single webhook configured to post to a single receiver configured for the `proj-virtual` virtual repository, an image pushed to `example.frog.io/proj-&lt;local-repo-name&gt;/&lt;path&gt;/image`, will cause that receiver to refresh all Warehouses subscribed to `example.frog.io/proj-virtual/&lt;path&gt;/image`.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-AutoPromotionOptions"></a>
@@ -1891,7 +1824,7 @@ RawFormat specifies the format for raw resource representation.
  AzureWebhookReceiverConfig describes a webhook receiver that is compatible with Azure Container Registry (ACR) and Azure DevOps payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Azure when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Azure webhooks, please refer to the Azure documentation:   Azure Container Registry: 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories   Azure DevOps: 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Azure when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Azure webhooks, please refer to the Azure documentation:   Azure Container Registry: 	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories   Azure DevOps: 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-BitbucketWebhookReceiverConfig"></a>
 
@@ -1899,7 +1832,7 @@ RawFormat specifies the format for raw resource representation.
  BitbucketWebhookReceiverConfig describes a webhook receiver that is compatible with Bitbucket payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Bitbucket. For more information please refer to the Bitbucket documentation:   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Bitbucket. For more information please refer to the Bitbucket documentation:   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Chart"></a>
 
@@ -1928,10 +1861,10 @@ RawFormat specifies the format for raw resource representation.
  ChartSubscription defines a subscription to a Helm chart repository.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. It may be a classic chart repository (using HTTP/S) OR a repository within an OCI registry. Classic chart repositories can contain differently named charts. When this field points to such a repository, the Name field MUST also be used to specify the name of the desired chart within that repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the Name field MUST NOT be used. The RepoURL field is required.     |
-| name | [string](#string) |  Name specifies the name of a Helm chart to subscribe to within a classic chart repository specified by the RepoURL field. This field is required when the RepoURL field points to a classic chart repository and MUST otherwise be empty. |
-| semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new chart versions are permissible. This field is optional. When left unspecified, there will be no constraints, which means the latest version of the chart will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes. More info: https://github.com/masterminds/semver#checking-version-constraints   |
-| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the SemverConstraint field. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100.     |
+| discoveryLimit | [int64](#int64) |  DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the semverConstraint field. The upper limit for this field is 100. |
+| name | [string](#string) |  Name specifies the name of a Helm chart to subscribe to within a classic chart repository specified by the repoURL field. This field is required when the repoURL field points to a classic chart repository and MUST otherwise be empty. |
+| repoURL | [string](#string) |  RepoURL specifies the URL of a Helm chart repository. It may be a classic chart repository (using HTTP/S) OR a repository within an OCI registry. Classic chart repositories can contain differently named charts. When this field points to such a repository, the name field MUST also be used to specify the name of the desired chart within that repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the name field MUST NOT be used. This field is required. |
+| semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new chart versions are permissible. When left unspecified, there will be no constraints, which means the latest version of the chart will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfig"></a>
 
@@ -2007,6 +1940,7 @@ RawFormat specifies the format for raw resource representation.
 | git | [GitDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-GitDiscoveryResult) |  Git holds the commits discovered by the Warehouse for the Git subscriptions.  +optional |
 | images | [ImageDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ImageDiscoveryResult) |  Images holds the image references discovered by the Warehouse for the image subscriptions.  +optional |
 | charts | [ChartDiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-ChartDiscoveryResult) |  Charts holds the charts discovered by the Warehouse for the chart subscriptions.  +optional |
+| results | [DiscoveryResult](#github-com-akuity-kargo-api-v1alpha1-DiscoveryResult) |  Results holds the artifact references discovered by the Warehouse.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit"></a>
 
@@ -2042,6 +1976,15 @@ RawFormat specifies the format for raw resource representation.
 | key | [string](#string) |   |
 | value | [string](#string) |   |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-DiscoveryResult"></a>
+
+### DiscoveryResult
+ DiscoveryResult represents the result of an artifact discovery operation for some subscription.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  SubscriptionName is the name of the Subscription that discovered these results.   |
+| artifactReferences | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  ArtifactReferences is a list of references to specific versions of an artifact.  +optional |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-DockerHubWebhookReceiverConfig"></a>
 
 ### DockerHubWebhookReceiverConfig
@@ -2071,6 +2014,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
+| artifacts | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 | status | [FreightStatus](#github-com-akuity-kargo-api-v1alpha1-FreightStatus) |  Status describes the current status of this Freight. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightCollection"></a>
@@ -2129,6 +2073,7 @@ RawFormat specifies the format for raw resource representation.
 | commits | [GitCommit](#github-com-akuity-kargo-api-v1alpha1-GitCommit) |  Commits describes specific Git repository commits. |
 | images | [Image](#github-com-akuity-kargo-api-v1alpha1-Image) |  Images describes specific versions of specific container images. |
 | charts | [Chart](#github-com-akuity-kargo-api-v1alpha1-Chart) |  Charts describes specific versions of specific Helm charts. |
+| artifacts | [ArtifactReference](#github-com-akuity-kargo-api-v1alpha1-ArtifactReference) |  Artifacts describes specific versions of artifacts other than Git repository commits, container images, and Helm charts. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-FreightRequest"></a>
 
@@ -2224,7 +2169,7 @@ RawFormat specifies the format for raw resource representation.
  GenericWebhookReceiverConfig describes a generic webhook receiver that can be configured to respond to any arbitrary POST by applying user-defined actions on user-defined sets of resources selected by name, labels and/or values in pre-built indices. Both types of selectors support using values extracted from the request by means of expressions. Currently, refreshing resources is the only supported action and Warehouse is the only supported kind. "Refreshing" means immediately enqueuing the target resource for reconciliation by its controller. The practical effect of refreshing a Warehouses is triggering its artifact discovery process.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with the sender. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret.   |
 | actions | [GenericWebhookAction](#github-com-akuity-kargo-api-v1alpha1-GenericWebhookAction) |  Actions is a list of actions to be performed when a webhook event is received.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GenericWebhookTargetSelectionCriteria"></a>
@@ -2267,7 +2212,7 @@ RawFormat specifies the format for raw resource representation.
  GitHubWebhookReceiverConfig describes a webhook receiver that is compatible with GitHub payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by GitHub. For more information please refer to GitHub documentation:   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by GitHub. For more information please refer to GitHub documentation:   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitLabWebhookReceiverConfig"></a>
 
@@ -2275,7 +2220,7 @@ RawFormat specifies the format for raw resource representation.
  GitLabWebhookReceiverConfig describes a webhook receiver that is compatible with GitLab payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain a `secret-token` key containing the shared secret specified when registering the webhook in GitLab. For more information about this token, please refer to the GitLab documentation:   https://docs.gitlab.com/user/project/integrations/webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The secret is expected to contain a `secret-token` key containing the shared secret specified when registering the webhook in GitLab. For more information about this token, please refer to the GitLab documentation:   https://docs.gitlab.com/user/project/integrations/webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitSubscription"></a>
 
@@ -2283,20 +2228,20 @@ RawFormat specifies the format for raw resource representation.
  GitSubscription defines a subscription to a Git repository.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| repoURL | [string](#string) |  URL is the repository's URL. This is a required field.     |
-| commitSelectionStrategy | [string](#string) |  CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were "NewestFromBranch".  Accepted values:  - "NewestFromBranch": Selects the latest commit on the branch specified   by the Branch field or the default branch if none is specified. This is   the default strategy.  - "SemVer": Selects the commit referenced by the semantically greatest   tag. The SemverConstraint field can optionally be used to narrow the set   of tags eligible for selection.  - "Lexical": Selects the commit referenced by the lexicographically   greatest tag. Useful when tags embed a _leading_ date or timestamp. The   AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used to   narrow the set of tags eligible for selection.  - "NewestTag": Selects the commit referenced by the most recently created   tag. The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be   used to narrow the set of tags eligible for selection.   |
-| branch | [string](#string) |  Branch references a particular branch of the repository. The value in this field only has any effect when the CommitSelectionStrategy is NewestFromBranch or left unspecified (which is implicitly the same as NewestFromBranch). This field is optional. When left unspecified, (and the CommitSelectionStrategy is NewestFromBranch or unspecified), the subscription is implicitly to the repository's default branch.      |
-| strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the CommitSelectionStrategy is SemVer. This should be disabled cautiously, as it creates the potential for any tag containing numeric characters only to be mistaken for a semver string containing the major version number only.   |
-| semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is SemVer. This field is optional. When left unspecified, there will be no constraints, which means the latest semantically tagged commit will always be used. Care should be taken with leaving this field unspecified, as it can lead to the unanticipated rollout of breaking changes.   |
-| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
-| allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered in determining the newest commit of interest. The values in this field only have any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.   |
-| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. No regular expressions or glob patterns are supported yet. The value in this field only has any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
-| ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest commit of interest. The values in this field only have any effect when the CommitSelectionStrategy is Lexical, NewestTag, or SemVer. This field is optional.   |
-| expressionFilter | [string](#string) |  ExpressionFilter is an expression that can optionally be used to limit the commits or tags that are considered in determining the newest commit of interest based on their metadata.  For commit-based strategies (NewestFromBranch), the filter applies to commits and has access to commit metadata variables. For tag-based strategies (Lexical, NewestTag, SemVer), the filter applies to tags and has access to tag metadata variables. The filter is applied after AllowTagsRegexes, IgnoreTagsRegexes, and SemverConstraint fields.  The expression should be a valid expr-lang expression that evaluates to true or false. When the expression evaluates to true, the commit/tag is included in the set that is considered. When the expression evaluates to false, the commit/tag is excluded.  Available variables depend on the CommitSelectionStrategy:  For NewestFromBranch (commit filtering):   - `id`: The ID (sha) of the commit.   - `commitDate`: The commit date of the commit.   - `author`: The author of the commit message, in the format "Name &lt;email&gt;".   - `committer`: The person who committed the commit, in the format 	   "Name &lt;email&gt;".   - `subject`: The subject (first line) of the commit message.  For Lexical, NewestTag, SemVer (tag filtering):   - `tag`: The name of the tag.   - `id`: The ID (sha) of the commit associated with the tag.   - `creatorDate`: The creation date of an annotated tag, or the commit 		date of a lightweight tag.   - `author`: The author of the commit message associated with the tag, 	   in the format "Name &lt;email&gt;".   - `committer`: The person who committed the commit associated with the 	   tag, in the format "Name &lt;email&gt;".   - `subject`: The subject (first line) of the commit message associated 	   with the tag. 	 - `tagger`: The person who created the tag, in the format "Name &lt;email&gt;". 	   Only available for annotated tags. 	 - `annotation`: The subject (first line) of the tag annotation. Only 	   available for annotated tags.  Refer to the expr-lang documentation for more details on syntax and capabilities of the expression language: https://expr-lang.org.   |
+| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the tags that are considered in determining the newest commit of interest. Deprecated: Use allowTagsRegexes instead. |
+| allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the tags that are considered. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
+| branch | [string](#string) |  Branch references a particular branch of the repository. Only has effect when CommitSelectionStrategy is NewestFromBranch or unspecified. When left unspecified, the subscription is implicitly to the repository's default branch. Must be a valid branch name. |
+| commitSelectionStrategy | [string](#string) |  CommitSelectionStrategy specifies the rules for how to identify the newest commit of interest in the repository specified by the RepoURL field. |
+| discoveryLimit | [int64](#int64) |  DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100. |
+| excludePaths | [string](#string) |  ExcludePaths is a list of selectors that designate paths in the repository that should NOT trigger the production of new Freight when changes are detected therein. |
+| expressionFilter | [string](#string) |  ExpressionFilter is an expression that can optionally be used to limit the commits or tags that are considered in determining the newest commit of interest based on their metadata. |
+| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest commit of interest. Deprecated: Use ignoreTagsRegexes instead. |
+| ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
+| includePaths | [string](#string) |  IncludePaths is a list of selectors that designate paths in the repository that should trigger the production of new Freight when changes are detected therein. |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
-| includePaths | [string](#string) |  IncludePaths is a list of selectors that designate paths in the repository that should trigger the production of new Freight when changes are detected therein. When specified, only changes in the identified paths will trigger Freight production. When not specified, changes in any path will trigger Freight production. Selectors may be defined using:   1. Exact paths to files or directories (ex. "charts/foo")   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";      ex. "regexp:^.*\.yaml$")  Paths selected by IncludePaths may be unselected by ExcludePaths. This is a useful method for including a broad set of paths and then excluding a subset of them.  |
-| excludePaths | [string](#string) |  ExcludePaths is a list of selectors that designate paths in the repository that should NOT trigger the production of new Freight when changes are detected therein. When specified, changes in the identified paths will not trigger Freight production. When not specified, paths that should trigger Freight production will be defined solely by IncludePaths. Selectors may be defined using:   1. Exact paths to files or directories (ex. "charts/foo")   2. Glob patterns (prefix the pattern with "glob:"; ex. "glob:*.yaml")   3. Regular expressions (prefix the pattern with "regex:" or "regexp:";      ex. "regexp:^.*\.yaml$") Paths selected by IncludePaths may be unselected by ExcludePaths. This is a useful method for including a broad set of paths and then excluding a subset of them.  |
-| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The limit is applied after filtering commits based on the AllowTagsRegexes, IgnoreTagsRegexes, and ExpressionFilter fields. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100.     |
+| repoURL | [string](#string) |  URL is the repository's URL. This is a required field. |
+| semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer. |
+| strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag contains ALL of major, minor, and patch version components. Only has effect when CommitSelectionStrategy is SemVer. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig"></a>
 
@@ -2304,7 +2249,7 @@ RawFormat specifies the format for raw resource representation.
  GiteaWebhookReceiverConfig describes a webhook receiver that is compatible with Gitea payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Gitea. For more information please refer to the Gitea documentation:   https://docs.gitea.io/en-us/webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value is the shared secret used to authenticate the webhook requests sent by Gitea. For more information please refer to the Gitea documentation:   https://docs.gitea.io/en-us/webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-HarborWebhookReceiverConfig"></a>
 
@@ -2312,7 +2257,7 @@ RawFormat specifies the format for raw resource representation.
  HarborWebhookReceiverConfig describes a webhook receiver that is compatible with Harbor payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation:   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The secret is expected to contain an `auth-header` key containing the "auth header" specified when registering the webhook in Harbor. For more information, please refer to the Harbor documentation:   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Health"></a>
 
@@ -2375,21 +2320,21 @@ RawFormat specifies the format for raw resource representation.
 <a name="github-com-akuity-kargo-api-v1alpha1-ImageSubscription"></a>
 
 ### ImageSubscription
- ImageSubscription defines a subscription to an image repository.  
+ ImageSubscription defines a subscription to a container image repository.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| repoURL | [string](#string) |  RepoURL specifies the URL of the image repository to subscribe to. The value in this field MUST NOT include an image tag. This field is required.     |
-| imageSelectionStrategy | [string](#string) |  ImageSelectionStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were "SemVer".  Accepted values:  - "Digest": Selects the image currently referenced by the tag specified   by the Constraint field.  - "Lexical": Selects the image referenced by the lexicographically greatest   tag. This strategy is useful when tags embed a leading date or timestamp.   The AllowTagsRegexes and IgnoreTagsRegexes fields can optionally be used   to narrow the set of tags eligible for selection.  - "NewestBuild": Selects the image that was most recently pushed to the   repository. The AllowTagsRegexes and IgnoreTagsRegexes fields can   optionally be used to narrow the set of tags eligible for selection. This   is the least efficient selection strategy and is likely to cause rate   limiting affecting this Warehouse and possibly others. This strategy   should be avoided.  - "SemVer": Selects the image with the semantically greatest tag. The   Constraint field may optionally include a semver version constraint to   restrict the set of tags eligible for selection to those representing   semantic versions in a given range. The AllowTagsRegexes and   IgnoreTagsRegexes fields can optionally be used to further narrow the   set of tags eligible for selection.   See the following for for a description of semver version constraint   syntax: https://github.com/Masterminds/semver/?tab=readme-ov-file#checking-version-constraints   |
-| strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the ImageSelectionStrategy is SemVer. This should be disabled cautiously, as it is not uncommon to tag container images with short Git commit hashes, which have the potential to contain numeric characters only and could be mistaken for a semver string containing the major version number only.   |
-| constraint | [string](#string) |  Constraint specifies ImageSelectionStrategy-specific constraints on what new image revisions are permissible. Acceptable values for this field vary contextually by ImageSelectionStrategy. The field is optional for some strategies. Others either require it or ignore it. For strategies that treat this field as optional, specifying no value means "no constraints." Refer to the descriptions of individual strategies to learn if or how they use this field.   |
-| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional.  Deprecated: Use AllowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
-| allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the image tags that are considered in determining the newest revision of an image. This field is optional.   |
-| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional.  Deprecated: Use IgnoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0.   |
-| ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional.   |
-| platform | [string](#string) |  Platform is a string of the form &lt;os&gt;/&lt;arch&gt; that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image referenced by this ImageRepositorySubscription will run on a Kubernetes node with a different OS/architecture than the Kargo controller. At present this is uncommon, but not unheard of.   |
+| allowTags | [string](#string) |  AllowTags is a regular expression that can optionally be used to limit the image tags that are considered in determining the newest version of an image. This field is optional. Deprecated: Use allowTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0. |
+| allowTagsRegexes | [string](#string) |  AllowTagsRegexes is a list of regular expressions that can optionally be used to limit the image tags that are considered in determining the newest revision of an image. This field is optional. |
+| cacheByTag | [bool](#bool) |  CacheByTag specifies whether to cache image metadata by tag. This can improve performance but may lead to stale data if mutable tags are used. |
+| constraint | [string](#string) |  Constraint specifies ImageSelectionStrategy-specific constraints on what new image revisions are permissible. Acceptable values for this field vary contextually by ImageSelectionStrategy. The field is optional for some strategies. Others either require it or ignore it. For strategies that treat this field as optional, specifying no value means "no constraints." |
+| discoveryLimit | [int64](#int64) |  DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100. |
+| ignoreTags | [string](#string) |  IgnoreTags is a list of tags that must be ignored when determining the newest version of an image. No regular expressions or glob patterns are supported yet. This field is optional. Deprecated: Use ignoreTagsRegexes instead. Beginning in v1.11.0, artifact discovery will FAIL if this field is non-empty. This field will be removed in v1.13.0. |
+| ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration when determining the newest revision of an image. This field is optional. |
+| imageSelectionStrategy | [string](#string) |  ImageSelectionStrategy specifies the rules for how to identify the newest version of the image specified by the RepoURL field. This field is optional. When left unspecified, the field is implicitly treated as if its value were "SemVer". Accepted values: "Digest", "Lexical", "NewestBuild", "SemVer". |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
-| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of image references that can be discovered for this subscription. The limit is applied after filtering images based on the AllowTagsRegexes and IgnoreTagsRegexes fields. When left unspecified, the field is implicitly treated as if its value were "20". The upper limit for this field is 100.     |
-| cacheByTag | [bool](#bool) |  CacheByTag specifies whether to use image metadata cached by tag when discovering new image revisions. When set to true, image metadata cached by tag will be used when available, which can help reduce the number of requests made to the image repository and dramatically improve performance. When set to false, image metadata is only ever cached by digest. This setting is only safe to enable when it's known with certainty that relevant tags are "immutable" (i.e. the exact images referenced by tags remain constant over time and tags are never "re-used" to point to new/different images). This setting will automatically be ignored by the Digest selection strategy, which assumes that tags are mutable. Note that the Kargo administrator may choose to either disallow the use of this setting OR require that it be used (for non-Digest selection strategies). When configuration disagrees with the administrator's policy, artifact discovery will FAIL.   |
+| platform | [string](#string) |  Platform is a string of the form &lt;os&gt;/&lt;arch&gt; that limits the tags that can be considered when searching for new versions of an image. This field is optional. When left unspecified, it is implicitly equivalent to the OS/architecture of the Kargo controller. Care should be taken to set this value correctly in cases where the image will run on a Kubernetes node with a different OS/architecture than the Kargo controller. |
+| repoURL | [string](#string) |  RepoURL specifies the URL of the image repository to subscribe to. The value in this field MUST NOT include an image tag. This field is required. |
+| strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag is one containing ALL of major, minor, and patch version components. This is enabled by default, but only has any effect when the ImageSelectionStrategy is SemVer. This should be disabled cautiously, as it is not uncommon to tag container images with short Git commit hashes, which could be mistaken for a semver string containing the major version number only. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-IndexSelector"></a>
 
@@ -2645,17 +2590,18 @@ RawFormat specifies the format for raw resource representation.
  QuayWebhookReceiverConfig describes a webhook receiver that is compatible with Quay.io payloads.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "cluster Secrets" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Quay when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Quay webhooks, please refer to the Quay documentation:   https://docs.quay.io/guides/notifications.html   |
+| secretRef | k8s.io.api.core.v1.LocalObjectReference |  SecretRef contains a reference to a Secret. For Project-scoped webhook receivers, the referenced Secret must be in the same namespace as the ProjectConfig.  For cluster-scoped webhook receivers, the referenced Secret must be in the designated "system resources" namespace.  The Secret's data map is expected to contain a `secret` key whose value does NOT need to be shared directly with Quay when registering a webhook. It is used only by Kargo to create a complex, hard-to-guess URL, which implicitly serves as a shared secret. For more information about Quay webhooks, please refer to the Quay documentation:   https://docs.quay.io/guides/notifications.html   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-RepoSubscription"></a>
 
 ### RepoSubscription
- RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, or a Helm chart repository.
+ RepoSubscription describes a subscription to ONE OF a Git repository, a container image repository, a Helm chart repository, or something else.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | git | [GitSubscription](#github-com-akuity-kargo-api-v1alpha1-GitSubscription) |  Git describes a subscriptions to a Git repository. |
 | image | [ImageSubscription](#github-com-akuity-kargo-api-v1alpha1-ImageSubscription) |  Image describes a subscription to container image repository. |
 | chart | [ChartSubscription](#github-com-akuity-kargo-api-v1alpha1-ChartSubscription) |  Chart describes a subscription to a Helm chart repository. |
+| subscription | [Subscription](#github-com-akuity-kargo-api-v1alpha1-Subscription) |  Subscription describes a subscription to something that is not a Git, container image, or Helm chart repository. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-Stage"></a>
 
@@ -2737,6 +2683,17 @@ RawFormat specifies the format for raw resource representation.
 | message | [string](#string) |  Message is a display message about the step, including any errors. |
 | continueOnError | [bool](#bool) |  ContinueOnError is a boolean value that, if set to true, will cause the Promotion to continue executing the next step even if this step fails. It also will not permit this failure to impact the overall status of the Promotion. |
 
+<a name="github-com-akuity-kargo-api-v1alpha1-Subscription"></a>
+
+### Subscription
+ Subscription represents a subscription to some kind of artifact repository.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| subscriptionType | [string](#string) |  SubscriptionType specifies the kind of subscription this is.   |
+| name | [string](#string) |  Name is a unique (with respect to a Warehouse) name used for identifying this subscription.   |
+| config | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Config is a JSON object containing opaque configuration for this subscription. (It must be an object. It may not be a list or a scalar value.) This is only understood by a corresponding Subscriber implementation for the ArtifactType.  +optional |
+| discoveryLimit | [int32](#int32) |  DiscoveryLimit is an optional limit on the number of artifacts that can be discovered for this subscription.     |
+
 <a name="github-com-akuity-kargo-api-v1alpha1-Verification"></a>
 
 ### Verification
@@ -2798,7 +2755,7 @@ RawFormat specifies the format for raw resource representation.
 | shard | [string](#string) |  Shard is the name of the shard that this Warehouse belongs to. This is an optional field. If not specified, the Warehouse will belong to the default shard. A defaulting webhook will sync this field with the value of the kargo.akuity.io/shard label. When the shard label is not present or differs from the value of this field, the defaulting webhook will set the label to the value of this field. If the shard label is present and this field is empty, the defaulting webhook will set the value of this field to the value of the shard label. |
 | interval | k8s.io.apimachinery.pkg.apis.meta.v1.Duration |  Interval is the reconciliation interval for this Warehouse. On each reconciliation, the Warehouse will discover new artifacts and optionally produce new Freight. This field is optional. When left unspecified, the field is implicitly treated as if its value were "5m0s".      |
 | freightCreationPolicy | [string](#string) |  FreightCreationPolicy describes how Freight is created by this Warehouse. This field is optional. When left unspecified, the field is implicitly treated as if its value were "Automatic".  Accepted values:  - "Automatic": New Freight is created automatically when any new artifact   is discovered. - "Manual": New Freight is never created automatically.    |
-| subscriptions | [RepoSubscription](#github-com-akuity-kargo-api-v1alpha1-RepoSubscription) |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
+| subscriptions | k8s.io.apiextensions_apiserver.pkg.apis.apiextensions.v1.JSON |  Subscriptions describes sources of artifacts to be included in Freight produced by this Warehouse.   |
 | freightCreationCriteria | [FreightCreationCriteria](#github-com-akuity-kargo-api-v1alpha1-FreightCreationCriteria) |  FreightCreationCriteria defines criteria that must be satisfied for Freight to be created automatically from new artifacts following discovery. This field has no effect when the FreightCreationPolicy is `Manual`.   |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-WarehouseStats"></a>

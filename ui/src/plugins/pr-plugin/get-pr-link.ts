@@ -5,6 +5,9 @@ type gitOpenPrOutput = {
   };
 };
 
+// Steps that can produce PR deep links
+export const PR_STEP_TYPES = ['git-open-pr', 'git-wait-for-pr'];
+
 export const getPullRequestLink = (promotionStepOutput: Record<string, unknown>) =>
   (promotionStepOutput as gitOpenPrOutput)?.pr?.url;
 

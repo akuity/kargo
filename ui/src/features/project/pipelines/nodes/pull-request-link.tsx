@@ -41,7 +41,7 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
   );
 
   const indexOfPullRequest = promotion?.spec?.steps?.findIndex(
-    (step) => step?.uses === 'git-open-pr'
+    (step: { uses?: string }) => step?.uses === 'git-open-pr' || step?.uses === 'git-wait-for-pr'
   );
 
   if (getPromotionQuery.isFetching) {
@@ -53,27 +53,37 @@ export const PullRequestLink = (props: PullRequestLinkProps) => {
     return null;
   }
 
-  if (!indexOfPullRequest || indexOfPullRequest < 0) {
+  if (indexOfPullRequest === undefined || indexOfPullRequest < 0) {
     return null;
   }
 
-  const hasPullRequestStepSucceeded =
-    promotion?.status?.stepExecutionMetadata[indexOfPullRequest]?.status === 'Succeeded';
+  const step = promotion.spec.steps[indexOfPullRequest];
+  const stepType = step?.uses;
+  const stepMetadata = promotion?.status?.stepExecutionMetadata?.[indexOfPullRequest];
+  const stepStatus = stepMetadata?.status;
 
-  if (!hasPullRequestStepSucceeded) {
-    return null;
-  }
-
-  const aliasOfPullRequestStep = getPromotionStepAlias(
-    promotion.spec.steps[indexOfPullRequest],
-    indexOfPullRequest
-  );
+  const aliasOfPullRequestStep = getPromotionStepAlias(step, indexOfPullRequest);
 
   const outputOfPullRequestStep = outputsByStepAlias?.[aliasOfPullRequestStep];
 
-  const pullRequestLink = (outputOfPullRequestStep as { pr?: { url?: string } }).pr?.url;
+  const pullRequestLink = (outputOfPullRequestStep as { pr?: { url?: string } })?.pr?.url;
 
   if (!pullRequestLink) {
+    return null;
+  }
+
+  // For git-open-pr: only show when succeeded
+  // For git-wait-for-pr: show when running (has PR URL) or succeeded
+  const isGitWaitForPr = stepType === 'git-wait-for-pr';
+  const isGitOpenPr = stepType === 'git-open-pr';
+  const hasPullRequestStepSucceeded = stepStatus === 'Succeeded';
+  const hasPullRequestStepRunning = stepStatus === 'Running';
+
+  const isStatusAcceptable =
+    (isGitOpenPr && hasPullRequestStepSucceeded) ||
+    (isGitWaitForPr && (hasPullRequestStepSucceeded || hasPullRequestStepRunning));
+
+  if (!isStatusAcceptable) {
     return null;
   }
 

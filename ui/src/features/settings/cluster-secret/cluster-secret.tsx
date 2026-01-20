@@ -6,35 +6,35 @@ import { Button, Card, Flex, Table, Tag } from 'antd';
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import {
-  deleteClusterSecret,
+  deleteGenericCredentials,
   getConfig,
-  listClusterSecrets
+  listGenericCredentials
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
-import { CreateClusterSecretModal } from './create-cluster-secret-modal';
+import { CreateSystemSecretModal } from './create-system-secret-modal';
 
 export const ClusterSecret = () => {
-  const listClusterSecretsQuery = useQuery(listClusterSecrets);
+  const listSystemSecretsQuery = useQuery(listGenericCredentials, { systemLevel: true });
   const confirm = useConfirmModal();
 
   const getConfigQuery = useQuery(getConfig);
   const config = getConfigQuery.data;
 
   const createSecretModal = useModal((p) => (
-    <CreateClusterSecretModal {...p} onSuccess={listClusterSecretsQuery.refetch} />
+    <CreateSystemSecretModal {...p} onSuccess={listSystemSecretsQuery.refetch} />
   ));
 
-  const deleteSecretsMutation = useMutation(deleteClusterSecret, {
-    onSuccess: () => listClusterSecretsQuery.refetch()
+  const deleteSecretsMutation = useMutation(deleteGenericCredentials, {
+    onSuccess: () => listSystemSecretsQuery.refetch()
   });
 
   return (
     <Card
       title={
         <>
-          Cluster Secret{' '}
+          System Secrets{' '}
           <Tag className='text-xs ml-2' color='blue'>
-            namespace: {config?.clusterSecretsNamespace}
+            namespace: {config?.systemResourcesNamespace}
           </Tag>
         </>
       }
@@ -48,9 +48,9 @@ export const ClusterSecret = () => {
       <Table
         className='my-2'
         scroll={{ x: 'max-content' }}
-        dataSource={listClusterSecretsQuery.data?.secrets || []}
+        dataSource={listSystemSecretsQuery.data?.credentials || []}
         rowKey={(record) => record?.metadata?.name || ''}
-        loading={listClusterSecretsQuery.isLoading}
+        loading={listSystemSecretsQuery.isLoading}
         pagination={{ defaultPageSize: 10, hideOnSinglePage: true }}
         size='small'
         columns={[
@@ -88,8 +88,8 @@ export const ClusterSecret = () => {
                   size='small'
                   onClick={() =>
                     createSecretModal.show((p) => (
-                      <CreateClusterSecretModal
-                        onSuccess={listClusterSecretsQuery.refetch}
+                      <CreateSystemSecretModal
+                        onSuccess={listSystemSecretsQuery.refetch}
                         init={record}
                         {...p}
                       />
@@ -111,6 +111,7 @@ export const ClusterSecret = () => {
                       ),
                       onOk: () =>
                         deleteSecretsMutation.mutate({
+                          systemLevel: true,
                           name: record?.metadata?.name
                         })
                     });

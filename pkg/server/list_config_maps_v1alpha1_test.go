@@ -26,14 +26,15 @@ func TestListConfigMaps(t *testing.T) {
 		rolloutsDisabled bool
 		assertions       func(*testing.T, *connect.Response[svcv1alpha1.ListConfigMapsResponse], error)
 	}{
-		"empty project": {
+		"empty project (shared namespace)": {
 			req: &svcv1alpha1.ListConfigMapsRequest{
 				Project: "",
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.ListConfigMapsResponse], err error) {
-				require.Error(t, err)
-				require.Equal(t, connect.CodeInvalidArgument, connect.CodeOf(err))
-				require.Nil(t, r)
+				require.NoError(t, err)
+				require.NotNil(t, r)
+				// Should return config maps from shared namespace (none in this test)
+				require.Empty(t, r.Msg.GetConfigMaps())
 			},
 		},
 		"non-existing project": {

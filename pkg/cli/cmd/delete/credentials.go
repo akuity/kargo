@@ -29,6 +29,7 @@ type deleteCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	Shared  bool
 	Project string
 	Names   []string
 }
@@ -54,7 +55,11 @@ kargo delete credentials --project=my-project my-credentials1 my-credentials2
 
 # Delete credentials from default project
 kargo config set-project my-project
-kargo delete credentials my-credentials`),
+kargo delete credentials my-credentials
+
+# Delete shared credentials
+kargo delete credentials --shared my-credentials
+`),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
 
@@ -85,6 +90,12 @@ func (o *deleteCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to delete credentials. If not set, the default project will be used.",
 	)
+	option.Shared(
+		cmd.Flags(), &o.Shared, false,
+		"Whether to delete shared credentials that can be used across all projects.",
+	)
+	// project and shared flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SharedFlag)
 }
 
 // complete sets the options from the command arguments.
@@ -97,8 +108,10 @@ func (o *deleteCredentialsOptions) complete(args []string) {
 func (o *deleteCredentialsOptions) validate() error {
 	var errs []error
 
-	if o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
+	if o.Project == "" && !o.Shared {
+		errs = append(errs, fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SharedFlag,
+		))
 	}
 
 	if len(o.Names) == 0 {
@@ -120,13 +133,18 @@ func (o *deleteCredentialsOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
+	var project string
+	if !o.Shared {
+		project = o.Project
+	}
+
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteCredentials(
+		if _, err := kargoSvcCli.DeleteRepoCredentials(
 			ctx,
 			connect.NewRequest(
-				&v1alpha1.DeleteCredentialsRequest{
-					Project: o.Project,
+				&v1alpha1.DeleteRepoCredentialsRequest{
+					Project: project,
 					Name:    name,
 				},
 			),

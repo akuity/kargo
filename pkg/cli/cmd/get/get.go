@@ -51,9 +51,8 @@ kargo get promotions --project=my-project --stage=my-stage
 	cmd.AddCommand(newGetProjectsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetPromotionsCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newRolesCommand(cfg, streams, cmdOpts))
-	cmd.AddCommand(newGetServiceAccountsCommand(cfg, streams, cmdOpts))
-	cmd.AddCommand(newGetServiceAccountTokensCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetStagesCommand(cfg, streams, cmdOpts))
+	cmd.AddCommand(newGetTokensCommand(cfg, streams, cmdOpts))
 	cmd.AddCommand(newGetWarehousesCommand(cfg, streams, cmdOpts))
 
 	return cmd
@@ -99,16 +98,14 @@ func PrintObjects[T runtime.Object](
 		// TODO(krancour): This is hacky and I don't love it
 		if len(list.Items) > 0 {
 			if secret, ok := list.Items[0].Object.(*corev1.Secret); ok &&
-				secret.GetLabels()[rbacapi.LabelKeyServiceAccountToken] == rbacapi.LabelValueTrue {
-				printObj = newServiceAccountTokensTable(list)
+				secret.GetLabels()[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue {
+				printObj = newAPITokensTable(list)
 			} else {
 				printObj = newCredentialsTable(list)
 			}
 		} else {
 			printObj = list
 		}
-	case *corev1.ServiceAccount:
-		printObj = newServiceAccountTable(list)
 	case *kargoapi.ClusterConfig:
 		printObj = newClusterConfigTable(list)
 	case *kargoapi.Freight:

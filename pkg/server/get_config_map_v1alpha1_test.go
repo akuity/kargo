@@ -27,7 +27,7 @@ func TestGetConfigMap(t *testing.T) {
 		interceptor interceptor.Funcs
 		assertions  func(*testing.T, *connect.Response[svcv1alpha1.GetConfigMapResponse], error)
 	}{
-		"empty project": {
+		"empty name": {
 			req: &svcv1alpha1.GetConfigMapRequest{
 				Project: "",
 				Name:    "",
@@ -58,6 +58,7 @@ func TestGetConfigMap(t *testing.T) {
 				Project: "kargo-demo",
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				&corev1.ConfigMap{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "cm-1",
@@ -87,6 +88,7 @@ func TestGetConfigMap(t *testing.T) {
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_JSON,
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				mustNewObject[corev1.ConfigMap]("testdata/config-map-1.yaml"),
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.GetConfigMapResponse], err error) {
@@ -122,6 +124,7 @@ func TestGetConfigMap(t *testing.T) {
 				Format:  svcv1alpha1.RawFormat_RAW_FORMAT_YAML,
 			},
 			objects: []client.Object{
+				mustNewObject[corev1.Namespace]("testdata/namespace.yaml"),
 				mustNewObject[corev1.ConfigMap]("testdata/config-map-1.yaml"),
 			},
 			assertions: func(t *testing.T, r *connect.Response[svcv1alpha1.GetConfigMapResponse], err error) {

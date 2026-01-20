@@ -5,12 +5,12 @@ import AntdFormLabel from 'antd/es/form/FormItemLabel';
 import { JSONSchema7 } from 'json-schema';
 import { useState } from 'react';
 
+import { WarehouseExpanded } from '@ui/extend/types';
 import { RjsfConfigContext } from '@ui/features/common/form/rjsf/context';
 import { DescriptionFieldTemplate } from '@ui/features/common/form/rjsf/description-field-template';
 import { FieldTemplate } from '@ui/features/common/form/rjsf/field-template';
 import { ObjectFieldTemplate } from '@ui/features/common/form/rjsf/object-field-template';
 import rjsfStylesOverride from '@ui/features/common/form/rjsf/style-overrides.module.less';
-import { WarehouseSpec } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { warehouseCreateFormJSONSchema } from './schema';
 import { SubscriptionWizard } from './subscription-wizard';
@@ -32,7 +32,7 @@ export const CreateWarehouseWizard = (props: CreateWarehouseWizardProps) => {
 
   const { formState, setFormState } = props;
 
-  const subscriptions = (formState?.spec as WarehouseSpec)?.subscriptions || [];
+  const subscriptions = (formState?.spec as WarehouseExpanded['spec'])?.subscriptions || [];
 
   return (
     <RjsfConfigContext.Provider

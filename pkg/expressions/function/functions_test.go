@@ -101,7 +101,7 @@ func Test_getCommitFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Git: &kargoapi.GitSubscription{
 									RepoURL: "https://github.com/example/repo",
@@ -339,7 +339,7 @@ func Test_getImageFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Image: &kargoapi.ImageSubscription{
 									RepoURL: "registry.example.com/app",
@@ -563,7 +563,7 @@ func Test_getChartFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: "oci://registry.example.com/chart",
@@ -611,7 +611,7 @@ func Test_getChartFromFreight(t *testing.T) {
 						Namespace: testProject,
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{
+						InternalSubscriptions: []kargoapi.RepoSubscription{
 							{
 								Chart: &kargoapi.ChartSubscription{
 									RepoURL: "https://charts.example.com",
@@ -796,7 +796,7 @@ func Test_getChartFromFreight(t *testing.T) {
 	}
 }
 
-func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
+func Test_getChartFromDiscoveredArtifacts(t *testing.T) {
 	for _, tc := range []struct {
 		name       string
 		artifacts  *kargoapi.DiscoveredArtifacts
@@ -897,6 +897,232 @@ func Test_getChartfromDiscoveredArtifacts(t *testing.T) {
 			fn := getChartFromDiscoveredArtifacts(tc.artifacts)
 			result, err := fn(tc.args...)
 			tc.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getArtifactFromFreight(t *testing.T) {
+	const testProject = "fake-project"
+
+	scheme := runtime.NewScheme()
+	assert.NoError(t, kargoapi.AddToScheme(scheme))
+
+	testCases := []struct {
+		name        string
+		objects     []client.Object
+		freightReqs []kargoapi.FreightRequest
+		freightRefs []kargoapi.FreightReference
+		args        []any
+		assertions  func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "subscription name only",
+			objects: []client.Object{
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-warehouse",
+						Namespace: testProject,
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Subscription: &kargoapi.Subscription{
+								SubscriptionType: "fake-type",
+								Name:             "fake-sub",
+							},
+						}},
+					},
+				},
+			},
+			freightReqs: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+			}},
+			freightRefs: []kargoapi.FreightReference{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+				Artifacts: []kargoapi.ArtifactReference{{
+					SubscriptionName: "fake-sub",
+					Version:          "fake-version",
+				}},
+			}},
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
+				assert.True(t, ok)
+				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
+				assert.Equal(t, "fake-version", artifact.Version)
+			},
+		},
+		{
+			name: "subscription name and origin",
+			freightReqs: []kargoapi.FreightRequest{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+			}},
+			freightRefs: []kargoapi.FreightReference{{
+				Origin: kargoapi.FreightOrigin{
+					Name: "fake-warehouse",
+					Kind: "Warehouse",
+				},
+				Artifacts: []kargoapi.ArtifactReference{{
+					SubscriptionName: "fake-sub",
+					Version:          "fake-version",
+				}},
+			}},
+			args: []any{"fake-sub", kargoapi.FreightOrigin{
+				Kind: "Warehouse",
+				Name: "fake-warehouse",
+			}},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
+				assert.True(t, ok)
+				assert.Equal(t, "fake-sub", artifact.SubscriptionName)
+				assert.Equal(t, "fake-version", artifact.Version)
+			},
+		},
+		{
+			name: "no arguments",
+			args: []any{},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1-2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "too many arguments",
+			args: []any{"fake-sub", kargoapi.FreightOrigin{}, "extra"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "expected 1-2 arguments")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid first argument type",
+			args: []any{123},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "first argument must be string")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "invalid second argument type",
+			args: []any{"fake-sub", "invalid"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.ErrorContains(t, err, "second argument must be FreightOrigin")
+				assert.Nil(t, result)
+			},
+		},
+		{
+			name: "success",
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				assert.NoError(t, err)
+				assert.Nil(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			ctx := context.Background()
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(testCase.objects...).
+				Build()
+			result, err := getArtifactFromFreight(
+				ctx,
+				c,
+				testProject,
+				testCase.freightReqs,
+				testCase.freightRefs,
+			)(testCase.args...)
+			testCase.assertions(t, result, err)
+		})
+	}
+}
+
+func Test_getArtifactFromDiscoveredArtifacts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		artifacts  *kargoapi.DiscoveredArtifacts
+		args       []any
+		assertions func(t *testing.T, result any, err error)
+	}{
+		{
+			name: "wrong number of args",
+			args: []any{"one", "two"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "expected 1 argument, got 2")
+			},
+		},
+		{
+			name: "invalid arg type",
+			args: []any{1},
+			assertions: func(t *testing.T, result any, err error) {
+				require.Nil(t, result)
+				require.ErrorContains(t, err, "first argument must be string, got int")
+			},
+		},
+		{
+			name: "success",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Results: []kargoapi.DiscoveryResult{{
+					SubscriptionName: "fake-sub",
+					ArtifactReferences: []kargoapi.ArtifactReference{
+						{Version: "v1.0.0"},
+						{Version: "v1.1.0"},
+					},
+				}},
+			},
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, result)
+				artifact, ok := result.(expressionFriendlyArtifactReference)
+				require.True(t, ok)
+				require.Equal(t, "v1.0.0", artifact.Version)
+			},
+		},
+		{
+			name: "artifacts nil",
+			args: []any{"fake-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
+		{
+			name: "requested artifact not found",
+			artifacts: &kargoapi.DiscoveredArtifacts{
+				Results: []kargoapi.DiscoveryResult{{
+					SubscriptionName: "fake-sub",
+					ArtifactReferences: []kargoapi.ArtifactReference{
+						{Version: "v1.0.0"},
+						{Version: "v1.1.0"},
+					},
+				}},
+			},
+			args: []any{"wrong-sub"},
+			assertions: func(t *testing.T, result any, err error) {
+				require.NoError(t, err)
+				require.Nil(t, result)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			result, err := getArtifactFromDiscoveredArtifacts(
+				testCase.artifacts,
+			)(testCase.args...)
+			testCase.assertions(t, result, err)
 		})
 	}
 }
@@ -1052,11 +1278,12 @@ func Test_getSecret(t *testing.T) {
 	assert.NoError(t, corev1.AddToScheme(scheme))
 
 	tests := []struct {
-		name       string
-		objects    []client.Object
-		args       []any
-		cache      *cache.Cache
-		assertions func(t *testing.T, cache *cache.Cache, result any, err error)
+		name            string
+		objects         []client.Object
+		args            []any
+		cache           *cache.Cache
+		hasDirectAccess bool
+		assertions      func(t *testing.T, cache *cache.Cache, result any, err error)
 	}{
 		{
 			name: "no arguments",
@@ -1094,7 +1321,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success",
+			name:            "success",
+			hasDirectAccess: true,
 			objects: []client.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1114,7 +1342,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success with cache",
+			name:            "success with cache",
+			hasDirectAccess: true,
 			objects: []client.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1139,7 +1368,8 @@ func Test_getSecret(t *testing.T) {
 			},
 		},
 		{
-			name: "success from cache",
+			name:            "success from cache",
+			hasDirectAccess: true,
 			cache: cache.NewFrom(cache.NoExpiration, cache.NoExpiration, map[string]cache.Item{
 				getCacheKey(cacheKeyPrefixSecret, testProject, testSecret): {
 					Object: map[string]string{"foo": "bar"},
@@ -1168,6 +1398,49 @@ func Test_getSecret(t *testing.T) {
 				assert.Equal(t, map[string]string{"foo": "bar"}, data)
 			},
 		},
+		{
+			name:            "success with no direct access but is generic",
+			hasDirectAccess: false,
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+						Labels: map[string]string{
+							kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+						},
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{"foo": "bar"}, result)
+			},
+		},
+		{
+			name:            "no direct access and not generic returns empty data",
+			hasDirectAccess: false,
+			objects: []client.Object{
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProject,
+						Name:      testSecret,
+					},
+					Data: map[string][]byte{
+						"foo": []byte("bar"),
+					},
+				},
+			},
+			args: []any{testSecret},
+			assertions: func(t *testing.T, _ *cache.Cache, result any, err error) {
+				assert.NoError(t, err)
+				assert.Equal(t, map[string]string{}, result)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1179,7 +1452,7 @@ func Test_getSecret(t *testing.T) {
 				WithObjects(tt.objects...).
 				Build()
 
-			fn := getSecret(ctx, c, tt.cache, testProject)
+			fn := getSecret(ctx, c, tt.cache, testProject, tt.hasDirectAccess)
 
 			result, err := fn(tt.args...)
 			tt.assertions(t, tt.cache, result, err)
@@ -1251,7 +1524,7 @@ func Test_getConfigMap_getSecret_no_cache_key_collision(t *testing.T) {
 			_, err := cfgFn(tt.args...)
 			assert.NoError(t, err)
 
-			secretFn := getSecret(ctx, c, tt.cache, testProject)
+			secretFn := getSecret(ctx, c, tt.cache, testProject, true)
 			_, err = secretFn(tt.args...)
 			assert.NoError(t, err)
 

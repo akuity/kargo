@@ -17,20 +17,27 @@ func (s *server) ListConfigMaps(
 	ctx context.Context,
 	req *connect.Request[svcv1alpha1.ListConfigMapsRequest],
 ) (*connect.Response[svcv1alpha1.ListConfigMapsResponse], error) {
-	project := req.Msg.GetProject()
-	if err := validateFieldNotEmpty("project", project); err != nil {
-		return nil, err
-	}
-
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
 	}
 
 	var configMapsList corev1.ConfigMapList
 	if err := s.client.List(
 		ctx,
 		&configMapsList,
-		client.InNamespace(req.Msg.GetProject()),
+		client.InNamespace(namespace),
 	); err != nil {
 		return nil, fmt.Errorf("list configmaps: %w", err)
 	}

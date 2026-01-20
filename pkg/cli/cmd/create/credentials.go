@@ -28,6 +28,7 @@ type createCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	Shared      bool
 	Project     string
 	Name        string
 	Description string
@@ -91,6 +92,11 @@ kargo config set-project my-project
 kargo create credentials my-credentials \
   --image --repo-url=ghcr.io/my-org/my-image \
   --username=my-username --password=my-password
+
+# Create shared credentials for all GitHub repositories
+kargo create credentials --shared my-credentials \
+	--git --repo-url='^https://github\.com/.*$' --regex \
+	--username=my-username --password=personal-access-token
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -122,6 +128,13 @@ func (o *createCredentialsOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to create credentials. If not set, the default project will be used.",
 	)
+	option.Shared(
+		cmd.Flags(), &o.Shared, false,
+		"Whether to create shared credentials that can be used across all projects.",
+	)
+	// project and shared flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SharedFlag)
+
 	option.Description(cmd.Flags(), &o.Description, "Description of the credentials.")
 	option.Git(cmd.Flags(), &o.Git, "Create credentials for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Create credentials for a Helm chart repository.")
@@ -171,11 +184,14 @@ func (o *createCredentialsOptions) complete(args []string) {
 // error is returned.
 func (o *createCredentialsOptions) validate() error {
 	var errs []error
-	// While the flags are marked as required, a user could still provide an empty
-	// string. This is a check to ensure that the flags are not empty.
-	if o.Project == "" {
-		errs = append(errs, errors.New("project is required"))
+	if o.Project == "" && !o.Shared {
+		errs = append(errs, fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SharedFlag,
+		))
 	}
+
+	// While these flags are marked as required, a user could still provide an
+	// empty string. This is a check to ensure that the flags are not empty.
 	if o.RepoURL == "" {
 		errs = append(errs, errors.New("repo-url is required"))
 	}
@@ -210,11 +226,16 @@ func (o *createCredentialsOptions) run(ctx context.Context) error {
 		o.Type = credentials.TypeImage.String()
 	}
 
-	resp, err := kargoSvcCli.CreateCredentials(
+	var project string
+	if !o.Shared {
+		project = o.Project
+	}
+
+	resp, err := kargoSvcCli.CreateRepoCredentials(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.CreateCredentialsRequest{
-				Project:        o.Project,
+			&v1alpha1.CreateRepoCredentialsRequest{
+				Project:        project,
 				Name:           o.Name,
 				Description:    o.Description,
 				Type:           o.Type,

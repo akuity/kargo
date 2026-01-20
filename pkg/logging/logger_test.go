@@ -1,269 +1,265 @@
 package logging
 
 import (
-	"context"
-	"os"
+	"errors"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 )
 
-func TestContextWithLogger(t *testing.T) {
-	testLogger := &Logger{}
-	ctx := ContextWithLogger(context.Background(), testLogger)
-	require.Same(t, testLogger, ctx.Value(loggerContextKey{}))
+func TestGlobalLogger(t *testing.T) {
+	require.NotNil(t, globalLogger)
 }
 
-func TestLoggerFromContext(t *testing.T) {
-	logger := LoggerFromContext(context.Background())
-	// This should give us the global logger if one was never explicitly added to
-	// the context.
+func TestNewDiscardLoggerOrDie(t *testing.T) {
+	logger := NewDiscardLoggerOrDie()
 	require.NotNil(t, logger)
-	require.Same(t, globalLogger, logger)
+	require.Equal(
+		t,
+		"zapcore.nopCore",
+		reflect.TypeOf(logger.logger.Desugar().Core()).String(),
+	)
+}
 
-	testLogger := &Logger{}
-	ctx := context.WithValue(context.Background(), loggerContextKey{}, testLogger)
-	require.Same(t, testLogger, LoggerFromContext(ctx))
+func TestNewLoggerOrDie(t *testing.T) {
+	testCases := []struct {
+		name        string
+		level       Level
+		format      Format
+		shouldPanic bool
+		assertions  func(*testing.T, *Logger)
+	}{
+		{
+			name:        "invalid level",
+			level:       Level(100),
+			format:      ConsoleFormat,
+			shouldPanic: true,
+		},
+		{
+			name:        "invalid format",
+			level:       InfoLevel,
+			format:      "invalid-format",
+			shouldPanic: true,
+		},
+		{
+			name:        "valid parameters",
+			level:       DebugLevel,
+			format:      JSONFormat,
+			shouldPanic: false,
+			assertions: func(t *testing.T, l *Logger) {
+				require.NotNil(t, l)
+				require.Equal(t, zap.DebugLevel, l.logger.Level())
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			if testCase.shouldPanic {
+				require.Panics(t, func() {
+					NewLoggerOrDie(testCase.level, testCase.format)
+				})
+				return
+			}
+			testCase.assertions(t, NewLoggerOrDie(testCase.level, testCase.format))
+		})
+	}
 }
 
 func TestNewLogger(t *testing.T) {
-	// First test the normal case and then test with a custom writer so we make sure the zap core
-	// wrapper logic works
-	logger, err := NewLogger(DebugLevel, ConsoleFormat)
-	require.NoError(t, err)
-	require.NotNil(t, logger)
-
-	logger, err = newLoggerInternal(DebugLevel, JSONFormat, os.Stderr)
-	require.NoError(t, err)
-	require.NotNil(t, logger)
-
-	// Pass an invalid format and ensure we get an error
-	_, err = NewLogger(DebugLevel, "invalid-format")
-	require.Error(t, err)
-}
-
-func TestParseLevel(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected Level
-		wantErr  bool
+	testCases := []struct {
+		name       string
+		level      Level
+		format     Format
+		assertions func(*testing.T, *Logger, error)
 	}{
 		{
-			name:     "error level",
-			input:    "error",
-			expected: ErrorLevel,
-			wantErr:  false,
+			name:   "invalid level",
+			level:  Level(100),
+			format: ConsoleFormat,
+			assertions: func(t *testing.T, _ *Logger, err error) {
+				require.ErrorContains(t, err, "invalid log level")
+			},
 		},
 		{
-			name:     "error level uppercase",
-			input:    "ERROR",
-			expected: ErrorLevel,
-			wantErr:  false,
+			name:   "invalid format",
+			level:  InfoLevel,
+			format: "invalid-format",
+			assertions: func(t *testing.T, _ *Logger, err error) {
+				require.ErrorContains(t, err, "invalid log format")
+			},
 		},
 		{
-			name:     "info level",
-			input:    "info",
-			expected: InfoLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "info level uppercase",
-			input:    "INFO",
-			expected: InfoLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "debug level",
-			input:    "debug",
-			expected: DebugLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "debug level mixed case",
-			input:    "DeBuG",
-			expected: DebugLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "trace level",
-			input:    "trace",
-			expected: TraceLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "trace level uppercase",
-			input:    "TRACE",
-			expected: TraceLevel,
-			wantErr:  false,
-		},
-		{
-			name:     "invalid level",
-			input:    "invalid",
-			expected: InfoLevel,
-			wantErr:  true,
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: InfoLevel,
-			wantErr:  true,
-		},
-		{
-			name:     "numeric string",
-			input:    "123",
-			expected: InfoLevel,
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseLevel(tt.input)
-			if tt.wantErr {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "invalid log level")
-			} else {
+			name:   "valid parameters",
+			level:  DebugLevel,
+			format: ConsoleFormat,
+			assertions: func(t *testing.T, l *Logger, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, l)
+				require.Equal(t, zap.DebugLevel, l.logger.Level())
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			logger, err := NewLogger(testCase.level, testCase.format)
+			if testCase.assertions != nil {
+				testCase.assertions(t, logger, err)
 			}
-			require.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-func TestToZapLevel(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    Level
-		expected zapcore.Level
+func Test_newLoggerInternal(t *testing.T) {
+	testCases := []struct {
+		name       string
+		level      Level
+		format     Format
+		assertions func(*testing.T, *Logger, error)
 	}{
 		{
-			name:     "error level",
-			input:    ErrorLevel,
-			expected: zapcore.ErrorLevel,
+			name:   "invalid level",
+			level:  Level(100),
+			format: ConsoleFormat,
+			assertions: func(t *testing.T, _ *Logger, err error) {
+				require.ErrorContains(t, err, "invalid log level")
+			},
 		},
 		{
-			name:     "info level",
-			input:    InfoLevel,
-			expected: zapcore.InfoLevel,
+			name:   "invalid format",
+			level:  InfoLevel,
+			format: "invalid-format",
+			assertions: func(t *testing.T, _ *Logger, err error) {
+				require.ErrorContains(t, err, "invalid log format")
+			},
 		},
 		{
-			name:     "debug level",
-			input:    DebugLevel,
-			expected: zapcore.DebugLevel,
-		},
-		{
-			name:     "trace level",
-			input:    TraceLevel,
-			expected: zapcore.DebugLevel, // TraceLevel maps to DebugLevel in zap
-		},
-		{
-			name:     "invalid level (default case)",
-			input:    Level(999), // Invalid level to test default case
-			expected: zapcore.InfoLevel,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := toZapLevel(tt.input)
-			require.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestParseFormat(t *testing.T) {
-	tests := []struct {
-		name     string
-		input    string
-		expected Format
-		wantErr  bool
-	}{
-		{
-			name:     "json format",
-			input:    "json",
-			expected: JSONFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "json format uppercase",
-			input:    "JSON",
-			expected: JSONFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "json format mixed case",
-			input:    "JsOn",
-			expected: JSONFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "console format",
-			input:    "console",
-			expected: ConsoleFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "console format uppercase",
-			input:    "CONSOLE",
-			expected: ConsoleFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "console format mixed case",
-			input:    "CoNsOlE",
-			expected: ConsoleFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "whitespace",
-			input:    " json ",
-			expected: JSONFormat,
-			wantErr:  false,
-		},
-		{
-			name:     "invalid format",
-			input:    "invalid",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "empty string",
-			input:    "",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "numeric string",
-			input:    "123",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "special characters",
-			input:    "json!@#",
-			expected: "",
-			wantErr:  true,
-		},
-		{
-			name:     "partial match",
-			input:    "jso",
-			expected: "",
-			wantErr:  true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result, err := ParseFormat(tt.input)
-			if tt.wantErr {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "invalid log format")
-			} else {
+			name:   "valid parameters",
+			level:  DebugLevel,
+			format: ConsoleFormat,
+			assertions: func(t *testing.T, l *Logger, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, l)
+				require.Equal(t, zap.DebugLevel, l.logger.Level())
+				// TODO: Figure out how to verify that the write syncer is actually
+				// being used.
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			logger, err := newLoggerInternal(testCase.level, testCase.format)
+			if testCase.assertions != nil {
+				testCase.assertions(t, logger, err)
 			}
-			require.Equal(t, tt.expected, result)
 		})
 	}
+}
+
+func TestWrap(t *testing.T) {
+	core, logs := observer.New(zapcore.InfoLevel)
+	Wrap(zap.New(core)).WithValues("component", "test").Info("test message")
+	// If the message made it through to the wrapped zap.Logger, the Wrap()
+	// worked.
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.InfoLevel, entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_WithValues(t *testing.T) {
+	core, logs := observer.New(zapcore.InfoLevel)
+	// Wrap() has its own tests, so here we assume it works.
+	Wrap(zap.New(core)).WithValues("component", "test").Info("test message")
+	// If the message sent to the underlying zap.Logger has the expected key/value
+	// pair, then WithValues() worked.
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.InfoLevel, entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_Error(t *testing.T) {
+	core, logs := observer.New(zapcore.ErrorLevel)
+	// Wrap() has its own tests, so here we assume it works.
+	Wrap(zap.New(core)).Error(
+		errors.New("something went wrong"),
+		"an error occurred",
+		"component", "test",
+	)
+	// Examine captured logs...
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.ErrorLevel, entry.Level)
+	require.Equal(t, "an error occurred: something went wrong", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_Info(t *testing.T) {
+	core, logs := observer.New(zapcore.InfoLevel)
+	// Wrap() has its own tests, so here we assume it works.
+	Wrap(zap.New(core)).Info("test message", "component", "test")
+	// Examine captured logs...
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.InfoLevel, entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_Debug(t *testing.T) {
+	core, logs := observer.New(zapcore.DebugLevel)
+	// Wrap() has its own tests, so here we assume it works.
+	Wrap(zap.New(core)).Debug("test message", "component", "test")
+	// Examine captured logs...
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.DebugLevel, entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_Trace(t *testing.T) {
+	// Build a logger with an observable core that ALSO uses outr custom
+	// traceEncoder.
+	observableCore, logs := observer.New(zapcore.Level(TraceLevel))
+	cfg := zap.NewProductionConfig()
+	cfg.EncoderConfig.EncodeLevel = traceEncoder
+	logger, err := cfg.Build(
+		zap.WrapCore(func(zapcore.Core) zapcore.Core {
+			return observableCore
+		}),
+	)
+	require.NoError(t, err)
+	// Wrap() has its own tests, so here we assume it works.
+	Wrap(logger).Trace("test message", "component", "test")
+	require.Len(t, logs.All(), 1)
+	// Examine captured logs...
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.Level(TraceLevel), entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+}
+
+func TestLogger_Logr(t *testing.T) {
+	core, logs := observer.New(zapcore.Level(TraceLevel))
+	// Wrap() has its own tests, so here we assume it works.
+	logger := Wrap(zap.New(core))
+	logrLogger := logger.Logr()
+	require.NotNil(t, logrLogger)
+	// Write a message using the logr.Logger...
+	logrLogger.Info("test message", "component", "test")
+	// If the message sent through the logr.Logger made it to the underlying
+	// zap.Logger, then the Logr() method worked.
+	require.Len(t, logs.All(), 1)
+	entry := logs.All()[0]
+	require.Equal(t, zapcore.InfoLevel, entry.Level)
+	require.Equal(t, "test message", entry.Message)
+	require.Equal(t, []zapcore.Field{zap.Any("component", "test")}, entry.Context)
+
 }

@@ -34,6 +34,7 @@ type getRolesOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	SystemLevel           bool
 	Project               string
 	Names                 []string
 	AsKubernetesResources bool
@@ -72,6 +73,12 @@ kargo get roles
 # Get a the dev role in the default project
 kargo config set-project my-project
 kargo get role dev
+
+# List all system-level roles
+kargo get roles --system
+
+# Get the kargo-admin system-level role
+kargo get role --system kargo-admin
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -102,6 +109,12 @@ func (o *getRolesOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list roles. If not set, the default project will be used.",
 	)
+	option.System(
+		cmd.Flags(), &o.SystemLevel, false,
+		"Whether to list system-level roles instead of project-level roles",
+	)
+	// project and system flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SystemFlag)
 
 	option.AsKubernetesResources(
 		cmd.Flags(), &o.AsKubernetesResources,
@@ -117,10 +130,10 @@ func (o *getRolesOptions) complete(args []string) {
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *getRolesOptions) validate() error {
-	// While the flags are marked as required, a user could still provide an empty
-	// string. This is a check to ensure that the flags are not empty.
-	if o.Project == "" {
-		return fmt.Errorf("%s is required", option.ProjectFlag)
+	if o.Project == "" && !o.SystemLevel {
+		return fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SystemFlag,
+		)
 	}
 	return nil
 }
@@ -141,6 +154,7 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 		if resp, err = kargoSvcCli.ListRoles(
 			ctx,
 			connect.NewRequest(&v1alpha1.ListRolesRequest{
+				SystemLevel: o.SystemLevel,
 				Project:     o.Project,
 				AsResources: o.AsKubernetesResources,
 			}),
@@ -168,6 +182,7 @@ func (o *getRolesOptions) run(ctx context.Context) error {
 				ctx,
 				connect.NewRequest(
 					&v1alpha1.GetRoleRequest{
+						SystemLevel: o.SystemLevel,
 						Project:     o.Project,
 						Name:        name,
 						AsResources: o.AsKubernetesResources,

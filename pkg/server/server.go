@@ -47,12 +47,11 @@ var (
 )
 
 type server struct {
-	cfg               config.ServerConfig
-	client            kubernetes.Client
-	rolesDB           rbac.RolesDatabase
-	serviceAccountsDB rbac.ServiceAccountsDatabase
-	sender            event.Sender
-	argoCDURLStore    libargocd.URLStore
+	cfg            config.ServerConfig
+	client         kubernetes.Client
+	rolesDB        rbac.RolesDatabase
+	sender         event.Sender
+	argoCDURLStore libargocd.URLStore
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -169,17 +168,15 @@ func NewServer(
 	cfg config.ServerConfig,
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
-	serviceAccountsDB rbac.ServiceAccountsDatabase,
 	sender event.Sender,
 	argoCDURLStore libargocd.URLStore,
 ) Server {
 	s := &server{
-		cfg:               cfg,
-		client:            kubeClient,
-		rolesDB:           rolesDB,
-		serviceAccountsDB: serviceAccountsDB,
-		sender:            sender,
-		argoCDURLStore:    argoCDURLStore,
+		cfg:            cfg,
+		client:         kubeClient,
+		rolesDB:        rolesDB,
+		sender:         sender,
+		argoCDURLStore: argoCDURLStore,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists

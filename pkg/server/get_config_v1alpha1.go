@@ -15,7 +15,7 @@ func (s *server) GetConfig(
 	resp := svcv1alpha1.GetConfigResponse{
 		ArgocdShards:                  s.argoCDURLStore.GetShards(),
 		SecretManagementEnabled:       s.cfg.SecretManagementEnabled,
-		ClusterSecretsNamespace:       s.cfg.ClusterSecretNamespace,
+		SystemResourcesNamespace:      s.cfg.SystemResourcesNamespace,
 		HasAnalysisRunLogsUrlTemplate: s.cfg.AnalysisRunLogURLTemplate != "",
 	}
 	return connect.NewResponse(&resp), nil

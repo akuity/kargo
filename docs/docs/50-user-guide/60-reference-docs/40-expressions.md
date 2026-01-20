@@ -366,6 +366,20 @@ config:
   repoURL: ${{ configMap('my-config').repoURL }}
 ```
 
+### `sharedConfigMap(name)`
+
+The `sharedConfigMap()` function returns the `Data` field (a
+`map[string]string`) of a Kubernetes `ConfigMap` with the specified name from 
+the shared resources namespace. If no such `ConfigMap` exists, an empty map is 
+returned.
+
+Example:
+
+```yaml
+config:
+  repoURL: ${{ sharedConfigMap('my-config').repoURL }}
+```
+
 ### `secret(name)`
 
 The `secret()` function returns the `Data` field of a Kubernetes `Secret` with
@@ -380,6 +394,31 @@ config:
   - name: Authorization
     value: Bearer ${{ secret('slack').token }}
 ```
+
+### `sharedSecret(name)`
+
+The `sharedSecret()` function returns the `Data` field of a Kubernetes `Secret` 
+with the specified name from the shared resources namespace decoded into a
+`map[string]string`. If no such `Secret` exists, an empty map is returned.
+
+**By design, this function only works for "generic credentials" (i.e. `Secret`s
+labeled with `kargo.akuity.io/cred-type: generic`).**
+
+Examples:
+
+```yaml
+config:
+  headers:
+  - name: Authorization
+    value: Bearer ${{ sharedSecret('slack').token }}
+```
+
+:::note
+
+`sharedSecret()` can only be used to retrieve shared `Secret`s whose 
+`kargo.akuity.io/cred-type` label is `generic`.
+
+:::
 
 ### `warehouse(name)`
 
@@ -520,7 +559,7 @@ spec:
       repoURL: https://github.com/example/backend.git
   freightCreationCriteria:
     expression: |
-      commitFrom('https://github.com/example/frontend.git').Tag == comitFrom('https://github.com/example/backend.git').Tag
+      commitFrom('https://github.com/example/frontend.git').Tag == commitFrom('https://github.com/example/backend.git').Tag
 ```
 
 In all other contexts, such as promotion and verification processes, the

@@ -1,0 +1,126 @@
+package server
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"connectrpc.com/connect"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libCreds "github.com/akuity/kargo/pkg/credentials"
+)
+
+type credentials struct {
+	project        string
+	name           string
+	credType       string
+	repoURL        string
+	repoURLIsRegex bool
+	username       string
+	password       string
+	description    string
+}
+
+func (s *server) CreateRepoCredentials(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.CreateRepoCredentialsRequest],
+) (*connect.Response[svcv1alpha1.CreateRepoCredentialsResponse], error) {
+	// Check if secret management is enabled
+	if !s.cfg.SecretManagementEnabled {
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
+	}
+
+	creds := credentials{
+		project:        req.Msg.GetProject(),
+		name:           req.Msg.GetName(),
+		description:    req.Msg.GetDescription(),
+		credType:       req.Msg.GetType(),
+		repoURL:        req.Msg.GetRepoUrl(),
+		repoURLIsRegex: req.Msg.GetRepoUrlIsRegex(),
+		username:       req.Msg.GetUsername(),
+		password:       req.Msg.GetPassword(),
+	}
+
+	if err := s.validateCredentials(ctx, creds); err != nil {
+		return nil, err
+	}
+
+	secret := s.credentialsToK8sSecret(creds)
+	if err := s.client.Create(ctx, secret); err != nil {
+		return nil, fmt.Errorf("create secret: %w", err)
+	}
+
+	return connect.NewResponse(
+		&svcv1alpha1.CreateRepoCredentialsResponse{
+			Credentials: sanitizeCredentialSecret(*secret),
+		},
+	), nil
+}
+
+func (s *server) validateCredentials(ctx context.Context, creds credentials) error {
+	if creds.project != "" {
+		if err := s.validateProjectExists(ctx, creds.project); err != nil {
+			return err
+		}
+	}
+	if err := validateFieldNotEmpty("name", creds.name); err != nil {
+		return err
+	}
+	if err := validateFieldNotEmpty("type", creds.credType); err != nil {
+		return err
+	}
+	switch creds.credType {
+	case kargoapi.LabelValueCredentialTypeGit,
+		kargoapi.LabelValueCredentialTypeHelm,
+		kargoapi.LabelValueCredentialTypeImage:
+	default:
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("type should be one of git, helm, or image"),
+		)
+	}
+	if creds.repoURL == "" {
+		return connect.NewError(
+			connect.CodeInvalidArgument,
+			errors.New("repoURL should not be empty"),
+		)
+	}
+	if err := validateFieldNotEmpty("username", creds.username); err != nil {
+		return err
+	}
+	return validateFieldNotEmpty("password", creds.password)
+}
+
+func (s *server) credentialsToK8sSecret(creds credentials) *corev1.Secret {
+	namespace := creds.project
+	if namespace == "" {
+		namespace = s.cfg.SharedResourcesNamespace
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      creds.name,
+			Labels: map[string]string{
+				kargoapi.LabelKeyCredentialType: creds.credType,
+			},
+		},
+		Data: map[string][]byte{
+			libCreds.FieldRepoURL:  []byte(creds.repoURL),
+			libCreds.FieldUsername: []byte(creds.username),
+			libCreds.FieldPassword: []byte(creds.password),
+		},
+	}
+	if creds.description != "" {
+		secret.Annotations = map[string]string{
+			kargoapi.AnnotationKeyDescription: creds.description,
+		}
+	}
+	if creds.repoURLIsRegex {
+		secret.Data[libCreds.FieldRepoURLIsRegex] = []byte("true")
+	}
+	return secret
+}
