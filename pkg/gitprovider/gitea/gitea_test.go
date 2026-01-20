@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"code.gitea.io/sdk/gitea"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
@@ -626,10 +627,16 @@ func TestMergePullRequestMergeMethod(t *testing.T) {
 					Head:      &gitea.PRBranchInfo{Sha: "head_sha"},
 					URL:       "https://gitea.com/akuity/kargo/pulls/1234",
 				}, &gitea.Response{}, nil).Once()
-			mockClient.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 1234, mock.MatchedBy(func(opts *gitea.MergePullRequestOption) bool {
-				return opts.Style == tt.expectedStyle
-			})).
+			var opts *gitea.MergePullRequestOption
+			mockClient.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, 1234,
+				mock.AnythingOfType("*gitea.MergePullRequestOption")).
+				Run(func(args mock.Arguments) {
+					var ok bool
+					opts, ok = args.Get(4).(*gitea.MergePullRequestOption)
+					require.True(t, ok, "fourth argument should be of type *.gitea.MergePullRequestOption")
+				}).
 				Return(&gitea.Response{}, nil)
+
 			mockClient.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(1234)).
 				Return(&gitea.PullRequest{
 					Index:     1234,
@@ -639,8 +646,12 @@ func TestMergePullRequestMergeMethod(t *testing.T) {
 					URL:       "https://gitea.com/akuity/kargo/pulls/1234",
 				}, &gitea.Response{}, nil).Once()
 
-			p.MergePullRequest(context.Background(),
+			_, _, err := p.MergePullRequest(context.Background(),
 				&gitprovider.MergePullRequestOpts{Number: 1234, MergeMethod: tt.method})
+
+			require.NoError(t, err)
+			require.NotNil(t, opts)
+			assert.Equal(t, tt.expectedStyle, opts.Style)
 		})
 	}
 }
