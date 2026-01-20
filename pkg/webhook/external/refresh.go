@@ -16,7 +16,6 @@ import (
 	"github.com/akuity/kargo/pkg/image"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
-	"github.com/akuity/kargo/pkg/pattern"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -274,49 +273,18 @@ func matchesPathFilters(
 		return true // No paths to filter, allow refresh
 	}
 
-	includeMatcher, err := getPathSelectors(includePaths)
+	includeMatcher, err := commit.GetPathSelectors(includePaths)
 	if err != nil {
 		// If there's an error parsing include patterns, be conservative and allow refresh
 		return true
 	}
 
-	excludeMatcher, err := getPathSelectors(excludePaths)
+	excludeMatcher, err := commit.GetPathSelectors(excludePaths)
 	if err != nil {
 		// If there's an error parsing exclude patterns, be conservative and allow refresh
 		return true
 	}
 
-	// Check if any changed path matches the filters
-	for _, path := range changedPaths {
-		// If includePaths is specified, the path must match at least one pattern
-		if includeMatcher != nil && !includeMatcher.Matches(path) {
-			continue // Path not included, check next path
-		}
-		// Path is included (either explicitly or implicitly)
-		// Check if it should be excluded
-		if excludeMatcher != nil && excludeMatcher.Matches(path) {
-			continue // Path is excluded, check next path
-		}
-		// Found a path that matches the filters
-		return true
-	}
-	// No paths matched the filters
-	return false
-}
-
-func getPathSelectors(
-	selectors []string,
-) (pattern.Matcher, error) {
-	if len(selectors) == 0 {
-		return nil, nil
-	}
-	matchers := make(pattern.Matchers, len(selectors))
-	for i := range selectors {
-		matcher, err := pattern.ParsePathPattern(selectors[i])
-		if err != nil {
-			return nil, fmt.Errorf("parse error path selector %q: %w", selectors[i], err)
-		}
-		matchers[i] = matcher
-	}
-	return matchers, nil
+	// Use the existing path matching logic from the commit package
+	return commit.MatchesPathFilters(includeMatcher, excludeMatcher, changedPaths)
 }
