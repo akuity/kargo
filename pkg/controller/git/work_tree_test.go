@@ -23,7 +23,8 @@ func TestNonFastForwardRegex(t *testing.T) {
 		" ! [rejected]        main -> main (fetch first)":                      true,
 		" ! [remote rejected] HEAD -> experiment (cannot lock ref 'refs/heads/experiment': is at " +
 			"7dc98ee9c0b75be429e300bb59b3cf6d091ca9ed but expected 1bdf96c8c868981a0e24c43c98aef09a8970a1b8)": true,
-		" ! [rejected]        HEAD -> experiment (fetch first)": true,
+		" ! [rejected]        HEAD -> experiment (fetch first)":            true,
+		" ! [remote rejected] HEAD -> main (incorrect old value provided)": true,
 	}
 
 	testingPkg.ValidateRegularExpression(t, nonFastForwardRegex, testCases)
