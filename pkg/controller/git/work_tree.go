@@ -586,10 +586,10 @@ type PushOptions struct {
 	PullRebase bool
 }
 
-// https://regex101.com/r/aNYjHP/1
+// https://regex101.com/r/f7kTjs/1
 //
 // nolint: lll
-var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*)\)\s*$`)
+var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`)
 
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
