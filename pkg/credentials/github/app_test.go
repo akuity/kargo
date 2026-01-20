@@ -178,6 +178,17 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name:     "valid with .git suffix",
+			credType: credentials.TypeGit,
+			repoURL:  testRepoURL + ".git",
+			getDataMap: func() map[string][]byte {
+				dm := maps.Clone(supportedDataMap)
+				delete(dm, clientIDKey)
+				return dm
+			},
+			expected: true,
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -525,6 +536,11 @@ func TestAppCredentialProvider_extractRepoName(t *testing.T) {
 		{
 			name:     "GitHub URL",
 			repoURL:  "https://github.com/example/repo",
+			expected: "repo",
+		},
+		{
+			name:     "GitHub URL with .git suffix",
+			repoURL:  "https://github.com/example/repo.git",
 			expected: "repo",
 		},
 		{
