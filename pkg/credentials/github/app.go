@@ -280,7 +280,7 @@ func (p *AppCredentialProvider) extractRepoName(repoURL string) string {
 	if len(parts) < 5 {
 		return ""
 	}
-	return parts[len(parts)-1]
+	return strings.TrimSuffix(parts[len(parts)-1], ".git")
 }
 
 // extractBaseURL extracts the base URL from a full repository URL. The base
