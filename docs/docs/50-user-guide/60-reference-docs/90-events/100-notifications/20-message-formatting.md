@@ -44,6 +44,7 @@ being handled. However, the object passed to expressions does have 3 common top-
   resource that triggered the event such as `Promotion` or `Freight`. It is fetched in its entirety
   from the Kubernetes API and kept in its raw form. So all fields will be accessible as if you were
   accessing items in a JSON object (e.g., `data.metadata.name`, `data.spec.stage`, etc.).
+- `ctx`: Optional. Extra fields injected by the controller, for example `ctx.uiBaseURL` for UI links formatting.
 
 ## Available Functions
 
