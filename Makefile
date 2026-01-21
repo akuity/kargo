@@ -239,6 +239,8 @@ codegen-openapi: install-swag install-go-swagger
 		--client-package client/generated \
 		--model-package client/generated/models \
 		--skip-validation
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run generate:api
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
