@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	httptransport "github.com/go-openapi/runtime/client"
@@ -16,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/option"
 	client "github.com/akuity/kargo/pkg/client/generated"
 	"github.com/akuity/kargo/pkg/client/watch"
+	"github.com/akuity/kargo/pkg/x/version"
 )
 
 type Options struct {
@@ -25,6 +27,17 @@ type Options struct {
 // AddFlags adds the flags for the client options to the provided flag set.
 func (o *Options) AddFlags(flags *pflag.FlagSet) {
 	option.InsecureTLS(flags, &o.InsecureTLS)
+}
+
+// versionHeaderTransport wraps an http.RoundTripper and adds the CLI version
+// header to every outbound request.
+type versionHeaderTransport struct {
+	wrapped http.RoundTripper
+}
+
+func (t *versionHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	req.Header.Set("X-Kargo-CLI-Version", version.GetVersion().Version)
+	return t.wrapped.RoundTrip(req)
 }
 
 func GetClientFromConfig(
@@ -60,17 +73,22 @@ func GetClient(
 		WithHost(u.Host)
 	apiClient := client.NewHTTPClientWithConfig(strfmt.Default, transportCfg)
 
+	// Get the runtime to configure transport
+	rt := apiClient.Transport.(*httptransport.Runtime) // nolint: forcetypeassert
+
+	// Start with the default transport
+	baseTransport := cleanhttp.DefaultTransport()
 	if insecureTLS {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{
+		baseTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
 		}
-		apiClient.Transport.(*httptransport.Runtime).Transport = transport // nolint: forcetypeassert
 	}
+
+	// Wrap with version header transport
+	rt.Transport = &versionHeaderTransport{wrapped: baseTransport}
 
 	// Set authentication if credential is provided
 	if credential != "" {
-		rt := apiClient.Transport.(*httptransport.Runtime) // nolint: forcetypeassert
 		rt.DefaultAuthentication = httptransport.BearerToken(credential)
 	}
 
@@ -107,13 +125,16 @@ func GetWatchClient(
 ) *watch.Client {
 	httpClient := cleanhttp.DefaultClient()
 
+	// Start with the default transport
+	baseTransport := cleanhttp.DefaultTransport()
 	if insecureTLS {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{
+		baseTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
 		}
-		httpClient.Transport = transport
 	}
+
+	// Wrap with version header transport
+	httpClient.Transport = &versionHeaderTransport{wrapped: baseTransport}
 
 	return watch.NewClient(serverAddress, httpClient, credential)
 }
