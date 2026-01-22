@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"testing"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
@@ -227,7 +228,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			repoURL string,
-		) (string, error)
+		) (*cachedToken, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
@@ -320,8 +321,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "", errors.New("token error")
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (*cachedToken, error) {
+				return nil, errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
@@ -334,8 +335,11 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "test-token", nil
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (*cachedToken, error) {
+				return &cachedToken{
+					accessToken: "test-token",
+					expiresAt:   time.Now().Add(1 * time.Hour),
+				}, nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
@@ -396,13 +400,16 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			repoURL string,
-		) (string, error)
+		) (*cachedToken, error)
 		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
 		{
 			name: "cache hit",
 			setupCache: func(c *cache.Cache) {
-				c.Set(testTokenCacheKey, fakeAccessToken, cache.DefaultExpiration)
+				c.Set(testTokenCacheKey, &cachedToken{
+					accessToken: fakeAccessToken,
+					expiresAt:   time.Now().Add(1 * time.Hour),
+				}, cache.DefaultExpiration)
 			},
 			assertions: func(
 				t *testing.T,
@@ -418,8 +425,11 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		},
 		{
 			name: "cache miss, successful token fetch",
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return fakeAccessToken, nil
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (*cachedToken, error) {
+				return &cachedToken{
+					accessToken: fakeAccessToken,
+					expiresAt:   time.Now().Add(1 * time.Hour),
+				}, nil
 			},
 			assertions: func(
 				t *testing.T,
@@ -433,15 +443,17 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Equal(t, fakeAccessToken, creds.Password)
 
 				// Verify the token was cached
-				cachedToken, found := c.Get(testTokenCacheKey)
+				cachedVal, found := c.Get(testTokenCacheKey)
 				assert.True(t, found)
-				assert.Equal(t, fakeAccessToken, cachedToken)
+				ct, ok := cachedVal.(*cachedToken)
+				assert.True(t, ok, "cached value should be *cachedToken")
+				assert.Equal(t, fakeAccessToken, ct.accessToken)
 			},
 		},
 		{
 			name: "error in getAccessToken",
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "", errors.New("token error")
+			getAccessTokenFn: func(_ string, _ int64, _, _ string) (*cachedToken, error) {
+				return nil, errors.New("token error")
 			},
 			assertions: func(
 				t *testing.T,
