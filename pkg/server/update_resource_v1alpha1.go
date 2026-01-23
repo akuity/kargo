@@ -178,7 +178,7 @@ func (s *server) updateResource(
 		if !upsert {
 			return createOrUpdateResourceResult{
 				Error: "resource does not exist",
-			}, fmt.Errorf("resource does not exist")
+			}, libhttp.ErrorStr("resource does not exist", http.StatusNotFound)
 		}
 		// If the object is a Project, annotate it with information about the user
 		// who created it.
