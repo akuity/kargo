@@ -47,7 +47,8 @@ func NewClient(baseURL string, httpClient *http.Client, token string) *Client {
 	}
 }
 
-// WatchStage watches a specific Stage for changes.
+// WatchStage watches a specific Stage for changes. Cancel the provided context
+// to stop watching.
 func (c *Client) WatchStage(
 	ctx context.Context,
 	project string,
@@ -57,7 +58,8 @@ func (c *Client) WatchStage(
 	return watchResource[*kargoapi.Stage](ctx, c, url)
 }
 
-// WatchWarehouses watches all Warehouses in a project for changes.
+// WatchWarehouses watches all Warehouses in a project for changes. Cancel the
+// provided context to stop watching.
 func (c *Client) WatchWarehouses(
 	ctx context.Context,
 	project string,
@@ -66,7 +68,8 @@ func (c *Client) WatchWarehouses(
 	return watchResource[*kargoapi.Warehouse](ctx, c, url)
 }
 
-// WatchStages watches all Stages in a project for changes.
+// WatchStages watches all Stages in a project for changes. Cancel the provided
+// context to stop watching.
 func (c *Client) WatchStages(
 	ctx context.Context,
 	project string,
@@ -75,7 +78,8 @@ func (c *Client) WatchStages(
 	return watchResource[*kargoapi.Stage](ctx, c, url)
 }
 
-// WatchPromotions watches all Promotions in a project for changes.
+// WatchPromotions watches all Promotions in a project for changes. Cancel the
+// provided context to stop watching.
 func (c *Client) WatchPromotions(
 	ctx context.Context,
 	project string,
@@ -84,7 +88,8 @@ func (c *Client) WatchPromotions(
 	return watchResource[*kargoapi.Promotion](ctx, c, url)
 }
 
-// WatchWarehouse watches a specific Warehouse for changes.
+// WatchWarehouse watches a specific Warehouse for changes. Cancel the provided
+// context to stop watching.
 func (c *Client) WatchWarehouse(
 	ctx context.Context,
 	project string,
@@ -94,7 +99,8 @@ func (c *Client) WatchWarehouse(
 	return watchResource[*kargoapi.Warehouse](ctx, c, url)
 }
 
-// WatchPromotion watches a specific Promotion for changes.
+// WatchPromotion watches a specific Promotion for changes. Cancel the provided
+// context to stop watching.
 func (c *Client) WatchPromotion(
 	ctx context.Context,
 	project string,
@@ -104,7 +110,8 @@ func (c *Client) WatchPromotion(
 	return watchResource[*kargoapi.Promotion](ctx, c, url)
 }
 
-// WatchProjectConfig watches the ProjectConfig for a specific project.
+// WatchProjectConfig watches the ProjectConfig for a specific project. Cancel
+// the provided context to stop watching.
 func (c *Client) WatchProjectConfig(
 	ctx context.Context,
 	project string,
@@ -113,7 +120,8 @@ func (c *Client) WatchProjectConfig(
 	return watchResource[*kargoapi.ProjectConfig](ctx, c, url)
 }
 
-// WatchClusterConfig watches the ClusterConfig.
+// WatchClusterConfig watches the ClusterConfig. Cancel the provided context to
+// stop watching.
 func (c *Client) WatchClusterConfig(
 	ctx context.Context,
 ) (<-chan Event[*kargoapi.ClusterConfig], <-chan error) {
