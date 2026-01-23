@@ -13,7 +13,6 @@ import (
 	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/client/generated/credentials"
 	"github.com/akuity/kargo/pkg/client/generated/events"
-	"github.com/akuity/kargo/pkg/client/generated/operations"
 	"github.com/akuity/kargo/pkg/client/generated/rbac"
 	"github.com/akuity/kargo/pkg/client/generated/resources"
 	"github.com/akuity/kargo/pkg/client/generated/system"
@@ -65,7 +64,6 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *KargoAPI {
 	cli.Core = core.New(transport, formats)
 	cli.Credentials = credentials.New(transport, formats)
 	cli.Events = events.New(transport, formats)
-	cli.Operations = operations.New(transport, formats)
 	cli.Rbac = rbac.New(transport, formats)
 	cli.Resources = resources.New(transport, formats)
 	cli.System = system.New(transport, formats)
@@ -120,8 +118,6 @@ type KargoAPI struct {
 
 	Events events.ClientService
 
-	Operations operations.ClientService
-
 	Rbac rbac.ClientService
 
 	Resources resources.ClientService
@@ -139,7 +135,6 @@ func (c *KargoAPI) SetTransport(transport runtime.ClientTransport) {
 	c.Core.SetTransport(transport)
 	c.Credentials.SetTransport(transport)
 	c.Events.SetTransport(transport)
-	c.Operations.SetTransport(transport)
 	c.Rbac.SetTransport(transport)
 	c.Resources.SetTransport(transport)
 	c.System.SetTransport(transport)

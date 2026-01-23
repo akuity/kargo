@@ -2447,7 +2447,7 @@
                     "Project-Level"
                 ],
                 "summary": "Promote to Stage",
-                "operationId": "PromoteToStageRest",
+                "operationId": "PromoteToStage",
                 "parameters": [
                     {
                         "type": "string",
@@ -2496,6 +2496,10 @@
                 ],
                 "produces": [
                     "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
                 ],
                 "summary": "Promote downstream",
                 "operationId": "PromoteDownstream",

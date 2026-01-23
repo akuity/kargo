@@ -54,8 +54,10 @@ import type {
   PatchProjectConfigMap200,
   PatchSharedConfigMap200,
   PatchSystemConfigMap200,
+  PromoteDownstream201,
+  PromoteDownstreamRequest,
+  PromoteToStage201,
   PromoteToStageRequest,
-  PromoteToStageRest201,
   QueryFreightsRest200,
   QueryFreightsRestParams,
   UpdateConfigMapRequestBody,
@@ -3253,27 +3255,27 @@ export const useDeleteStage = <TError = unknown, TContext = unknown>(
 the state represented by the specified Freight.
  * @summary Promote to Stage
  */
-export type promoteToStageRestResponse201 = {
-  data: PromoteToStageRest201;
+export type promoteToStageResponse201 = {
+  data: PromoteToStage201;
   status: 201;
 };
 
-export type promoteToStageRestResponseSuccess = promoteToStageRestResponse201 & {
+export type promoteToStageResponseSuccess = promoteToStageResponse201 & {
   headers: Headers;
 };
-export type promoteToStageRestResponse = promoteToStageRestResponseSuccess;
+export type promoteToStageResponse = promoteToStageResponseSuccess;
 
-export const getPromoteToStageRestUrl = (project: string, stage: string) => {
+export const getPromoteToStageUrl = (project: string, stage: string) => {
   return `/v2/projects/${project}/stages/${stage}/promotions`;
 };
 
-export const promoteToStageRest = async (
+export const promoteToStage = async (
   project: string,
   stage: string,
   promoteToStageRequest: PromoteToStageRequest,
   options?: RequestInit
-): Promise<promoteToStageRestResponse> => {
-  return customFetch<promoteToStageRestResponse>(getPromoteToStageRestUrl(project, stage), {
+): Promise<promoteToStageResponse> => {
+  return customFetch<promoteToStageResponse>(getPromoteToStageUrl(project, stage), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
@@ -3281,24 +3283,21 @@ export const promoteToStageRest = async (
   });
 };
 
-export const getPromoteToStageRestMutationOptions = <
-  TError = unknown,
-  TContext = unknown
->(options?: {
+export const getPromoteToStageMutationOptions = <TError = unknown, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof promoteToStageRest>>,
+    Awaited<ReturnType<typeof promoteToStage>>,
     TError,
     { project: string; stage: string; data: PromoteToStageRequest },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof promoteToStageRest>>,
+  Awaited<ReturnType<typeof promoteToStage>>,
   TError,
   { project: string; stage: string; data: PromoteToStageRequest },
   TContext
 > => {
-  const mutationKey = ['promoteToStageRest'];
+  const mutationKey = ['promoteToStage'];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -3306,30 +3305,28 @@ export const getPromoteToStageRestMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof promoteToStageRest>>,
+    Awaited<ReturnType<typeof promoteToStage>>,
     { project: string; stage: string; data: PromoteToStageRequest }
   > = (props) => {
     const { project, stage, data } = props ?? {};
 
-    return promoteToStageRest(project, stage, data, requestOptions);
+    return promoteToStage(project, stage, data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type PromoteToStageRestMutationResult = NonNullable<
-  Awaited<ReturnType<typeof promoteToStageRest>>
->;
-export type PromoteToStageRestMutationBody = PromoteToStageRequest;
-export type PromoteToStageRestMutationError = unknown;
+export type PromoteToStageMutationResult = NonNullable<Awaited<ReturnType<typeof promoteToStage>>>;
+export type PromoteToStageMutationBody = PromoteToStageRequest;
+export type PromoteToStageMutationError = unknown;
 
 /**
  * @summary Promote to Stage
  */
-export const usePromoteToStageRest = <TError = unknown, TContext = unknown>(
+export const usePromoteToStage = <TError = unknown, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof promoteToStageRest>>,
+      Awaited<ReturnType<typeof promoteToStage>>,
       TError,
       { project: string; stage: string; data: PromoteToStageRequest },
       TContext
@@ -3338,12 +3335,111 @@ export const usePromoteToStageRest = <TError = unknown, TContext = unknown>(
   },
   queryClient?: QueryClient
 ): UseMutationResult<
-  Awaited<ReturnType<typeof promoteToStageRest>>,
+  Awaited<ReturnType<typeof promoteToStage>>,
   TError,
   { project: string; stage: string; data: PromoteToStageRequest },
   TContext
 > => {
-  const mutationOptions = getPromoteToStageRestMutationOptions(options);
+  const mutationOptions = getPromoteToStageMutationOptions(options);
+
+  return useMutation(mutationOptions, queryClient);
+};
+/**
+ * Creates a Promotion resource for each of a Stage's immediately
+downstream Stages.
+ * @summary Promote downstream
+ */
+export type promoteDownstreamResponse201 = {
+  data: PromoteDownstream201;
+  status: 201;
+};
+
+export type promoteDownstreamResponseSuccess = promoteDownstreamResponse201 & {
+  headers: Headers;
+};
+export type promoteDownstreamResponse = promoteDownstreamResponseSuccess;
+
+export const getPromoteDownstreamUrl = (project: string, stage: string) => {
+  return `/v2/projects/${project}/stages/${stage}/promotions/downstream`;
+};
+
+export const promoteDownstream = async (
+  project: string,
+  stage: string,
+  promoteDownstreamRequest: PromoteDownstreamRequest,
+  options?: RequestInit
+): Promise<promoteDownstreamResponse> => {
+  return customFetch<promoteDownstreamResponse>(getPromoteDownstreamUrl(project, stage), {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(promoteDownstreamRequest)
+  });
+};
+
+export const getPromoteDownstreamMutationOptions = <
+  TError = unknown,
+  TContext = unknown
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof promoteDownstream>>,
+    TError,
+    { project: string; stage: string; data: PromoteDownstreamRequest },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof promoteDownstream>>,
+  TError,
+  { project: string; stage: string; data: PromoteDownstreamRequest },
+  TContext
+> => {
+  const mutationKey = ['promoteDownstream'];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof promoteDownstream>>,
+    { project: string; stage: string; data: PromoteDownstreamRequest }
+  > = (props) => {
+    const { project, stage, data } = props ?? {};
+
+    return promoteDownstream(project, stage, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PromoteDownstreamMutationResult = NonNullable<
+  Awaited<ReturnType<typeof promoteDownstream>>
+>;
+export type PromoteDownstreamMutationBody = PromoteDownstreamRequest;
+export type PromoteDownstreamMutationError = unknown;
+
+/**
+ * @summary Promote downstream
+ */
+export const usePromoteDownstream = <TError = unknown, TContext = unknown>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<typeof promoteDownstream>>,
+      TError,
+      { project: string; stage: string; data: PromoteDownstreamRequest },
+      TContext
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+  queryClient?: QueryClient
+): UseMutationResult<
+  Awaited<ReturnType<typeof promoteDownstream>>,
+  TError,
+  { project: string; stage: string; data: PromoteDownstreamRequest },
+  TContext
+> => {
+  const mutationOptions = getPromoteDownstreamMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

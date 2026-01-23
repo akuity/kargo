@@ -132,7 +132,9 @@ type ClientService interface {
 
 	PatchSystemConfigMap(params *PatchSystemConfigMapParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PatchSystemConfigMapOK, error)
 
-	PromoteToStageRest(params *PromoteToStageRestParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteToStageRestCreated, error)
+	PromoteDownstream(params *PromoteDownstreamParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteDownstreamCreated, error)
+
+	PromoteToStage(params *PromoteToStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteToStageCreated, error)
 
 	QueryFreightsRest(params *QueryFreightsRestParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*QueryFreightsRestOK, error)
 
@@ -1943,26 +1945,26 @@ func (a *Client) PatchSystemConfigMap(params *PatchSystemConfigMapParams, authIn
 }
 
 /*
-	PromoteToStageRest promotes to stage
+	PromoteDownstream promotes downstream
 
-	Create a Promotion resource to transition a specified Stage into
+	Creates a Promotion resource for each of a Stage's immediately
 
-the state represented by the specified Freight.
+downstream Stages.
 */
-func (a *Client) PromoteToStageRest(params *PromoteToStageRestParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteToStageRestCreated, error) {
+func (a *Client) PromoteDownstream(params *PromoteDownstreamParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteDownstreamCreated, error) {
 	// NOTE: parameters are not validated before sending
 	if params == nil {
-		params = NewPromoteToStageRestParams()
+		params = NewPromoteDownstreamParams()
 	}
 	op := &runtime.ClientOperation{
-		ID:                 "PromoteToStageRest",
+		ID:                 "PromoteDownstream",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/promotions",
+		PathPattern:        "/v2/projects/{project}/stages/{stage}/promotions/downstream",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
 		Params:             params,
-		Reader:             &PromoteToStageRestReader{formats: a.formats},
+		Reader:             &PromoteDownstreamReader{formats: a.formats},
 		AuthInfo:           authInfo,
 		Context:            params.Context,
 		Client:             params.HTTPClient,
@@ -1976,7 +1978,7 @@ func (a *Client) PromoteToStageRest(params *PromoteToStageRestParams, authInfo r
 	}
 
 	// only one success response has to be checked
-	success, ok := result.(*PromoteToStageRestCreated)
+	success, ok := result.(*PromoteDownstreamCreated)
 	if ok {
 		return success, nil
 	}
@@ -1986,7 +1988,55 @@ func (a *Client) PromoteToStageRest(params *PromoteToStageRestParams, authInfo r
 	// no default response is defined.
 	//
 	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
-	msg := fmt.Sprintf("unexpected success response for PromoteToStageRest: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	msg := fmt.Sprintf("unexpected success response for PromoteDownstream: API contract not enforced by server. Client expected to get an error, but got: %T", result)
+	panic(msg)
+}
+
+/*
+	PromoteToStage promotes to stage
+
+	Create a Promotion resource to transition a specified Stage into
+
+the state represented by the specified Freight.
+*/
+func (a *Client) PromoteToStage(params *PromoteToStageParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*PromoteToStageCreated, error) {
+	// NOTE: parameters are not validated before sending
+	if params == nil {
+		params = NewPromoteToStageParams()
+	}
+	op := &runtime.ClientOperation{
+		ID:                 "PromoteToStage",
+		Method:             "POST",
+		PathPattern:        "/v2/projects/{project}/stages/{stage}/promotions",
+		ProducesMediaTypes: []string{"application/json"},
+		ConsumesMediaTypes: []string{"application/json"},
+		Schemes:            []string{"http"},
+		Params:             params,
+		Reader:             &PromoteToStageReader{formats: a.formats},
+		AuthInfo:           authInfo,
+		Context:            params.Context,
+		Client:             params.HTTPClient,
+	}
+	for _, opt := range opts {
+		opt(op)
+	}
+	result, err := a.transport.Submit(op)
+	if err != nil {
+		return nil, err
+	}
+
+	// only one success response has to be checked
+	success, ok := result.(*PromoteToStageCreated)
+	if ok {
+		return success, nil
+	}
+
+	// unexpected success response.
+
+	// no default response is defined.
+	//
+	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
+	msg := fmt.Sprintf("unexpected success response for PromoteToStage: API contract not enforced by server. Client expected to get an error, but got: %T", result)
 	panic(msg)
 }
 

@@ -2002,7 +2002,7 @@ paths:
       description: |-
         Create a Promotion resource to transition a specified Stage into
         the state represented by the specified Freight.
-      operationId: PromoteToStageRest
+      operationId: PromoteToStage
       parameters:
       - description: Project name
         in: path
@@ -2068,6 +2068,9 @@ paths:
       security:
       - BearerAuth: []
       summary: Promote downstream
+      tags:
+      - Core
+      - Project-Level
   /v2/projects/{project}/stages/{stage}/refresh:
     post:
       description: |-

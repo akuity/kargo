@@ -6,4 +6,4 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type PromoteToStageRest201 = { [key: string]: unknown };
+export type PromoteToStage201 = { [key: string]: unknown };
