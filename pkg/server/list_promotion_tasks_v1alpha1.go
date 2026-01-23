@@ -69,10 +69,6 @@ func (s *server) listPromotionTasks(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &kargoapi.PromotionTaskList{}
 	if err := s.client.List(
 		ctx, list, client.InNamespace(project),

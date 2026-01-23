@@ -77,10 +77,6 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 	project := c.Param("project")
 	role := c.Param("role")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req createAPITokenRequest
 	if !bindJSONOrError(c, &req) {
 		return

@@ -64,10 +64,6 @@ func (s *server) updateRole(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("role")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	role := &rbacapi.Role{}
 	if !bindJSONOrError(c, role) {
 		return

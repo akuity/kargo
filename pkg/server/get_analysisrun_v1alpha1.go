@@ -94,10 +94,6 @@ func (s *server) getAnalysisRun(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("analysis-run")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	run := &rolloutsapi.AnalysisRun{}
 	if err := s.client.Get(
 		ctx, client.ObjectKey{Namespace: project, Name: name}, run,

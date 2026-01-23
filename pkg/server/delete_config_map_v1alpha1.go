@@ -69,10 +69,6 @@ func (s *server) deleteProjectConfigMap(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("configmap")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	configMapObj := &corev1.ConfigMap{}
 	if err := s.client.Get(
 		ctx,

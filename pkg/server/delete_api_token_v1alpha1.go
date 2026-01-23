@@ -55,10 +55,6 @@ func (s *server) deleteProjectAPIToken(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("apitoken")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.rolesDB.DeleteAPIToken(ctx, false, project, name); err != nil {
 		_ = c.Error(err)
 		return

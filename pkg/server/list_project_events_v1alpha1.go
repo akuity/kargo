@@ -76,10 +76,6 @@ func (s *server) listProjectEvents(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &corev1.EventList{}
 	if err := s.client.List(
 		ctx,

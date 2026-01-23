@@ -37,8 +37,9 @@ func Test_server_getProjectGenericCredentials(t *testing.T) {
 		http.MethodGet, "/v2/projects/"+testProject.Name+"/generic-credentials/"+testCreds.Name,
 		[]restTestCase{
 			{
-				name:         "secret management disabled",
-				serverConfig: &config.ServerConfig{SecretManagementEnabled: false},
+				name:          "secret management disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig:  &config.ServerConfig{SecretManagementEnabled: false},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotImplemented, w.Code)
 				},

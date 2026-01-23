@@ -82,10 +82,6 @@ func (s *server) revoke(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req revokeRequest
 	if !bindJSONOrError(c, &req) {
 		return

@@ -29,10 +29,6 @@ func (s *server) refreshStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	stage := &kargoapi.Stage{
 		ObjectMeta: metav1.ObjectMeta{Name: stageName, Namespace: project},
 	}

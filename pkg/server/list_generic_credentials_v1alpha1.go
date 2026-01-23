@@ -85,10 +85,6 @@ func (s *server) listProjectGenericCredentials(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &corev1.SecretList{}
 	if err := s.client.List(
 		ctx,

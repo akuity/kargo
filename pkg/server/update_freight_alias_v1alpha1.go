@@ -141,10 +141,6 @@ func (s *server) patchFreightAliasHandler(c *gin.Context) {
 		return
 	}
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
 	if freight == nil {
 		return

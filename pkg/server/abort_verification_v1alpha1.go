@@ -55,10 +55,6 @@ func (s *server) abortVerification(c *gin.Context) {
 	project := c.Param("project")
 	stage := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := api.AbortStageFreightVerification(
 		ctx,
 		s.client,

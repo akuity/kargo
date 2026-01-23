@@ -107,10 +107,6 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req createGenericCredentialsRequest
 	if !bindJSONOrError(c, &req) {
 		return

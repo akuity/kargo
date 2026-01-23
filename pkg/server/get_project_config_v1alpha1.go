@@ -81,10 +81,6 @@ func (s *server) getProjectConfig(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if watchMode := c.Query("watch") == trueStr; watchMode {
 		s.watchProjectConfig(c, project)
 		return

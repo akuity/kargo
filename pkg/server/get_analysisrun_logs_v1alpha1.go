@@ -536,10 +536,6 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 	metricName := c.Query("metricName")
 	containerName := c.Query("containerName")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	analysisRun, err := rollouts.GetAnalysisRun(
 		ctx,
 		s.client,

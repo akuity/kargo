@@ -62,10 +62,6 @@ func (s *server) createProjectRole(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	role := &rbacapi.Role{}
 	if !bindJSONOrError(c, role) {
 		return

@@ -85,10 +85,6 @@ func (s *server) getStage(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if watchMode := c.Query("watch") == trueStr; watchMode {
 		s.watchStage(c, project, name)
 		return

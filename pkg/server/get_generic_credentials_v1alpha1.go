@@ -29,10 +29,6 @@ func (s *server) getProjectGenericCredentials(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("generic-credentials")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	secret := &corev1.Secret{}
 	if err := s.client.Get(
 		ctx,

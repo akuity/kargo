@@ -124,17 +124,6 @@ func validateRepoCredentialSecret(secret *corev1.Secret) error {
 	return nil
 }
 
-// validateProjectExistsForGin validates that a project exists. Returns true if
-// validation passes, or false if an error was added to the gin context.
-func (s *server) validateProjectExistsForGin(c *gin.Context, project string) bool {
-	p := &kargoapi.Project{}
-	if err := s.client.Get(c.Request.Context(), client.ObjectKey{Name: project}, p); err != nil {
-		_ = c.Error(err)
-		return false
-	}
-	return true
-}
-
 // requireSecretManagement checks if secret management is enabled. Returns true
 // if enabled, or false if an error was added to the gin context.
 func (s *server) requireSecretManagement(c *gin.Context) bool {

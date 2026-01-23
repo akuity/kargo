@@ -126,10 +126,6 @@ func (s *server) updateProjectGenericCredentials(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("generic-credentials")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req updateGenericCredentialsRequest
 	if !bindJSONOrError(c, &req) {
 		return

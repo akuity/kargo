@@ -55,10 +55,6 @@ func (s *server) deleteProjectRole(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("role")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.rolesDB.Delete(ctx, project, name); err != nil {
 		_ = c.Error(err)
 		return

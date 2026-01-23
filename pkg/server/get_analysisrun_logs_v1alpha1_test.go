@@ -723,21 +723,25 @@ func Test_streamLogs(t *testing.T) {
 }
 
 func Test_server_getAnalysisRunLogs(t *testing.T) {
-	const projectName = "fake-project"
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
 	const runName = "fake-analysisrun"
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodGet, "/v2/projects/"+projectName+"/analysis-runs/"+runName+"/logs",
+		http.MethodGet, "/v2/projects/"+testProject.Name+"/analysis-runs/"+runName+"/logs",
 		[]restTestCase{
 			{
-				name:         "Rollouts integration disabled",
-				serverConfig: &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				name:          "Rollouts integration disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig:  &config.ServerConfig{RolloutsIntegrationEnabled: false},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotImplemented, w.Code)
 				},
 			},
 			{
-				name: "log streaming not configured",
+				name:          "log streaming not configured",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				serverConfig: &config.ServerConfig{
 					RolloutsIntegrationEnabled: true,
 					AnalysisRunLogURLTemplate:  "",
@@ -763,11 +767,7 @@ func Test_server_getAnalysisRunLogs(t *testing.T) {
 					RolloutsIntegrationEnabled: true,
 					AnalysisRunLogURLTemplate:  "http://example.com",
 				},
-				clientBuilder: fake.NewClientBuilder().WithObjects(
-					&kargoapi.Project{
-						ObjectMeta: metav1.ObjectMeta{Name: projectName},
-					},
-				),
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					// The error from rollouts.GetAnalysisRun gets wrapped, so we get 500
 					require.Equal(t, http.StatusNotFound, w.Code)

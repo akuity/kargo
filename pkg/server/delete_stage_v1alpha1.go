@@ -60,10 +60,6 @@ func (s *server) deleteStage(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.client.Delete(
 		ctx,
 		&kargoapi.Stage{

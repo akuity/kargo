@@ -219,10 +219,6 @@ func (s *server) promoteDownstream(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req promoteDownstreamRequest
 	if !bindJSONOrError(c, &req) {
 		return

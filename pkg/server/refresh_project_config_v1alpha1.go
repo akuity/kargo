@@ -26,10 +26,6 @@ func (s *server) refreshProjectConfig(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	obj := &kargoapi.ProjectConfig{
 		ObjectMeta: metav1.ObjectMeta{Name: project, Namespace: project},
 	}

@@ -119,10 +119,6 @@ func (s *server) createProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req createConfigMapRequest
 	if !bindJSONOrError(c, &req) {
 		return

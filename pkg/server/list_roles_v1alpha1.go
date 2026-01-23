@@ -119,10 +119,6 @@ func (s *server) listProjectRoles(c *gin.Context) {
 	project := c.Param("project")
 	asResources := c.Query("as-resources") == trueStr
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	kargoRoleNames, err := s.rolesDB.ListNames(ctx, false, project)
 	if err != nil {
 		_ = c.Error(err)

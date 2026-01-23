@@ -60,10 +60,6 @@ func (s *server) deleteWarehouse(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("warehouse")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.client.Delete(
 		ctx,
 		&kargoapi.Warehouse{

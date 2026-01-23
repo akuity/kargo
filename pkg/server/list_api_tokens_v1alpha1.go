@@ -70,10 +70,6 @@ func (s *server) listProjectAPITokens(c *gin.Context) {
 	project := c.Param("project")
 	roleName := c.Query("role")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	tokens, err := s.rolesDB.ListAPITokens(ctx, false, project, roleName)
 	if err != nil {
 		_ = c.Error(err)

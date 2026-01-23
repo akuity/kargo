@@ -73,10 +73,6 @@ func (s *server) listPromotions(c *gin.Context) {
 	project := c.Param("project")
 	stage := c.Query("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if watchMode := c.Query("watch") == trueStr; watchMode {
 		s.watchPromotions(c, project, stage)
 		return

@@ -86,10 +86,6 @@ func (s *server) getPromotionTask(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("promotion-task")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	task := &kargoapi.PromotionTask{}
 	if err := s.client.Get(
 		ctx,

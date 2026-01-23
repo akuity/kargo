@@ -97,10 +97,6 @@ func (s *server) listProjectRepoCredentials(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	credsLabelSelector := labels.NewSelector()
 	credsLabelSelectorRequirement, err := labels.NewRequirement(
 		kargoapi.LabelKeyCredentialType,

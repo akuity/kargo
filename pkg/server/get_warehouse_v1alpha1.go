@@ -111,10 +111,6 @@ func (s *server) getWarehouse(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("warehouse")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if watchMode := c.Query("watch") == trueStr; watchMode {
 		s.watchWarehouse(c, project, name)
 		return

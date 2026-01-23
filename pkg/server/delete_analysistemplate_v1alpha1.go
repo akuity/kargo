@@ -72,10 +72,6 @@ func (s *server) deleteAnalysisTemplate(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("analysis-template")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.client.Delete(ctx, &v1alpha1.AnalysisTemplate{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: project,

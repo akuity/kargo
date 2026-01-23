@@ -137,6 +137,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		v2.GET("/projects", defaultLimit, s.listProjects)
 		project := v2.Group("/projects/:project")
 		project.Use(defaultLimit)
+		project.Use(s.projectExistsMiddleware())
 		{
 			// Project CRUD
 			project.GET("", s.getProject)

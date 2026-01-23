@@ -74,10 +74,6 @@ func (s *server) listProjectConfigMaps(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &corev1.ConfigMapList{}
 	if err := s.client.List(
 		ctx, list, client.InNamespace(project),

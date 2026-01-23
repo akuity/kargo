@@ -79,10 +79,6 @@ func (s *server) listAnalysisTemplates(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &rolloutsapi.AnalysisTemplateList{}
 	if err := s.client.List(
 		ctx, list, client.InNamespace(project),

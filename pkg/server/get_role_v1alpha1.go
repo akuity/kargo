@@ -123,10 +123,6 @@ func (s *server) getProjectRole(c *gin.Context) {
 	name := c.Param("role")
 	asResources := c.Query("as-resources") == trueStr
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		_ = c.Error(err)

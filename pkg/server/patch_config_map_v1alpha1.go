@@ -43,10 +43,6 @@ func (s *server) patchProjectConfigMap(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("configmap")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req patchConfigMapRequest
 	if !bindJSONOrError(c, &req) {
 		return

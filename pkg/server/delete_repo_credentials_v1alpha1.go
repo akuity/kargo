@@ -94,10 +94,6 @@ func (s *server) deleteProjectRepoCredentials(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("repo-credentials")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,

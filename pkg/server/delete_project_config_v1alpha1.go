@@ -54,10 +54,6 @@ func (s *server) deleteProjectConfig(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	if err := s.client.Delete(
 		ctx,
 		&kargoapi.ProjectConfig{

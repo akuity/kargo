@@ -106,7 +106,8 @@ func Test_server_createProjectGenericCredentials(t *testing.T) {
 		http.MethodPost, "/v2/projects/"+testProject.Name+"/generic-credentials",
 		[]restTestCase{
 			{
-				name: "Secret management disabled",
+				name:          "Secret management disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				body: mustJSONBody(createGenericCredentialsRequest{
 					Name: testSecret.Name,
 					Data: testData,

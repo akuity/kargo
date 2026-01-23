@@ -56,10 +56,6 @@ func (s *server) abortPromotion(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("promotion")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	objKey := client.ObjectKey{
 		Namespace: project,
 		Name:      name,

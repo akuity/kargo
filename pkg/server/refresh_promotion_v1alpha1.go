@@ -28,10 +28,6 @@ func (s *server) refreshPromotion(c *gin.Context) {
 	project := c.Param("project")
 	promotionName := c.Param("promotion")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	obj := &kargoapi.Promotion{
 		ObjectMeta: metav1.ObjectMeta{Name: promotionName, Namespace: project},
 	}

@@ -130,10 +130,6 @@ func (s *server) createProjectRepoCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req createRepoCredentialsRequest
 	if !bindJSONOrError(c, &req) {
 		return

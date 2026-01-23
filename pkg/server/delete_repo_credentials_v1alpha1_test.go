@@ -33,8 +33,9 @@ func Test_server_deleteProjectRepoCredentials(t *testing.T) {
 		t, &config.ServerConfig{SecretManagementEnabled: true},
 		http.MethodDelete, "/v2/projects/"+testProject.Name+"/repo-credentials/"+testCreds.Name, []restTestCase{
 			{
-				name:         "Secret management disabled",
-				serverConfig: &config.ServerConfig{SecretManagementEnabled: false},
+				name:          "Secret management disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig:  &config.ServerConfig{SecretManagementEnabled: false},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotImplemented, w.Code)
 				},

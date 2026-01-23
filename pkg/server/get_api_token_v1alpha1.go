@@ -85,10 +85,6 @@ func (s *server) getProjectAPIToken(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("apitoken")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	tokenSecret, err := s.rolesDB.GetAPIToken(ctx, false, project, name)
 	if err != nil {
 		_ = c.Error(err)

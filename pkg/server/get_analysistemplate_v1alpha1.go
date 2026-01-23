@@ -101,10 +101,6 @@ func (s *server) getAnalysisTemplate(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("analysis-template")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	template := &rolloutsapi.AnalysisTemplate{}
 	if err := s.client.Get(
 		ctx, client.ObjectKey{Namespace: project, Name: name}, template,

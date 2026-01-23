@@ -87,10 +87,6 @@ func (s *server) grant(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req grantRequest
 	if !bindJSONOrError(c, &req) {
 		return

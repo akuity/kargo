@@ -184,10 +184,6 @@ func (s *server) approveFreight(c *gin.Context) {
 		return
 	}
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	freight := s.getFreightByNameOrAliasForGin(c, project, freightNameOrAlias)
 	if freight == nil {
 		return

@@ -119,7 +119,8 @@ func Test_server_createProjectRepoCredentials(t *testing.T) {
 		http.MethodPost, "/v2/projects/"+testProject.Name+"/repo-credentials",
 		[]restTestCase{
 			{
-				name:         "Secret management disabled",
+				name:          "Secret management disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				serverConfig: &config.ServerConfig{SecretManagementEnabled: false},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotImplemented, w.Code)

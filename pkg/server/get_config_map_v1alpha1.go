@@ -93,10 +93,6 @@ func (s *server) getProjectConfigMap(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("configmap")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	configMap := &corev1.ConfigMap{}
 	if err := s.client.Get(
 		ctx, client.ObjectKey{Name: name, Namespace: project}, configMap,

@@ -117,10 +117,6 @@ func (s *server) getFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
 	if freight == nil {
 		return

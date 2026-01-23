@@ -88,10 +88,6 @@ func (s *server) updateProjectConfigMap(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("configmap")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req updateConfigMapRequest
 	if !bindJSONOrError(c, &req) {
 		return

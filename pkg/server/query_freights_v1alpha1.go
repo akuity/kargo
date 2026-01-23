@@ -375,10 +375,6 @@ func (s *server) queryFreight(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	stageName := c.Query("stage")
 	group := c.Query("group")
 	groupBy := c.Query("groupBy")

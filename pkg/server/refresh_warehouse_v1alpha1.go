@@ -28,10 +28,6 @@ func (s *server) refreshWarehouse(c *gin.Context) {
 	project := c.Param("project")
 	warehouseName := c.Param("warehouse")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	obj := &kargoapi.Warehouse{
 		ObjectMeta: metav1.ObjectMeta{Name: warehouseName, Namespace: project},
 	}

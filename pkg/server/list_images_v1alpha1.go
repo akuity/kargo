@@ -104,10 +104,6 @@ func (s *server) listImages(c *gin.Context) {
 
 	project := c.Param("project")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	list := &kargoapi.StageList{}
 	if err := s.client.List(
 		ctx, list, client.InNamespace(project),

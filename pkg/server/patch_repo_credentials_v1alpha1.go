@@ -44,10 +44,6 @@ func (s *server) patchProjectRepoCredentials(c *gin.Context) {
 	project := c.Param("project")
 	name := c.Param("repo-credentials")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req patchRepoCredentialsRequest
 	if !bindJSONOrError(c, &req) {
 		return

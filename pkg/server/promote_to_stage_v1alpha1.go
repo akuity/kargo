@@ -185,10 +185,6 @@ func (s *server) promoteToStage(c *gin.Context) {
 	project := c.Param("project")
 	stageName := c.Param("stage")
 
-	if !s.validateProjectExistsForGin(c, project) {
-		return
-	}
-
 	var req promoteToStageRequest
 	if !bindJSONOrError(c, &req) {
 		return
