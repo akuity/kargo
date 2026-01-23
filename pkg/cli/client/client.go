@@ -75,7 +75,10 @@ func GetClient(
 	apiClient := client.NewHTTPClientWithConfig(strfmt.Default, transportCfg)
 
 	// Get the runtime to configure transport
-	rt := apiClient.Transport.(*httptransport.Runtime) // nolint: forcetypeassert
+	rt, ok := apiClient.Transport.(*httptransport.Runtime)
+	if !ok {
+		return nil, errors.New("unexpected transport type")
+	}
 
 	// Start with the default transport
 	baseTransport := cleanhttp.DefaultTransport()
