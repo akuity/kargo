@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/hashicorp/go-cleanhttp"
 )
 
 // EventType represents the type of watch event.
@@ -37,7 +38,7 @@ type Client struct {
 // NewClient creates a new watch client.
 func NewClient(baseURL string, httpClient *http.Client, token string) *Client {
 	if httpClient == nil {
-		httpClient = http.DefaultClient
+		httpClient = cleanhttp.DefaultClient()
 	}
 	return &Client{
 		baseURL:    strings.TrimSuffix(baseURL, "/"),
