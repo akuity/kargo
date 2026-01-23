@@ -42,8 +42,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// Generic Resources (CRUD via group/version/kind/namespace/name)
 		// =====================================================================
 		v2.POST("/resources", s.createResources)
-		v2.PUT("/resources", s.createOrUpdateResources)
-		v2.PATCH("/resources", s.updateResources)
+		v2.PUT("/resources", s.updateResources)
 		v2.DELETE("/resources", s.deleteResources)
 
 		// =====================================================================
