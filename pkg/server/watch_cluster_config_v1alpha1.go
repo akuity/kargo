@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,10 +26,11 @@ func (s *server) WatchClusterConfig(
 		return fmt.Errorf("get ClusterConfig: %w", err)
 	}
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, api.ClusterConfigName).String(),
-	}
-	w, err := s.client.Watch(ctx, &kargoapi.ClusterConfig{}, api.ClusterConfigName, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.ClusterConfigList{},
+		client.MatchingFields{"metadata.name": api.ClusterConfigName},
+	)
 	if err != nil {
 		return fmt.Errorf("watch ClusterConfig: %w", err)
 	}

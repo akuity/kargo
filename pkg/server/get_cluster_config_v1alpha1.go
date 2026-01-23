@@ -8,7 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -103,12 +102,12 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 
 	setSSEHeaders(c)
 
-	opts := metav1.ListOptions{
-		FieldSelector: "metadata.name=" + api.ClusterConfigName,
-	}
-
 	// ClusterConfig is cluster-scoped, so no namespace
-	w, err := s.client.Watch(ctx, &kargoapi.ClusterConfig{}, "", opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.ClusterConfigList{},
+		client.MatchingFields{"metadata.name": api.ClusterConfigName},
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch cluster config: %w", err))

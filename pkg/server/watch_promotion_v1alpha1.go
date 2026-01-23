@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,10 +40,12 @@ func (s *server) WatchPromotion(
 		return fmt.Errorf("get promotion: %w", err)
 	}
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
-	}
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.PromotionList{},
+		client.InNamespace(project),
+		client.MatchingFields{"metadata.name": name},
+	)
 	if err != nil {
 		return fmt.Errorf("watch promotion: %w", err)
 	}

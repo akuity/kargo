@@ -10,7 +10,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -93,7 +92,7 @@ func (s *server) watchWarehouses(c *gin.Context, project string) {
 
 	setSSEHeaders(c)
 
-	w, err := s.client.Watch(ctx, &kargoapi.Warehouse{}, project, metav1.ListOptions{})
+	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, client.InNamespace(project))
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch warehouses: %w", err))

@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -37,10 +35,12 @@ func (s *server) WatchProjectConfig(
 		return fmt.Errorf("get projectconfig: %w", err)
 	}
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, project).String(),
-	}
-	w, err := s.client.Watch(ctx, &kargoapi.ProjectConfig{}, project, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.ProjectConfigList{},
+		client.InNamespace(project),
+		client.MatchingFields{"metadata.name": project},
+	)
 	if err != nil {
 		return fmt.Errorf("watch ProjectConfig: %w", err)
 	}

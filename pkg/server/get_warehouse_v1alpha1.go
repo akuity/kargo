@@ -9,9 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -150,11 +148,12 @@ func (s *server) watchWarehouse(c *gin.Context, project, name string) {
 
 	setSSEHeaders(c)
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, name).String(),
-	}
-
-	w, err := s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.WarehouseList{},
+		client.InNamespace(project),
+		client.MatchingFields{"metadata.name": name},
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch warehouse: %w", err))

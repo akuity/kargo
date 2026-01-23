@@ -156,9 +156,8 @@ func TestAllClientOperations(t *testing.T) {
 	watchOp := func(client *client) error {
 		_, err := client.Watch(
 			context.Background(),
-			&corev1.Pod{},
-			"test-namespace",
-			metav1.ListOptions{},
+			&corev1.PodList{},
+			libClient.InNamespace("test-namespace"),
 		)
 		return err
 	}
@@ -370,23 +369,23 @@ func TestAllClientOperations(t *testing.T) {
 			if !testCase.allowed {
 				client.getAuthorizedClientFn = func(
 					context.Context,
-					libClient.Client,
+					libClient.WithWatch,
 					string,
 					schema.GroupVersionResource,
 					string,
 					libClient.ObjectKey,
-				) (libClient.Client, error) {
+				) (libClient.WithWatch, error) {
 					return nil, errors.New("not allowed")
 				}
 			} else {
 				client.getAuthorizedClientFn = func(
 					context.Context,
-					libClient.Client,
+					libClient.WithWatch,
 					string,
 					schema.GroupVersionResource,
 					string,
 					libClient.ObjectKey,
-				) (libClient.Client, error) {
+				) (libClient.WithWatch, error) {
 					return client.internalClient, nil
 				}
 			}

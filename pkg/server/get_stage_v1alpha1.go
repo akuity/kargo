@@ -8,7 +8,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -125,11 +124,12 @@ func (s *server) watchStage(c *gin.Context, project, name string) {
 
 	setSSEHeaders(c)
 
-	opts := metav1.ListOptions{
-		FieldSelector: "metadata.name=" + name,
-	}
-
-	w, err := s.client.Watch(ctx, &kargoapi.Stage{}, project, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.StageList{},
+		client.InNamespace(project),
+		client.MatchingFields{"metadata.name": name},
+	)
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch stage: %w", err))

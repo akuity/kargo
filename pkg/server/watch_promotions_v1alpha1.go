@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,7 +39,7 @@ func (s *server) WatchPromotions(
 		}
 	}
 
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, metav1.ListOptions{})
+	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
 	if err != nil {
 		return fmt.Errorf("watch promotion: %w", err)
 	}

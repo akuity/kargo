@@ -5,9 +5,7 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,11 +39,11 @@ func (s *server) WatchStages(
 		}
 	}
 
-	opts := metav1.ListOptions{}
+	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
 	if name != "" {
-		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
+		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.Stage{}, project, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, watchOpts...)
 	if err != nil {
 		return fmt.Errorf("watch stage: %w", err)
 	}

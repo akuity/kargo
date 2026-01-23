@@ -10,7 +10,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -111,7 +110,7 @@ func (s *server) watchPromotions(c *gin.Context, project, stage string) {
 
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
-	w, err := s.client.Watch(ctx, &kargoapi.Promotion{}, project, metav1.ListOptions{})
+	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
 	if err != nil {
 		logger.Error(err, "failed to start watch")
 		_ = c.Error(fmt.Errorf("watch promotions: %w", err))
