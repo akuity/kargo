@@ -80,8 +80,6 @@ func (s *server) watchStages(c *gin.Context, project string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	setSSEHeaders(c)
-
 	w, err := s.client.Watch(ctx, &kargoapi.StageList{}, client.InNamespace(project))
 	if err != nil {
 		logger.Error(err, "failed to start watch")
@@ -90,10 +88,10 @@ func (s *server) watchStages(c *gin.Context, project string) {
 	}
 	defer w.Stop()
 
-	c.Writer.Flush()
-
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
 
 	for {
 		select {

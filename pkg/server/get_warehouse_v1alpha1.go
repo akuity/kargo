@@ -142,8 +142,6 @@ func (s *server) watchWarehouse(c *gin.Context, project, name string) {
 		return
 	}
 
-	setSSEHeaders(c)
-
 	w, err := s.client.Watch(
 		ctx,
 		&kargoapi.WarehouseList{},
@@ -157,10 +155,10 @@ func (s *server) watchWarehouse(c *gin.Context, project, name string) {
 	}
 	defer w.Stop()
 
-	c.Writer.Flush()
-
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
 
 	for {
 		select {

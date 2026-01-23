@@ -102,8 +102,6 @@ func (s *server) watchPromotions(c *gin.Context, project, stage string) {
 	ctx := c.Request.Context()
 	logger := logging.LoggerFromContext(ctx)
 
-	setSSEHeaders(c)
-
 	// Note: We can't filter by stage using field selector in the watch API.
 	// The indexer is for List operations only. We filter events client-side.
 	w, err := s.client.Watch(ctx, &kargoapi.PromotionList{}, client.InNamespace(project))
@@ -114,10 +112,10 @@ func (s *server) watchPromotions(c *gin.Context, project, stage string) {
 	}
 	defer w.Stop()
 
-	c.Writer.Flush()
-
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
 
 	for {
 		select {

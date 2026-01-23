@@ -100,8 +100,6 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 		return
 	}
 
-	setSSEHeaders(c)
-
 	// ClusterConfig is cluster-scoped, so no namespace
 	w, err := s.client.Watch(
 		ctx,
@@ -115,10 +113,10 @@ func (s *server) watchClusterConfig(c *gin.Context) {
 	}
 	defer w.Stop()
 
-	c.Writer.Flush()
-
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
 
 	for {
 		select {

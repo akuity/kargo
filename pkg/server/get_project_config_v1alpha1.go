@@ -112,8 +112,6 @@ func (s *server) watchProjectConfig(c *gin.Context, project string) {
 		return
 	}
 
-	setSSEHeaders(c)
-
 	// ProjectConfig is namespaced, namespace = project
 	w, err := s.client.Watch(
 		ctx,
@@ -128,10 +126,10 @@ func (s *server) watchProjectConfig(c *gin.Context, project string) {
 	}
 	defer w.Stop()
 
-	c.Writer.Flush()
-
 	keepaliveTicker := time.NewTicker(30 * time.Second)
 	defer keepaliveTicker.Stop()
+
+	setSSEHeaders(c)
 
 	for {
 		select {

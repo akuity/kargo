@@ -612,9 +612,6 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 	}
 	defer httpResp.Body.Close()
 
-	setSSEHeaders(c)
-	c.Writer.Flush()
-
 	// Logs can be large, so we read them using a buffered reader.
 	reader := bufio.NewReader(httpResp.Body)
 
@@ -636,6 +633,8 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 		_ = c.Error(fmt.Errorf("error streaming logs: %w", err))
 		return
 	}
+
+	setSSEHeaders(c)
 
 	for {
 		select {
