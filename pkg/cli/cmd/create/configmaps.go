@@ -175,10 +175,7 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	var resp interface {
-		GetPayload() any
-	}
-
+	var resJSON []byte
 	switch {
 	case o.System:
 		var res *core.CreateSystemConfigMapCreated
@@ -193,7 +190,7 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("create system ConfigMap: %w", err)
 		}
-		resp = res
+		resJSON, err = json.Marshal(res.GetPayload())
 	case o.Shared:
 		var res *core.CreateSharedConfigMapCreated
 		if res, err = apiClient.Core.CreateSharedConfigMap(
@@ -207,7 +204,7 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("create shared ConfigMap: %w", err)
 		}
-		resp = res
+		resJSON, err = json.Marshal(res.GetPayload())
 	default:
 		var res *core.CreateProjectConfigMapCreated
 		if res, err = apiClient.Core.CreateProjectConfigMap(
@@ -222,10 +219,10 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		); err != nil {
 			return fmt.Errorf("create project ConfigMap: %w", err)
 		}
-		resp = res
+		resJSON, err = json.Marshal(res.GetPayload())
 	}
-
-	resJSON, err := json.Marshal(resp.GetPayload())
+	// All three cases above end with marshalling the response payload, so we
+	// can handle any of those potential errors here, in one place.
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)
 	}
