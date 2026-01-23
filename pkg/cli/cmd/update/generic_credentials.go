@@ -177,7 +177,7 @@ func (o *updateGenericCredentialsOptions) validate() error {
 			errs = append(errs, fmt.Errorf("invalid --set format %q: expected key=value", kv))
 			continue
 		}
-		key, value := parts[0], parts[1]
+		key, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
 		if key == "" {
 			errs = append(errs, fmt.Errorf("invalid --set format %q: key cannot be empty", kv))
 			continue
