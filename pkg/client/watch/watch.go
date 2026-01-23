@@ -136,6 +136,39 @@ type watchEvent[T any] struct {
 	Object T      `json:"object"`
 }
 
+// doSSERequest executes an SSE request and calls the provided handler with the
+// response body. It handles common setup like headers, authentication, and
+// error checking.
+func (c *Client) doSSERequest(
+	ctx context.Context,
+	url string,
+	handleBody func(ctx context.Context, body io.Reader) error,
+) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("creating request: %w", err)
+	}
+
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("Cache-Control", "no-cache")
+	if c.token != "" {
+		req.Header.Set("Authorization", "Bearer "+c.token)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("executing request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	return handleBody(ctx, resp.Body)
+}
+
 // watchResource is the generic implementation for watching any resource type.
 func watchResource[T any](
 	ctx context.Context,
@@ -149,32 +182,9 @@ func watchResource[T any](
 		defer close(eventCh)
 		defer close(errCh)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			errCh <- fmt.Errorf("creating request: %w", err)
-			return
-		}
-
-		req.Header.Set("Accept", "text/event-stream")
-		req.Header.Set("Cache-Control", "no-cache")
-		if c.token != "" {
-			req.Header.Set("Authorization", "Bearer "+c.token)
-		}
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			errCh <- fmt.Errorf("executing request: %w", err)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			errCh <- fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
-			return
-		}
-
-		if err := readSSEStream(ctx, resp.Body, eventCh); err != nil {
+		if err := c.doSSERequest(ctx, url, func(ctx context.Context, body io.Reader) error {
+			return readSSEStream(ctx, body, eventCh)
+		}); err != nil {
 			errCh <- err
 		}
 	}()
@@ -480,32 +490,9 @@ func streamLogs(
 		defer close(logCh)
 		defer close(errCh)
 
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-		if err != nil {
-			errCh <- fmt.Errorf("creating request: %w", err)
-			return
-		}
-
-		req.Header.Set("Accept", "text/event-stream")
-		req.Header.Set("Cache-Control", "no-cache")
-		if c.token != "" {
-			req.Header.Set("Authorization", "Bearer "+c.token)
-		}
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil {
-			errCh <- fmt.Errorf("executing request: %w", err)
-			return
-		}
-		defer resp.Body.Close()
-
-		if resp.StatusCode != http.StatusOK {
-			body, _ := io.ReadAll(resp.Body)
-			errCh <- fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
-			return
-		}
-
-		if err := readLogStream(ctx, resp.Body, logCh); err != nil {
+		if err := c.doSSERequest(ctx, url, func(ctx context.Context, body io.Reader) error {
+			return readLogStream(ctx, body, logCh)
+		}); err != nil {
 			errCh <- err
 		}
 	}()
