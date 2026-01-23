@@ -14,11 +14,11 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
-  CreateOrUpdateResourceManifestBody,
   CreateOrUpdateResourceResponse,
   CreateResourceResponse,
   DeleteResourceResponse,
-  UpdateResourceResponse
+  UpdateResourceManifestBody,
+  UpdateResourceParams
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -26,54 +26,61 @@ import { customFetch } from '../../../../lib/api/custom-fetch';
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 /**
- * Create or update one or more Kargo resources from YAML or JSON
-manifests.
- * @summary Create or update resources
+ * Update (or optionally, upsert) one or more Kargo resources from
+ * @summary Update resources
  */
-export type createOrUpdateResourceResponse200 = {
+export type updateResourceResponse200 = {
   data: CreateOrUpdateResourceResponse;
   status: 200;
 };
 
-export type createOrUpdateResourceResponseSuccess = createOrUpdateResourceResponse200 & {
+export type updateResourceResponseSuccess = updateResourceResponse200 & {
   headers: Headers;
 };
-export type createOrUpdateResourceResponse = createOrUpdateResourceResponseSuccess;
+export type updateResourceResponse = updateResourceResponseSuccess;
 
-export const getCreateOrUpdateResourceUrl = () => {
-  return `/v2/resources`;
+export const getUpdateResourceUrl = (params?: UpdateResourceParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/v2/resources?${stringifiedParams}` : `/v2/resources`;
 };
 
-export const createOrUpdateResource = async (
-  createOrUpdateResourceManifestBody: CreateOrUpdateResourceManifestBody,
+export const updateResource = async (
+  updateResourceManifestBody: UpdateResourceManifestBody,
+  params?: UpdateResourceParams,
   options?: RequestInit
-): Promise<createOrUpdateResourceResponse> => {
-  return customFetch<createOrUpdateResourceResponse>(getCreateOrUpdateResourceUrl(), {
+): Promise<updateResourceResponse> => {
+  return customFetch<updateResourceResponse>(getUpdateResourceUrl(params), {
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: createOrUpdateResourceManifestBody
+    body: updateResourceManifestBody
   });
 };
 
-export const getCreateOrUpdateResourceMutationOptions = <
-  TError = unknown,
-  TContext = unknown
->(options?: {
+export const getUpdateResourceMutationOptions = <TError = unknown, TContext = unknown>(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof createOrUpdateResource>>,
+    Awaited<ReturnType<typeof updateResource>>,
     TError,
-    { data: CreateOrUpdateResourceManifestBody },
+    { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof createOrUpdateResource>>,
+  Awaited<ReturnType<typeof updateResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
   TContext
 > => {
-  const mutationKey = ['createOrUpdateResource'];
+  const mutationKey = ['updateResource'];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
@@ -81,44 +88,42 @@ export const getCreateOrUpdateResourceMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof createOrUpdateResource>>,
-    { data: CreateOrUpdateResourceManifestBody }
+    Awaited<ReturnType<typeof updateResource>>,
+    { data: UpdateResourceManifestBody; params?: UpdateResourceParams }
   > = (props) => {
-    const { data } = props ?? {};
+    const { data, params } = props ?? {};
 
-    return createOrUpdateResource(data, requestOptions);
+    return updateResource(data, params, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type CreateOrUpdateResourceMutationResult = NonNullable<
-  Awaited<ReturnType<typeof createOrUpdateResource>>
->;
-export type CreateOrUpdateResourceMutationBody = CreateOrUpdateResourceManifestBody;
-export type CreateOrUpdateResourceMutationError = unknown;
+export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>;
+export type UpdateResourceMutationBody = UpdateResourceManifestBody;
+export type UpdateResourceMutationError = unknown;
 
 /**
- * @summary Create or update resources
+ * @summary Update resources
  */
-export const useCreateOrUpdateResource = <TError = unknown, TContext = unknown>(
+export const useUpdateResource = <TError = unknown, TContext = unknown>(
   options?: {
     mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof createOrUpdateResource>>,
+      Awaited<ReturnType<typeof updateResource>>,
       TError,
-      { data: CreateOrUpdateResourceManifestBody },
+      { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
-  Awaited<ReturnType<typeof createOrUpdateResource>>,
+  Awaited<ReturnType<typeof updateResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody; params?: UpdateResourceParams },
   TContext
 > => {
-  const mutationOptions = getCreateOrUpdateResourceMutationOptions(options);
+  const mutationOptions = getUpdateResourceMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };
@@ -141,14 +146,14 @@ export const getCreateResourceUrl = () => {
 };
 
 export const createResource = async (
-  createOrUpdateResourceManifestBody: CreateOrUpdateResourceManifestBody,
+  updateResourceManifestBody: UpdateResourceManifestBody,
   options?: RequestInit
 ): Promise<createResourceResponse> => {
   return customFetch<createResourceResponse>(getCreateResourceUrl(), {
     ...options,
     method: 'POST',
     headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: createOrUpdateResourceManifestBody
+    body: updateResourceManifestBody
   });
 };
 
@@ -156,14 +161,14 @@ export const getCreateResourceMutationOptions = <TError = unknown, TContext = un
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof createResource>>,
     TError,
-    { data: CreateOrUpdateResourceManifestBody },
+    { data: UpdateResourceManifestBody },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody },
   TContext
 > => {
   const mutationKey = ['createResource'];
@@ -175,7 +180,7 @@ export const getCreateResourceMutationOptions = <TError = unknown, TContext = un
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createResource>>,
-    { data: CreateOrUpdateResourceManifestBody }
+    { data: UpdateResourceManifestBody }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -186,7 +191,7 @@ export const getCreateResourceMutationOptions = <TError = unknown, TContext = un
 };
 
 export type CreateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof createResource>>>;
-export type CreateResourceMutationBody = CreateOrUpdateResourceManifestBody;
+export type CreateResourceMutationBody = UpdateResourceManifestBody;
 export type CreateResourceMutationError = unknown;
 
 /**
@@ -197,7 +202,7 @@ export const useCreateResource = <TError = unknown, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof createResource>>,
       TError,
-      { data: CreateOrUpdateResourceManifestBody },
+      { data: UpdateResourceManifestBody },
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -206,7 +211,7 @@ export const useCreateResource = <TError = unknown, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof createResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody },
   TContext
 > => {
   const mutationOptions = getCreateResourceMutationOptions(options);
@@ -233,14 +238,14 @@ export const getDeleteResourceUrl = () => {
 };
 
 export const deleteResource = async (
-  createOrUpdateResourceManifestBody: CreateOrUpdateResourceManifestBody,
+  updateResourceManifestBody: UpdateResourceManifestBody,
   options?: RequestInit
 ): Promise<deleteResourceResponse> => {
   return customFetch<deleteResourceResponse>(getDeleteResourceUrl(), {
     ...options,
     method: 'DELETE',
     headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: createOrUpdateResourceManifestBody
+    body: updateResourceManifestBody
   });
 };
 
@@ -248,14 +253,14 @@ export const getDeleteResourceMutationOptions = <TError = unknown, TContext = un
   mutation?: UseMutationOptions<
     Awaited<ReturnType<typeof deleteResource>>,
     TError,
-    { data: CreateOrUpdateResourceManifestBody },
+    { data: UpdateResourceManifestBody },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody },
   TContext
 > => {
   const mutationKey = ['deleteResource'];
@@ -267,7 +272,7 @@ export const getDeleteResourceMutationOptions = <TError = unknown, TContext = un
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteResource>>,
-    { data: CreateOrUpdateResourceManifestBody }
+    { data: UpdateResourceManifestBody }
   > = (props) => {
     const { data } = props ?? {};
 
@@ -278,7 +283,7 @@ export const getDeleteResourceMutationOptions = <TError = unknown, TContext = un
 };
 
 export type DeleteResourceMutationResult = NonNullable<Awaited<ReturnType<typeof deleteResource>>>;
-export type DeleteResourceMutationBody = CreateOrUpdateResourceManifestBody;
+export type DeleteResourceMutationBody = UpdateResourceManifestBody;
 export type DeleteResourceMutationError = unknown;
 
 /**
@@ -289,7 +294,7 @@ export const useDeleteResource = <TError = unknown, TContext = unknown>(
     mutation?: UseMutationOptions<
       Awaited<ReturnType<typeof deleteResource>>,
       TError,
-      { data: CreateOrUpdateResourceManifestBody },
+      { data: UpdateResourceManifestBody },
       TContext
     >;
     request?: SecondParameter<typeof customFetch>;
@@ -298,101 +303,10 @@ export const useDeleteResource = <TError = unknown, TContext = unknown>(
 ): UseMutationResult<
   Awaited<ReturnType<typeof deleteResource>>,
   TError,
-  { data: CreateOrUpdateResourceManifestBody },
+  { data: UpdateResourceManifestBody },
   TContext
 > => {
   const mutationOptions = getDeleteResourceMutationOptions(options);
-
-  return useMutation(mutationOptions, queryClient);
-};
-/**
- * Update one or more Kargo resources from YAML or JSON manifests.
- * @summary Update resources
- */
-export type updateResourceResponse200 = {
-  data: UpdateResourceResponse;
-  status: 200;
-};
-
-export type updateResourceResponseSuccess = updateResourceResponse200 & {
-  headers: Headers;
-};
-export type updateResourceResponse = updateResourceResponseSuccess;
-
-export const getUpdateResourceUrl = () => {
-  return `/v2/resources`;
-};
-
-export const updateResource = async (
-  createOrUpdateResourceManifestBody: CreateOrUpdateResourceManifestBody,
-  options?: RequestInit
-): Promise<updateResourceResponse> => {
-  return customFetch<updateResourceResponse>(getUpdateResourceUrl(), {
-    ...options,
-    method: 'PATCH',
-    headers: { 'Content-Type': 'text/plain', ...options?.headers },
-    body: createOrUpdateResourceManifestBody
-  });
-};
-
-export const getUpdateResourceMutationOptions = <TError = unknown, TContext = unknown>(options?: {
-  mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof updateResource>>,
-    TError,
-    { data: CreateOrUpdateResourceManifestBody },
-    TContext
-  >;
-  request?: SecondParameter<typeof customFetch>;
-}): UseMutationOptions<
-  Awaited<ReturnType<typeof updateResource>>,
-  TError,
-  { data: CreateOrUpdateResourceManifestBody },
-  TContext
-> => {
-  const mutationKey = ['updateResource'];
-  const { mutation: mutationOptions, request: requestOptions } = options
-    ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
-      ? options
-      : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
-
-  const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof updateResource>>,
-    { data: CreateOrUpdateResourceManifestBody }
-  > = (props) => {
-    const { data } = props ?? {};
-
-    return updateResource(data, requestOptions);
-  };
-
-  return { mutationFn, ...mutationOptions };
-};
-
-export type UpdateResourceMutationResult = NonNullable<Awaited<ReturnType<typeof updateResource>>>;
-export type UpdateResourceMutationBody = CreateOrUpdateResourceManifestBody;
-export type UpdateResourceMutationError = unknown;
-
-/**
- * @summary Update resources
- */
-export const useUpdateResource = <TError = unknown, TContext = unknown>(
-  options?: {
-    mutation?: UseMutationOptions<
-      Awaited<ReturnType<typeof updateResource>>,
-      TError,
-      { data: CreateOrUpdateResourceManifestBody },
-      TContext
-    >;
-    request?: SecondParameter<typeof customFetch>;
-  },
-  queryClient?: QueryClient
-): UseMutationResult<
-  Awaited<ReturnType<typeof updateResource>>,
-  TError,
-  { data: CreateOrUpdateResourceManifestBody },
-  TContext
-> => {
-  const mutationOptions = getUpdateResourceMutationOptions(options);
 
   return useMutation(mutationOptions, queryClient);
 };

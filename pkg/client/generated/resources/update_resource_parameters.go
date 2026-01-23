@@ -14,6 +14,7 @@ import (
 	"github.com/go-openapi/runtime"
 	cr "github.com/go-openapi/runtime/client"
 	"github.com/go-openapi/strfmt"
+	"github.com/go-openapi/swag"
 )
 
 // NewUpdateResourceParams creates a new UpdateResourceParams object,
@@ -66,6 +67,12 @@ type UpdateResourceParams struct {
 	   YAML or JSON manifest(s)
 	*/
 	Manifest string
+
+	/* Upsert.
+
+	   If true, create a resource if it does not exist
+	*/
+	Upsert *bool
 
 	timeout    time.Duration
 	Context    context.Context
@@ -131,6 +138,17 @@ func (o *UpdateResourceParams) SetManifest(manifest string) {
 	o.Manifest = manifest
 }
 
+// WithUpsert adds the upsert to the update resource params
+func (o *UpdateResourceParams) WithUpsert(upsert *bool) *UpdateResourceParams {
+	o.SetUpsert(upsert)
+	return o
+}
+
+// SetUpsert adds the upsert to the update resource params
+func (o *UpdateResourceParams) SetUpsert(upsert *bool) {
+	o.Upsert = upsert
+}
+
 // WriteToRequest writes these params to a swagger request
 func (o *UpdateResourceParams) WriteToRequest(r runtime.ClientRequest, reg strfmt.Registry) error {
 
@@ -140,6 +158,23 @@ func (o *UpdateResourceParams) WriteToRequest(r runtime.ClientRequest, reg strfm
 	var res []error
 	if err := r.SetBodyParam(o.Manifest); err != nil {
 		return err
+	}
+
+	if o.Upsert != nil {
+
+		// query param upsert
+		var qrUpsert bool
+
+		if o.Upsert != nil {
+			qrUpsert = *o.Upsert
+		}
+		qUpsert := swag.FormatBool(qrUpsert)
+		if qUpsert != "" {
+
+			if err := r.SetQueryParam("upsert", qUpsert); err != nil {
+				return err
+			}
+		}
 	}
 
 	if len(res) > 0 {

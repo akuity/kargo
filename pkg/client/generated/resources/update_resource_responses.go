@@ -32,7 +32,7 @@ func (o *UpdateResourceReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PATCH /v2/resources] UpdateResource", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v2/resources] UpdateResource", response, response.Code())
 	}
 }
 
@@ -47,7 +47,7 @@ UpdateResourceOK describes a response with status code 200, with default header 
 Update results
 */
 type UpdateResourceOK struct {
-	Payload *models.UpdateResourceResponse
+	Payload *models.CreateOrUpdateResourceResponse
 }
 
 // IsSuccess returns true when this update resource o k response has a 2xx status code
@@ -82,21 +82,21 @@ func (o *UpdateResourceOK) Code() int {
 
 func (o *UpdateResourceOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/resources][%d] updateResourceOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v2/resources][%d] updateResourceOK %s", 200, payload)
 }
 
 func (o *UpdateResourceOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/resources][%d] updateResourceOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v2/resources][%d] updateResourceOK %s", 200, payload)
 }
 
-func (o *UpdateResourceOK) GetPayload() *models.UpdateResourceResponse {
+func (o *UpdateResourceOK) GetPayload() *models.CreateOrUpdateResourceResponse {
 	return o.Payload
 }
 
 func (o *UpdateResourceOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.UpdateResourceResponse)
+	o.Payload = new(models.CreateOrUpdateResourceResponse)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

@@ -2815,7 +2815,7 @@
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create or update one or more Kargo resources from YAML or JSON\nmanifests.",
+                "description": "Update (or optionally, upsert) one or more Kargo resources from",
                 "consumes": [
                     "text/plain"
                 ],
@@ -2825,9 +2825,15 @@
                 "tags": [
                     "Resources"
                 ],
-                "summary": "Create or update resources",
-                "operationId": "CreateOrUpdateResource",
+                "summary": "Update resources",
+                "operationId": "UpdateResource",
                 "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "If true, create a resource if it does not exist",
+                        "name": "upsert",
+                        "in": "query"
+                    },
                     {
                         "description": "YAML or JSON manifest(s)",
                         "name": "manifest",
@@ -2840,7 +2846,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Update results",
                         "schema": {
                             "$ref": "#/definitions/CreateOrUpdateResourceResponse"
                         }
@@ -2919,44 +2925,6 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/DeleteResourceResponse"
-                        }
-                    }
-                }
-            },
-            "patch": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Update one or more Kargo resources from YAML or JSON manifests.",
-                "consumes": [
-                    "text/plain"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Resources"
-                ],
-                "summary": "Update resources",
-                "operationId": "UpdateResource",
-                "parameters": [
-                    {
-                        "description": "YAML or JSON manifest(s)",
-                        "name": "manifest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Update results",
-                        "schema": {
-                            "$ref": "#/definitions/UpdateResourceResponse"
                         }
                     }
                 }
@@ -5063,29 +5031,6 @@
                 },
                 "username": {
                     "type": "string"
-                }
-            }
-        },
-        "UpdateResourceResponse": {
-            "type": "object",
-            "properties": {
-                "results": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/UpdateResourceResult"
-                    }
-                }
-            }
-        },
-        "UpdateResourceResult": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                },
-                "updatedResourceManifest": {
-                    "type": "object",
-                    "additionalProperties": {}
                 }
             }
         },

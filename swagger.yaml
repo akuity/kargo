@@ -284,21 +284,6 @@ definitions:
       username:
         type: string
     type: object
-  UpdateResourceResponse:
-    properties:
-      results:
-        items:
-          $ref: '#/definitions/UpdateResourceResult'
-        type: array
-    type: object
-  UpdateResourceResult:
-    properties:
-      error:
-        type: string
-      updatedResourceManifest:
-        additionalProperties: {}
-        type: object
-    type: object
   UserClaims:
     properties:
       claims:
@@ -2298,30 +2283,6 @@ paths:
       summary: Delete resources
       tags:
       - Resources
-    patch:
-      consumes:
-      - text/plain
-      description: Update one or more Kargo resources from YAML or JSON manifests.
-      operationId: UpdateResource
-      parameters:
-      - description: YAML or JSON manifest(s)
-        in: body
-        name: manifest
-        required: true
-        schema:
-          type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Update results
-          schema:
-            $ref: '#/definitions/UpdateResourceResponse'
-      security:
-      - BearerAuth: []
-      summary: Update resources
-      tags:
-      - Resources
     post:
       consumes:
       - text/plain
@@ -2349,11 +2310,13 @@ paths:
     put:
       consumes:
       - text/plain
-      description: |-
-        Create or update one or more Kargo resources from YAML or JSON
-        manifests.
-      operationId: CreateOrUpdateResource
+      description: Update (or optionally, upsert) one or more Kargo resources from
+      operationId: UpdateResource
       parameters:
+      - description: If true, create a resource if it does not exist
+        in: query
+        name: upsert
+        type: boolean
       - description: YAML or JSON manifest(s)
         in: body
         name: manifest
@@ -2364,12 +2327,12 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Update results
           schema:
             $ref: '#/definitions/CreateOrUpdateResourceResponse'
       security:
       - BearerAuth: []
-      summary: Create or update resources
+      summary: Update resources
       tags:
       - Resources
   /v2/shared/cluster-analysis-templates:

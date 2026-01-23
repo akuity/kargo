@@ -6,7 +6,9 @@
  * OpenAPI spec version: v1alpha1
  */
 
-/**
- * YAML or JSON manifest(s)
- */
-export type CreateOrUpdateResourceManifestBody = string;
+export type UpdateResourceParams = {
+  /**
+   * If true, create a resource if it does not exist
+   */
+  upsert?: boolean;
+};

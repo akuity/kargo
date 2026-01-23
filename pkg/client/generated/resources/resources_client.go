@@ -80,8 +80,6 @@ func WithContentTypeTextPlain(r *runtime.ClientOperation) {
 
 // ClientService is the interface for Client methods
 type ClientService interface {
-	CreateOrUpdateResource(params *CreateOrUpdateResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*CreateOrUpdateResourceOK, error)
-
 	CreateResource(params *CreateResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*CreateResourceCreated, error)
 
 	DeleteResource(params *DeleteResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*DeleteResourceOK, error)
@@ -89,54 +87,6 @@ type ClientService interface {
 	UpdateResource(params *UpdateResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*UpdateResourceOK, error)
 
 	SetTransport(transport runtime.ClientTransport)
-}
-
-/*
-	CreateOrUpdateResource creates or update resources
-
-	Create or update one or more Kargo resources from YAML or JSON
-
-manifests.
-*/
-func (a *Client) CreateOrUpdateResource(params *CreateOrUpdateResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*CreateOrUpdateResourceOK, error) {
-	// NOTE: parameters are not validated before sending
-	if params == nil {
-		params = NewCreateOrUpdateResourceParams()
-	}
-	op := &runtime.ClientOperation{
-		ID:                 "CreateOrUpdateResource",
-		Method:             "PUT",
-		PathPattern:        "/v2/resources",
-		ProducesMediaTypes: []string{"application/json"},
-		ConsumesMediaTypes: []string{"text/plain"},
-		Schemes:            []string{"http"},
-		Params:             params,
-		Reader:             &CreateOrUpdateResourceReader{formats: a.formats},
-		AuthInfo:           authInfo,
-		Context:            params.Context,
-		Client:             params.HTTPClient,
-	}
-	for _, opt := range opts {
-		opt(op)
-	}
-	result, err := a.transport.Submit(op)
-	if err != nil {
-		return nil, err
-	}
-
-	// only one success response has to be checked
-	success, ok := result.(*CreateOrUpdateResourceOK)
-	if ok {
-		return success, nil
-	}
-
-	// unexpected success response.
-
-	// no default response is defined.
-	//
-	// safeguard: normally, in the absence of a default response, unknown success responses return an error above: so this is a codegen issue
-	msg := fmt.Sprintf("unexpected success response for CreateOrUpdateResource: API contract not enforced by server. Client expected to get an error, but got: %T", result)
-	panic(msg)
 }
 
 /*
@@ -236,7 +186,7 @@ func (a *Client) DeleteResource(params *DeleteResourceParams, authInfo runtime.C
 /*
 UpdateResource updates resources
 
-Update one or more Kargo resources from YAML or JSON manifests.
+Update (or optionally, upsert) one or more Kargo resources from
 */
 func (a *Client) UpdateResource(params *UpdateResourceParams, authInfo runtime.ClientAuthInfoWriter, opts ...ClientOption) (*UpdateResourceOK, error) {
 	// NOTE: parameters are not validated before sending
@@ -245,7 +195,7 @@ func (a *Client) UpdateResource(params *UpdateResourceParams, authInfo runtime.C
 	}
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateResource",
-		Method:             "PATCH",
+		Method:             "PUT",
 		PathPattern:        "/v2/resources",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"text/plain"},

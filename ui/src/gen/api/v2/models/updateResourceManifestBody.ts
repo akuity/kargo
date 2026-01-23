@@ -6,4 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type UpdateResourceResultUpdatedResourceManifest = { [key: string]: unknown };
+/**
+ * YAML or JSON manifest(s)
+ */
+export type UpdateResourceManifestBody = string;
