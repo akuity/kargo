@@ -182,6 +182,10 @@ func watchResource[T any](
 	return eventCh, errCh
 }
 
+// maxEventSize is the maximum size of a single SSE event block.
+// This is set to 1MB to accommodate large Kargo resources.
+const maxEventSize = 1024 * 1024
+
 // readSSEStream reads SSE events from the response body and sends them to the
 // channel.
 func readSSEStream[T any](
@@ -190,6 +194,7 @@ func readSSEStream[T any](
 	eventCh chan<- Event[T],
 ) error {
 	scanner := bufio.NewScanner(body)
+	scanner.Buffer(make([]byte, 0, maxEventSize), maxEventSize)
 	scanner.Split(scanSSEEvents)
 
 	for scanner.Scan() {
@@ -518,6 +523,7 @@ func readLogStream(
 	logCh chan<- string,
 ) error {
 	scanner := bufio.NewScanner(body)
+	scanner.Buffer(make([]byte, 0, maxEventSize), maxEventSize)
 	scanner.Split(scanSSEEvents)
 
 	for scanner.Scan() {
