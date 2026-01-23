@@ -4,8 +4,9 @@ import { ColumnType } from 'antd/es/table';
 import { memo, useContext, useMemo, useState, useEffect } from 'react';
 
 import { ColorContext } from '@ui/context/colors';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { TagMap } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { useLocalStorage } from '@ui/utils/use-local-storage';
 
 import { shortVersion } from '../freight/short-version-utils';
@@ -23,7 +24,7 @@ interface ImagesProps {
   images: Record<string, TagMap>;
   project: string;
   stages: Stage[];
-  warehouses: Warehouse[];
+  warehouses: WarehouseExpanded[];
 }
 
 export const Images = memo<ImagesProps>(({ hide, images, project, stages, warehouses }) => {

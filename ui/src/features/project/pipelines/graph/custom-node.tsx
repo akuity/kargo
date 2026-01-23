@@ -1,6 +1,7 @@
 import { Handle, Position } from '@xyflow/react';
 import { PropsWithChildren } from 'react';
 
+import { WarehouseExpanded } from '@ui/extend/types';
 import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { StageNode } from '../nodes/stage-node';
@@ -12,7 +13,7 @@ import { repoSubscriptionIndexer, stageIndexer } from './node-indexer';
 export const CustomNode = (props: {
   data: {
     label: string;
-    value: Warehouse | RepoSubscription | Stage;
+    value: WarehouseExpanded | RepoSubscription | Stage;
     subscriptionParent?: Warehouse;
   };
   id?: string;
@@ -55,8 +56,8 @@ export const CustomNode = (props: {
 CustomNode.Container = (
   props: PropsWithChildren<{
     stage?: Stage;
-    warehouse?: Warehouse;
-    repoSubscription?: { data: RepoSubscription; parent: Warehouse };
+    warehouse?: WarehouseExpanded;
+    repoSubscription?: { data: RepoSubscription; parent: WarehouseExpanded };
     id?: string;
   }>
 ) => {

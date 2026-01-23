@@ -470,3 +470,47 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	// Assert submodule file was populated inside worktree
 	require.FileExists(t, filepath.Join(stepCtx.WorkDir, "src", "sub", "sub.txt"))
 }
+
+func Test_filterForCheckouts(t *testing.T) {
+	tests := []struct {
+		name      string
+		checkouts []builtin.Checkout
+		expected  string
+	}{
+		{
+			name:      "empty checkouts returns filter",
+			checkouts: nil,
+			expected:  git.FilterBlobless,
+		},
+		{
+			name: "all checkouts with sparse returns filter",
+			checkouts: []builtin.Checkout{
+				{Sparse: []string{"dir1"}},
+				{Sparse: []string{"dir2"}},
+			},
+			expected: git.FilterBlobless,
+		},
+		{
+			name: "any checkout without sparse returns empty",
+			checkouts: []builtin.Checkout{
+				{Sparse: []string{"dir1"}},
+				{Branch: "main"},
+			},
+			expected: "",
+		},
+		{
+			name: "empty sparse slice returns empty",
+			checkouts: []builtin.Checkout{
+				{Sparse: []string{}},
+			},
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := filterForCheckouts(tt.checkouts)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+}

@@ -16,6 +16,44 @@ import (
 const testRepoOwner = "akuity"
 const testRepoName = "kargo"
 
+func TestRegistrationPredicate(t *testing.T) {
+	testCases := []struct {
+		name     string
+		url      string
+		expected bool
+	}{
+		{
+			name:     "Standard GitHub URL",
+			url:      "https://github.com/akuity/kargo",
+			expected: true,
+		},
+		{
+			name:     "GitHub Enterprise (ghe.com)",
+			url:      "https://my-org.ghe.com/repo/project",
+			expected: true, // This would fail before your fix!
+		},
+		{
+			name:     "GitLab URL (Should fail)",
+			url:      "https://gitlab.com/owner/repo",
+			expected: false,
+		},
+		{
+			name:     "Random Domain (Should fail)",
+			url:      "https://google.com",
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Accessing the unexported 'registration' variable directly
+			// because we are in package 'github'
+			result := registration.Predicate(tc.url)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 func TestParseGitHubURL(t *testing.T) {
 	testCases := []struct {
 		url            string

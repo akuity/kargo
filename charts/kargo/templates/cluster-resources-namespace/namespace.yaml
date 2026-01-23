@@ -1,8 +1,0 @@
-{{- if .Values.global.createClusterResourcesNamespace }}
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: {{ quote .Values.global.clusterResourcesNamespace }}
-  labels:
-    {{- include "kargo.labels" . | nindent 4 }}
-{{- end }}

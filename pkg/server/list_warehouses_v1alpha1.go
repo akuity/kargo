@@ -38,6 +38,12 @@ func (s *server) ListWarehouses(
 	warehouses := make([]*kargoapi.Warehouse, len(list.Items))
 	for idx := range list.Items {
 		warehouses[idx] = &list.Items[idx]
+		// Necessary because serializing a Warehouse as part of a protobuf message
+		// does not apply custom marshaling. The call to this helper compensates for
+		// that.
+		if err := prepareOutboundWarehouse(warehouses[idx]); err != nil {
+			return nil, err
+		}
 	}
 	return connect.NewResponse(&svcv1alpha1.ListWarehousesResponse{
 		Warehouses: warehouses,

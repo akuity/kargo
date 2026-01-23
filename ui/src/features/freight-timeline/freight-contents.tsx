@@ -80,6 +80,24 @@ export const FreightContents = (props: {
           {c.version}
         </FreightContentItem>
       ))}
+      {(freight?.artifacts || []).map((g) => (
+        <FreightContentItem
+          key={g.subscriptionName + g.artifactType}
+          highlighted={highlighted}
+          linkClass={linkClass}
+          fullContentVisibility={props.fullContentVisibility}
+          horizontal={horizontal}
+          overlay={
+            <>
+              Subscription Type: {g.artifactType}
+              <br />
+              Subscription name: {g.subscriptionName}
+            </>
+          }
+        >
+          {g.version}
+        </FreightContentItem>
+      ))}
     </div>
   );
 };

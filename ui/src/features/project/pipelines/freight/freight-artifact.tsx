@@ -6,19 +6,32 @@ import {
   getGitCommitURL,
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
-import { Chart, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  Chart,
+  ArtifactReference as GenericArtifactReference,
+  GitCommit,
+  Image
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ArtifactIcon } from './artifact-icon';
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import { shortVersion } from './short-version-utils';
 
 type FreightArtifactProps = {
-  artifact: GitCommit | Chart | Image;
+  artifact: GitCommit | Chart | Image | GenericArtifactReference;
   expand?: boolean;
 };
 
 export const FreightArtifact = (props: FreightArtifactProps) => {
   const artifactType = props.artifact?.$typeName;
+
+  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
+    return (
+      <Tag color='geekblue' bordered={false}>
+        {shortVersion(props.artifact.version)}
+      </Tag>
+    );
+  }
 
   let Expand: ReactNode;
 

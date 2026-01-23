@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 
-import { RepoSubscription, Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { RepoSubscription, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { CustomNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
@@ -10,12 +11,12 @@ import { DimensionState } from './use-node-dimension-state';
 // that will give us accurate layout for graph
 export const DummyNodeRenderrer = (props: {
   stages: Stage[];
-  warehouses: Warehouse[];
+  warehouses: WarehouseExpanded[];
   onDimensionChange: (d: DimensionState) => void;
 }) => {
   const customNodes: Array<{
     label: string;
-    value: Warehouse | RepoSubscription | Stage;
+    value: WarehouseExpanded | RepoSubscription | Stage;
   }> = [];
 
   for (const warehouse of props.warehouses) {

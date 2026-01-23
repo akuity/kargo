@@ -45,7 +45,7 @@ steps:
 ### Downloading a Helm Chart with OCI Protocol
 
 This example shows downloading a Helm chart using the `oci://` prefix, which
-ensures that [Helm-specific credentials](../../50-security/30-managing-credentials.md)
+ensures that [Helm-specific credentials](../../50-security/30-managing-secrets.md)
 are used for authentication.
 
 ```yaml

@@ -51,6 +51,44 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
+          artifacts:
+            description: |-
+              Artifacts describes specific versions of artifacts other
+              than Git repository commits, container images, and Helm charts.
+            items:
+              description: ArtifactReference is a reference to a specific version
+                of an artifact.
+              properties:
+                artifactType:
+                  description: |-
+                    ArtifactType specifies the type of artifact this is. Often, but not always,
+                    it will be the media type (MIME type) of the artifact referenced by this
+                    ArtifactReference.
+                  minLength: 1
+                  type: string
+                metadata:
+                  description: |-
+                    Metadata is a JSON object containing a mostly opaque collection of artifact
+                    attributes. (It must be an object. It may not be a list or a scalar value.)
+                    "Mostly" because Kargo may understand how to interpret some documented,
+                    well-known, top-level keys. Those aside, this metadata is only understood
+                    by a corresponding Subscriber implementation that created it.
+                  x-kubernetes-preserve-unknown-fields: true
+                subscriptionName:
+                  description: |-
+                    SubscriptionName is the name of the Subscription that discovered this
+                    artifact.
+                  minLength: 1
+                  type: string
+                version:
+                  description: Version identifies a specific revision of this artifact.
+                  minLength: 1
+                  type: string
+              required:
+              - subscriptionName
+              - version
+              type: object
+            type: array
           charts:
             description: Charts describes specific versions of specific Helm charts.
             items:

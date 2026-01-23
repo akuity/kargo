@@ -162,7 +162,7 @@ func TestHarborHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "harbor.example.com/library/alpine",
 								Constraint: "^2.0.0", // Constraint won't be met
@@ -197,7 +197,7 @@ func TestHarborHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "harbor.example.com/library/alpine",
 								Constraint: "^1.0.0",
@@ -232,7 +232,7 @@ func TestHarborHandler(t *testing.T) {
 						Name:      "fake-warehouse-alpine",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Image: &kargoapi.ImageSubscription{
 								RepoURL:    "harbor.example.com/library/alpine",
 								Constraint: "^1.0.0",
@@ -269,7 +269,7 @@ func TestHarborHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://harbor.example.com/charts/my-chart",
 								SemverConstraint: "^2.0.0", // Constraint won't be met
@@ -304,7 +304,7 @@ func TestHarborHandler(t *testing.T) {
 						Name:      "fake-warehouse",
 					},
 					Spec: kargoapi.WarehouseSpec{
-						Subscriptions: []kargoapi.RepoSubscription{{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
 							Chart: &kargoapi.ChartSubscription{
 								RepoURL:          "oci://harbor.example.com/charts/my-chart",
 								SemverConstraint: "^1.0.0",

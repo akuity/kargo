@@ -137,36 +137,44 @@ service KargoService {
   // DeleteWarehouse removes a warehouse from the system.
   rpc DeleteWarehouse(DeleteWarehouseRequest) returns (DeleteWarehouseResponse);
 
-  /* Credential APIs */
+  /* Repo Credentials APIs */
 
-  // CreateCredentials creates new credentials for accessing external resources.
-  rpc CreateCredentials(CreateCredentialsRequest) returns (CreateCredentialsResponse);
-  // DeleteCredentials removes credentials from the system.
-  rpc DeleteCredentials(DeleteCredentialsRequest) returns (DeleteCredentialsResponse);
-  // GetCredentials retrieves details of specific credentials.
-  rpc GetCredentials(GetCredentialsRequest) returns (GetCredentialsResponse);
-  // ListCredentials retrieves all credentials within a project.
-  rpc ListCredentials(ListCredentialsRequest) returns (ListCredentialsResponse);
-  // UpdateCredentials modifies existing credentials.
-  rpc UpdateCredentials(UpdateCredentialsRequest) returns (UpdateCredentialsResponse);
+  // CreateRepoCredentials creates new credentials for accessing external repositories.
+  rpc CreateRepoCredentials(CreateRepoCredentialsRequest) returns (CreateRepoCredentialsResponse);
+  // DeleteRepoCredentials removes repository credentials from the system.
+  rpc DeleteRepoCredentials(DeleteRepoCredentialsRequest) returns (DeleteRepoCredentialsResponse);
+  // GetRepoCredentials retrieves details of specific repository credentials.
+  rpc GetRepoCredentials(GetRepoCredentialsRequest) returns (GetRepoCredentialsResponse);
+  // ListRepoCredentials retrieves all repository credentials within a project.
+  rpc ListRepoCredentials(ListRepoCredentialsRequest) returns (ListRepoCredentialsResponse);
+  // UpdateRepoCredentials modifies existing repository credentials.
+  rpc UpdateRepoCredentials(UpdateRepoCredentialsRequest) returns (UpdateRepoCredentialsResponse);
 
-  /* Project Secrets APIs */
+  /* Generic Credentials APIs */
 
-  // ListProjectSecrets retrieves all secrets within a project.
-  rpc ListProjectSecrets(ListProjectSecretsRequest) returns (ListProjectSecretsResponse);
-  // CreateProjectSecret creates a new secret within a project.
-  rpc CreateProjectSecret(CreateProjectSecretRequest) returns (CreateProjectSecretResponse);
-  // UpdateProjectSecret modifies an existing project secret.
-  rpc UpdateProjectSecret(UpdateProjectSecretRequest) returns (UpdateProjectSecretResponse);
-  // DeleteProjectSecret removes a secret from a project.
-  rpc DeleteProjectSecret(DeleteProjectSecretRequest) returns (DeleteProjectSecretResponse);
+  // ListGenericCredentials retrieves all generic credentials within a project.
+  rpc ListGenericCredentials(ListGenericCredentialsRequest) returns (ListGenericCredentialsResponse);
+  // CreateGenericCredentials creates new generic credentials within a project.
+  rpc CreateGenericCredentials(CreateGenericCredentialsRequest) returns (CreateGenericCredentialsResponse);
+  // UpdateGenericCredentials modifies existing generic credentials.
+  rpc UpdateGenericCredentials(UpdateGenericCredentialsRequest) returns (UpdateGenericCredentialsResponse);
+  // DeleteGenericCredentials removes generic credentials from a project.
+  rpc DeleteGenericCredentials(DeleteGenericCredentialsRequest) returns (DeleteGenericCredentialsResponse);
 
   /* ConfigMaps APIs */
 
+  // CreateConfigMap creates a new project-level, system-level, or shared
+  // ConfigMap.
+  rpc CreateConfigMap(CreateConfigMapRequest) returns (CreateConfigMapResponse);
+  // DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+  rpc DeleteConfigMap(DeleteConfigMapRequest) returns (DeleteConfigMapResponse);
   // ListConfigMaps retrieves all ConfigMaps within a project.
   rpc ListConfigMaps(ListConfigMapsRequest) returns (ListConfigMapsResponse);
-  // GetConfigMap retrieves details of a specific ConfigMap.
+  // GetConfigMap retrieves details of a specific project-level, system-level,
+  // or shared ConfigMap.
   rpc GetConfigMap(GetConfigMapRequest) returns (GetConfigMapResponse);
+  // UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+  rpc UpdateConfigMap(UpdateConfigMapRequest) returns (UpdateConfigMapResponse);
 
   /* Analysis APIs */
 
@@ -218,65 +226,36 @@ service KargoService {
   // GetRole retrieves details of a Kargo Role virtual resource or its
   // underlying Kubernetes resources.
   rpc GetRole(GetRoleRequest) returns (GetRoleResponse);
-  // Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
-  // or users having specific OIDC claims to a Kargo Role by updating its
-  // underlying Kubernetes resources.
+  // Grant assigns permissions to a Kargo Role virtual resource or binds users
+  // having specific OIDC claims to a Kargo Role virtual resource by updating
+  // its underlying Kubernetes resources.
   rpc Grant(GrantRequest) returns (GrantResponse);
   // ListRoles retrieves details of all Kargo Role virtual resources or their
   // underlying Kubernetes resources.
   rpc ListRoles(ListRolesRequest) returns (ListRolesResponse);
-  // Revoke removes permissions from a Kargo Role; or unbinds a Kargo
-  // ServiceAccount or users having specific OIDC claims from a Kargo Role by
+  // Revoke removes permissions from a Kargo Role virtual resource or unbinds
+  // users having specific OIDC claims from a Kargo Role virtual resource by
   // updating its underlying Kubernetes resources.
   rpc Revoke(RevokeRequest) returns (RevokeResponse);
   // UpdateRole modifies an existing Kargo Role virtual resource by updating its
   // underlying Kubernetes resources.
   rpc UpdateRole(UpdateRoleRequest) returns (UpdateRoleResponse);
 
-  /* Kargo ServiceAccount APIs */
+  /* Kargo API Tokens */
 
-  // Note: A "Kargo ServiceAccount" is a specially labeled Kubernetes
-  // ServiceAccount with a token, managed through the Kargo API. It is a
-  // SEPARATE THING from the Kubernetes ServiceAccount that makes up part of a
-  // "Kargo Role's" underlying trio of Kubernetes ServiceAccount, Role, and
-  // RoleBinding resources. If you create a Kargo Role X and wish to grant that
-  // Kargo Role to a Kargo ServiceAccount Y, there are actually TWO Kubernetes
-  // ServiceAccounts involved -- X and Y. Role X will be bound to BOTH
-  // ServiceAccount X and ServiceAccount Y through RoleBinding X. ServiceAccount
-  // X may potentially be unused UNLESS it is also annotated in a way that
-  // indicates users having specific OIDC claims may assume its identity.
+  // CreateAPIToken generates and returns a new bearer token associated with a
+  // Kargo Role virtual resource.
+  rpc CreateAPIToken(CreateAPITokenRequest) returns (CreateAPITokenResponse);
+  // DeleteToken deletes a bearer token associated with a Kargo Role virtual
+  // resource.
+  rpc DeleteAPIToken(DeleteAPITokenRequest) returns (DeleteAPITokenResponse);
+  // GetAPIToken retrieves details of a specific bearer token associated with a
+  // Kargo Role virtual resource.
+  rpc GetAPIToken(GetAPITokenRequest) returns (GetAPITokenResponse);
+  // ListAPITokens lists bearer tokens associated with with a specified Kargo
+  // Role virtual resource.
+  rpc ListAPITokens(ListAPITokensRequest) returns (ListAPITokensResponse);
 
-  // CreateServiceAccount creates a new Kargo ServiceAccount.
-  rpc CreateServiceAccount(CreateServiceAccountRequest) returns (CreateServiceAccountResponse);
-  // DeleteServiceAccount removes a Kargo ServiceAccount.
-  rpc DeleteServiceAccount(DeleteServiceAccountRequest) returns (DeleteServiceAccountResponse);
-  // GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
-  rpc GetServiceAccount(GetServiceAccountRequest) returns (GetServiceAccountResponse);
-  // ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
-  rpc ListServiceAccounts(ListServiceAccountsRequest) returns (ListServiceAccountsResponse);
-
-  // CreateServiceAccountToken generates and returns a new bearer token
-  // associated with a Kargo ServiceAccount.
-  rpc CreateServiceAccountToken(CreateServiceAccountTokenRequest) returns (CreateServiceAccountTokenResponse);
-  // DeleteServiceAccountToken deletes a bearer token associated with a
-  // Kargo ServiceAccount.
-  rpc DeleteServiceAccountToken(DeleteServiceAccountTokenRequest) returns (DeleteServiceAccountTokenResponse);
-  // GetServiceAccountToken retrieves details of a specific bearer token
-  // associated with a Kargo ServiceAccount.
-  rpc GetServiceAccountToken(GetServiceAccountTokenRequest) returns (GetServiceAccountTokenResponse);
-  // ListServiceAccountTokens lists bearer tokens associated with
-  // with a specified Kargo ServiceAccount.
-  rpc ListServiceAccountTokens(ListServiceAccountTokensRequest) returns (ListServiceAccountTokensResponse);
-
-  /* Cluster Secrets APIs */
-  // ListClusterSecrets retrieves all cluster-scoped secrets.
-  rpc ListClusterSecrets(ListClusterSecretsRequest) returns (ListClusterSecretsResponse);
-  // CreateClusterSecret creates a new cluster-scoped secret.
-  rpc CreateClusterSecret(CreateClusterSecretRequest) returns (CreateClusterSecretResponse);
-  // UpdateClusterSecret modifies an existing cluster-scoped secret.
-  rpc UpdateClusterSecret(UpdateClusterSecretRequest) returns (UpdateClusterSecretResponse);
-  // DeleteClusterSecret removes a cluster-scoped secret.
-  rpc DeleteClusterSecret(DeleteClusterSecretRequest) returns (DeleteClusterSecretResponse);
 }
 
 /* Version and Configuration Messages */
@@ -333,8 +312,8 @@ message GetConfigResponse {
   map<string, ArgoCDShard> argocd_shards = 1;
   // secret_management_enabled indicates if secret management features are available.
   bool secret_management_enabled = 2;
-  // cluster_resources_namespace is the namespace used for cluster-scoped secrets.
-  string cluster_resources_namespace = 3;
+  // system_resources_namespace is the namespace used for "cluster-scoped" system secrets.
+  string system_resources_namespace = 3;
   // has_analysis_run_logs_url_template indicates if an analysis run logs URL template is configured.
   bool has_analysis_run_logs_url_template = 4;
 }
@@ -1005,29 +984,88 @@ message DeleteWarehouseResponse {
   /* explicitly empty */
 }
 
-// ListConfigMapsRequest is the request for retrieving all ConfigMaps in a project.
+/* ConfigMap Messages */
+
+// CreateConfigMapRequest is the request for creating a project-level,
+// system-level, or shared ConfigMap.
+message CreateConfigMapRequest {
+  // system_level indicates whether the request is to create a system-level
+  // ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // project is the name of the project where the ConfigMap will be created. If
+  // empty and system_level is false, creates the ConfigMap in the shared
+  // resources namespace. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to create.
+  string name = 3;
+  // description is a human-readable description of the ConfigMap.
+  string description = 4;
+  // data contains the key-value pairs that make up the ConfigMap.
+  map<string, string> data = 5;
+}
+
+// CreateConfigMapResponse is the response containing the ConfigMap that was
+// created.
+message CreateConfigMapResponse {
+  // config_map is the ConfigMap that was created.
+  k8s.io.api.core.v1.ConfigMap config_map = 1;
+}
+
+// DeleteConfigMapRequest is the request for deleting a project-level,
+// system-level, or shared ConfigMap.
+message DeleteConfigMapRequest {
+  // system_level indicates whether the request is to delete a
+  // system-level ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // project is the name of the project in which to delete a ConfigMap. If empty
+  // and system_level is false, deletes a shared ConfigMap. This value is
+  // ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to delete.
+  string name = 3;
+}
+
+// DeleteConfigMapResponse is the response returned after deleting a ConfigMap.
+message DeleteConfigMapResponse {
+  /* explicitly empty */
+}
+
+// ListConfigMapsRequest is the request for listing all project-level,
+// system-level, or shared ConfigMaps.
 message ListConfigMapsRequest {
-  // project is the name of the project to list ConfigMaps from.
+  // system_level indicates whether the request is to list system-level
+  // ConfigMaps instead of project-level or shared ones.
+  bool system_level = 2;
+  // project is the name of the project in which to list ConfigMaps. If empty
+  // and system_level is false, lists shared ConfigMaps. This value is ignored
+  // if system_level is true.
   string project = 1;
 }
 
-// ListConfigMapsResponse contains the list of ConfigMaps in a project.
+// ListConfigMapsResponse contains the list of ConfigMaps.
 message ListConfigMapsResponse {
-  // config_maps is the list of ConfigMaps found in the project.
+  // config_maps is the list of ConfigMaps.
   repeated k8s.io.api.core.v1.ConfigMap config_maps = 1;
 }
 
-// GetConfigMapRequest is the request for retrieving a specific ConfigMap.
+// GetConfigMapRequest is the request for getting a specific project-level,
+// system-level, or shared ConfigMap.
 message GetConfigMapRequest {
-  // project is the name of the project containing the ConfigMap.
+  // system_level indicates whether the request is to get a system-level
+  // ConfigMap instead of a project-level or shared one.
+  bool system_level = 4;
+  // project is the name of the project in which to get the ConfigMap. If empty
+  // and system_level is false, gets a shared ConfigMap. This value is ignored
+  // if system_level is true.
   string project = 1;
   // name is the name of the ConfigMap to retrieve.
   string name = 2;
-  // format specifies the desired response format (structured object or raw YAML).
+  // format specifies the desired response format (structured object or raw
+  // YAML).
   RawFormat format = 3;
 }
 
-// GetConfigMapResponse contains the requested ConfigMap information.
+// GetConfigMapResponse contains the requested ConfigMap.
 message GetConfigMapResponse {
   oneof result {
     // config_map is the structured Kubernetes ConfigMap object.
@@ -1037,10 +1075,34 @@ message GetConfigMapResponse {
   }
 }
 
-/* Credential Messages */
+// UpdateConfigMapRequest is the request for updating a project-level,
+// system-level, or shared ConfigMap.
+message UpdateConfigMapRequest {
+  // system_level indicates whether the request is to update a system-level
+  // ConfigMap instead of a project-level or shared one.
+  bool system_level = 1;
+  // project is the name of the project containing the ConfigMap to be updated.
+  // If empty and system_level is false, updates the ConfigMap in the shared
+  // resources namespace. This value is ignored if system_level is true.
+  string project = 2;
+  // name is the name of the ConfigMap to be updated.
+  string name = 3;
+  // description is a human-readable description of the ConfigMap.
+  string description = 4;
+  // data contains the key-value pairs that make up the ConfigMap.
+  map<string, string> data = 5;
+}
 
-// CreateCredentialsRequest is the request for creating new credentials for accessing external resources.
-message CreateCredentialsRequest {
+// UpdateConfigMapResponse is the response containing the updated ConfigMap.
+message UpdateConfigMapResponse {
+  // config_map is the updated ConfigMap.
+  k8s.io.api.core.v1.ConfigMap config_map = 1;
+}
+
+/* Repo Credentials Messages */
+
+// CreateRepoCredentialsRequest is the request for creating new credentials for accessing external repositories.
+message CreateRepoCredentialsRequest {
   // project is the name of the project where the credentials will be stored.
   string project = 1;
   // name is the name of the credentials.
@@ -1059,27 +1121,28 @@ message CreateCredentialsRequest {
   string password = 7;
 }
 
-// CreateCredentialsResponse contains the newly created credentials.
-message CreateCredentialsResponse {
+// CreateRepoCredentialsResponse contains the newly created repository credentials.
+message CreateRepoCredentialsResponse {
   // credentials is the created Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// DeleteCredentialsRequest is the request for deleting existing credentials.
-message DeleteCredentialsRequest {
+// DeleteRepoCredentialsRequest is the request for deleting existing repository credentials.
+message DeleteRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
+  // If project is left empty, it will default to the "shared resources" namespace.
   string project = 1;
   // name is the name of the credentials to delete.
   string name = 2;
 }
 
-// DeleteCredentialsResponse is the response returned after deleting credentials.
-message DeleteCredentialsResponse {
+// DeleteRepoCredentialsResponse is the response returned after deleting repository credentials.
+message DeleteRepoCredentialsResponse {
   /* explicitly empty */
 }
 
-// GetCredentialsRequest is the request for retrieving existing credentials.
-message GetCredentialsRequest {
+// GetRepoCredentialsRequest is the request for retrieving existing repository credentials.
+message GetRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to retrieve.
@@ -1088,8 +1151,8 @@ message GetCredentialsRequest {
   RawFormat format = 3;
 }
 
-// GetCredentialsResponse contains the requested credentials information.
-message GetCredentialsResponse {
+// GetRepoCredentialsResponse contains the requested repository credentials information.
+message GetRepoCredentialsResponse {
   oneof result {
     // credentials is the structured Kubernetes Secret containing the credentials.
     k8s.io.api.core.v1.Secret credentials = 1;
@@ -1098,20 +1161,20 @@ message GetCredentialsResponse {
   }
 }
 
-// ListCredentialsRequest is the request for listing all credentials in a project.
-message ListCredentialsRequest {
+// ListRepoCredentialsRequest is the request for listing all repository credentials in a project.
+message ListRepoCredentialsRequest {
   // project is the name of the project whose credentials will be listed.
   string project = 1;
 }
 
-// ListCredentialsResponse contains a list of credentials for the specified project.
-message ListCredentialsResponse {
+// ListRepoCredentialsResponse contains a list of repository credentials for the specified project.
+message ListRepoCredentialsResponse {
   // credentials is the list of Kubernetes Secrets containing the credentials.
   repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// UpdateCredentialsRequest is the request for updating existing credentials.
-message UpdateCredentialsRequest {
+// UpdateRepoCredentialsRequest is the request for updating existing repository credentials.
+message UpdateRepoCredentialsRequest {
   // project is the name of the project containing the credentials.
   string project = 1;
   // name is the name of the credentials to update.
@@ -1130,72 +1193,95 @@ message UpdateCredentialsRequest {
   string password = 7;
 }
 
-// UpdateCredentialsResponse contains the updated credentials information.
-message UpdateCredentialsResponse {
+// UpdateRepoCredentialsResponse contains the updated repository credentials information.
+message UpdateRepoCredentialsResponse {
   // credentials is the updated Kubernetes Secret containing the credentials.
   k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-/* Project Secrets Messages */
+/* Generic Credentials Messages */
 
-// ListProjectSecretsRequest is the request for listing all secrets in a project.
-message ListProjectSecretsRequest {
-  // project is the name of the project whose secrets will be listed.
+// ListGenericCredentialsRequest is the request for listing all generic
+// credentials in a project, shared namespace, or system namespace.
+message ListGenericCredentialsRequest {
+  // system_level indicates whether the request is to list generic credentials
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 2;
+  // project is the name of the project whose generic credentials will be listed.
+  // If empty and system_level is false, lists generic credentials from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
 }
 
-// ListProjectSecretsResponse contains a list of secrets for the specified project.
-message ListProjectSecretsResponse {
-  // secrets is the list of Kubernetes Secrets within the project.
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
+// ListGenericCredentialsResponse contains a list of generic credentials for the specified project.
+message ListGenericCredentialsResponse {
+  // credentials is the list of Kubernetes Secrets containing generic credentials within the project.
+  repeated k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// CreateProjectSecretRequest is the request for creating a new secret within a project.
-message CreateProjectSecretRequest {
-  // project is the name of the project where the secret will be created.
+// CreateGenericCredentialsRequest is the request for creating new generic
+// credentials within a project, shared namespace, or system namespace.
+message CreateGenericCredentialsRequest {
+  // system_level indicates whether the request is to create generic credentials
+  // in the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 6;
+  // project is the name of the project where the generic credentials will be
+  // created. If empty and system_level is false, creates generic credentials in the shared resources
+  // namespace. This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to create.
+  // name is the name of the generic credentials to create.
   string name = 2;
-  // description is a human-readable description of the secret.
+  // description is a human-readable description of the generic credentials.
   string description = 3;
-  // data contains the key-value pairs that make up the secret data.
+  // data contains the key-value pairs that make up the generic credentials data.
   map<string, string> data = 4;
 }
 
-// CreateProjectSecretResponse contains the newly created project secret.
-message CreateProjectSecretResponse {
-  // secret is the created Kubernetes Secret within the project.
-  k8s.io.api.core.v1.Secret secret = 1;
+// CreateGenericCredentialsResponse contains the newly created generic credentials.
+message CreateGenericCredentialsResponse {
+  // credentials is the created Kubernetes Secret containing generic credentials within the project.
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// UpdateProjectSecretRequest is the request for updating an existing project secret.
-message UpdateProjectSecretRequest {
-  // project is the name of the project containing the secret.
+// UpdateGenericCredentialsRequest is the request for updating existing generic credentials.
+message UpdateGenericCredentialsRequest {
+  // system_level indicates whether the request is to update generic credentials
+  // in the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 6;
+  // project is the name of the project containing the generic credentials. If
+  // empty and system_level is false, updates generic credentials in the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to update.
+  // name is the name of the generic credentials to update.
   string name = 2;
-  // description is a human-readable description of the secret.
+  // description is a human-readable description of the generic credentials.
   string description = 3;
-  // data contains the key-value pairs that make up the secret data.
+  // data contains the key-value pairs that make up the generic credentials data.
   map<string, string> data = 4;
 }
 
-// UpdateProjectSecretResponse contains the updated project secret information.
-message UpdateProjectSecretResponse {
-  // secret is the updated Kubernetes Secret within the project.
-  k8s.io.api.core.v1.Secret secret = 1;
+// UpdateGenericCredentialsResponse contains the updated generic credentials information.
+message UpdateGenericCredentialsResponse {
+  // credentials is the updated Kubernetes Secret containing generic credentials within the project.
+  k8s.io.api.core.v1.Secret credentials = 1;
 }
 
-// DeleteProjectSecretRequest is the request for deleting a project secret.
-message DeleteProjectSecretRequest {
-  // project is the name of the project containing the secret.
+// DeleteGenericCredentialsRequest is the request for deleting generic
+// credentials.
+message DeleteGenericCredentialsRequest {
+  // system_level indicates whether the request is to delete generic credentials
+  // from the system-level namespace instead of a project-level or shared namespace.
+  bool system_level = 3;
+  // project is the name of the project containing the generic credentials. If
+  // empty and system_level is false, deletes generic credentials from the shared resources namespace.
+  // This value is ignored if system_level is true.
   string project = 1;
-  // name is the name of the secret to delete.
+  // name is the name of the generic credentials to delete.
   string name = 2;
 }
 
-// DeleteProjectSecretResponse is the response returned after deleting a project secret.
-message DeleteProjectSecretResponse {
+// DeleteGenericCredentialsResponse is the response returned after deleting generic credentials.
+message DeleteGenericCredentialsResponse {
   /* explicitly empty */
 }
 
@@ -1431,6 +1517,9 @@ message DeleteRoleResponse {
 // GetRoleRequest is a request to retrieve the details of a Kargo Role virtual
 // resource or its underlying Kubernetes resources.
 message GetRoleRequest {
+  // system_level indicates whether the request is to retrieve a system-level
+  // role instead of a project-level one.
+  bool system_level = 5;
   // project is the name of the project containing the Kargo Role to be
   // retrieved.
   string project = 1;
@@ -1465,16 +1554,9 @@ message Claims {
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.Claim claims = 1;
 }
 
-// ServiceAccountReferences represents a collection of references to Kargo
-// ServiceAccounts.
-message ServiceAccountReferences {
-  // Note: oneof and repeated do not work together
-  // service_accounts is a list of Kargo ServiceAccounts.
-  repeated github.com.akuity.kargo.api.rbac.v1alpha1.ServiceAccountReference service_accounts = 1;
-}
-
-// GrantRequest is a request to assign permissions to a Kargo Role; or to bind a
-// Kargo ServiceAccount or users having specific ODIC claims to a Kargo Role.
+// GrantRequest is a request to assign permissions to a Kargo Role virtual
+// resource or to bind users having specific ODIC claims to a Kargo Role virtual
+// resource.
 message GrantRequest {
   // project is the name of the project containing the Kargo Role that is the
   // subject of the grant.
@@ -1484,9 +1566,6 @@ message GrantRequest {
   oneof request {
     // user_claims are OIDC claims to which the Kargo Role should be mapped.
     Claims user_claims = 3;
-    // service_accounts is a collection of references to Kargo ServiceAccounts
-    // to be bound to this Kargo Role.
-    ServiceAccountReferences service_accounts = 5;
     // resource_details are the details of permissions to be granted to the
     // Kargo Role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
@@ -1503,6 +1582,9 @@ message GrantResponse {
 // ListRolesRequests is a request to retrieve the details of all Kargo Role
 // virtual resources or their underlying Kubernetes resources.
 message ListRolesRequest {
+  // system_level indicates whether the request is to list system-level roles
+  // instead of project-level roles.
+  bool system_level = 3;
   // project is the name of the project for which to list all Kargo Roles.
   string project = 1;
   // as_resources indicates whether to return each Kargo Role's underlying
@@ -1521,9 +1603,9 @@ message ListRolesResponse {
   repeated github.com.akuity.kargo.api.rbac.v1alpha1.RoleResources resources = 2;
 }
 
-// RevokeRequest is a request to remove permissions from a Kargo Role; or to
-// unbind a Kargo ServiceAccount or users having specific OIDC claims from a
-// Kargo Role.
+// RevokeRequest is a request to remove permissions from a Kargo Role virtual
+// resource or to unbind users having specific OIDC claims from a Kargo Role
+// virtual resource.
 message RevokeRequest {
   // project is the name of the project containing the Kargo Role that is the
   // subject of the revocation.
@@ -1534,9 +1616,6 @@ message RevokeRequest {
     // user_claims are OIDC claims from which the Kargo Role virtual resource
     // will be unmapped.
     Claims user_claims = 3;
-    // service_accounts is a collection of references to Kargo ServiceAccounts
-    // to be unbound from this Kargo Role.
-    ServiceAccountReferences service_accounts = 5;
     // resource_details are the details of permissions to be revoked from the
     // Kargo Role.
     github.com.akuity.kargo.api.rbac.v1alpha1.ResourceDetails resource_details = 4;
@@ -1565,114 +1644,38 @@ message UpdateRoleResponse {
   github.com.akuity.kargo.api.rbac.v1alpha1.Role role = 1;
 }
 
-/* Kargo ServiceAccount Messages */
+/* Kargo API Token Messages */
 
-// CreateServiceAccountRequest is a request to create a new Kargo
-// ServiceAccount resource.
-message CreateServiceAccountRequest {
-  // service_account is the Kargo ServiceAccount to create.
-  k8s.io.api.core.v1.ServiceAccount service_account = 1;
-}
-
-// CreateServiceAccountResponse contains the details of a newly created Kargo
-// ServiceAccount resource.
-message CreateServiceAccountResponse {
-  // service_account is the newly created Kargo ServiceAccount resource.
-  k8s.io.api.core.v1.ServiceAccount service_account = 1;
-}
-
-// DeleteServiceAccountRequest is a request to delete a Kargo ServiceAccount
-// resource.
-message DeleteServiceAccountRequest {
-  // project is the name of the project containing the Kargo ServiceAccount
-  // resource.
-  string project = 1;
-  // name is the name of the Kargo ServiceAccount resource to delete.
-  string name = 2;
-}
-
-// DeleteServiceAccountResponse is the response returned after deleting a Kargo
-// ServiceAccount resource.
-message DeleteServiceAccountResponse {
-  /* explicitly empty */
-}
-
-// GetServiceAccountRequest is a request for the details of specific Kargo
-// ServiceAccount resource.
-message GetServiceAccountRequest {
-  // system_level indicates whether the request is for a system-level Kargo
-  // Service Account instead of one at the project-level.
-  bool system_level = 1;
-  // project is the name of the project containing the requested Kargo
-  // ServiceAccount resource. This value is ignored if system_level is true.
-  string project = 2;
-  // name is the name of a Kargo ServiceAccount to retrieve.
-  string name = 3;
-  // format specifies the desired response format (structured object or raw
-  // YAML or JSON).
-  RawFormat format = 4;
-}
-
-// GetServiceAccountResponse contains the details of the requested Kargo
-// ServiceAccount resource.
-message GetServiceAccountResponse {
-  oneof result {
-    // service_account is a structured ServiceAccount.
-    k8s.io.api.core.v1.ServiceAccount service_account = 1;
-    // raw is a raw YAML or JSON representation of the requested resource.
-    bytes raw = 2;
-  }
-}
-
-// ListServiceAccountRequest is a request to retrieve all Kargo ServiceAccount
-// resources.
-message ListServiceAccountsRequest {
-  // system_level indicates whether the request is to list Kargo ServiceAccounts
-  // at the system-level instead of the project-level. This value is ignored if
-  // system_level is true.
-  bool system_level = 1;
-  // project is the name of the project for which to list all Kargo
-  // ServiceAccount resources.
-  string project = 2;
-}
-
-// ListServiceAccountsResponse contains a list of Kargo ServiceAccount
-// resources.
-message ListServiceAccountsResponse {
-  // service_accounts is the list of Kargo ServiceAccount resources.
-  repeated k8s.io.api.core.v1.ServiceAccount service_accounts = 1;
-}
-
-// CreateServiceAccountTokenRequest is a request to generate a new bearer token
-// associated with a specified Kargo ServiceAccount.
-message CreateServiceAccountTokenRequest {
+// CreateAPITokenRequest is a request to generate a new bearer token associated
+// with a specified Kargo Role virtual resource.
+message CreateAPITokenRequest {
   // system_level indicates whether the request is to create a token associated
-  // with a system-level Kargo Service Account instead of one at the
+  // with a system-level Kargo Role virtual resource instead of one at the
   // project-level.
   bool system_level = 1;
-  // project is the name of the project containing the Kargo ServiceAccount
+  // project is the name of the project containing the Kargo Role virtual
   // resource for which a new token is being created. This value is ignored if
   // system_level is true.
   string project = 2;
-  // service_account_name is the name of the Kargo ServiceAccount for which to
+  // role_name is the name of the Kargo Role virtual resource for which to
   // generate a new bearer token.
-  string service_account_name = 3;
+  string role_name = 3;
   // name is the name for the bearer token to be created.
   string name = 4;
 }
 
-// CreateServiceAccountTokenResponse contains a newly generated bearer
-// token in the form of a Kubernetes Secret.
-message CreateServiceAccountTokenResponse {
+// CreateAPITokenResponse contains a newly generated bearer token in the form of
+// a Kubernetes Secret.
+message CreateAPITokenResponse {
   // token_secret is a Kubernetes Secret containing the token.
   k8s.io.api.core.v1.Secret token_secret = 1;
 }
 
-// DeleteServiceAccountTokenRequest is a request to delete a bearer token
-// associated with a Kargo ServiceAccount.
-message DeleteServiceAccountTokenRequest {
+// DeleteAPITokenRequest is a request to delete a bearer token associated with a
+// Kargo Role virtual resource.
+message DeleteAPITokenRequest {
   // system_level indicates whether the request is to delete a token associated
-  // with a system-level Kargo Service Account instead of one at the
+  // with a system-level Kargo Role virtual resource instead of one at the
   // project-level.
   bool system_level = 1;
   // project is the name of the project containing the token that is to be
@@ -1682,17 +1685,18 @@ message DeleteServiceAccountTokenRequest {
   string name = 3;
 }
 
-// DeleteServiceAccountTokenResponse is the response returned after deleting a
-// bearer token associated with a Kargo ServiceAccount.
-message DeleteServiceAccountTokenResponse {
+// DeleteAPITokenResponse is the response returned after deleting a bearer token
+// associated with a Kargo Role virtual resource.
+message DeleteAPITokenResponse {
   /* explicitly empty */
 }
 
-// GetServiceAccountTokenRequest is a request to retrieve details of a bearer
-// token associated with a Kargo ServiceAccount.
-message GetServiceAccountTokenRequest {
+// GetAPITokenRequest is a request to retrieve details of a bearer token
+// associated with a Kargo Role virtual resource.
+message GetAPITokenRequest {
   // system_level indicates whether the request is for a token associated with a
-  // system-level Kargo Service Account instead of one at the project-level.
+  // system-level Kargo Role virtual resource instead of one at the
+  // project-level.
   bool system_level = 1;
   // project is the name of the project containing the requested token. This
   // value is ignored if system_level is true.
@@ -1703,87 +1707,37 @@ message GetServiceAccountTokenRequest {
   RawFormat format = 4;
 }
 
-// GetServiceAccountTokenResponse contains contains the details of a bearer
-// token associated with a Kargo ServiceAccount.
-message GetServiceAccountTokenResponse {
+// GetAPITokenResponse contains contains the details of a bearer token
+// associated with a Kargo Role virtual resource.
+message GetAPITokenResponse {
   oneof result {
     // token_secret is a Kubernetes Secrets containing a redacted token
-    // associated with a Kargo ServiceAccount.
+    // associated with a Kargo Role virtual resource.
     k8s.io.api.core.v1.Secret token_secret = 1;
     // raw is a raw YAML or JSON representation of the requested resource.
     bytes raw = 2;
   }
 }
 
-// ListServiceAccountTokensRequest is a request to list bearer tokens associated
-// with a specified Kargo ServiceAccount.
-message ListServiceAccountTokensRequest {
+// ListAPITokensRequest is a request to list bearer tokens associated with a
+// specified Kargo Role virtual resource.
+message ListAPITokensRequest {
   // system_level indicates whether to list tokens associated with system-level
-  // Kargo Service Accounts instead of ones at the project-level.
+  // Kargo Role virtual resources instead of ones at the project-level.
   bool system_level = 1;
   // project is the name of the project containing the tokens.
   string project = 2;
-  // service_account_name is the name of the Kargo ServiceAccount for which
-  // to list associated tokens.
-  string service_account_name = 3;
+  // role_name is the name of the Kargo Role virtual resource for which to list
+  // associated tokens.
+  string role_name = 3;
 }
 
-// ListServiceAccountTokensResponse contains a list of bearer tokens associated
-// with a specified Kargo ServiceAccount.
-message ListServiceAccountTokensResponse {
+// ListAPITokensResponse contains a list of bearer tokens associated with a
+// specified Kargo Role virtual resource.
+message ListAPITokensResponse {
   // token_secrets is the list of Kubernetes Secrets containing redacted tokens
-  // associated with a Kargo ServiceAccount.
+  // associated with a Kargo Role virtual resource.
   repeated k8s.io.api.core.v1.Secret token_secrets = 1;
-}
-
-// ListClusterSecretsRequest is the request for listing all cluster-level secrets.
-message ListClusterSecretsRequest {
-  /* explicitly empty */
-}
-
-// ListClusterSecretsResponse contains a list of cluster-level secrets.
-message ListClusterSecretsResponse {
-  // secrets is the list of cluster-level Kubernetes Secrets.
-  repeated k8s.io.api.core.v1.Secret secrets = 1;
-}
-
-// CreateClusterSecretRequest is the request for creating a new cluster-level secret.
-message CreateClusterSecretRequest {
-  // name is the name of the cluster secret to create.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// CreateClusterSecretResponse contains the newly created cluster secret.
-message CreateClusterSecretResponse {
-  // secret is the created cluster-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// UpdateClusterSecretRequest is the request for updating an existing cluster secret.
-message UpdateClusterSecretRequest {
-  // name is the name of the cluster secret to update.
-  string name = 1;
-  // data contains the key-value pairs that make up the secret data.
-  map<string, string> data = 2;
-}
-
-// UpdateClusterSecretResponse contains the updated cluster secret information.
-message UpdateClusterSecretResponse {
-  // secret is the updated cluster-level Kubernetes Secret.
-  k8s.io.api.core.v1.Secret secret = 1;
-}
-
-// DeleteClusterSecretRequest is the request for deleting a cluster secret.
-message DeleteClusterSecretRequest {
-  // name is the name of the cluster secret to delete.
-  string name = 1;
-}
-
-// DeleteClusterSecretResponse is the response returned after deleting a cluster secret.
-message DeleteClusterSecretResponse {
-  /* explicitly empty */
 }
 
 message RefreshResourceRequest {

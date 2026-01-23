@@ -1,0 +1,122 @@
+package server
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"connectrpc.com/connect"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/types"
+
+	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+)
+
+func (s *server) UpdateGenericCredentials(
+	ctx context.Context,
+	req *connect.Request[svcv1alpha1.UpdateGenericCredentialsRequest],
+) (*connect.Response[svcv1alpha1.UpdateGenericCredentialsResponse], error) {
+	// Check if secret management is enabled
+	if !s.cfg.SecretManagementEnabled {
+		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
+	}
+
+	var namespace string
+	if req.Msg.SystemLevel {
+		namespace = s.cfg.SystemResourcesNamespace
+	} else {
+		project := req.Msg.Project
+		if project != "" {
+			if err := s.validateProjectExists(ctx, project); err != nil {
+				return nil, err
+			}
+		}
+		namespace = project
+		if namespace == "" {
+			namespace = s.cfg.SharedResourcesNamespace
+		}
+	}
+
+	name := req.Msg.Name
+
+	if err := validateFieldNotEmpty("name", name); err != nil {
+		return nil, err
+	}
+
+	secret := corev1.Secret{}
+	if err := s.client.Get(
+		ctx,
+		types.NamespacedName{
+			Namespace: namespace,
+			Name:      name,
+		},
+		&secret,
+	); err != nil {
+		return nil, fmt.Errorf("get secret: %w", err)
+	}
+
+	// Check for the label that indicates this is a generic secret.
+	if secret.Labels[kargoapi.LabelKeyCredentialType] != kargoapi.LabelValueCredentialTypeGeneric {
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			fmt.Errorf(
+				"secret %s/%s exists, but is not labeled with %s=%s",
+				secret.Namespace,
+				secret.Name,
+				kargoapi.LabelKeyCredentialType,
+				kargoapi.LabelValueCredentialTypeGeneric,
+			),
+		)
+	}
+
+	genericCredsUpdate := genericCredentials{
+		data:        req.Msg.Data,
+		description: req.Msg.Description,
+	}
+
+	if len(genericCredsUpdate.data) == 0 {
+		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("cannot create empty secret"))
+	}
+
+	applyGenericCredentialsUpdateToK8sSecret(&secret, genericCredsUpdate)
+
+	if err := s.client.Update(ctx, &secret); err != nil {
+		return nil, fmt.Errorf("update secret: %w", err)
+	}
+
+	return connect.NewResponse(
+		&svcv1alpha1.UpdateGenericCredentialsResponse{
+			Credentials: sanitizeGenericCredentials(secret),
+		},
+	), nil
+}
+
+func applyGenericCredentialsUpdateToK8sSecret(secret *corev1.Secret, genericCredsUpdate genericCredentials) {
+	// Set the description annotation if provided
+	if genericCredsUpdate.description != "" {
+		if secret.Annotations == nil {
+			secret.Annotations = make(map[string]string, 1)
+		}
+		secret.Annotations[kargoapi.AnnotationKeyDescription] = genericCredsUpdate.description
+	} else {
+		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
+	// Delete any keys in the secret that are not in the update
+	for key := range secret.Data {
+		if _, ok := genericCredsUpdate.data[key]; !ok {
+			delete(secret.Data, key)
+		}
+	}
+
+	// Add or update the keys in the secret with the values from the update
+	if secret.Data == nil {
+		secret.Data = make(map[string][]byte, len(genericCredsUpdate.data))
+	}
+	for key, value := range genericCredsUpdate.data {
+		if value != "" {
+			secret.Data[key] = []byte(value)
+		}
+	}
+}

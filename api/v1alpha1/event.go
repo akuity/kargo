@@ -12,6 +12,7 @@ const (
 	AnnotationKeyEventFreightCommits         = AnnotationKeyEventPrefix + "freight-commits"
 	AnnotationKeyEventFreightImages          = AnnotationKeyEventPrefix + "freight-images"
 	AnnotationKeyEventFreightCharts          = AnnotationKeyEventPrefix + "freight-charts"
+	AnnotationKeyEventFreightArtifacts       = AnnotationKeyEventPrefix + "freight-artifacts"
 	AnnotationKeyEventStageName              = AnnotationKeyEventPrefix + "stage-name"
 	AnnotationKeyEventAnalysisRunName        = AnnotationKeyEventPrefix + "analysis-run-name"
 	AnnotationKeyEventVerificationPending    = AnnotationKeyEventPrefix + "verification-pending"

@@ -33,11 +33,9 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
-  globalCredentials:
-    namespaces:
-    - kargo-shared-credentials
-  imageCache:
-    cacheByTagPolicy: Force
+  images:
+    cache:
+      cacheByTagPolicy: Force
 crds:
   install: true
 externalWebhooksServer:

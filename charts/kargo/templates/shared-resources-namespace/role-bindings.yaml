@@ -1,0 +1,25 @@
+{{- if .Values.global.sharedResources.createNamespace }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kargo-shared-resources-admin
+  namespace: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kargo-shared-resources-admin
+subjects:
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-admin
+- kind: ServiceAccount
+  namespace: {{ .Release.Namespace }}
+  name: kargo-controller
+{{- if .Values.api.secretManagementEnabled }}
+- kind: ServiceAccount
+  namespace:  {{ .Release.Namespace }}
+  name: kargo-api
+{{- end }}
+{{- end }}

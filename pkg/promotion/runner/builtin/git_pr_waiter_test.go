@@ -115,13 +115,27 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
-						Open: true,
+						Number: 42,
+						URL:    "https://github.com/example/repo/pull/42",
+						Open:   true,
+						Merged: false,
 					}, nil
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				// Verify PR metadata in output
+				require.NotNil(t, res.Output)
+				prOutput, ok := res.Output["pr"].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, int64(42), prOutput["id"])
+				require.Equal(t, "https://github.com/example/repo/pull/42", prOutput["url"])
+				require.Equal(t, true, prOutput["open"])
+				require.Equal(t, false, prOutput["merged"])
+				// commit should not be present when PR is open
+				_, hasCommit := res.Output["commit"]
+				require.False(t, hasCommit)
 			},
 		},
 		{
@@ -132,6 +146,8 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
+						Number: 42,
+						URL:    "https://github.com/example/repo/pull/42",
 						Open:   false,
 						Merged: false,
 					}, nil
@@ -141,6 +157,14 @@ func Test_gitPRWaiter_run(t *testing.T) {
 				require.ErrorContains(t, err, "closed without being merged")
 				require.True(t, promotion.IsTerminal(err))
 				require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
+				// Verify PR metadata in output even on failure
+				require.NotNil(t, res.Output)
+				prOutput, ok := res.Output["pr"].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, int64(42), prOutput["id"])
+				require.Equal(t, "https://github.com/example/repo/pull/42", prOutput["url"])
+				require.Equal(t, false, prOutput["open"])
+				require.Equal(t, false, prOutput["merged"])
 			},
 		},
 		{
@@ -151,14 +175,27 @@ func Test_gitPRWaiter_run(t *testing.T) {
 					int64,
 				) (*gitprovider.PullRequest, error) {
 					return &gitprovider.PullRequest{
-						Open:   false,
-						Merged: true,
+						Number:         42,
+						URL:            "https://github.com/example/repo/pull/42",
+						Open:           false,
+						Merged:         true,
+						MergeCommitSHA: "abc123def456",
 					}, nil
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+				// Verify PR metadata in output
+				require.NotNil(t, res.Output)
+				prOutput, ok := res.Output["pr"].(map[string]any)
+				require.True(t, ok)
+				require.Equal(t, int64(42), prOutput["id"])
+				require.Equal(t, "https://github.com/example/repo/pull/42", prOutput["url"])
+				require.Equal(t, false, prOutput["open"])
+				require.Equal(t, true, prOutput["merged"])
+				// Verify commit is present when merged
+				require.Equal(t, "abc123def456", res.Output["commit"])
 			},
 		},
 	}

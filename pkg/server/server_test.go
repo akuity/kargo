@@ -38,10 +38,9 @@ func TestNewServer(t *testing.T) {
 	s, ok := NewServer(
 		testServerConfig,
 		testClient,
-		rbac.NewKubernetesRolesDatabase(testClient),
-		rbac.NewKubernetesServiceAccountsDatabase(
+		rbac.NewKubernetesRolesDatabase(
 			testClient,
-			rbac.ServiceAccountDatabaseConfigFromEnv(),
+			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,
 	).(*server)

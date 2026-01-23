@@ -1,12 +1,12 @@
 package v1alpha1
 
 const (
-	// LabelKeyServiceAccount can be used to mark a Kubernetes ServiceAccount as a
-	// also being a Kargo ServiceAccount.
-	LabelKeyServiceAccount = "rbac.kargo.akuity.io/service-account"
-	// LabelKeyServiceAccountToken can be used to mark a Kubernetes Secret as a
-	// token for a Kargo ServiceAccount.
-	LabelKeyServiceAccountToken = "rbac.kargo.akuity.io/service-account-token" // nolint: gosec
+	// LabelKeyAPIToken can be used to mark a Kubernetes Secret as a
+	// token for the Kargo API.
+	LabelKeyAPIToken = "rbac.kargo.akuity.io/api-token" // nolint: gosec
+	// LabelKeySystemRole can be used to mark a ServiceAccount in Kargo's own
+	// namespace as a "system role".
+	LabelKeySystemRole = "rbac.kargo.akuity.io/system-role"
 
 	// LabelValueTrue is used to identify a label that has a value of "true".
 	LabelValueTrue = "true"

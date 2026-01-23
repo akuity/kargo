@@ -1,6 +1,6 @@
-import { Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
 
-export const getWarehouseError = (warehouse: Warehouse): string | null => {
+export const getWarehouseError = (warehouse: WarehouseExpanded): string | null => {
   let message: string | null = null;
 
   const conditions = warehouse?.status?.conditions || [];

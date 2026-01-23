@@ -1,4 +1,5 @@
-import { Stage, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { WarehouseExpanded } from '@ui/extend/types';
+import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ProcessedTagMap } from './types';
 
@@ -16,7 +17,7 @@ export const getStages = (selectedImageData: ProcessedTagMap | undefined): strin
   return Array.from(stageSet).sort();
 };
 
-const findWarehousesForImageRepo = (repoURL: string, warehouses: Warehouse[]): string[] => {
+const findWarehousesForImageRepo = (repoURL: string, warehouses: WarehouseExpanded[]): string[] => {
   return warehouses
     .filter((w) => w.spec?.subscriptions?.some((s) => s.image?.repoURL === repoURL))
     .map((w) => w.metadata?.name || '')
@@ -36,7 +37,7 @@ export const findStagesForWarehouse = (warehouseName: string, stages: Stage[]): 
 
 export const getStagesForImage = (
   repoURL: string,
-  warehouses: Warehouse[],
+  warehouses: WarehouseExpanded[],
   stages: Stage[]
 ): Set<string> => {
   const warehousesForImage = findWarehousesForImageRepo(repoURL, warehouses);

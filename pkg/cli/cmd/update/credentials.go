@@ -28,6 +28,7 @@ type updateCredentialsOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	Shared                      bool
 	Project                     string
 	Name                        string
 	Description                 string
@@ -106,10 +107,18 @@ kargo update credentials my-credentials --git
 func (o *updateCredentialsOptions) addFlags(cmd *cobra.Command) {
 	o.ClientOptions.AddFlags(cmd.PersistentFlags())
 	o.AddFlags(cmd)
+
 	option.Project(
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project in which to update credentials. If not set, the default project will be used.",
 	)
+	option.Shared(
+		cmd.Flags(), &o.Shared, false,
+		"Whether to update shared credentials instead of project-specific credentials.",
+	)
+	// project and shared flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SharedFlag)
+
 	option.Description(cmd.Flags(), &o.Description, "Change the description of the credentials.")
 	option.Git(cmd.Flags(), &o.Git, "Change the credentials to be for a Git repository.")
 	option.Helm(cmd.Flags(), &o.Helm, "Change the credentials to be for a Helm chart repository.")
@@ -146,15 +155,18 @@ func (o *updateCredentialsOptions) complete(args []string) {
 func (o *updateCredentialsOptions) validate() error {
 	// While the flags are marked as required, a user could still provide an empty
 	// string. This is a check to ensure that the flags are not empty.
-	if o.Project == "" {
-		return errors.New("project is required")
+	var errs []error
+	if o.Project == "" && !o.Shared {
+		errs = append(errs, fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SharedFlag,
+		))
 	}
 
 	if o.Regex && o.RepoURL == "" {
 		return errors.New("regex is only allows when repo-url is set")
 	}
 
-	return nil
+	return errors.Join(errs...)
 }
 
 // run creates the credentials in the project based on the options.
@@ -184,11 +196,16 @@ func (o *updateCredentialsOptions) run(ctx context.Context) error {
 		o.Type = credentials.TypeImage.String()
 	}
 
-	resp, err := kargoSvcCli.UpdateCredentials(
+	var project string
+	if !o.Shared {
+		project = o.Project
+	}
+
+	resp, err := kargoSvcCli.UpdateRepoCredentials(
 		ctx,
 		connect.NewRequest(
-			&v1alpha1.UpdateCredentialsRequest{
-				Project:        o.Project,
+			&v1alpha1.UpdateRepoCredentialsRequest{
+				Project:        project,
 				Name:           o.Name,
 				Description:    o.Description,
 				Type:           o.Type,

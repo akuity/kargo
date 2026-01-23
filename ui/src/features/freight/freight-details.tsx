@@ -1,9 +1,7 @@
 import { toJson } from '@bufbuild/protobuf';
-import { IconProp } from '@fortawesome/fontawesome-svg-core';
-import { faDocker, faGitAlt } from '@fortawesome/free-brands-svg-icons';
-import { faAnchor, faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
+import { faFile, faInfoCircle, faPencil } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Drawer, Table, Tabs, Typography } from 'antd';
+import { Button, Drawer, Tabs, Typography } from 'antd';
 import classNames from 'classnames';
 import { useEffect, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
@@ -15,9 +13,9 @@ import { Description } from '../common/description';
 import { ManifestPreview } from '../common/manifest-preview';
 import { useModal } from '../common/modal/use-modal';
 import { getAlias } from '../common/utils';
+import { FreightTable } from '../project/pipelines/freight/freight-table';
 
-import { ArtifactMetadata } from './artifact-metadata';
-import { flattenFreightOrigin } from './flatten-freight-origin-utils';
+import { FreightMetadata } from './freight-metadata';
 import { FreightStatusList } from './freight-status-list';
 import { UpdateFreightAliasModal } from './update-freight-alias-modal';
 
@@ -37,7 +35,6 @@ export const FreightDetails = ({
   const navigate = useNavigate();
   const { name: projectName } = useParams();
   const [alias, setAlias] = useState<string | undefined>();
-  const [pageSize, setPageSize] = useState(5);
 
   useEffect(() => {
     if (freight) {
@@ -95,68 +92,16 @@ export const FreightDetails = ({
                   icon: <FontAwesomeIcon icon={faInfoCircle} />,
                   children: (
                     <>
-                      <div className='mb-4'>
+                      <div className='mb-8'>
                         {alias && freight?.metadata?.name && (
                           <CopyValue label='NAME:' value={freight.metadata?.name} />
                         )}
                         {freight?.metadata?.uid && (
                           <CopyValue label='UID:' value={freight?.metadata?.uid} />
                         )}
-                        <div className='font-semibold mt-4 mb-2 text-xs'>ARTIFACTS</div>
-                        <Table
-                          pagination={{
-                            pageSize: pageSize,
-                            showSizeChanger: true,
-                            onChange: (_, size) => setPageSize(size || 5),
-                            pageSizeOptions: ['5', '10', '20', '50', '100']
-                          }}
-                          dataSource={flattenFreightOrigin(freight)}
-                          columns={[
-                            {
-                              title: 'Source',
-                              render: (_, { type }) => {
-                                let icon: IconProp = faGitAlt;
-
-                                switch (type) {
-                                  case 'helm':
-                                    icon = faAnchor;
-                                    break;
-                                  case 'image':
-                                    icon = faDocker;
-                                    break;
-                                }
-
-                                return <FontAwesomeIcon icon={icon} />;
-                              },
-                              width: '5%'
-                            },
-                            {
-                              title: 'Repo',
-                              dataIndex: 'repoURL',
-                              width: '30%'
-                            },
-                            {
-                              title: 'Version',
-                              render: (_, record) => {
-                                switch (record.type) {
-                                  case 'git':
-                                    return record.tag || record.id;
-                                  case 'helm':
-                                    return record.version;
-                                  case 'image':
-                                    return record.tag;
-                                }
-                              }
-                            },
-                            {
-                              title: 'Metadata',
-                              width: '600px',
-                              render: (_, record) => {
-                                return <ArtifactMetadata {...record} />;
-                              }
-                            }
-                          ]}
-                        />
+                        <br />
+                        <FreightMetadata freight={freight} className='mb-5' />
+                        <FreightTable freight={freight} />
                       </div>
                       <FreightStatusList freight={freight} />
                     </>

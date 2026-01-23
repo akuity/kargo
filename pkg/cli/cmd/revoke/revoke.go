@@ -28,13 +28,12 @@ type revokeOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project         string
-	Role            string
-	Claims          []string
-	ServiceAccounts []string
-	ResourceType    string
-	ResourceName    string
-	Verbs           []string
+	Project      string
+	Role         string
+	Claims       []string
+	ResourceType string
+	ResourceName string
+	Verbs        []string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -46,7 +45,6 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 
 	cmd := &cobra.Command{
 		Use: `revoke [--project=project] --role=role [--claim=name=value]... \
-		[--service-account=service-account]... 
 		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
@@ -62,10 +60,6 @@ kargo revoke --project=my-project --role=my-role \
 # Revoke my-role from users with specific claims
 kargo revoke --project=my-project --role=my-role \
   --claim=email=alice@example.com --claim=groups=admins,power-users
-
-# Grant my-role from the ServiceAccount my-service-account
-kargo revoke --project=my-project --role=my-role \
-  --service-account=my-service-account
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -95,7 +89,6 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
 	option.Claims(cmd.Flags(), &o.Claims, "A OIDC claim name and value.")
-	option.ServiceAccounts(cmd.Flags(), &o.ServiceAccounts, "A Kargo ServiceAccount name.")
 
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
@@ -106,21 +99,13 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	}
 
 	// If none of these are specified, we're not revoking anything.
-	cmd.MarkFlagsOneRequired(
-		option.ClaimFlag,
-		option.ServiceAccountFlag,
-		option.ResourceTypeFlag,
-	)
+	cmd.MarkFlagsOneRequired(option.ClaimFlag, option.ResourceTypeFlag)
 
-	// You can't revoke a role from users and/or ServiceAccounts and revoke
-	// permissions from a role at the same time.
+	// You can't revoke a role from users and revoke permissions from a role at
+	// the same time.
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ServiceAccountFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.VerbFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
@@ -163,19 +148,6 @@ func (o *revokeOptions) run(ctx context.Context) error {
 				ResourceType: o.ResourceType,
 				ResourceName: o.ResourceName,
 				Verbs:        o.Verbs,
-			},
-		}
-	} else if len(o.ServiceAccounts) > 0 {
-		saRefs := make([]*rbacapi.ServiceAccountReference, len(o.ServiceAccounts))
-		for i, saName := range o.ServiceAccounts {
-			saRefs[i] = &rbacapi.ServiceAccountReference{
-				Namespace: o.Project,
-				Name:      saName,
-			}
-		}
-		req.Request = &svcv1alpha1.RevokeRequest_ServiceAccounts{
-			ServiceAccounts: &svcv1alpha1.ServiceAccountReferences{
-				ServiceAccounts: saRefs,
 			},
 		}
 	} else {
