@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 
@@ -17,7 +18,6 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/io"
 )
 
 // createResourceResponse is the response for creating resources
@@ -111,14 +111,8 @@ func (s *server) CreateResource(
 func (s *server) createResources(c *gin.Context) {
 	ctx := c.Request.Context()
 
-	// Limit request body to 4MB to prevent DoS
-	const maxBodyBytes = 4 * 1024 * 1024
-	manifest, err := io.LimitRead(c.Request.Body, maxBodyBytes)
+	manifest, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		if errors.Is(err, &io.BodyTooLargeError{}) {
-			_ = c.Error(libhttp.Error(err, http.StatusRequestEntityTooLarge))
-			return
-		}
 		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
 		return
 	}

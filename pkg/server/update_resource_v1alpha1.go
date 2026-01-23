@@ -2,8 +2,8 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"connectrpc.com/connect"
@@ -15,7 +15,6 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
-	"github.com/akuity/kargo/pkg/io"
 )
 
 func (s *server) UpdateResource(
@@ -87,14 +86,8 @@ func (s *server) updateResources(c *gin.Context) {
 		upsert = true
 	}
 
-	// Limit request body to 4MB to prevent DoS
-	const maxBodyBytes = 4 * 1024 * 1024
-	manifest, err := io.LimitRead(c.Request.Body, maxBodyBytes)
+	manifest, err := io.ReadAll(c.Request.Body)
 	if err != nil {
-		if errors.Is(err, &io.BodyTooLargeError{}) {
-			_ = c.Error(libhttp.Error(err, http.StatusRequestEntityTooLarge))
-			return
-		}
 		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
 		return
 	}

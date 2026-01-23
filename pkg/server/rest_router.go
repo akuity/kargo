@@ -36,19 +36,25 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// =====================================================================
 		// Authentication
 		// =====================================================================
-		v2.POST("/login", s.adminLogin)
+		v2.POST("/login", bodyLimitMiddleware(1*1024*1024), s.adminLogin)
 
 		// =====================================================================
 		// Generic Resources (CRUD via group/version/kind/namespace/name)
+		// These endpoints accept YAML/JSON manifests and need a larger limit (4MB).
 		// =====================================================================
-		v2.POST("/resources", s.createResources)
-		v2.PUT("/resources", s.updateResources)
-		v2.DELETE("/resources", s.deleteResources)
+		resourceLimit := bodyLimitMiddleware(4 * 1024 * 1024)
+		v2.POST("/resources", resourceLimit, s.createResources)
+		v2.PUT("/resources", resourceLimit, s.updateResources)
+		v2.DELETE("/resources", resourceLimit, s.deleteResources)
+
+		// All other endpoints use a 1MB limit
+		defaultLimit := bodyLimitMiddleware(1 * 1024 * 1024)
 
 		// =====================================================================
 		// System-Level Endpoints (/v2/system/*)
 		// =====================================================================
 		system := v2.Group("/system")
+		system.Use(defaultLimit)
 		{
 			// Configuration
 			system.GET("/server-version", s.getVersionInfo)
@@ -89,6 +95,7 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// Shared Resources (/v2/shared/*)
 		// =====================================================================
 		shared := v2.Group("/shared")
+		shared.Use(defaultLimit)
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
 			shared.GET("/cluster-analysis-templates", s.listClusterAnalysisTemplates)
@@ -127,8 +134,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		// =====================================================================
 		// Projects (/v2/projects)
 		// =====================================================================
-		v2.GET("/projects", s.listProjects)
+		v2.GET("/projects", defaultLimit, s.listProjects)
 		project := v2.Group("/projects/:project")
+		project.Use(defaultLimit)
 		{
 			// Project CRUD
 			project.GET("", s.getProject)
@@ -259,6 +267,14 @@ func (s *server) handleError(c *gin.Context) {
 	c.Next()
 	if len(c.Errors) > 0 {
 		err := c.Errors.Last().Err
+
+		// Check for MaxBytesError (body too large)
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "request body too large"})
+			return
+		}
+
 		var httpErr *libhttp.HTTPError
 		if ok := errors.As(err, &httpErr); ok {
 			if code := httpErr.Code(); code == http.StatusInternalServerError {
