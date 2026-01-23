@@ -12,6 +12,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 func (s *server) DeleteRepoCredentials(
@@ -23,15 +24,18 @@ func (s *server) DeleteRepoCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
+	logger := logging.LoggerFromContext(ctx)
 	project := req.Msg.GetProject()
-	if project != "" {
+	if project == "" {
+		logger.Debug("no project specified, defaulting to shared resources namespace",
+			"sharedResourcesNamespace", s.cfg.SharedResourcesNamespace,
+		)
+		project = s.cfg.SharedResourcesNamespace
+	} else {
 		if err := s.validateProjectExists(ctx, project); err != nil {
+			logger.Error(err, "project does not exist", "project", project)
 			return nil, err
 		}
-	}
-	namespace := project
-	if namespace == "" {
-		namespace = s.cfg.SharedResourcesNamespace
 	}
 
 	name := req.Msg.GetName()
@@ -39,20 +43,24 @@ func (s *server) DeleteRepoCredentials(
 		return nil, err
 	}
 
-	if err := s.validateProjectExists(ctx, project); err != nil {
-		return nil, err
-	}
-
 	secret := corev1.Secret{}
 	if err := s.client.Get(
 		ctx,
 		types.NamespacedName{
-			Namespace: namespace,
+			Namespace: project,
 			Name:      name,
 		},
 		&secret,
 	); err != nil {
-		return nil, fmt.Errorf("get secret: %w", err)
+		return nil, connect.NewError(
+			connect.CodeNotFound,
+			fmt.Errorf(
+				"get secret %s/%s: %w",
+				project,
+				name,
+				err,
+			),
+		)
 	}
 
 	// If this isn't labeled as repository credentials, return not found.
@@ -69,7 +77,15 @@ func (s *server) DeleteRepoCredentials(
 	}
 
 	if err := s.client.Delete(ctx, &secret); err != nil {
-		return nil, fmt.Errorf("delete secret: %w", err)
+		return nil, connect.NewError(
+			connect.CodeInternal,
+			fmt.Errorf(
+				"delete secret %s/%s: %w",
+				secret.Namespace,
+				secret.Name,
+				err,
+			),
+		)
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteRepoCredentialsResponse{}), nil
