@@ -2,6 +2,7 @@ package watch
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -181,13 +182,16 @@ func watchResource[T any](
 	return eventCh, errCh
 }
 
-// readSSEStream reads SSE events from the response body and sends them to the channel.
+// readSSEStream reads SSE events from the response body and sends them to the
+// channel.
 func readSSEStream[T any](
 	ctx context.Context,
 	body io.Reader,
 	eventCh chan<- Event[T],
 ) error {
 	scanner := bufio.NewScanner(body)
+	scanner.Split(scanSSEEvents)
+
 	for scanner.Scan() {
 		select {
 		case <-ctx.Done():
@@ -195,19 +199,27 @@ func readSSEStream[T any](
 		default:
 		}
 
-		line := scanner.Text()
+		eventBlock := scanner.Text()
 
-		// Skip empty lines and comments (keepalives)
-		if line == "" || strings.HasPrefix(line, ":") {
+		// Parse lines within the event block
+		var dataLines []string
+		for _, line := range strings.Split(eventBlock, "\n") {
+			// Skip comments (keepalives)
+			if strings.HasPrefix(line, ":") {
+				continue
+			}
+			// Collect data lines
+			if strings.HasPrefix(line, "data: ") {
+				dataLines = append(dataLines, strings.TrimPrefix(line, "data: "))
+			}
+		}
+
+		if len(dataLines) == 0 {
 			continue
 		}
 
-		// SSE data lines start with "data: "
-		if !strings.HasPrefix(line, "data: ") {
-			continue
-		}
-
-		data := strings.TrimPrefix(line, "data: ")
+		// Join multiple data lines per SSE spec
+		data := strings.Join(dataLines, "\n")
 
 		var event watchEvent[T]
 		if err := json.Unmarshal([]byte(data), &event); err != nil {
@@ -229,6 +241,32 @@ func readSSEStream[T any](
 	}
 
 	return nil
+}
+
+// scanSSEEvents is a bufio.SplitFunc that splits on double newlines,
+// which is the event delimiter per the SSE specification.
+func scanSSEEvents(data []byte, atEOF bool) (advance int, token []byte, err error) {
+	if atEOF && len(data) == 0 {
+		return 0, nil, nil
+	}
+
+	// Look for double newline (event delimiter)
+	if i := bytes.Index(data, []byte("\n\n")); i >= 0 {
+		return i + 2, data[:i], nil
+	}
+
+	// Also handle \r\n\r\n for Windows-style line endings
+	if i := bytes.Index(data, []byte("\r\n\r\n")); i >= 0 {
+		return i + 4, data[:i], nil
+	}
+
+	// If at EOF and we have data, return it as the final event
+	if atEOF {
+		return len(data), data, nil
+	}
+
+	// Request more data
+	return 0, nil, nil
 }
 
 // LogEntry represents a single log line from an analysis run.
@@ -471,7 +509,7 @@ func streamLogs(
 }
 
 // readLogStream reads log entries from an SSE stream. The server sends each
-// line prefixed with "data: " and terminates events with an empty line.
+// line prefixed with "data: " and terminates events with a double newline.
 // Multi-line log chunks are sent as multiple "data:" lines within a single
 // event.
 func readLogStream(
@@ -480,7 +518,7 @@ func readLogStream(
 	logCh chan<- string,
 ) error {
 	scanner := bufio.NewScanner(body)
-	var dataLines []string
+	scanner.Split(scanSSEEvents)
 
 	for scanner.Scan() {
 		select {
@@ -489,37 +527,28 @@ func readLogStream(
 		default:
 		}
 
-		line := scanner.Text()
+		eventBlock := scanner.Text()
 
-		// Skip comments (keepalives)
-		if strings.HasPrefix(line, ":") {
-			continue
-		}
-
-		// Empty line signals end of an SSE event
-		if line == "" {
-			if len(dataLines) > 0 {
-				// Join accumulated data lines and send
-				data := strings.Join(dataLines, "\n")
-				select {
-				case logCh <- data:
-				case <-ctx.Done():
-					return ctx.Err()
-				}
-				dataLines = nil
+		// Parse lines within the event block
+		var dataLines []string
+		for _, line := range strings.Split(eventBlock, "\n") {
+			// Skip comments (keepalives)
+			if strings.HasPrefix(line, ":") {
+				continue
 			}
+			// Collect data lines
+			if strings.HasPrefix(line, "data: ") {
+				dataLines = append(dataLines, strings.TrimPrefix(line, "data: "))
+			}
+		}
+
+		if len(dataLines) == 0 {
 			continue
 		}
 
-		// SSE data lines start with "data: "
-		if strings.HasPrefix(line, "data: ") {
-			dataLines = append(dataLines, strings.TrimPrefix(line, "data: "))
-		}
-	}
-
-	// Send any remaining data
-	if len(dataLines) > 0 {
+		// Join multiple data lines per SSE spec
 		data := strings.Join(dataLines, "\n")
+
 		select {
 		case logCh <- data:
 		case <-ctx.Done():

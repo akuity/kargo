@@ -58,7 +58,8 @@ func TestNewClient(t *testing.T) {
 			if tt.httpClient != nil {
 				assert.Equal(t, tt.httpClient, client.httpClient)
 			} else {
-				assert.Equal(t, http.DefaultClient, client.httpClient)
+				// When nil is passed, NewClient creates a default client via cleanhttp
+				assert.NotNil(t, client.httpClient)
 			}
 		})
 	}
