@@ -28,7 +28,7 @@ type Update struct {
 }
 
 // SetValuesInFile overwrites the specified file with the changes specified by
-// the the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
+// the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
 // Integers may be used as keys in cases where a specific node needs to be
 // selected from a sequence. An error is returned for any attempted update to a
 // key that does not exist or does not address a scalar node. Importantly, all
@@ -79,7 +79,7 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
-		keyPath := strings.Split(update.Key, ".")
+		keyPath := splitKeyPath(update.Key)
 		line, col, err := findScalarNode(doc, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)
@@ -161,4 +161,26 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
 	return 0, 0, fmt.Errorf("key path not found")
+}
+
+// splitKeyPath splits a key string into path elements for traversal.
+//
+// Rules:
+// 1. "." is treated as a path separator (original behavior).
+// 2. "\." is treated as a literal dot in the key name (new behavior).
+//
+// Examples:
+// - "image.tag" -> ["image", "tag"]
+// - "example\.com/version" -> ["example.com", "version"]
+func splitKeyPath(key string) []string {
+	placeholder := "__DOT__"
+	// Replace all escaped dots with a placeholder
+	key = strings.ReplaceAll(key, `\.`, placeholder)
+	// Split on unescaped dots
+	parts := strings.Split(key, ".")
+	// Finally,restore literal dots in each part
+	for i := range parts {
+		parts[i] = strings.ReplaceAll(parts[i], placeholder, ".")
+	}
+	return parts
 }
