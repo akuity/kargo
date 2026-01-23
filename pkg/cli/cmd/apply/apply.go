@@ -114,9 +114,11 @@ func (o *applyOptions) run(ctx context.Context) error {
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
 	// It actually "replaces" resource with the given file.
 	// We should provide the same implementation as `kubectl` does.
-	res, err := apiClient.Resources.CreateOrUpdateResource(
-		resources.NewCreateOrUpdateResourceParams().
-			WithManifest(string(manifest)),
+	upsert := true
+	res, err := apiClient.Resources.UpdateResource(
+		resources.NewUpdateResourceParams().
+			WithManifest(string(manifest)).
+			WithUpsert(&upsert),
 		nil,
 	)
 	if err != nil {
