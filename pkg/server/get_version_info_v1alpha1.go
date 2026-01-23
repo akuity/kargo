@@ -12,6 +12,13 @@ import (
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
+// CLIVersionHeader is the HTTP header used to convey the CLI version in
+// requests to the API server.
+//
+// TODO(krancour): Move this closer to CLI-version-checking middleware once it
+// exists.
+const CLIVersionHeader = "X-Kargo-CLI-Version"
+
 func (s *server) GetVersionInfo(
 	context.Context,
 	*connect.Request[svcv1alpha1.GetVersionInfoRequest],

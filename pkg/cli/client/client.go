@@ -17,6 +17,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/option"
 	client "github.com/akuity/kargo/pkg/client/generated"
 	"github.com/akuity/kargo/pkg/client/watch"
+	"github.com/akuity/kargo/pkg/server"
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
@@ -36,7 +37,7 @@ type versionHeaderTransport struct {
 }
 
 func (t *versionHeaderTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	req.Header.Set("X-Kargo-CLI-Version", version.GetVersion().Version)
+	req.Header.Set(server.CLIVersionHeader, version.GetVersion().Version)
 	return t.wrapped.RoundTrip(req)
 }
 
