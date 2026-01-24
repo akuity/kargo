@@ -31,6 +31,7 @@
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "ajv": "^8.17.1",
     "autoprefixer": "^10.4.23",
     "cssnano": "^7.1.2",
     "eslint": "^9.36.0",
