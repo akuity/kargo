@@ -221,7 +221,7 @@ func (o *createConfigMapOptions) run(ctx context.Context) error {
 		}
 		resJSON, err = json.Marshal(res.GetPayload())
 	}
-	// All three cases above end with marshalling the response payload, so we
+	// All three cases above end with marshaling the response payload, so we
 	// can handle any of those potential errors here, in one place.
 	if err != nil {
 		return fmt.Errorf("marshal response: %w", err)

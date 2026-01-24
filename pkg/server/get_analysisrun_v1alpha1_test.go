@@ -245,9 +245,9 @@ func Test_server_getAnalysisRun(t *testing.T) {
 		http.MethodGet, "/v2/projects/"+testProject.Name+"/analysis-runs/"+testRun.Name,
 		[]restTestCase{
 			{
-				name:         "Rollouts integration disabled",
+				name:          "Rollouts integration disabled",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
-				serverConfig: &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				serverConfig:  &config.ServerConfig{RolloutsIntegrationEnabled: false},
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotImplemented, w.Code)
 				},

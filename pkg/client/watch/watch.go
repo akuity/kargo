@@ -10,8 +10,9 @@ import (
 	"net/http"
 	"strings"
 
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/hashicorp/go-cleanhttp"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 // EventType represents the type of watch event.

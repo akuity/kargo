@@ -187,7 +187,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Abort:
-		if _, err := apiClient.Core.AbortPromotion(
+		if _, err = apiClient.Core.AbortPromotion(
 			core.NewAbortPromotionParams().WithProject(o.Project).WithPromotion(o.Promotion),
 			nil,
 		); err != nil {
@@ -213,7 +213,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 			return fmt.Errorf("marshal promotion: %w", err)
 		}
 		promo := &kargoapi.Promotion{}
-		if err := json.Unmarshal(promoJSON, promo); err != nil {
+		if err = json.Unmarshal(promoJSON, promo); err != nil {
 			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
 		if o.Wait {
@@ -242,7 +242,7 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("marshal promotions: %w", err)
 		}
-		if err := json.Unmarshal(promotionsJSON, &promotions); err != nil {
+		if err = json.Unmarshal(promotionsJSON, &promotions); err != nil {
 			return fmt.Errorf("unmarshal promotions: %w", err)
 		}
 		if o.Wait {
