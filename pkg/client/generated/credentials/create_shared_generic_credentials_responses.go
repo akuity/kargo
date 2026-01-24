@@ -30,7 +30,7 @@ func (o *CreateSharedGenericCredentialsReader) ReadResponse(response runtime.Cli
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/shared/generic-credentials] CreateSharedGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/shared/generic-credentials] CreateSharedGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *CreateSharedGenericCredentialsCreated) Code() int {
 
 func (o *CreateSharedGenericCredentialsCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/shared/generic-credentials][%d] createSharedGenericCredentialsCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/shared/generic-credentials][%d] createSharedGenericCredentialsCreated %s", 201, payload)
 }
 
 func (o *CreateSharedGenericCredentialsCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/shared/generic-credentials][%d] createSharedGenericCredentialsCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/shared/generic-credentials][%d] createSharedGenericCredentialsCreated %s", 201, payload)
 }
 
 func (o *CreateSharedGenericCredentialsCreated) GetPayload() any {

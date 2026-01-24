@@ -27,7 +27,7 @@ func (o *ApproveFreightReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/freight/{freight-name-or-alias}/approve] ApproveFreight", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve] ApproveFreight", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *ApproveFreightOK) Code() int {
 }
 
 func (o *ApproveFreightOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/freight/{freight-name-or-alias}/approve][%d] approveFreightOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve][%d] approveFreightOK", 200)
 }
 
 func (o *ApproveFreightOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/freight/{freight-name-or-alias}/approve][%d] approveFreightOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve][%d] approveFreightOK", 200)
 }
 
 func (o *ApproveFreightOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

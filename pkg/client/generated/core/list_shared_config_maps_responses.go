@@ -30,7 +30,7 @@ func (o *ListSharedConfigMapsReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/configmaps] ListSharedConfigMaps", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/configmaps] ListSharedConfigMaps", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListSharedConfigMapsOK) Code() int {
 
 func (o *ListSharedConfigMapsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/configmaps][%d] listSharedConfigMapsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/configmaps][%d] listSharedConfigMapsOK %s", 200, payload)
 }
 
 func (o *ListSharedConfigMapsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/configmaps][%d] listSharedConfigMapsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/configmaps][%d] listSharedConfigMapsOK %s", 200, payload)
 }
 
 func (o *ListSharedConfigMapsOK) GetPayload() any {

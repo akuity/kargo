@@ -30,7 +30,7 @@ func (o *PatchSystemConfigMapReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PATCH /v2/system/configmaps/{configmap}] PatchSystemConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[PATCH /v1beta1/system/configmaps/{configmap}] PatchSystemConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *PatchSystemConfigMapOK) Code() int {
 
 func (o *PatchSystemConfigMapOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/system/configmaps/{configmap}][%d] patchSystemConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/system/configmaps/{configmap}][%d] patchSystemConfigMapOK %s", 200, payload)
 }
 
 func (o *PatchSystemConfigMapOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/system/configmaps/{configmap}][%d] patchSystemConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/system/configmaps/{configmap}][%d] patchSystemConfigMapOK %s", 200, payload)
 }
 
 func (o *PatchSystemConfigMapOK) GetPayload() any {

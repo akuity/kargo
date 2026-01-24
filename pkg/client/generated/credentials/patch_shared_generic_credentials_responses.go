@@ -30,7 +30,7 @@ func (o *PatchSharedGenericCredentialsReader) ReadResponse(response runtime.Clie
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PATCH /v2/shared/generic-credentials/{generic-credentials}] PatchSharedGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[PATCH /v1beta1/shared/generic-credentials/{generic-credentials}] PatchSharedGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *PatchSharedGenericCredentialsOK) Code() int {
 
 func (o *PatchSharedGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/shared/generic-credentials/{generic-credentials}][%d] patchSharedGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/shared/generic-credentials/{generic-credentials}][%d] patchSharedGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *PatchSharedGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/shared/generic-credentials/{generic-credentials}][%d] patchSharedGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/shared/generic-credentials/{generic-credentials}][%d] patchSharedGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *PatchSharedGenericCredentialsOK) GetPayload() any {

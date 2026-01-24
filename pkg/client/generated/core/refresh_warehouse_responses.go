@@ -27,7 +27,7 @@ func (o *RefreshWarehouseReader) ReadResponse(response runtime.ClientResponse, c
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/warehouses/{warehouse}/refresh] RefreshWarehouse", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/warehouses/{warehouse}/refresh] RefreshWarehouse", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *RefreshWarehouseOK) Code() int {
 }
 
 func (o *RefreshWarehouseOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/warehouses/{warehouse}/refresh][%d] refreshWarehouseOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/warehouses/{warehouse}/refresh][%d] refreshWarehouseOK", 200)
 }
 
 func (o *RefreshWarehouseOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/warehouses/{warehouse}/refresh][%d] refreshWarehouseOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/warehouses/{warehouse}/refresh][%d] refreshWarehouseOK", 200)
 }
 
 func (o *RefreshWarehouseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

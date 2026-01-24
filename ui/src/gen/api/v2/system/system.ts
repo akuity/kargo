@@ -48,7 +48,7 @@ export type adminLoginResponseSuccess = adminLoginResponse200 & {
 export type adminLoginResponse = adminLoginResponseSuccess;
 
 export const getAdminLoginUrl = () => {
-  return `/v2/login`;
+  return `/v1beta1/login`;
 };
 
 export const adminLogin = async (options?: RequestInit): Promise<adminLoginResponse> => {
@@ -109,7 +109,7 @@ export type getClusterConfigResponseSuccess = getClusterConfigResponse200 & {
 export type getClusterConfigResponse = getClusterConfigResponseSuccess;
 
 export const getGetClusterConfigUrl = () => {
-  return `/v2/system/cluster-config`;
+  return `/v1beta1/system/cluster-config`;
 };
 
 export const getClusterConfig = async (
@@ -122,7 +122,7 @@ export const getClusterConfig = async (
 };
 
 export const getGetClusterConfigQueryKey = () => {
-  return [`/v2/system/cluster-config`] as const;
+  return [`/v1beta1/system/cluster-config`] as const;
 };
 
 export const getGetClusterConfigQueryOptions = <
@@ -235,7 +235,7 @@ export type deleteClusterConfigResponseSuccess = deleteClusterConfigResponse204 
 export type deleteClusterConfigResponse = deleteClusterConfigResponseSuccess;
 
 export const getDeleteClusterConfigUrl = () => {
-  return `/v2/system/cluster-config`;
+  return `/v1beta1/system/cluster-config`;
 };
 
 export const deleteClusterConfig = async (
@@ -317,7 +317,7 @@ export type refreshClusterConfigResponseSuccess = refreshClusterConfigResponse20
 export type refreshClusterConfigResponse = refreshClusterConfigResponseSuccess;
 
 export const getRefreshClusterConfigUrl = () => {
-  return `/v2/system/cluster-config/refresh`;
+  return `/v1beta1/system/cluster-config/refresh`;
 };
 
 export const refreshClusterConfig = async (
@@ -405,7 +405,7 @@ export type getPublicConfigResponseSuccess = getPublicConfigResponse200 & {
 export type getPublicConfigResponse = getPublicConfigResponseSuccess;
 
 export const getGetPublicConfigUrl = () => {
-  return `/v2/system/public-server-config`;
+  return `/v1beta1/system/public-server-config`;
 };
 
 export const getPublicConfig = async (options?: RequestInit): Promise<getPublicConfigResponse> => {
@@ -416,7 +416,7 @@ export const getPublicConfig = async (options?: RequestInit): Promise<getPublicC
 };
 
 export const getGetPublicConfigQueryKey = () => {
-  return [`/v2/system/public-server-config`] as const;
+  return [`/v1beta1/system/public-server-config`] as const;
 };
 
 export const getGetPublicConfigQueryOptions = <
@@ -530,7 +530,7 @@ export type getConfigResponseSuccess = getConfigResponse200 & {
 export type getConfigResponse = getConfigResponseSuccess;
 
 export const getGetConfigUrl = () => {
-  return `/v2/system/server-config`;
+  return `/v1beta1/system/server-config`;
 };
 
 export const getConfig = async (options?: RequestInit): Promise<getConfigResponse> => {
@@ -541,7 +541,7 @@ export const getConfig = async (options?: RequestInit): Promise<getConfigRespons
 };
 
 export const getGetConfigQueryKey = () => {
-  return [`/v2/system/server-config`] as const;
+  return [`/v1beta1/system/server-config`] as const;
 };
 
 export const getGetConfigQueryOptions = <
@@ -642,7 +642,7 @@ export type getVersionInfoResponseSuccess = getVersionInfoResponse200 & {
 export type getVersionInfoResponse = getVersionInfoResponseSuccess;
 
 export const getGetVersionInfoUrl = () => {
-  return `/v2/system/server-version`;
+  return `/v1beta1/system/server-version`;
 };
 
 export const getVersionInfo = async (options?: RequestInit): Promise<getVersionInfoResponse> => {
@@ -653,7 +653,7 @@ export const getVersionInfo = async (options?: RequestInit): Promise<getVersionI
 };
 
 export const getGetVersionInfoQueryKey = () => {
-  return [`/v2/system/server-version`] as const;
+  return [`/v1beta1/system/server-version`] as const;
 };
 
 export const getGetVersionInfoQueryOptions = <

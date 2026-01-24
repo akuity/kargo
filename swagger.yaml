@@ -327,7 +327,7 @@ info:
   title: Kargo API
   version: v1alpha1
 paths:
-  /v2/login:
+  /v1beta1/login:
     post:
       description: Authenticate as the admin user if enabled.
       operationId: AdminLogin
@@ -343,7 +343,7 @@ paths:
       summary: Admin login
       tags:
       - System
-  /v2/projects:
+  /v1beta1/projects:
     get:
       description: List all Projects resources. Returns a ProjectList resource.
       operationId: ListProjects
@@ -360,7 +360,7 @@ paths:
       tags:
       - Core
       - Cluster-Scoped Resource
-  /v2/projects/{project}:
+  /v1beta1/projects/{project}:
     delete:
       description: Delete a Project resource and its associated namespace.
       operationId: DeleteProject
@@ -401,7 +401,7 @@ paths:
       tags:
       - Core
       - Cluster-Scoped Resource
-  /v2/projects/{project}/analysis-runs/{analysis-run}:
+  /v1beta1/projects/{project}/analysis-runs/{analysis-run}:
     get:
       description: Retrieve an AnalysisRun resource from a project's namespace.
       operationId: GetAnalysisRun
@@ -429,7 +429,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/analysis-runs/{analysis-run}/logs:
+  /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs:
     get:
       description: Stream logs from an AnalysisRun job as Server-Sent Events (SSE).
       operationId: GetAnalysisRunLogs
@@ -465,7 +465,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/analysis-templates:
+  /v1beta1/projects/{project}/analysis-templates:
     get:
       description: List AnalysisTemplate resources from a project's namespace.
       operationId: ListAnalysisTemplates
@@ -488,7 +488,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/analysis-templates/{analysis-template}:
+  /v1beta1/projects/{project}/analysis-templates/{analysis-template}:
     delete:
       description: Delete an AnalysisTemplate resource from a project's namespace.
       operationId: DeleteAnalysisTemplate
@@ -541,7 +541,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/apitokens:
+  /v1beta1/projects/{project}/apitokens:
     get:
       description: |-
         List project-level API tokens. Returns a Kubernetes SecretList
@@ -571,7 +571,7 @@ paths:
       - Rbac
       - Credentials
       - Project-Level
-  /v2/projects/{project}/apitokens/{apitoken}:
+  /v1beta1/projects/{project}/apitokens/{apitoken}:
     delete:
       description: Delete a project-level API token from a project's namespace.
       operationId: DeleteProjectAPIToken
@@ -626,7 +626,7 @@ paths:
       - Rbac
       - Credentials
       - Project-Level
-  /v2/projects/{project}/config:
+  /v1beta1/projects/{project}/config:
     delete:
       description: |-
         Delete the single ProjectConfig resource from a project's
@@ -675,7 +675,7 @@ paths:
       - Project-Level
       - Config
       - Singleton
-  /v2/projects/{project}/config/refresh:
+  /v1beta1/projects/{project}/config/refresh:
     post:
       description: |-
         Refresh the single ProjectConfig resource in a project's
@@ -701,7 +701,7 @@ paths:
       - Config
       - Project-Level
       - Singleton
-  /v2/projects/{project}/configmaps:
+  /v1beta1/projects/{project}/configmaps:
     get:
       description: |-
         List ConfigMap resources from a project's namespace. Returns a
@@ -760,7 +760,7 @@ paths:
       - Core
       - Generic Config
       - Project-Level
-  /v2/projects/{project}/configmaps/{configmap}:
+  /v1beta1/projects/{project}/configmaps/{configmap}:
     delete:
       description: Delete a ConfigMap from a project's namespace.
       operationId: DeleteProjectConfigMap
@@ -890,7 +890,7 @@ paths:
       - Core
       - Generic Config
       - Project-Level
-  /v2/projects/{project}/events:
+  /v1beta1/projects/{project}/events:
     get:
       description: |-
         List Kubernetes Events from a project's namespace. Returns a
@@ -915,7 +915,7 @@ paths:
       tags:
       - Events
       - Project-Level
-  /v2/projects/{project}/freight:
+  /v1beta1/projects/{project}/freight:
     get:
       description: Query and filter Freight resources from a project's namespace.
       operationId: QueryFreightsRest
@@ -965,7 +965,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/freight/{freight-name-or-alias}:
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}:
     delete:
       description: |-
         Delete a Freight resource from a project's namespace by name or
@@ -1020,7 +1020,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/freight/{freight-name-or-alias}/alias:
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias:
     patch:
       consumes:
       - application/json
@@ -1053,7 +1053,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/freight/{freight-name-or-alias}/approve:
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve:
     post:
       description: Approve Freight for promotion to a Stage.
       operationId: ApproveFreight
@@ -1084,7 +1084,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/generic-credentials:
+  /v1beta1/projects/{project}/generic-credentials:
     get:
       description: |-
         List project-level generic credentials. Returns a Kubernetes
@@ -1143,7 +1143,7 @@ paths:
       - Credentials
       - Generic Credentials
       - Project-Level
-  /v2/projects/{project}/generic-credentials/{generic-credentials}:
+  /v1beta1/projects/{project}/generic-credentials/{generic-credentials}:
     delete:
       description: Delete generic credentials from a project's namespace.
       operationId: DeleteProjectGenericCredentials
@@ -1275,7 +1275,7 @@ paths:
       - Credentials
       - Generic Credentials
       - Project-Level
-  /v2/projects/{project}/images:
+  /v1beta1/projects/{project}/images:
     get:
       description: |-
         List container images referenced by Freight resources in a
@@ -1302,7 +1302,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotion-tasks:
+  /v1beta1/projects/{project}/promotion-tasks:
     get:
       description: |-
         List PromotionTask resources from a project's namespace. Returns
@@ -1327,7 +1327,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotion-tasks/{promotion-task}:
+  /v1beta1/projects/{project}/promotion-tasks/{promotion-task}:
     get:
       description: Retrieve a PromotionTask resource from a project's namespace.
       operationId: GetPromotionTask
@@ -1355,7 +1355,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotions:
+  /v1beta1/projects/{project}/promotions:
     get:
       description: |-
         List Promotion resources from a project's namespace. Returns a
@@ -1384,7 +1384,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotions/{promotion}:
+  /v1beta1/projects/{project}/promotions/{promotion}:
     get:
       description: Retrieve a Promotion resource from a project's namespace.
       operationId: GetPromotion
@@ -1412,7 +1412,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotions/{promotion}/abort:
+  /v1beta1/projects/{project}/promotions/{promotion}/abort:
     post:
       description: Abort a running Promotion.
       operationId: AbortPromotion
@@ -1438,7 +1438,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/promotions/{promotion}/refresh:
+  /v1beta1/projects/{project}/promotions/{promotion}/refresh:
     post:
       description: |-
         Refresh a Promotion resource in a project's namespace.
@@ -1467,7 +1467,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/repo-credentials:
+  /v1beta1/projects/{project}/repo-credentials:
     get:
       description: |-
         List project-level repository credentials. Returns a SecretList
@@ -1526,7 +1526,7 @@ paths:
       - Credentials
       - Repo Credentials
       - Project-Level
-  /v2/projects/{project}/repo-credentials/{repo-credentials}:
+  /v1beta1/projects/{project}/repo-credentials/{repo-credentials}:
     delete:
       description: Delete repository credentials from a project's namespace.
       operationId: DeleteProjectRepoCredentials
@@ -1657,7 +1657,7 @@ paths:
       - Credentials
       - Repo Credentials
       - Project-Level
-  /v2/projects/{project}/roles:
+  /v1beta1/projects/{project}/roles:
     get:
       description: |-
         List project-level Kargo Role virtual resources. Returns a
@@ -1715,7 +1715,7 @@ paths:
       tags:
       - Rbac
       - Project-Level
-  /v2/projects/{project}/roles/{role}:
+  /v1beta1/projects/{project}/roles/{role}:
     delete:
       description: |-
         Delete a project-level Kargo Role virtual resource by deleting
@@ -1811,7 +1811,7 @@ paths:
       tags:
       - Rbac
       - Project-Level
-  /v2/projects/{project}/roles/{role}/apitokens:
+  /v1beta1/projects/{project}/roles/{role}/apitokens:
     post:
       consumes:
       - application/json
@@ -1853,7 +1853,7 @@ paths:
       - Rbac
       - Credentials
       - Project-Level
-  /v2/projects/{project}/roles/grants:
+  /v1beta1/projects/{project}/roles/grants:
     post:
       consumes:
       - application/json
@@ -1886,7 +1886,7 @@ paths:
       tags:
       - Rbac
       - Project-Level
-  /v2/projects/{project}/roles/revocations:
+  /v1beta1/projects/{project}/roles/revocations:
     post:
       consumes:
       - application/json
@@ -1919,7 +1919,7 @@ paths:
       tags:
       - Rbac
       - Project-Level
-  /v2/projects/{project}/stages:
+  /v1beta1/projects/{project}/stages:
     get:
       description: |-
         List Stage resources from a project's namespace. Returns a
@@ -1944,7 +1944,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/stages/{stage}:
+  /v1beta1/projects/{project}/stages/{stage}:
     delete:
       description: Delete a Stage resource from a project's namespace.
       operationId: DeleteStage
@@ -1995,7 +1995,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/stages/{stage}/promotions:
+  /v1beta1/projects/{project}/stages/{stage}/promotions:
     post:
       consumes:
       - application/json
@@ -2033,7 +2033,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/stages/{stage}/promotions/downstream:
+  /v1beta1/projects/{project}/stages/{stage}/promotions/downstream:
     post:
       consumes:
       - application/json
@@ -2071,7 +2071,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/stages/{stage}/refresh:
+  /v1beta1/projects/{project}/stages/{stage}/refresh:
     post:
       description: |-
         Refresh a Stage resource in a project's namespace. Refreshing
@@ -2100,7 +2100,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/stages/{stage}/verification:
+  /v1beta1/projects/{project}/stages/{stage}/verification:
     post:
       description: |-
         Trigger re-verification of the Freight currently in use by a
@@ -2128,7 +2128,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/stages/{stage}/verification/abort:
+  /v1beta1/projects/{project}/stages/{stage}/verification/abort:
     post:
       description: Abort a running Verification process.
       operationId: AbortVerification
@@ -2154,7 +2154,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v2/projects/{project}/warehouses:
+  /v1beta1/projects/{project}/warehouses:
     get:
       description: |-
         List Warehouse resources from a project's namespace. Returns a
@@ -2179,7 +2179,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/warehouses/{warehouse}:
+  /v1beta1/projects/{project}/warehouses/{warehouse}:
     delete:
       description: Delete a Warehouse resource from a project's namespace.
       operationId: DeleteWarehouse
@@ -2230,7 +2230,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/projects/{project}/warehouses/{warehouse}/refresh:
+  /v1beta1/projects/{project}/warehouses/{warehouse}/refresh:
     post:
       description: |-
         Refresh a Warehouse resource in a project's namespace.
@@ -2259,7 +2259,7 @@ paths:
       tags:
       - Core
       - Project-Level
-  /v2/resources:
+  /v1beta1/resources:
     delete:
       consumes:
       - text/plain
@@ -2338,7 +2338,7 @@ paths:
       summary: Update resources
       tags:
       - Resources
-  /v2/shared/cluster-analysis-templates:
+  /v1beta1/shared/cluster-analysis-templates:
     get:
       description: |-
         List ClusterAnalysisTemplate resources. Returns a
@@ -2358,7 +2358,7 @@ paths:
       - Verifications
       - Shared
       - Cluster-Scoped Resource
-  /v2/shared/cluster-analysis-templates/{cluster-analysis-template}:
+  /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}:
     delete:
       description: Delete a ClusterAnalysisTemplate resource.
       operationId: DeleteClusterAnalysisTemplate
@@ -2401,7 +2401,7 @@ paths:
       - Verifications
       - Shared
       - Cluster-Scoped Resource
-  /v2/shared/cluster-promotion-tasks:
+  /v1beta1/shared/cluster-promotion-tasks:
     get:
       description: |-
         List ClusterPromotionTask resources. Returns a
@@ -2421,7 +2421,7 @@ paths:
       - Core
       - Shared
       - Cluster-Scoped Resource
-  /v2/shared/cluster-promotion-tasks/{cluster-promotion-task}:
+  /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}:
     get:
       description: Retrieve a ClusterPromotionTask by name.
       operationId: GetClusterPromotionTask
@@ -2445,7 +2445,7 @@ paths:
       - Core
       - Shared
       - Cluster-Scoped Resource
-  /v2/shared/configmaps:
+  /v1beta1/shared/configmaps:
     get:
       description: |-
         List shared ConfigMap resources referenceable by all projects.
@@ -2493,7 +2493,7 @@ paths:
       - Core
       - Generic Config
       - Shared
-  /v2/shared/configmaps/{configmap}:
+  /v1beta1/shared/configmaps/{configmap}:
     delete:
       description: Delete a shared ConfigMap.
       operationId: DeleteSharedConfigMap
@@ -2603,7 +2603,7 @@ paths:
       - Core
       - Generic Config
       - Shared
-  /v2/shared/generic-credentials:
+  /v1beta1/shared/generic-credentials:
     get:
       description: |-
         List shared generic credentials. Returns a Kubernetes SecretList
@@ -2651,7 +2651,7 @@ paths:
       - Credentials
       - Generic Credentials
       - Shared
-  /v2/shared/generic-credentials/{generic-credentials}:
+  /v1beta1/shared/generic-credentials/{generic-credentials}:
     delete:
       description: Delete shared generic credentials.
       operationId: DeleteSharedGenericCredentials
@@ -2763,7 +2763,7 @@ paths:
       - Credentials
       - Generic Credentials
       - Shared
-  /v2/shared/repo-credentials:
+  /v1beta1/shared/repo-credentials:
     get:
       description: |-
         List shared repository credentials. Returns a SecretList
@@ -2811,7 +2811,7 @@ paths:
       - Credentials
       - Repo Credentials
       - Shared
-  /v2/shared/repo-credentials/{repo-credentials}:
+  /v1beta1/shared/repo-credentials/{repo-credentials}:
     delete:
       description: Delete shared repository credentials.
       operationId: DeleteSharedRepoCredentials
@@ -2922,7 +2922,7 @@ paths:
       - Credentials
       - Repo Credentials
       - Shared
-  /v2/system/apitokens:
+  /v1beta1/system/apitokens:
     get:
       description: |-
         List system-level API tokens. Returns a Kubernetes SecretList
@@ -2947,7 +2947,7 @@ paths:
       - Rbac
       - Credentials
       - System-Level
-  /v2/system/apitokens/{apitoken}:
+  /v1beta1/system/apitokens/{apitoken}:
     delete:
       description: Delete a system-level API token.
       operationId: DeleteSystemAPIToken
@@ -2992,7 +2992,7 @@ paths:
       - Rbac
       - Credentials
       - System-Level
-  /v2/system/cluster-config:
+  /v1beta1/system/cluster-config:
     delete:
       description: Deletes the single ClusterConfig resource.
       operationId: DeleteClusterConfig
@@ -3025,7 +3025,7 @@ paths:
       - Config
       - Cluster-Scoped Resource
       - Singleton
-  /v2/system/cluster-config/refresh:
+  /v1beta1/system/cluster-config/refresh:
     post:
       description: |-
         Refresh the single ClusterConfig resource. Refreshing enqueues
@@ -3044,7 +3044,7 @@ paths:
       - Config
       - Cluster-Scoped Resource
       - Singleton
-  /v2/system/configmaps:
+  /v1beta1/system/configmaps:
     get:
       description: |-
         List system-level ConfigMap resources. Returns a Kubernetes
@@ -3092,7 +3092,7 @@ paths:
       - Core
       - Generic Config
       - System-Level
-  /v2/system/configmaps/{configmap}:
+  /v1beta1/system/configmaps/{configmap}:
     delete:
       description: Delete a system-level ConfigMap.
       operationId: DeleteSystemConfigMap
@@ -3202,7 +3202,7 @@ paths:
       - Core
       - Generic Config
       - System-Level
-  /v2/system/generic-credentials:
+  /v1beta1/system/generic-credentials:
     get:
       description: |-
         List system-level generic credentials. Returns a Kubernetes
@@ -3250,7 +3250,7 @@ paths:
       - Credentials
       - Generic Credentials
       - System-Level
-  /v2/system/generic-credentials/{generic-credentials}:
+  /v1beta1/system/generic-credentials/{generic-credentials}:
     delete:
       description: Delete system-level generic credentials.
       operationId: DeleteSystemGenericCredentials
@@ -3362,7 +3362,7 @@ paths:
       - Credentials
       - Generic Credentials
       - System-Level
-  /v2/system/public-server-config:
+  /v1beta1/system/public-server-config:
     get:
       description: |-
         Retrieve information a client may need to know about how the
@@ -3380,7 +3380,7 @@ paths:
       tags:
       - System
       - Config
-  /v2/system/roles:
+  /v1beta1/system/roles:
     get:
       description: |-
         List system-level Kargo Role virtual resources. Returns a
@@ -3399,7 +3399,7 @@ paths:
       tags:
       - Rbac
       - System-Level
-  /v2/system/roles/{role}:
+  /v1beta1/system/roles/{role}:
     get:
       description: |-
         Retrieve a system-level Kargo Role virtual resource by name.
@@ -3426,7 +3426,7 @@ paths:
       tags:
       - Rbac
       - System-Level
-  /v2/system/roles/{role}/apitokens:
+  /v1beta1/system/roles/{role}/apitokens:
     post:
       consumes:
       - application/json
@@ -3463,7 +3463,7 @@ paths:
       - Rbac
       - Credentials
       - System-Level
-  /v2/system/server-config:
+  /v1beta1/system/server-config:
     get:
       description: |-
         Retrieve information a client may need to know about how the
@@ -3482,7 +3482,7 @@ paths:
       tags:
       - System
       - Config
-  /v2/system/server-version:
+  /v1beta1/system/server-version:
     get:
       description: Retrieve API Server version information.
       operationId: GetVersionInfo

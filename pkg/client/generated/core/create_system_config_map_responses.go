@@ -30,7 +30,7 @@ func (o *CreateSystemConfigMapReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/system/configmaps] CreateSystemConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/system/configmaps] CreateSystemConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *CreateSystemConfigMapCreated) Code() int {
 
 func (o *CreateSystemConfigMapCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/system/configmaps][%d] createSystemConfigMapCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/system/configmaps][%d] createSystemConfigMapCreated %s", 201, payload)
 }
 
 func (o *CreateSystemConfigMapCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/system/configmaps][%d] createSystemConfigMapCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/system/configmaps][%d] createSystemConfigMapCreated %s", 201, payload)
 }
 
 func (o *CreateSystemConfigMapCreated) GetPayload() any {

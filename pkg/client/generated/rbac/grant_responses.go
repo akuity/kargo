@@ -30,7 +30,7 @@ func (o *GrantReader) ReadResponse(response runtime.ClientResponse, consumer run
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/roles/grants] Grant", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/roles/grants] Grant", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GrantOK) Code() int {
 
 func (o *GrantOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles/grants][%d] grantOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/grants][%d] grantOK %s", 200, payload)
 }
 
 func (o *GrantOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles/grants][%d] grantOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/grants][%d] grantOK %s", 200, payload)
 }
 
 func (o *GrantOK) GetPayload() any {

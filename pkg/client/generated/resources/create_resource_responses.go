@@ -32,7 +32,7 @@ func (o *CreateResourceReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/resources] CreateResource", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/resources] CreateResource", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *CreateResourceCreated) Code() int {
 
 func (o *CreateResourceCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/resources][%d] createResourceCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/resources][%d] createResourceCreated %s", 201, payload)
 }
 
 func (o *CreateResourceCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/resources][%d] createResourceCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/resources][%d] createResourceCreated %s", 201, payload)
 }
 
 func (o *CreateResourceCreated) GetPayload() *models.CreateResourceResponse {

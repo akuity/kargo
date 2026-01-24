@@ -30,7 +30,7 @@ func (o *GetClusterAnalysisTemplateReader) ReadResponse(response runtime.ClientR
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/cluster-analysis-templates/{cluster-analysis-template}] GetClusterAnalysisTemplate", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}] GetClusterAnalysisTemplate", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetClusterAnalysisTemplateOK) Code() int {
 
 func (o *GetClusterAnalysisTemplateOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] getClusterAnalysisTemplateOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] getClusterAnalysisTemplateOK %s", 200, payload)
 }
 
 func (o *GetClusterAnalysisTemplateOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] getClusterAnalysisTemplateOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] getClusterAnalysisTemplateOK %s", 200, payload)
 }
 
 func (o *GetClusterAnalysisTemplateOK) GetPayload() any {

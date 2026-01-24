@@ -30,7 +30,7 @@ func (o *UpdateRoleReader) ReadResponse(response runtime.ClientResponse, consume
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/projects/{project}/roles/{role}] UpdateRole", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/projects/{project}/roles/{role}] UpdateRole", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateRoleOK) Code() int {
 
 func (o *UpdateRoleOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/roles/{role}][%d] updateRoleOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/roles/{role}][%d] updateRoleOK %s", 200, payload)
 }
 
 func (o *UpdateRoleOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/roles/{role}][%d] updateRoleOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/roles/{role}][%d] updateRoleOK %s", 200, payload)
 }
 
 func (o *UpdateRoleOK) GetPayload() any {

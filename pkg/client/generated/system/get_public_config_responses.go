@@ -32,7 +32,7 @@ func (o *GetPublicConfigReader) ReadResponse(response runtime.ClientResponse, co
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/public-server-config] GetPublicConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/public-server-config] GetPublicConfig", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *GetPublicConfigOK) Code() int {
 
 func (o *GetPublicConfigOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/public-server-config][%d] getPublicConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/public-server-config][%d] getPublicConfigOK %s", 200, payload)
 }
 
 func (o *GetPublicConfigOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/public-server-config][%d] getPublicConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/public-server-config][%d] getPublicConfigOK %s", 200, payload)
 }
 
 func (o *GetPublicConfigOK) GetPayload() *models.PublicConfig {

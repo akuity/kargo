@@ -8,7 +8,7 @@
     },
     "basePath": "/",
     "paths": {
-        "/v2/login": {
+        "/v1beta1/login": {
             "post": {
                 "security": [
                     {
@@ -34,7 +34,7 @@
                 }
             }
         },
-        "/v2/projects": {
+        "/v1beta1/projects": {
             "get": {
                 "security": [
                     {
@@ -61,7 +61,7 @@
                 }
             }
         },
-        "/v2/projects/{project}": {
+        "/v1beta1/projects/{project}": {
             "get": {
                 "security": [
                     {
@@ -125,7 +125,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/analysis-runs/{analysis-run}": {
+        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
             "get": {
                 "security": [
                     {
@@ -168,7 +168,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/analysis-runs/{analysis-run}/logs": {
+        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
             "get": {
                 "security": [
                     {
@@ -223,7 +223,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/analysis-templates": {
+        "/v1beta1/projects/{project}/analysis-templates": {
             "get": {
                 "security": [
                     {
@@ -259,7 +259,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/analysis-templates/{analysis-template}": {
+        "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
             "get": {
                 "security": [
                     {
@@ -337,7 +337,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/apitokens": {
+        "/v1beta1/projects/{project}/apitokens": {
             "get": {
                 "security": [
                     {
@@ -380,7 +380,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/apitokens/{apitoken}": {
+        "/v1beta1/projects/{project}/apitokens/{apitoken}": {
             "get": {
                 "security": [
                     {
@@ -460,7 +460,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/config": {
+        "/v1beta1/projects/{project}/config": {
             "get": {
                 "security": [
                     {
@@ -528,7 +528,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/config/refresh": {
+        "/v1beta1/projects/{project}/config/refresh": {
             "post": {
                 "security": [
                     {
@@ -563,7 +563,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/configmaps": {
+        "/v1beta1/projects/{project}/configmaps": {
             "get": {
                 "security": [
                     {
@@ -647,7 +647,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/configmaps/{configmap}": {
+        "/v1beta1/projects/{project}/configmaps/{configmap}": {
             "get": {
                 "security": [
                     {
@@ -835,7 +835,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/events": {
+        "/v1beta1/projects/{project}/events": {
             "get": {
                 "security": [
                     {
@@ -871,7 +871,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/freight": {
+        "/v1beta1/projects/{project}/freight": {
             "get": {
                 "security": [
                     {
@@ -947,7 +947,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/freight/{freight-name-or-alias}": {
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
             "get": {
                 "security": [
                     {
@@ -1025,7 +1025,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/freight/{freight-name-or-alias}/alias": {
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
             "patch": {
                 "security": [
                     {
@@ -1075,7 +1075,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/freight/{freight-name-or-alias}/approve": {
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
             "post": {
                 "security": [
                     {
@@ -1122,7 +1122,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/generic-credentials": {
+        "/v1beta1/projects/{project}/generic-credentials": {
             "get": {
                 "security": [
                     {
@@ -1206,7 +1206,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/generic-credentials/{generic-credentials}": {
+        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
             "get": {
                 "security": [
                     {
@@ -1394,7 +1394,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/images": {
+        "/v1beta1/projects/{project}/images": {
             "get": {
                 "security": [
                     {
@@ -1433,7 +1433,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotion-tasks": {
+        "/v1beta1/projects/{project}/promotion-tasks": {
             "get": {
                 "security": [
                     {
@@ -1469,7 +1469,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotion-tasks/{promotion-task}": {
+        "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
             "get": {
                 "security": [
                     {
@@ -1512,7 +1512,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotions": {
+        "/v1beta1/projects/{project}/promotions": {
             "get": {
                 "security": [
                     {
@@ -1554,7 +1554,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotions/{promotion}": {
+        "/v1beta1/projects/{project}/promotions/{promotion}": {
             "get": {
                 "security": [
                     {
@@ -1597,7 +1597,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotions/{promotion}/abort": {
+        "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
             "post": {
                 "security": [
                     {
@@ -1637,7 +1637,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/promotions/{promotion}/refresh": {
+        "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
             "post": {
                 "security": [
                     {
@@ -1677,7 +1677,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/repo-credentials": {
+        "/v1beta1/projects/{project}/repo-credentials": {
             "get": {
                 "security": [
                     {
@@ -1761,7 +1761,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/repo-credentials/{repo-credentials}": {
+        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
             "get": {
                 "security": [
                     {
@@ -1949,7 +1949,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/roles": {
+        "/v1beta1/projects/{project}/roles": {
             "get": {
                 "security": [
                     {
@@ -2031,7 +2031,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/roles/grants": {
+        "/v1beta1/projects/{project}/roles/grants": {
             "post": {
                 "security": [
                     {
@@ -2079,7 +2079,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/roles/revocations": {
+        "/v1beta1/projects/{project}/roles/revocations": {
             "post": {
                 "security": [
                     {
@@ -2127,7 +2127,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/roles/{role}": {
+        "/v1beta1/projects/{project}/roles/{role}": {
             "get": {
                 "security": [
                     {
@@ -2258,7 +2258,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/roles/{role}/apitokens": {
+        "/v1beta1/projects/{project}/roles/{role}/apitokens": {
             "post": {
                 "security": [
                     {
@@ -2314,7 +2314,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages": {
+        "/v1beta1/projects/{project}/stages": {
             "get": {
                 "security": [
                     {
@@ -2350,7 +2350,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}": {
+        "/v1beta1/projects/{project}/stages/{stage}": {
             "get": {
                 "security": [
                     {
@@ -2428,7 +2428,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}/promotions": {
+        "/v1beta1/projects/{project}/stages/{stage}/promotions": {
             "post": {
                 "security": [
                     {
@@ -2483,7 +2483,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}/promotions/downstream": {
+        "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
             "post": {
                 "security": [
                     {
@@ -2538,7 +2538,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}/refresh": {
+        "/v1beta1/projects/{project}/stages/{stage}/refresh": {
             "post": {
                 "security": [
                     {
@@ -2578,7 +2578,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}/verification": {
+        "/v1beta1/projects/{project}/stages/{stage}/verification": {
             "post": {
                 "security": [
                     {
@@ -2618,7 +2618,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/stages/{stage}/verification/abort": {
+        "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
             "post": {
                 "security": [
                     {
@@ -2658,7 +2658,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/warehouses": {
+        "/v1beta1/projects/{project}/warehouses": {
             "get": {
                 "security": [
                     {
@@ -2694,7 +2694,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/warehouses/{warehouse}": {
+        "/v1beta1/projects/{project}/warehouses/{warehouse}": {
             "get": {
                 "security": [
                     {
@@ -2772,7 +2772,7 @@
                 }
             }
         },
-        "/v2/projects/{project}/warehouses/{warehouse}/refresh": {
+        "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
             "post": {
                 "security": [
                     {
@@ -2812,7 +2812,7 @@
                 }
             }
         },
-        "/v2/resources": {
+        "/v1beta1/resources": {
             "put": {
                 "security": [
                     {
@@ -2934,7 +2934,7 @@
                 }
             }
         },
-        "/v2/shared/cluster-analysis-templates": {
+        "/v1beta1/shared/cluster-analysis-templates": {
             "get": {
                 "security": [
                     {
@@ -2962,7 +2962,7 @@
                 }
             }
         },
-        "/v2/shared/cluster-analysis-templates/{cluster-analysis-template}": {
+        "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
             "get": {
                 "security": [
                     {
@@ -3028,7 +3028,7 @@
                 }
             }
         },
-        "/v2/shared/cluster-promotion-tasks": {
+        "/v1beta1/shared/cluster-promotion-tasks": {
             "get": {
                 "security": [
                     {
@@ -3056,7 +3056,7 @@
                 }
             }
         },
-        "/v2/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
+        "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
             "get": {
                 "security": [
                     {
@@ -3093,7 +3093,7 @@
                 }
             }
         },
-        "/v2/shared/configmaps": {
+        "/v1beta1/shared/configmaps": {
             "get": {
                 "security": [
                     {
@@ -3161,7 +3161,7 @@
                 }
             }
         },
-        "/v2/shared/configmaps/{configmap}": {
+        "/v1beta1/shared/configmaps/{configmap}": {
             "get": {
                 "security": [
                     {
@@ -3321,7 +3321,7 @@
                 }
             }
         },
-        "/v2/shared/generic-credentials": {
+        "/v1beta1/shared/generic-credentials": {
             "get": {
                 "security": [
                     {
@@ -3389,7 +3389,7 @@
                 }
             }
         },
-        "/v2/shared/generic-credentials/{generic-credentials}": {
+        "/v1beta1/shared/generic-credentials/{generic-credentials}": {
             "get": {
                 "security": [
                     {
@@ -3549,7 +3549,7 @@
                 }
             }
         },
-        "/v2/shared/repo-credentials": {
+        "/v1beta1/shared/repo-credentials": {
             "get": {
                 "security": [
                     {
@@ -3617,7 +3617,7 @@
                 }
             }
         },
-        "/v2/shared/repo-credentials/{repo-credentials}": {
+        "/v1beta1/shared/repo-credentials/{repo-credentials}": {
             "get": {
                 "security": [
                     {
@@ -3777,7 +3777,7 @@
                 }
             }
         },
-        "/v2/system/apitokens": {
+        "/v1beta1/system/apitokens": {
             "get": {
                 "security": [
                     {
@@ -3813,7 +3813,7 @@
                 }
             }
         },
-        "/v2/system/apitokens/{apitoken}": {
+        "/v1beta1/system/apitokens/{apitoken}": {
             "get": {
                 "security": [
                     {
@@ -3879,7 +3879,7 @@
                 }
             }
         },
-        "/v2/system/cluster-config": {
+        "/v1beta1/system/cluster-config": {
             "get": {
                 "security": [
                     {
@@ -3929,7 +3929,7 @@
                 }
             }
         },
-        "/v2/system/cluster-config/refresh": {
+        "/v1beta1/system/cluster-config/refresh": {
             "post": {
                 "security": [
                     {
@@ -3955,7 +3955,7 @@
                 }
             }
         },
-        "/v2/system/configmaps": {
+        "/v1beta1/system/configmaps": {
             "get": {
                 "security": [
                     {
@@ -4023,7 +4023,7 @@
                 }
             }
         },
-        "/v2/system/configmaps/{configmap}": {
+        "/v1beta1/system/configmaps/{configmap}": {
             "get": {
                 "security": [
                     {
@@ -4183,7 +4183,7 @@
                 }
             }
         },
-        "/v2/system/generic-credentials": {
+        "/v1beta1/system/generic-credentials": {
             "get": {
                 "security": [
                     {
@@ -4251,7 +4251,7 @@
                 }
             }
         },
-        "/v2/system/generic-credentials/{generic-credentials}": {
+        "/v1beta1/system/generic-credentials/{generic-credentials}": {
             "get": {
                 "security": [
                     {
@@ -4411,7 +4411,7 @@
                 }
             }
         },
-        "/v2/system/public-server-config": {
+        "/v1beta1/system/public-server-config": {
             "get": {
                 "description": "Retrieve information a client may need to know about how the\nKargo API server is configured in order to proceed with\nauthentication.",
                 "produces": [
@@ -4433,7 +4433,7 @@
                 }
             }
         },
-        "/v2/system/roles": {
+        "/v1beta1/system/roles": {
             "get": {
                 "security": [
                     {
@@ -4460,7 +4460,7 @@
                 }
             }
         },
-        "/v2/system/roles/{role}": {
+        "/v1beta1/system/roles/{role}": {
             "get": {
                 "security": [
                     {
@@ -4496,7 +4496,7 @@
                 }
             }
         },
-        "/v2/system/roles/{role}/apitokens": {
+        "/v1beta1/system/roles/{role}/apitokens": {
             "post": {
                 "security": [
                     {
@@ -4545,7 +4545,7 @@
                 }
             }
         },
-        "/v2/system/server-config": {
+        "/v1beta1/system/server-config": {
             "get": {
                 "security": [
                     {
@@ -4572,7 +4572,7 @@
                 }
             }
         },
-        "/v2/system/server-version": {
+        "/v1beta1/system/server-version": {
             "get": {
                 "security": [
                     {

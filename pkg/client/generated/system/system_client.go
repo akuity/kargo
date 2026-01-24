@@ -86,7 +86,7 @@ func (a *Client) AdminLogin(params *AdminLoginParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "AdminLogin",
 		Method:             "POST",
-		PathPattern:        "/v2/login",
+		PathPattern:        "/v1beta1/login",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -132,7 +132,7 @@ func (a *Client) DeleteClusterConfig(params *DeleteClusterConfigParams, authInfo
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteClusterConfig",
 		Method:             "DELETE",
-		PathPattern:        "/v2/system/cluster-config",
+		PathPattern:        "/v1beta1/system/cluster-config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -178,7 +178,7 @@ func (a *Client) GetClusterConfig(params *GetClusterConfigParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "GetClusterConfig",
 		Method:             "GET",
-		PathPattern:        "/v2/system/cluster-config",
+		PathPattern:        "/v1beta1/system/cluster-config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -226,7 +226,7 @@ func (a *Client) GetConfig(params *GetConfigParams, authInfo runtime.ClientAuthI
 	op := &runtime.ClientOperation{
 		ID:                 "GetConfig",
 		Method:             "GET",
-		PathPattern:        "/v2/system/server-config",
+		PathPattern:        "/v1beta1/system/server-config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -275,7 +275,7 @@ func (a *Client) GetPublicConfig(params *GetPublicConfigParams, opts ...ClientOp
 	op := &runtime.ClientOperation{
 		ID:                 "GetPublicConfig",
 		Method:             "GET",
-		PathPattern:        "/v2/system/public-server-config",
+		PathPattern:        "/v1beta1/system/public-server-config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -320,7 +320,7 @@ func (a *Client) GetVersionInfo(params *GetVersionInfoParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "GetVersionInfo",
 		Method:             "GET",
-		PathPattern:        "/v2/system/server-version",
+		PathPattern:        "/v1beta1/system/server-version",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -368,7 +368,7 @@ func (a *Client) RefreshClusterConfig(params *RefreshClusterConfigParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "RefreshClusterConfig",
 		Method:             "POST",
-		PathPattern:        "/v2/system/cluster-config/refresh",
+		PathPattern:        "/v1beta1/system/cluster-config/refresh",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

@@ -30,7 +30,7 @@ func (o *ListWarehousesReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/warehouses] ListWarehouses", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/warehouses] ListWarehouses", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListWarehousesOK) Code() int {
 
 func (o *ListWarehousesOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/warehouses][%d] listWarehousesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/warehouses][%d] listWarehousesOK %s", 200, payload)
 }
 
 func (o *ListWarehousesOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/warehouses][%d] listWarehousesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/warehouses][%d] listWarehousesOK %s", 200, payload)
 }
 
 func (o *ListWarehousesOK) GetPayload() any {

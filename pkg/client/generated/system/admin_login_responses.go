@@ -32,7 +32,7 @@ func (o *AdminLoginReader) ReadResponse(response runtime.ClientResponse, consume
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/login] AdminLogin", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/login] AdminLogin", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *AdminLoginOK) Code() int {
 
 func (o *AdminLoginOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/login][%d] adminLoginOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/login][%d] adminLoginOK %s", 200, payload)
 }
 
 func (o *AdminLoginOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/login][%d] adminLoginOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/login][%d] adminLoginOK %s", 200, payload)
 }
 
 func (o *AdminLoginOK) GetPayload() *models.AdminLoginResponse {

@@ -30,7 +30,7 @@ func (o *GetSharedRepoCredentialsReader) ReadResponse(response runtime.ClientRes
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/repo-credentials/{repo-credentials}] GetSharedRepoCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/repo-credentials/{repo-credentials}] GetSharedRepoCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetSharedRepoCredentialsOK) Code() int {
 
 func (o *GetSharedRepoCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/repo-credentials/{repo-credentials}][%d] getSharedRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/repo-credentials/{repo-credentials}][%d] getSharedRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *GetSharedRepoCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/repo-credentials/{repo-credentials}][%d] getSharedRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/repo-credentials/{repo-credentials}][%d] getSharedRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *GetSharedRepoCredentialsOK) GetPayload() any {

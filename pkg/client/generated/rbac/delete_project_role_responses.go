@@ -27,7 +27,7 @@ func (o *DeleteProjectRoleReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/roles/{role}] DeleteProjectRole", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/roles/{role}] DeleteProjectRole", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteProjectRoleNoContent) Code() int {
 }
 
 func (o *DeleteProjectRoleNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/roles/{role}][%d] deleteProjectRoleNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/roles/{role}][%d] deleteProjectRoleNoContent", 204)
 }
 
 func (o *DeleteProjectRoleNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/roles/{role}][%d] deleteProjectRoleNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/roles/{role}][%d] deleteProjectRoleNoContent", 204)
 }
 
 func (o *DeleteProjectRoleNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

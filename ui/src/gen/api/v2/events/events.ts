@@ -40,7 +40,7 @@ export type listProjectEventsResponseSuccess = listProjectEventsResponse200 & {
 export type listProjectEventsResponse = listProjectEventsResponseSuccess;
 
 export const getListProjectEventsUrl = (project: string) => {
-  return `/v2/projects/${project}/events`;
+  return `/v1beta1/projects/${project}/events`;
 };
 
 export const listProjectEvents = async (
@@ -54,7 +54,7 @@ export const listProjectEvents = async (
 };
 
 export const getListProjectEventsQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/events`] as const;
+  return [`/v1beta1/projects/${project}/events`] as const;
 };
 
 export const getListProjectEventsQueryOptions = <

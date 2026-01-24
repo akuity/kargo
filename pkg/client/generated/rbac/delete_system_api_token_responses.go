@@ -27,7 +27,7 @@ func (o *DeleteSystemAPITokenReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/system/apitokens/{apitoken}] DeleteSystemAPIToken", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/system/apitokens/{apitoken}] DeleteSystemAPIToken", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteSystemAPITokenNoContent) Code() int {
 }
 
 func (o *DeleteSystemAPITokenNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/system/apitokens/{apitoken}][%d] deleteSystemApiTokenNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/system/apitokens/{apitoken}][%d] deleteSystemApiTokenNoContent", 204)
 }
 
 func (o *DeleteSystemAPITokenNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/system/apitokens/{apitoken}][%d] deleteSystemApiTokenNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/system/apitokens/{apitoken}][%d] deleteSystemApiTokenNoContent", 204)
 }
 
 func (o *DeleteSystemAPITokenNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

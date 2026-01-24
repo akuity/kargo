@@ -27,7 +27,7 @@ func (o *DeleteSharedConfigMapReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/shared/configmaps/{configmap}] DeleteSharedConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/shared/configmaps/{configmap}] DeleteSharedConfigMap", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteSharedConfigMapNoContent) Code() int {
 }
 
 func (o *DeleteSharedConfigMapNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/shared/configmaps/{configmap}][%d] deleteSharedConfigMapNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/configmaps/{configmap}][%d] deleteSharedConfigMapNoContent", 204)
 }
 
 func (o *DeleteSharedConfigMapNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/shared/configmaps/{configmap}][%d] deleteSharedConfigMapNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/configmaps/{configmap}][%d] deleteSharedConfigMapNoContent", 204)
 }
 
 func (o *DeleteSharedConfigMapNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

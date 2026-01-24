@@ -27,7 +27,7 @@ func (o *DeleteSharedGenericCredentialsReader) ReadResponse(response runtime.Cli
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/shared/generic-credentials/{generic-credentials}] DeleteSharedGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/shared/generic-credentials/{generic-credentials}] DeleteSharedGenericCredentials", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteSharedGenericCredentialsNoContent) Code() int {
 }
 
 func (o *DeleteSharedGenericCredentialsNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/shared/generic-credentials/{generic-credentials}][%d] deleteSharedGenericCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/generic-credentials/{generic-credentials}][%d] deleteSharedGenericCredentialsNoContent", 204)
 }
 
 func (o *DeleteSharedGenericCredentialsNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/shared/generic-credentials/{generic-credentials}][%d] deleteSharedGenericCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/generic-credentials/{generic-credentials}][%d] deleteSharedGenericCredentialsNoContent", 204)
 }
 
 func (o *DeleteSharedGenericCredentialsNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

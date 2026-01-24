@@ -27,7 +27,7 @@ func (o *DeleteProjectAPITokenReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/apitokens/{apitoken}] DeleteProjectAPIToken", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/apitokens/{apitoken}] DeleteProjectAPIToken", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteProjectAPITokenNoContent) Code() int {
 }
 
 func (o *DeleteProjectAPITokenNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/apitokens/{apitoken}][%d] deleteProjectApiTokenNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/apitokens/{apitoken}][%d] deleteProjectApiTokenNoContent", 204)
 }
 
 func (o *DeleteProjectAPITokenNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/apitokens/{apitoken}][%d] deleteProjectApiTokenNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/apitokens/{apitoken}][%d] deleteProjectApiTokenNoContent", 204)
 }
 
 func (o *DeleteProjectAPITokenNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

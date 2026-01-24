@@ -76,7 +76,7 @@ export type listProjectGenericCredentialsResponseSuccess =
 export type listProjectGenericCredentialsResponse = listProjectGenericCredentialsResponseSuccess;
 
 export const getListProjectGenericCredentialsUrl = (project: string) => {
-  return `/v2/projects/${project}/generic-credentials`;
+  return `/v1beta1/projects/${project}/generic-credentials`;
 };
 
 export const listProjectGenericCredentials = async (
@@ -93,7 +93,7 @@ export const listProjectGenericCredentials = async (
 };
 
 export const getListProjectGenericCredentialsQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/generic-credentials`] as const;
+  return [`/v1beta1/projects/${project}/generic-credentials`] as const;
 };
 
 export const getListProjectGenericCredentialsQueryOptions = <
@@ -228,7 +228,7 @@ export type createProjectGenericCredentialsResponse =
   createProjectGenericCredentialsResponseSuccess;
 
 export const getCreateProjectGenericCredentialsUrl = (project: string) => {
-  return `/v2/projects/${project}/generic-credentials`;
+  return `/v1beta1/projects/${project}/generic-credentials`;
 };
 
 export const createProjectGenericCredentials = async (
@@ -330,7 +330,7 @@ export type getProjectGenericCredentialsResponseSuccess =
 export type getProjectGenericCredentialsResponse = getProjectGenericCredentialsResponseSuccess;
 
 export const getGetProjectGenericCredentialsUrl = (project: string, genericCredentials: string) => {
-  return `/v2/projects/${project}/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
 export const getProjectGenericCredentials = async (
@@ -351,7 +351,7 @@ export const getGetProjectGenericCredentialsQueryKey = (
   project?: string,
   genericCredentials?: string
 ) => {
-  return [`/v2/projects/${project}/generic-credentials/${genericCredentials}`] as const;
+  return [`/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`] as const;
 };
 
 export const getGetProjectGenericCredentialsQueryOptions = <
@@ -502,7 +502,7 @@ export const getUpdateProjectGenericCredentialsUrl = (
   project: string,
   genericCredentials: string
 ) => {
-  return `/v2/projects/${project}/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
 export const updateProjectGenericCredentials = async (
@@ -608,7 +608,7 @@ export const getDeleteProjectGenericCredentialsUrl = (
   project: string,
   genericCredentials: string
 ) => {
-  return `/v2/projects/${project}/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
 export const deleteProjectGenericCredentials = async (
@@ -712,7 +712,7 @@ export const getPatchProjectGenericCredentialsUrl = (
   project: string,
   genericCredentials: string
 ) => {
-  return `/v2/projects/${project}/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/projects/${project}/generic-credentials/${genericCredentials}`;
 };
 
 export const patchProjectGenericCredentials = async (
@@ -814,7 +814,7 @@ export type listProjectRepoCredentialsResponseSuccess = listProjectRepoCredentia
 export type listProjectRepoCredentialsResponse = listProjectRepoCredentialsResponseSuccess;
 
 export const getListProjectRepoCredentialsUrl = (project: string) => {
-  return `/v2/projects/${project}/repo-credentials`;
+  return `/v1beta1/projects/${project}/repo-credentials`;
 };
 
 export const listProjectRepoCredentials = async (
@@ -831,7 +831,7 @@ export const listProjectRepoCredentials = async (
 };
 
 export const getListProjectRepoCredentialsQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/repo-credentials`] as const;
+  return [`/v1beta1/projects/${project}/repo-credentials`] as const;
 };
 
 export const getListProjectRepoCredentialsQueryOptions = <
@@ -965,7 +965,7 @@ export type createProjectRepoCredentialsResponseSuccess =
 export type createProjectRepoCredentialsResponse = createProjectRepoCredentialsResponseSuccess;
 
 export const getCreateProjectRepoCredentialsUrl = (project: string) => {
-  return `/v2/projects/${project}/repo-credentials`;
+  return `/v1beta1/projects/${project}/repo-credentials`;
 };
 
 export const createProjectRepoCredentials = async (
@@ -1066,7 +1066,7 @@ export type getProjectRepoCredentialsResponseSuccess = getProjectRepoCredentials
 export type getProjectRepoCredentialsResponse = getProjectRepoCredentialsResponseSuccess;
 
 export const getGetProjectRepoCredentialsUrl = (project: string, repoCredentials: string) => {
-  return `/v2/projects/${project}/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
 export const getProjectRepoCredentials = async (
@@ -1087,7 +1087,7 @@ export const getGetProjectRepoCredentialsQueryKey = (
   project?: string,
   repoCredentials?: string
 ) => {
-  return [`/v2/projects/${project}/repo-credentials/${repoCredentials}`] as const;
+  return [`/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`] as const;
 };
 
 export const getGetProjectRepoCredentialsQueryOptions = <
@@ -1230,7 +1230,7 @@ export type updateProjectRepoCredentialsResponseSuccess =
 export type updateProjectRepoCredentialsResponse = updateProjectRepoCredentialsResponseSuccess;
 
 export const getUpdateProjectRepoCredentialsUrl = (project: string, repoCredentials: string) => {
-  return `/v2/projects/${project}/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
 export const updateProjectRepoCredentials = async (
@@ -1332,7 +1332,7 @@ export type deleteProjectRepoCredentialsResponseSuccess =
 export type deleteProjectRepoCredentialsResponse = deleteProjectRepoCredentialsResponseSuccess;
 
 export const getDeleteProjectRepoCredentialsUrl = (project: string, repoCredentials: string) => {
-  return `/v2/projects/${project}/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
 export const deleteProjectRepoCredentials = async (
@@ -1431,7 +1431,7 @@ export type patchProjectRepoCredentialsResponseSuccess = patchProjectRepoCredent
 export type patchProjectRepoCredentialsResponse = patchProjectRepoCredentialsResponseSuccess;
 
 export const getPatchProjectRepoCredentialsUrl = (project: string, repoCredentials: string) => {
-  return `/v2/projects/${project}/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/projects/${project}/repo-credentials/${repoCredentials}`;
 };
 
 export const patchProjectRepoCredentials = async (
@@ -1534,7 +1534,7 @@ export type listSharedGenericCredentialsResponseSuccess =
 export type listSharedGenericCredentialsResponse = listSharedGenericCredentialsResponseSuccess;
 
 export const getListSharedGenericCredentialsUrl = () => {
-  return `/v2/shared/generic-credentials`;
+  return `/v1beta1/shared/generic-credentials`;
 };
 
 export const listSharedGenericCredentials = async (
@@ -1547,7 +1547,7 @@ export const listSharedGenericCredentials = async (
 };
 
 export const getListSharedGenericCredentialsQueryKey = () => {
-  return [`/v2/shared/generic-credentials`] as const;
+  return [`/v1beta1/shared/generic-credentials`] as const;
 };
 
 export const getListSharedGenericCredentialsQueryOptions = <
@@ -1674,7 +1674,7 @@ export type createSharedGenericCredentialsResponseSuccess =
 export type createSharedGenericCredentialsResponse = createSharedGenericCredentialsResponseSuccess;
 
 export const getCreateSharedGenericCredentialsUrl = () => {
-  return `/v2/shared/generic-credentials`;
+  return `/v1beta1/shared/generic-credentials`;
 };
 
 export const createSharedGenericCredentials = async (
@@ -1774,7 +1774,7 @@ export type getSharedGenericCredentialsResponseSuccess = getSharedGenericCredent
 export type getSharedGenericCredentialsResponse = getSharedGenericCredentialsResponseSuccess;
 
 export const getGetSharedGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/shared/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
 export const getSharedGenericCredentials = async (
@@ -1791,7 +1791,7 @@ export const getSharedGenericCredentials = async (
 };
 
 export const getGetSharedGenericCredentialsQueryKey = (genericCredentials?: string) => {
-  return [`/v2/shared/generic-credentials/${genericCredentials}`] as const;
+  return [`/v1beta1/shared/generic-credentials/${genericCredentials}`] as const;
 };
 
 export const getGetSharedGenericCredentialsQueryOptions = <
@@ -1926,7 +1926,7 @@ export type updateSharedGenericCredentialsResponseSuccess =
 export type updateSharedGenericCredentialsResponse = updateSharedGenericCredentialsResponseSuccess;
 
 export const getUpdateSharedGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/shared/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
 export const updateSharedGenericCredentials = async (
@@ -2027,7 +2027,7 @@ export type deleteSharedGenericCredentialsResponseSuccess =
 export type deleteSharedGenericCredentialsResponse = deleteSharedGenericCredentialsResponseSuccess;
 
 export const getDeleteSharedGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/shared/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
 export const deleteSharedGenericCredentials = async (
@@ -2127,7 +2127,7 @@ export type patchSharedGenericCredentialsResponseSuccess =
 export type patchSharedGenericCredentialsResponse = patchSharedGenericCredentialsResponseSuccess;
 
 export const getPatchSharedGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/shared/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/shared/generic-credentials/${genericCredentials}`;
 };
 
 export const patchSharedGenericCredentials = async (
@@ -2228,7 +2228,7 @@ export type listSharedRepoCredentialsResponseSuccess = listSharedRepoCredentials
 export type listSharedRepoCredentialsResponse = listSharedRepoCredentialsResponseSuccess;
 
 export const getListSharedRepoCredentialsUrl = () => {
-  return `/v2/shared/repo-credentials`;
+  return `/v1beta1/shared/repo-credentials`;
 };
 
 export const listSharedRepoCredentials = async (
@@ -2241,7 +2241,7 @@ export const listSharedRepoCredentials = async (
 };
 
 export const getListSharedRepoCredentialsQueryKey = () => {
-  return [`/v2/shared/repo-credentials`] as const;
+  return [`/v1beta1/shared/repo-credentials`] as const;
 };
 
 export const getListSharedRepoCredentialsQueryOptions = <
@@ -2367,7 +2367,7 @@ export type createSharedRepoCredentialsResponseSuccess = createSharedRepoCredent
 export type createSharedRepoCredentialsResponse = createSharedRepoCredentialsResponseSuccess;
 
 export const getCreateSharedRepoCredentialsUrl = () => {
-  return `/v2/shared/repo-credentials`;
+  return `/v1beta1/shared/repo-credentials`;
 };
 
 export const createSharedRepoCredentials = async (
@@ -2464,7 +2464,7 @@ export type getSharedRepoCredentialsResponseSuccess = getSharedRepoCredentialsRe
 export type getSharedRepoCredentialsResponse = getSharedRepoCredentialsResponseSuccess;
 
 export const getGetSharedRepoCredentialsUrl = (repoCredentials: string) => {
-  return `/v2/shared/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
 export const getSharedRepoCredentials = async (
@@ -2481,7 +2481,7 @@ export const getSharedRepoCredentials = async (
 };
 
 export const getGetSharedRepoCredentialsQueryKey = (repoCredentials?: string) => {
-  return [`/v2/shared/repo-credentials/${repoCredentials}`] as const;
+  return [`/v1beta1/shared/repo-credentials/${repoCredentials}`] as const;
 };
 
 export const getGetSharedRepoCredentialsQueryOptions = <
@@ -2614,7 +2614,7 @@ export type updateSharedRepoCredentialsResponseSuccess = updateSharedRepoCredent
 export type updateSharedRepoCredentialsResponse = updateSharedRepoCredentialsResponseSuccess;
 
 export const getUpdateSharedRepoCredentialsUrl = (repoCredentials: string) => {
-  return `/v2/shared/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
 export const updateSharedRepoCredentials = async (
@@ -2714,7 +2714,7 @@ export type deleteSharedRepoCredentialsResponseSuccess = deleteSharedRepoCredent
 export type deleteSharedRepoCredentialsResponse = deleteSharedRepoCredentialsResponseSuccess;
 
 export const getDeleteSharedRepoCredentialsUrl = (repoCredentials: string) => {
-  return `/v2/shared/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
 export const deleteSharedRepoCredentials = async (
@@ -2812,7 +2812,7 @@ export type patchSharedRepoCredentialsResponseSuccess = patchSharedRepoCredentia
 export type patchSharedRepoCredentialsResponse = patchSharedRepoCredentialsResponseSuccess;
 
 export const getPatchSharedRepoCredentialsUrl = (repoCredentials: string) => {
-  return `/v2/shared/repo-credentials/${repoCredentials}`;
+  return `/v1beta1/shared/repo-credentials/${repoCredentials}`;
 };
 
 export const patchSharedRepoCredentials = async (
@@ -2914,7 +2914,7 @@ export type listSystemGenericCredentialsResponseSuccess =
 export type listSystemGenericCredentialsResponse = listSystemGenericCredentialsResponseSuccess;
 
 export const getListSystemGenericCredentialsUrl = () => {
-  return `/v2/system/generic-credentials`;
+  return `/v1beta1/system/generic-credentials`;
 };
 
 export const listSystemGenericCredentials = async (
@@ -2927,7 +2927,7 @@ export const listSystemGenericCredentials = async (
 };
 
 export const getListSystemGenericCredentialsQueryKey = () => {
-  return [`/v2/system/generic-credentials`] as const;
+  return [`/v1beta1/system/generic-credentials`] as const;
 };
 
 export const getListSystemGenericCredentialsQueryOptions = <
@@ -3054,7 +3054,7 @@ export type createSystemGenericCredentialsResponseSuccess =
 export type createSystemGenericCredentialsResponse = createSystemGenericCredentialsResponseSuccess;
 
 export const getCreateSystemGenericCredentialsUrl = () => {
-  return `/v2/system/generic-credentials`;
+  return `/v1beta1/system/generic-credentials`;
 };
 
 export const createSystemGenericCredentials = async (
@@ -3154,7 +3154,7 @@ export type getSystemGenericCredentialsResponseSuccess = getSystemGenericCredent
 export type getSystemGenericCredentialsResponse = getSystemGenericCredentialsResponseSuccess;
 
 export const getGetSystemGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/system/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
 export const getSystemGenericCredentials = async (
@@ -3171,7 +3171,7 @@ export const getSystemGenericCredentials = async (
 };
 
 export const getGetSystemGenericCredentialsQueryKey = (genericCredentials?: string) => {
-  return [`/v2/system/generic-credentials/${genericCredentials}`] as const;
+  return [`/v1beta1/system/generic-credentials/${genericCredentials}`] as const;
 };
 
 export const getGetSystemGenericCredentialsQueryOptions = <
@@ -3306,7 +3306,7 @@ export type updateSystemGenericCredentialsResponseSuccess =
 export type updateSystemGenericCredentialsResponse = updateSystemGenericCredentialsResponseSuccess;
 
 export const getUpdateSystemGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/system/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
 export const updateSystemGenericCredentials = async (
@@ -3407,7 +3407,7 @@ export type deleteSystemGenericCredentialsResponseSuccess =
 export type deleteSystemGenericCredentialsResponse = deleteSystemGenericCredentialsResponseSuccess;
 
 export const getDeleteSystemGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/system/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
 export const deleteSystemGenericCredentials = async (
@@ -3507,7 +3507,7 @@ export type patchSystemGenericCredentialsResponseSuccess =
 export type patchSystemGenericCredentialsResponse = patchSystemGenericCredentialsResponseSuccess;
 
 export const getPatchSystemGenericCredentialsUrl = (genericCredentials: string) => {
-  return `/v2/system/generic-credentials/${genericCredentials}`;
+  return `/v1beta1/system/generic-credentials/${genericCredentials}`;
 };
 
 export const patchSystemGenericCredentials = async (

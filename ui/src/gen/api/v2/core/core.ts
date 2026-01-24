@@ -85,7 +85,7 @@ export type listProjectsResponseSuccess = listProjectsResponse200 & {
 export type listProjectsResponse = listProjectsResponseSuccess;
 
 export const getListProjectsUrl = () => {
-  return `/v2/projects`;
+  return `/v1beta1/projects`;
 };
 
 export const listProjects = async (options?: RequestInit): Promise<listProjectsResponse> => {
@@ -96,7 +96,7 @@ export const listProjects = async (options?: RequestInit): Promise<listProjectsR
 };
 
 export const getListProjectsQueryKey = () => {
-  return [`/v2/projects`] as const;
+  return [`/v1beta1/projects`] as const;
 };
 
 export const getListProjectsQueryOptions = <
@@ -197,7 +197,7 @@ export type getProjectResponseSuccess = getProjectResponse200 & {
 export type getProjectResponse = getProjectResponseSuccess;
 
 export const getGetProjectUrl = (project: string) => {
-  return `/v2/projects/${project}`;
+  return `/v1beta1/projects/${project}`;
 };
 
 export const getProject = async (
@@ -211,7 +211,7 @@ export const getProject = async (
 };
 
 export const getGetProjectQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}`] as const;
+  return [`/v1beta1/projects/${project}`] as const;
 };
 
 export const getGetProjectQueryOptions = <
@@ -319,7 +319,7 @@ export type deleteProjectResponseSuccess = deleteProjectResponse204 & {
 export type deleteProjectResponse = deleteProjectResponseSuccess;
 
 export const getDeleteProjectUrl = (project: string) => {
-  return `/v2/projects/${project}`;
+  return `/v1beta1/projects/${project}`;
 };
 
 export const deleteProject = async (
@@ -409,7 +409,7 @@ export type getProjectConfigResponseSuccess = getProjectConfigResponse200 & {
 export type getProjectConfigResponse = getProjectConfigResponseSuccess;
 
 export const getGetProjectConfigUrl = (project: string) => {
-  return `/v2/projects/${project}/config`;
+  return `/v1beta1/projects/${project}/config`;
 };
 
 export const getProjectConfig = async (
@@ -423,7 +423,7 @@ export const getProjectConfig = async (
 };
 
 export const getGetProjectConfigQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/config`] as const;
+  return [`/v1beta1/projects/${project}/config`] as const;
 };
 
 export const getGetProjectConfigQueryOptions = <
@@ -544,7 +544,7 @@ export type deleteProjectConfigResponseSuccess = deleteProjectConfigResponse204 
 export type deleteProjectConfigResponse = deleteProjectConfigResponseSuccess;
 
 export const getDeleteProjectConfigUrl = (project: string) => {
-  return `/v2/projects/${project}/config`;
+  return `/v1beta1/projects/${project}/config`;
 };
 
 export const deleteProjectConfig = async (
@@ -640,7 +640,7 @@ export type refreshProjectConfigResponseSuccess = refreshProjectConfigResponse20
 export type refreshProjectConfigResponse = refreshProjectConfigResponseSuccess;
 
 export const getRefreshProjectConfigUrl = (project: string) => {
-  return `/v2/projects/${project}/config/refresh`;
+  return `/v1beta1/projects/${project}/config/refresh`;
 };
 
 export const refreshProjectConfig = async (
@@ -735,7 +735,7 @@ export type listProjectConfigMapsResponseSuccess = listProjectConfigMapsResponse
 export type listProjectConfigMapsResponse = listProjectConfigMapsResponseSuccess;
 
 export const getListProjectConfigMapsUrl = (project: string) => {
-  return `/v2/projects/${project}/configmaps`;
+  return `/v1beta1/projects/${project}/configmaps`;
 };
 
 export const listProjectConfigMaps = async (
@@ -749,7 +749,7 @@ export const listProjectConfigMaps = async (
 };
 
 export const getListProjectConfigMapsQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/configmaps`] as const;
+  return [`/v1beta1/projects/${project}/configmaps`] as const;
 };
 
 export const getListProjectConfigMapsQueryOptions = <
@@ -882,7 +882,7 @@ export type createProjectConfigMapResponseSuccess = createProjectConfigMapRespon
 export type createProjectConfigMapResponse = createProjectConfigMapResponseSuccess;
 
 export const getCreateProjectConfigMapUrl = (project: string) => {
-  return `/v2/projects/${project}/configmaps`;
+  return `/v1beta1/projects/${project}/configmaps`;
 };
 
 export const createProjectConfigMap = async (
@@ -979,7 +979,7 @@ export type getProjectConfigMapResponseSuccess = getProjectConfigMapResponse200 
 export type getProjectConfigMapResponse = getProjectConfigMapResponseSuccess;
 
 export const getGetProjectConfigMapUrl = (project: string, configmap: string) => {
-  return `/v2/projects/${project}/configmaps/${configmap}`;
+  return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
 export const getProjectConfigMap = async (
@@ -994,7 +994,7 @@ export const getProjectConfigMap = async (
 };
 
 export const getGetProjectConfigMapQueryKey = (project?: string, configmap?: string) => {
-  return [`/v2/projects/${project}/configmaps/${configmap}`] as const;
+  return [`/v1beta1/projects/${project}/configmaps/${configmap}`] as const;
 };
 
 export const getGetProjectConfigMapQueryOptions = <
@@ -1135,7 +1135,7 @@ export type updateProjectConfigMapResponseSuccess = updateProjectConfigMapRespon
 export type updateProjectConfigMapResponse = updateProjectConfigMapResponseSuccess;
 
 export const getUpdateProjectConfigMapUrl = (project: string, configmap: string) => {
-  return `/v2/projects/${project}/configmaps/${configmap}`;
+  return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
 export const updateProjectConfigMap = async (
@@ -1236,7 +1236,7 @@ export type deleteProjectConfigMapResponseSuccess = deleteProjectConfigMapRespon
 export type deleteProjectConfigMapResponse = deleteProjectConfigMapResponseSuccess;
 
 export const getDeleteProjectConfigMapUrl = (project: string, configmap: string) => {
-  return `/v2/projects/${project}/configmaps/${configmap}`;
+  return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
 export const deleteProjectConfigMap = async (
@@ -1336,7 +1336,7 @@ export type patchProjectConfigMapResponseSuccess = patchProjectConfigMapResponse
 export type patchProjectConfigMapResponse = patchProjectConfigMapResponseSuccess;
 
 export const getPatchProjectConfigMapUrl = (project: string, configmap: string) => {
-  return `/v2/projects/${project}/configmaps/${configmap}`;
+  return `/v1beta1/projects/${project}/configmaps/${configmap}`;
 };
 
 export const patchProjectConfigMap = async (
@@ -1457,8 +1457,8 @@ export const getQueryFreightsRestUrl = (project: string, params?: QueryFreightsR
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/freight?${stringifiedParams}`
-    : `/v2/projects/${project}/freight`;
+    ? `/v1beta1/projects/${project}/freight?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/freight`;
 };
 
 export const queryFreightsRest = async (
@@ -1476,7 +1476,7 @@ export const getQueryFreightsRestQueryKey = (
   project?: string,
   params?: QueryFreightsRestParams
 ) => {
-  return [`/v2/projects/${project}/freight`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/projects/${project}/freight`, ...(params ? [params] : [])] as const;
 };
 
 export const getQueryFreightsRestQueryOptions = <
@@ -1604,7 +1604,7 @@ export type getFreightResponseSuccess = getFreightResponse200 & {
 export type getFreightResponse = getFreightResponseSuccess;
 
 export const getGetFreightUrl = (project: string, freightNameOrAlias: string) => {
-  return `/v2/projects/${project}/freight/${freightNameOrAlias}`;
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
 export const getFreight = async (
@@ -1619,7 +1619,7 @@ export const getFreight = async (
 };
 
 export const getGetFreightQueryKey = (project?: string, freightNameOrAlias?: string) => {
-  return [`/v2/projects/${project}/freight/${freightNameOrAlias}`] as const;
+  return [`/v1beta1/projects/${project}/freight/${freightNameOrAlias}`] as const;
 };
 
 export const getGetFreightQueryOptions = <
@@ -1736,7 +1736,7 @@ export type deleteFreightResponseSuccess = deleteFreightResponse204 & {
 export type deleteFreightResponse = deleteFreightResponseSuccess;
 
 export const getDeleteFreightUrl = (project: string, freightNameOrAlias: string) => {
-  return `/v2/projects/${project}/freight/${freightNameOrAlias}`;
+  return `/v1beta1/projects/${project}/freight/${freightNameOrAlias}`;
 };
 
 export const deleteFreight = async (
@@ -1841,8 +1841,8 @@ export const getPatchFreightAliasUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/freight/${freightNameOrAlias}/alias?${stringifiedParams}`
-    : `/v2/projects/${project}/freight/${freightNameOrAlias}/alias`;
+    ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/alias?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/alias`;
 };
 
 export const patchFreightAlias = async (
@@ -1956,8 +1956,8 @@ export const getApproveFreightUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/freight/${freightNameOrAlias}/approve?${stringifiedParams}`
-    : `/v2/projects/${project}/freight/${freightNameOrAlias}/approve`;
+    ? `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/approve?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/freight/${freightNameOrAlias}/approve`;
 };
 
 export const approveFreight = async (
@@ -2052,7 +2052,7 @@ export type listImagesResponseSuccess = listImagesResponse200 & {
 export type listImagesResponse = listImagesResponseSuccess;
 
 export const getListImagesUrl = (project: string) => {
-  return `/v2/projects/${project}/images`;
+  return `/v1beta1/projects/${project}/images`;
 };
 
 export const listImages = async (
@@ -2066,7 +2066,7 @@ export const listImages = async (
 };
 
 export const getListImagesQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/images`] as const;
+  return [`/v1beta1/projects/${project}/images`] as const;
 };
 
 export const getListImagesQueryOptions = <
@@ -2175,7 +2175,7 @@ export type listPromotionTasksResponseSuccess = listPromotionTasksResponse200 & 
 export type listPromotionTasksResponse = listPromotionTasksResponseSuccess;
 
 export const getListPromotionTasksUrl = (project: string) => {
-  return `/v2/projects/${project}/promotion-tasks`;
+  return `/v1beta1/projects/${project}/promotion-tasks`;
 };
 
 export const listPromotionTasks = async (
@@ -2189,7 +2189,7 @@ export const listPromotionTasks = async (
 };
 
 export const getListPromotionTasksQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/promotion-tasks`] as const;
+  return [`/v1beta1/projects/${project}/promotion-tasks`] as const;
 };
 
 export const getListPromotionTasksQueryOptions = <
@@ -2313,7 +2313,7 @@ export type getPromotionTaskResponseSuccess = getPromotionTaskResponse200 & {
 export type getPromotionTaskResponse = getPromotionTaskResponseSuccess;
 
 export const getGetPromotionTaskUrl = (project: string, promotionTask: string) => {
-  return `/v2/projects/${project}/promotion-tasks/${promotionTask}`;
+  return `/v1beta1/projects/${project}/promotion-tasks/${promotionTask}`;
 };
 
 export const getPromotionTask = async (
@@ -2328,7 +2328,7 @@ export const getPromotionTask = async (
 };
 
 export const getGetPromotionTaskQueryKey = (project?: string, promotionTask?: string) => {
-  return [`/v2/projects/${project}/promotion-tasks/${promotionTask}`] as const;
+  return [`/v1beta1/projects/${project}/promotion-tasks/${promotionTask}`] as const;
 };
 
 export const getGetPromotionTaskQueryOptions = <
@@ -2468,8 +2468,8 @@ export const getListPromotionsUrl = (project: string, params?: ListPromotionsPar
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/promotions?${stringifiedParams}`
-    : `/v2/projects/${project}/promotions`;
+    ? `/v1beta1/projects/${project}/promotions?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/promotions`;
 };
 
 export const listPromotions = async (
@@ -2484,7 +2484,7 @@ export const listPromotions = async (
 };
 
 export const getListPromotionsQueryKey = (project?: string, params?: ListPromotionsParams) => {
-  return [`/v2/projects/${project}/promotions`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/projects/${project}/promotions`, ...(params ? [params] : [])] as const;
 };
 
 export const getListPromotionsQueryOptions = <
@@ -2609,7 +2609,7 @@ export type getPromotionResponseSuccess = getPromotionResponse200 & {
 export type getPromotionResponse = getPromotionResponseSuccess;
 
 export const getGetPromotionUrl = (project: string, promotion: string) => {
-  return `/v2/projects/${project}/promotions/${promotion}`;
+  return `/v1beta1/projects/${project}/promotions/${promotion}`;
 };
 
 export const getPromotion = async (
@@ -2624,7 +2624,7 @@ export const getPromotion = async (
 };
 
 export const getGetPromotionQueryKey = (project?: string, promotion?: string) => {
-  return [`/v2/projects/${project}/promotions/${promotion}`] as const;
+  return [`/v1beta1/projects/${project}/promotions/${promotion}`] as const;
 };
 
 export const getGetPromotionQueryOptions = <
@@ -2740,7 +2740,7 @@ export type abortPromotionResponseSuccess = abortPromotionResponse200 & {
 export type abortPromotionResponse = abortPromotionResponseSuccess;
 
 export const getAbortPromotionUrl = (project: string, promotion: string) => {
-  return `/v2/projects/${project}/promotions/${promotion}/abort`;
+  return `/v1beta1/projects/${project}/promotions/${promotion}/abort`;
 };
 
 export const abortPromotion = async (
@@ -2832,7 +2832,7 @@ export type refreshPromotionResponseSuccess = refreshPromotionResponse200 & {
 export type refreshPromotionResponse = refreshPromotionResponseSuccess;
 
 export const getRefreshPromotionUrl = (project: string, promotion: string) => {
-  return `/v2/projects/${project}/promotions/${promotion}/refresh`;
+  return `/v1beta1/projects/${project}/promotions/${promotion}/refresh`;
 };
 
 export const refreshPromotion = async (
@@ -2925,7 +2925,7 @@ export type listStagesResponseSuccess = listStagesResponse200 & {
 export type listStagesResponse = listStagesResponseSuccess;
 
 export const getListStagesUrl = (project: string) => {
-  return `/v2/projects/${project}/stages`;
+  return `/v1beta1/projects/${project}/stages`;
 };
 
 export const listStages = async (
@@ -2939,7 +2939,7 @@ export const listStages = async (
 };
 
 export const getListStagesQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/stages`] as const;
+  return [`/v1beta1/projects/${project}/stages`] as const;
 };
 
 export const getListStagesQueryOptions = <
@@ -3047,7 +3047,7 @@ export type getStageResponseSuccess = getStageResponse200 & {
 export type getStageResponse = getStageResponseSuccess;
 
 export const getGetStageUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}`;
+  return `/v1beta1/projects/${project}/stages/${stage}`;
 };
 
 export const getStage = async (
@@ -3062,7 +3062,7 @@ export const getStage = async (
 };
 
 export const getGetStageQueryKey = (project?: string, stage?: string) => {
-  return [`/v2/projects/${project}/stages/${stage}`] as const;
+  return [`/v1beta1/projects/${project}/stages/${stage}`] as const;
 };
 
 export const getGetStageQueryOptions = <
@@ -3175,7 +3175,7 @@ export type deleteStageResponseSuccess = deleteStageResponse204 & {
 export type deleteStageResponse = deleteStageResponseSuccess;
 
 export const getDeleteStageUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}`;
+  return `/v1beta1/projects/${project}/stages/${stage}`;
 };
 
 export const deleteStage = async (
@@ -3266,7 +3266,7 @@ export type promoteToStageResponseSuccess = promoteToStageResponse201 & {
 export type promoteToStageResponse = promoteToStageResponseSuccess;
 
 export const getPromoteToStageUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}/promotions`;
+  return `/v1beta1/projects/${project}/stages/${stage}/promotions`;
 };
 
 export const promoteToStage = async (
@@ -3360,7 +3360,7 @@ export type promoteDownstreamResponseSuccess = promoteDownstreamResponse201 & {
 export type promoteDownstreamResponse = promoteDownstreamResponseSuccess;
 
 export const getPromoteDownstreamUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}/promotions/downstream`;
+  return `/v1beta1/projects/${project}/stages/${stage}/promotions/downstream`;
 };
 
 export const promoteDownstream = async (
@@ -3460,7 +3460,7 @@ export type refreshStageResponseSuccess = refreshStageResponse200 & {
 export type refreshStageResponse = refreshStageResponseSuccess;
 
 export const getRefreshStageUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}/refresh`;
+  return `/v1beta1/projects/${project}/stages/${stage}/refresh`;
 };
 
 export const refreshStage = async (
@@ -3551,7 +3551,7 @@ export type listWarehousesResponseSuccess = listWarehousesResponse200 & {
 export type listWarehousesResponse = listWarehousesResponseSuccess;
 
 export const getListWarehousesUrl = (project: string) => {
-  return `/v2/projects/${project}/warehouses`;
+  return `/v1beta1/projects/${project}/warehouses`;
 };
 
 export const listWarehouses = async (
@@ -3565,7 +3565,7 @@ export const listWarehouses = async (
 };
 
 export const getListWarehousesQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/warehouses`] as const;
+  return [`/v1beta1/projects/${project}/warehouses`] as const;
 };
 
 export const getListWarehousesQueryOptions = <
@@ -3685,7 +3685,7 @@ export type getWarehouseResponseSuccess = getWarehouseResponse200 & {
 export type getWarehouseResponse = getWarehouseResponseSuccess;
 
 export const getGetWarehouseUrl = (project: string, warehouse: string) => {
-  return `/v2/projects/${project}/warehouses/${warehouse}`;
+  return `/v1beta1/projects/${project}/warehouses/${warehouse}`;
 };
 
 export const getWarehouse = async (
@@ -3700,7 +3700,7 @@ export const getWarehouse = async (
 };
 
 export const getGetWarehouseQueryKey = (project?: string, warehouse?: string) => {
-  return [`/v2/projects/${project}/warehouses/${warehouse}`] as const;
+  return [`/v1beta1/projects/${project}/warehouses/${warehouse}`] as const;
 };
 
 export const getGetWarehouseQueryOptions = <
@@ -3816,7 +3816,7 @@ export type deleteWarehouseResponseSuccess = deleteWarehouseResponse204 & {
 export type deleteWarehouseResponse = deleteWarehouseResponseSuccess;
 
 export const getDeleteWarehouseUrl = (project: string, warehouse: string) => {
-  return `/v2/projects/${project}/warehouses/${warehouse}`;
+  return `/v1beta1/projects/${project}/warehouses/${warehouse}`;
 };
 
 export const deleteWarehouse = async (
@@ -3910,7 +3910,7 @@ export type refreshWarehouseResponseSuccess = refreshWarehouseResponse200 & {
 export type refreshWarehouseResponse = refreshWarehouseResponseSuccess;
 
 export const getRefreshWarehouseUrl = (project: string, warehouse: string) => {
-  return `/v2/projects/${project}/warehouses/${warehouse}/refresh`;
+  return `/v1beta1/projects/${project}/warehouses/${warehouse}/refresh`;
 };
 
 export const refreshWarehouse = async (
@@ -4003,7 +4003,7 @@ export type listClusterPromotionTasksResponseSuccess = listClusterPromotionTasks
 export type listClusterPromotionTasksResponse = listClusterPromotionTasksResponseSuccess;
 
 export const getListClusterPromotionTasksUrl = () => {
-  return `/v2/shared/cluster-promotion-tasks`;
+  return `/v1beta1/shared/cluster-promotion-tasks`;
 };
 
 export const listClusterPromotionTasks = async (
@@ -4016,7 +4016,7 @@ export const listClusterPromotionTasks = async (
 };
 
 export const getListClusterPromotionTasksQueryKey = () => {
-  return [`/v2/shared/cluster-promotion-tasks`] as const;
+  return [`/v1beta1/shared/cluster-promotion-tasks`] as const;
 };
 
 export const getListClusterPromotionTasksQueryOptions = <
@@ -4141,7 +4141,7 @@ export type getClusterPromotionTaskResponseSuccess = getClusterPromotionTaskResp
 export type getClusterPromotionTaskResponse = getClusterPromotionTaskResponseSuccess;
 
 export const getGetClusterPromotionTaskUrl = (clusterPromotionTask: string) => {
-  return `/v2/shared/cluster-promotion-tasks/${clusterPromotionTask}`;
+  return `/v1beta1/shared/cluster-promotion-tasks/${clusterPromotionTask}`;
 };
 
 export const getClusterPromotionTask = async (
@@ -4158,7 +4158,7 @@ export const getClusterPromotionTask = async (
 };
 
 export const getGetClusterPromotionTaskQueryKey = (clusterPromotionTask?: string) => {
-  return [`/v2/shared/cluster-promotion-tasks/${clusterPromotionTask}`] as const;
+  return [`/v1beta1/shared/cluster-promotion-tasks/${clusterPromotionTask}`] as const;
 };
 
 export const getGetClusterPromotionTaskQueryOptions = <
@@ -4292,7 +4292,7 @@ export type listSharedConfigMapsResponseSuccess = listSharedConfigMapsResponse20
 export type listSharedConfigMapsResponse = listSharedConfigMapsResponseSuccess;
 
 export const getListSharedConfigMapsUrl = () => {
-  return `/v2/shared/configmaps`;
+  return `/v1beta1/shared/configmaps`;
 };
 
 export const listSharedConfigMaps = async (
@@ -4305,7 +4305,7 @@ export const listSharedConfigMaps = async (
 };
 
 export const getListSharedConfigMapsQueryKey = () => {
-  return [`/v2/shared/configmaps`] as const;
+  return [`/v1beta1/shared/configmaps`] as const;
 };
 
 export const getListSharedConfigMapsQueryOptions = <
@@ -4429,7 +4429,7 @@ export type createSharedConfigMapResponseSuccess = createSharedConfigMapResponse
 export type createSharedConfigMapResponse = createSharedConfigMapResponseSuccess;
 
 export const getCreateSharedConfigMapUrl = () => {
-  return `/v2/shared/configmaps`;
+  return `/v1beta1/shared/configmaps`;
 };
 
 export const createSharedConfigMap = async (
@@ -4525,7 +4525,7 @@ export type getSharedConfigMapResponseSuccess = getSharedConfigMapResponse200 & 
 export type getSharedConfigMapResponse = getSharedConfigMapResponseSuccess;
 
 export const getGetSharedConfigMapUrl = (configmap: string) => {
-  return `/v2/shared/configmaps/${configmap}`;
+  return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
 export const getSharedConfigMap = async (
@@ -4539,7 +4539,7 @@ export const getSharedConfigMap = async (
 };
 
 export const getGetSharedConfigMapQueryKey = (configmap?: string) => {
-  return [`/v2/shared/configmaps/${configmap}`] as const;
+  return [`/v1beta1/shared/configmaps/${configmap}`] as const;
 };
 
 export const getGetSharedConfigMapQueryOptions = <
@@ -4664,7 +4664,7 @@ export type updateSharedConfigMapResponseSuccess = updateSharedConfigMapResponse
 export type updateSharedConfigMapResponse = updateSharedConfigMapResponseSuccess;
 
 export const getUpdateSharedConfigMapUrl = (configmap: string) => {
-  return `/v2/shared/configmaps/${configmap}`;
+  return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
 export const updateSharedConfigMap = async (
@@ -4761,7 +4761,7 @@ export type deleteSharedConfigMapResponseSuccess = deleteSharedConfigMapResponse
 export type deleteSharedConfigMapResponse = deleteSharedConfigMapResponseSuccess;
 
 export const getDeleteSharedConfigMapUrl = (configmap: string) => {
-  return `/v2/shared/configmaps/${configmap}`;
+  return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
 export const deleteSharedConfigMap = async (
@@ -4857,7 +4857,7 @@ export type patchSharedConfigMapResponseSuccess = patchSharedConfigMapResponse20
 export type patchSharedConfigMapResponse = patchSharedConfigMapResponseSuccess;
 
 export const getPatchSharedConfigMapUrl = (configmap: string) => {
-  return `/v2/shared/configmaps/${configmap}`;
+  return `/v1beta1/shared/configmaps/${configmap}`;
 };
 
 export const patchSharedConfigMap = async (
@@ -4955,7 +4955,7 @@ export type listSystemConfigMapsResponseSuccess = listSystemConfigMapsResponse20
 export type listSystemConfigMapsResponse = listSystemConfigMapsResponseSuccess;
 
 export const getListSystemConfigMapsUrl = () => {
-  return `/v2/system/configmaps`;
+  return `/v1beta1/system/configmaps`;
 };
 
 export const listSystemConfigMaps = async (
@@ -4968,7 +4968,7 @@ export const listSystemConfigMaps = async (
 };
 
 export const getListSystemConfigMapsQueryKey = () => {
-  return [`/v2/system/configmaps`] as const;
+  return [`/v1beta1/system/configmaps`] as const;
 };
 
 export const getListSystemConfigMapsQueryOptions = <
@@ -5092,7 +5092,7 @@ export type createSystemConfigMapResponseSuccess = createSystemConfigMapResponse
 export type createSystemConfigMapResponse = createSystemConfigMapResponseSuccess;
 
 export const getCreateSystemConfigMapUrl = () => {
-  return `/v2/system/configmaps`;
+  return `/v1beta1/system/configmaps`;
 };
 
 export const createSystemConfigMap = async (
@@ -5188,7 +5188,7 @@ export type getSystemConfigMapResponseSuccess = getSystemConfigMapResponse200 & 
 export type getSystemConfigMapResponse = getSystemConfigMapResponseSuccess;
 
 export const getGetSystemConfigMapUrl = (configmap: string) => {
-  return `/v2/system/configmaps/${configmap}`;
+  return `/v1beta1/system/configmaps/${configmap}`;
 };
 
 export const getSystemConfigMap = async (
@@ -5202,7 +5202,7 @@ export const getSystemConfigMap = async (
 };
 
 export const getGetSystemConfigMapQueryKey = (configmap?: string) => {
-  return [`/v2/system/configmaps/${configmap}`] as const;
+  return [`/v1beta1/system/configmaps/${configmap}`] as const;
 };
 
 export const getGetSystemConfigMapQueryOptions = <
@@ -5327,7 +5327,7 @@ export type updateSystemConfigMapResponseSuccess = updateSystemConfigMapResponse
 export type updateSystemConfigMapResponse = updateSystemConfigMapResponseSuccess;
 
 export const getUpdateSystemConfigMapUrl = (configmap: string) => {
-  return `/v2/system/configmaps/${configmap}`;
+  return `/v1beta1/system/configmaps/${configmap}`;
 };
 
 export const updateSystemConfigMap = async (
@@ -5424,7 +5424,7 @@ export type deleteSystemConfigMapResponseSuccess = deleteSystemConfigMapResponse
 export type deleteSystemConfigMapResponse = deleteSystemConfigMapResponseSuccess;
 
 export const getDeleteSystemConfigMapUrl = (configmap: string) => {
-  return `/v2/system/configmaps/${configmap}`;
+  return `/v1beta1/system/configmaps/${configmap}`;
 };
 
 export const deleteSystemConfigMap = async (
@@ -5520,7 +5520,7 @@ export type patchSystemConfigMapResponseSuccess = patchSystemConfigMapResponse20
 export type patchSystemConfigMapResponse = patchSystemConfigMapResponseSuccess;
 
 export const getPatchSystemConfigMapUrl = (configmap: string) => {
-  return `/v2/system/configmaps/${configmap}`;
+  return `/v1beta1/system/configmaps/${configmap}`;
 };
 
 export const patchSystemConfigMap = async (

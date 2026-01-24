@@ -134,7 +134,7 @@ func (a *Client) CreateProjectGenericCredentials(params *CreateProjectGenericCre
 	op := &runtime.ClientOperation{
 		ID:                 "CreateProjectGenericCredentials",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/generic-credentials",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -182,7 +182,7 @@ func (a *Client) CreateProjectRepoCredentials(params *CreateProjectRepoCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "CreateProjectRepoCredentials",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/repo-credentials",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -230,7 +230,7 @@ func (a *Client) CreateSharedGenericCredentials(params *CreateSharedGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSharedGenericCredentials",
 		Method:             "POST",
-		PathPattern:        "/v2/shared/generic-credentials",
+		PathPattern:        "/v1beta1/shared/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -278,7 +278,7 @@ func (a *Client) CreateSharedRepoCredentials(params *CreateSharedRepoCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSharedRepoCredentials",
 		Method:             "POST",
-		PathPattern:        "/v2/shared/repo-credentials",
+		PathPattern:        "/v1beta1/shared/repo-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -326,7 +326,7 @@ func (a *Client) CreateSystemGenericCredentials(params *CreateSystemGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSystemGenericCredentials",
 		Method:             "POST",
-		PathPattern:        "/v2/system/generic-credentials",
+		PathPattern:        "/v1beta1/system/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -372,7 +372,7 @@ func (a *Client) DeleteProjectGenericCredentials(params *DeleteProjectGenericCre
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectGenericCredentials",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -418,7 +418,7 @@ func (a *Client) DeleteProjectRepoCredentials(params *DeleteProjectRepoCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectRepoCredentials",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -464,7 +464,7 @@ func (a *Client) DeleteSharedGenericCredentials(params *DeleteSharedGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSharedGenericCredentials",
 		Method:             "DELETE",
-		PathPattern:        "/v2/shared/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/shared/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -510,7 +510,7 @@ func (a *Client) DeleteSharedRepoCredentials(params *DeleteSharedRepoCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSharedRepoCredentials",
 		Method:             "DELETE",
-		PathPattern:        "/v2/shared/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/shared/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -556,7 +556,7 @@ func (a *Client) DeleteSystemGenericCredentials(params *DeleteSystemGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSystemGenericCredentials",
 		Method:             "DELETE",
-		PathPattern:        "/v2/system/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/system/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -604,7 +604,7 @@ func (a *Client) GetProjectGenericCredentials(params *GetProjectGenericCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -652,7 +652,7 @@ func (a *Client) GetProjectRepoCredentials(params *GetProjectRepoCredentialsPara
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectRepoCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -700,7 +700,7 @@ func (a *Client) GetSharedGenericCredentials(params *GetSharedGenericCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "GetSharedGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/shared/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -748,7 +748,7 @@ func (a *Client) GetSharedRepoCredentials(params *GetSharedRepoCredentialsParams
 	op := &runtime.ClientOperation{
 		ID:                 "GetSharedRepoCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/shared/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -796,7 +796,7 @@ func (a *Client) GetSystemGenericCredentials(params *GetSystemGenericCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "GetSystemGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/system/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/system/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -844,7 +844,7 @@ func (a *Client) ListProjectGenericCredentials(params *ListProjectGenericCredent
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/generic-credentials",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -892,7 +892,7 @@ func (a *Client) ListProjectRepoCredentials(params *ListProjectRepoCredentialsPa
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectRepoCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/repo-credentials",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -940,7 +940,7 @@ func (a *Client) ListSharedGenericCredentials(params *ListSharedGenericCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "ListSharedGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/generic-credentials",
+		PathPattern:        "/v1beta1/shared/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -988,7 +988,7 @@ func (a *Client) ListSharedRepoCredentials(params *ListSharedRepoCredentialsPara
 	op := &runtime.ClientOperation{
 		ID:                 "ListSharedRepoCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/repo-credentials",
+		PathPattern:        "/v1beta1/shared/repo-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1036,7 +1036,7 @@ func (a *Client) ListSystemGenericCredentials(params *ListSystemGenericCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "ListSystemGenericCredentials",
 		Method:             "GET",
-		PathPattern:        "/v2/system/generic-credentials",
+		PathPattern:        "/v1beta1/system/generic-credentials",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1085,7 +1085,7 @@ func (a *Client) PatchProjectGenericCredentials(params *PatchProjectGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "PatchProjectGenericCredentials",
 		Method:             "PATCH",
-		PathPattern:        "/v2/projects/{project}/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1133,7 +1133,7 @@ func (a *Client) PatchProjectRepoCredentials(params *PatchProjectRepoCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "PatchProjectRepoCredentials",
 		Method:             "PATCH",
-		PathPattern:        "/v2/projects/{project}/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1182,7 +1182,7 @@ func (a *Client) PatchSharedGenericCredentials(params *PatchSharedGenericCredent
 	op := &runtime.ClientOperation{
 		ID:                 "PatchSharedGenericCredentials",
 		Method:             "PATCH",
-		PathPattern:        "/v2/shared/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/shared/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1230,7 +1230,7 @@ func (a *Client) PatchSharedRepoCredentials(params *PatchSharedRepoCredentialsPa
 	op := &runtime.ClientOperation{
 		ID:                 "PatchSharedRepoCredentials",
 		Method:             "PATCH",
-		PathPattern:        "/v2/shared/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/shared/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1279,7 +1279,7 @@ func (a *Client) PatchSystemGenericCredentials(params *PatchSystemGenericCredent
 	op := &runtime.ClientOperation{
 		ID:                 "PatchSystemGenericCredentials",
 		Method:             "PATCH",
-		PathPattern:        "/v2/system/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/system/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1327,7 +1327,7 @@ func (a *Client) UpdateProjectGenericCredentials(params *UpdateProjectGenericCre
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateProjectGenericCredentials",
 		Method:             "PUT",
-		PathPattern:        "/v2/projects/{project}/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1375,7 +1375,7 @@ func (a *Client) UpdateProjectRepoCredentials(params *UpdateProjectRepoCredentia
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateProjectRepoCredentials",
 		Method:             "PUT",
-		PathPattern:        "/v2/projects/{project}/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1423,7 +1423,7 @@ func (a *Client) UpdateSharedGenericCredentials(params *UpdateSharedGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateSharedGenericCredentials",
 		Method:             "PUT",
-		PathPattern:        "/v2/shared/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/shared/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1471,7 +1471,7 @@ func (a *Client) UpdateSharedRepoCredentials(params *UpdateSharedRepoCredentials
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateSharedRepoCredentials",
 		Method:             "PUT",
-		PathPattern:        "/v2/shared/repo-credentials/{repo-credentials}",
+		PathPattern:        "/v1beta1/shared/repo-credentials/{repo-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1519,7 +1519,7 @@ func (a *Client) UpdateSystemGenericCredentials(params *UpdateSystemGenericCrede
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateSystemGenericCredentials",
 		Method:             "PUT",
-		PathPattern:        "/v2/system/generic-credentials/{generic-credentials}",
+		PathPattern:        "/v1beta1/system/generic-credentials/{generic-credentials}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

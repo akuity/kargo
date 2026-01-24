@@ -30,7 +30,7 @@ func (o *ListAnalysisTemplatesReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/analysis-templates] ListAnalysisTemplates", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/analysis-templates] ListAnalysisTemplates", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListAnalysisTemplatesOK) Code() int {
 
 func (o *ListAnalysisTemplatesOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/analysis-templates][%d] listAnalysisTemplatesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-templates][%d] listAnalysisTemplatesOK %s", 200, payload)
 }
 
 func (o *ListAnalysisTemplatesOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/analysis-templates][%d] listAnalysisTemplatesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-templates][%d] listAnalysisTemplatesOK %s", 200, payload)
 }
 
 func (o *ListAnalysisTemplatesOK) GetPayload() any {

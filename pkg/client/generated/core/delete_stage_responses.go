@@ -27,7 +27,7 @@ func (o *DeleteStageReader) ReadResponse(response runtime.ClientResponse, consum
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/stages/{stage}] DeleteStage", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/stages/{stage}] DeleteStage", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteStageNoContent) Code() int {
 }
 
 func (o *DeleteStageNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/stages/{stage}][%d] deleteStageNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/stages/{stage}][%d] deleteStageNoContent", 204)
 }
 
 func (o *DeleteStageNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/stages/{stage}][%d] deleteStageNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/stages/{stage}][%d] deleteStageNoContent", 204)
 }
 
 func (o *DeleteStageNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

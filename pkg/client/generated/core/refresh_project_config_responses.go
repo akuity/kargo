@@ -27,7 +27,7 @@ func (o *RefreshProjectConfigReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/config/refresh] RefreshProjectConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/config/refresh] RefreshProjectConfig", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *RefreshProjectConfigOK) Code() int {
 }
 
 func (o *RefreshProjectConfigOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/config/refresh][%d] refreshProjectConfigOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/config/refresh][%d] refreshProjectConfigOK", 200)
 }
 
 func (o *RefreshProjectConfigOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/config/refresh][%d] refreshProjectConfigOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/config/refresh][%d] refreshProjectConfigOK", 200)
 }
 
 func (o *RefreshProjectConfigOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

@@ -27,7 +27,7 @@ func (o *DeleteClusterAnalysisTemplateReader) ReadResponse(response runtime.Clie
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/shared/cluster-analysis-templates/{cluster-analysis-template}] DeleteClusterAnalysisTemplate", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}] DeleteClusterAnalysisTemplate", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteClusterAnalysisTemplateNoContent) Code() int {
 }
 
 func (o *DeleteClusterAnalysisTemplateNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] deleteClusterAnalysisTemplateNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] deleteClusterAnalysisTemplateNoContent", 204)
 }
 
 func (o *DeleteClusterAnalysisTemplateNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] deleteClusterAnalysisTemplateNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}][%d] deleteClusterAnalysisTemplateNoContent", 204)
 }
 
 func (o *DeleteClusterAnalysisTemplateNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

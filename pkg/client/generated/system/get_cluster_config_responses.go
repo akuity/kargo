@@ -30,7 +30,7 @@ func (o *GetClusterConfigReader) ReadResponse(response runtime.ClientResponse, c
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/cluster-config] GetClusterConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/cluster-config] GetClusterConfig", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetClusterConfigOK) Code() int {
 
 func (o *GetClusterConfigOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/cluster-config][%d] getClusterConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/cluster-config][%d] getClusterConfigOK %s", 200, payload)
 }
 
 func (o *GetClusterConfigOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/cluster-config][%d] getClusterConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/cluster-config][%d] getClusterConfigOK %s", 200, payload)
 }
 
 func (o *GetClusterConfigOK) GetPayload() any {

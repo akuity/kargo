@@ -27,7 +27,7 @@ func (o *DeleteProjectReader) ReadResponse(response runtime.ClientResponse, cons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}] DeleteProject", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}] DeleteProject", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteProjectNoContent) Code() int {
 }
 
 func (o *DeleteProjectNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}][%d] deleteProjectNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}][%d] deleteProjectNoContent", 204)
 }
 
 func (o *DeleteProjectNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}][%d] deleteProjectNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}][%d] deleteProjectNoContent", 204)
 }
 
 func (o *DeleteProjectNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

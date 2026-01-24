@@ -30,7 +30,7 @@ func (o *GetProjectGenericCredentialsReader) ReadResponse(response runtime.Clien
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/generic-credentials/{generic-credentials}] GetProjectGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/generic-credentials/{generic-credentials}] GetProjectGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetProjectGenericCredentialsOK) Code() int {
 
 func (o *GetProjectGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/generic-credentials/{generic-credentials}][%d] getProjectGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/generic-credentials/{generic-credentials}][%d] getProjectGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *GetProjectGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/generic-credentials/{generic-credentials}][%d] getProjectGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/generic-credentials/{generic-credentials}][%d] getProjectGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *GetProjectGenericCredentialsOK) GetPayload() any {

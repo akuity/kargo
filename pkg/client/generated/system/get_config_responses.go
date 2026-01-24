@@ -32,7 +32,7 @@ func (o *GetConfigReader) ReadResponse(response runtime.ClientResponse, consumer
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/server-config] GetConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/server-config] GetConfig", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *GetConfigOK) Code() int {
 
 func (o *GetConfigOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/server-config][%d] getConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/server-config][%d] getConfigOK %s", 200, payload)
 }
 
 func (o *GetConfigOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/server-config][%d] getConfigOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/server-config][%d] getConfigOK %s", 200, payload)
 }
 
 func (o *GetConfigOK) GetPayload() *models.GetConfigResponse {

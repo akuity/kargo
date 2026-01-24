@@ -49,7 +49,7 @@ export type getAnalysisRunResponseSuccess = getAnalysisRunResponse200 & {
 export type getAnalysisRunResponse = getAnalysisRunResponseSuccess;
 
 export const getGetAnalysisRunUrl = (project: string, analysisRun: string) => {
-  return `/v2/projects/${project}/analysis-runs/${analysisRun}`;
+  return `/v1beta1/projects/${project}/analysis-runs/${analysisRun}`;
 };
 
 export const getAnalysisRun = async (
@@ -64,7 +64,7 @@ export const getAnalysisRun = async (
 };
 
 export const getGetAnalysisRunQueryKey = (project?: string, analysisRun?: string) => {
-  return [`/v2/projects/${project}/analysis-runs/${analysisRun}`] as const;
+  return [`/v1beta1/projects/${project}/analysis-runs/${analysisRun}`] as const;
 };
 
 export const getGetAnalysisRunQueryOptions = <
@@ -207,8 +207,8 @@ export const getGetAnalysisRunLogsUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/analysis-runs/${analysisRun}/logs?${stringifiedParams}`
-    : `/v2/projects/${project}/analysis-runs/${analysisRun}/logs`;
+    ? `/v1beta1/projects/${project}/analysis-runs/${analysisRun}/logs?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/analysis-runs/${analysisRun}/logs`;
 };
 
 export const getAnalysisRunLogs = async (
@@ -232,7 +232,7 @@ export const getGetAnalysisRunLogsQueryKey = (
   params?: GetAnalysisRunLogsParams
 ) => {
   return [
-    `/v2/projects/${project}/analysis-runs/${analysisRun}/logs`,
+    `/v1beta1/projects/${project}/analysis-runs/${analysisRun}/logs`,
     ...(params ? [params] : [])
   ] as const;
 };
@@ -372,7 +372,7 @@ export type listAnalysisTemplatesResponseSuccess = listAnalysisTemplatesResponse
 export type listAnalysisTemplatesResponse = listAnalysisTemplatesResponseSuccess;
 
 export const getListAnalysisTemplatesUrl = (project: string) => {
-  return `/v2/projects/${project}/analysis-templates`;
+  return `/v1beta1/projects/${project}/analysis-templates`;
 };
 
 export const listAnalysisTemplates = async (
@@ -386,7 +386,7 @@ export const listAnalysisTemplates = async (
 };
 
 export const getListAnalysisTemplatesQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/analysis-templates`] as const;
+  return [`/v1beta1/projects/${project}/analysis-templates`] as const;
 };
 
 export const getListAnalysisTemplatesQueryOptions = <
@@ -519,7 +519,7 @@ export type getAnalysisTemplateResponseSuccess = getAnalysisTemplateResponse200 
 export type getAnalysisTemplateResponse = getAnalysisTemplateResponseSuccess;
 
 export const getGetAnalysisTemplateUrl = (project: string, analysisTemplate: string) => {
-  return `/v2/projects/${project}/analysis-templates/${analysisTemplate}`;
+  return `/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`;
 };
 
 export const getAnalysisTemplate = async (
@@ -537,7 +537,7 @@ export const getAnalysisTemplate = async (
 };
 
 export const getGetAnalysisTemplateQueryKey = (project?: string, analysisTemplate?: string) => {
-  return [`/v2/projects/${project}/analysis-templates/${analysisTemplate}`] as const;
+  return [`/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`] as const;
 };
 
 export const getGetAnalysisTemplateQueryOptions = <
@@ -678,7 +678,7 @@ export type deleteAnalysisTemplateResponseSuccess = deleteAnalysisTemplateRespon
 export type deleteAnalysisTemplateResponse = deleteAnalysisTemplateResponseSuccess;
 
 export const getDeleteAnalysisTemplateUrl = (project: string, analysisTemplate: string) => {
-  return `/v2/projects/${project}/analysis-templates/${analysisTemplate}`;
+  return `/v1beta1/projects/${project}/analysis-templates/${analysisTemplate}`;
 };
 
 export const deleteAnalysisTemplate = async (
@@ -777,7 +777,7 @@ export type reverifyResponseSuccess = reverifyResponse200 & {
 export type reverifyResponse = reverifyResponseSuccess;
 
 export const getReverifyUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}/verification`;
+  return `/v1beta1/projects/${project}/stages/${stage}/verification`;
 };
 
 export const reverify = async (
@@ -867,7 +867,7 @@ export type abortVerificationResponseSuccess = abortVerificationResponse200 & {
 export type abortVerificationResponse = abortVerificationResponseSuccess;
 
 export const getAbortVerificationUrl = (project: string, stage: string) => {
-  return `/v2/projects/${project}/stages/${stage}/verification/abort`;
+  return `/v1beta1/projects/${project}/stages/${stage}/verification/abort`;
 };
 
 export const abortVerification = async (
@@ -964,7 +964,7 @@ export type listClusterAnalysisTemplatesResponseSuccess =
 export type listClusterAnalysisTemplatesResponse = listClusterAnalysisTemplatesResponseSuccess;
 
 export const getListClusterAnalysisTemplatesUrl = () => {
-  return `/v2/shared/cluster-analysis-templates`;
+  return `/v1beta1/shared/cluster-analysis-templates`;
 };
 
 export const listClusterAnalysisTemplates = async (
@@ -977,7 +977,7 @@ export const listClusterAnalysisTemplates = async (
 };
 
 export const getListClusterAnalysisTemplatesQueryKey = () => {
-  return [`/v2/shared/cluster-analysis-templates`] as const;
+  return [`/v1beta1/shared/cluster-analysis-templates`] as const;
 };
 
 export const getListClusterAnalysisTemplatesQueryOptions = <
@@ -1102,7 +1102,7 @@ export type getClusterAnalysisTemplateResponseSuccess = getClusterAnalysisTempla
 export type getClusterAnalysisTemplateResponse = getClusterAnalysisTemplateResponseSuccess;
 
 export const getGetClusterAnalysisTemplateUrl = (clusterAnalysisTemplate: string) => {
-  return `/v2/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
+  return `/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
 };
 
 export const getClusterAnalysisTemplate = async (
@@ -1119,7 +1119,7 @@ export const getClusterAnalysisTemplate = async (
 };
 
 export const getGetClusterAnalysisTemplateQueryKey = (clusterAnalysisTemplate?: string) => {
-  return [`/v2/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`] as const;
+  return [`/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`] as const;
 };
 
 export const getGetClusterAnalysisTemplateQueryOptions = <
@@ -1256,7 +1256,7 @@ export type deleteClusterAnalysisTemplateResponseSuccess =
 export type deleteClusterAnalysisTemplateResponse = deleteClusterAnalysisTemplateResponseSuccess;
 
 export const getDeleteClusterAnalysisTemplateUrl = (clusterAnalysisTemplate: string) => {
-  return `/v2/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
+  return `/v1beta1/shared/cluster-analysis-templates/${clusterAnalysisTemplate}`;
 };
 
 export const deleteClusterAnalysisTemplate = async (

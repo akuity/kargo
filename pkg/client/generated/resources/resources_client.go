@@ -102,7 +102,7 @@ func (a *Client) CreateResource(params *CreateResourceParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "CreateResource",
 		Method:             "POST",
-		PathPattern:        "/v2/resources",
+		PathPattern:        "/v1beta1/resources",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"text/plain"},
 		Schemes:            []string{"http"},
@@ -150,7 +150,7 @@ func (a *Client) DeleteResource(params *DeleteResourceParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteResource",
 		Method:             "DELETE",
-		PathPattern:        "/v2/resources",
+		PathPattern:        "/v1beta1/resources",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"text/plain"},
 		Schemes:            []string{"http"},
@@ -196,7 +196,7 @@ func (a *Client) UpdateResource(params *UpdateResourceParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateResource",
 		Method:             "PUT",
-		PathPattern:        "/v2/resources",
+		PathPattern:        "/v1beta1/resources",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"text/plain"},
 		Schemes:            []string{"http"},

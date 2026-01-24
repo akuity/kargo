@@ -30,7 +30,7 @@ func (o *ListSystemConfigMapsReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/configmaps] ListSystemConfigMaps", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/configmaps] ListSystemConfigMaps", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListSystemConfigMapsOK) Code() int {
 
 func (o *ListSystemConfigMapsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/configmaps][%d] listSystemConfigMapsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/configmaps][%d] listSystemConfigMapsOK %s", 200, payload)
 }
 
 func (o *ListSystemConfigMapsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/configmaps][%d] listSystemConfigMapsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/configmaps][%d] listSystemConfigMapsOK %s", 200, payload)
 }
 
 func (o *ListSystemConfigMapsOK) GetPayload() any {

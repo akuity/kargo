@@ -30,7 +30,7 @@ func (o *UpdateSharedRepoCredentialsReader) ReadResponse(response runtime.Client
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/shared/repo-credentials/{repo-credentials}] UpdateSharedRepoCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/shared/repo-credentials/{repo-credentials}] UpdateSharedRepoCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateSharedRepoCredentialsOK) Code() int {
 
 func (o *UpdateSharedRepoCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/shared/repo-credentials/{repo-credentials}][%d] updateSharedRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/shared/repo-credentials/{repo-credentials}][%d] updateSharedRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateSharedRepoCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/shared/repo-credentials/{repo-credentials}][%d] updateSharedRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/shared/repo-credentials/{repo-credentials}][%d] updateSharedRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateSharedRepoCredentialsOK) GetPayload() any {

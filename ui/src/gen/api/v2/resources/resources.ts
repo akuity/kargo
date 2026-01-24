@@ -50,7 +50,9 @@ export const getUpdateResourceUrl = (params?: UpdateResourceParams) => {
 
   const stringifiedParams = normalizedParams.toString();
 
-  return stringifiedParams.length > 0 ? `/v2/resources?${stringifiedParams}` : `/v2/resources`;
+  return stringifiedParams.length > 0
+    ? `/v1beta1/resources?${stringifiedParams}`
+    : `/v1beta1/resources`;
 };
 
 export const updateResource = async (
@@ -142,7 +144,7 @@ export type createResourceResponseSuccess = createResourceResponse201 & {
 export type createResourceResponse = createResourceResponseSuccess;
 
 export const getCreateResourceUrl = () => {
-  return `/v2/resources`;
+  return `/v1beta1/resources`;
 };
 
 export const createResource = async (
@@ -234,7 +236,7 @@ export type deleteResourceResponseSuccess = deleteResourceResponse200 & {
 export type deleteResourceResponse = deleteResourceResponseSuccess;
 
 export const getDeleteResourceUrl = () => {
-  return `/v2/resources`;
+  return `/v1beta1/resources`;
 };
 
 export const deleteResource = async (

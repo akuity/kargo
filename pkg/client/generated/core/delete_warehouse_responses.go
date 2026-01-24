@@ -27,7 +27,7 @@ func (o *DeleteWarehouseReader) ReadResponse(response runtime.ClientResponse, co
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/warehouses/{warehouse}] DeleteWarehouse", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/warehouses/{warehouse}] DeleteWarehouse", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteWarehouseNoContent) Code() int {
 }
 
 func (o *DeleteWarehouseNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/warehouses/{warehouse}][%d] deleteWarehouseNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/warehouses/{warehouse}][%d] deleteWarehouseNoContent", 204)
 }
 
 func (o *DeleteWarehouseNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/warehouses/{warehouse}][%d] deleteWarehouseNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/warehouses/{warehouse}][%d] deleteWarehouseNoContent", 204)
 }
 
 func (o *DeleteWarehouseNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

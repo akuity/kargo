@@ -30,7 +30,7 @@ func (o *GetSystemRoleReader) ReadResponse(response runtime.ClientResponse, cons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/roles/{role}] GetSystemRole", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/roles/{role}] GetSystemRole", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetSystemRoleOK) Code() int {
 
 func (o *GetSystemRoleOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/roles/{role}][%d] getSystemRoleOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/roles/{role}][%d] getSystemRoleOK %s", 200, payload)
 }
 
 func (o *GetSystemRoleOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/roles/{role}][%d] getSystemRoleOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/roles/{role}][%d] getSystemRoleOK %s", 200, payload)
 }
 
 func (o *GetSystemRoleOK) GetPayload() any {

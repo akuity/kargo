@@ -30,7 +30,7 @@ func (o *ListSharedGenericCredentialsReader) ReadResponse(response runtime.Clien
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/generic-credentials] ListSharedGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/generic-credentials] ListSharedGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListSharedGenericCredentialsOK) Code() int {
 
 func (o *ListSharedGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/generic-credentials][%d] listSharedGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/generic-credentials][%d] listSharedGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *ListSharedGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/generic-credentials][%d] listSharedGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/generic-credentials][%d] listSharedGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *ListSharedGenericCredentialsOK) GetPayload() any {

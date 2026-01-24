@@ -32,7 +32,7 @@ func (o *DeleteResourceReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/resources] DeleteResource", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/resources] DeleteResource", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *DeleteResourceOK) Code() int {
 
 func (o *DeleteResourceOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[DELETE /v2/resources][%d] deleteResourceOK %s", 200, payload)
+	return fmt.Sprintf("[DELETE /v1beta1/resources][%d] deleteResourceOK %s", 200, payload)
 }
 
 func (o *DeleteResourceOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[DELETE /v2/resources][%d] deleteResourceOK %s", 200, payload)
+	return fmt.Sprintf("[DELETE /v1beta1/resources][%d] deleteResourceOK %s", 200, payload)
 }
 
 func (o *DeleteResourceOK) GetPayload() *models.DeleteResourceResponse {

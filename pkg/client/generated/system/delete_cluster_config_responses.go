@@ -27,7 +27,7 @@ func (o *DeleteClusterConfigReader) ReadResponse(response runtime.ClientResponse
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/system/cluster-config] DeleteClusterConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/system/cluster-config] DeleteClusterConfig", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteClusterConfigNoContent) Code() int {
 }
 
 func (o *DeleteClusterConfigNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/system/cluster-config][%d] deleteClusterConfigNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/system/cluster-config][%d] deleteClusterConfigNoContent", 204)
 }
 
 func (o *DeleteClusterConfigNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/system/cluster-config][%d] deleteClusterConfigNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/system/cluster-config][%d] deleteClusterConfigNoContent", 204)
 }
 
 func (o *DeleteClusterConfigNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

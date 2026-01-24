@@ -30,7 +30,7 @@ func (o *UpdateProjectRepoCredentialsReader) ReadResponse(response runtime.Clien
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/projects/{project}/repo-credentials/{repo-credentials}] UpdateProjectRepoCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/projects/{project}/repo-credentials/{repo-credentials}] UpdateProjectRepoCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateProjectRepoCredentialsOK) Code() int {
 
 func (o *UpdateProjectRepoCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/repo-credentials/{repo-credentials}][%d] updateProjectRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/repo-credentials/{repo-credentials}][%d] updateProjectRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateProjectRepoCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/repo-credentials/{repo-credentials}][%d] updateProjectRepoCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/repo-credentials/{repo-credentials}][%d] updateProjectRepoCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateProjectRepoCredentialsOK) GetPayload() any {

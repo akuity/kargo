@@ -30,7 +30,7 @@ func (o *RevokeReader) ReadResponse(response runtime.ClientResponse, consumer ru
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/roles/revocations] Revoke", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/roles/revocations] Revoke", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *RevokeOK) Code() int {
 
 func (o *RevokeOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles/revocations][%d] revokeOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/revocations][%d] revokeOK %s", 200, payload)
 }
 
 func (o *RevokeOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles/revocations][%d] revokeOK %s", 200, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/revocations][%d] revokeOK %s", 200, payload)
 }
 
 func (o *RevokeOK) GetPayload() any {

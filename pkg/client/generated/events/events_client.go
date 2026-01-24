@@ -76,7 +76,7 @@ func (a *Client) ListProjectEvents(params *ListProjectEventsParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectEvents",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/events",
+		PathPattern:        "/v1beta1/projects/{project}/events",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

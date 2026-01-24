@@ -30,7 +30,7 @@ func (o *GetProjectAPITokenReader) ReadResponse(response runtime.ClientResponse,
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/apitokens/{apitoken}] GetProjectAPIToken", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/apitokens/{apitoken}] GetProjectAPIToken", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetProjectAPITokenOK) Code() int {
 
 func (o *GetProjectAPITokenOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/apitokens/{apitoken}][%d] getProjectApiTokenOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/apitokens/{apitoken}][%d] getProjectApiTokenOK %s", 200, payload)
 }
 
 func (o *GetProjectAPITokenOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/apitokens/{apitoken}][%d] getProjectApiTokenOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/apitokens/{apitoken}][%d] getProjectApiTokenOK %s", 200, payload)
 }
 
 func (o *GetProjectAPITokenOK) GetPayload() any {

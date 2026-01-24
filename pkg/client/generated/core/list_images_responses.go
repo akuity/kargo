@@ -32,7 +32,7 @@ func (o *ListImagesReader) ReadResponse(response runtime.ClientResponse, consume
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/images] ListImages", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/images] ListImages", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *ListImagesOK) Code() int {
 
 func (o *ListImagesOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/images][%d] listImagesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/images][%d] listImagesOK %s", 200, payload)
 }
 
 func (o *ListImagesOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/images][%d] listImagesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/images][%d] listImagesOK %s", 200, payload)
 }
 
 func (o *ListImagesOK) GetPayload() map[string]models.TagMap {

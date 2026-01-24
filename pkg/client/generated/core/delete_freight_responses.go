@@ -27,7 +27,7 @@ func (o *DeleteFreightReader) ReadResponse(response runtime.ClientResponse, cons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/freight/{freight-name-or-alias}] DeleteFreight", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/freight/{freight-name-or-alias}] DeleteFreight", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteFreightNoContent) Code() int {
 }
 
 func (o *DeleteFreightNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/freight/{freight-name-or-alias}][%d] deleteFreightNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/freight/{freight-name-or-alias}][%d] deleteFreightNoContent", 204)
 }
 
 func (o *DeleteFreightNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/freight/{freight-name-or-alias}][%d] deleteFreightNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/freight/{freight-name-or-alias}][%d] deleteFreightNoContent", 204)
 }
 
 func (o *DeleteFreightNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

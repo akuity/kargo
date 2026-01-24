@@ -30,7 +30,7 @@ func (o *UpdateSharedConfigMapReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/shared/configmaps/{configmap}] UpdateSharedConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/shared/configmaps/{configmap}] UpdateSharedConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateSharedConfigMapOK) Code() int {
 
 func (o *UpdateSharedConfigMapOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/shared/configmaps/{configmap}][%d] updateSharedConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/shared/configmaps/{configmap}][%d] updateSharedConfigMapOK %s", 200, payload)
 }
 
 func (o *UpdateSharedConfigMapOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/shared/configmaps/{configmap}][%d] updateSharedConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/shared/configmaps/{configmap}][%d] updateSharedConfigMapOK %s", 200, payload)
 }
 
 func (o *UpdateSharedConfigMapOK) GetPayload() any {

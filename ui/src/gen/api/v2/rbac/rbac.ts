@@ -78,8 +78,8 @@ export const getListProjectAPITokensUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/projects/${project}/apitokens?${stringifiedParams}`
-    : `/v2/projects/${project}/apitokens`;
+    ? `/v1beta1/projects/${project}/apitokens?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/apitokens`;
 };
 
 export const listProjectAPITokens = async (
@@ -97,7 +97,7 @@ export const getListProjectAPITokensQueryKey = (
   project?: string,
   params?: ListProjectAPITokensParams
 ) => {
-  return [`/v2/projects/${project}/apitokens`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/projects/${project}/apitokens`, ...(params ? [params] : [])] as const;
 };
 
 export const getListProjectAPITokensQueryOptions = <
@@ -235,7 +235,7 @@ export type getProjectAPITokenResponseSuccess = getProjectAPITokenResponse200 & 
 export type getProjectAPITokenResponse = getProjectAPITokenResponseSuccess;
 
 export const getGetProjectAPITokenUrl = (project: string, apitoken: string) => {
-  return `/v2/projects/${project}/apitokens/${apitoken}`;
+  return `/v1beta1/projects/${project}/apitokens/${apitoken}`;
 };
 
 export const getProjectAPIToken = async (
@@ -250,7 +250,7 @@ export const getProjectAPIToken = async (
 };
 
 export const getGetProjectAPITokenQueryKey = (project?: string, apitoken?: string) => {
-  return [`/v2/projects/${project}/apitokens/${apitoken}`] as const;
+  return [`/v1beta1/projects/${project}/apitokens/${apitoken}`] as const;
 };
 
 export const getGetProjectAPITokenQueryOptions = <
@@ -382,7 +382,7 @@ export type deleteProjectAPITokenResponseSuccess = deleteProjectAPITokenResponse
 export type deleteProjectAPITokenResponse = deleteProjectAPITokenResponseSuccess;
 
 export const getDeleteProjectAPITokenUrl = (project: string, apitoken: string) => {
-  return `/v2/projects/${project}/apitokens/${apitoken}`;
+  return `/v1beta1/projects/${project}/apitokens/${apitoken}`;
 };
 
 export const deleteProjectAPIToken = async (
@@ -481,7 +481,7 @@ export type listProjectRolesResponseSuccess = listProjectRolesResponse200 & {
 export type listProjectRolesResponse = listProjectRolesResponseSuccess;
 
 export const getListProjectRolesUrl = (project: string) => {
-  return `/v2/projects/${project}/roles`;
+  return `/v1beta1/projects/${project}/roles`;
 };
 
 export const listProjectRoles = async (
@@ -495,7 +495,7 @@ export const listProjectRoles = async (
 };
 
 export const getListProjectRolesQueryKey = (project?: string) => {
-  return [`/v2/projects/${project}/roles`] as const;
+  return [`/v1beta1/projects/${project}/roles`] as const;
 };
 
 export const getListProjectRolesQueryOptions = <
@@ -617,7 +617,7 @@ export type createProjectRoleResponseSuccess = createProjectRoleResponse201 & {
 export type createProjectRoleResponse = createProjectRoleResponseSuccess;
 
 export const getCreateProjectRoleUrl = (project: string) => {
-  return `/v2/projects/${project}/roles`;
+  return `/v1beta1/projects/${project}/roles`;
 };
 
 export const createProjectRole = async (
@@ -715,7 +715,7 @@ export type grantResponseSuccess = grantResponse200 & {
 export type grantResponse = grantResponseSuccess;
 
 export const getGrantUrl = (project: string) => {
-  return `/v2/projects/${project}/roles/grants`;
+  return `/v1beta1/projects/${project}/roles/grants`;
 };
 
 export const grant = async (
@@ -808,7 +808,7 @@ export type revokeResponseSuccess = revokeResponse200 & {
 export type revokeResponse = revokeResponseSuccess;
 
 export const getRevokeUrl = (project: string) => {
-  return `/v2/projects/${project}/roles/revocations`;
+  return `/v1beta1/projects/${project}/roles/revocations`;
 };
 
 export const revoke = async (
@@ -902,7 +902,7 @@ export type getProjectRoleResponseSuccess = getProjectRoleResponse200 & {
 export type getProjectRoleResponse = getProjectRoleResponseSuccess;
 
 export const getGetProjectRoleUrl = (project: string, role: string) => {
-  return `/v2/projects/${project}/roles/${role}`;
+  return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
 export const getProjectRole = async (
@@ -917,7 +917,7 @@ export const getProjectRole = async (
 };
 
 export const getGetProjectRoleQueryKey = (project?: string, role?: string) => {
-  return [`/v2/projects/${project}/roles/${role}`] as const;
+  return [`/v1beta1/projects/${project}/roles/${role}`] as const;
 };
 
 export const getGetProjectRoleQueryOptions = <
@@ -1044,7 +1044,7 @@ export type updateRoleResponseSuccess = updateRoleResponse200 & {
 export type updateRoleResponse = updateRoleResponseSuccess;
 
 export const getUpdateRoleUrl = (project: string, role: string) => {
-  return `/v2/projects/${project}/roles/${role}`;
+  return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
 export const updateRole = async (
@@ -1139,7 +1139,7 @@ export type deleteProjectRoleResponseSuccess = deleteProjectRoleResponse204 & {
 export type deleteProjectRoleResponse = deleteProjectRoleResponseSuccess;
 
 export const getDeleteProjectRoleUrl = (project: string, role: string) => {
-  return `/v2/projects/${project}/roles/${role}`;
+  return `/v1beta1/projects/${project}/roles/${role}`;
 };
 
 export const deleteProjectRole = async (
@@ -1238,7 +1238,7 @@ export type createProjectAPITokenResponseSuccess = createProjectAPITokenResponse
 export type createProjectAPITokenResponse = createProjectAPITokenResponseSuccess;
 
 export const getCreateProjectAPITokenUrl = (project: string, role: string) => {
-  return `/v2/projects/${project}/roles/${role}/apitokens`;
+  return `/v1beta1/projects/${project}/roles/${role}/apitokens`;
 };
 
 export const createProjectAPIToken = async (
@@ -1348,8 +1348,8 @@ export const getListSystemAPITokensUrl = (params?: ListSystemAPITokensParams) =>
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v2/system/apitokens?${stringifiedParams}`
-    : `/v2/system/apitokens`;
+    ? `/v1beta1/system/apitokens?${stringifiedParams}`
+    : `/v1beta1/system/apitokens`;
 };
 
 export const listSystemAPITokens = async (
@@ -1363,7 +1363,7 @@ export const listSystemAPITokens = async (
 };
 
 export const getListSystemAPITokensQueryKey = (params?: ListSystemAPITokensParams) => {
-  return [`/v2/system/apitokens`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/system/apitokens`, ...(params ? [params] : [])] as const;
 };
 
 export const getListSystemAPITokensQueryOptions = <
@@ -1496,7 +1496,7 @@ export type getSystemAPITokenResponseSuccess = getSystemAPITokenResponse200 & {
 export type getSystemAPITokenResponse = getSystemAPITokenResponseSuccess;
 
 export const getGetSystemAPITokenUrl = (apitoken: string) => {
-  return `/v2/system/apitokens/${apitoken}`;
+  return `/v1beta1/system/apitokens/${apitoken}`;
 };
 
 export const getSystemAPIToken = async (
@@ -1510,7 +1510,7 @@ export const getSystemAPIToken = async (
 };
 
 export const getGetSystemAPITokenQueryKey = (apitoken?: string) => {
-  return [`/v2/system/apitokens/${apitoken}`] as const;
+  return [`/v1beta1/system/apitokens/${apitoken}`] as const;
 };
 
 export const getGetSystemAPITokenQueryOptions = <
@@ -1632,7 +1632,7 @@ export type deleteSystemAPITokenResponseSuccess = deleteSystemAPITokenResponse20
 export type deleteSystemAPITokenResponse = deleteSystemAPITokenResponseSuccess;
 
 export const getDeleteSystemAPITokenUrl = (apitoken: string) => {
-  return `/v2/system/apitokens/${apitoken}`;
+  return `/v1beta1/system/apitokens/${apitoken}`;
 };
 
 export const deleteSystemAPIToken = async (
@@ -1727,7 +1727,7 @@ export type listSystemRolesResponseSuccess = listSystemRolesResponse200 & {
 export type listSystemRolesResponse = listSystemRolesResponseSuccess;
 
 export const getListSystemRolesUrl = () => {
-  return `/v2/system/roles`;
+  return `/v1beta1/system/roles`;
 };
 
 export const listSystemRoles = async (options?: RequestInit): Promise<listSystemRolesResponse> => {
@@ -1738,7 +1738,7 @@ export const listSystemRoles = async (options?: RequestInit): Promise<listSystem
 };
 
 export const getListSystemRolesQueryKey = () => {
-  return [`/v2/system/roles`] as const;
+  return [`/v1beta1/system/roles`] as const;
 };
 
 export const getListSystemRolesQueryOptions = <
@@ -1853,7 +1853,7 @@ export type getSystemRoleResponseSuccess = getSystemRoleResponse200 & {
 export type getSystemRoleResponse = getSystemRoleResponseSuccess;
 
 export const getGetSystemRoleUrl = (role: string) => {
-  return `/v2/system/roles/${role}`;
+  return `/v1beta1/system/roles/${role}`;
 };
 
 export const getSystemRole = async (
@@ -1867,7 +1867,7 @@ export const getSystemRole = async (
 };
 
 export const getGetSystemRoleQueryKey = (role?: string) => {
-  return [`/v2/system/roles/${role}`] as const;
+  return [`/v1beta1/system/roles/${role}`] as const;
 };
 
 export const getGetSystemRoleQueryOptions = <
@@ -1991,7 +1991,7 @@ export type createSystemAPITokenResponseSuccess = createSystemAPITokenResponse20
 export type createSystemAPITokenResponse = createSystemAPITokenResponseSuccess;
 
 export const getCreateSystemAPITokenUrl = (role: string) => {
-  return `/v2/system/roles/${role}/apitokens`;
+  return `/v1beta1/system/roles/${role}/apitokens`;
 };
 
 export const createSystemAPIToken = async (

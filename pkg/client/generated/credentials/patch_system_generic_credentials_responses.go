@@ -30,7 +30,7 @@ func (o *PatchSystemGenericCredentialsReader) ReadResponse(response runtime.Clie
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PATCH /v2/system/generic-credentials/{generic-credentials}] PatchSystemGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[PATCH /v1beta1/system/generic-credentials/{generic-credentials}] PatchSystemGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *PatchSystemGenericCredentialsOK) Code() int {
 
 func (o *PatchSystemGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/system/generic-credentials/{generic-credentials}][%d] patchSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/system/generic-credentials/{generic-credentials}][%d] patchSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *PatchSystemGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PATCH /v2/system/generic-credentials/{generic-credentials}][%d] patchSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PATCH /v1beta1/system/generic-credentials/{generic-credentials}][%d] patchSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *PatchSystemGenericCredentialsOK) GetPayload() any {

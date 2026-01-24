@@ -30,7 +30,7 @@ func (o *CreateSharedConfigMapReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/shared/configmaps] CreateSharedConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/shared/configmaps] CreateSharedConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *CreateSharedConfigMapCreated) Code() int {
 
 func (o *CreateSharedConfigMapCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/shared/configmaps][%d] createSharedConfigMapCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/shared/configmaps][%d] createSharedConfigMapCreated %s", 201, payload)
 }
 
 func (o *CreateSharedConfigMapCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/shared/configmaps][%d] createSharedConfigMapCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/shared/configmaps][%d] createSharedConfigMapCreated %s", 201, payload)
 }
 
 func (o *CreateSharedConfigMapCreated) GetPayload() any {

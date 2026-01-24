@@ -27,7 +27,7 @@ func (o *DeleteProjectRepoCredentialsReader) ReadResponse(response runtime.Clien
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/repo-credentials/{repo-credentials}] DeleteProjectRepoCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/repo-credentials/{repo-credentials}] DeleteProjectRepoCredentials", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteProjectRepoCredentialsNoContent) Code() int {
 }
 
 func (o *DeleteProjectRepoCredentialsNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/repo-credentials/{repo-credentials}][%d] deleteProjectRepoCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/repo-credentials/{repo-credentials}][%d] deleteProjectRepoCredentialsNoContent", 204)
 }
 
 func (o *DeleteProjectRepoCredentialsNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/repo-credentials/{repo-credentials}][%d] deleteProjectRepoCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/repo-credentials/{repo-credentials}][%d] deleteProjectRepoCredentialsNoContent", 204)
 }
 
 func (o *DeleteProjectRepoCredentialsNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

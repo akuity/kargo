@@ -32,7 +32,7 @@ func (o *UpdateResourceReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/resources] UpdateResource", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/resources] UpdateResource", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *UpdateResourceOK) Code() int {
 
 func (o *UpdateResourceOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/resources][%d] updateResourceOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/resources][%d] updateResourceOK %s", 200, payload)
 }
 
 func (o *UpdateResourceOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/resources][%d] updateResourceOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/resources][%d] updateResourceOK %s", 200, payload)
 }
 
 func (o *UpdateResourceOK) GetPayload() *models.CreateOrUpdateResourceResponse {

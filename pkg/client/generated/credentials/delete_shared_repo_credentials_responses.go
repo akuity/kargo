@@ -27,7 +27,7 @@ func (o *DeleteSharedRepoCredentialsReader) ReadResponse(response runtime.Client
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/shared/repo-credentials/{repo-credentials}] DeleteSharedRepoCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/shared/repo-credentials/{repo-credentials}] DeleteSharedRepoCredentials", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteSharedRepoCredentialsNoContent) Code() int {
 }
 
 func (o *DeleteSharedRepoCredentialsNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/shared/repo-credentials/{repo-credentials}][%d] deleteSharedRepoCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/repo-credentials/{repo-credentials}][%d] deleteSharedRepoCredentialsNoContent", 204)
 }
 
 func (o *DeleteSharedRepoCredentialsNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/shared/repo-credentials/{repo-credentials}][%d] deleteSharedRepoCredentialsNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/shared/repo-credentials/{repo-credentials}][%d] deleteSharedRepoCredentialsNoContent", 204)
 }
 
 func (o *DeleteSharedRepoCredentialsNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

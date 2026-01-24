@@ -27,7 +27,7 @@ func (o *RefreshStageReader) ReadResponse(response runtime.ClientResponse, consu
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/stages/{stage}/refresh] RefreshStage", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/stages/{stage}/refresh] RefreshStage", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *RefreshStageOK) Code() int {
 }
 
 func (o *RefreshStageOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/refresh][%d] refreshStageOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/refresh][%d] refreshStageOK", 200)
 }
 
 func (o *RefreshStageOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/refresh][%d] refreshStageOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/refresh][%d] refreshStageOK", 200)
 }
 
 func (o *RefreshStageOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

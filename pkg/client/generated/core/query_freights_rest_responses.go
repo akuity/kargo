@@ -30,7 +30,7 @@ func (o *QueryFreightsRestReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/freight] QueryFreightsRest", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/freight] QueryFreightsRest", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *QueryFreightsRestOK) Code() int {
 
 func (o *QueryFreightsRestOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/freight][%d] queryFreightsRestOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/freight][%d] queryFreightsRestOK %s", 200, payload)
 }
 
 func (o *QueryFreightsRestOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/freight][%d] queryFreightsRestOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/freight][%d] queryFreightsRestOK %s", 200, payload)
 }
 
 func (o *QueryFreightsRestOK) GetPayload() any {

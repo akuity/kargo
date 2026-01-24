@@ -27,7 +27,7 @@ func (o *AbortVerificationReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/stages/{stage}/verification/abort] AbortVerification", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/stages/{stage}/verification/abort] AbortVerification", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *AbortVerificationOK) Code() int {
 }
 
 func (o *AbortVerificationOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/verification/abort][%d] abortVerificationOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/verification/abort][%d] abortVerificationOK", 200)
 }
 
 func (o *AbortVerificationOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/verification/abort][%d] abortVerificationOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/verification/abort][%d] abortVerificationOK", 200)
 }
 
 func (o *AbortVerificationOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

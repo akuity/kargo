@@ -27,7 +27,7 @@ func (o *RefreshClusterConfigReader) ReadResponse(response runtime.ClientRespons
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/system/cluster-config/refresh] RefreshClusterConfig", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/system/cluster-config/refresh] RefreshClusterConfig", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *RefreshClusterConfigOK) Code() int {
 }
 
 func (o *RefreshClusterConfigOK) Error() string {
-	return fmt.Sprintf("[POST /v2/system/cluster-config/refresh][%d] refreshClusterConfigOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/system/cluster-config/refresh][%d] refreshClusterConfigOK", 200)
 }
 
 func (o *RefreshClusterConfigOK) String() string {
-	return fmt.Sprintf("[POST /v2/system/cluster-config/refresh][%d] refreshClusterConfigOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/system/cluster-config/refresh][%d] refreshClusterConfigOK", 200)
 }
 
 func (o *RefreshClusterConfigOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

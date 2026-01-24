@@ -30,7 +30,7 @@ func (o *GetAnalysisRunLogsReader) ReadResponse(response runtime.ClientResponse,
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/analysis-runs/{analysis-run}/logs] GetAnalysisRunLogs", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs] GetAnalysisRunLogs", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetAnalysisRunLogsOK) Code() int {
 
 func (o *GetAnalysisRunLogsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/analysis-runs/{analysis-run}/logs][%d] getAnalysisRunLogsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs][%d] getAnalysisRunLogsOK %s", 200, payload)
 }
 
 func (o *GetAnalysisRunLogsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/analysis-runs/{analysis-run}/logs][%d] getAnalysisRunLogsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs][%d] getAnalysisRunLogsOK %s", 200, payload)
 }
 
 func (o *GetAnalysisRunLogsOK) GetPayload() string {

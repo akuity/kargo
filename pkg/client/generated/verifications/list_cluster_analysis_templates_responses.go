@@ -30,7 +30,7 @@ func (o *ListClusterAnalysisTemplatesReader) ReadResponse(response runtime.Clien
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/cluster-analysis-templates] ListClusterAnalysisTemplates", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/cluster-analysis-templates] ListClusterAnalysisTemplates", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListClusterAnalysisTemplatesOK) Code() int {
 
 func (o *ListClusterAnalysisTemplatesOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-analysis-templates][%d] listClusterAnalysisTemplatesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates][%d] listClusterAnalysisTemplatesOK %s", 200, payload)
 }
 
 func (o *ListClusterAnalysisTemplatesOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-analysis-templates][%d] listClusterAnalysisTemplatesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates][%d] listClusterAnalysisTemplatesOK %s", 200, payload)
 }
 
 func (o *ListClusterAnalysisTemplatesOK) GetPayload() any {

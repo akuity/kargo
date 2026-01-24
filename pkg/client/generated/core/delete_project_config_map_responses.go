@@ -27,7 +27,7 @@ func (o *DeleteProjectConfigMapReader) ReadResponse(response runtime.ClientRespo
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/configmaps/{configmap}] DeleteProjectConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/configmaps/{configmap}] DeleteProjectConfigMap", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteProjectConfigMapNoContent) Code() int {
 }
 
 func (o *DeleteProjectConfigMapNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/configmaps/{configmap}][%d] deleteProjectConfigMapNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/configmaps/{configmap}][%d] deleteProjectConfigMapNoContent", 204)
 }
 
 func (o *DeleteProjectConfigMapNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/configmaps/{configmap}][%d] deleteProjectConfigMapNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/configmaps/{configmap}][%d] deleteProjectConfigMapNoContent", 204)
 }
 
 func (o *DeleteProjectConfigMapNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

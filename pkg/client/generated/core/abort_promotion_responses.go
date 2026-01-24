@@ -27,7 +27,7 @@ func (o *AbortPromotionReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/promotions/{promotion}/abort] AbortPromotion", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/promotions/{promotion}/abort] AbortPromotion", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *AbortPromotionOK) Code() int {
 }
 
 func (o *AbortPromotionOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/promotions/{promotion}/abort][%d] abortPromotionOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/promotions/{promotion}/abort][%d] abortPromotionOK", 200)
 }
 
 func (o *AbortPromotionOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/promotions/{promotion}/abort][%d] abortPromotionOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/promotions/{promotion}/abort][%d] abortPromotionOK", 200)
 }
 
 func (o *AbortPromotionOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

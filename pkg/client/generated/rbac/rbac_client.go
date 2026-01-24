@@ -111,7 +111,7 @@ func (a *Client) CreateProjectAPIToken(params *CreateProjectAPITokenParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "CreateProjectAPIToken",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/roles/{role}/apitokens",
+		PathPattern:        "/v1beta1/projects/{project}/roles/{role}/apitokens",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -160,7 +160,7 @@ func (a *Client) CreateProjectRole(params *CreateProjectRoleParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "CreateProjectRole",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/roles",
+		PathPattern:        "/v1beta1/projects/{project}/roles",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -211,7 +211,7 @@ func (a *Client) CreateSystemAPIToken(params *CreateSystemAPITokenParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSystemAPIToken",
 		Method:             "POST",
-		PathPattern:        "/v2/system/roles/{role}/apitokens",
+		PathPattern:        "/v1beta1/system/roles/{role}/apitokens",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -257,7 +257,7 @@ func (a *Client) DeleteProjectAPIToken(params *DeleteProjectAPITokenParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectAPIToken",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/apitokens/{apitoken}",
+		PathPattern:        "/v1beta1/projects/{project}/apitokens/{apitoken}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -306,7 +306,7 @@ func (a *Client) DeleteProjectRole(params *DeleteProjectRoleParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectRole",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/roles/{role}",
+		PathPattern:        "/v1beta1/projects/{project}/roles/{role}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -352,7 +352,7 @@ func (a *Client) DeleteSystemAPIToken(params *DeleteSystemAPITokenParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSystemAPIToken",
 		Method:             "DELETE",
-		PathPattern:        "/v2/system/apitokens/{apitoken}",
+		PathPattern:        "/v1beta1/system/apitokens/{apitoken}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -400,7 +400,7 @@ func (a *Client) GetProjectAPIToken(params *GetProjectAPITokenParams, authInfo r
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectAPIToken",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/apitokens/{apitoken}",
+		PathPattern:        "/v1beta1/projects/{project}/apitokens/{apitoken}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -449,7 +449,7 @@ func (a *Client) GetProjectRole(params *GetProjectRoleParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectRole",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/roles/{role}",
+		PathPattern:        "/v1beta1/projects/{project}/roles/{role}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -497,7 +497,7 @@ func (a *Client) GetSystemAPIToken(params *GetSystemAPITokenParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "GetSystemAPIToken",
 		Method:             "GET",
-		PathPattern:        "/v2/system/apitokens/{apitoken}",
+		PathPattern:        "/v1beta1/system/apitokens/{apitoken}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -546,7 +546,7 @@ func (a *Client) GetSystemRole(params *GetSystemRoleParams, authInfo runtime.Cli
 	op := &runtime.ClientOperation{
 		ID:                 "GetSystemRole",
 		Method:             "GET",
-		PathPattern:        "/v2/system/roles/{role}",
+		PathPattern:        "/v1beta1/system/roles/{role}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -594,7 +594,7 @@ func (a *Client) Grant(params *GrantParams, authInfo runtime.ClientAuthInfoWrite
 	op := &runtime.ClientOperation{
 		ID:                 "Grant",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/roles/grants",
+		PathPattern:        "/v1beta1/projects/{project}/roles/grants",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -642,7 +642,7 @@ func (a *Client) ListProjectAPITokens(params *ListProjectAPITokensParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectAPITokens",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/apitokens",
+		PathPattern:        "/v1beta1/projects/{project}/apitokens",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -690,7 +690,7 @@ func (a *Client) ListProjectRoles(params *ListProjectRolesParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectRoles",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/roles",
+		PathPattern:        "/v1beta1/projects/{project}/roles",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -738,7 +738,7 @@ func (a *Client) ListSystemAPITokens(params *ListSystemAPITokensParams, authInfo
 	op := &runtime.ClientOperation{
 		ID:                 "ListSystemAPITokens",
 		Method:             "GET",
-		PathPattern:        "/v2/system/apitokens",
+		PathPattern:        "/v1beta1/system/apitokens",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -786,7 +786,7 @@ func (a *Client) ListSystemRoles(params *ListSystemRolesParams, authInfo runtime
 	op := &runtime.ClientOperation{
 		ID:                 "ListSystemRoles",
 		Method:             "GET",
-		PathPattern:        "/v2/system/roles",
+		PathPattern:        "/v1beta1/system/roles",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -834,7 +834,7 @@ func (a *Client) Revoke(params *RevokeParams, authInfo runtime.ClientAuthInfoWri
 	op := &runtime.ClientOperation{
 		ID:                 "Revoke",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/roles/revocations",
+		PathPattern:        "/v1beta1/projects/{project}/roles/revocations",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -883,7 +883,7 @@ func (a *Client) UpdateRole(params *UpdateRoleParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateRole",
 		Method:             "PUT",
-		PathPattern:        "/v2/projects/{project}/roles/{role}",
+		PathPattern:        "/v1beta1/projects/{project}/roles/{role}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

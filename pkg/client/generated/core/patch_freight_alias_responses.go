@@ -27,7 +27,7 @@ func (o *PatchFreightAliasReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PATCH /v2/projects/{project}/freight/{freight-name-or-alias}/alias] PatchFreightAlias", response, response.Code())
+		return nil, runtime.NewAPIError("[PATCH /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias] PatchFreightAlias", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *PatchFreightAliasOK) Code() int {
 }
 
 func (o *PatchFreightAliasOK) Error() string {
-	return fmt.Sprintf("[PATCH /v2/projects/{project}/freight/{freight-name-or-alias}/alias][%d] patchFreightAliasOK", 200)
+	return fmt.Sprintf("[PATCH /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias][%d] patchFreightAliasOK", 200)
 }
 
 func (o *PatchFreightAliasOK) String() string {
-	return fmt.Sprintf("[PATCH /v2/projects/{project}/freight/{freight-name-or-alias}/alias][%d] patchFreightAliasOK", 200)
+	return fmt.Sprintf("[PATCH /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias][%d] patchFreightAliasOK", 200)
 }
 
 func (o *PatchFreightAliasOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

@@ -27,7 +27,7 @@ func (o *RefreshPromotionReader) ReadResponse(response runtime.ClientResponse, c
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/promotions/{promotion}/refresh] RefreshPromotion", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/promotions/{promotion}/refresh] RefreshPromotion", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *RefreshPromotionOK) Code() int {
 }
 
 func (o *RefreshPromotionOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/promotions/{promotion}/refresh][%d] refreshPromotionOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/promotions/{promotion}/refresh][%d] refreshPromotionOK", 200)
 }
 
 func (o *RefreshPromotionOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/promotions/{promotion}/refresh][%d] refreshPromotionOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/promotions/{promotion}/refresh][%d] refreshPromotionOK", 200)
 }
 
 func (o *RefreshPromotionOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

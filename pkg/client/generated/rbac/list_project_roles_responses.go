@@ -30,7 +30,7 @@ func (o *ListProjectRolesReader) ReadResponse(response runtime.ClientResponse, c
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/roles] ListProjectRoles", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/roles] ListProjectRoles", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListProjectRolesOK) Code() int {
 
 func (o *ListProjectRolesOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/roles][%d] listProjectRolesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/roles][%d] listProjectRolesOK %s", 200, payload)
 }
 
 func (o *ListProjectRolesOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/roles][%d] listProjectRolesOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/roles][%d] listProjectRolesOK %s", 200, payload)
 }
 
 func (o *ListProjectRolesOK) GetPayload() any {

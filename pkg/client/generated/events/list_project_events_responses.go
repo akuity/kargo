@@ -30,7 +30,7 @@ func (o *ListProjectEventsReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/events] ListProjectEvents", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/events] ListProjectEvents", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListProjectEventsOK) Code() int {
 
 func (o *ListProjectEventsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/events][%d] listProjectEventsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/events][%d] listProjectEventsOK %s", 200, payload)
 }
 
 func (o *ListProjectEventsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/events][%d] listProjectEventsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/events][%d] listProjectEventsOK %s", 200, payload)
 }
 
 func (o *ListProjectEventsOK) GetPayload() any {

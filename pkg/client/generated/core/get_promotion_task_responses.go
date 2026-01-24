@@ -30,7 +30,7 @@ func (o *GetPromotionTaskReader) ReadResponse(response runtime.ClientResponse, c
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/promotion-tasks/{promotion-task}] GetPromotionTask", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/promotion-tasks/{promotion-task}] GetPromotionTask", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetPromotionTaskOK) Code() int {
 
 func (o *GetPromotionTaskOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/promotion-tasks/{promotion-task}][%d] getPromotionTaskOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotion-tasks/{promotion-task}][%d] getPromotionTaskOK %s", 200, payload)
 }
 
 func (o *GetPromotionTaskOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/promotion-tasks/{promotion-task}][%d] getPromotionTaskOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotion-tasks/{promotion-task}][%d] getPromotionTaskOK %s", 200, payload)
 }
 
 func (o *GetPromotionTaskOK) GetPayload() any {

@@ -27,7 +27,7 @@ func (o *ReverifyReader) ReadResponse(response runtime.ClientResponse, consumer 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/stages/{stage}/verification] Reverify", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/stages/{stage}/verification] Reverify", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *ReverifyOK) Code() int {
 }
 
 func (o *ReverifyOK) Error() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/verification][%d] reverifyOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/verification][%d] reverifyOK", 200)
 }
 
 func (o *ReverifyOK) String() string {
-	return fmt.Sprintf("[POST /v2/projects/{project}/stages/{stage}/verification][%d] reverifyOK", 200)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/stages/{stage}/verification][%d] reverifyOK", 200)
 }
 
 func (o *ReverifyOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

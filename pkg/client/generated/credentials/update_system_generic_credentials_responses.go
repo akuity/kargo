@@ -30,7 +30,7 @@ func (o *UpdateSystemGenericCredentialsReader) ReadResponse(response runtime.Cli
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/system/generic-credentials/{generic-credentials}] UpdateSystemGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/system/generic-credentials/{generic-credentials}] UpdateSystemGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateSystemGenericCredentialsOK) Code() int {
 
 func (o *UpdateSystemGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/system/generic-credentials/{generic-credentials}][%d] updateSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/system/generic-credentials/{generic-credentials}][%d] updateSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateSystemGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/system/generic-credentials/{generic-credentials}][%d] updateSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/system/generic-credentials/{generic-credentials}][%d] updateSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *UpdateSystemGenericCredentialsOK) GetPayload() any {

@@ -30,7 +30,7 @@ func (o *UpdateProjectConfigMapReader) ReadResponse(response runtime.ClientRespo
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[PUT /v2/projects/{project}/configmaps/{configmap}] UpdateProjectConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[PUT /v1beta1/projects/{project}/configmaps/{configmap}] UpdateProjectConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *UpdateProjectConfigMapOK) Code() int {
 
 func (o *UpdateProjectConfigMapOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/configmaps/{configmap}][%d] updateProjectConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/configmaps/{configmap}][%d] updateProjectConfigMapOK %s", 200, payload)
 }
 
 func (o *UpdateProjectConfigMapOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[PUT /v2/projects/{project}/configmaps/{configmap}][%d] updateProjectConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/configmaps/{configmap}][%d] updateProjectConfigMapOK %s", 200, payload)
 }
 
 func (o *UpdateProjectConfigMapOK) GetPayload() any {

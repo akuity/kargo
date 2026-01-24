@@ -32,7 +32,7 @@ func (o *GetVersionInfoReader) ReadResponse(response runtime.ClientResponse, con
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/server-version] GetVersionInfo", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/server-version] GetVersionInfo", response, response.Code())
 	}
 }
 
@@ -82,12 +82,12 @@ func (o *GetVersionInfoOK) Code() int {
 
 func (o *GetVersionInfoOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/server-version][%d] getVersionInfoOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/server-version][%d] getVersionInfoOK %s", 200, payload)
 }
 
 func (o *GetVersionInfoOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/server-version][%d] getVersionInfoOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/server-version][%d] getVersionInfoOK %s", 200, payload)
 }
 
 func (o *GetVersionInfoOK) GetPayload() *models.GithubComAkuityKargoPkgxVersionVersion {

@@ -30,7 +30,7 @@ func (o *CreateProjectRoleReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v2/projects/{project}/roles] CreateProjectRole", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/roles] CreateProjectRole", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *CreateProjectRoleCreated) Code() int {
 
 func (o *CreateProjectRoleCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles][%d] createProjectRoleCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles][%d] createProjectRoleCreated %s", 201, payload)
 }
 
 func (o *CreateProjectRoleCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v2/projects/{project}/roles][%d] createProjectRoleCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles][%d] createProjectRoleCreated %s", 201, payload)
 }
 
 func (o *CreateProjectRoleCreated) GetPayload() any {

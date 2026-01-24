@@ -30,7 +30,7 @@ func (o *GetProjectConfigMapReader) ReadResponse(response runtime.ClientResponse
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/configmaps/{configmap}] GetProjectConfigMap", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/configmaps/{configmap}] GetProjectConfigMap", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetProjectConfigMapOK) Code() int {
 
 func (o *GetProjectConfigMapOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/configmaps/{configmap}][%d] getProjectConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/configmaps/{configmap}][%d] getProjectConfigMapOK %s", 200, payload)
 }
 
 func (o *GetProjectConfigMapOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/configmaps/{configmap}][%d] getProjectConfigMapOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/configmaps/{configmap}][%d] getProjectConfigMapOK %s", 200, payload)
 }
 
 func (o *GetProjectConfigMapOK) GetPayload() any {

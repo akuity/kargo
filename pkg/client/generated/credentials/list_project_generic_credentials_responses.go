@@ -30,7 +30,7 @@ func (o *ListProjectGenericCredentialsReader) ReadResponse(response runtime.Clie
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/generic-credentials] ListProjectGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/generic-credentials] ListProjectGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListProjectGenericCredentialsOK) Code() int {
 
 func (o *ListProjectGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/generic-credentials][%d] listProjectGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/generic-credentials][%d] listProjectGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *ListProjectGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/generic-credentials][%d] listProjectGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/generic-credentials][%d] listProjectGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *ListProjectGenericCredentialsOK) GetPayload() any {

@@ -30,7 +30,7 @@ func (o *ListClusterPromotionTasksReader) ReadResponse(response runtime.ClientRe
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/shared/cluster-promotion-tasks] ListClusterPromotionTasks", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/shared/cluster-promotion-tasks] ListClusterPromotionTasks", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *ListClusterPromotionTasksOK) Code() int {
 
 func (o *ListClusterPromotionTasksOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-promotion-tasks][%d] listClusterPromotionTasksOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-promotion-tasks][%d] listClusterPromotionTasksOK %s", 200, payload)
 }
 
 func (o *ListClusterPromotionTasksOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/shared/cluster-promotion-tasks][%d] listClusterPromotionTasksOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/shared/cluster-promotion-tasks][%d] listClusterPromotionTasksOK %s", 200, payload)
 }
 
 func (o *ListClusterPromotionTasksOK) GetPayload() any {

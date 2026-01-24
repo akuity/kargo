@@ -30,7 +30,7 @@ func (o *GetSystemGenericCredentialsReader) ReadResponse(response runtime.Client
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/system/generic-credentials/{generic-credentials}] GetSystemGenericCredentials", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/generic-credentials/{generic-credentials}] GetSystemGenericCredentials", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetSystemGenericCredentialsOK) Code() int {
 
 func (o *GetSystemGenericCredentialsOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/generic-credentials/{generic-credentials}][%d] getSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/generic-credentials/{generic-credentials}][%d] getSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *GetSystemGenericCredentialsOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/system/generic-credentials/{generic-credentials}][%d] getSystemGenericCredentialsOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/generic-credentials/{generic-credentials}][%d] getSystemGenericCredentialsOK %s", 200, payload)
 }
 
 func (o *GetSystemGenericCredentialsOK) GetPayload() any {

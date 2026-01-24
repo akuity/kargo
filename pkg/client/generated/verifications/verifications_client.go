@@ -116,7 +116,7 @@ func (a *Client) AbortVerification(params *AbortVerificationParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "AbortVerification",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/verification/abort",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/verification/abort",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -162,7 +162,7 @@ func (a *Client) DeleteAnalysisTemplate(params *DeleteAnalysisTemplateParams, au
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteAnalysisTemplate",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/analysis-templates/{analysis-template}",
+		PathPattern:        "/v1beta1/projects/{project}/analysis-templates/{analysis-template}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -208,7 +208,7 @@ func (a *Client) DeleteClusterAnalysisTemplate(params *DeleteClusterAnalysisTemp
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteClusterAnalysisTemplate",
 		Method:             "DELETE",
-		PathPattern:        "/v2/shared/cluster-analysis-templates/{cluster-analysis-template}",
+		PathPattern:        "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -254,7 +254,7 @@ func (a *Client) GetAnalysisRun(params *GetAnalysisRunParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "GetAnalysisRun",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/analysis-runs/{analysis-run}",
+		PathPattern:        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -300,7 +300,7 @@ func (a *Client) GetAnalysisRunLogs(params *GetAnalysisRunLogsParams, authInfo r
 	op := &runtime.ClientOperation{
 		ID:                 "GetAnalysisRunLogs",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/analysis-runs/{analysis-run}/logs",
+		PathPattern:        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs",
 		ProducesMediaTypes: []string{"text/event-stream"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -348,7 +348,7 @@ func (a *Client) GetAnalysisTemplate(params *GetAnalysisTemplateParams, authInfo
 	op := &runtime.ClientOperation{
 		ID:                 "GetAnalysisTemplate",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/analysis-templates/{analysis-template}",
+		PathPattern:        "/v1beta1/projects/{project}/analysis-templates/{analysis-template}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -394,7 +394,7 @@ func (a *Client) GetClusterAnalysisTemplate(params *GetClusterAnalysisTemplatePa
 	op := &runtime.ClientOperation{
 		ID:                 "GetClusterAnalysisTemplate",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/cluster-analysis-templates/{cluster-analysis-template}",
+		PathPattern:        "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -440,7 +440,7 @@ func (a *Client) ListAnalysisTemplates(params *ListAnalysisTemplatesParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "ListAnalysisTemplates",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/analysis-templates",
+		PathPattern:        "/v1beta1/projects/{project}/analysis-templates",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -488,7 +488,7 @@ func (a *Client) ListClusterAnalysisTemplates(params *ListClusterAnalysisTemplat
 	op := &runtime.ClientOperation{
 		ID:                 "ListClusterAnalysisTemplates",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/cluster-analysis-templates",
+		PathPattern:        "/v1beta1/shared/cluster-analysis-templates",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -536,7 +536,7 @@ func (a *Client) Reverify(params *ReverifyParams, authInfo runtime.ClientAuthInf
 	op := &runtime.ClientOperation{
 		ID:                 "Reverify",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/verification",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/verification",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

@@ -27,7 +27,7 @@ func (o *DeleteAnalysisTemplateReader) ReadResponse(response runtime.ClientRespo
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[DELETE /v2/projects/{project}/analysis-templates/{analysis-template}] DeleteAnalysisTemplate", response, response.Code())
+		return nil, runtime.NewAPIError("[DELETE /v1beta1/projects/{project}/analysis-templates/{analysis-template}] DeleteAnalysisTemplate", response, response.Code())
 	}
 }
 
@@ -75,11 +75,11 @@ func (o *DeleteAnalysisTemplateNoContent) Code() int {
 }
 
 func (o *DeleteAnalysisTemplateNoContent) Error() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/analysis-templates/{analysis-template}][%d] deleteAnalysisTemplateNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/analysis-templates/{analysis-template}][%d] deleteAnalysisTemplateNoContent", 204)
 }
 
 func (o *DeleteAnalysisTemplateNoContent) String() string {
-	return fmt.Sprintf("[DELETE /v2/projects/{project}/analysis-templates/{analysis-template}][%d] deleteAnalysisTemplateNoContent", 204)
+	return fmt.Sprintf("[DELETE /v1beta1/projects/{project}/analysis-templates/{analysis-template}][%d] deleteAnalysisTemplateNoContent", 204)
 }
 
 func (o *DeleteAnalysisTemplateNoContent) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {

@@ -168,7 +168,7 @@ func (a *Client) AbortPromotion(params *AbortPromotionParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "AbortPromotion",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/promotions/{promotion}/abort",
+		PathPattern:        "/v1beta1/projects/{project}/promotions/{promotion}/abort",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -214,7 +214,7 @@ func (a *Client) ApproveFreight(params *ApproveFreightParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "ApproveFreight",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/freight/{freight-name-or-alias}/approve",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -262,7 +262,7 @@ func (a *Client) CreateProjectConfigMap(params *CreateProjectConfigMapParams, au
 	op := &runtime.ClientOperation{
 		ID:                 "CreateProjectConfigMap",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/configmaps",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -310,7 +310,7 @@ func (a *Client) CreateSharedConfigMap(params *CreateSharedConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSharedConfigMap",
 		Method:             "POST",
-		PathPattern:        "/v2/shared/configmaps",
+		PathPattern:        "/v1beta1/shared/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -358,7 +358,7 @@ func (a *Client) CreateSystemConfigMap(params *CreateSystemConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "CreateSystemConfigMap",
 		Method:             "POST",
-		PathPattern:        "/v2/system/configmaps",
+		PathPattern:        "/v1beta1/system/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -406,7 +406,7 @@ func (a *Client) DeleteFreight(params *DeleteFreightParams, authInfo runtime.Cli
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteFreight",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/freight/{freight-name-or-alias}",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -452,7 +452,7 @@ func (a *Client) DeleteProject(params *DeleteProjectParams, authInfo runtime.Cli
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProject",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}",
+		PathPattern:        "/v1beta1/projects/{project}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -500,7 +500,7 @@ func (a *Client) DeleteProjectConfig(params *DeleteProjectConfigParams, authInfo
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectConfig",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/config",
+		PathPattern:        "/v1beta1/projects/{project}/config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -546,7 +546,7 @@ func (a *Client) DeleteProjectConfigMap(params *DeleteProjectConfigMapParams, au
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteProjectConfigMap",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -592,7 +592,7 @@ func (a *Client) DeleteSharedConfigMap(params *DeleteSharedConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSharedConfigMap",
 		Method:             "DELETE",
-		PathPattern:        "/v2/shared/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/shared/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -638,7 +638,7 @@ func (a *Client) DeleteStage(params *DeleteStageParams, authInfo runtime.ClientA
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteStage",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -684,7 +684,7 @@ func (a *Client) DeleteSystemConfigMap(params *DeleteSystemConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteSystemConfigMap",
 		Method:             "DELETE",
-		PathPattern:        "/v2/system/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/system/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -730,7 +730,7 @@ func (a *Client) DeleteWarehouse(params *DeleteWarehouseParams, authInfo runtime
 	op := &runtime.ClientOperation{
 		ID:                 "DeleteWarehouse",
 		Method:             "DELETE",
-		PathPattern:        "/v2/projects/{project}/warehouses/{warehouse}",
+		PathPattern:        "/v1beta1/projects/{project}/warehouses/{warehouse}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -776,7 +776,7 @@ func (a *Client) GetClusterPromotionTask(params *GetClusterPromotionTaskParams, 
 	op := &runtime.ClientOperation{
 		ID:                 "GetClusterPromotionTask",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/cluster-promotion-tasks/{cluster-promotion-task}",
+		PathPattern:        "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -824,7 +824,7 @@ func (a *Client) GetFreight(params *GetFreightParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "GetFreight",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/freight/{freight-name-or-alias}",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -870,7 +870,7 @@ func (a *Client) GetProject(params *GetProjectParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "GetProject",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}",
+		PathPattern:        "/v1beta1/projects/{project}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -918,7 +918,7 @@ func (a *Client) GetProjectConfig(params *GetProjectConfigParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectConfig",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/config",
+		PathPattern:        "/v1beta1/projects/{project}/config",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -964,7 +964,7 @@ func (a *Client) GetProjectConfigMap(params *GetProjectConfigMapParams, authInfo
 	op := &runtime.ClientOperation{
 		ID:                 "GetProjectConfigMap",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1010,7 +1010,7 @@ func (a *Client) GetPromotion(params *GetPromotionParams, authInfo runtime.Clien
 	op := &runtime.ClientOperation{
 		ID:                 "GetPromotion",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/promotions/{promotion}",
+		PathPattern:        "/v1beta1/projects/{project}/promotions/{promotion}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1056,7 +1056,7 @@ func (a *Client) GetPromotionTask(params *GetPromotionTaskParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "GetPromotionTask",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/promotion-tasks/{promotion-task}",
+		PathPattern:        "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1102,7 +1102,7 @@ func (a *Client) GetSharedConfigMap(params *GetSharedConfigMapParams, authInfo r
 	op := &runtime.ClientOperation{
 		ID:                 "GetSharedConfigMap",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/shared/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1148,7 +1148,7 @@ func (a *Client) GetStage(params *GetStageParams, authInfo runtime.ClientAuthInf
 	op := &runtime.ClientOperation{
 		ID:                 "GetStage",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1194,7 +1194,7 @@ func (a *Client) GetSystemConfigMap(params *GetSystemConfigMapParams, authInfo r
 	op := &runtime.ClientOperation{
 		ID:                 "GetSystemConfigMap",
 		Method:             "GET",
-		PathPattern:        "/v2/system/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/system/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1240,7 +1240,7 @@ func (a *Client) GetWarehouse(params *GetWarehouseParams, authInfo runtime.Clien
 	op := &runtime.ClientOperation{
 		ID:                 "GetWarehouse",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/warehouses/{warehouse}",
+		PathPattern:        "/v1beta1/projects/{project}/warehouses/{warehouse}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1288,7 +1288,7 @@ func (a *Client) ListClusterPromotionTasks(params *ListClusterPromotionTasksPara
 	op := &runtime.ClientOperation{
 		ID:                 "ListClusterPromotionTasks",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/cluster-promotion-tasks",
+		PathPattern:        "/v1beta1/shared/cluster-promotion-tasks",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1336,7 +1336,7 @@ func (a *Client) ListImages(params *ListImagesParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "ListImages",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/images",
+		PathPattern:        "/v1beta1/projects/{project}/images",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1384,7 +1384,7 @@ func (a *Client) ListProjectConfigMaps(params *ListProjectConfigMapsParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjectConfigMaps",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/configmaps",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1430,7 +1430,7 @@ func (a *Client) ListProjects(params *ListProjectsParams, authInfo runtime.Clien
 	op := &runtime.ClientOperation{
 		ID:                 "ListProjects",
 		Method:             "GET",
-		PathPattern:        "/v2/projects",
+		PathPattern:        "/v1beta1/projects",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1478,7 +1478,7 @@ func (a *Client) ListPromotionTasks(params *ListPromotionTasksParams, authInfo r
 	op := &runtime.ClientOperation{
 		ID:                 "ListPromotionTasks",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/promotion-tasks",
+		PathPattern:        "/v1beta1/projects/{project}/promotion-tasks",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1526,7 +1526,7 @@ func (a *Client) ListPromotions(params *ListPromotionsParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "ListPromotions",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/promotions",
+		PathPattern:        "/v1beta1/projects/{project}/promotions",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1574,7 +1574,7 @@ func (a *Client) ListSharedConfigMaps(params *ListSharedConfigMapsParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "ListSharedConfigMaps",
 		Method:             "GET",
-		PathPattern:        "/v2/shared/configmaps",
+		PathPattern:        "/v1beta1/shared/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1622,7 +1622,7 @@ func (a *Client) ListStages(params *ListStagesParams, authInfo runtime.ClientAut
 	op := &runtime.ClientOperation{
 		ID:                 "ListStages",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/stages",
+		PathPattern:        "/v1beta1/projects/{project}/stages",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1670,7 +1670,7 @@ func (a *Client) ListSystemConfigMaps(params *ListSystemConfigMapsParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "ListSystemConfigMaps",
 		Method:             "GET",
-		PathPattern:        "/v2/system/configmaps",
+		PathPattern:        "/v1beta1/system/configmaps",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1718,7 +1718,7 @@ func (a *Client) ListWarehouses(params *ListWarehousesParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "ListWarehouses",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/warehouses",
+		PathPattern:        "/v1beta1/projects/{project}/warehouses",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1764,7 +1764,7 @@ func (a *Client) PatchFreightAlias(params *PatchFreightAliasParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "PatchFreightAlias",
 		Method:             "PATCH",
-		PathPattern:        "/v2/projects/{project}/freight/{freight-name-or-alias}/alias",
+		PathPattern:        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1813,7 +1813,7 @@ func (a *Client) PatchProjectConfigMap(params *PatchProjectConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "PatchProjectConfigMap",
 		Method:             "PATCH",
-		PathPattern:        "/v2/projects/{project}/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1862,7 +1862,7 @@ func (a *Client) PatchSharedConfigMap(params *PatchSharedConfigMapParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "PatchSharedConfigMap",
 		Method:             "PATCH",
-		PathPattern:        "/v2/shared/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/shared/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1911,7 +1911,7 @@ func (a *Client) PatchSystemConfigMap(params *PatchSystemConfigMapParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "PatchSystemConfigMap",
 		Method:             "PATCH",
-		PathPattern:        "/v2/system/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/system/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -1959,7 +1959,7 @@ func (a *Client) PromoteDownstream(params *PromoteDownstreamParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "PromoteDownstream",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/promotions/downstream",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2007,7 +2007,7 @@ func (a *Client) PromoteToStage(params *PromoteToStageParams, authInfo runtime.C
 	op := &runtime.ClientOperation{
 		ID:                 "PromoteToStage",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/promotions",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/promotions",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2053,7 +2053,7 @@ func (a *Client) QueryFreightsRest(params *QueryFreightsRestParams, authInfo run
 	op := &runtime.ClientOperation{
 		ID:                 "QueryFreightsRest",
 		Method:             "GET",
-		PathPattern:        "/v2/projects/{project}/freight",
+		PathPattern:        "/v1beta1/projects/{project}/freight",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2102,7 +2102,7 @@ func (a *Client) RefreshProjectConfig(params *RefreshProjectConfigParams, authIn
 	op := &runtime.ClientOperation{
 		ID:                 "RefreshProjectConfig",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/config/refresh",
+		PathPattern:        "/v1beta1/projects/{project}/config/refresh",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2151,7 +2151,7 @@ func (a *Client) RefreshPromotion(params *RefreshPromotionParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "RefreshPromotion",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/promotions/{promotion}/refresh",
+		PathPattern:        "/v1beta1/projects/{project}/promotions/{promotion}/refresh",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2200,7 +2200,7 @@ func (a *Client) RefreshStage(params *RefreshStageParams, authInfo runtime.Clien
 	op := &runtime.ClientOperation{
 		ID:                 "RefreshStage",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/stages/{stage}/refresh",
+		PathPattern:        "/v1beta1/projects/{project}/stages/{stage}/refresh",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2249,7 +2249,7 @@ func (a *Client) RefreshWarehouse(params *RefreshWarehouseParams, authInfo runti
 	op := &runtime.ClientOperation{
 		ID:                 "RefreshWarehouse",
 		Method:             "POST",
-		PathPattern:        "/v2/projects/{project}/warehouses/{warehouse}/refresh",
+		PathPattern:        "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2297,7 +2297,7 @@ func (a *Client) UpdateProjectConfigMap(params *UpdateProjectConfigMapParams, au
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateProjectConfigMap",
 		Method:             "PUT",
-		PathPattern:        "/v2/projects/{project}/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/projects/{project}/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2345,7 +2345,7 @@ func (a *Client) UpdateSharedConfigMap(params *UpdateSharedConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateSharedConfigMap",
 		Method:             "PUT",
-		PathPattern:        "/v2/shared/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/shared/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},
@@ -2393,7 +2393,7 @@ func (a *Client) UpdateSystemConfigMap(params *UpdateSystemConfigMapParams, auth
 	op := &runtime.ClientOperation{
 		ID:                 "UpdateSystemConfigMap",
 		Method:             "PUT",
-		PathPattern:        "/v2/system/configmaps/{configmap}",
+		PathPattern:        "/v1beta1/system/configmaps/{configmap}",
 		ProducesMediaTypes: []string{"application/json"},
 		ConsumesMediaTypes: []string{"application/json"},
 		Schemes:            []string{"http"},

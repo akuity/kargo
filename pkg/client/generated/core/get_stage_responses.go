@@ -30,7 +30,7 @@ func (o *GetStageReader) ReadResponse(response runtime.ClientResponse, consumer 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v2/projects/{project}/stages/{stage}] GetStage", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/projects/{project}/stages/{stage}] GetStage", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetStageOK) Code() int {
 
 func (o *GetStageOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/stages/{stage}][%d] getStageOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/stages/{stage}][%d] getStageOK %s", 200, payload)
 }
 
 func (o *GetStageOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v2/projects/{project}/stages/{stage}][%d] getStageOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/projects/{project}/stages/{stage}][%d] getStageOK %s", 200, payload)
 }
 
 func (o *GetStageOK) GetPayload() any {
