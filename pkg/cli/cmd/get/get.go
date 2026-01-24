@@ -99,18 +99,19 @@ func PrintObjects[T runtime.Object](
 	case *corev1.ConfigMap:
 		printObj = newConfigMapsTable(list)
 	case *corev1.Secret:
+		if len(list.Items) == 0 {
+			return nil
+		}
 		// TODO(krancour): This is hacky and I don't love it
-		if len(list.Items) > 0 {
-			secret := list.Items[0].Object.(*corev1.Secret) // nolint: forcetypeassert
-			if secret.GetLabels()[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue {
-				printObj = newAPITokensTable(list)
-			} else if secret.GetLabels()[kargoapi.LabelKeyCredentialType] == kargoapi.LabelValueCredentialTypeGeneric {
-				printObj = newGenericCredentialsTable(list)
-			} else if _, ok := secret.GetLabels()[kargoapi.LabelKeyCredentialType]; ok {
-				printObj = newRepoCredentialsTable(list)
-			} else {
-				printObj = list
-			}
+		secret := list.Items[0].Object.(*corev1.Secret) // nolint: forcetypeassert
+		if secret.GetLabels()[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue {
+			printObj = newAPITokensTable(list)
+		} else if secret.GetLabels()[kargoapi.LabelKeyCredentialType] == kargoapi.LabelValueCredentialTypeGeneric {
+			printObj = newGenericCredentialsTable(list)
+		} else if _, ok := secret.GetLabels()[kargoapi.LabelKeyCredentialType]; ok {
+			printObj = newRepoCredentialsTable(list)
+		} else {
+			return nil
 		}
 	case *kargoapi.ClusterConfig:
 		printObj = newClusterConfigTable(list)
