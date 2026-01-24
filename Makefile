@@ -470,9 +470,3 @@ hack-serve-docs: hack-build-dev-tools
 .PHONY: serve-docs
 serve-docs:
 	cd docs && pnpm install && pnpm start
-
-################################################################################
-# Swagger/OpenAPI Documentation                                                #
-################################################################################
-
-
