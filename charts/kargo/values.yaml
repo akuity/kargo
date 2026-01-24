@@ -641,7 +641,7 @@ garbageCollector:
 
   ## @param garbageCollector.schedule When to run the garbage collector.
   schedule: "0 * * * *"
-  ## @param garbageCollector.activeDeadlineSeconds The active deadline seconds for the garbage collector job.
+  ## @param garbageCollector.activeDeadlineSeconds Specifies the maximum duration(in secs) that the garbage collector job may be active before the system tries to terminate it.
   activeDeadlineSeconds: ""
   ## @param garbageCollector.workers The number of concurrent workers to run. Tuning this too low will result in slow garbage collection. Tuning this too high will result in too many API calls and may result in throttling.
   workers: 3
