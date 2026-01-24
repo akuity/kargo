@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -44,13 +42,9 @@ func (s *server) WatchFreight(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			freight, ok := e.Object.(*kargoapi.Freight)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
-			}
-			var freight *kargoapi.Freight
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &freight); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchFreightResponse{
 				Freight: freight,
