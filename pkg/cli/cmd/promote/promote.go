@@ -2,6 +2,7 @@ package promote
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/client/watch"
 )
 
@@ -172,7 +175,7 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	watchClient, err := client.GetWatchClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -184,42 +187,67 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Abort:
-		if err = watchClient.AbortPromotion(ctx, o.Project, o.Promotion); err != nil {
+		if _, err := apiClient.Core.AbortPromotion(
+			core.NewAbortPromotionParams().WithProject(o.Project).WithPromotion(o.Promotion),
+			nil,
+		); err != nil {
 			return fmt.Errorf("abort promotion: %w", err)
 		}
 		return nil
 	case o.Stage != "":
-		promotion, err := watchClient.PromoteToStage(
-			ctx,
-			o.Project,
-			o.Stage,
-			o.FreightName,
-			o.FreightAlias,
-		)
+		var res *core.PromoteToStageCreated
+		if res, err = apiClient.Core.PromoteToStage(
+			core.NewPromoteToStageParams().
+				WithProject(o.Project).
+				WithStage(o.Stage).
+				WithBody(&models.PromoteToStageRequest{
+					Freight:      o.FreightName,
+					FreightAlias: o.FreightAlias,
+				}),
+			nil,
+		); err != nil {
+			return err
+		}
+		promoJSON, err := json.Marshal(res.Payload)
 		if err != nil {
-			return fmt.Errorf("promote stage: %w", err)
+			return fmt.Errorf("marshal promotion: %w", err)
+		}
+		promo := &kargoapi.Promotion{}
+		if err := json.Unmarshal(promoJSON, promo); err != nil {
+			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotion(ctx, watchClient, promotion); err != nil {
+			if err = o.waitForPromotion(ctx, nil, promo); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
-		_ = printer.PrintObj(promotion, o.Out)
+		_ = printer.PrintObj(promo, o.Out)
 		return nil
 	case o.DownstreamFrom != "":
-		promotions, err := watchClient.PromoteDownstream(
-			ctx,
-			o.Project,
-			o.DownstreamFrom,
-			o.FreightName,
-			o.FreightAlias,
+		res, err := apiClient.Core.PromoteDownstream(
+			core.NewPromoteDownstreamParams().
+				WithProject(o.Project).
+				WithStage(o.DownstreamFrom).
+				WithBody(&models.PromoteDownstreamRequest{
+					Freight:      o.FreightName,
+					FreightAlias: o.FreightAlias,
+				}),
+			nil,
 		)
 		if err != nil {
-			return fmt.Errorf("promote stage subscribers: %w", err)
+			return err
+		}
+		var promotions []*kargoapi.Promotion
+		promotionsJSON, err := json.Marshal(res.Payload)
+		if err != nil {
+			return fmt.Errorf("marshal promotions: %w", err)
+		}
+		if err := json.Unmarshal(promotionsJSON, &promotions); err != nil {
+			return fmt.Errorf("unmarshal promotions: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotions(ctx, watchClient, promotions...); err != nil {
-				return fmt.Errorf("wait for promotions: %w", err)
+			if err = o.waitForPromotions(ctx, promotions...); err != nil {
+				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
 		for _, p := range promotions {
@@ -230,21 +258,28 @@ func (o *promotionOptions) run(ctx context.Context) error {
 	return nil
 }
 
-func waitForPromotions(
+func (o *promotionOptions) waitForPromotions(
 	ctx context.Context,
-	watchClient *watch.Client,
 	p ...*kargoapi.Promotion,
 ) error {
+	watchClient, err := client.GetWatchClientFromConfig(
+		ctx,
+		o.Config,
+		o.ClientOptions,
+	)
+	if err != nil {
+		return fmt.Errorf("get client from config: %w", err)
+	}
 	g, ctx := errgroup.WithContext(ctx)
 	for _, promo := range p {
 		g.Go(func() error {
-			return waitForPromotion(ctx, watchClient, promo)
+			return o.waitForPromotion(ctx, watchClient, promo)
 		})
 	}
 	return g.Wait()
 }
 
-func waitForPromotion(
+func (o *promotionOptions) waitForPromotion(
 	ctx context.Context,
 	watchClient *watch.Client,
 	p *kargoapi.Promotion,
@@ -252,6 +287,17 @@ func waitForPromotion(
 	if p == nil || p.Status.Phase.IsTerminal() {
 		// No need to wait for a promotion that is already terminal.
 		return nil
+	}
+
+	if watchClient == nil {
+		var err error
+		if watchClient, err = client.GetWatchClientFromConfig(
+			ctx,
+			o.Config,
+			o.ClientOptions,
+		); err != nil {
+			return fmt.Errorf("get client from config: %w", err)
+		}
 	}
 
 	eventCh, errCh := watchClient.WatchPromotion(ctx, p.Namespace, p.Name)

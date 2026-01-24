@@ -206,6 +206,7 @@ type promoteDownstreamRequest struct {
 // @Summary Promote downstream
 // @Description Creates a Promotion resource for each of a Stage's immediately
 // @Description downstream Stages.
+// @Tags Core, Project-Level
 // @Security BearerAuth
 // @Accept json
 // @Produce json

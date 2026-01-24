@@ -167,7 +167,7 @@ type promoteToStageRequest struct {
 	FreightAlias string `json:"freightAlias,omitempty"`
 } // @name PromoteToStageRequest
 
-// @id PromoteToStageRest
+// @id PromoteToStage
 // @Summary Promote to Stage
 // @Description Create a Promotion resource to transition a specified Stage into
 // @Description the state represented by the specified Freight.
