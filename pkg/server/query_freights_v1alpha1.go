@@ -370,7 +370,7 @@ func getRepoAndTag(s *kargoapi.Freight) (string, string, *semver.Version) {
 // @Param orderBy query string false "Order by (first_seen, tag)"
 // @Param reverse query bool false "Reverse order"
 // @Success 200 {object} object "Map of freight groups"
-// @Router /v2/projects/{project}/freight [get]
+// @Router /v1beta1/projects/{project}/freight [get]
 func (s *server) queryFreight(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

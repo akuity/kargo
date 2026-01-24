@@ -152,7 +152,7 @@ func Test_server_listPromotionTasks(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/promotion-tasks",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/promotion-tasks",
 		[]restTestCase{
 			{
 				name: "Project does not exist",

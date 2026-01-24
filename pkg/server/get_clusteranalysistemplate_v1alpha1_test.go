@@ -203,7 +203,7 @@ func Test_server_getClusterAnalysisTemplate(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodGet, "/v2/shared/cluster-analysis-templates/"+testTemplate.Name,
+		http.MethodGet, "/v1beta1/shared/cluster-analysis-templates/"+testTemplate.Name,
 		[]restTestCase{
 			{
 				name:         "Rollouts integration disabled",

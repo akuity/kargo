@@ -98,7 +98,7 @@ type TagMap struct {
 // @Param project path string true "Project name"
 // @Produce json
 // @Success 200 {object} map[string]TagMap
-// @Router /v2/projects/{project}/images [get]
+// @Router /v1beta1/projects/{project}/images [get]
 func (s *server) listImages(c *gin.Context) {
 	ctx := c.Request.Context()
 

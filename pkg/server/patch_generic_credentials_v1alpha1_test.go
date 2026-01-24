@@ -129,7 +129,7 @@ func Test_server_patchProjectGenericCredentials(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SecretManagementEnabled: true},
-		http.MethodPatch, "/v2/projects/"+testProject.Name+"/generic-credentials/"+testSecret.Name,
+		http.MethodPatch, "/v1beta1/projects/"+testProject.Name+"/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:          "Secret management disabled",
@@ -299,7 +299,7 @@ func Test_server_patchSystemGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SystemResourcesNamespace: testSystemResourcesNamespace,
 		},
-		http.MethodPatch, "/v2/system/generic-credentials/"+testSecret.Name,
+		http.MethodPatch, "/v1beta1/system/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",
@@ -406,7 +406,7 @@ func Test_server_patchSharedGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodPatch, "/v2/shared/generic-credentials/"+testSecret.Name,
+		http.MethodPatch, "/v1beta1/shared/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",

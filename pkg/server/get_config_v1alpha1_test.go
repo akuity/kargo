@@ -60,7 +60,7 @@ func Test_server_getConfig(t *testing.T) {
 				},
 			},
 		},
-		http.MethodGet, "/v2/system/server-config",
+		http.MethodGet, "/v1beta1/system/server-config",
 		[]restTestCase{
 			{
 				name: "gets system config",

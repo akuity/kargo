@@ -58,7 +58,7 @@ func (s *server) UpdateRole(
 // @Param role path string true "Role name"
 // @Param body body object true "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
 // @Success 200 {object} object "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
-// @Router /v2/projects/{project}/roles/{role} [put]
+// @Router /v1beta1/projects/{project}/roles/{role} [put]
 func (s *server) updateRole(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

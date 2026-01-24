@@ -28,7 +28,7 @@ func Test_server_refreshPromotion(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/promotions/"+testPromotion.Name+"/refresh",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/promotions/"+testPromotion.Name+"/refresh",
 		[]restTestCase{
 			{
 				name:          "Project not found",

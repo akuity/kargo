@@ -85,7 +85,7 @@ func (s *server) DeleteGenericCredentials(
 // @Param project path string true "Project name"
 // @Param generic-credentials path string true "Generic credentials name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/generic-credentials/{generic-credentials} [delete]
+// @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -126,7 +126,7 @@ func (s *server) deleteProjectGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Param generic-credentials path string true "Generic credentials name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/system/generic-credentials/{generic-credentials} [delete]
+// @Router /v1beta1/system/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -165,7 +165,7 @@ func (s *server) deleteSystemGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Param generic-credentials path string true "Generic credentials name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/shared/generic-credentials/{generic-credentials} [delete]
+// @Router /v1beta1/shared/generic-credentials/{generic-credentials} [delete]
 func (s *server) deleteSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return

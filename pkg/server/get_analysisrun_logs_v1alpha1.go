@@ -513,7 +513,7 @@ func streamLogs(
 // @Param containerName query string false "Container name"
 // @Produce text/event-stream
 // @Success 200 {string} string "Log stream (SSE)"
-// @Router /v2/projects/{project}/analysis-runs/{analysis-run}/logs [get]
+// @Router /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs [get]
 func (s *server) getAnalysisRunLogs(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
 		_ = c.Error(errArgoRolloutsIntegrationDisabled)

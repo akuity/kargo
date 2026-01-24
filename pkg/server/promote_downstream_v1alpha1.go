@@ -214,7 +214,7 @@ type promoteDownstreamRequest struct {
 // @Param stage path string true "Stage name"
 // @Param body body promoteDownstreamRequest true "Promote request"
 // @Success 201 {object} object "Promotions created"
-// @Router /v2/projects/{project}/stages/{stage}/promotions/downstream [post]
+// @Router /v1beta1/projects/{project}/stages/{stage}/promotions/downstream [post]
 func (s *server) promoteDownstream(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

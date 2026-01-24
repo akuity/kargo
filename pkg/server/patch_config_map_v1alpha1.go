@@ -36,7 +36,7 @@ type patchConfigMapRequest struct {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body patchConfigMapRequest true "ConfigMap patch"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/projects/{project}/configmaps/{configmap} [patch]
+// @Router /v1beta1/projects/{project}/configmaps/{configmap} [patch]
 func (s *server) patchProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -85,7 +85,7 @@ func (s *server) patchProjectConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body patchConfigMapRequest true "ConfigMap patch"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/system/configmaps/{configmap} [patch]
+// @Router /v1beta1/system/configmaps/{configmap} [patch]
 func (s *server) patchSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")
@@ -135,7 +135,7 @@ func (s *server) patchSystemConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body patchConfigMapRequest true "ConfigMap patch"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/shared/configmaps/{configmap} [patch]
+// @Router /v1beta1/shared/configmaps/{configmap} [patch]
 func (s *server) patchSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")

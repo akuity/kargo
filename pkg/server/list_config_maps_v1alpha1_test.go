@@ -123,7 +123,7 @@ func Test_server_listProjectConfigMaps(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/configmaps",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/configmaps",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -176,7 +176,7 @@ func Test_server_listProjectConfigMaps(t *testing.T) {
 func Test_server_listSystemConfigMaps(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{SystemResourcesNamespace: testSystemResourcesNamespace},
-		http.MethodGet, "/v2/system/configmaps",
+		http.MethodGet, "/v1beta1/system/configmaps",
 		[]restTestCase{
 			{
 				name: "no ConfigMaps exist",
@@ -221,7 +221,7 @@ func Test_server_listSystemConfigMaps(t *testing.T) {
 func Test_server_listSharedConfigMaps(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
-		http.MethodGet, "/v2/shared/configmaps",
+		http.MethodGet, "/v1beta1/shared/configmaps",
 		[]restTestCase{
 			{
 				name: "no ConfigMaps exist",

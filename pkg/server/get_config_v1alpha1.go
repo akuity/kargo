@@ -55,7 +55,7 @@ type argoCDShard struct {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} getConfigResponse
-// @Router /v2/system/server-config [get]
+// @Router /v1beta1/system/server-config [get]
 func (s *server) getConfig(c *gin.Context) {
 	resp := getConfigResponse{
 		ArgocdShards:                  make(map[string]*argoCDShard),

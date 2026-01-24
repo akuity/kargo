@@ -412,7 +412,7 @@ func Test_server_approveFreight(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/freight/"+testFreight.Name+"/approve?stage="+testStageName,
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/freight/"+testFreight.Name+"/approve?stage="+testStageName,
 		[]restTestCase{
 			{
 				name:          "Project not found",

@@ -18,7 +18,7 @@ import (
 // @Security BearerAuth
 // @Produce json
 // @Success 200 "Success"
-// @Router /v2/system/cluster-config/refresh [post]
+// @Router /v1beta1/system/cluster-config/refresh [post]
 func (s *server) refreshClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 

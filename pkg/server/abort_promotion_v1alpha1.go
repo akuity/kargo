@@ -49,7 +49,7 @@ func (s *server) AbortPromotion(
 // @Param project path string true "Project name"
 // @Param promotion path string true "Promotion name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/promotions/{promotion}/abort [post]
+// @Router /v1beta1/projects/{project}/promotions/{promotion}/abort [post]
 func (s *server) abortPromotion(c *gin.Context) {
 	ctx := c.Request.Context()
 

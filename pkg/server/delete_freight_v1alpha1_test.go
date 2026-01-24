@@ -31,7 +31,7 @@ func Test_server_deleteFreight(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/freight/"+testFreight.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/freight/"+testFreight.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -67,7 +67,7 @@ func Test_server_deleteFreight(t *testing.T) {
 			},
 			{
 				name: "deletes Freight by alias",
-				url:  "/v2/projects/" + testProject.Name + "/freight/" + testFreight.Alias,
+				url:  "/v1beta1/projects/" + testProject.Name + "/freight/" + testFreight.Alias,
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testFreight,

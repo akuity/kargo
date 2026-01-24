@@ -78,7 +78,7 @@ func (s *server) GetAPIToken(
 // @Param apitoken path string true "API token name"
 // @Produce json
 // @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/projects/{project}/apitokens/{apitoken} [get]
+// @Router /v1beta1/projects/{project}/apitokens/{apitoken} [get]
 func (s *server) getProjectAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -103,7 +103,7 @@ func (s *server) getProjectAPIToken(c *gin.Context) {
 // @Param apitoken path string true "API token name"
 // @Produce json
 // @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/system/apitokens/{apitoken} [get]
+// @Router /v1beta1/system/apitokens/{apitoken} [get]
 func (s *server) getSystemAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 

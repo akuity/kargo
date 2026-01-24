@@ -167,7 +167,7 @@ func Test_server_deleteProjectConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/configmaps/"+testConfigMap.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -215,7 +215,7 @@ func Test_server_deleteSystemConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SystemResourcesNamespace: testSystemResourcesNamespace},
-		http.MethodDelete, "/v2/system/configmaps/"+testConfigMap.Name,
+		http.MethodDelete, "/v1beta1/system/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "ConfigMap does not exist",
@@ -253,7 +253,7 @@ func Test_server_deleteSharedConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
-		http.MethodDelete, "/v2/shared/configmaps/"+testConfigMap.Name,
+		http.MethodDelete, "/v1beta1/shared/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "ConfigMap does not exist",

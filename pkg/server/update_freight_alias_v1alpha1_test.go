@@ -324,7 +324,7 @@ func Test_server_patchFreightAliasHandler(t *testing.T) {
 		},
 		Alias: testOldAlias,
 	}
-	testBaseURL := "/v2/projects/" + testProject.Name + "/freight/"
+	testBaseURL := "/v1beta1/projects/" + testProject.Name + "/freight/"
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodPatch, testBaseURL+testFreight.Name+"/alias?newAlias="+testNewAlias,

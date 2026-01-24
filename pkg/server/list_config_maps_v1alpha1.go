@@ -68,7 +68,7 @@ func (s *server) ListConfigMaps(
 // @Param project path string true "Project name"
 // @Produce json
 // @Success 200 {object} object "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)"
-// @Router /v2/projects/{project}/configmaps [get]
+// @Router /v1beta1/projects/{project}/configmaps [get]
 func (s *server) listProjectConfigMaps(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -98,7 +98,7 @@ func (s *server) listProjectConfigMaps(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} object "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)"
-// @Router /v2/system/configmaps [get]
+// @Router /v1beta1/system/configmaps [get]
 func (s *server) listSystemConfigMaps(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -126,7 +126,7 @@ func (s *server) listSystemConfigMaps(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} object "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)"
-// @Router /v2/shared/configmaps [get]
+// @Router /v1beta1/shared/configmaps [get]
 func (s *server) listSharedConfigMaps(c *gin.Context) {
 	ctx := c.Request.Context()
 

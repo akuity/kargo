@@ -149,7 +149,7 @@ func Test_server_deleteAnalysisTemplate(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/analysis-templates/"+testTemplate.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/analysis-templates/"+testTemplate.Name,
 		[]restTestCase{
 			{
 				name:          "Rollouts integration disabled",

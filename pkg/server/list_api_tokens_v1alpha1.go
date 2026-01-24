@@ -63,7 +63,7 @@ func (s *server) ListAPITokens(
 // @Param role query string false "Role name filter"
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/projects/{project}/apitokens [get]
+// @Router /v1beta1/projects/{project}/apitokens [get]
 func (s *server) listProjectAPITokens(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -88,7 +88,7 @@ func (s *server) listProjectAPITokens(c *gin.Context) {
 // @Param role query string false "Role name filter"
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/system/apitokens [get]
+// @Router /v1beta1/system/apitokens [get]
 func (s *server) listSystemAPITokens(c *gin.Context) {
 	ctx := c.Request.Context()
 

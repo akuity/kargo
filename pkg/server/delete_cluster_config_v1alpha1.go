@@ -37,7 +37,7 @@ func (s *server) DeleteClusterConfig(
 // @Tags System, Config, Cluster-Scoped Resource, Singleton
 // @Security BearerAuth
 // @Success 204 "Deleted successfully"
-// @Router /v2/system/cluster-config [delete]
+// @Router /v1beta1/system/cluster-config [delete]
 func (s *server) deleteClusterConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -79,7 +79,7 @@ func (s *server) ListGenericCredentials(
 // @Param project path string true "Project name"
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/projects/{project}/generic-credentials [get]
+// @Router /v1beta1/projects/{project}/generic-credentials [get]
 func (s *server) listProjectGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -118,7 +118,7 @@ func (s *server) listProjectGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/system/generic-credentials [get]
+// @Router /v1beta1/system/generic-credentials [get]
 func (s *server) listSystemGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -155,7 +155,7 @@ func (s *server) listSystemGenericCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/shared/generic-credentials [get]
+// @Router /v1beta1/shared/generic-credentials [get]
 func (s *server) listSharedGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 

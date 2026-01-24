@@ -174,7 +174,7 @@ func Test_server_listPromotions(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/promotions",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/promotions",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -229,11 +229,11 @@ func Test_server_listPromotions_watch(t *testing.T) {
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/projects/"+projectName+"/promotions?watch=true",
+		"/v1beta1/projects/"+projectName+"/promotions?watch=true",
 		[]restWatchTestCase{
 			{
 				name:          "project not found",
-				url:           "/v2/projects/non-existent/promotions?watch=true",
+				url:           "/v1beta1/projects/non-existent/promotions?watch=true",
 				clientBuilder: fake.NewClientBuilder(),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)

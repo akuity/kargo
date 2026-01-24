@@ -91,7 +91,7 @@ func (s *server) ListRepoCredentials(
 // @Param project path string true "Project name"
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/projects/{project}/repo-credentials [get]
+// @Router /v1beta1/projects/{project}/repo-credentials [get]
 func (s *server) listProjectRepoCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -144,7 +144,7 @@ func (s *server) listProjectRepoCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} object "SecretList resource (k8s.io/api/core/v1.SecretList)"
-// @Router /v2/shared/repo-credentials [get]
+// @Router /v1beta1/shared/repo-credentials [get]
 func (s *server) listSharedRepoCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 

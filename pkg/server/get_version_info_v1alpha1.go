@@ -37,7 +37,7 @@ func (s *server) GetVersionInfo(
 // @Security BearerAuth
 // @Produce json
 // @Success 200 {object} version.Version
-// @Router /v2/system/server-version [get]
+// @Router /v1beta1/system/server-version [get]
 func (s *server) getVersionInfo(c *gin.Context) {
 	c.JSON(http.StatusOK, version.GetVersion())
 }

@@ -116,7 +116,7 @@ func Test_server_createProjectRepoCredentials(t *testing.T) {
 	)
 	testRESTEndpoint(
 		t, &config.ServerConfig{SecretManagementEnabled: true},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/repo-credentials",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/repo-credentials",
 		[]restTestCase{
 			{
 				name:          "Secret management disabled",
@@ -284,7 +284,7 @@ func Test_server_createSharedRepoCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodPost, "/v2/shared/repo-credentials",
+		http.MethodPost, "/v1beta1/shared/repo-credentials",
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",

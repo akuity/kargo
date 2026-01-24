@@ -48,7 +48,7 @@ func (s *server) DeleteAPIToken(
 // @Param project path string true "Project name"
 // @Param apitoken path string true "API token name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/apitokens/{apitoken} [delete]
+// @Router /v1beta1/projects/{project}/apitokens/{apitoken} [delete]
 func (s *server) deleteProjectAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -70,7 +70,7 @@ func (s *server) deleteProjectAPIToken(c *gin.Context) {
 // @Security BearerAuth
 // @Param apitoken path string true "API token name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/system/apitokens/{apitoken} [delete]
+// @Router /v1beta1/system/apitokens/{apitoken} [delete]
 func (s *server) deleteSystemAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -98,7 +98,7 @@ type createGenericCredentialsRequest struct {
 // @Param project path string true "Project name"
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
 // @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/projects/{project}/generic-credentials [post]
+// @Router /v1beta1/projects/{project}/generic-credentials [post]
 func (s *server) createProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -143,7 +143,7 @@ func (s *server) createProjectGenericCredentials(c *gin.Context) {
 // @Produce json
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
 // @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/system/generic-credentials [post]
+// @Router /v1beta1/system/generic-credentials [post]
 func (s *server) createSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -187,7 +187,7 @@ func (s *server) createSystemGenericCredentials(c *gin.Context) {
 // @Produce json
 // @Param body body createGenericCredentialsRequest true "Generic credentials"
 // @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/shared/generic-credentials [post]
+// @Router /v1beta1/shared/generic-credentials [post]
 func (s *server) createSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return

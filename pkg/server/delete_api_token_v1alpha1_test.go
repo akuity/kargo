@@ -37,7 +37,7 @@ func Test_server_deleteProjectAPIToken(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/apitokens/"+testToken.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/apitokens/"+testToken.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -150,7 +150,7 @@ func Test_server_deleteSystemAPIToken(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/system/apitokens/"+testToken.Name,
+		http.MethodDelete, "/v1beta1/system/apitokens/"+testToken.Name,
 		[]restTestCase{
 			{
 				name: "token does not exist",

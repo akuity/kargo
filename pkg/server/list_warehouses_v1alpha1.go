@@ -63,7 +63,7 @@ func (s *server) ListWarehouses(
 // @Param project path string true "Project name"
 // @Produce json
 // @Success 200 {object} object "WarehouseList custom resource (github.com/akuity/kargo/api/v1alpha1.WarehouseList)"
-// @Router /v2/projects/{project}/warehouses [get]
+// @Router /v1beta1/projects/{project}/warehouses [get]
 func (s *server) listWarehouses(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

@@ -77,7 +77,7 @@ func (s *server) UpdateResource(
 // @Param upsert query bool false "If true, create a resource if it does not exist"
 // @Param manifest body string true "YAML or JSON manifest(s)"
 // @Success 200 {object} createOrUpdateResourceResponse "Update results"
-// @Router /v2/resources [put]
+// @Router /v1beta1/resources [put]
 func (s *server) updateResources(c *gin.Context) {
 	ctx := c.Request.Context()
 

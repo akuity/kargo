@@ -21,7 +21,7 @@ func Test_server_deleteClusterConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodDelete, "/v2/system/cluster-config",
+		http.MethodDelete, "/v1beta1/system/cluster-config",
 		[]restTestCase{
 			{
 				name: "ClusterConfig does not exist",

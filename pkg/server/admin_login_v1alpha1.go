@@ -81,7 +81,7 @@ func (s *server) AdminLogin(
 // @Tags System
 // @Produce json
 // @Success 200 {object} adminLoginResponse
-// @Router /v2/login [post]
+// @Router /v1beta1/login [post]
 func (s *server) adminLogin(c *gin.Context) {
 	if s.cfg.AdminConfig == nil {
 		_ = c.Error(libhttp.Error(

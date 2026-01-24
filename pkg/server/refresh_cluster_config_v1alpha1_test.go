@@ -21,7 +21,7 @@ func Test_server_refreshClusterConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/system/cluster-config/refresh",
+		http.MethodPost, "/v1beta1/system/cluster-config/refresh",
 		[]restTestCase{
 			{
 				name:          "ClusterConfig not found",

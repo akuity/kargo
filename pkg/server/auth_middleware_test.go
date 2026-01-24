@@ -161,7 +161,7 @@ func TestAuthenticate(t *testing.T) {
 	// The way the tests are structured, we don't need this to be valid. It just
 	// needs to be non-empty.
 	const (
-		testPath        = "/v2/projects"
+		testPath        = "/v1beta1/projects"
 		testIDPIssuer   = "fake-idp-issuer"
 		testKargoIssuer = "fake-kargo-issuer"
 		testToken       = "some-token"
@@ -173,7 +173,7 @@ func TestAuthenticate(t *testing.T) {
 		assertions     func(ctx context.Context, err error)
 	}{
 		"exempt path": {
-			path:           "/v2/system/public-server-config",
+			path:           "/v1beta1/system/public-server-config",
 			authMiddleware: &authMiddleware{},
 			// The path is exempt from authentication, so no user information
 			// should be bound to the context.
@@ -613,21 +613,21 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 	}{
 		{
 			name:           "exempt path - no auth required",
-			path:           "/v2/system/public-server-config",
+			path:           "/v1beta1/system/public-server-config",
 			authMiddleware: &authMiddleware{},
 			expectedStatus: http.StatusOK,
 			expectUserInfo: false,
 		},
 		{
 			name:           "no token provided",
-			path:           "/v2/projects",
+			path:           "/v1beta1/projects",
 			authMiddleware: &authMiddleware{},
 			expectedStatus: http.StatusUnauthorized,
 			expectUserInfo: false,
 		},
 		{
 			name: "valid admin token",
-			path: "/v2/projects",
+			path: "/v1beta1/projects",
 			authMiddleware: &authMiddleware{
 				cfg: config.ServerConfig{
 					AdminConfig: &config.AdminConfig{
@@ -654,7 +654,7 @@ func TestAuthMiddlewareHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			router := gin.New()
 			router.Use(tc.authMiddleware.Handler)
-			router.GET("/v2/*path", func(c *gin.Context) {
+			router.GET("/v1beta1/*path", func(c *gin.Context) {
 				_, hasUser := user.InfoFromContext(c.Request.Context())
 				require.Equal(t, tc.expectUserInfo, hasUser)
 				c.Status(http.StatusOK)

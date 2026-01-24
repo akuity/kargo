@@ -104,7 +104,7 @@ func prepareOutboundWarehouse(w *kargoapi.Warehouse) error {
 // @Param warehouse path string true "Warehouse name"
 // @Produce json
 // @Success 200 {object} object "Warehouse custom resource (github.com/akuity/kargo/api/v1alpha1.Warehouse)"
-// @Router /v2/projects/{project}/warehouses/{warehouse} [get]
+// @Router /v1beta1/projects/{project}/warehouses/{warehouse} [get]
 func (s *server) getWarehouse(c *gin.Context) {
 	ctx := c.Request.Context()
 

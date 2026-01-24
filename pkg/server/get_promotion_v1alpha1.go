@@ -79,7 +79,7 @@ func (s *server) GetPromotion(
 // @Param promotion path string true "Promotion name"
 // @Produce json
 // @Success 200 {object} object "Promotion custom resource (github.com/akuity/kargo/api/v1alpha1.Promotion)"
-// @Router /v2/projects/{project}/promotions/{promotion} [get]
+// @Router /v1beta1/projects/{project}/promotions/{promotion} [get]
 func (s *server) getPromotion(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

@@ -786,7 +786,7 @@ func Test_server_queryFreight(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/freight",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/freight",
 		[]restTestCase{
 			{
 				name:          "Project not found",
@@ -804,7 +804,7 @@ func Test_server_queryFreight(t *testing.T) {
 			},
 			{
 				name:          "Stage not found when filtering by stage",
-				url:           "/v2/projects/" + testProject.Name + "/freight?stage=nonexistent-stage",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?stage=nonexistent-stage",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)
@@ -812,7 +812,7 @@ func Test_server_queryFreight(t *testing.T) {
 			},
 			{
 				name:          "Invalid groupBy value",
-				url:           "/v2/projects/" + testProject.Name + "/freight?groupBy=invalid",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=invalid",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusBadRequest, w.Code)
@@ -820,7 +820,7 @@ func Test_server_queryFreight(t *testing.T) {
 			},
 			{
 				name:          "Group by image repository",
-				url:           "/v2/projects/" + testProject.Name + "/freight?groupBy=image_repo",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=image_repo",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight1),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -828,7 +828,7 @@ func Test_server_queryFreight(t *testing.T) {
 			},
 			{
 				name:          "Group by git repository",
-				url:           "/v2/projects/" + testProject.Name + "/freight?groupBy=git_repo",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=git_repo",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight2),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)

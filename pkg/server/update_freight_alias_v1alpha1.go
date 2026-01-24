@@ -126,7 +126,7 @@ func (s *server) patchFreightAlias(
 // @Param freight-name-or-alias path string true "Freight name or alias"
 // @Param newAlias query string true "New alias"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/freight/{freight-name-or-alias}/alias [patch]
+// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias [patch]
 func (s *server) patchFreightAliasHandler(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

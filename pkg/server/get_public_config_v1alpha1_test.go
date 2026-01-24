@@ -26,7 +26,7 @@ func Test_server_getPublicConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &testConfig,
-		http.MethodGet, "/v2/system/public-server-config",
+		http.MethodGet, "/v1beta1/system/public-server-config",
 		[]restTestCase{
 			{
 				name: "get public config with OIDC",

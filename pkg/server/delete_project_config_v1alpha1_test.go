@@ -26,7 +26,7 @@ func Test_server_deleteProjectConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/config",
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/config",
 		[]restTestCase{
 			{
 				name: "Project does not exist",

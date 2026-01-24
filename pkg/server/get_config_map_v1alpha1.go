@@ -86,7 +86,7 @@ func (s *server) GetConfigMap(
 // @Param configmap path string true "ConfigMap name"
 // @Produce json
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/projects/{project}/configmaps/{configmap} [get]
+// @Router /v1beta1/projects/{project}/configmaps/{configmap} [get]
 func (s *server) getProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -112,7 +112,7 @@ func (s *server) getProjectConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Produce json
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/system/configmaps/{configmap} [get]
+// @Router /v1beta1/system/configmaps/{configmap} [get]
 func (s *server) getSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")
@@ -136,7 +136,7 @@ func (s *server) getSystemConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Produce json
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/shared/configmaps/{configmap} [get]
+// @Router /v1beta1/shared/configmaps/{configmap} [get]
 func (s *server) getSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")

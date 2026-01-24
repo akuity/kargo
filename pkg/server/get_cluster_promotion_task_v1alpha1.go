@@ -67,7 +67,7 @@ func (s *server) GetClusterPromotionTask(
 // @Param cluster-promotion-task path string true "ClusterPromotionTask name"
 // @Produce json
 // @Success 200 {object} object "ClusterPromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTask)"
-// @Router /v2/shared/cluster-promotion-tasks/{cluster-promotion-task} [get]
+// @Router /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task} [get]
 func (s *server) getClusterPromotionTask(c *gin.Context) {
 	ctx := c.Request.Context()
 

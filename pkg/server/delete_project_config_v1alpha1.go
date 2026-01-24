@@ -48,7 +48,7 @@ func (s *server) DeleteProjectConfig(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/config [delete]
+// @Router /v1beta1/projects/{project}/config [delete]
 func (s *server) deleteProjectConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -194,7 +194,7 @@ func Test_server_getClusterConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/system/cluster-config",
+		http.MethodGet, "/v1beta1/system/cluster-config",
 		[]restTestCase{
 			{
 				name: "ClusterConfig does not exist",
@@ -222,7 +222,7 @@ func Test_server_getClusterConfig(t *testing.T) {
 func Test_server_getClusterConfig_watch(t *testing.T) {
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/system/cluster-config?watch=true",
+		"/v1beta1/system/cluster-config?watch=true",
 		[]restWatchTestCase{
 			{
 				name:          "cluster config not found",

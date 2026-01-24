@@ -272,7 +272,7 @@ func Test_server_getPromotion(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/promotions/"+testPromo.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/promotions/"+testPromo.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -314,11 +314,11 @@ func Test_server_getPromotion_watch(t *testing.T) {
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/projects/"+projectName+"/promotions/"+promotionName+"?watch=true",
+		"/v1beta1/projects/"+projectName+"/promotions/"+promotionName+"?watch=true",
 		[]restWatchTestCase{
 			{
 				name: "promotion not found",
-				url:  "/v2/projects/" + projectName + "/promotions/non-existent?watch=true",
+				url:  "/v1beta1/projects/" + projectName + "/promotions/non-existent?watch=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{Name: projectName},

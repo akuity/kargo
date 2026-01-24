@@ -22,7 +22,7 @@ import (
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/stages/{stage}/refresh [post]
+// @Router /v1beta1/projects/{project}/stages/{stage}/refresh [post]
 func (s *server) refreshStage(c *gin.Context) {
 	ctx := c.Request.Context()
 

@@ -26,7 +26,7 @@ func Test_server_refreshProjectConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/config/refresh",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/config/refresh",
 		[]restTestCase{
 			{
 				name:          "Project not found",

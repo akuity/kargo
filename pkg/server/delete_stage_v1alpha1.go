@@ -53,7 +53,7 @@ func (s *server) DeleteStage(
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/stages/{stage} [delete]
+// @Router /v1beta1/projects/{project}/stages/{stage} [delete]
 func (s *server) deleteStage(c *gin.Context) {
 	ctx := c.Request.Context()
 

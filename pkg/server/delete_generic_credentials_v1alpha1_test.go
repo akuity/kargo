@@ -96,7 +96,7 @@ func Test_server_deleteProjectGenericCredentials(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SecretManagementEnabled: true},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/generic-credentials/"+testSecret.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:          "Secret management disabled",
@@ -172,7 +172,7 @@ func Test_server_deleteSystemGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SystemResourcesNamespace: testSystemResourcesNamespace,
 		},
-		http.MethodDelete, "/v2/system/generic-credentials/"+testSecret.Name,
+		http.MethodDelete, "/v1beta1/system/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",
@@ -236,7 +236,7 @@ func Test_server_deleteSharedGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodDelete, "/v2/shared/generic-credentials/"+testSecret.Name,
+		http.MethodDelete, "/v1beta1/shared/generic-credentials/"+testSecret.Name,
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",

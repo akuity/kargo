@@ -53,7 +53,7 @@ func (s *server) DeleteWarehouse(
 // @Param project path string true "Project name"
 // @Param warehouse path string true "Warehouse name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/warehouses/{warehouse} [delete]
+// @Router /v1beta1/projects/{project}/warehouses/{warehouse} [delete]
 func (s *server) deleteWarehouse(c *gin.Context) {
 	ctx := c.Request.Context()
 

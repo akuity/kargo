@@ -48,7 +48,7 @@ func (s *server) DeleteRole(
 // @Param project path string true "Project name"
 // @Param role path string true "Role name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/roles/{role} [delete]
+// @Router /v1beta1/projects/{project}/roles/{role} [delete]
 func (s *server) deleteProjectRole(c *gin.Context) {
 	ctx := c.Request.Context()
 

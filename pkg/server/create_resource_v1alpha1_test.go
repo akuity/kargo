@@ -35,7 +35,7 @@ func Test_server_createResources(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodPost, "/v2/resources",
+		http.MethodPost, "/v1beta1/resources",
 		[]restTestCase{
 			{
 				name: "empty request body",

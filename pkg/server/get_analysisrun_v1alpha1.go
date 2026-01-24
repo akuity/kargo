@@ -82,7 +82,7 @@ func (s *server) GetAnalysisRun(
 // @Param analysis-run path string true "AnalysisRun name"
 // @Produce json
 // @Success 200 {object} object "AnalysisRun custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisRun)"
-// @Router /v2/projects/{project}/analysis-runs/{analysis-run} [get]
+// @Router /v1beta1/projects/{project}/analysis-runs/{analysis-run} [get]
 func (s *server) getAnalysisRun(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
 		_ = c.Error(errArgoRolloutsIntegrationDisabled)

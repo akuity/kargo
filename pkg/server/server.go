@@ -210,7 +210,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 
 	// Add Gin REST router
 	ginRouter := s.setupRESTRouter(ctx)
-	mux.Handle("/v2/", ginRouter)
+	mux.Handle("/v1beta1/", ginRouter)
 
 	dashboardHandler, err := newDashboardRequestHandler()
 	if err != nil {

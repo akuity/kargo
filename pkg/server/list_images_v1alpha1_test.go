@@ -22,7 +22,7 @@ func Test_server_listImages(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/images",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/images",
 		[]restTestCase{
 			{
 				name: "Project does not exist",

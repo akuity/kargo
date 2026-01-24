@@ -52,7 +52,7 @@ type oidcConfig struct {
 // @Tags System, Config
 // @Produce json
 // @Success 200 {object} publicConfig
-// @Router /v2/system/public-server-config [get]
+// @Router /v1beta1/system/public-server-config [get]
 func (s *server) getPublicConfig(c *gin.Context) {
 	var oidcCfg *oidcConfig
 	if s.cfg.OIDCConfig != nil {

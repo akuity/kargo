@@ -278,7 +278,7 @@ func Test_server_updateProjectConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPut, "/v2/projects/"+testProject.Name+"/configmaps/"+testConfigMap.Name,
+		http.MethodPut, "/v1beta1/projects/"+testProject.Name+"/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -366,7 +366,7 @@ func Test_server_updateSystemConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SystemResourcesNamespace: testSystemResourcesNamespace},
-		http.MethodPut, "/v2/system/configmaps/"+testConfigMap.Name,
+		http.MethodPut, "/v1beta1/system/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "invalid JSON in request body",
@@ -442,7 +442,7 @@ func Test_server_updateSharedConfigMap(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
-		http.MethodPut, "/v2/shared/configmaps/"+testConfigMap.Name,
+		http.MethodPut, "/v1beta1/shared/configmaps/"+testConfigMap.Name,
 		[]restTestCase{
 			{
 				name: "invalid JSON in request body",

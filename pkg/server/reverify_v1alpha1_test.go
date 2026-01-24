@@ -36,7 +36,7 @@ func Test_server_reverify(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/stages/"+testStage.Name+"/verification",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/verification",
 		[]restTestCase{{
 			name: "success",
 			clientBuilder: fake.NewClientBuilder().WithObjects(

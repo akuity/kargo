@@ -31,29 +31,29 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		router.Use(newAuthMiddleware(ctx, s.cfg, s.client.InternalClient()))
 	}
 
-	v2 := router.Group("/v2")
+	v1beta1 := router.Group("/v1beta1")
 	{
 		// =====================================================================
 		// Authentication
 		// =====================================================================
-		v2.POST("/login", bodyLimitMiddleware(1*1024*1024), s.adminLogin)
+		v1beta1.POST("/login", bodyLimitMiddleware(1*1024*1024), s.adminLogin)
 
 		// =====================================================================
 		// Generic Resources (CRUD via group/version/kind/namespace/name)
 		// These endpoints accept YAML/JSON manifests and need a larger limit (4MB).
 		// =====================================================================
 		resourceLimit := bodyLimitMiddleware(4 * 1024 * 1024)
-		v2.POST("/resources", resourceLimit, s.createResources)
-		v2.PUT("/resources", resourceLimit, s.updateResources)
-		v2.DELETE("/resources", resourceLimit, s.deleteResources)
+		v1beta1.POST("/resources", resourceLimit, s.createResources)
+		v1beta1.PUT("/resources", resourceLimit, s.updateResources)
+		v1beta1.DELETE("/resources", resourceLimit, s.deleteResources)
 
 		// All other endpoints use a 1MB limit
 		defaultLimit := bodyLimitMiddleware(1 * 1024 * 1024)
 
 		// =====================================================================
-		// System-Level Endpoints (/v2/system/*)
+		// System-Level Endpoints (/v1beta1/system/*)
 		// =====================================================================
-		system := v2.Group("/system")
+		system := v1beta1.Group("/system")
 		system.Use(defaultLimit)
 		{
 			// Configuration
@@ -92,9 +92,9 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		}
 
 		// =====================================================================
-		// Shared Resources (/v2/shared/*)
+		// Shared Resources (/v1beta1/shared/*)
 		// =====================================================================
-		shared := v2.Group("/shared")
+		shared := v1beta1.Group("/shared")
 		shared.Use(defaultLimit)
 		{
 			// Cluster Analysis Templates (Argo Rollouts)
@@ -132,10 +132,10 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		}
 
 		// =====================================================================
-		// Projects (/v2/projects)
+		// Projects (/v1beta1/projects)
 		// =====================================================================
-		v2.GET("/projects", defaultLimit, s.listProjects)
-		project := v2.Group("/projects/:project")
+		v1beta1.GET("/projects", defaultLimit, s.listProjects)
+		project := v1beta1.Group("/projects/:project")
 		project.Use(defaultLimit)
 		project.Use(s.projectExistsMiddleware())
 		{

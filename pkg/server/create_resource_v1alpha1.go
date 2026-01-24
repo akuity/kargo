@@ -107,7 +107,7 @@ func (s *server) CreateResource(
 // @Produce json
 // @Param manifest body string true "YAML or JSON manifest(s)"
 // @Success 201 {object} createResourceResponse "Created successfully"
-// @Router /v2/resources [post]
+// @Router /v1beta1/resources [post]
 func (s *server) createResources(c *gin.Context) {
 	ctx := c.Request.Context()
 

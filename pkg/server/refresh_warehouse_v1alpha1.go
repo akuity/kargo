@@ -21,7 +21,7 @@ import (
 // @Param project path string true "Project name"
 // @Param warehouse path string true "Warehouse name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/warehouses/{warehouse}/refresh [post]
+// @Router /v1beta1/projects/{project}/warehouses/{warehouse}/refresh [post]
 func (s *server) refreshWarehouse(c *gin.Context) {
 	ctx := c.Request.Context()
 

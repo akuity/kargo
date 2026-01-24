@@ -67,7 +67,7 @@ func (s *server) ListPromotions(
 // @Param stage query string false "Stage filter"
 // @Produce json
 // @Success 200 {object} object "PromotionList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionList)"
-// @Router /v2/projects/{project}/promotions [get]
+// @Router /v1beta1/projects/{project}/promotions [get]
 func (s *server) listPromotions(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

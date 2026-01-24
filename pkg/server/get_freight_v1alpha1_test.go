@@ -351,7 +351,7 @@ func Test_server_getFreight(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/freight/"+testFreight.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/freight/"+testFreight.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -385,7 +385,7 @@ func Test_server_getFreight(t *testing.T) {
 			},
 			{
 				name: "gets Freight by alias",
-				url:  "/v2/projects/" + testProject.Name + "/freight/" + testFreight.Alias,
+				url:  "/v1beta1/projects/" + testProject.Name + "/freight/" + testFreight.Alias,
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testFreight,

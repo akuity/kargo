@@ -243,7 +243,7 @@ func Test_server_getProjectConfig(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/config",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/config",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -284,11 +284,11 @@ func Test_server_getProjectConfig_watch(t *testing.T) {
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/projects/"+projectName+"/config?watch=true",
+		"/v1beta1/projects/"+projectName+"/config?watch=true",
 		[]restWatchTestCase{
 			{
 				name:          "project not found",
-				url:           "/v2/projects/non-existent/config?watch=true",
+				url:           "/v1beta1/projects/non-existent/config?watch=true",
 				clientBuilder: fake.NewClientBuilder(),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
 					require.Equal(t, http.StatusNotFound, w.Code)

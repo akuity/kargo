@@ -77,7 +77,7 @@ type revokeRequest struct {
 // @Param project path string true "Project name"
 // @Param body body revokeRequest true "Revoke request"
 // @Success 200 {object} object "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
-// @Router /v2/projects/{project}/roles/revocations [post]
+// @Router /v1beta1/projects/{project}/roles/revocations [post]
 func (s *server) revoke(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

@@ -317,7 +317,7 @@ func Test_server_getWarehouse(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/warehouses/"+testWarehouse.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/warehouses/"+testWarehouse.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -359,11 +359,11 @@ func Test_server_getWarehouse_watch(t *testing.T) {
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/projects/"+projectName+"/warehouses/"+warehouseName+"?watch=true",
+		"/v1beta1/projects/"+projectName+"/warehouses/"+warehouseName+"?watch=true",
 		[]restWatchTestCase{
 			{
 				name: "warehouse not found",
-				url:  "/v2/projects/" + projectName + "/warehouses/non-existent?watch=true",
+				url:  "/v1beta1/projects/" + projectName + "/warehouses/non-existent?watch=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{Name: projectName},

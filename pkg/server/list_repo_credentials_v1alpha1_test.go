@@ -22,7 +22,7 @@ func Test_server_listProjectRepoCredentials(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/repo-credentials",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/repo-credentials",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -83,7 +83,7 @@ func Test_server_listSharedRepoCredentials(t *testing.T) {
 		t, &config.ServerConfig{
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodGet, "/v2/shared/repo-credentials",
+		http.MethodGet, "/v1beta1/shared/repo-credentials",
 		[]restTestCase{
 			{
 				name:          "no credentials exist",

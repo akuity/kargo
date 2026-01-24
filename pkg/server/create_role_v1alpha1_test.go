@@ -45,7 +45,7 @@ func Test_server_createProjectRole(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/roles",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles",
 		[]restTestCase{
 			{
 				name: "Project does not exist",

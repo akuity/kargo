@@ -57,7 +57,7 @@ func (s *server) CreateRole(
 // @Param project path string true "Project name"
 // @Param body body object true "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
 // @Success 201 {object} object "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)"
-// @Router /v2/projects/{project}/roles [post]
+// @Router /v1beta1/projects/{project}/roles [post]
 func (s *server) createProjectRole(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")

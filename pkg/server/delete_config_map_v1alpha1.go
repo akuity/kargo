@@ -62,7 +62,7 @@ func (s *server) DeleteConfigMap(
 // @Param project path string true "Project name"
 // @Param configmap path string true "ConfigMap name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/configmaps/{configmap} [delete]
+// @Router /v1beta1/projects/{project}/configmaps/{configmap} [delete]
 func (s *server) deleteProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -94,7 +94,7 @@ func (s *server) deleteProjectConfigMap(c *gin.Context) {
 // @Security BearerAuth
 // @Param configmap path string true "ConfigMap name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/system/configmaps/{configmap} [delete]
+// @Router /v1beta1/system/configmaps/{configmap} [delete]
 func (s *server) deleteSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")
@@ -127,7 +127,7 @@ func (s *server) deleteSystemConfigMap(c *gin.Context) {
 // @Security BearerAuth
 // @Param configmap path string true "ConfigMap name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/shared/configmaps/{configmap} [delete]
+// @Router /v1beta1/shared/configmaps/{configmap} [delete]
 func (s *server) deleteSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")

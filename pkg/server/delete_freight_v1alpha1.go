@@ -69,7 +69,7 @@ func (s *server) DeleteFreight(
 // @Param project path string true "Project name"
 // @Param freight-name-or-alias path string true "Freight name or alias"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/freight/{freight-name-or-alias} [delete]
+// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias} [delete]
 func (s *server) deleteFreight(c *gin.Context) {
 	project := c.Param("project")
 	nameOrAlias := c.Param("freight-name-or-alias")

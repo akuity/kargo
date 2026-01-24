@@ -194,7 +194,7 @@ func Test_server_getClusterPromotionTask(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/shared/cluster-promotion-tasks/"+testTask.Name,
+		http.MethodGet, "/v1beta1/shared/cluster-promotion-tasks/"+testTask.Name,
 		[]restTestCase{
 			{
 				name: "ClusterPromotionTask does not exist",

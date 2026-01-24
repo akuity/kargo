@@ -115,7 +115,7 @@ func (s *server) GetRole(
 // @Query as-resources boolean false "Return the role as its underlying Kubernetes resources"
 // @Produce json
 // @Success 200 {object} object "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources"
-// @Router /v2/projects/{project}/roles/{role} [get]
+// @Router /v1beta1/projects/{project}/roles/{role} [get]
 func (s *server) getProjectRole(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -170,7 +170,7 @@ func (s *server) getProjectRole(c *gin.Context) {
 // @Query as-resources boolean false "Return the role as its underlying Kubernetes resources"
 // @Produce json
 // @Success 200 {object} object "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources"
-// @Router /v2/system/roles/{role} [get]
+// @Router /v1beta1/system/roles/{role} [get]
 func (s *server) getSystemRole(c *gin.Context) {
 	ctx := c.Request.Context()
 

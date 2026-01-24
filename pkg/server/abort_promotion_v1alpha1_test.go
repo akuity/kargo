@@ -31,7 +31,7 @@ func Test_server_abortPromotion(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/promotions/"+testPromotion.Name+"/abort",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/promotions/"+testPromotion.Name+"/abort",
 		[]restTestCase{{
 			name: "success",
 			clientBuilder: fake.NewClientBuilder().WithObjects(

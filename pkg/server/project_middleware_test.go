@@ -27,7 +27,7 @@ func Test_server_projectExistsMiddleware(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/existing-project/stages/test-stage",
+		http.MethodGet, "/v1beta1/projects/existing-project/stages/test-stage",
 		[]restTestCase{
 			{
 				name: "project does not exist returns 404",

@@ -20,7 +20,7 @@ import (
 // @Produce json
 // @Param project path string true "Project name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/config/refresh [post]
+// @Router /v1beta1/projects/{project}/config/refresh [post]
 func (s *server) refreshProjectConfig(c *gin.Context) {
 	ctx := c.Request.Context()
 

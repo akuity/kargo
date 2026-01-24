@@ -37,7 +37,7 @@ func Test_server_abortVerification(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/stages/"+testStage.Name+"/verification/abort",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/verification/abort",
 		[]restTestCase{{
 			name: "success",
 			clientBuilder: fake.NewClientBuilder().WithObjects(

@@ -99,7 +99,7 @@ func (s *server) DeleteRepoCredentials(
 // @Param project path string true "Project name"
 // @Param repo-credentials path string true "Credentials name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/repo-credentials/{repo-credentials} [delete]
+// @Router /v1beta1/projects/{project}/repo-credentials/{repo-credentials} [delete]
 func (s *server) deleteProjectRepoCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -143,7 +143,7 @@ func (s *server) deleteProjectRepoCredentials(c *gin.Context) {
 // @Security BearerAuth
 // @Param repo-credentials path string true "Credentials name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/shared/repo-credentials/{repo-credentials} [delete]
+// @Router /v1beta1/shared/repo-credentials/{repo-credentials} [delete]
 func (s *server) deleteSharedRepoCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return

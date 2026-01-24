@@ -90,7 +90,7 @@ type deleteResourceResult struct {
 // @Produce json
 // @Param manifest body string true "YAML or JSON manifest(s)"
 // @Success 200 {object} deleteResourceResponse
-// @Router /v2/resources [delete]
+// @Router /v1beta1/resources [delete]
 func (s *server) deleteResources(c *gin.Context) {
 	ctx := c.Request.Context()
 

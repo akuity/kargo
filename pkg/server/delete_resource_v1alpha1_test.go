@@ -36,7 +36,7 @@ func Test_server_deleteResources(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/resources",
+		http.MethodDelete, "/v1beta1/resources",
 		[]restTestCase{
 			{
 				name: "empty request body",

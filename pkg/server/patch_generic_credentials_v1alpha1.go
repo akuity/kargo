@@ -30,7 +30,7 @@ type patchGenericCredentialsRequest struct {
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body patchGenericCredentialsRequest true "GenericCredentials patch"
 // @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/projects/{project}/generic-credentials/{generic-credentials} [patch]
+// @Router /v1beta1/projects/{project}/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchProjectGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -88,7 +88,7 @@ func (s *server) patchProjectGenericCredentials(c *gin.Context) {
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body patchGenericCredentialsRequest true "GenericCredentials patch"
 // @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/system/generic-credentials/{generic-credentials} [patch]
+// @Router /v1beta1/system/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchSystemGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return
@@ -147,7 +147,7 @@ func (s *server) patchSystemGenericCredentials(c *gin.Context) {
 // @Param generic-credentials path string true "Generic credentials name"
 // @Param body body patchGenericCredentialsRequest true "GenericCredentials patch"
 // @Success 200 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v2/shared/generic-credentials/{generic-credentials} [patch]
+// @Router /v1beta1/shared/generic-credentials/{generic-credentials} [patch]
 func (s *server) patchSharedGenericCredentials(c *gin.Context) {
 	if !s.requireSecretManagement(c) {
 		return

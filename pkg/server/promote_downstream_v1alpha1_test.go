@@ -748,7 +748,7 @@ func Test_server_promoteDownstream(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions/downstream",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions/downstream",
 		[]restTestCase{
 			{
 				name:          "Project not found",

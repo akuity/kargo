@@ -49,7 +49,7 @@ func (s *server) Reverify(
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/stages/{stage}/verification [post]
+// @Router /v1beta1/projects/{project}/stages/{stage}/verification [post]
 func (s *server) reverify(c *gin.Context) {
 	ctx := c.Request.Context()
 

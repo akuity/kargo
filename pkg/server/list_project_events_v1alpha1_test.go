@@ -23,7 +23,7 @@ func Test_server_listProjectEvents(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/events",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/events",
 		[]restTestCase{
 			{
 				name: "Project does not exist",

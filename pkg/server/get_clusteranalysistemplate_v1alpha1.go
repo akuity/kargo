@@ -76,7 +76,7 @@ func (s *server) GetClusterAnalysisTemplate(
 // @Param cluster-analysis-template path string true "ClusterAnalysisTemplate name"
 // @Produce json
 // @Success 200 {object} object "ClusterAnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplate)"
-// @Router /v2/shared/cluster-analysis-templates/{cluster-analysis-template} [get]
+// @Router /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template} [get]
 func (s *server) getClusterAnalysisTemplate(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
 		_ = c.Error(errArgoRolloutsIntegrationDisabled)

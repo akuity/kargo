@@ -49,7 +49,7 @@ func (s *server) DeleteClusterAnalysisTemplate(
 // @Security BearerAuth
 // @Param cluster-analysis-template path string true "ClusterAnalysisTemplate name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/shared/cluster-analysis-templates/{cluster-analysis-template} [delete]
+// @Router /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template} [delete]
 func (s *server) deleteClusterAnalysisTemplate(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
 		_ = c.Error(errArgoRolloutsIntegrationDisabled)

@@ -222,7 +222,7 @@ func Test_server_getStage(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/stages/"+testStage.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -269,11 +269,11 @@ func Test_server_getStage_watch(t *testing.T) {
 
 	testRESTWatchEndpoint(
 		t, &config.ServerConfig{},
-		"/v2/projects/"+projectName+"/stages/"+stageName+"?watch=true",
+		"/v1beta1/projects/"+projectName+"/stages/"+stageName+"?watch=true",
 		[]restWatchTestCase{
 			{
 				name: "stage not found",
-				url:  "/v2/projects/" + projectName + "/stages/non-existent?watch=true",
+				url:  "/v1beta1/projects/" + projectName + "/stages/non-existent?watch=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					&kargoapi.Project{
 						ObjectMeta: metav1.ObjectMeta{Name: projectName},

@@ -168,7 +168,7 @@ func (s *server) patchFreightStatus(
 // @Param freight-name-or-alias path string true "Freight name or alias"
 // @Param stage query string true "Stage name"
 // @Success 200 "Success"
-// @Router /v2/projects/{project}/freight/{freight-name-or-alias}/approve [post]
+// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve [post]
 func (s *server) approveFreight(c *gin.Context) {
 	ctx := c.Request.Context()
 

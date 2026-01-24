@@ -16,7 +16,7 @@ import (
 func Test_server_getVersionInfo(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/system/server-version", []restTestCase{
+		http.MethodGet, "/v1beta1/system/server-version", []restTestCase{
 			{
 				name: "gets version info",
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {

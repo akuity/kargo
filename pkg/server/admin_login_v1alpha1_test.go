@@ -30,7 +30,7 @@ func Test_server_adminLogin(t *testing.T) {
 				TokenSigningKey: []byte("test-key"),
 			},
 		},
-		http.MethodPost, "/v2/login",
+		http.MethodPost, "/v1beta1/login",
 		[]restTestCase{
 			{
 				name:         "admin user not enabled",

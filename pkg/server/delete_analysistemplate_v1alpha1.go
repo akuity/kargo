@@ -60,7 +60,7 @@ func (s *server) DeleteAnalysisTemplate(
 // @Param project path string true "Project name"
 // @Param analysis-template path string true "AnalysisTemplate name"
 // @Success 204 "Deleted successfully"
-// @Router /v2/projects/{project}/analysis-templates/{analysis-template} [delete]
+// @Router /v1beta1/projects/{project}/analysis-templates/{analysis-template} [delete]
 func (s *server) deleteAnalysisTemplate(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
 		_ = c.Error(errArgoRolloutsIntegrationDisabled)

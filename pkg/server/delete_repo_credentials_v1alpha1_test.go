@@ -31,7 +31,7 @@ func Test_server_deleteProjectRepoCredentials(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SecretManagementEnabled: true},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/repo-credentials/"+testCreds.Name, []restTestCase{
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/repo-credentials/"+testCreds.Name, []restTestCase{
 			{
 				name:          "Secret management disabled",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
@@ -120,7 +120,7 @@ func Test_server_deleteSharedRepoCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodDelete, "/v2/shared/repo-credentials/"+testCreds.Name, []restTestCase{
+		http.MethodDelete, "/v1beta1/shared/repo-credentials/"+testCreds.Name, []restTestCase{
 			{
 				name:         "Secret management disabled",
 				serverConfig: &config.ServerConfig{SecretManagementEnabled: false},

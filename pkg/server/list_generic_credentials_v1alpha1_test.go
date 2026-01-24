@@ -89,7 +89,7 @@ func Test_server_listProjectGenericCredentials(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/generic-credentials",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/generic-credentials",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -148,7 +148,7 @@ func Test_server_listProjectGenericCredentials(t *testing.T) {
 func Test_server_listSystemGenericCredentials(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{SystemResourcesNamespace: testSystemResourcesNamespace},
-		http.MethodGet, "/v2/system/generic-credentials",
+		http.MethodGet, "/v1beta1/system/generic-credentials",
 		[]restTestCase{
 			{
 				name: "no cluster Secrets exist",
@@ -199,7 +199,7 @@ func Test_server_listSystemGenericCredentials(t *testing.T) {
 func Test_server_listSharedGenericCredentials(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
-		http.MethodGet, "/v2/shared/generic-credentials",
+		http.MethodGet, "/v1beta1/shared/generic-credentials",
 		[]restTestCase{
 			{
 				name: "no shared Secrets exist",

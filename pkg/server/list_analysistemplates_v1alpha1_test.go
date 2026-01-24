@@ -164,7 +164,7 @@ func Test_server_listAnalysisTemplates(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/analysis-templates",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-templates",
 		[]restTestCase{
 			{
 				name:          "Rollouts integration disabled",

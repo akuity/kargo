@@ -33,7 +33,7 @@ func Test_server_grant(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/roles/grants",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles/grants",
 		[]restTestCase{
 			{
 				name:          "Project not found",

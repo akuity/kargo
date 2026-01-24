@@ -103,7 +103,7 @@ func Test_server_createProjectGenericCredentials(t *testing.T) {
 	testData := map[string]string{"foo": "bar", "bat": "baz"}
 	testRESTEndpoint(
 		t, &config.ServerConfig{SecretManagementEnabled: true},
-		http.MethodPost, "/v2/projects/"+testProject.Name+"/generic-credentials",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/generic-credentials",
 		[]restTestCase{
 			{
 				name:          "Secret management disabled",
@@ -232,7 +232,7 @@ func Test_server_createSystemGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SystemResourcesNamespace: testSystemResourcesNamespace,
 		},
-		http.MethodPost, "/v2/system/generic-credentials",
+		http.MethodPost, "/v1beta1/system/generic-credentials",
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",
@@ -348,7 +348,7 @@ func Test_server_createSharedGenericCredentials(t *testing.T) {
 			SecretManagementEnabled:  true,
 			SharedResourcesNamespace: testSharedResourcesNamespace,
 		},
-		http.MethodPost, "/v2/shared/generic-credentials",
+		http.MethodPost, "/v1beta1/shared/generic-credentials",
 		[]restTestCase{
 			{
 				name:         "Secret management disabled",

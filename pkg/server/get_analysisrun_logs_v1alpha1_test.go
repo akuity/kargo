@@ -729,7 +729,7 @@ func Test_server_getAnalysisRunLogs(t *testing.T) {
 	const runName = "fake-analysisrun"
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/analysis-runs/"+runName+"/logs",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/"+runName+"/logs",
 		[]restTestCase{
 			{
 				name:          "Rollouts integration disabled",
@@ -835,7 +835,7 @@ func Test_server_getAnalysisRunLogs_success(t *testing.T) {
 
 	testRESTEndpoint(
 		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/analysis-runs/"+testRun.Name+"/logs",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/"+testRun.Name+"/logs",
 		[]restTestCase{
 			{
 				name: "streams logs successfully",

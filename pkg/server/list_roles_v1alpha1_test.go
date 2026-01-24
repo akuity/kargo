@@ -23,7 +23,7 @@ func Test_server_listProjectRoles(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/roles",
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/roles",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -78,7 +78,7 @@ func Test_server_listProjectRoles(t *testing.T) {
 func Test_server_listSystemRoles(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/system/roles",
+		http.MethodGet, "/v1beta1/system/roles",
 		[]restTestCase{
 			{
 				name:          "no Kargo Roles exist",

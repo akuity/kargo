@@ -33,8 +33,8 @@ const authHeaderKey = "Authorization"
 
 // exemptPaths are REST paths that don't require authentication
 var exemptPaths = map[string]struct{}{
-	"/v2/system/public-server-config": {},
-	"/v2/login":                       {},
+	"/v1beta1/system/public-server-config": {},
+	"/v1beta1/login":                       {},
 }
 
 // authMiddleware is a Gin middleware that authenticates requests

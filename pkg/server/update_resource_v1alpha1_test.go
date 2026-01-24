@@ -36,7 +36,7 @@ func Test_server_updateResources(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPut, "/v2/resources",
+		http.MethodPut, "/v1beta1/resources",
 		[]restTestCase{
 			{
 				name: "empty request body",
@@ -169,7 +169,7 @@ func Test_server_updateResources(t *testing.T) {
 			},
 			{
 				name: "upsert creates resources from JSON",
-				url:  "/v2/resources?upsert=true",
+				url:  "/v1beta1/resources?upsert=true",
 				body: mustJSONArrayBody(testProject, testWarehouse),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -218,7 +218,7 @@ func Test_server_updateResources(t *testing.T) {
 			},
 			{
 				name: "upsert creates resources from YAML",
-				url:  "/v2/resources?upsert=true",
+				url:  "/v1beta1/resources?upsert=true",
 				body: mustYAMLBody(testProject, testWarehouse),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
 					require.Equal(t, http.StatusOK, w.Code)
@@ -267,7 +267,7 @@ func Test_server_updateResources(t *testing.T) {
 			},
 			{
 				name: "upsert updates existing resources from JSON",
-				url:  "/v2/resources?upsert=true",
+				url:  "/v1beta1/resources?upsert=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testWarehouse,
@@ -336,7 +336,7 @@ func Test_server_updateResources(t *testing.T) {
 			},
 			{
 				name: "upsert updates existing resources from YAML",
-				url:  "/v2/resources?upsert=true",
+				url:  "/v1beta1/resources?upsert=true",
 				clientBuilder: fake.NewClientBuilder().WithObjects(
 					testProject,
 					testWarehouse,

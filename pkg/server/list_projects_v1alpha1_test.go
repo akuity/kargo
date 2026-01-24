@@ -109,7 +109,7 @@ func TestListProjects(t *testing.T) {
 func Test_server_listProjects(t *testing.T) {
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects",
+		http.MethodGet, "/v1beta1/projects",
 		[]restTestCase{
 			{
 				name: "no Projects exist",

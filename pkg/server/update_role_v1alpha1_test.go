@@ -75,7 +75,7 @@ func Test_server_updateRole(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodPut, "/v2/projects/"+testProject.Name+"/roles/"+testKargoRole.Name, []restTestCase{
+		http.MethodPut, "/v1beta1/projects/"+testProject.Name+"/roles/"+testKargoRole.Name, []restTestCase{
 			{
 				name: "Project does not exist",
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {

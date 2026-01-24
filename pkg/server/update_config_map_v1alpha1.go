@@ -81,7 +81,7 @@ type updateConfigMapRequest struct {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/projects/{project}/configmaps/{configmap} [put]
+// @Router /v1beta1/projects/{project}/configmaps/{configmap} [put]
 func (s *server) updateProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 
@@ -132,7 +132,7 @@ func (s *server) updateProjectConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/system/configmaps/{configmap} [put]
+// @Router /v1beta1/system/configmaps/{configmap} [put]
 func (s *server) updateSystemConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")
@@ -184,7 +184,7 @@ func (s *server) updateSystemConfigMap(c *gin.Context) {
 // @Param configmap path string true "ConfigMap name"
 // @Param body body updateConfigMapRequest true "ConfigMap"
 // @Success 200 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
-// @Router /v2/shared/configmaps/{configmap} [put]
+// @Router /v1beta1/shared/configmaps/{configmap} [put]
 func (s *server) updateSharedConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()
 	name := c.Param("configmap")

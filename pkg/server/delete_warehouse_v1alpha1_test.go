@@ -27,7 +27,7 @@ func Test_server_deleteWarehouse(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodDelete, "/v2/projects/"+testProject.Name+"/warehouses/"+testWarehouse.Name,
+		http.MethodDelete, "/v1beta1/projects/"+testProject.Name+"/warehouses/"+testWarehouse.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",

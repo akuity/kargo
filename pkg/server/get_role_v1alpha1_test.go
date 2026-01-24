@@ -72,7 +72,7 @@ func Test_server_getProjectRole(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/projects/"+testProject.Name+"/roles/"+testKargoRole.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/roles/"+testKargoRole.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -165,7 +165,7 @@ func Test_server_getSystemRole(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v2/system/roles/"+testKargoRole.Name,
+		http.MethodGet, "/v1beta1/system/roles/"+testKargoRole.Name,
 		[]restTestCase{
 			{
 				name:          "Kargo Role does not exist", // Underlying ServiceAccount does not exist
