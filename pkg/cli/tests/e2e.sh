@@ -6,7 +6,7 @@ set -euo pipefail
 # Kargo CLI API Test Script
 # =============================================================================
 # This script tests the Kargo CLI against the REST API to ensure all commands
-# work correctly with the new /v2/ endpoints.
+# work correctly with the new /v1beta1/ endpoints.
 #
 # Prerequisites:
 # - Kargo API server running and accessible
@@ -436,8 +436,8 @@ if [[ -z "$BEARER_TOKEN" ]]; then
 fi
 
 # Fetch server config to get namespace information
-log_info "Fetching server config from ${API_ADDRESS}/v2/system/server-config"
-SERVER_CONFIG=$(curl -s $CURL_FLAGS -H "Authorization: Bearer $BEARER_TOKEN" "${API_ADDRESS}/v2/system/server-config")
+log_info "Fetching server config from ${API_ADDRESS}/v1beta1/system/server-config"
+SERVER_CONFIG=$(curl -s $CURL_FLAGS -H "Authorization: Bearer $BEARER_TOKEN" "${API_ADDRESS}/v1beta1/system/server-config")
 
 # Extract namespace values
 SYSTEM_RESOURCES_NS=$(echo "$SERVER_CONFIG" | jq -r '.systemResourcesNamespace')
