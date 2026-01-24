@@ -29,6 +29,9 @@ spec:
       annotations:
         configmap/checksum: {{ pick ( include (print $.Template.BasePath "/garbage-collector/configmap.yaml") . | fromYaml ) "data" | toYaml | sha256sum }}
     spec:
+      {{- if .Values.garbageCollector.activeDeadlineSeconds }}
+      activeDeadlineSeconds: {{ .Values.garbageCollector.activeDeadlineSeconds }}
+      {{- end }}
       template:
         metadata:
           labels:
