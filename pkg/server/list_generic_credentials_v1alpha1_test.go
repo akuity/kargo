@@ -167,12 +167,18 @@ func Test_server_listSystemGenericCredentials(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: testSystemResourcesNamespace,
 							Name:      "secret-1",
+							Labels: map[string]string{
+								kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+							},
 						},
 					},
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: testSystemResourcesNamespace,
 							Name:      "secret-2",
+							Labels: map[string]string{
+								kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+							},
 						},
 					},
 				),
@@ -212,12 +218,18 @@ func Test_server_listSharedGenericCredentials(t *testing.T) {
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: testSharedResourcesNamespace,
 							Name:      "secret-1",
+							Labels: map[string]string{
+								kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+							},
 						},
 					},
 					&corev1.Secret{
 						ObjectMeta: metav1.ObjectMeta{
 							Namespace: testSharedResourcesNamespace,
 							Name:      "secret-2",
+							Labels: map[string]string{
+								kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+							},
 						},
 					},
 				),

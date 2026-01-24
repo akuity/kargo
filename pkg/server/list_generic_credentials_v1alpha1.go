@@ -124,7 +124,12 @@ func (s *server) listSystemGenericCredentials(c *gin.Context) {
 
 	list := &corev1.SecretList{}
 	if err := s.client.List(
-		ctx, list, client.InNamespace(s.cfg.SystemResourcesNamespace),
+		ctx,
+		list,
+		client.InNamespace(s.cfg.SystemResourcesNamespace),
+		client.MatchingLabels{
+			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+		},
 	); err != nil {
 		_ = c.Error(err)
 		return
@@ -134,6 +139,10 @@ func (s *server) listSystemGenericCredentials(c *gin.Context) {
 	slices.SortFunc(list.Items, func(lhs, rhs corev1.Secret) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
+
+	for i := range list.Items {
+		list.Items[i] = *sanitizeGenericCredentials(list.Items[i])
+	}
 
 	c.JSON(http.StatusOK, list)
 }
@@ -152,7 +161,12 @@ func (s *server) listSharedGenericCredentials(c *gin.Context) {
 
 	list := &corev1.SecretList{}
 	if err := s.client.List(
-		ctx, list, client.InNamespace(s.cfg.SharedResourcesNamespace),
+		ctx,
+		list,
+		client.InNamespace(s.cfg.SharedResourcesNamespace),
+		client.MatchingLabels{
+			kargoapi.LabelKeyCredentialType: kargoapi.LabelValueCredentialTypeGeneric,
+		},
 	); err != nil {
 		_ = c.Error(err)
 		return
@@ -162,6 +176,10 @@ func (s *server) listSharedGenericCredentials(c *gin.Context) {
 	slices.SortFunc(list.Items, func(lhs, rhs corev1.Secret) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
+
+	for i := range list.Items {
+		list.Items[i] = *sanitizeGenericCredentials(list.Items[i])
+	}
 
 	c.JSON(http.StatusOK, list)
 }
