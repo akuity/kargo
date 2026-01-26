@@ -27,6 +27,8 @@ func (s *server) ListRepoCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
+	var cl client.Client = s.client
+
 	project := req.Msg.GetProject()
 	if project != "" {
 		if err := s.validateProjectExists(ctx, project); err != nil {
@@ -36,6 +38,10 @@ func (s *server) ListRepoCredentials(
 	namespace := project
 	if namespace == "" {
 		namespace = s.cfg.SharedResourcesNamespace
+		// Note: We're using the internal client here so that all authenticated
+		// users can see what shared repo credentials exist without requiring actual
+		// permissions to list those Secrets. The Secrets are heavily redacted.
+		cl = s.client.InternalClient()
 	}
 
 	credsLabelSelector := labels.NewSelector()
@@ -56,7 +62,7 @@ func (s *server) ListRepoCredentials(
 	credsLabelSelector = credsLabelSelector.Add(*credsLabelSelectorRequirement)
 
 	var secretsList corev1.SecretList
-	if err := s.client.List(
+	if err := cl.List(
 		ctx,
 		&secretsList,
 		client.InNamespace(namespace),
@@ -164,8 +170,11 @@ func (s *server) listSharedRepoCredentials(c *gin.Context) {
 
 	credsLabelSelector = credsLabelSelector.Add(*credsLabelSelectorRequirement)
 
+	// Note: We're using the internal client here so that all authenticated
+	// users can see what shared repo credentials exist without requiring actual
+	// permissions to list those Secrets. The Secrets are heavily redacted.
 	list := &corev1.SecretList{}
-	if err := s.client.List(
+	if err := s.client.InternalClient().List(
 		ctx,
 		list,
 		client.InNamespace(s.cfg.SharedResourcesNamespace),
