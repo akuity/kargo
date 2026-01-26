@@ -45,7 +45,7 @@ func Test_server_createProjectAPIToken(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles/"+testSA.Name+"/apitokens",
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/roles/"+testSA.Name+"/api-tokens",
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -175,7 +175,7 @@ func Test_server_createSystemAPIToken(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, nil,
-		http.MethodPost, "/v1beta1/system/roles/"+testSA.Name+"/apitokens",
+		http.MethodPost, "/v1beta1/system/roles/"+testSA.Name+"/api-tokens",
 		[]restTestCase{
 			{
 				name: "invalid JSON in request body",

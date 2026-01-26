@@ -67,12 +67,12 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			// Roles
 			system.GET("/roles", s.listSystemRoles)
 			system.GET("/roles/:role", s.getSystemRole)
-			system.POST("/roles/:role/apitokens", s.createSystemAPIToken)
+			system.POST("/roles/:role/api-tokens", s.createSystemAPIToken)
 
 			// API Tokens
-			system.GET("/apitokens", s.listSystemAPITokens)
-			system.GET("/apitokens/:apitoken", s.getSystemAPIToken)
-			system.DELETE("/apitokens/:apitoken", s.deleteSystemAPIToken)
+			system.GET("/api-tokens", s.listSystemAPITokens)
+			system.GET("/api-tokens/:apitoken", s.getSystemAPIToken)
+			system.DELETE("/api-tokens/:apitoken", s.deleteSystemAPIToken)
 
 			// Generic Credentials
 			system.GET("/generic-credentials", s.listSystemGenericCredentials)
@@ -248,16 +248,16 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 			project.GET("/roles/:role", s.getProjectRole)
 			project.PUT("/roles/:role", s.updateRole)
 			project.DELETE("/roles/:role", s.deleteProjectRole)
-			project.POST("/roles/:role/apitokens", s.createProjectAPIToken)
+			project.POST("/roles/:role/api-tokens", s.createProjectAPIToken)
 
 			// Role Grants/Revocations
 			project.POST("/roles/grants", s.grant)
 			project.POST("/roles/revocations", s.revoke)
 
 			// API Tokens
-			project.GET("/apitokens", s.listProjectAPITokens)
-			project.GET("/apitokens/:apitoken", s.getProjectAPIToken)
-			project.DELETE("/apitokens/:apitoken", s.deleteProjectAPIToken)
+			project.GET("/api-tokens", s.listProjectAPITokens)
+			project.GET("/api-tokens/:apitoken", s.getProjectAPIToken)
+			project.DELETE("/api-tokens/:apitoken", s.deleteProjectAPIToken)
 		}
 	}
 

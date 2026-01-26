@@ -38,7 +38,7 @@ func Test_server_getProjectAPIToken(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/apitokens/"+testToken.Name,
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/api-tokens/"+testToken.Name,
 		[]restTestCase{
 			{
 				name: "Project does not exist",
@@ -91,7 +91,7 @@ func Test_server_getSystemAPIToken(t *testing.T) {
 	}
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
-		http.MethodGet, "/v1beta1/system/apitokens/"+testToken.Name,
+		http.MethodGet, "/v1beta1/system/api-tokens/"+testToken.Name,
 		[]restTestCase{
 			{
 				name: "Secret does not exist",

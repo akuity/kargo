@@ -71,7 +71,7 @@ type createAPITokenRequest struct {
 // @Param role path string true "Role name"
 // @Param body body createAPITokenRequest true "Token"
 // @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v1beta1/projects/{project}/roles/{role}/apitokens [post]
+// @Router /v1beta1/projects/{project}/roles/{role}/api-tokens [post]
 func (s *server) createProjectAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 	project := c.Param("project")
@@ -114,7 +114,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 // @Param role path string true "Role name"
 // @Param body body createAPITokenRequest true "Token"
 // @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
-// @Router /v1beta1/system/roles/{role}/apitokens [post]
+// @Router /v1beta1/system/roles/{role}/api-tokens [post]
 func (s *server) createSystemAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
 	role := c.Param("role")

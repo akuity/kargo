@@ -22,7 +22,7 @@ func Test_server_listProjectAPITokens(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
 	}
 
-	var testURL = "/v1beta1/projects/" + testProject.Name + "/apitokens"
+	var testURL = "/v1beta1/projects/" + testProject.Name + "/api-tokens"
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodGet, testURL,
@@ -144,7 +144,7 @@ func Test_server_listProjectAPITokens(t *testing.T) {
 }
 
 func Test_server_listSystemAPITokens(t *testing.T) {
-	const testURL = "/v1beta1/system/apitokens"
+	const testURL = "/v1beta1/system/api-tokens"
 	testRESTEndpoint(
 		t, &config.ServerConfig{},
 		http.MethodGet, testURL,
