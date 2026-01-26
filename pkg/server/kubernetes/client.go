@@ -12,12 +12,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/watch"
-	"k8s.io/client-go/dynamic"
 	kubescheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -62,14 +60,7 @@ type ClientOptions struct {
 		context.Context,
 		*rest.Config,
 		*runtime.Scheme,
-	) (libClient.Client, error)
-	// NewInternalDynamicClient may be used to take control of how the client's
-	// own internal/underlying client-go dynamic client is created. This is mainly
-	// useful for tests wherein one may wish to inject a custom implementation of
-	// that interface. Ordinarily, the value of this field should be left as
-	// nil/unspecified, in which case, the NewClient function to which this struct
-	// is passed will supply its own default implementation.
-	NewInternalDynamicClient func(*rest.Config) (dynamic.Interface, error)
+	) (libClient.WithWatch, error)
 	// Scheme may be used to take control of the scheme used by the client's own
 	// internal/underlying controller-runtime client. Ordinarily, the value of
 	// this field should be left as nil/unspecified, in which case, the NewClient
@@ -99,19 +90,13 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	if opts.NewInternalClient == nil {
 		opts.NewInternalClient = newDefaultInternalClient
 	}
-	if opts.NewInternalDynamicClient == nil {
-		opts.NewInternalDynamicClient = func(c *rest.Config) (dynamic.Interface, error) {
-			return dynamic.NewForConfig(c)
-		}
-	}
 	return opts, nil
 }
 
-// The Client interface combines the familiar controller-runtime Client
-// interface with helpful Authorized and Watch functions that are absent from
-// that interface.
+// The Client interface combines the familiar controller-runtime WithWatch
+// interface with a helpful Authorized() method.
 type Client interface {
-	libClient.Client
+	libClient.WithWatch
 
 	// Authorize attempts to authorize the user to perform the desired operation
 	// on the specified resource. If the user is not authorized, an error is
@@ -127,32 +112,22 @@ type Client interface {
 	// InternalClient returns the internal controller-runtime client used by this
 	// client. This is useful for cases where the API server needs to bypass
 	// the extra authorization checks performed by this client.
-	InternalClient() libClient.Client
-
-	// Watch returns a suitable implementation of the watch.Interface for
-	// subscribing to the resources described by the provided arguments.
-	Watch(
-		ctx context.Context,
-		obj libClient.Object,
-		namespace string,
-		opts metav1.ListOptions,
-	) (watch.Interface, error)
+	InternalClient() libClient.WithWatch
 }
 
 // client implements Client.
 type client struct {
-	internalClient        libClient.Client
-	internalDynamicClient dynamic.Interface
-	opts                  ClientOptions
+	internalClient libClient.WithWatch
+	opts           ClientOptions
 
 	getAuthorizedClientFn func(
 		ctx context.Context,
-		internalClient libClient.Client,
+		internalClient libClient.WithWatch,
 		verb string,
 		gvr schema.GroupVersionResource,
 		subresource string,
 		key libClient.ObjectKey,
-	) (libClient.Client, error)
+	) (libClient.WithWatch, error)
 }
 
 // NewClient returns an implementation of the Client interface. The interface
@@ -180,24 +155,19 @@ func NewClient(
 	if err != nil {
 		return nil, fmt.Errorf("error building internal client: %w", err)
 	}
-	internalDynamicClient, err := opts.NewInternalDynamicClient(restCfg)
-	if err != nil {
-		return nil, fmt.Errorf("error building internal dynamic client: %w", err)
-	}
 	c := &client{
-		internalClient:        internalClient,
-		internalDynamicClient: internalDynamicClient,
-		opts:                  opts,
+		internalClient: internalClient,
+		opts:           opts,
 	}
 	if opts.SkipAuthorization {
 		c.getAuthorizedClientFn = func(
 			context.Context,
-			libClient.Client,
+			libClient.WithWatch,
 			string,
 			schema.GroupVersionResource,
 			string,
 			libClient.ObjectKey,
-		) (libClient.Client, error) {
+		) (libClient.WithWatch, error) {
 			return internalClient, nil // Unconditionally return the internal client
 		}
 	} else {
@@ -213,7 +183,7 @@ func newDefaultInternalClient(
 	ctx context.Context,
 	restCfg *rest.Config,
 	scheme *runtime.Scheme,
-) (libClient.Client, error) {
+) (libClient.WithWatch, error) {
 	cluster, err := libCluster.New(
 		restCfg,
 		func(clusterOptions *libCluster.Options) {
@@ -224,6 +194,12 @@ func newDefaultInternalClient(
 						&corev1.Secret{},
 					},
 				},
+			}
+			clusterOptions.NewClient = func(
+				cfg *rest.Config,
+				opts libClient.Options,
+			) (libClient.Client, error) {
+				return libClient.NewWithWatch(cfg, opts)
 			}
 		},
 	)
@@ -290,7 +266,12 @@ func newDefaultInternalClient(
 	if err != nil {
 		return nil, fmt.Errorf("error starting cluster: %w", err)
 	}
-	return cluster.GetClient(), nil
+
+	cl, ok := cluster.GetClient().(libClient.WithWatch)
+	if !ok {
+		return nil, errors.New("internal client does not implement WithWatch")
+	}
+	return cl, nil
 }
 
 func (c *client) Get(
@@ -524,16 +505,16 @@ func (c *client) RESTMapper() meta.RESTMapper {
 type authorizingSubResourceClient struct {
 	subResourceType string
 
-	internalClient libClient.Client
+	internalClient libClient.WithWatch
 
 	getAuthorizedClientFn func(
 		ctx context.Context,
-		internalClient libClient.Client,
+		internalClient libClient.WithWatch,
 		verb string,
 		gvr schema.GroupVersionResource,
 		subresource string,
 		key libClient.ObjectKey,
-	) (libClient.Client, error)
+	) (libClient.WithWatch, error)
 }
 
 func (a *authorizingSubResourceClient) Get(
@@ -653,39 +634,36 @@ func (c *client) Authorize(
 	return nil
 }
 
-func (c *client) InternalClient() libClient.Client {
+func (c *client) InternalClient() libClient.WithWatch {
 	return c.internalClient
 }
 
 func (c *client) Watch(
 	ctx context.Context,
-	obj libClient.Object,
-	namespace string,
-	opts metav1.ListOptions,
+	list libClient.ObjectList,
+	opts ...libClient.ListOption,
 ) (watch.Interface, error) {
-	gvr, _, err := gvrAndKeyFromObj(obj, obj, c.internalClient.Scheme())
+	gvr, _, err := gvrAndKeyFromObj(list, nil, c.internalClient.Scheme())
 	if err != nil {
 		return nil, err
 	}
-	if _, err = c.getAuthorizedClientFn(
+	// Extract namespace from ListOptions if provided
+	listOpts := libClient.ListOptions{}
+	listOpts.ApplyOptions(opts)
+	var client libClient.WithWatch
+	if client, err = c.getAuthorizedClientFn(
 		ctx,
 		c.internalClient,
 		"watch",
 		gvr,
 		"", // No subresource
 		libClient.ObjectKey{
-			Namespace: namespace,
+			Namespace: listOpts.Namespace,
 		},
 	); err != nil {
 		return nil, err
 	}
-	var ri dynamic.ResourceInterface
-	if namespace != "" {
-		ri = c.internalDynamicClient.Resource(gvr).Namespace(namespace)
-	} else {
-		ri = c.internalDynamicClient.Resource(gvr)
-	}
-	return ri.Watch(ctx, opts)
+	return client.Watch(ctx, list, opts...)
 }
 
 func GetRestConfig(ctx context.Context, path string) (*rest.Config, error) {
@@ -767,20 +745,20 @@ func gvrAndKeyFromObj(
 // operation being unauthorized and an error is returned.
 func getAuthorizedClient(globalServiceAccountNamespaces []string) func(
 	context.Context,
-	libClient.Client,
+	libClient.WithWatch,
 	string,
 	schema.GroupVersionResource,
 	string,
 	libClient.ObjectKey,
-) (libClient.Client, error) {
+) (libClient.WithWatch, error) {
 	return func(
 		ctx context.Context,
-		internalClient libClient.Client,
+		internalClient libClient.WithWatch,
 		verb string,
 		gvr schema.GroupVersionResource,
 		subresource string,
 		key libClient.ObjectKey,
-	) (libClient.Client, error) {
+	) (libClient.WithWatch, error) {
 		userInfo, ok := user.InfoFromContext(ctx)
 		if !ok {
 			return nil, errors.New("not allowed")

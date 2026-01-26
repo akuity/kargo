@@ -3,10 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"slices"
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -78,4 +80,29 @@ func (s *server) ListProjects(
 		Projects: projects,
 		Total:    int32(total), // nolint: gosec
 	}), nil
+}
+
+// @id ListProjects
+// @Summary List projects
+// @Description List all Projects resources. Returns a ProjectList resource.
+// @Tags Core, Cluster-Scoped Resource
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} object "ProjectList custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectList)"
+// @Router /v1beta1/projects [get]
+func (s *server) listProjects(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	list := &kargoapi.ProjectList{}
+	if err := s.client.List(ctx, list); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	// Sort ascending by name
+	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Project) int {
+		return strings.Compare(lhs.Name, rhs.Name)
+	})
+
+	c.JSON(http.StatusOK, list)
 }

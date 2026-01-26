@@ -6,13 +6,12 @@ import (
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/oauth2"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/config"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 // tokenRefresher is a component that helps to refresh tokens.
@@ -106,27 +105,28 @@ func redeemRefreshToken(
 	refreshToken string,
 	insecureTLS bool,
 ) (string, string, error) {
-	client := GetClient(serverAddress, "", insecureTLS)
-
-	res, err := client.GetPublicConfig(
-		ctx,
-		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
+	apiClient, err := GetClient(serverAddress, "", insecureTLS)
+	if err != nil {
+		return "", "", err
+	}
+	res, err := apiClient.System.GetPublicConfig(
+		system.NewGetPublicConfigParams(),
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
-	if res.Msg.OidcConfig == nil {
+	if res.Payload.OidcConfig == nil {
 		return "", "", errors.New("server does not support OpenID Connect")
 	}
 
-	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
+	provider, err := oidc.NewProvider(ctx, res.Payload.OidcConfig.IssuerURL)
 	if err != nil {
 		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
 
 	cfg := oauth2.Config{
-		ClientID: res.Msg.OidcConfig.ClientId,
+		ClientID: res.Payload.OidcConfig.ClientID,
 		Endpoint: provider.Endpoint(),
 	}
 

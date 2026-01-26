@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
@@ -174,7 +178,7 @@ func TestGetPromotionTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -190,7 +194,7 @@ func TestGetPromotionTask(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
 							WithObjects(
@@ -213,4 +217,52 @@ func TestGetPromotionTask(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_getPromotionTask(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testTask := &kargoapi.PromotionTask{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-task",
+		},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/promotion-tasks/"+testTask.Name,
+		[]restTestCase{
+			{
+				name: "Project does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "PromotionTask does not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "gets PromotionTask",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testTask,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the PromotionTask in the response
+					task := &kargoapi.PromotionTask{}
+					err := json.Unmarshal(w.Body.Bytes(), task)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, task.Namespace)
+					require.Equal(t, testTask.Name, task.Name)
+				},
+			},
+		},
+	)
 }

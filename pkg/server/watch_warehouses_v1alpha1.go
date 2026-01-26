@@ -5,10 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -41,11 +37,11 @@ func (s *server) WatchWarehouses(
 		}
 	}
 
-	opts := metav1.ListOptions{}
+	watchOpts := []libClient.ListOption{libClient.InNamespace(project)}
 	if name != "" {
-		opts.FieldSelector = fields.OneTermEqualSelector(metav1.ObjectNameField, name).String()
+		watchOpts = append(watchOpts, libClient.MatchingFields{"metadata.name": name})
 	}
-	w, err := s.client.Watch(ctx, &kargoapi.Warehouse{}, project, opts)
+	w, err := s.client.Watch(ctx, &kargoapi.WarehouseList{}, watchOpts...)
 	if err != nil {
 		return fmt.Errorf("watch warehouse: %w", err)
 	}
@@ -60,13 +56,9 @@ func (s *server) WatchWarehouses(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			warehouse, ok := e.Object.(*kargoapi.Warehouse)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
-			}
-			var warehouse *kargoapi.Warehouse
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, warehouse); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
 				Warehouse: warehouse,

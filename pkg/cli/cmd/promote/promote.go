@@ -2,17 +2,15 @@ package promote
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -20,6 +18,9 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/watch"
 )
 
 type promotionOptions struct {
@@ -174,7 +175,7 @@ func (o *promotionOptions) validate() error {
 
 // run performs the promotion of the freight using the options.
 func (o *promotionOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -186,61 +187,70 @@ func (o *promotionOptions) run(ctx context.Context) error {
 
 	switch {
 	case o.Abort:
-		if _, err = kargoSvcCli.AbortPromotion(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.AbortPromotionRequest{
-					Project: o.Project,
-					Name:    o.Promotion,
-				},
-			),
+		if _, err = apiClient.Core.AbortPromotion(
+			core.NewAbortPromotionParams().WithProject(o.Project).WithPromotion(o.Promotion),
+			nil,
 		); err != nil {
 			return fmt.Errorf("abort promotion: %w", err)
 		}
 		return nil
 	case o.Stage != "":
-		res, err := kargoSvcCli.PromoteToStage(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.PromoteToStageRequest{
-					Project:      o.Project,
+		var res *core.PromoteToStageCreated
+		if res, err = apiClient.Core.PromoteToStage(
+			core.NewPromoteToStageParams().
+				WithProject(o.Project).
+				WithStage(o.Stage).
+				WithBody(&models.PromoteToStageRequest{
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,
-					Stage:        o.Stage,
-				},
-			),
-		)
+				}),
+			nil,
+		); err != nil {
+			return err
+		}
+		promoJSON, err := json.Marshal(res.Payload)
 		if err != nil {
-			return fmt.Errorf("promote stage: %w", err)
+			return fmt.Errorf("marshal promotion: %w", err)
+		}
+		promo := &kargoapi.Promotion{}
+		if err = json.Unmarshal(promoJSON, promo); err != nil {
+			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotion(ctx, kargoSvcCli, res.Msg.GetPromotion()); err != nil {
+			if err = o.waitForPromotion(ctx, nil, promo); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
-		_ = printer.PrintObj(res.Msg.GetPromotion(), o.Out)
+		_ = printer.PrintObj(promo, o.Out)
 		return nil
 	case o.DownstreamFrom != "":
-		res, err := kargoSvcCli.PromoteDownstream(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.PromoteDownstreamRequest{
-					Project:      o.Project,
+		res, err := apiClient.Core.PromoteDownstream(
+			core.NewPromoteDownstreamParams().
+				WithProject(o.Project).
+				WithStage(o.DownstreamFrom).
+				WithBody(&models.PromoteDownstreamRequest{
 					Freight:      o.FreightName,
 					FreightAlias: o.FreightAlias,
-					Stage:        o.DownstreamFrom,
-				},
-			),
+				}),
+			nil,
 		)
 		if err != nil {
-			return fmt.Errorf("promote stage subscribers: %w", err)
+			return err
+		}
+		var promotions []*kargoapi.Promotion
+		promotionsJSON, err := json.Marshal(res.Payload)
+		if err != nil {
+			return fmt.Errorf("marshal promotions: %w", err)
+		}
+		if err = json.Unmarshal(promotionsJSON, &promotions); err != nil {
+			return fmt.Errorf("unmarshal promotions: %w", err)
 		}
 		if o.Wait {
-			if err = waitForPromotions(ctx, kargoSvcCli, res.Msg.GetPromotions()...); err != nil {
-				return fmt.Errorf("wait for promotions: %w", err)
+			if err = o.waitForPromotions(ctx, promotions...); err != nil {
+				return fmt.Errorf("wait for promotion: %w", err)
 			}
 		}
-		for _, p := range res.Msg.GetPromotions() {
+		for _, p := range promotions {
 			_ = printer.PrintObj(p, o.Out)
 		}
 		return nil
@@ -248,23 +258,30 @@ func (o *promotionOptions) run(ctx context.Context) error {
 	return nil
 }
 
-func waitForPromotions(
+func (o *promotionOptions) waitForPromotions(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
 	p ...*kargoapi.Promotion,
 ) error {
+	watchClient, err := client.GetWatchClientFromConfig(
+		ctx,
+		o.Config,
+		o.ClientOptions,
+	)
+	if err != nil {
+		return fmt.Errorf("get client from config: %w", err)
+	}
 	g, ctx := errgroup.WithContext(ctx)
 	for _, promo := range p {
 		g.Go(func() error {
-			return waitForPromotion(ctx, kargoSvcCli, promo)
+			return o.waitForPromotion(ctx, watchClient, promo)
 		})
 	}
 	return g.Wait()
 }
 
-func waitForPromotion(
+func (o *promotionOptions) waitForPromotion(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 	p *kargoapi.Promotion,
 ) error {
 	if p == nil || p.Status.Phase.IsTerminal() {
@@ -272,28 +289,40 @@ func waitForPromotion(
 		return nil
 	}
 
-	res, err := kargoSvcCli.WatchPromotion(ctx, connect.NewRequest(&v1alpha1.WatchPromotionRequest{
-		Project: p.Namespace,
-		Name:    p.Name,
-	}))
-	if err != nil {
-		return fmt.Errorf("watch promotion: %w", err)
-	}
-	defer func() {
-		if conn, connErr := res.Conn(); connErr == nil {
-			_ = conn.CloseRequest()
+	if watchClient == nil {
+		var err error
+		if watchClient, err = client.GetWatchClientFromConfig(
+			ctx,
+			o.Config,
+			o.ClientOptions,
+		); err != nil {
+			return fmt.Errorf("get client from config: %w", err)
 		}
-	}()
+	}
+
+	eventCh, errCh := watchClient.WatchPromotion(ctx, p.Namespace, p.Name)
 	for {
-		if !res.Receive() {
-			if err = res.Err(); err != nil {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				select {
+				case err := <-errCh:
+					if err != nil {
+						return fmt.Errorf("watch promotion: %w", err)
+					}
+				default:
+				}
+				return errors.New("unexpected end of watch stream")
+			}
+			if event.Object != nil && event.Object.Status.Phase.IsTerminal() {
+				return nil
+			}
+		case err := <-errCh:
+			if err != nil {
 				return fmt.Errorf("watch promotion: %w", err)
 			}
-			return errors.New("unexpected end of watch stream")
-		}
-		msg := res.Msg()
-		if msg.GetPromotion().Status.Phase.IsTerminal() {
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

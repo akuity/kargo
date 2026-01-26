@@ -2,18 +2,17 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -21,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getFreightOptions struct {
@@ -132,67 +132,71 @@ func (o *getFreightOptions) validate() error {
 
 // run gets the freight from the server and prints it to the console.
 func (o *getFreightOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 && len(o.Aliases) == 0 {
-		var resp *connect.Response[v1alpha1.QueryFreightResponse]
-		if resp, err = kargoSvcCli.QueryFreight(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.QueryFreightRequest{
-					Project: o.Project,
-					Origins: o.Origins,
-				},
-			),
-		); err != nil {
+		params := core.NewQueryFreightsRestParams().
+			WithProject(o.Project)
+		if len(o.Origins) > 0 {
+			params = params.WithOrigins(o.Origins)
+		}
+		var res *core.QueryFreightsRestOK
+		if res, err = apiClient.Core.QueryFreightsRest(params, nil); err != nil {
 			return fmt.Errorf("query freight: %w", err)
 		}
-
+		var freightJSON []byte
+		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+			return fmt.Errorf("marshal freight: %w", err)
+		}
+		// The response is {"groups": {"": {"items": [...]}}}
+		type freightList struct {
+			Items []*kargoapi.Freight `json:"items"`
+		}
+		var result struct {
+			Groups map[string]*freightList `json:"groups"`
+		}
+		if err = json.Unmarshal(freightJSON, &result); err != nil {
+			return fmt.Errorf("unmarshal freight: %w", err)
+		}
 		// We didn't specify any groupBy, so there should be one group with an
 		// empty key
-		freight := resp.Msg.GetGroups()[""]
-		return PrintObjects(freight.Freight, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		group := result.Groups[""]
+		if group == nil || len(group.Items) == 0 {
+			return PrintObjects([]*kargoapi.Freight{}, o.PrintFlags, o.IOStreams, o.NoHeaders)
+		}
+		return PrintObjects(group.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
-	res := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
-	errs := make([]error, 0, len(o.Names))
-	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetFreightResponse]
-		if resp, err = kargoSvcCli.GetFreight(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetFreightRequest{
-					Project: o.Project,
-					Name:    name,
-				},
-			),
+	freight := make([]*kargoapi.Freight, 0, len(o.Names)+len(o.Aliases))
+	errs := make([]error, 0, len(o.Names)+len(o.Aliases))
+	for _, nameOrAlias := range append(o.Names, o.Aliases...) {
+		var res *core.GetFreightOK
+		if res, err = apiClient.Core.GetFreight(
+			core.NewGetFreightParams().
+				WithProject(o.Project).
+				WithFreightNameOrAlias(nameOrAlias),
+			nil,
 		); err != nil {
-			errs = append(errs, fmt.Errorf("get freight %s: %w", name, err))
+			errs = append(errs, fmt.Errorf("get freight %s: %w", nameOrAlias, err))
 			continue
 		}
-		res = append(res, resp.Msg.GetFreight())
-	}
-	for _, alias := range o.Aliases {
-		var resp *connect.Response[v1alpha1.GetFreightResponse]
-		if resp, err = kargoSvcCli.GetFreight(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetFreightRequest{
-					Project: o.Project,
-					Alias:   alias,
-				},
-			),
-		); err != nil {
-			errs = append(errs, fmt.Errorf("get freight %s: %w", alias, err))
+		var freightJSON []byte
+		if freightJSON, err = json.Marshal(res.Payload); err != nil {
+			errs = append(errs, fmt.Errorf("marshal freight %s: %w", nameOrAlias, err))
 			continue
 		}
-		res = append(res, resp.Msg.GetFreight())
+		var f *kargoapi.Freight
+		if err = json.Unmarshal(freightJSON, &f); err != nil {
+			errs = append(errs, fmt.Errorf("unmarshal freight %s: %w", nameOrAlias, err))
+			continue
+		}
+		freight = append(freight, f)
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(freight, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print freight: %w", err)
 	}
 	return errors.Join(errs...)
@@ -201,17 +205,17 @@ func (o *getFreightOptions) run(ctx context.Context) error {
 func newFreightTable(list *metav1.List) *metav1.Table {
 	rows := make([]metav1.TableRow, len(list.Items))
 	for i, item := range list.Items {
-		freight := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
+		frt := item.Object.(*kargoapi.Freight) // nolint: forcetypeassert
 		var alias string
-		if freight.Labels != nil {
-			alias = freight.Labels[kargoapi.LabelKeyAlias]
+		if frt.Labels != nil {
+			alias = frt.Labels[kargoapi.LabelKeyAlias]
 		}
 		rows[i] = metav1.TableRow{
 			Cells: []any{
-				freight.Name,
+				frt.Name,
 				alias,
-				freight.Origin.String(),
-				duration.HumanDuration(time.Since(freight.CreationTimestamp.Time)),
+				frt.Origin.String(),
+				duration.HumanDuration(time.Since(frt.CreationTimestamp.Time)),
 			},
 			Object: list.Items[i],
 		}

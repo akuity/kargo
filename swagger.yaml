@@ -1,0 +1,3508 @@
+basePath: /
+definitions:
+  AdminLoginResponse:
+    properties:
+      idToken:
+        type: string
+    type: object
+  ArgoCDShard:
+    properties:
+      namespace:
+        type: string
+      url:
+        type: string
+    type: object
+  Claim:
+    properties:
+      name:
+        type: string
+      values:
+        items:
+          type: string
+        type: array
+    type: object
+  CreateAPITokenRequest:
+    properties:
+      name:
+        type: string
+    type: object
+  CreateConfigMapRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  CreateGenericCredentialsRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+      name:
+        type: string
+    type: object
+  CreateOrUpdateResourceResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/CreateOrUpdateResourceResult'
+        type: array
+    type: object
+  CreateOrUpdateResourceResult:
+    properties:
+      createdResourceManifest:
+        additionalProperties: {}
+        type: object
+      error:
+        type: string
+      updatedResourceManifest:
+        additionalProperties: {}
+        type: object
+    type: object
+  CreateRepoCredentialsRequest:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      password:
+        type: string
+      repoUrl:
+        type: string
+      repoUrlIsRegex:
+        type: boolean
+      type:
+        type: string
+      username:
+        type: string
+    type: object
+  CreateResourceResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/CreateResourceResult'
+        type: array
+    type: object
+  CreateResourceResult:
+    properties:
+      createdResourceManifest:
+        additionalProperties: {}
+        type: object
+      error:
+        type: string
+    type: object
+  DeleteResourceResponse:
+    properties:
+      results:
+        items:
+          $ref: '#/definitions/DeleteResourceResult'
+        type: array
+    type: object
+  DeleteResourceResult:
+    properties:
+      deletedResourceManifest:
+        additionalProperties: {}
+        type: object
+      error:
+        type: string
+    type: object
+  GetConfigResponse:
+    properties:
+      argocdShards:
+        additionalProperties:
+          $ref: '#/definitions/ArgoCDShard'
+        type: object
+      hasAnalysisRunLogsUrlTemplate:
+        type: boolean
+      kargoNamespace:
+        type: string
+      secretManagementEnabled:
+        type: boolean
+      sharedResourcesNamespace:
+        type: string
+      systemResourcesNamespace:
+        type: string
+    type: object
+  GrantRequest:
+    properties:
+      resourceDetails:
+        $ref: '#/definitions/ResourceDetails'
+      role:
+        type: string
+      userClaims:
+        $ref: '#/definitions/UserClaims'
+    type: object
+  ImageStageMap:
+    properties:
+      stages:
+        additionalProperties:
+          format: int32
+          type: integer
+        type: object
+    type: object
+  OIDCConfig:
+    properties:
+      cliClientId:
+        type: string
+      clientId:
+        type: string
+      issuerUrl:
+        type: string
+      scopes:
+        items:
+          type: string
+        type: array
+    type: object
+  PatchConfigMapRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+      removeKeys:
+        items:
+          type: string
+        type: array
+    type: object
+  PatchGenericCredentialsRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+      removeKeys:
+        items:
+          type: string
+        type: array
+    type: object
+  PatchRepoCredentialsRequest:
+    properties:
+      description:
+        type: string
+      password:
+        type: string
+      repoUrl:
+        type: string
+      repoUrlIsRegex:
+        type: boolean
+      type:
+        type: string
+      username:
+        type: string
+    type: object
+  PromoteDownstreamRequest:
+    properties:
+      freight:
+        type: string
+      freightAlias:
+        type: string
+    type: object
+  PromoteToStageRequest:
+    properties:
+      freight:
+        type: string
+      freightAlias:
+        type: string
+    type: object
+  PublicConfig:
+    properties:
+      adminAccountEnabled:
+        type: boolean
+      oidcConfig:
+        $ref: '#/definitions/OIDCConfig'
+      skipAuth:
+        type: boolean
+    type: object
+  ResourceDetails:
+    properties:
+      resourceName:
+        type: string
+      resourceType:
+        type: string
+      verbs:
+        items:
+          type: string
+        type: array
+    type: object
+  RevokeRequest:
+    properties:
+      resourceDetails:
+        $ref: '#/definitions/ResourceDetails'
+      role:
+        type: string
+      userClaims:
+        $ref: '#/definitions/UserClaims'
+    type: object
+  TagMap:
+    properties:
+      tags:
+        additionalProperties:
+          $ref: '#/definitions/ImageStageMap'
+        type: object
+    type: object
+  UpdateConfigMapRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+    type: object
+  UpdateGenericCredentialsRequest:
+    properties:
+      data:
+        additionalProperties:
+          type: string
+        type: object
+      description:
+        type: string
+    type: object
+  UpdateRepoCredentialsRequest:
+    properties:
+      description:
+        type: string
+      password:
+        type: string
+      repoUrl:
+        type: string
+      repoUrlIsRegex:
+        type: boolean
+      type:
+        type: string
+      username:
+        type: string
+    type: object
+  UserClaims:
+    properties:
+      claims:
+        items:
+          $ref: '#/definitions/Claim'
+        type: array
+    type: object
+  github_com_akuity_kargo_pkg_x_version.Version:
+    properties:
+      buildDate:
+        description: BuildDate is the date/time on which the application was built.
+        type: string
+      compiler:
+        description: Compiler indicates what Go compiler was used for the build.
+        type: string
+      gitCommit:
+        description: |-
+          GitCommit is the ID (sha) of the last commit to the application's source
+          code that is included in this build.
+        type: string
+      gitTreeDirty:
+        description: |-
+          GitTreeDirty is true if the application's source code contained
+          uncommitted changes at the time it was built; otherwise it is false.
+        type: boolean
+      goVersion:
+        description: GoVersion is the version of Go that was used to build the application.
+        type: string
+      platform:
+        description: |-
+          Platform indicates the OS and CPU architecture for which the application
+          was built.
+        type: string
+      version:
+        description: Version is a human-friendly version string.
+        type: string
+    type: object
+info:
+  contact: {}
+  description: REST API for Kargo
+  title: Kargo API
+  version: v1alpha1
+paths:
+  /v1beta1/login:
+    post:
+      description: Authenticate as the admin user if enabled.
+      operationId: AdminLogin
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/AdminLoginResponse'
+      security:
+      - BearerAuth: []
+      summary: Admin login
+      tags:
+      - System
+  /v1beta1/projects:
+    get:
+      description: List all Projects resources. Returns a ProjectList resource.
+      operationId: ListProjects
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ProjectList custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List projects
+      tags:
+      - Core
+      - Cluster-Scoped Resource
+  /v1beta1/projects/{project}:
+    delete:
+      description: Delete a Project resource and its associated namespace.
+      operationId: DeleteProject
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Project
+      tags:
+      - Core
+      - Cluster-Scoped Resource
+    get:
+      description: Retrieve a Project resource.
+      operationId: GetProject
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Project custom resource (github.com/akuity/kargo/api/v1alpha1.Project)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Project resource
+      tags:
+      - Core
+      - Cluster-Scoped Resource
+  /v1beta1/projects/{project}/analysis-runs/{analysis-run}:
+    get:
+      description: Retrieve an AnalysisRun resource from a project's namespace.
+      operationId: GetAnalysisRun
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: AnalysisRun name
+        in: path
+        name: analysis-run
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AnalysisRun custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisRun)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve an AnalysisRun
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs:
+    get:
+      description: Stream logs from an AnalysisRun job as Server-Sent Events (SSE).
+      operationId: GetAnalysisRunLogs
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: AnalysisRun name
+        in: path
+        name: analysis-run
+        required: true
+        type: string
+      - description: Metric name
+        in: query
+        name: metricName
+        type: string
+      - description: Container name
+        in: query
+        name: containerName
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Log stream (SSE)
+          schema:
+            type: string
+      security:
+      - BearerAuth: []
+      summary: Stream AnalysisRun logs
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/analysis-templates:
+    get:
+      description: List AnalysisTemplate resources from a project's namespace.
+      operationId: ListAnalysisTemplates
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List AnalysisTemplates
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/analysis-templates/{analysis-template}:
+    delete:
+      description: Delete an AnalysisTemplate resource from a project's namespace.
+      operationId: DeleteAnalysisTemplate
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: AnalysisTemplate name
+        in: path
+        name: analysis-template
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete an AnalysisTemplate
+      tags:
+      - Verifications
+      - Project-Level
+    get:
+      description: |-
+        Retrieve an AnalysisTemplate resource from a project's
+        namespace.
+      operationId: GetAnalysisTemplate
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: AnalysisTemplate name
+        in: path
+        name: analysis-template
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve an AnalysisTemplate
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/api-tokens:
+    get:
+      description: |-
+        List project-level API tokens. Returns a Kubernetes SecretList
+        resource containing heavily redacted Secrets.
+      operationId: ListProjectAPITokens
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role name filter
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level API tokens
+      tags:
+      - Rbac
+      - Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/api-tokens/{apitoken}:
+    delete:
+      description: Delete a project-level API token from a project's namespace.
+      operationId: DeleteProjectAPIToken
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: API token name
+        in: path
+        name: apitoken
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a project-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - Project-Level
+    get:
+      description: |-
+        Retrieve a project-level API token by name. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: GetProjectAPIToken
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: API token name
+        in: path
+        name: apitoken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a project-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/config:
+    delete:
+      description: |-
+        Delete the single ProjectConfig resource from a project's
+        namespace.
+      operationId: DeleteProjectConfig
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a ProjectConfig resource
+      tags:
+      - Core
+      - Project-Level
+      - Config
+      - Singleton
+    get:
+      description: |-
+        Retrieve the single ProjectConfig resource from a project's
+        namespace.
+      operationId: GetProjectConfig
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ProjectConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectConfig)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve ProjectConfig
+      tags:
+      - Core
+      - Project-Level
+      - Config
+      - Singleton
+  /v1beta1/projects/{project}/config/refresh:
+    post:
+      description: |-
+        Refresh the single ProjectConfig resource in a project's
+        namespace. Refreshing enqueues the resource for reconciliation
+        by its corresponding controller.
+      operationId: RefreshProjectConfig
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Refresh ProjectConfig
+      tags:
+      - Core
+      - Config
+      - Project-Level
+      - Singleton
+  /v1beta1/projects/{project}/configmaps:
+    get:
+      description: |-
+        List ConfigMap resources from a project's namespace. Returns a
+        Kubernetes ConfigMapList resource.
+      operationId: ListProjectConfigMaps
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level ConfigMaps
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a ConfigMap in a project's namespace. Returns the created
+        Kubernetes ConfigMap resource.
+      operationId: CreateProjectConfigMap
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a project-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+  /v1beta1/projects/{project}/configmaps/{configmap}:
+    delete:
+      description: Delete a ConfigMap from a project's namespace.
+      operationId: DeleteProjectConfigMap
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a project-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+    get:
+      description: Retrieve a ConfigMap by name from a project's namespace.
+      operationId: GetProjectConfigMap
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a project-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch a ConfigMap in a project's namespace. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns the updated Kubernetes ConfigMap resource.
+      operationId: PatchProjectConfigMap
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch a project-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace a ConfigMap in a project's namespace. All existing data
+        is replaced. Returns the updated Kubernetes ConfigMap resource.
+      operationId: UpdateProjectConfigMap
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace a project-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Project-Level
+  /v1beta1/projects/{project}/events:
+    get:
+      description: |-
+        List Kubernetes Events from a project's namespace. Returns a
+        Kubernetes EventList resource.
+      operationId: ListProjectEvents
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: EventList resource (k8s.io/api/core/v1.EventList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level Kubernetes Events
+      tags:
+      - Events
+      - Project-Level
+  /v1beta1/projects/{project}/freight:
+    get:
+      description: Query and filter Freight resources from a project's namespace.
+      operationId: QueryFreightsRest
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name to get available freight for
+        in: query
+        name: stage
+        type: string
+      - collectionFormat: csv
+        description: Warehouse names to get freight from
+        in: query
+        items:
+          type: string
+        name: origins
+        type: array
+      - description: Group filter
+        in: query
+        name: group
+        type: string
+      - description: Group by (image_repo, git_repo, chart_repo)
+        in: query
+        name: groupBy
+        type: string
+      - description: Order by (first_seen, tag)
+        in: query
+        name: orderBy
+        type: string
+      - description: Reverse order
+        in: query
+        name: reverse
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Map of freight groups
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Query Freight
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}:
+    delete:
+      description: |-
+        Delete a Freight resource from a project's namespace by name or
+        alias.
+      operationId: DeleteFreight
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Freight resource
+      tags:
+      - Core
+      - Project-Level
+    get:
+      description: |-
+        Retrieve a Freight resource from a project's namespace by name
+        or alias.
+      operationId: GetFreight
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Freight resource
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias:
+    patch:
+      consumes:
+      - application/json
+      description: Patch a Freight resource's human-friendly alias.
+      operationId: PatchFreightAlias
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        type: string
+      - description: New alias
+        in: query
+        name: newAlias
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Patch a Freight resource's alias
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve:
+    post:
+      description: Approve Freight for promotion to a Stage.
+      operationId: ApproveFreight
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Freight name or alias
+        in: path
+        name: freight-name-or-alias
+        required: true
+        type: string
+      - description: Stage name
+        in: query
+        name: stage
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Approve Freight for promotion to a Stage
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/generic-credentials:
+    get:
+      description: |-
+        List project-level generic credentials. Returns a Kubernetes
+        SecretList resource containing heavily redacted Secrets.
+      operationId: ListProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create project-level generic credentials. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: CreateProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Generic credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/generic-credentials/{generic-credentials}:
+    delete:
+      description: Delete generic credentials from a project's namespace.
+      operationId: DeleteProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+    get:
+      description: |-
+        Retrieve project-level generic credentials by name. Returns a
+        heavily redacted Kubernetes Secret resource.
+      operationId: GetProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch project-level generic credentials. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: PatchProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace project-level generic credentials. All existing data is
+        replaced. Returns a heavily redacted Kubernetes Secret resource.
+      operationId: UpdateProjectGenericCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace project-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/images:
+    get:
+      description: |-
+        List container images referenced by Freight resources in a
+        project's namespace.
+      operationId: ListImages
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              $ref: '#/definitions/TagMap'
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List container images
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotion-tasks:
+    get:
+      description: |-
+        List PromotionTask resources from a project's namespace. Returns
+        a PromotionTaskList resource.
+      operationId: ListPromotionTasks
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: PromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTaskList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List PromotionTasks
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotion-tasks/{promotion-task}:
+    get:
+      description: Retrieve a PromotionTask resource from a project's namespace.
+      operationId: GetPromotionTask
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: PromotionTask name
+        in: path
+        name: promotion-task
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: PromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTask)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a PromotionTask
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotions:
+    get:
+      description: |-
+        List Promotion resources from a project's namespace. Returns a
+        PromotionList resource.
+      operationId: ListPromotions
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage filter
+        in: query
+        name: stage
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: PromotionList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Promotions
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotions/{promotion}:
+    get:
+      description: Retrieve a Promotion resource from a project's namespace.
+      operationId: GetPromotion
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Promotion name
+        in: path
+        name: promotion
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Promotion custom resource (github.com/akuity/kargo/api/v1alpha1.Promotion)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Promotion
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotions/{promotion}/abort:
+    post:
+      description: Abort a running Promotion.
+      operationId: AbortPromotion
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Promotion name
+        in: path
+        name: promotion
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Abort a Promotion
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/promotions/{promotion}/refresh:
+    post:
+      description: |-
+        Refresh a Promotion resource in a project's namespace.
+        Refreshing enqueues the resource for reconciliation by its
+        corresponding controller.
+      operationId: RefreshPromotion
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Promotion name
+        in: path
+        name: promotion
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Refresh a Promotion
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/repo-credentials:
+    get:
+      description: |-
+        List project-level repository credentials. Returns a SecretList
+        resource containing heavily redacted Secrets.
+      operationId: ListProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create project-level repository credentials. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: CreateProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/repo-credentials/{repo-credentials}:
+    delete:
+      description: Delete repository credentials from a project's namespace.
+      operationId: DeleteProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+    get:
+      description: |-
+        Retrieve project-level repository credentials by name. Returns a
+        heavily redacted Kubernetes Secret resource.
+      operationId: GetProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch project-level repository credentials. Only provided fields
+        are updated. Returns a heavily redacted Kubernetes Secret resource.
+      operationId: PatchProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Repo credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace project-level repository credentials. All fields are replaced.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: UpdateProjectRepoCredentials
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Repo credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace project-level repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/roles:
+    get:
+      description: |-
+        List project-level Kargo Role virtual resources. Returns a
+        RoleList resource.
+      operationId: ListProjectRoles
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List project-level Kargo Role virtual resources
+      tags:
+      - Rbac
+      - Project-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a project-level Kargo Role virtual resource by creating
+        the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+        resources.
+      operationId: CreateProjectRole
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a project-level Kargo Role virtual resource
+      tags:
+      - Rbac
+      - Project-Level
+  /v1beta1/projects/{project}/roles/{role}:
+    delete:
+      description: |-
+        Delete a project-level Kargo Role virtual resource by deleting
+        the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+        resources from the project's namespace.
+      operationId: DeleteProjectRole
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a project-level Kargo Role virtual resource
+      tags:
+      - Rbac
+      - Project-Level
+    get:
+      description: |-
+        Retrieve a project-level Kargo Role virtual resource by name.
+        Returns a Kargo Role virtual resource or its underlying
+        Kubernetes resources.
+      operationId: GetProjectRole
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes
+            resources
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a project-level Kargo Role virtual resource
+      tags:
+      - Rbac
+      - Project-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Update a project-level Kargo Role virtual resource by updating
+        the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+        resources.
+      operationId: UpdateRole
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      - description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Update a project-level Kargo Role virtual resource
+      tags:
+      - Rbac
+      - Project-Level
+  /v1beta1/projects/{project}/roles/{role}/api-tokens:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a project-level API token associated with a Kargo Role
+        virtual resource. Returns a Kubernetes Secret resource
+        representing the token. Store it securely. The token is not
+        retrievable via the Kargo API after creation except in a
+        redacted form.
+      operationId: CreateProjectAPIToken
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      - description: Token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateAPITokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a project-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - Project-Level
+  /v1beta1/projects/{project}/roles/grants:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Grant a project-level Kargo Role to users or grant permissions
+        to a project-level Kargo Role.
+      operationId: Grant
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Grant request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/GrantRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Grant permissions
+      tags:
+      - Rbac
+      - Project-Level
+  /v1beta1/projects/{project}/roles/revocations:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Revoke a project-level Kargo Role from users or revoke
+        permissions from a project-level Kargo Role.
+      operationId: Revoke
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Revoke request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/RevokeRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Revoke permissions
+      tags:
+      - Rbac
+      - Project-Level
+  /v1beta1/projects/{project}/stages:
+    get:
+      description: |-
+        List Stage resources from a project's namespace. Returns a
+        StageList resource.
+      operationId: ListStages
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Stages
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}:
+    delete:
+      description: Delete a Stage resource from a project's namespace.
+      operationId: DeleteStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Stage
+      tags:
+      - Core
+      - Project-Level
+    get:
+      description: Retrieve a Stage resource from a project's namespace.
+      operationId: GetStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Stage custom resource (github.com/akuity/kargo/api/v1alpha1.Stage)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Stage
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}/promotions:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a Promotion resource to transition a specified Stage into
+        the state represented by the specified Freight.
+      operationId: PromoteToStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      - description: Promote request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PromoteToStageRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Promote to Stage
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}/promotions/downstream:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Creates a Promotion resource for each of a Stage's immediately
+        downstream Stages.
+      operationId: PromoteDownstream
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      - description: Promote request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PromoteDownstreamRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Promotions created
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Promote downstream
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}/refresh:
+    post:
+      description: |-
+        Refresh a Stage resource in a project's namespace. Refreshing
+        enqueues the resource for reconciliation by its corresponding
+        controller.
+      operationId: RefreshStage
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Refresh a Stage
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}/verification:
+    post:
+      description: |-
+        Trigger re-verification of the Freight currently in use by a
+        Stage.
+      operationId: Reverify
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Reverify Freight
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/stages/{stage}/verification/abort:
+    post:
+      description: Abort a running Verification process.
+      operationId: AbortVerification
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Stage name
+        in: path
+        name: stage
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Abort a running Verification process
+      tags:
+      - Verifications
+      - Project-Level
+  /v1beta1/projects/{project}/warehouses:
+    get:
+      description: |-
+        List Warehouse resources from a project's namespace. Returns a
+        WarehouseList resource.
+      operationId: ListWarehouses
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: WarehouseList custom resource (github.com/akuity/kargo/api/v1alpha1.WarehouseList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List Warehouses
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/warehouses/{warehouse}:
+    delete:
+      description: Delete a Warehouse resource from a project's namespace.
+      operationId: DeleteWarehouse
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Warehouse name
+        in: path
+        name: warehouse
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a Warehouse
+      tags:
+      - Core
+      - Project-Level
+    get:
+      description: Retrieve a Warehouse resource from a project's namespace.
+      operationId: GetWarehouse
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Warehouse name
+        in: path
+        name: warehouse
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Warehouse custom resource (github.com/akuity/kargo/api/v1alpha1.Warehouse)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a Warehouse
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/projects/{project}/warehouses/{warehouse}/refresh:
+    post:
+      description: |-
+        Refresh a Warehouse resource in a project's namespace.
+        Refreshing enqueues the resource for reconciliation by its
+        corresponding controller.
+      operationId: RefreshWarehouse
+      parameters:
+      - description: Project name
+        in: path
+        name: project
+        required: true
+        type: string
+      - description: Warehouse name
+        in: path
+        name: warehouse
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Refresh a Warehouse
+      tags:
+      - Core
+      - Project-Level
+  /v1beta1/resources:
+    delete:
+      consumes:
+      - text/plain
+      description: |-
+        Delete one or more Kargo resources using namespaces and names
+        obtained from YAML or JSON manifests.
+      operationId: DeleteResource
+      parameters:
+      - description: YAML or JSON manifest(s)
+        in: body
+        name: manifest
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/DeleteResourceResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete resources
+      tags:
+      - Resources
+    post:
+      consumes:
+      - text/plain
+      description: Create one or more Kargo resources from YAML or JSON manifests.
+      operationId: CreateResource
+      parameters:
+      - description: YAML or JSON manifest(s)
+        in: body
+        name: manifest
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created successfully
+          schema:
+            $ref: '#/definitions/CreateResourceResponse'
+      security:
+      - BearerAuth: []
+      summary: Create resources
+      tags:
+      - Resources
+    put:
+      consumes:
+      - text/plain
+      description: Update (or optionally, upsert) one or more Kargo resources from
+      operationId: UpdateResource
+      parameters:
+      - description: If true, create a resource if it does not exist
+        in: query
+        name: upsert
+        type: boolean
+      - description: YAML or JSON manifest(s)
+        in: body
+        name: manifest
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Update results
+          schema:
+            $ref: '#/definitions/CreateOrUpdateResourceResponse'
+      security:
+      - BearerAuth: []
+      summary: Update resources
+      tags:
+      - Resources
+  /v1beta1/shared/cluster-analysis-templates:
+    get:
+      description: |-
+        List ClusterAnalysisTemplate resources. Returns a
+        ClusterAnalysisTemplateList resource.
+      operationId: ListClusterAnalysisTemplates
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List ClusterAnalysisTemplates
+      tags:
+      - Verifications
+      - Shared
+      - Cluster-Scoped Resource
+  /v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}:
+    delete:
+      description: Delete a ClusterAnalysisTemplate resource.
+      operationId: DeleteClusterAnalysisTemplate
+      parameters:
+      - description: ClusterAnalysisTemplate name
+        in: path
+        name: cluster-analysis-template
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a ClusterAnalysisTemplate
+      tags:
+      - Verifications
+      - Shared
+      - Cluster-Scoped Resource
+    get:
+      description: Retrieve a ClusterAnalysisTemplate by name.
+      operationId: GetClusterAnalysisTemplate
+      parameters:
+      - description: ClusterAnalysisTemplate name
+        in: path
+        name: cluster-analysis-template
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ClusterAnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplate)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a ClusterAnalysisTemplate
+      tags:
+      - Verifications
+      - Shared
+      - Cluster-Scoped Resource
+  /v1beta1/shared/cluster-promotion-tasks:
+    get:
+      description: |-
+        List ClusterPromotionTask resources. Returns a
+        ClusterPromotionTaskList resource.
+      operationId: ListClusterPromotionTasks
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ClusterPromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTaskList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List ClusterPromotionTasks
+      tags:
+      - Core
+      - Shared
+      - Cluster-Scoped Resource
+  /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}:
+    get:
+      description: Retrieve a ClusterPromotionTask by name.
+      operationId: GetClusterPromotionTask
+      parameters:
+      - description: ClusterPromotionTask name
+        in: path
+        name: cluster-promotion-task
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ClusterPromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTask)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a ClusterPromotionTask
+      tags:
+      - Core
+      - Shared
+      - Cluster-Scoped Resource
+  /v1beta1/shared/configmaps:
+    get:
+      description: |-
+        List shared ConfigMap resources referenceable by all projects.
+        Returns a Kubernetes ConfigMapList resource.
+      operationId: ListSharedConfigMaps
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List shared ConfigMaps
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a shared ConfigMap referenceable by all projects. Returns
+        the created Kubernetes ConfigMap resource.
+      operationId: CreateSharedConfigMap
+      parameters:
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a shared ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+  /v1beta1/shared/configmaps/{configmap}:
+    delete:
+      description: Delete a shared ConfigMap.
+      operationId: DeleteSharedConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a shared ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+    get:
+      description: Retrieve a shared ConfigMap by name.
+      operationId: GetSharedConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a shared ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch a shared ConfigMap. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns the updated Kubernetes ConfigMap resource.
+      operationId: PatchSharedConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch a shared ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace a shared ConfigMap. All existing data is replaced.
+        Returns the updated Kubernetes ConfigMap resource.
+      operationId: UpdateSharedConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace a shared ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - Shared
+  /v1beta1/shared/generic-credentials:
+    get:
+      description: |-
+        List shared generic credentials. Returns a Kubernetes SecretList
+        resource containing heavily redacted Secrets.
+      operationId: ListSharedGenericCredentials
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create shared generic credentials referenceable by all
+        projects. Returns a heavily redacted Kubernetes Secret resource.
+      operationId: CreateSharedGenericCredentials
+      parameters:
+      - description: Generic credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+  /v1beta1/shared/generic-credentials/{generic-credentials}:
+    delete:
+      description: Delete shared generic credentials.
+      operationId: DeleteSharedGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+    get:
+      description: |-
+        Retrieve shared generic credentials by name. Returns a
+        heavily redacted Kubernetes Secret resource.
+      operationId: GetSharedGenericCredentials
+      parameters:
+      - description: Credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch shared generic credentials. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: PatchSharedGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace shared generic credentials. All existing data is replaced.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: UpdateSharedGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace shared generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - Shared
+  /v1beta1/shared/repo-credentials:
+    get:
+      description: |-
+        List shared repository credentials. Returns a SecretList
+        resource containing heavily redacted Secrets.
+      operationId: ListSharedRepoCredentials
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create shared repository credentials. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: CreateSharedRepoCredentials
+      parameters:
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+  /v1beta1/shared/repo-credentials/{repo-credentials}:
+    delete:
+      description: Delete shared repository credentials.
+      operationId: DeleteSharedRepoCredentials
+      parameters:
+      - description: Credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+    get:
+      description: |-
+        Retrieve shared repository credentials by name. Returns a
+        heavily redacted Kubernetes Secret resource.
+      operationId: GetSharedRepoCredentials
+      parameters:
+      - description: Credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch shared repository credentials. Only provided fields
+        are updated. Returns a heavily redacted Kubernetes Secret resource.
+      operationId: PatchSharedRepoCredentials
+      parameters:
+      - description: Repo credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace shared repository credentials. All fields are replaced.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: UpdateSharedRepoCredentials
+      parameters:
+      - description: Repo credentials name
+        in: path
+        name: repo-credentials
+        required: true
+        type: string
+      - description: Credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateRepoCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace shared repository credentials
+      tags:
+      - Credentials
+      - Repo Credentials
+      - Shared
+  /v1beta1/system/api-tokens:
+    get:
+      description: |-
+        List system-level API tokens. Returns a Kubernetes SecretList
+        resource containing heavily redacted Secrets.
+      operationId: ListSystemAPITokens
+      parameters:
+      - description: Role name filter
+        in: query
+        name: role
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List system-level API tokens
+      tags:
+      - Rbac
+      - Credentials
+      - System-Level
+  /v1beta1/system/api-tokens/{apitoken}:
+    delete:
+      description: Delete a system-level API token.
+      operationId: DeleteSystemAPIToken
+      parameters:
+      - description: API token name
+        in: path
+        name: apitoken
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a system-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - System-Level
+    get:
+      description: |-
+        Retrieve a system-level API token by name. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: GetSystemAPIToken
+      parameters:
+      - description: API token name
+        in: path
+        name: apitoken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a system-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - System-Level
+  /v1beta1/system/cluster-config:
+    delete:
+      description: Deletes the single ClusterConfig resource.
+      operationId: DeleteClusterConfig
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete the ClusterConfig
+      tags:
+      - System
+      - Config
+      - Cluster-Scoped Resource
+      - Singleton
+    get:
+      description: Retrieve the single ClusterConfig resource.
+      operationId: GetClusterConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ClusterConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterConfig)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve the ClusterConfig
+      tags:
+      - System
+      - Config
+      - Cluster-Scoped Resource
+      - Singleton
+  /v1beta1/system/cluster-config/refresh:
+    post:
+      description: |-
+        Refresh the single ClusterConfig resource. Refreshing enqueues
+        the resource for reconciliation by its corresponding controller.
+      operationId: RefreshClusterConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+      security:
+      - BearerAuth: []
+      summary: Refresh the ClusterConfig
+      tags:
+      - System
+      - Config
+      - Cluster-Scoped Resource
+      - Singleton
+  /v1beta1/system/configmaps:
+    get:
+      description: |-
+        List system-level ConfigMap resources. Returns a Kubernetes
+        ConfigMapList resource.
+      operationId: ListSystemConfigMaps
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List system-level ConfigMaps
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a system-level ConfigMap. Returns the created Kubernetes
+        ConfigMap resource.
+      operationId: CreateSystemConfigMap
+      parameters:
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a system-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+  /v1beta1/system/configmaps/{configmap}:
+    delete:
+      description: Delete a system-level ConfigMap.
+      operationId: DeleteSystemConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete a system-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+    get:
+      description: Retrieve a system-level ConfigMap by name.
+      operationId: GetSystemConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a system-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch a system-level ConfigMap. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns the updated Kubernetes ConfigMap resource.
+      operationId: PatchSystemConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch a system-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace a system-level ConfigMap. All existing data is replaced.
+        Returns the updated Kubernetes ConfigMap resource.
+      operationId: UpdateSystemConfigMap
+      parameters:
+      - description: ConfigMap name
+        in: path
+        name: configmap
+        required: true
+        type: string
+      - description: ConfigMap
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateConfigMapRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace a system-level ConfigMap
+      tags:
+      - Core
+      - Generic Config
+      - System-Level
+  /v1beta1/system/generic-credentials:
+    get:
+      description: |-
+        List system-level generic credentials. Returns a Kubernetes
+        SecretList resource containing heavily redacted Secrets.
+      operationId: ListSystemGenericCredentials
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: SecretList resource (k8s.io/api/core/v1.SecretList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create system-level generic credentials. Returns a heavily
+        redacted Kubernetes Secret resource.
+      operationId: CreateSystemGenericCredentials
+      parameters:
+      - description: Generic credentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+  /v1beta1/system/generic-credentials/{generic-credentials}:
+    delete:
+      description: Delete system-level generic credentials.
+      operationId: DeleteSystemGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Deleted successfully
+      security:
+      - BearerAuth: []
+      summary: Delete system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+    get:
+      description: |-
+        Retrieve system-level generic credentials by name. Returns a
+        heavily redacted Kubernetes Secret resource.
+      operationId: GetSystemGenericCredentials
+      parameters:
+      - description: Credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+    patch:
+      consumes:
+      - application/json
+      description: |-
+        Patch system-level generic credentials. Merges provided data
+        with existing data. Use removeKeys to delete specific keys.
+        Returns a heavily redacted Kubernetes Secret resource.
+      operationId: PatchSystemGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/PatchGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Patch system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+    put:
+      consumes:
+      - application/json
+      description: |-
+        Replace system-level generic credentials. All existing data is
+        replaced. Returns a heavily redacted Kubernetes Secret resource.
+      operationId: UpdateSystemGenericCredentials
+      parameters:
+      - description: Generic credentials name
+        in: path
+        name: generic-credentials
+        required: true
+        type: string
+      - description: GenericCredentials
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/UpdateGenericCredentialsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Replace system-level generic credentials
+      tags:
+      - Credentials
+      - Generic Credentials
+      - System-Level
+  /v1beta1/system/public-server-config:
+    get:
+      description: |-
+        Retrieve information a client may need to know about how the
+        Kargo API server is configured in order to proceed with
+        authentication.
+      operationId: GetPublicConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/PublicConfig'
+      summary: Retrieve public server configuration
+      tags:
+      - System
+      - Config
+  /v1beta1/system/roles:
+    get:
+      description: |-
+        List system-level Kargo Role virtual resources. Returns a
+        RoleList resource.
+      operationId: ListSystemRoles
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: List system-level Kargo Role virtual resources
+      tags:
+      - Rbac
+      - System-Level
+  /v1beta1/system/roles/{role}:
+    get:
+      description: |-
+        Retrieve a system-level Kargo Role virtual resource by name.
+        Returns a Kargo Role virtual resource or its underlying
+        Kubernetes resources.
+      operationId: GetSystemRole
+      parameters:
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes
+            resources
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Retrieve a system-level Kargo Role virtual resource
+      tags:
+      - Rbac
+      - System-Level
+  /v1beta1/system/roles/{role}/api-tokens:
+    post:
+      consumes:
+      - application/json
+      description: |-
+        Create a system-level API token associated with a system-level
+        Kargo Role virtual resource. Returns a Kubernetes Secret
+        resource representing the token. Store it securely. The token
+        is not retrievable via the Kargo API after creation except in
+        a redacted form.
+      operationId: CreateSystemAPIToken
+      parameters:
+      - description: Role name
+        in: path
+        name: role
+        required: true
+        type: string
+      - description: Token
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/CreateAPITokenRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Secret resource (k8s.io/api/core/v1.Secret)
+          schema:
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Create a system-level API token
+      tags:
+      - Rbac
+      - Credentials
+      - System-Level
+  /v1beta1/system/server-config:
+    get:
+      description: |-
+        Retrieve information a client may need to know about how the
+        Kargo API server is configured.
+      operationId: GetConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/GetConfigResponse'
+      security:
+      - BearerAuth: []
+      summary: Retrieve server configuration
+      tags:
+      - System
+      - Config
+  /v1beta1/system/server-version:
+    get:
+      description: Retrieve API Server version information.
+      operationId: GetVersionInfo
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_akuity_kargo_pkg_x_version.Version'
+      security:
+      - BearerAuth: []
+      summary: Retrieve API Server version information
+      tags:
+      - System
+securityDefinitions:
+  BearerAuth:
+    description: Bearer token authentication. Obtain token via OIDC/PKCE flow with
+      your identity provider.
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

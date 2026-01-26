@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -18,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type deleteClusterConfigOptions struct {
@@ -73,7 +72,7 @@ func (o *deleteClusterConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run removes the project config from the project.
 func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -83,9 +82,9 @@ func (o *deleteClusterConfigOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	if _, err = kargoSvcCli.DeleteClusterConfig(
-		ctx,
-		connect.NewRequest(&v1alpha1.DeleteClusterConfigRequest{}),
+	if _, err = apiClient.System.DeleteClusterConfig(
+		system.NewDeleteClusterConfigParams(),
+		nil,
 	); err != nil {
 		return fmt.Errorf("delete cluster configuration: %w", err)
 	}

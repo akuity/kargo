@@ -2,10 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -86,7 +90,7 @@ func TestListClusterAnalysisTemplates(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -102,7 +106,7 @@ func TestListClusterAnalysisTemplates(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
@@ -122,4 +126,54 @@ func TestListClusterAnalysisTemplates(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_listClusterAnalysisTemplates(t *testing.T) {
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/shared/cluster-analysis-templates",
+		[]restTestCase{
+			{
+				name:         "Rollouts integration disabled",
+				serverConfig: &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name: "no ClusterAnalysisTemplates exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					templates := &rollouts.ClusterAnalysisTemplateList{}
+					err := json.Unmarshal(w.Body.Bytes(), templates)
+					require.NoError(t, err)
+					require.Empty(t, templates.Items)
+				},
+			},
+			{
+				name: "lists ClusterAnalysisTemplates",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&rollouts.ClusterAnalysisTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "template-1",
+						},
+					},
+					&rollouts.ClusterAnalysisTemplate{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "template-2",
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the ClusterAnalysisTemplates in the response
+					templates := &rollouts.ClusterAnalysisTemplateList{}
+					err := json.Unmarshal(w.Body.Bytes(), templates)
+					require.NoError(t, err)
+					require.Len(t, templates.Items, 2)
+				},
+			},
+		},
+	)
 }

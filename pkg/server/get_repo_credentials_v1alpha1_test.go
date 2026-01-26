@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -290,7 +293,7 @@ func TestGetRepoCredentials(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
@@ -313,6 +316,154 @@ func TestGetRepoCredentials(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_getProjectRepoCredentials(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testCreds := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-credential",
+			Labels: map[string]string{
+				kargoapi.LabelKeyCredentialType: "git",
+			},
+		},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/repo-credentials/"+testCreds.Name,
+		[]restTestCase{
+			{
+				name: "Project does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "credentials do not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "Secret exists but is not labeled as credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					func() *corev1.Secret {
+						secret := testCreds.DeepCopy()
+						delete(secret.Labels, kargoapi.LabelKeyCredentialType)
+						return secret
+					}(),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "Secret exists but is labeled as generic credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					func() *corev1.Secret {
+						secret := testCreds.DeepCopy()
+						secret.Labels[kargoapi.LabelKeyCredentialType] =
+							kargoapi.LabelValueCredentialTypeGeneric
+						return secret
+					}(),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "gets credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testCreds,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the Secret in the response
+					secret := &corev1.Secret{}
+					err := json.Unmarshal(w.Body.Bytes(), secret)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, secret.Namespace)
+					require.Equal(t, testCreds.Name, secret.Name)
+				},
+			},
+		},
+	)
+}
+
+func Test_server_getSharedRepoCredentials(t *testing.T) {
+	testCreds := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testSharedResourcesNamespace,
+			Name:      "fake-credential",
+			Labels: map[string]string{
+				kargoapi.LabelKeyCredentialType: "git",
+			},
+		},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{SharedResourcesNamespace: testSharedResourcesNamespace},
+		http.MethodGet, "/v1beta1/shared/repo-credentials/"+testCreds.Name,
+		[]restTestCase{
+			{
+				name:          "credentials do not exist",
+				clientBuilder: fake.NewClientBuilder(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "Secret exists but is not labeled as credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					func() *corev1.Secret {
+						secret := testCreds.DeepCopy()
+						delete(secret.Labels, kargoapi.LabelKeyCredentialType)
+						return secret
+					}(),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "Secret exists but is labeled as generic credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					func() *corev1.Secret {
+						secret := testCreds.DeepCopy()
+						secret.Labels[kargoapi.LabelKeyCredentialType] =
+							kargoapi.LabelValueCredentialTypeGeneric
+						return secret
+					}(),
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusConflict, w.Code)
+				},
+			},
+			{
+				name: "gets credentials",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testCreds,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the Secret in the response
+					secret := &corev1.Secret{}
+					err := json.Unmarshal(w.Body.Bytes(), secret)
+					require.NoError(t, err)
+					require.Equal(t, testSharedResourcesNamespace, secret.Namespace)
+					require.Equal(t, testCreds.Name, secret.Name)
+				},
+			},
+		},
+	)
 }
 
 func TestSanitizeCredentialSecret(t *testing.T) {

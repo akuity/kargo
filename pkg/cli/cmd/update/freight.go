@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type updateFreightAliasOptions struct {
@@ -108,23 +107,25 @@ func (o *updateFreightAliasOptions) validate() error {
 
 // run updates the freight alias using the options.
 func (o *updateFreightAliasOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	if _, err = kargoSvcCli.UpdateFreightAlias(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.UpdateFreightAliasRequest{
-				Project:  o.Project,
-				Name:     o.Name,
-				OldAlias: o.OldAlias,
-				NewAlias: o.NewAlias,
-			},
-		),
+	// Use name if provided, otherwise use old alias
+	freightNameOrAlias := o.Name
+	if freightNameOrAlias == "" {
+		freightNameOrAlias = o.OldAlias
+	}
+
+	if _, err = apiClient.Core.PatchFreightAlias(
+		core.NewPatchFreightAliasParams().
+			WithProject(o.Project).
+			WithFreightNameOrAlias(freightNameOrAlias).
+			WithNewAlias(o.NewAlias),
+		nil,
 	); err != nil {
-		return fmt.Errorf("update freight alias: %w", err)
+		return fmt.Errorf("patch freight alias: %w", err)
 	}
 	return nil
 }

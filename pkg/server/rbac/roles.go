@@ -640,8 +640,12 @@ func (c *rolesDatabase) RevokePermissionsFromRole(
 
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
+		ruleResourceName := ""
+		if len(rule.ResourceNames) > 0 {
+			ruleResourceName = rule.ResourceNames[0]
+		}
 		if rule.APIGroups[0] != group || rule.Resources[0] != resourceDetails.ResourceType ||
-			(resourceDetails.ResourceName != "" && rule.ResourceNames[0] != resourceDetails.ResourceName) {
+			(resourceDetails.ResourceName != "" && ruleResourceName != resourceDetails.ResourceName) {
 			filteredRules = append(filteredRules, rule)
 			continue
 		}
@@ -1162,9 +1166,33 @@ func (c *rolesDatabase) DeleteAPIToken(
 			"error getting token Secret %q in namespace %q: %w", name, namespace, err,
 		)
 	}
+	if tokenSecret.Type != corev1.SecretTypeServiceAccountToken {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is not a service account "+
+					"token",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	if _, ok := tokenSecret.Annotations["kubernetes.io/service-account.name"]; !ok {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is missing the service account "+
+					"annotation",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
 	if !isKargoAPIToken(tokenSecret) {
-		return apierrors.NewBadRequest(
-			fmt.Sprintf(
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
 				"Kubernetes Secret %q in namespace %q is not labeled as a Kargo "+
 					"API token",
 				tokenSecret.Name, tokenSecret.Namespace,
@@ -1172,23 +1200,12 @@ func (c *rolesDatabase) DeleteAPIToken(
 		)
 	}
 	if !isKargoManaged(tokenSecret) {
-		return apierrors.NewBadRequest(
-			fmt.Sprintf(
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
 				"Kubernetes Secret %q in namespace %q is not annotated as Kargo-managed",
 				tokenSecret.Name, tokenSecret.Namespace,
-			),
-		)
-	}
-	roleName := tokenSecret.Annotations["kubernetes.io/service-account.name"]
-	sa, _, _, err := c.GetAsResources(ctx, systemLevel, project, roleName)
-	if err != nil {
-		return err
-	}
-	if systemLevel && sa.Labels[rbacapi.LabelKeySystemRole] != rbacapi.LabelValueTrue {
-		return apierrors.NewBadRequest(
-			fmt.Sprintf(
-				"ServiceAccount %q in namespace %q is not labeled as a system-level Kargo role",
-				roleName, namespace,
 			),
 		)
 	}

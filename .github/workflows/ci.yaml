@@ -41,7 +41,7 @@ jobs:
       run: |
         for report in $(find . -maxdepth 4 -type f -name 'coverage.txt'); do
           tmp_file=$(dirname $report)/coverage.tmp
-          grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go > $tmp_file
+          grep -v .pb.go $report | grep -v zz_ | grep -v .connect.go | grep -v 'pkg/client/generated/' > $tmp_file
           mv $tmp_file $report
         done
     - name: Upload coverage reports

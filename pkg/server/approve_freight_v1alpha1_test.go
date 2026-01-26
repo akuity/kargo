@@ -3,19 +3,24 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/server/config"
 )
 
 func TestApproveFreight(t *testing.T) {
@@ -384,4 +389,78 @@ func TestApproveFreight(t *testing.T) {
 			testCase.assertions(t, recorder, resp, err)
 		})
 	}
+}
+
+func Test_server_approveFreight(t *testing.T) {
+	const testStageName = "fake-stage"
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fake-project",
+		},
+	}
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testProject.Name,
+		},
+	}
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testProject.Name,
+		},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/freight/"+testFreight.Name+"/approve?stage="+testStageName,
+		[]restTestCase{
+			{
+				name:          "Project not found",
+				clientBuilder: fake.NewClientBuilder(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "Freight not found",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testStage,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "Stage not found",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testFreight,
+				).WithStatusSubresource(testFreight),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "approves Freight",
+				clientBuilder: fake.NewClientBuilder().
+					WithObjects(testProject, testFreight, testStage).
+					WithStatusSubresource(testFreight),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Verify the Freight was approved for the Stage
+					freight := &kargoapi.Freight{}
+					err := c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(testFreight),
+						freight,
+					)
+					require.NoError(t, err)
+					require.True(t, freight.IsApprovedFor(testStage.Name))
+					require.Contains(t, freight.Status.ApprovedFor, testStage.Name)
+				},
+			},
+		},
+	)
 }

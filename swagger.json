@@ -1,0 +1,5094 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "REST API for Kargo",
+        "title": "Kargo API",
+        "contact": {},
+        "version": "v1alpha1"
+    },
+    "basePath": "/",
+    "paths": {
+        "/v1beta1/login": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Authenticate as the admin user if enabled.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Admin login",
+                "operationId": "AdminLogin",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/AdminLoginResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List all Projects resources. Returns a ProjectList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "List projects",
+                "operationId": "ListProjects",
+                "responses": {
+                    "200": {
+                        "description": "ProjectList custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Project resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "Retrieve a Project resource",
+                "operationId": "GetProject",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Project custom resource (github.com/akuity/kargo/api/v1alpha1.Project)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Project resource and its associated namespace.",
+                "tags": [
+                    "Core",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "Delete a Project",
+                "operationId": "DeleteProject",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve an AnalysisRun resource from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve an AnalysisRun",
+                "operationId": "GetAnalysisRun",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AnalysisRun name",
+                        "name": "analysis-run",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AnalysisRun custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisRun)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Stream logs from an AnalysisRun job as Server-Sent Events (SSE).",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Stream AnalysisRun logs",
+                "operationId": "GetAnalysisRunLogs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AnalysisRun name",
+                        "name": "analysis-run",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Metric name",
+                        "name": "metricName",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Container name",
+                        "name": "containerName",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Log stream (SSE)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/analysis-templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List AnalysisTemplate resources from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "List AnalysisTemplates",
+                "operationId": "ListAnalysisTemplates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/analysis-templates/{analysis-template}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve an AnalysisTemplate resource from a project's\nnamespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve an AnalysisTemplate",
+                "operationId": "GetAnalysisTemplate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AnalysisTemplate name",
+                        "name": "analysis-template",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete an AnalysisTemplate resource from a project's namespace.",
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Delete an AnalysisTemplate",
+                "operationId": "DeleteAnalysisTemplate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "AnalysisTemplate name",
+                        "name": "analysis-template",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/api-tokens": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List project-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "Project-Level"
+                ],
+                "summary": "List project-level API tokens",
+                "operationId": "ListProjectAPITokens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role name filter",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a project-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a project-level API token",
+                "operationId": "GetProjectAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "API token name",
+                        "name": "apitoken",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a project-level API token from a project's namespace.",
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Delete a project-level API token",
+                "operationId": "DeleteProjectAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "API token name",
+                        "name": "apitoken",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the single ProjectConfig resource from a project's\nnamespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level",
+                    "Config",
+                    "Singleton"
+                ],
+                "summary": "Retrieve ProjectConfig",
+                "operationId": "GetProjectConfig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ProjectConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectConfig)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete the single ProjectConfig resource from a project's\nnamespace.",
+                "tags": [
+                    "Core",
+                    "Project-Level",
+                    "Config",
+                    "Singleton"
+                ],
+                "summary": "Delete a ProjectConfig resource",
+                "operationId": "DeleteProjectConfig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/config/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refresh the single ProjectConfig resource in a project's\nnamespace. Refreshing enqueues the resource for reconciliation\nby its corresponding controller.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Config",
+                    "Project-Level",
+                    "Singleton"
+                ],
+                "summary": "Refresh ProjectConfig",
+                "operationId": "RefreshProjectConfig",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/configmaps": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List ConfigMap resources from a project's namespace. Returns a\nKubernetes ConfigMapList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "List project-level ConfigMaps",
+                "operationId": "ListProjectConfigMaps",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a ConfigMap in a project's namespace. Returns the created\nKubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "Create a project-level ConfigMap",
+                "operationId": "CreateProjectConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/configmaps/{configmap}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a ConfigMap by name from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a project-level ConfigMap",
+                "operationId": "GetProjectConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace a ConfigMap in a project's namespace. All existing data\nis replaced. Returns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "Replace a project-level ConfigMap",
+                "operationId": "UpdateProjectConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a ConfigMap from a project's namespace.",
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "Delete a project-level ConfigMap",
+                "operationId": "DeleteProjectConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch a ConfigMap in a project's namespace. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Project-Level"
+                ],
+                "summary": "Patch a project-level ConfigMap",
+                "operationId": "PatchProjectConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List Kubernetes Events from a project's namespace. Returns a\nKubernetes EventList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Events",
+                    "Project-Level"
+                ],
+                "summary": "List project-level Kubernetes Events",
+                "operationId": "ListProjectEvents",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "EventList resource (k8s.io/api/core/v1.EventList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/freight": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Query and filter Freight resources from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Query Freight",
+                "operationId": "QueryFreightsRest",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name to get available freight for",
+                        "name": "stage",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Warehouse names to get freight from",
+                        "name": "origins",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group filter",
+                        "name": "group",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Group by (image_repo, git_repo, chart_repo)",
+                        "name": "groupBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Order by (first_seen, tag)",
+                        "name": "orderBy",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "Reverse order",
+                        "name": "reverse",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Map of freight groups",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Freight resource from a project's namespace by name\nor alias.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a Freight resource",
+                "operationId": "GetFreight",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Freight name or alias",
+                        "name": "freight-name-or-alias",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Freight resource from a project's namespace by name or\nalias.",
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Delete a Freight resource",
+                "operationId": "DeleteFreight",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Freight name or alias",
+                        "name": "freight-name-or-alias",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/alias": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch a Freight resource's human-friendly alias.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Patch a Freight resource's alias",
+                "operationId": "PatchFreightAlias",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Freight name or alias",
+                        "name": "freight-name-or-alias",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "New alias",
+                        "name": "newAlias",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/freight/{freight-name-or-alias}/approve": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Approve Freight for promotion to a Stage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Approve Freight for promotion to a Stage",
+                "operationId": "ApproveFreight",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Freight name or alias",
+                        "name": "freight-name-or-alias",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/generic-credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List project-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "List project-level generic credentials",
+                "operationId": "ListProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create project-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Create project-level generic credentials",
+                "operationId": "CreateProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Generic credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/generic-credentials/{generic-credentials}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve project-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve project-level generic credentials",
+                "operationId": "GetProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace project-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Replace project-level generic credentials",
+                "operationId": "UpdateProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete generic credentials from a project's namespace.",
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Delete project-level generic credentials",
+                "operationId": "DeleteProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch project-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Patch project-level generic credentials",
+                "operationId": "PatchProjectGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/images": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List container images referenced by Freight resources in a\nproject's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "List container images",
+                "operationId": "ListImages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/TagMap"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotion-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List PromotionTask resources from a project's namespace. Returns\na PromotionTaskList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "List PromotionTasks",
+                "operationId": "ListPromotionTasks",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTaskList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotion-tasks/{promotion-task}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a PromotionTask resource from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a PromotionTask",
+                "operationId": "GetPromotionTask",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "PromotionTask name",
+                        "name": "promotion-task",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTask)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List Promotion resources from a project's namespace. Returns a\nPromotionList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "List Promotions",
+                "operationId": "ListPromotions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage filter",
+                        "name": "stage",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "PromotionList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotions/{promotion}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Promotion resource from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a Promotion",
+                "operationId": "GetPromotion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Promotion name",
+                        "name": "promotion",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Promotion custom resource (github.com/akuity/kargo/api/v1alpha1.Promotion)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotions/{promotion}/abort": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Abort a running Promotion.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Abort a Promotion",
+                "operationId": "AbortPromotion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Promotion name",
+                        "name": "promotion",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/promotions/{promotion}/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refresh a Promotion resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Refresh a Promotion",
+                "operationId": "RefreshPromotion",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Promotion name",
+                        "name": "promotion",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/repo-credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List project-level repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "List project-level repository credentials",
+                "operationId": "ListProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create project-level repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Create project-level repository credentials",
+                "operationId": "CreateProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/repo-credentials/{repo-credentials}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve project-level repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve project-level repository credentials",
+                "operationId": "GetProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace project-level repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Replace project-level repository credentials",
+                "operationId": "UpdateProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Repo credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete repository credentials from a project's namespace.",
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Delete project-level repository credentials",
+                "operationId": "DeleteProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch project-level repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Patch project-level repository credentials",
+                "operationId": "PatchProjectRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Repo credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List project-level Kargo Role virtual resources. Returns a\nRoleList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "List project-level Kargo Role virtual resources",
+                "operationId": "ListProjectRoles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a project-level Kargo Role virtual resource by creating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Create a project-level Kargo Role virtual resource",
+                "operationId": "CreateProjectRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/roles/grants": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Grant a project-level Kargo Role to users or grant permissions\nto a project-level Kargo Role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Grant permissions",
+                "operationId": "Grant",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Grant request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/GrantRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/roles/revocations": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke a project-level Kargo Role from users or revoke\npermissions from a project-level Kargo Role.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Revoke permissions",
+                "operationId": "Revoke",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Revoke request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/RevokeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/roles/{role}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a project-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a project-level Kargo Role virtual resource",
+                "operationId": "GetProjectRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update a project-level Kargo Role virtual resource by updating\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Update a project-level Kargo Role virtual resource",
+                "operationId": "UpdateRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a project-level Kargo Role virtual resource by deleting\nthe underlying Kubernetes ServiceAccount, Role, and RoleBinding\nresources from the project's namespace.",
+                "tags": [
+                    "Rbac",
+                    "Project-Level"
+                ],
+                "summary": "Delete a project-level Kargo Role virtual resource",
+                "operationId": "DeleteProjectRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a project-level API token associated with a Kargo Role\nvirtual resource. Returns a Kubernetes Secret resource\nrepresenting the token. Store it securely. The token is not\nretrievable via the Kargo API after creation except in a\nredacted form.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "Project-Level"
+                ],
+                "summary": "Create a project-level API token",
+                "operationId": "CreateProjectAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateAPITokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List Stage resources from a project's namespace. Returns a\nStageList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "List Stages",
+                "operationId": "ListStages",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Stage resource from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a Stage",
+                "operationId": "GetStage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stage custom resource (github.com/akuity/kargo/api/v1alpha1.Stage)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Stage resource from a project's namespace.",
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Delete a Stage",
+                "operationId": "DeleteStage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}/promotions": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a Promotion resource to transition a specified Stage into\nthe state represented by the specified Freight.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Promote to Stage",
+                "operationId": "PromoteToStage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Promote request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PromoteToStageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Promotion resource (github.com/akuity/kargo/api/v1alpha1.Promotion)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}/promotions/downstream": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a Promotion resource for each of a Stage's immediately\ndownstream Stages.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Promote downstream",
+                "operationId": "PromoteDownstream",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Promote request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PromoteDownstreamRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Promotions created",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refresh a Stage resource in a project's namespace. Refreshing\nenqueues the resource for reconciliation by its corresponding\ncontroller.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Refresh a Stage",
+                "operationId": "RefreshStage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}/verification": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Trigger re-verification of the Freight currently in use by a\nStage.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Reverify Freight",
+                "operationId": "Reverify",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/stages/{stage}/verification/abort": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Abort a running Verification process.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Project-Level"
+                ],
+                "summary": "Abort a running Verification process",
+                "operationId": "AbortVerification",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stage name",
+                        "name": "stage",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/warehouses": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List Warehouse resources from a project's namespace. Returns a\nWarehouseList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "List Warehouses",
+                "operationId": "ListWarehouses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "WarehouseList custom resource (github.com/akuity/kargo/api/v1alpha1.WarehouseList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/warehouses/{warehouse}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a Warehouse resource from a project's namespace.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Retrieve a Warehouse",
+                "operationId": "GetWarehouse",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Warehouse name",
+                        "name": "warehouse",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Warehouse custom resource (github.com/akuity/kargo/api/v1alpha1.Warehouse)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a Warehouse resource from a project's namespace.",
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Delete a Warehouse",
+                "operationId": "DeleteWarehouse",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Warehouse name",
+                        "name": "warehouse",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/projects/{project}/warehouses/{warehouse}/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refresh a Warehouse resource in a project's namespace.\nRefreshing enqueues the resource for reconciliation by its\ncorresponding controller.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Project-Level"
+                ],
+                "summary": "Refresh a Warehouse",
+                "operationId": "RefreshWarehouse",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project name",
+                        "name": "project",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Warehouse name",
+                        "name": "warehouse",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/resources": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update (or optionally, upsert) one or more Kargo resources from",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Resources"
+                ],
+                "summary": "Update resources",
+                "operationId": "UpdateResource",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "If true, create a resource if it does not exist",
+                        "name": "upsert",
+                        "in": "query"
+                    },
+                    {
+                        "description": "YAML or JSON manifest(s)",
+                        "name": "manifest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Update results",
+                        "schema": {
+                            "$ref": "#/definitions/CreateOrUpdateResourceResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create one or more Kargo resources from YAML or JSON manifests.",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Resources"
+                ],
+                "summary": "Create resources",
+                "operationId": "CreateResource",
+                "parameters": [
+                    {
+                        "description": "YAML or JSON manifest(s)",
+                        "name": "manifest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created successfully",
+                        "schema": {
+                            "$ref": "#/definitions/CreateResourceResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete one or more Kargo resources using namespaces and names\nobtained from YAML or JSON manifests.",
+                "consumes": [
+                    "text/plain"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Resources"
+                ],
+                "summary": "Delete resources",
+                "operationId": "DeleteResource",
+                "parameters": [
+                    {
+                        "description": "YAML or JSON manifest(s)",
+                        "name": "manifest",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/DeleteResourceResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/cluster-analysis-templates": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List ClusterAnalysisTemplate resources. Returns a\nClusterAnalysisTemplateList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Shared",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "List ClusterAnalysisTemplates",
+                "operationId": "ListClusterAnalysisTemplates",
+                "responses": {
+                    "200": {
+                        "description": "ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/cluster-analysis-templates/{cluster-analysis-template}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a ClusterAnalysisTemplate by name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Verifications",
+                    "Shared",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "Retrieve a ClusterAnalysisTemplate",
+                "operationId": "GetClusterAnalysisTemplate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ClusterAnalysisTemplate name",
+                        "name": "cluster-analysis-template",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ClusterAnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplate)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a ClusterAnalysisTemplate resource.",
+                "tags": [
+                    "Verifications",
+                    "Shared",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "Delete a ClusterAnalysisTemplate",
+                "operationId": "DeleteClusterAnalysisTemplate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ClusterAnalysisTemplate name",
+                        "name": "cluster-analysis-template",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/cluster-promotion-tasks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List ClusterPromotionTask resources. Returns a\nClusterPromotionTaskList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Shared",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "List ClusterPromotionTasks",
+                "operationId": "ListClusterPromotionTasks",
+                "responses": {
+                    "200": {
+                        "description": "ClusterPromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTaskList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a ClusterPromotionTask by name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Shared",
+                    "Cluster-Scoped Resource"
+                ],
+                "summary": "Retrieve a ClusterPromotionTask",
+                "operationId": "GetClusterPromotionTask",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ClusterPromotionTask name",
+                        "name": "cluster-promotion-task",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ClusterPromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTask)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/configmaps": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List shared ConfigMap resources referenceable by all projects.\nReturns a Kubernetes ConfigMapList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "List shared ConfigMaps",
+                "operationId": "ListSharedConfigMaps",
+                "responses": {
+                    "200": {
+                        "description": "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a shared ConfigMap referenceable by all projects. Returns\nthe created Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "Create a shared ConfigMap",
+                "operationId": "CreateSharedConfigMap",
+                "parameters": [
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/configmaps/{configmap}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a shared ConfigMap by name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "Retrieve a shared ConfigMap",
+                "operationId": "GetSharedConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace a shared ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "Replace a shared ConfigMap",
+                "operationId": "UpdateSharedConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a shared ConfigMap.",
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "Delete a shared ConfigMap",
+                "operationId": "DeleteSharedConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch a shared ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "Shared"
+                ],
+                "summary": "Patch a shared ConfigMap",
+                "operationId": "PatchSharedConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/generic-credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List shared generic credentials. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "List shared generic credentials",
+                "operationId": "ListSharedGenericCredentials",
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create shared generic credentials referenceable by all\nprojects. Returns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "Create shared generic credentials",
+                "operationId": "CreateSharedGenericCredentials",
+                "parameters": [
+                    {
+                        "description": "Generic credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/generic-credentials/{generic-credentials}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve shared generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "Retrieve shared generic credentials",
+                "operationId": "GetSharedGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace shared generic credentials. All existing data is replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "Replace shared generic credentials",
+                "operationId": "UpdateSharedGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete shared generic credentials.",
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "Delete shared generic credentials",
+                "operationId": "DeleteSharedGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch shared generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "Shared"
+                ],
+                "summary": "Patch shared generic credentials",
+                "operationId": "PatchSharedGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/repo-credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List shared repository credentials. Returns a SecretList\nresource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "List shared repository credentials",
+                "operationId": "ListSharedRepoCredentials",
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create shared repository credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "Create shared repository credentials",
+                "operationId": "CreateSharedRepoCredentials",
+                "parameters": [
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/shared/repo-credentials/{repo-credentials}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve shared repository credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "Retrieve shared repository credentials",
+                "operationId": "GetSharedRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace shared repository credentials. All fields are replaced.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "Replace shared repository credentials",
+                "operationId": "UpdateSharedRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Repo credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete shared repository credentials.",
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "Delete shared repository credentials",
+                "operationId": "DeleteSharedRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch shared repository credentials. Only provided fields\nare updated. Returns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Repo Credentials",
+                    "Shared"
+                ],
+                "summary": "Patch shared repository credentials",
+                "operationId": "PatchSharedRepoCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Repo credentials name",
+                        "name": "repo-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchRepoCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/api-tokens": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List system-level API tokens. Returns a Kubernetes SecretList\nresource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "System-Level"
+                ],
+                "summary": "List system-level API tokens",
+                "operationId": "ListSystemAPITokens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role name filter",
+                        "name": "role",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/api-tokens/{apitoken}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a system-level API token by name. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "System-Level"
+                ],
+                "summary": "Retrieve a system-level API token",
+                "operationId": "GetSystemAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API token name",
+                        "name": "apitoken",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a system-level API token.",
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "System-Level"
+                ],
+                "summary": "Delete a system-level API token",
+                "operationId": "DeleteSystemAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "API token name",
+                        "name": "apitoken",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/cluster-config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve the single ClusterConfig resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System",
+                    "Config",
+                    "Cluster-Scoped Resource",
+                    "Singleton"
+                ],
+                "summary": "Retrieve the ClusterConfig",
+                "operationId": "GetClusterConfig",
+                "responses": {
+                    "200": {
+                        "description": "ClusterConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterConfig)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Deletes the single ClusterConfig resource.",
+                "tags": [
+                    "System",
+                    "Config",
+                    "Cluster-Scoped Resource",
+                    "Singleton"
+                ],
+                "summary": "Delete the ClusterConfig",
+                "operationId": "DeleteClusterConfig",
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/cluster-config/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Refresh the single ClusterConfig resource. Refreshing enqueues\nthe resource for reconciliation by its corresponding controller.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System",
+                    "Config",
+                    "Cluster-Scoped Resource",
+                    "Singleton"
+                ],
+                "summary": "Refresh the ClusterConfig",
+                "operationId": "RefreshClusterConfig",
+                "responses": {
+                    "200": {
+                        "description": "Success"
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/configmaps": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List system-level ConfigMap resources. Returns a Kubernetes\nConfigMapList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "List system-level ConfigMaps",
+                "operationId": "ListSystemConfigMaps",
+                "responses": {
+                    "200": {
+                        "description": "ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a system-level ConfigMap. Returns the created Kubernetes\nConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "Create a system-level ConfigMap",
+                "operationId": "CreateSystemConfigMap",
+                "parameters": [
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/configmaps/{configmap}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a system-level ConfigMap by name.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "Retrieve a system-level ConfigMap",
+                "operationId": "GetSystemConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace a system-level ConfigMap. All existing data is replaced.\nReturns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "Replace a system-level ConfigMap",
+                "operationId": "UpdateSystemConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a system-level ConfigMap.",
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "Delete a system-level ConfigMap",
+                "operationId": "DeleteSystemConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch a system-level ConfigMap. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns the updated Kubernetes ConfigMap resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Core",
+                    "Generic Config",
+                    "System-Level"
+                ],
+                "summary": "Patch a system-level ConfigMap",
+                "operationId": "PatchSystemConfigMap",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ConfigMap name",
+                        "name": "configmap",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ConfigMap patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchConfigMapRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/generic-credentials": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List system-level generic credentials. Returns a Kubernetes\nSecretList resource containing heavily redacted Secrets.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "List system-level generic credentials",
+                "operationId": "ListSystemGenericCredentials",
+                "responses": {
+                    "200": {
+                        "description": "SecretList resource (k8s.io/api/core/v1.SecretList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create system-level generic credentials. Returns a heavily\nredacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "Create system-level generic credentials",
+                "operationId": "CreateSystemGenericCredentials",
+                "parameters": [
+                    {
+                        "description": "Generic credentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/generic-credentials/{generic-credentials}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve system-level generic credentials by name. Returns a\nheavily redacted Kubernetes Secret resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "Retrieve system-level generic credentials",
+                "operationId": "GetSystemGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Replace system-level generic credentials. All existing data is\nreplaced. Returns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "Replace system-level generic credentials",
+                "operationId": "UpdateSystemGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/UpdateGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete system-level generic credentials.",
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "Delete system-level generic credentials",
+                "operationId": "DeleteSystemGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted successfully"
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Patch system-level generic credentials. Merges provided data\nwith existing data. Use removeKeys to delete specific keys.\nReturns a heavily redacted Kubernetes Secret resource.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Credentials",
+                    "Generic Credentials",
+                    "System-Level"
+                ],
+                "summary": "Patch system-level generic credentials",
+                "operationId": "PatchSystemGenericCredentials",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Generic credentials name",
+                        "name": "generic-credentials",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "GenericCredentials patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/PatchGenericCredentialsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/public-server-config": {
+            "get": {
+                "description": "Retrieve information a client may need to know about how the\nKargo API server is configured in order to proceed with\nauthentication.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System",
+                    "Config"
+                ],
+                "summary": "Retrieve public server configuration",
+                "operationId": "GetPublicConfig",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/PublicConfig"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/roles": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "List system-level Kargo Role virtual resources. Returns a\nRoleList resource.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "System-Level"
+                ],
+                "summary": "List system-level Kargo Role virtual resources",
+                "operationId": "ListSystemRoles",
+                "responses": {
+                    "200": {
+                        "description": "RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/roles/{role}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve a system-level Kargo Role virtual resource by name.\nReturns a Kargo Role virtual resource or its underlying\nKubernetes resources.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "System-Level"
+                ],
+                "summary": "Retrieve a system-level Kargo Role virtual resource",
+                "operationId": "GetSystemRole",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/roles/{role}/api-tokens": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a system-level API token associated with a system-level\nKargo Role virtual resource. Returns a Kubernetes Secret\nresource representing the token. Store it securely. The token\nis not retrievable via the Kargo API after creation except in\na redacted form.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Rbac",
+                    "Credentials",
+                    "System-Level"
+                ],
+                "summary": "Create a system-level API token",
+                "operationId": "CreateSystemAPIToken",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role name",
+                        "name": "role",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Token",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/CreateAPITokenRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Secret resource (k8s.io/api/core/v1.Secret)",
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/server-config": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve information a client may need to know about how the\nKargo API server is configured.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System",
+                    "Config"
+                ],
+                "summary": "Retrieve server configuration",
+                "operationId": "GetConfig",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/GetConfigResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1beta1/system/server-version": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieve API Server version information.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Retrieve API Server version information",
+                "operationId": "GetVersionInfo",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_akuity_kargo_pkg_x_version.Version"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "AdminLoginResponse": {
+            "type": "object",
+            "properties": {
+                "idToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "ArgoCDShard": {
+            "type": "object",
+            "properties": {
+                "namespace": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "Claim": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "values": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "CreateAPITokenRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateConfigMapRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateGenericCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateOrUpdateResourceResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/CreateOrUpdateResourceResult"
+                    }
+                }
+            }
+        },
+        "CreateOrUpdateResourceResult": {
+            "type": "object",
+            "properties": {
+                "createdResourceManifest": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "error": {
+                    "type": "string"
+                },
+                "updatedResourceManifest": {
+                    "type": "object",
+                    "additionalProperties": {}
+                }
+            }
+        },
+        "CreateRepoCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "repoUrl": {
+                    "type": "string"
+                },
+                "repoUrlIsRegex": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "CreateResourceResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/CreateResourceResult"
+                    }
+                }
+            }
+        },
+        "CreateResourceResult": {
+            "type": "object",
+            "properties": {
+                "createdResourceManifest": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "DeleteResourceResponse": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/DeleteResourceResult"
+                    }
+                }
+            }
+        },
+        "DeleteResourceResult": {
+            "type": "object",
+            "properties": {
+                "deletedResourceManifest": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "GetConfigResponse": {
+            "type": "object",
+            "properties": {
+                "argocdShards": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/ArgoCDShard"
+                    }
+                },
+                "hasAnalysisRunLogsUrlTemplate": {
+                    "type": "boolean"
+                },
+                "kargoNamespace": {
+                    "type": "string"
+                },
+                "secretManagementEnabled": {
+                    "type": "boolean"
+                },
+                "sharedResourcesNamespace": {
+                    "type": "string"
+                },
+                "systemResourcesNamespace": {
+                    "type": "string"
+                }
+            }
+        },
+        "GrantRequest": {
+            "type": "object",
+            "properties": {
+                "resourceDetails": {
+                    "$ref": "#/definitions/ResourceDetails"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "userClaims": {
+                    "$ref": "#/definitions/UserClaims"
+                }
+            }
+        },
+        "ImageStageMap": {
+            "type": "object",
+            "properties": {
+                "stages": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "format": "int32"
+                    }
+                }
+            }
+        },
+        "OIDCConfig": {
+            "type": "object",
+            "properties": {
+                "cliClientId": {
+                    "type": "string"
+                },
+                "clientId": {
+                    "type": "string"
+                },
+                "issuerUrl": {
+                    "type": "string"
+                },
+                "scopes": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "PatchConfigMapRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "removeKeys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "PatchGenericCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "removeKeys": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "PatchRepoCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "repoUrl": {
+                    "type": "string"
+                },
+                "repoUrlIsRegex": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "PromoteDownstreamRequest": {
+            "type": "object",
+            "properties": {
+                "freight": {
+                    "type": "string"
+                },
+                "freightAlias": {
+                    "type": "string"
+                }
+            }
+        },
+        "PromoteToStageRequest": {
+            "type": "object",
+            "properties": {
+                "freight": {
+                    "type": "string"
+                },
+                "freightAlias": {
+                    "type": "string"
+                }
+            }
+        },
+        "PublicConfig": {
+            "type": "object",
+            "properties": {
+                "adminAccountEnabled": {
+                    "type": "boolean"
+                },
+                "oidcConfig": {
+                    "$ref": "#/definitions/OIDCConfig"
+                },
+                "skipAuth": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "ResourceDetails": {
+            "type": "object",
+            "properties": {
+                "resourceName": {
+                    "type": "string"
+                },
+                "resourceType": {
+                    "type": "string"
+                },
+                "verbs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "RevokeRequest": {
+            "type": "object",
+            "properties": {
+                "resourceDetails": {
+                    "$ref": "#/definitions/ResourceDetails"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "userClaims": {
+                    "$ref": "#/definitions/UserClaims"
+                }
+            }
+        },
+        "TagMap": {
+            "type": "object",
+            "properties": {
+                "tags": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/ImageStageMap"
+                    }
+                }
+            }
+        },
+        "UpdateConfigMapRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateGenericCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                }
+            }
+        },
+        "UpdateRepoCredentialsRequest": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "repoUrl": {
+                    "type": "string"
+                },
+                "repoUrlIsRegex": {
+                    "type": "boolean"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "UserClaims": {
+            "type": "object",
+            "properties": {
+                "claims": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Claim"
+                    }
+                }
+            }
+        },
+        "github_com_akuity_kargo_pkg_x_version.Version": {
+            "type": "object",
+            "properties": {
+                "buildDate": {
+                    "description": "BuildDate is the date/time on which the application was built.",
+                    "type": "string"
+                },
+                "compiler": {
+                    "description": "Compiler indicates what Go compiler was used for the build.",
+                    "type": "string"
+                },
+                "gitCommit": {
+                    "description": "GitCommit is the ID (sha) of the last commit to the application's source\ncode that is included in this build.",
+                    "type": "string"
+                },
+                "gitTreeDirty": {
+                    "description": "GitTreeDirty is true if the application's source code contained\nuncommitted changes at the time it was built; otherwise it is false.",
+                    "type": "boolean"
+                },
+                "goVersion": {
+                    "description": "GoVersion is the version of Go that was used to build the application.",
+                    "type": "string"
+                },
+                "platform": {
+                    "description": "Platform indicates the OS and CPU architecture for which the application\nwas built.",
+                    "type": "string"
+                },
+                "version": {
+                    "description": "Version is a human-friendly version string.",
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Bearer token authentication. Obtain token via OIDC/PKCE flow with your identity provider.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

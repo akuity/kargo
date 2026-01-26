@@ -5,10 +5,6 @@ import (
 	"fmt"
 
 	"connectrpc.com/connect"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/fields"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -28,10 +24,11 @@ func (s *server) WatchClusterConfig(
 		return fmt.Errorf("get ClusterConfig: %w", err)
 	}
 
-	opts := metav1.ListOptions{
-		FieldSelector: fields.OneTermEqualSelector(metav1.ObjectNameField, api.ClusterConfigName).String(),
-	}
-	w, err := s.client.Watch(ctx, &kargoapi.ClusterConfig{}, api.ClusterConfigName, opts)
+	w, err := s.client.Watch(
+		ctx,
+		&kargoapi.ClusterConfigList{},
+		client.MatchingFields{"metadata.name": api.ClusterConfigName},
+	)
 	if err != nil {
 		return fmt.Errorf("watch ClusterConfig: %w", err)
 	}
@@ -46,13 +43,9 @@ func (s *server) WatchClusterConfig(
 			if !ok {
 				return nil
 			}
-			u, ok := e.Object.(*unstructured.Unstructured)
+			config, ok := e.Object.(*kargoapi.ClusterConfig)
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
-			}
-			var config *kargoapi.ClusterConfig
-			if err := runtime.DefaultUnstructuredConverter.FromUnstructured(u.Object, &config); err != nil {
-				return fmt.Errorf("from unstructured: %w", err)
 			}
 			if err := stream.Send(&svcv1alpha1.WatchClusterConfigResponse{
 				ClusterConfig: config,

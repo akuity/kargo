@@ -5,16 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/server"
 )
 
@@ -57,40 +55,42 @@ kargo refresh projectconfig
 
 func waitForProjectConfig(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 	project string,
 ) error {
-	res, err := kargoSvcCli.WatchProjectConfig(ctx, connect.NewRequest(&v1alpha1.WatchProjectConfigRequest{
-		Project: project,
-	}))
-	if err != nil {
-		return fmt.Errorf("watch projectconfig: %w", err)
-	}
-	defer func() {
-		if conn, connErr := res.Conn(); connErr == nil {
-			_ = conn.CloseRequest()
-		}
-	}()
+	eventCh, errCh := watchClient.WatchProjectConfig(ctx, project)
 	for {
-		if !res.Receive() {
-			if err = res.Err(); err != nil {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				select {
+				case err := <-errCh:
+					if err != nil {
+						return fmt.Errorf("watch projectconfig: %w", err)
+					}
+				default:
+				}
+				return errors.New("unexpected end of watch stream")
+			}
+			if event.Object == nil {
+				return errors.New("unexpected response")
+			}
+			token, ok := api.RefreshAnnotationValue(event.Object.GetAnnotations())
+			if !ok {
+				return fmt.Errorf(
+					"ProjectConfig %q has no %q annotation",
+					event.Object.Name, kargoapi.AnnotationKeyRefresh,
+				)
+			}
+			if event.Object.Status.LastHandledRefresh == token {
+				return nil
+			}
+		case err := <-errCh:
+			if err != nil {
 				return fmt.Errorf("watch projectconfig: %w", err)
 			}
-			return errors.New("unexpected end of watch stream")
-		}
-		msg := res.Msg()
-		if msg == nil || msg.ProjectConfig == nil {
-			return errors.New("unexpected response")
-		}
-		token, ok := api.RefreshAnnotationValue(msg.ProjectConfig.GetAnnotations())
-		if !ok {
-			return fmt.Errorf(
-				"ProjectConfig %q has no %q annotation",
-				msg.ProjectConfig.Name, kargoapi.AnnotationKeyRefresh,
-			)
-		}
-		if msg.ProjectConfig.Status.LastHandledRefresh == token {
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

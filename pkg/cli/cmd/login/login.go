@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/AlecAivazis/survey/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/hashicorp/go-cleanhttp"
@@ -26,11 +25,11 @@ import (
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	libConfig "github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 	"github.com/akuity/kargo/pkg/kubeclient"
 )
 
@@ -176,7 +175,7 @@ func (o *loginOptions) run(ctx context.Context) error {
 				return err
 			}
 		}
-		if bearerToken, err = adminLogin(ctx, o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
+		if bearerToken, err = adminLogin(o.ServerAddress, o.Password, o.InsecureTLS); err != nil {
 			return err
 		}
 	case o.UseKubeconfig:
@@ -222,36 +221,39 @@ func (o *loginOptions) run(ctx context.Context) error {
 }
 
 func adminLogin(
-	ctx context.Context,
 	serverAddress string,
 	password string,
 	insecureTLS bool,
 ) (string, error) {
-	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
-
-	cfgRes, err := kargoClient.GetPublicConfig(
-		ctx,
-		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
+	apiClient, err := client.GetClient(serverAddress, "", insecureTLS)
+	if err != nil {
+		return "", err
+	}
+	res, err := apiClient.System.GetPublicConfig(
+		system.NewGetPublicConfigParams(),
 	)
 	if err != nil {
 		return "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
-	if !cfgRes.Msg.AdminAccountEnabled {
+	if !res.Payload.AdminAccountEnabled {
 		return "", errors.New("server does not support admin user login")
 	}
 
-	loginRes, err := kargoClient.AdminLogin(
-		ctx,
-		connect.NewRequest(&v1alpha1.AdminLoginRequest{
-			Password: password,
-		}),
-	)
+	if apiClient, err = client.GetClient(
+		serverAddress,
+		password,
+		insecureTLS,
+	); err != nil {
+		return "", err
+	}
+
+	loginRes, err := apiClient.System.AdminLogin(system.NewAdminLoginParams(), nil)
 	if err != nil {
 		return "", fmt.Errorf("error logging in as admin user: %w", err)
 	}
 
-	return loginRes.Msg.IdToken, nil
+	return loginRes.Payload.IDToken, nil
 }
 
 // kubeconfigLogin gleans a bearer token from the local kubeconfig's current
@@ -279,21 +281,24 @@ func ssoLogin(
 	callbackPort int,
 	insecureTLS bool,
 ) (string, string, error) {
-	kargoClient := client.GetClient(serverAddress, "", insecureTLS)
-
-	res, err := kargoClient.GetPublicConfig(
-		ctx,
-		connect.NewRequest(&v1alpha1.GetPublicConfigRequest{}),
+	apiClient, err := client.GetClient(serverAddress, "", insecureTLS)
+	if err != nil {
+		return "", "", err
+	}
+	res, err := apiClient.System.GetPublicConfig(
+		system.NewGetPublicConfigParams(),
 	)
 	if err != nil {
 		return "", "", fmt.Errorf("error retrieving public configuration from server: %w", err)
 	}
 
-	if res.Msg.OidcConfig == nil {
+	svrCfg := res.Payload
+
+	if svrCfg.OidcConfig == nil {
 		return "", "", errors.New("server does not support OpenID Connect")
 	}
 
-	scopes := res.Msg.OidcConfig.Scopes
+	scopes := svrCfg.OidcConfig.Scopes
 
 	httpClient := cleanhttp.DefaultClient()
 	if insecureTLS {
@@ -305,7 +310,7 @@ func ssoLogin(
 	}
 	ctx = oidc.ClientContext(ctx, httpClient)
 
-	provider, err := oidc.NewProvider(ctx, res.Msg.OidcConfig.IssuerUrl)
+	provider, err := oidc.NewProvider(ctx, svrCfg.OidcConfig.IssuerURL)
 	if err != nil {
 		return "", "", fmt.Errorf("error initializing OIDC provider: %w", err)
 	}
@@ -331,8 +336,8 @@ func ssoLogin(
 		return "", "", fmt.Errorf("error creating callback listener: %w", err)
 	}
 
-	cfg := oauth2.Config{
-		ClientID: res.Msg.OidcConfig.ClientId,
+	oauthCfg := oauth2.Config{
+		ClientID: svrCfg.OidcConfig.ClientID,
 		Endpoint: provider.Endpoint(),
 		Scopes:   scopes,
 		RedirectURL: fmt.Sprintf(
@@ -340,9 +345,9 @@ func ssoLogin(
 			strings.Split(listener.Addr().String(), ":")[1],
 		),
 	}
-	if res.Msg.OidcConfig.CliClientId != "" {
+	if svrCfg.OidcConfig.CliClientID != "" {
 		// There is an OIDC client ID specifically meant for CLI use
-		cfg.ClientID = res.Msg.OidcConfig.CliClientId
+		oauthCfg.ClientID = svrCfg.OidcConfig.CliClientID
 	}
 
 	// Per the spec, this must be guessable with probability <= 2^(-128). The
@@ -363,7 +368,7 @@ func ssoLogin(
 	if err != nil {
 		return "", "", fmt.Errorf("error creating PCKE code verifier and code challenge: %w", err)
 	}
-	u := cfg.AuthCodeURL(
+	u := oauthCfg.AuthCodeURL(
 		state,
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
@@ -383,7 +388,7 @@ func ssoLogin(
 		return "", "", ctx.Err()
 	}
 
-	token, err := cfg.Exchange(
+	token, err := oauthCfg.Exchange(
 		ctx,
 		code,
 		oauth2.SetAuthURLParam("code_verifier", codeVerifier),

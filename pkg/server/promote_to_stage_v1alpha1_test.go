@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -12,11 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/server/config"
 )
 
 func TestPromoteToStage(t *testing.T) {
@@ -521,4 +525,157 @@ func TestPromoteToStage(t *testing.T) {
 			testCase.assertions(t, recorder, res, err)
 		})
 	}
+}
+
+func Test_server_promoteToStage(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testWarehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-warehouse",
+			Namespace: testProject.Name,
+		},
+	}
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight",
+			Namespace: testProject.Name,
+			Labels: map[string]string{
+				kargoapi.LabelKeyAlias: "fake-alias",
+			},
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: testWarehouse.Name,
+		},
+	}
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testProject.Name,
+		},
+		Spec: kargoapi.StageSpec{
+			RequestedFreight: []kargoapi.FreightRequest{
+				{
+					Origin: kargoapi.FreightOrigin{
+						Kind: kargoapi.FreightOriginKindWarehouse,
+						Name: testWarehouse.Name,
+					},
+					Sources: kargoapi.FreightSources{
+						Direct: true,
+					},
+				},
+			},
+			PromotionTemplate: &kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Steps: []kargoapi.PromotionStep{
+						{Uses: "fake-step"},
+					},
+				},
+			},
+		},
+	}
+
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodPost, "/v1beta1/projects/"+testProject.Name+"/stages/"+testStage.Name+"/promotions",
+		[]restTestCase{
+			{
+				name:          "Project not found",
+				clientBuilder: fake.NewClientBuilder(),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Stage not found",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Freight not found by name",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: "nonexistent-freight",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Freight not found by alias",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					FreightAlias: "nonexistent-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Neither freight nor freightAlias provided",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body:          mustJSONBody(promoteToStageRequest{}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Both freight and freightAlias provided",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight:      testFreight.Name,
+					FreightAlias: "fake-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Successfully promote by freight name",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Verify a Promotion was created
+					promos := &kargoapi.PromotionList{}
+					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
+					require.NoError(t, err)
+					require.Len(t, promos.Items, 1)
+					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
+					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+				},
+			},
+			{
+				name:          "Successfully promote by freight alias",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
+				body: mustJSONBody(promoteToStageRequest{
+					FreightAlias: "fake-alias",
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Verify a Promotion was created
+					promos := &kargoapi.PromotionList{}
+					err := c.List(t.Context(), promos, client.InNamespace(testProject.Name))
+					require.NoError(t, err)
+					require.Len(t, promos.Items, 1)
+					require.Equal(t, testStage.Name, promos.Items[0].Spec.Stage)
+					require.Equal(t, testFreight.Name, promos.Items[0].Spec.Freight)
+				},
+			},
+		},
+	)
 }

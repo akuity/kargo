@@ -5,21 +5,20 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	"k8s.io/cli-runtime/pkg/printers"
-	sigyaml "sigs.k8s.io/yaml"
 
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type applyOptions struct {
@@ -107,7 +106,7 @@ func (o *applyOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -115,58 +114,54 @@ func (o *applyOptions) run(ctx context.Context) error {
 	// TODO: Current implementation of apply is not the same as `kubectl` does.
 	// It actually "replaces" resource with the given file.
 	// We should provide the same implementation as `kubectl` does.
-	resp, err := kargoSvcCli.CreateOrUpdateResource(ctx,
-		connect.NewRequest(&kargosvcapi.CreateOrUpdateResourceRequest{
-			Manifest: manifest,
-		}))
+	upsert := true
+	res, err := apiClient.Resources.UpdateResource(
+		resources.NewUpdateResourceParams().
+			WithManifest(string(manifest)).
+			WithUpsert(&upsert),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("apply resource: %w", err)
 	}
 
-	resCap := len(resp.Msg.GetResults())
-	createdRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest, 0, resCap)
-	updatedRes := make([]*kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest, 0, resCap)
-	errs := make([]error, 0, resCap)
-	for _, r := range resp.Msg.GetResults() {
-		switch typedRes := r.GetResult().(type) {
-		case *kargosvcapi.CreateOrUpdateResourceResult_CreatedResourceManifest:
-			createdRes = append(createdRes, typedRes)
-		case *kargosvcapi.CreateOrUpdateResourceResult_UpdatedResourceManifest:
-			updatedRes = append(updatedRes, typedRes)
-		case *kargosvcapi.CreateOrUpdateResourceResult_Error:
-			errs = append(errs, errors.New(typedRes.Error))
+	// Separate results into created, updated, and errors
+	var createdRes, updatedRes []*models.CreateOrUpdateResourceResult
+	var errs []error
+	for _, r := range res.Payload.Results {
+		if r.Error != "" {
+			errs = append(errs, errors.New(r.Error))
+		} else if r.CreatedResourceManifest != nil {
+			createdRes = append(createdRes, r)
+		} else if r.UpdatedResourceManifest != nil {
+			updatedRes = append(updatedRes, r)
 		}
 	}
 
-	printer, err := o.toPrinter("created")
-	if err != nil {
-		return fmt.Errorf("new printer: %w", err)
-	}
-
-	for _, res := range createdRes {
-		var obj unstructured.Unstructured
-		if err = sigyaml.Unmarshal(res.CreatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
-				fmt.Errorf("uunmarshal created manifest: %w", err))
-			continue
+	// Print created resources
+	if len(createdRes) > 0 {
+		printer, printerErr := o.toPrinter("created")
+		if printerErr != nil {
+			return fmt.Errorf("new printer: %w", printerErr)
 		}
-		_ = printer.PrintObj(&obj, o.Out)
-	}
-
-	printer, err = o.toPrinter("updated")
-	if err != nil {
-		return fmt.Errorf("new printer: %w", err)
-	}
-
-	for _, res := range updatedRes {
-		var obj unstructured.Unstructured
-		if err = sigyaml.Unmarshal(res.UpdatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
-				fmt.Errorf("unmarshal updated manifest: %w", err))
-			continue
+		for _, res := range createdRes {
+			obj := &unstructured.Unstructured{Object: res.CreatedResourceManifest}
+			_ = printer.PrintObj(obj, o.Out)
 		}
-		_ = printer.PrintObj(&obj, o.Out)
 	}
+
+	// Print updated resources
+	if len(updatedRes) > 0 {
+		printer, printerErr := o.toPrinter("configured")
+		if printerErr != nil {
+			return fmt.Errorf("new printer: %w", printerErr)
+		}
+		for _, res := range updatedRes {
+			obj := &unstructured.Unstructured{Object: res.UpdatedResourceManifest}
+			_ = printer.PrintObj(obj, o.Out)
+		}
+	}
+
 	return errors.Join(errs...)
 }
 

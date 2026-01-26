@@ -24,7 +24,7 @@ const gitignorePath = path.resolve(__dirname, '.gitignore');
 export default [
   includeIgnoreFile(gitignorePath),
   {
-    ignores: ['**/*.cjs']
+    ignores: ['**/*.cjs', 'src/gen/api/v2/**']
   },
   ...compat.extends('eslint:recommended', 'plugin:@typescript-eslint/recommended', 'prettier'),
   {

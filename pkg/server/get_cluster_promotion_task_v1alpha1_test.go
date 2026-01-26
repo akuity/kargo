@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
@@ -143,7 +147,7 @@ func TestGetClusterPromotionTask(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -159,7 +163,7 @@ func TestGetClusterPromotionTask(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
 							WithObjects(
@@ -182,4 +186,35 @@ func TestGetClusterPromotionTask(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_getClusterPromotionTask(t *testing.T) {
+	testTask := &kargoapi.ClusterPromotionTask{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-task"},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/shared/cluster-promotion-tasks/"+testTask.Name,
+		[]restTestCase{
+			{
+				name: "ClusterPromotionTask does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "gets ClusterPromotionTask",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testTask),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the ClusterPromotionTask in the response
+					task := &kargoapi.ClusterPromotionTask{}
+					err := json.Unmarshal(w.Body.Bytes(), task)
+					require.NoError(t, err)
+					require.Equal(t, testTask.Name, task.Name)
+				},
+			},
+		},
+	)
 }

@@ -7,8 +7,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	"github.com/hashicorp/go-cleanhttp"
 	"golang.org/x/text/encoding"
 	"golang.org/x/text/transform"
@@ -21,6 +23,7 @@ import (
 	"github.com/akuity/kargo/pkg/api/stubs/rollouts"
 	libEncoding "github.com/akuity/kargo/pkg/encoding"
 	"github.com/akuity/kargo/pkg/expressions"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/server/user"
 )
@@ -497,4 +500,177 @@ func streamLogs(
 	}()
 
 	return resultCh, nil
+}
+
+// @id GetAnalysisRunLogs
+// @Summary Stream AnalysisRun logs
+// @Description Stream logs from an AnalysisRun job as Server-Sent Events (SSE).
+// @Tags Verifications, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param analysis-run path string true "AnalysisRun name"
+// @Param metricName query string false "Metric name"
+// @Param containerName query string false "Container name"
+// @Produce text/event-stream
+// @Success 200 {string} string "Log stream (SSE)"
+// @Router /v1beta1/projects/{project}/analysis-runs/{analysis-run}/logs [get]
+func (s *server) getAnalysisRunLogs(c *gin.Context) {
+	if !s.cfg.RolloutsIntegrationEnabled {
+		_ = c.Error(errArgoRolloutsIntegrationDisabled)
+		return
+	}
+
+	if s.cfg.AnalysisRunLogURLTemplate == "" {
+		_ = c.Error(libhttp.ErrorStr(
+			"AnalysisRun log streaming is not configured",
+			http.StatusNotImplemented,
+		))
+		return
+	}
+
+	ctx := c.Request.Context()
+	logger := logging.LoggerFromContext(ctx)
+
+	project := c.Param("project")
+	name := c.Param("analysis-run")
+	metricName := c.Query("metricName")
+	containerName := c.Query("containerName")
+
+	analysisRun, err := rollouts.GetAnalysisRun(
+		ctx,
+		s.client,
+		types.NamespacedName{
+			Namespace: project,
+			Name:      name,
+		},
+	)
+	if err != nil {
+		_ = c.Error(fmt.Errorf(
+			"error getting AnalysisRun %q in namespace %q: %w",
+			name, project, err,
+		))
+		return
+	}
+	if analysisRun == nil {
+		_ = c.Error(libhttp.ErrorStr(
+			fmt.Sprintf("AnalysisRun %q in namespace %q not found", name, project),
+			http.StatusNotFound,
+		))
+		return
+	}
+
+	jobMetricName, jobMetric, err := s.getJobMetric(analysisRun, metricName)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	containerName, err = s.getContainerName(
+		analysisRun,
+		jobMetricName,
+		jobMetric,
+		containerName,
+	)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	jobNamespace, jobName, err := s.getJobNamespaceAndName(analysisRun, jobMetricName)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	stage, err := s.getStageFromAnalysisRun(ctx, analysisRun)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	httpReq, err := s.buildRequest(
+		ctx,
+		stage,
+		analysisRun,
+		jobMetricName,
+		jobNamespace,
+		jobName,
+		containerName,
+	)
+	if err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	httpResp, err := cleanhttp.DefaultClient().Do(httpReq)
+	if err != nil {
+		_ = c.Error(fmt.Errorf(
+			"error performing GET request for log url %s: %w",
+			httpReq.URL.String(), err,
+		))
+		return
+	}
+	defer httpResp.Body.Close()
+
+	// Logs can be large, so we read them using a buffered reader.
+	reader := bufio.NewReader(httpResp.Body)
+
+	const bufferSize = 4096 // 4 KB
+
+	// just need to peek at the first two bytes to help detect encoding
+	peekedBytes, err := reader.Peek(2)
+	if err != nil && err != io.EOF {
+		_ = c.Error(fmt.Errorf("error peeking at log stream: %w", err))
+		return
+	}
+
+	// Log data has a higher than average probability of being encoded with
+	// something other than UTF-8.
+	enc := libEncoding.DetectEncoding(httpResp.Header.Get("Content-Type"), peekedBytes)
+
+	logCh, err := streamLogs(ctx, reader, enc.NewDecoder(), bufferSize)
+	if err != nil {
+		_ = c.Error(fmt.Errorf("error streaming logs: %w", err))
+		return
+	}
+
+	setSSEHeaders(c)
+
+	for {
+		select {
+		case chunk, ok := <-logCh:
+			if !ok {
+				// Channel closed
+				return
+			}
+
+			if chunk.Error != nil {
+				// Error reading log data
+				logger.Error(chunk.Error, "error streaming logs")
+				return
+			}
+
+			// Write log chunk as SSE event
+			// Split on newlines and prefix each line with "data: " per SSE spec
+			lines := strings.Split(chunk.Data, "\n")
+			for _, line := range lines {
+				if _, err := fmt.Fprintf(c.Writer, "data: %s\n", line); err != nil {
+					logger.Debug("failed to write log line", "error", err)
+					return
+				}
+			}
+			// Empty line terminates the SSE event
+			if _, err := fmt.Fprint(c.Writer, "\n"); err != nil {
+				logger.Debug("failed to write event terminator", "error", err)
+				return
+			}
+
+			// Flush to ensure the data is sent immediately
+			c.Writer.Flush()
+
+		case <-ctx.Done():
+			logger.Debug("context done", "error", ctx.Err())
+			return
+		}
+	}
 }

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,4 +76,38 @@ func (s *server) GetAnalysisTemplate(
 			AnalysisTemplate: at,
 		},
 	}), nil
+}
+
+// nolint: lll
+// @id GetAnalysisTemplate
+// @Summary Retrieve an AnalysisTemplate
+// @Description Retrieve an AnalysisTemplate resource from a project's
+// @Description namespace.
+// @Tags Verifications, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param analysis-template path string true "AnalysisTemplate name"
+// @Produce json
+// @Success 200 {object} object "AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)"
+// @Router /v1beta1/projects/{project}/analysis-templates/{analysis-template} [get]
+func (s *server) getAnalysisTemplate(c *gin.Context) {
+	if !s.cfg.RolloutsIntegrationEnabled {
+		_ = c.Error(errArgoRolloutsIntegrationDisabled)
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	project := c.Param("project")
+	name := c.Param("analysis-template")
+
+	template := &rolloutsapi.AnalysisTemplate{}
+	if err := s.client.Get(
+		ctx, client.ObjectKey{Namespace: project, Name: name}, template,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.JSON(http.StatusOK, template)
 }

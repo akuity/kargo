@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/verifications"
 )
 
 type verifyStageOptions struct {
@@ -102,34 +101,28 @@ func (o *verifyStageOptions) validate() error {
 
 // run requests a rerun of the stage verification.
 func (o *verifyStageOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if o.Abort {
-		if _, err := kargoSvcCli.AbortVerification(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.AbortVerificationRequest{
-					Project: o.Project,
-					Stage:   o.Name,
-				},
-			),
+		if _, err := apiClient.Verifications.AbortVerification(
+			verifications.NewAbortVerificationParams().
+				WithProject(o.Project).
+				WithStage(o.Name),
+			nil,
 		); err != nil {
 			return fmt.Errorf("abort verification: %w", err)
 		}
 		return nil
 	}
 
-	if _, err := kargoSvcCli.Reverify(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.ReverifyRequest{
-				Project: o.Project,
-				Stage:   o.Name,
-			},
-		),
+	if _, err := apiClient.Verifications.Reverify(
+		verifications.NewReverifyParams().
+			WithProject(o.Project).
+			WithStage(o.Name),
+		nil,
 	); err != nil {
 		return fmt.Errorf("reverify stage: %w", err)
 	}
