@@ -91,7 +91,8 @@ func (o *serverOptions) run(ctx context.Context) error {
 
 	srv := server.NewServer(
 		apiconfig.ServerConfig{
-			LocalMode: true,
+			RestConfig: restCfg,
+			LocalMode:  true,
 		},
 		client,
 		rbac.NewKubernetesRolesDatabase(client),
