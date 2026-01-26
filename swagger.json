@@ -337,7 +337,7 @@
                 }
             }
         },
-        "/v1beta1/projects/{project}/apitokens": {
+        "/v1beta1/projects/{project}/api-tokens": {
             "get": {
                 "security": [
                     {
@@ -380,7 +380,7 @@
                 }
             }
         },
-        "/v1beta1/projects/{project}/apitokens/{apitoken}": {
+        "/v1beta1/projects/{project}/api-tokens/{apitoken}": {
             "get": {
                 "security": [
                     {
@@ -2258,7 +2258,7 @@
                 }
             }
         },
-        "/v1beta1/projects/{project}/roles/{role}/apitokens": {
+        "/v1beta1/projects/{project}/roles/{role}/api-tokens": {
             "post": {
                 "security": [
                     {
@@ -3777,7 +3777,7 @@
                 }
             }
         },
-        "/v1beta1/system/apitokens": {
+        "/v1beta1/system/api-tokens": {
             "get": {
                 "security": [
                     {
@@ -3813,7 +3813,7 @@
                 }
             }
         },
-        "/v1beta1/system/apitokens/{apitoken}": {
+        "/v1beta1/system/api-tokens/{apitoken}": {
             "get": {
                 "security": [
                     {
@@ -4496,7 +4496,7 @@
                 }
             }
         },
-        "/v1beta1/system/roles/{role}/apitokens": {
+        "/v1beta1/system/roles/{role}/api-tokens": {
             "post": {
                 "security": [
                     {

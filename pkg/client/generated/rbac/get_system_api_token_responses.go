@@ -30,7 +30,7 @@ func (o *GetSystemAPITokenReader) ReadResponse(response runtime.ClientResponse, 
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[GET /v1beta1/system/apitokens/{apitoken}] GetSystemAPIToken", response, response.Code())
+		return nil, runtime.NewAPIError("[GET /v1beta1/system/api-tokens/{apitoken}] GetSystemAPIToken", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *GetSystemAPITokenOK) Code() int {
 
 func (o *GetSystemAPITokenOK) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v1beta1/system/apitokens/{apitoken}][%d] getSystemApiTokenOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/api-tokens/{apitoken}][%d] getSystemApiTokenOK %s", 200, payload)
 }
 
 func (o *GetSystemAPITokenOK) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[GET /v1beta1/system/apitokens/{apitoken}][%d] getSystemApiTokenOK %s", 200, payload)
+	return fmt.Sprintf("[GET /v1beta1/system/api-tokens/{apitoken}][%d] getSystemApiTokenOK %s", 200, payload)
 }
 
 func (o *GetSystemAPITokenOK) GetPayload() any {

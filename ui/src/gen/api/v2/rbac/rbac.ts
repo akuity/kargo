@@ -78,8 +78,8 @@ export const getListProjectAPITokensUrl = (
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v1beta1/projects/${project}/apitokens?${stringifiedParams}`
-    : `/v1beta1/projects/${project}/apitokens`;
+    ? `/v1beta1/projects/${project}/api-tokens?${stringifiedParams}`
+    : `/v1beta1/projects/${project}/api-tokens`;
 };
 
 export const listProjectAPITokens = async (
@@ -97,7 +97,7 @@ export const getListProjectAPITokensQueryKey = (
   project?: string,
   params?: ListProjectAPITokensParams
 ) => {
-  return [`/v1beta1/projects/${project}/apitokens`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/projects/${project}/api-tokens`, ...(params ? [params] : [])] as const;
 };
 
 export const getListProjectAPITokensQueryOptions = <
@@ -235,7 +235,7 @@ export type getProjectAPITokenResponseSuccess = getProjectAPITokenResponse200 & 
 export type getProjectAPITokenResponse = getProjectAPITokenResponseSuccess;
 
 export const getGetProjectAPITokenUrl = (project: string, apitoken: string) => {
-  return `/v1beta1/projects/${project}/apitokens/${apitoken}`;
+  return `/v1beta1/projects/${project}/api-tokens/${apitoken}`;
 };
 
 export const getProjectAPIToken = async (
@@ -250,7 +250,7 @@ export const getProjectAPIToken = async (
 };
 
 export const getGetProjectAPITokenQueryKey = (project?: string, apitoken?: string) => {
-  return [`/v1beta1/projects/${project}/apitokens/${apitoken}`] as const;
+  return [`/v1beta1/projects/${project}/api-tokens/${apitoken}`] as const;
 };
 
 export const getGetProjectAPITokenQueryOptions = <
@@ -382,7 +382,7 @@ export type deleteProjectAPITokenResponseSuccess = deleteProjectAPITokenResponse
 export type deleteProjectAPITokenResponse = deleteProjectAPITokenResponseSuccess;
 
 export const getDeleteProjectAPITokenUrl = (project: string, apitoken: string) => {
-  return `/v1beta1/projects/${project}/apitokens/${apitoken}`;
+  return `/v1beta1/projects/${project}/api-tokens/${apitoken}`;
 };
 
 export const deleteProjectAPIToken = async (
@@ -1238,7 +1238,7 @@ export type createProjectAPITokenResponseSuccess = createProjectAPITokenResponse
 export type createProjectAPITokenResponse = createProjectAPITokenResponseSuccess;
 
 export const getCreateProjectAPITokenUrl = (project: string, role: string) => {
-  return `/v1beta1/projects/${project}/roles/${role}/apitokens`;
+  return `/v1beta1/projects/${project}/roles/${role}/api-tokens`;
 };
 
 export const createProjectAPIToken = async (
@@ -1348,8 +1348,8 @@ export const getListSystemAPITokensUrl = (params?: ListSystemAPITokensParams) =>
   const stringifiedParams = normalizedParams.toString();
 
   return stringifiedParams.length > 0
-    ? `/v1beta1/system/apitokens?${stringifiedParams}`
-    : `/v1beta1/system/apitokens`;
+    ? `/v1beta1/system/api-tokens?${stringifiedParams}`
+    : `/v1beta1/system/api-tokens`;
 };
 
 export const listSystemAPITokens = async (
@@ -1363,7 +1363,7 @@ export const listSystemAPITokens = async (
 };
 
 export const getListSystemAPITokensQueryKey = (params?: ListSystemAPITokensParams) => {
-  return [`/v1beta1/system/apitokens`, ...(params ? [params] : [])] as const;
+  return [`/v1beta1/system/api-tokens`, ...(params ? [params] : [])] as const;
 };
 
 export const getListSystemAPITokensQueryOptions = <
@@ -1496,7 +1496,7 @@ export type getSystemAPITokenResponseSuccess = getSystemAPITokenResponse200 & {
 export type getSystemAPITokenResponse = getSystemAPITokenResponseSuccess;
 
 export const getGetSystemAPITokenUrl = (apitoken: string) => {
-  return `/v1beta1/system/apitokens/${apitoken}`;
+  return `/v1beta1/system/api-tokens/${apitoken}`;
 };
 
 export const getSystemAPIToken = async (
@@ -1510,7 +1510,7 @@ export const getSystemAPIToken = async (
 };
 
 export const getGetSystemAPITokenQueryKey = (apitoken?: string) => {
-  return [`/v1beta1/system/apitokens/${apitoken}`] as const;
+  return [`/v1beta1/system/api-tokens/${apitoken}`] as const;
 };
 
 export const getGetSystemAPITokenQueryOptions = <
@@ -1632,7 +1632,7 @@ export type deleteSystemAPITokenResponseSuccess = deleteSystemAPITokenResponse20
 export type deleteSystemAPITokenResponse = deleteSystemAPITokenResponseSuccess;
 
 export const getDeleteSystemAPITokenUrl = (apitoken: string) => {
-  return `/v1beta1/system/apitokens/${apitoken}`;
+  return `/v1beta1/system/api-tokens/${apitoken}`;
 };
 
 export const deleteSystemAPIToken = async (
@@ -1991,7 +1991,7 @@ export type createSystemAPITokenResponseSuccess = createSystemAPITokenResponse20
 export type createSystemAPITokenResponse = createSystemAPITokenResponseSuccess;
 
 export const getCreateSystemAPITokenUrl = (role: string) => {
-  return `/v1beta1/system/roles/${role}/apitokens`;
+  return `/v1beta1/system/roles/${role}/api-tokens`;
 };
 
 export const createSystemAPIToken = async (

@@ -541,7 +541,7 @@ paths:
       tags:
       - Verifications
       - Project-Level
-  /v1beta1/projects/{project}/apitokens:
+  /v1beta1/projects/{project}/api-tokens:
     get:
       description: |-
         List project-level API tokens. Returns a Kubernetes SecretList
@@ -571,7 +571,7 @@ paths:
       - Rbac
       - Credentials
       - Project-Level
-  /v1beta1/projects/{project}/apitokens/{apitoken}:
+  /v1beta1/projects/{project}/api-tokens/{apitoken}:
     delete:
       description: Delete a project-level API token from a project's namespace.
       operationId: DeleteProjectAPIToken
@@ -1811,7 +1811,7 @@ paths:
       tags:
       - Rbac
       - Project-Level
-  /v1beta1/projects/{project}/roles/{role}/apitokens:
+  /v1beta1/projects/{project}/roles/{role}/api-tokens:
     post:
       consumes:
       - application/json
@@ -2922,7 +2922,7 @@ paths:
       - Credentials
       - Repo Credentials
       - Shared
-  /v1beta1/system/apitokens:
+  /v1beta1/system/api-tokens:
     get:
       description: |-
         List system-level API tokens. Returns a Kubernetes SecretList
@@ -2947,7 +2947,7 @@ paths:
       - Rbac
       - Credentials
       - System-Level
-  /v1beta1/system/apitokens/{apitoken}:
+  /v1beta1/system/api-tokens/{apitoken}:
     delete:
       description: Delete a system-level API token.
       operationId: DeleteSystemAPIToken
@@ -3426,7 +3426,7 @@ paths:
       tags:
       - Rbac
       - System-Level
-  /v1beta1/system/roles/{role}/apitokens:
+  /v1beta1/system/roles/{role}/api-tokens:
     post:
       consumes:
       - application/json

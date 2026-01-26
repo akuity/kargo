@@ -30,7 +30,7 @@ func (o *CreateProjectAPITokenReader) ReadResponse(response runtime.ClientRespon
 		}
 		return result, nil
 	default:
-		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/roles/{role}/apitokens] CreateProjectAPIToken", response, response.Code())
+		return nil, runtime.NewAPIError("[POST /v1beta1/projects/{project}/roles/{role}/api-tokens] CreateProjectAPIToken", response, response.Code())
 	}
 }
 
@@ -80,12 +80,12 @@ func (o *CreateProjectAPITokenCreated) Code() int {
 
 func (o *CreateProjectAPITokenCreated) Error() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/{role}/apitokens][%d] createProjectApiTokenCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/{role}/api-tokens][%d] createProjectApiTokenCreated %s", 201, payload)
 }
 
 func (o *CreateProjectAPITokenCreated) String() string {
 	payload, _ := json.Marshal(o.Payload)
-	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/{role}/apitokens][%d] createProjectApiTokenCreated %s", 201, payload)
+	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/{role}/api-tokens][%d] createProjectApiTokenCreated %s", 201, payload)
 }
 
 func (o *CreateProjectAPITokenCreated) GetPayload() any {
