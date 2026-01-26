@@ -21,6 +21,12 @@ import (
 	"github.com/akuity/kargo/pkg/x/version"
 )
 
+var errNotLoggedIn = errors.New(
+	"seems like you are not logged in; please use `kargo login` to " +
+		"authenticate or set both the KARGO_API_ADDRESS and KARGO_API_TOKEN " +
+		"environment variables",
+)
+
 type Options struct {
 	InsecureTLS bool
 }
@@ -47,9 +53,7 @@ func GetClientFromConfig(
 	opts Options,
 ) (*client.KargoAPI, error) {
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
-		return nil, errors.New(
-			"seems like you are not logged in; please use `kargo login` to authenticate",
-		)
+		return nil, errNotLoggedIn
 	}
 	skipTLSVerify := opts.InsecureTLS || cfg.InsecureSkipTLSVerify
 	cfg, err := newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify)
@@ -108,9 +112,7 @@ func GetWatchClientFromConfig(
 	opts Options,
 ) (*watch.Client, error) {
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
-		return nil, errors.New(
-			"seems like you are not logged in; please use `kargo login` to authenticate",
-		)
+		return nil, errNotLoggedIn
 	}
 	skipTLSVerify := opts.InsecureTLS || cfg.InsecureSkipTLSVerify
 	cfg, err := newTokenRefresher().refreshToken(ctx, cfg, skipTLSVerify)

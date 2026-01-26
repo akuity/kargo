@@ -67,6 +67,16 @@ type CLIConfig struct {
 	Project string `json:"project,omitempty"`
 }
 
+// NewEnvVarCLIConfig returns a new CLI configuration populated from environment
+// variables.
+func NewEnvVarCLIConfig() CLIConfig {
+	return CLIConfig{
+		APIAddress:            os.Getenv("KARGO_API_ADDRESS"),
+		BearerToken:           os.Getenv("KARGO_API_TOKEN"),
+		InsecureSkipTLSVerify: os.Getenv("KARGO_INSECURE_SKIP_TLS_VERIFY") == "true",
+	}
+}
+
 // NewDefaultCLIConfig returns a new default CLI configuration.
 func NewDefaultCLIConfig() CLIConfig {
 	return CLIConfig{}
@@ -83,7 +93,7 @@ func loadCLIConfig(configPath string) (CLIConfig, error) {
 	_, err := os.Stat(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return cfg, fmt.Errorf("please use `kargo login` to continue: %w", NewConfigNotFoundErr(configPath))
+			return cfg, NewConfigNotFoundErr(configPath)
 		}
 		return cfg, fmt.Errorf("os.Stat: %w", err)
 	}
