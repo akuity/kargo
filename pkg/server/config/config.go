@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -34,6 +35,7 @@ type ServerConfig struct {
 	SharedResourcesNamespace    string
 	SystemResourcesNamespace    string
 	KargoNamespace              string
+	RestConfig                  *rest.Config
 }
 
 func ServerConfigFromEnv() ServerConfig {

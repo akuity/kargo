@@ -20,6 +20,7 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	libClient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -50,16 +51,11 @@ type authInterceptor struct {
 		claims jwt.Claims,
 	) (*jwt.Token, []string, error)
 	verifyKargoIssuedTokenFn func(rawToken string) bool
-	verifyIDPIssuedTokenFn   func(
-		ctx context.Context,
-		rawToken string,
-	) (claims, error)
-	oidcTokenVerifyFn     goOIDCIDTokenVerifyFn
-	oidcExtractClaimsFn   func(*oidc.IDToken) (claims, error)
-	listServiceAccountsFn func(
-		ctx context.Context,
-		c claims,
-	) (map[string]map[types.NamespacedName]struct{}, error)
+	verifyIDPIssuedTokenFn   func(ctx context.Context, rawToken string) (claims, error)
+	verifyKubernetesTokenFn  func(ctx context.Context, rawToken string) error
+	oidcTokenVerifyFn        goOIDCIDTokenVerifyFn
+	oidcExtractClaimsFn      func(*oidc.IDToken) (claims, error)
+	listServiceAccountsFn    func(ctx context.Context, c claims) (map[string]map[types.NamespacedName]struct{}, error)
 }
 
 // goOIDCIDTokenVerifyFn is a github.com/coreos/go-oidc/v3/oidc/IDTokenVerifier.Verify() function
@@ -81,6 +77,7 @@ func newAuthInterceptor(
 	a.parseUnverifiedJWTFn = jwt.NewParser(jwt.WithoutClaimsValidation()).ParseUnverified
 	a.verifyKargoIssuedTokenFn = a.verifyKargoIssuedToken
 	a.verifyIDPIssuedTokenFn = a.verifyIDPIssuedToken
+	a.verifyKubernetesTokenFn = a.verifyKubernetesToken
 	a.oidcExtractClaimsFn = oidcExtractClaims
 	a.listServiceAccountsFn = a.listServiceAccounts
 	return a
@@ -368,22 +365,17 @@ func (a *authInterceptor) authenticate(
 
 	// Are we dealing with a JWT?
 	//
-	// Note: If this is a JWT, we cannot trust these claims yet because we're not
-	// verifying the token yet. We use untrustedClaims.Issuer only as a hint as to
-	// HOW we might be able to verify the token further.
+	// If not, we no longer assume this is potentially some other form of token
+	// that the Kubernetes API server might recognize, as that is an increasingly
+	// unlikely scenario.
+	//
+	// If this IS a JWT, we cannot trust these claims yet because we're not
+	// verifying the token just yet. We use untrustedClaims.Issuer only as a hint
+	// as to HOW we might be able to verify the token further.
 	untrustedClaims := jwt.RegisteredClaims{}
 	if _, _, err := a.parseUnverifiedJWTFn(rawToken, &untrustedClaims); err != nil {
-		// This token isn't a JWT, so it's probably an opaque bearer token for the
-		// Kubernetes API server. Just run with it. If we're wrong, Kubernetes API
-		// calls will simply have auth errors that will bubble back to the client.
-		return user.ContextWithInfo(
-			ctx,
-			user.Info{
-				BearerToken: rawToken,
-			},
-		), nil
+		return ctx, errors.New("invalid token")
 	}
-
 	logger.Debug("found untrusted claims in token", "claims", untrustedClaims)
 
 	// If we get to here, we're dealing with a JWT. It could have been issued:
@@ -451,15 +443,16 @@ func (a *authInterceptor) authenticate(
 
 	}
 
-	// Case 3 or 4: We don't know how to verify this token. It's probably a token
-	// issued by the Kubernetes cluster's identity provider. Just run with it. If
-	// we're wrong, Kubernetes API calls will simply have auth errors that will
-	// bubble back to the client.
+	// Case 3 or 4: We don't know how to verify this token. It's possibly a token
+	// issued by the Kubernetes cluster's identity provider.
 
-	logger.Debug(
-		"could not verify token; assuming it might have been issued by " +
-			"Kubernetes cluster identity provider",
-	)
+	// Test whether Kubernetes recognizes this token by making a request to /api
+	logger.Debug("could not verify token; checking if Kubernetes recognizes it")
+	if err := a.verifyKubernetesTokenFn(ctx, rawToken); err != nil {
+		logger.Debug("token not recognized by Kubernetes", "error", err)
+		return ctx, errors.New("invalid token")
+	}
+	logger.Debug("token recognized by Kubernetes")
 
 	return user.ContextWithInfo(
 		ctx,
@@ -528,4 +521,43 @@ func oidcExtractClaims(token *oidc.IDToken) (claims, error) {
 	c := claims{}
 	err := token.Claims(&c)
 	return c, err
+}
+
+// verifyKubernetesToken tests whether the Kubernetes API server recognizes the
+// provided token by making a GET request to the /api endpoint. This is a
+// lightweight check that doesn't require any specific permissions.
+func (a *authInterceptor) verifyKubernetesToken(
+	ctx context.Context,
+	rawToken string,
+) error {
+	if a.cfg.RestConfig == nil { // This shouldn't happen, but just in case...
+		return errors.New("Kubernetes REST config is not available") // nolint: staticcheck
+	}
+
+	transport, err := rest.TransportFor(a.cfg.RestConfig)
+	if err != nil {
+		return fmt.Errorf("create transport: %w", err)
+	}
+
+	apiURL := strings.TrimSuffix(a.cfg.RestConfig.Host, "/") + "/api"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	if err != nil {
+		return fmt.Errorf("create request: %w", err)
+	}
+	req.Header.Set("Authorization", "Bearer "+rawToken)
+
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	if err != nil {
+		return fmt.Errorf("execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf(
+			"unexpected response from Kubernetes API server: %d",
+			resp.StatusCode,
+		)
+	}
+
+	return nil
 }
