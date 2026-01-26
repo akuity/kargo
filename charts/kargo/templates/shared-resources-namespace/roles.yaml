@@ -2,6 +2,23 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
+  name: kargo-shared-resources-reader
+  namespace: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - get
+  - list
+  - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
   name: kargo-shared-resources-admin
   namespace: {{ .Values.global.sharedResources.namespace }}
   labels:
@@ -11,6 +28,7 @@ rules:
   - ""
   resources:
   - secrets
+  - configmaps
   verbs:
   - "*"
 {{- end }}
