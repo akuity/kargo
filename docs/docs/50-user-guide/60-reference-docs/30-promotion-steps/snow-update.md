@@ -65,8 +65,16 @@ All ServiceNow operations require proper authentication credentials stored in a 
 
 | Name                     | Type     | Required | Description                                                                                     |
 | ------------------------ | -------- | -------- | ----------------------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
+| `credentials.secretName` | `string` | N        | Name of the `Secret` containing the ServiceNow credentials in the project namespace.            |
+| `credentials.sharedSecretName` | `string` | N  | Name of the `Secret` containing the ServiceNow credentials in the `shared-resources-namespace`. |
 | `credentials.type`       | `string` | Y        | Type of ServiceNow credentials to use for authentication (either `api-token` or `basic`).       |
+
+:::info
+
+Both `credentials.secretName` and `credentials.sharedSecretName` are optional but it is required
+that one of them must be set. Both can not be set.
+
+:::
 
 For `credentials.type: api-token` the referenced `Secret` should contain the following keys:
 
