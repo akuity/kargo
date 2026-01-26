@@ -65,6 +65,7 @@ type TooltipContentProps = TooltipProps<ValueType, NameType> & {
 const TooltipContent = ({
   active,
   conditionKeys,
+  // @ts-expect-error doesn't change anything, but TODO(Marvin9) why was it here ununsed on the first place
   payload,
   valueFormatter
 }: TooltipContentProps) => {
