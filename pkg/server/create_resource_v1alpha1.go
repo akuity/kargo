@@ -111,6 +111,8 @@ func (s *server) CreateResource(
 func (s *server) createResources(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	// Note that there's middleware in place that limits the body size, which is
+	// why we're not defensive about that here.
 	manifest, err := io.ReadAll(c.Request.Body)
 	if err != nil {
 		_ = c.Error(libhttp.Error(err, http.StatusBadRequest))
