@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
+	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/internal/os"
 	"github.com/akuity/kargo/internal/server/dex"
@@ -32,6 +33,7 @@ type ServerConfig struct {
 	AnalysisRunLogToken         string
 	AnalysisRunLogHTTPHeaders   map[string]string
 	ClusterSecretNamespace      string
+	RestConfig                  *rest.Config
 }
 
 func ServerConfigFromEnv() ServerConfig {
