@@ -8,15 +8,12 @@ import (
 // Crucially, this function removes the oci:// prefix from the URL if there is
 // one.
 func NormalizeChart(repo string) string {
+	repo = sanitize(repo)
+	if repo == "" {
+		return repo
+	}
 	// Note: We lean a bit on image.NormalizeURL() because it is excellent at
 	// normalizing the many different forms of equivalent URLs for Docker Hub
 	// repositories.
-	return NormalizeImage(
-		strings.TrimPrefix(
-			strings.ToLower(
-				strings.TrimSpace(repo),
-			),
-			"oci://",
-		),
-	)
+	return NormalizeImage(strings.TrimPrefix(repo, "oci://"))
 }

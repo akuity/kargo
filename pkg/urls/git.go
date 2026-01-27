@@ -5,13 +5,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"unicode"
-)
-
-const (
-	zeroWidthNoBreakSpace = '\uFEFF' // BOM
-	zeroWidthSpace        = '\u200B'
-	noBreakSpace          = '\u00A0'
 )
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
@@ -26,14 +19,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
-	repo = strings.TrimSpace(strings.ToLower(repo))
-	repo = strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) || r == zeroWidthNoBreakSpace || r == zeroWidthSpace || r == noBreakSpace {
-			return -1 // Remove the character
-		}
-		return r
-	}, repo)
-
+	repo = sanitize(repo)
 	if repo == "" {
 		return repo
 	}

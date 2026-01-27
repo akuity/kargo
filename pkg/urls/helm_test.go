@@ -78,6 +78,82 @@ func TestNormalizeChart(t *testing.T) {
 			input:    "registry-1.docker.io/example/repo",
 			expected: "example/repo",
 		},
+		// Edge cases for unusual whitespace characters
+		{
+			name:     "leading BOM",
+			input:    "\ufeffoci://example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "trailing BOM",
+			input:    "oci://example/repo\ufeff",
+			expected: "example/repo",
+		},
+		{
+			name:     "leading and trailing spaces",
+			input:    "  oci://example/repo  ",
+			expected: "example/repo",
+		},
+		{
+			name:     "leading and trailing tabs",
+			input:    "\toci://example/repo\t",
+			expected: "example/repo",
+		},
+		{
+			name:     "leading and trailing newlines",
+			input:    "\noci://example/repo\n",
+			expected: "example/repo",
+		},
+		{
+			name:     "leading and trailing carriage returns",
+			input:    "\roci://example/repo\r",
+			expected: "example/repo",
+		},
+		{
+			name:     "mixed whitespace",
+			input:    " \t\noci://example/repo\t\n ",
+			expected: "example/repo",
+		},
+		{
+			name:     "non-breaking spaces",
+			input:    "\u00A0oci://example/repo\u00A0",
+			expected: "example/repo",
+		},
+		{
+			name:     "zero-width spaces",
+			input:    "\u200Boci://example/repo\u200B",
+			expected: "example/repo",
+		},
+		{
+			name:     "multiple BOMs",
+			input:    "\ufeff\ufeffoci://example/repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "internal spaces",
+			input:    "oci://example /repo",
+			expected: "example/repo",
+		},
+		{
+			name:     "encoded spaces",
+			input:    "oci://example%20repo",
+			expected: "example%20repo",
+		},
+		{
+			name:     "empty input",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "whitespace-only input",
+			input:    "   ",
+			expected: "",
+		},
+		{
+			name:     "whitespace-only input with tabs/newlines",
+			input:    "\t\n\r",
+			expected: "",
+		},
 	}
 
 	for _, tc := range testCases {
