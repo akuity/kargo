@@ -8,6 +8,12 @@ import (
 	"unicode"
 )
 
+const (
+	zeroWidthNoBreakSpace = '\uFEFF' // BOM
+	zeroWidthSpace        = '\u200B'
+	noBreakSpace          = '\u00A0'
+)
+
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
 
 // NormalizeGit normalizes Git URLs of the following forms:
@@ -22,7 +28,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 func NormalizeGit(repo string) string {
 	repo = strings.TrimSpace(strings.ToLower(repo))
 	repo = strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) || r == '\ufeff' || r == '\u200B' || r == '\u00A0' {
+		if unicode.IsSpace(r) || r == zeroWidthNoBreakSpace || r == zeroWidthSpace || r == noBreakSpace {
 			return -1 // Remove the character
 		}
 		return r
