@@ -69,6 +69,8 @@ global:
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
   affinity: {}
+  ## @param global.topologySpreadConstraints Default topology spread constraints for all Kargo pods.
+  topologySpreadConstraints: []
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
@@ -426,8 +428,18 @@ api:
   tolerations: []
   ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param api.topologySpreadConstraints Topology spread constraints for api pods. Defaults to `global.topologySpreadConstraints`.
+  topologySpreadConstraints: []
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param api.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the API server.
+    enabled: false
+    ## @param api.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param api.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   cabundle:
     ## @param api.cabundle.configMapName Specifies the name of an optional ConfigMap containing CA certs that is managed "out of band." Values in the ConfigMap named here should each contain a single PEM-encoded CA cert. If secretName is also defined, it will take precedence over this field.
@@ -759,8 +771,18 @@ externalWebhooksServer:
   tolerations: []
   ## @param externalWebhooksServer.affinity Specifies pod affinity for external webhook server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param externalWebhooksServer.topologySpreadConstraints Topology spread constraints for external webhook server pods. Defaults to `global.topologySpreadConstraints`.
+  topologySpreadConstraints: []
   ## @param externalWebhooksServer.securityContext Security context for external webhook server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param externalWebhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the external webhook server.
+    enabled: false
+    ## @param externalWebhooksServer.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param externalWebhooksServer.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   probes:
     ## @param externalWebhooksServer.probes.enabled Whether liveness and readiness probes should be included in the external webhook server deployment. It is sometimes advantageous to disable these during local development.
@@ -937,8 +959,18 @@ webhooksServer:
   tolerations: []
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param webhooksServer.topologySpreadConstraints Topology spread constraints for webhooks server pods. Defaults to `global.topologySpreadConstraints`.
+  topologySpreadConstraints: []
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
+
+  podDisruptionBudget:
+    ## @param webhooksServer.podDisruptionBudget.enabled Whether to create a PodDisruptionBudget for the webhooks server.
+    enabled: false
+    ## @param webhooksServer.podDisruptionBudget.minAvailable Minimum number/percentage of pods that must remain available during disruption. Cannot be used with maxUnavailable.
+    minAvailable: 1
+    ## @param webhooksServer.podDisruptionBudget.maxUnavailable Maximum number/percentage of pods that can be unavailable during disruption. Cannot be used with minAvailable.
+    maxUnavailable: ""
 
   tls:
     ## @param webhooksServer.tls.selfSignedCert Whether to generate a self-signed certificate for the (internal) webhooks server. If `true`, `cert-manager` CRDs **must** be present in the cluster. The chart will create and use its own namespaced `Issuer`. If `false`, a cert `Secret` with the name specified by `webhooksServer.tls.secretName` **must** be provided in the same namespace as Kargo. If that cert is not already trusted by the Kubernetes API server, you must specify a value for `webhooksServer.tls.caBundle`. This is why it is strongly recommended to leave this setting as `true`. There is no provision for running the webhooks server without TLS because the Kubernetes API server will not communicate with non-TLS endpoints.
