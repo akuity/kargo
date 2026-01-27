@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
@@ -19,18 +20,23 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
-	origRepo := repo
-	repo = strings.ToLower(repo)
+	repo = strings.TrimSpace(strings.ToLower(repo))
+	repo = strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) || r == '\ufeff' || r == '\u200B' || r == '\u00A0' || r == '\n' || r == '\r' || r == '\t' {
+			return -1 // Remove the character
+		}
+		return r
+	}, repo)
+
+	if repo == "" {
+		return repo
+	}
 
 	// HTTP/S URLs
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
-		repoURL, err := url.Parse(repo)
+		repoURL, err := getURL(repo)
 		if err != nil {
-			return origRepo
-		}
-		if len(repoURL.Query()) > 0 {
-			// Query parameters are not permitted
-			return origRepo
+			return repo
 		}
 		repoURL.User = nil // Remove user info if there is any
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
@@ -40,14 +46,9 @@ func NormalizeGit(repo string) string {
 
 	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
 	if strings.HasPrefix(repo, "ssh://") {
-		// repo = strings.TrimPrefix(repo, "ssh://")
-		repoURL, err := url.Parse(repo)
+		repoURL, err := getURL(repo)
 		if err != nil {
-			return origRepo
-		}
-		if len(repoURL.Query()) > 0 {
-			// Query parameters are not permitted
-			return origRepo
+			return repo
 		}
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
@@ -58,7 +59,7 @@ func NormalizeGit(repo string) string {
 	matches := scpSyntaxRegex.FindStringSubmatch(repo)
 	if len(matches) != 2 && len(matches) != 3 {
 		// This URL doesn't appear to be in a format we recognize
-		return origRepo
+		return repo
 	}
 	userHost := matches[1]
 	var path string
@@ -67,7 +68,11 @@ func NormalizeGit(repo string) string {
 	}
 	pathURL, err := url.Parse(path)
 	if err != nil {
-		return origRepo
+		return repo
+	}
+	decodedPath, err := url.PathUnescape(pathURL.Path)
+	if err == nil {
+		pathURL.Path = decodedPath
 	}
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
@@ -75,4 +80,20 @@ func NormalizeGit(repo string) string {
 		return fmt.Sprintf("ssh://%s", userHost)
 	}
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
+}
+
+func getURL(repo string) (*url.URL, error) {
+	repoURL, err := url.Parse(repo)
+	if err != nil {
+		return nil, fmt.Errorf("parsing URL: %w", err)
+	}
+	if len(repoURL.Query()) > 0 {
+		// Query parameters are not permitted
+		return nil, fmt.Errorf("URL contains %d query parameters; not permitted", len(repoURL.Query()))
+	}
+	decodedPath, err := url.PathUnescape(repoURL.Path)
+	if err == nil {
+		repoURL.Path = decodedPath
+	}
+	return repoURL, nil
 }
