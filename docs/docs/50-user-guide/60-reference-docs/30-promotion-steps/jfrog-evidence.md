@@ -32,8 +32,7 @@ All JFrog Evidence operations require proper authentication credentials stored i
 
 :::info
 
-Both `credentials.secretName` and `credentials.sharedSecretName` are optional but it is required
-that one of them must be set. Both can not be set.
+Either `credentials.secretName` or `credentials.sharedSecretName` must be set, but not both.
 
 :::
 
