@@ -22,7 +22,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 func NormalizeGit(repo string) string {
 	repo = strings.TrimSpace(strings.ToLower(repo))
 	repo = strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) || r == '\ufeff' || r == '\u200B' || r == '\u00A0' || r == '\n' || r == '\r' || r == '\t' {
+		if unicode.IsSpace(r) || r == '\ufeff' || r == '\u200B' || r == '\u00A0' {
 			return -1 // Remove the character
 		}
 		return r
