@@ -25,6 +25,8 @@ func (s *server) ListGenericCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
+	var cl client.Client = s.client
+
 	var namespace string
 	if req.Msg.SystemLevel {
 		namespace = s.cfg.SystemResourcesNamespace
@@ -38,12 +40,17 @@ func (s *server) ListGenericCredentials(
 		namespace = project
 		if namespace == "" {
 			namespace = s.cfg.SharedResourcesNamespace
+			// Note: We're using the internal client here so that all authenticated
+			// users can see what shared generic credentials exist without requiring
+			// actual permissions to list those Secrets. The Secrets are heavily
+			// redacted.
+			cl = s.client.InternalClient()
 		}
 	}
 
 	// List secrets having the label that indicates this is a generic secret.
 	var secretsList corev1.SecretList
-	if err := s.client.List(
+	if err := cl.List(
 		ctx,
 		&secretsList,
 		client.InNamespace(namespace),
@@ -159,8 +166,12 @@ func (s *server) listSystemGenericCredentials(c *gin.Context) {
 func (s *server) listSharedGenericCredentials(c *gin.Context) {
 	ctx := c.Request.Context()
 
+	// Note: We're using the internal client here so that all authenticated
+	// users can see what shared generic credentials exist without requiring
+	// actual permissions to list those Secrets. The Secrets are heavily
+	// redacted.
 	list := &corev1.SecretList{}
-	if err := s.client.List(
+	if err := s.client.InternalClient().List(
 		ctx,
 		list,
 		client.InNamespace(s.cfg.SharedResourcesNamespace),
