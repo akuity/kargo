@@ -31,8 +31,14 @@ All Jira operations require proper authentication credentials stored in a Kubern
 
 | Name                     | Type     | Required | Description                                                                      |
 | ------------------------ | -------- | -------- | -------------------------------------------------------------------------------- |
-| `credentials.secretName` | `string` | Y        | Name of the  `Secret`  containing the Jira credentials in the project namespace. |
+| `credentials.secretName` | `string` | N        | Name of the  `Secret`  containing the Jira credentials in the project namespace. |
+| `credentials.sharedSecretName` | `string` | N  | Name of the `Secret` containing the Jira credentials in the `shared-resources-namespace`. |
 
+:::info
+
+Either `credentials.secretName` or `credentials.sharedSecretName` must be set, but not both.
+
+:::
 
 The referenced `Secret` should contain the following keys:
 
