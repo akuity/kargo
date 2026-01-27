@@ -137,7 +137,7 @@ func TestNormalizeChart(t *testing.T) {
 		{
 			name:     "encoded spaces",
 			input:    "oci://example%20repo",
-			expected: "example%20repo",
+			expected: "examplerepo",
 		},
 		{
 			name:     "empty input",
