@@ -62,10 +62,6 @@ func NormalizeGit(repo string) string {
 	if err != nil {
 		return repo
 	}
-	decodedPath, err := url.PathUnescape(pathURL.Path)
-	if err == nil {
-		pathURL.Path = decodedPath
-	}
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
 	if pathURL.Path == "" {
