@@ -3,6 +3,7 @@ package acr
 import (
 	"context"
 	"errors"
+	"os"
 	"testing"
 	"time"
 
@@ -14,6 +15,31 @@ import (
 
 	"github.com/akuity/kargo/pkg/credentials"
 )
+
+func TestNewWorkloadIdentityProvider(t *testing.T) {
+	const azFederatedTokenFile = "AZURE_FEDERATED_TOKEN_FILE"
+	const azClientID = "AZURE_CLIENT_ID"
+	const azTenantID = "AZURE_TENANT_ID"
+	t.Run("workload identity not available", func(t *testing.T) {
+		// Make it look unavailable by ensuring key env vars are unset
+		t.Setenv(azFederatedTokenFile, "") // Ensures cleanup
+		os.Unsetenv(azFederatedTokenFile)  // Actually unsets
+		t.Setenv(azClientID, "")           // Ensures cleanup
+		os.Unsetenv(azClientID)            // Actually unsets
+		t.Setenv(azTenantID, "")           // Ensures cleanup
+		os.Unsetenv(azTenantID)            // Actually unsets
+		require.Nil(t, NewWorkloadIdentityProvider(t.Context()))
+	})
+	t.Run("workload identity available", func(t *testing.T) {
+		// Make it look available by ensuring key env vars are set, albeit with
+		// nonsense values.
+		const nonsense = "nonsense"
+		t.Setenv(azFederatedTokenFile, nonsense)
+		t.Setenv(azClientID, nonsense)
+		t.Setenv(azTenantID, nonsense)
+		require.NotNil(t, NewWorkloadIdentityProvider(t.Context()))
+	})
+}
 
 func TestWorkloadIdentityProvider_Supports(t *testing.T) {
 	const testOCIRepoURL = "myregistry.azurecr.io/my-repo"
