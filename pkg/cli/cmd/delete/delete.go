@@ -10,9 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	sigyaml "sigs.k8s.io/yaml"
 
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
@@ -128,6 +126,11 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
+	printer, err := o.ToPrinter()
+	if err != nil {
+		return fmt.Errorf("create printer: %w", err)
+	}
+
 	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
@@ -142,41 +145,27 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return fmt.Errorf("delete resource: %w", err)
 	}
 
-	// Convert response payload to typed struct
-	respBytes, err := json.Marshal(res.Payload)
-	if err != nil {
-		return fmt.Errorf("marshal response: %w", err)
-	}
-	var deleteResp kargosvcapi.DeleteResourceResponse
-	if err = json.Unmarshal(respBytes, &deleteResp); err != nil {
-		return fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	resCap := len(deleteResp.GetResults())
-	successRes := make([]*kargosvcapi.DeleteResourceResult_DeletedResourceManifest, 0, resCap)
-	deleteErrs := make([]error, 0, resCap)
-	for _, r := range deleteResp.GetResults() {
-		switch typedRes := r.GetResult().(type) {
-		case *kargosvcapi.DeleteResourceResult_DeletedResourceManifest:
-			successRes = append(successRes, typedRes)
-		case *kargosvcapi.DeleteResourceResult_Error:
-			deleteErrs = append(deleteErrs, errors.New(typedRes.Error))
-		}
-	}
-
-	printer, err := o.ToPrinter()
-	if err != nil {
-		return fmt.Errorf("create printer: %w", err)
-	}
-
-	for _, r := range successRes {
-		var obj unstructured.Unstructured
-		if err := sigyaml.Unmarshal(r.DeletedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
-				fmt.Errorf("unmarshal deleted manifest: %w", err))
+	deleteErrs := make([]error, 0, len(res.Payload.Results))
+	for _, r := range res.Payload.Results {
+		if r.Error != "" {
+			deleteErrs = append(deleteErrs, errors.New(r.Error))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.Out)
+		if len(r.DeletedResourceManifest) > 0 {
+			manifestJSON, err := json.Marshal(r.DeletedResourceManifest)
+			if err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("marshal created manifest: %w", err))
+				continue
+			}
+			var obj unstructured.Unstructured
+			if err := json.Unmarshal(manifestJSON, &obj); err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("unmarshal created manifest: %w", err))
+				continue
+			}
+			_ = printer.PrintObj(&obj, o.Out)
+		}
 	}
 	return errors.Join(deleteErrs...)
 }

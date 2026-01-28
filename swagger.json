@@ -4592,7 +4592,7 @@
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_akuity_kargo_pkg_x_version.Version"
+                            "$ref": "#/definitions/VersionInfo"
                         }
                     }
                 }
@@ -5049,7 +5049,7 @@
                 }
             }
         },
-        "github_com_akuity_kargo_pkg_x_version.Version": {
+        "VersionInfo": {
             "type": "object",
             "properties": {
                 "buildDate": {
