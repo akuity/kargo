@@ -162,6 +162,39 @@ func Test_server_createResources(t *testing.T) {
 					require.NoError(t, err)
 				},
 			},
+			{
+				name:          "partial failure",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				body: mustJSONArrayBody(
+					testProject, // Already exists
+					testWarehouse,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusCreated, w.Code)
+
+					// Examine the response
+					var res createResourceResponse
+					err := json.Unmarshal(w.Body.Bytes(), &res)
+					require.NoError(t, err)
+					require.Len(t, res.Results, 2)
+
+					// First result (Project) should have error
+					require.NotEmpty(t, res.Results[0].Error)
+					require.Contains(t, res.Results[0].Error, "already exists")
+
+					// Second result (Warehouse) should succeed
+					require.Empty(t, res.Results[1].Error)
+
+					// Verify the Warehouse was created in the cluster
+					warehouse := &kargoapi.Warehouse{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(testWarehouse),
+						warehouse,
+					)
+					require.NoError(t, err)
+				},
+			},
 		},
 	)
 }

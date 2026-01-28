@@ -406,6 +406,41 @@ func Test_server_updateResources(t *testing.T) {
 					require.Equal(t, trueStr, warehouse.Labels["updated"])
 				},
 			},
+			{
+				name: "partial failure",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+				),
+				body: mustJSONArrayBody(
+					testProject,
+					testWarehouse, // Does not already exist and upsert is not set; should fail
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, c client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the response
+					var res createOrUpdateResourceResponse
+					err := json.Unmarshal(w.Body.Bytes(), &res)
+					require.NoError(t, err)
+					require.Len(t, res.Results, 2)
+
+					// First result (Project) should succeed
+					require.Empty(t, res.Results[0].Error)
+
+					// Second result (Warehouse) should have error
+					require.NotNil(t, res.Results[1].Error)
+					require.Contains(t, res.Results[1].Error, "does not exist")
+
+					// Verify the Project was updated in the cluster
+					project := &kargoapi.Project{}
+					err = c.Get(
+						t.Context(),
+						client.ObjectKeyFromObject(testProject),
+						project,
+					)
+					require.NoError(t, err)
+				},
+			},
 		},
 	)
 }

@@ -150,7 +150,7 @@ func (s *server) updateResource(
 	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
 		return createOrUpdateResourceResult{
 			Error: errSecretManagementDisabled.Error(),
-		}, nil
+		}, errSecretManagementDisabled
 	}
 
 	// Note: It would be tempting to blindly attempt creating the resource and
