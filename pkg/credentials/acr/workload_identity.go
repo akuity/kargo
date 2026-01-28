@@ -60,7 +60,7 @@ func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 	logger := logging.LoggerFromContext(ctx)
 
 	// Try to create a DefaultAzureCredential which supports workload identity
-	credential, err := azidentity.NewDefaultAzureCredential(nil)
+	credential, err := azidentity.NewWorkloadIdentityCredential(nil)
 	if err != nil {
 		logger.Info("Azure workload identity not available", "error", err.Error())
 		return nil
