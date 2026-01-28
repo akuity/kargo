@@ -52,6 +52,9 @@ global:
     # foo: bar
     # another: value
 
+  ## @param global.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
+
   ## @param global.env Environment variables to add to all Kargo pods.
   env: []
   #  - name: ENV_NAME
@@ -302,6 +305,9 @@ api:
         # foo: bar
         # another: value
 
+      ## @param api.oidc.dex.priorityClassName [nullable] Name of the priority class to use.
+      # priorityClassName:
+
       ## @param api.oidc.dex.env Environment variables to add to Dex server pods. This is convenient for cases where api.oidc.dex.connectors needs to reference environment variables from a Secret that is managed "out of band" with a secret management solution such as Sealed Secrets.
       env: []
       # - name: CLIENT_SECRET
@@ -399,6 +405,9 @@ api:
     annotations: {}
     # foo: bar
     # another: value
+
+  ## @param api.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
 
   ## @param api.env Environment variables to add to API server pods.
   env: []
@@ -581,6 +590,9 @@ controller:
     ## @param controller.serviceAccount.clusterWideSecretReadingEnabled Specifies whether the controller's ServiceAccount should be granted read permissions to Secrets CLUSTER-WIDE in the Kargo control plane's cluster. Enabling this is highly discouraged and you do so at your own peril. When this is NOT enabled, the Kargo management controller will dynamically expand and contract the controller's permissions to read Secrets on a Project-by-Project basis.
     clusterWideSecretReadingEnabled: false
 
+  ## @param controller.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
+
   ## @param controller.initContainers Optional init containers to add to the controller pods. This is rendered as the literal YAML.
   initContainers: []
     # - name: download-tools
@@ -670,6 +682,9 @@ garbageCollector:
     # foo: bar
     # another: value
 
+  ## @param garbageCollector.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
+
   ## @param garbageCollector.env Environment variables to add to garbage collector pods.
   env: []
   #  - name: ENV_NAME
@@ -732,6 +747,9 @@ externalWebhooksServer:
     annotations: {}
     # foo: bar
     # another: value
+
+  ## @param externalWebhooksServer.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
 
   ## @param externalWebhooksServer.env Environment variables to add to external webhook server pods.
   env: []
@@ -848,6 +866,9 @@ managementController:
     # foo: bar
     # another: value
 
+  ## @param managementController.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
+
   ## @param managementController.env Environment variables to add to management controller pods.
   env: []
   #  - name: ENV_NAME
@@ -910,6 +931,9 @@ webhooksServer:
     annotations: {}
     # foo: bar
     # another: value
+
+  ## @param webhooksServer.priorityClassName [nullable] Name of the priority class to use.
+  # priorityClassName:
 
   ## @param webhooksServer.env Environment variables to add to webhook server pods.
   env: []
