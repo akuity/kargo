@@ -26,23 +26,14 @@ func NormalizeGit(repo string) string {
 		return origRepo
 	}
 
-	// HTTP/S URLs
-	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
+	if hasProtocolPrefix(repo) {
 		repoURL, err := safeParseURL(repo)
 		if err != nil {
 			return origRepo
 		}
-		repoURL.User = nil // Remove user info if there is any
-		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
-		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
-		return repoURL.String()
-	}
-
-	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
-	if strings.HasPrefix(repo, "ssh://") {
-		repoURL, err := safeParseURL(repo)
-		if err != nil {
-			return origRepo
+		// Remove user info for HTTP/S URLs
+		if !strings.HasPrefix(repo, "ssh://") {
+			repoURL.User = nil
 		}
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
@@ -71,6 +62,12 @@ func NormalizeGit(repo string) string {
 		return fmt.Sprintf("ssh://%s", userHost)
 	}
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
+}
+
+func hasProtocolPrefix(repo string) bool {
+	return strings.HasPrefix(repo, "http://") ||
+		strings.HasPrefix(repo, "https://") ||
+		strings.HasPrefix(repo, "ssh://")
 }
 
 func safeParseURL(repo string) (*url.URL, error) {
