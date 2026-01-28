@@ -47,7 +47,7 @@ GetVersionInfoOK describes a response with status code 200, with default header 
 OK
 */
 type GetVersionInfoOK struct {
-	Payload *models.GithubComAkuityKargoPkgxVersionVersion
+	Payload *models.VersionInfo
 }
 
 // IsSuccess returns true when this get version info o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *GetVersionInfoOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/system/server-version][%d] getVersionInfoOK %s", 200, payload)
 }
 
-func (o *GetVersionInfoOK) GetPayload() *models.GithubComAkuityKargoPkgxVersionVersion {
+func (o *GetVersionInfoOK) GetPayload() *models.VersionInfo {
 	return o.Payload
 }
 
 func (o *GetVersionInfoOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoPkgxVersionVersion)
+	o.Payload = new(models.VersionInfo)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
