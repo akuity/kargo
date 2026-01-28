@@ -17,9 +17,6 @@ import (
 // be normalized will be returned as-is.
 func NormalizeImage(repoURL string) string {
 	repoURL = rmSpaces(repoURL)
-	if repoURL == "" {
-		return repoURL
-	}
 	parsed, err := name.ParseReference(repoURL, name.WeakValidation)
 	if err != nil {
 		return repoURL

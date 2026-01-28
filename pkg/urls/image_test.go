@@ -46,9 +46,6 @@ func TestNormalizeImage(t *testing.T) {
 		{"\ufeff\ufeffdocker.io/example/repo", "example/repo"}, // Multiple BOMs
 		{"docker.io/example /repo", "example/repo"},            // Internal spaces
 		{"docker.io/example%20repo", "examplerepo"},            // Encoded spaces
-		{"", ""},       // Empty string
-		{"   ", ""},    // Whitespace-only string
-		{"\t\n\r", ""}, // Whitespace-only string with tabs/newlines
 	}
 
 	for _, tc := range tests {

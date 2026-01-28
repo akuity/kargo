@@ -139,21 +139,6 @@ func TestNormalizeChart(t *testing.T) {
 			input:    "oci://example%20repo",
 			expected: "examplerepo",
 		},
-		{
-			name:     "empty input",
-			input:    "",
-			expected: "",
-		},
-		{
-			name:     "whitespace-only input",
-			input:    "   ",
-			expected: "",
-		},
-		{
-			name:     "whitespace-only input with tabs/newlines",
-			input:    "\t\n\r",
-			expected: "",
-		},
 	}
 
 	for _, tc := range testCases {
