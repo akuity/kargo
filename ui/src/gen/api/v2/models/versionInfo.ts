@@ -6,7 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface GithubComAkuityKargoPkgXVersionVersion {
+export interface VersionInfo {
   /** BuildDate is the date/time on which the application was built. */
   buildDate?: string;
   /** Compiler indicates what Go compiler was used for the build. */
