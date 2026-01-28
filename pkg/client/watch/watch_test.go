@@ -74,7 +74,7 @@ func TestWatchStage(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/stages/test-stage", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/stages/test-stage", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 		assert.Equal(t, "text/event-stream", r.Header.Get("Accept"))
 		assert.Equal(t, "Bearer test-token", r.Header.Get("Authorization"))
@@ -117,7 +117,7 @@ func TestWatchStages(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/stages", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/stages", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -158,7 +158,7 @@ func TestWatchWarehouse(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/warehouses/test-warehouse", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/warehouses/test-warehouse", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -199,7 +199,7 @@ func TestWatchWarehouses(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/warehouses", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/warehouses", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -240,7 +240,7 @@ func TestWatchPromotion(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/promotions/test-promotion", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/promotions/test-promotion", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -281,7 +281,7 @@ func TestWatchPromotions(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/promotions", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/promotions", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -322,7 +322,7 @@ func TestWatchProjectConfig(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/projects/test-project/config", r.URL.Path)
+		assert.Equal(t, "/v1beta1/projects/test-project/config", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -362,7 +362,7 @@ func TestWatchClusterConfig(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/v2/cluster-config", r.URL.Path)
+		assert.Equal(t, "/v1beta1/cluster-config", r.URL.Path)
 		assert.Equal(t, "true", r.URL.Query().Get("watch"))
 
 		w.Header().Set("Content-Type", "text/event-stream")
@@ -581,28 +581,28 @@ func TestStreamAnalysisRunLogs(t *testing.T) {
 			name:          "no query params",
 			metricName:    "",
 			containerName: "",
-			expectedPath:  "/v2/projects/test-project/analysis-runs/test-run/logs",
+			expectedPath:  "/v1beta1/projects/test-project/analysis-runs/test-run/logs",
 			expectedQuery: "",
 		},
 		{
 			name:          "with metric name",
 			metricName:    "my-metric",
 			containerName: "",
-			expectedPath:  "/v2/projects/test-project/analysis-runs/test-run/logs",
+			expectedPath:  "/v1beta1/projects/test-project/analysis-runs/test-run/logs",
 			expectedQuery: "metricName=my-metric",
 		},
 		{
 			name:          "with container name",
 			metricName:    "",
 			containerName: "my-container",
-			expectedPath:  "/v2/projects/test-project/analysis-runs/test-run/logs",
+			expectedPath:  "/v1beta1/projects/test-project/analysis-runs/test-run/logs",
 			expectedQuery: "containerName=my-container",
 		},
 		{
 			name:          "with both params",
 			metricName:    "my-metric",
 			containerName: "my-container",
-			expectedPath:  "/v2/projects/test-project/analysis-runs/test-run/logs",
+			expectedPath:  "/v1beta1/projects/test-project/analysis-runs/test-run/logs",
 			expectedQuery: "metricName=my-metric&containerName=my-container",
 		},
 	}

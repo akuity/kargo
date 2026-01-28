@@ -56,7 +56,7 @@ func (c *Client) WatchStage(
 	project string,
 	stage string,
 ) (<-chan Event[*kargoapi.Stage], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/stages/%s?watch=true", c.baseURL, project, stage)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/stages/%s?watch=true", c.baseURL, project, stage)
 	return watchResource[*kargoapi.Stage](ctx, c, url)
 }
 
@@ -66,7 +66,7 @@ func (c *Client) WatchWarehouses(
 	ctx context.Context,
 	project string,
 ) (<-chan Event[*kargoapi.Warehouse], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/warehouses?watch=true", c.baseURL, project)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/warehouses?watch=true", c.baseURL, project)
 	return watchResource[*kargoapi.Warehouse](ctx, c, url)
 }
 
@@ -76,7 +76,7 @@ func (c *Client) WatchStages(
 	ctx context.Context,
 	project string,
 ) (<-chan Event[*kargoapi.Stage], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/stages?watch=true", c.baseURL, project)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/stages?watch=true", c.baseURL, project)
 	return watchResource[*kargoapi.Stage](ctx, c, url)
 }
 
@@ -86,7 +86,7 @@ func (c *Client) WatchPromotions(
 	ctx context.Context,
 	project string,
 ) (<-chan Event[*kargoapi.Promotion], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/promotions?watch=true", c.baseURL, project)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/promotions?watch=true", c.baseURL, project)
 	return watchResource[*kargoapi.Promotion](ctx, c, url)
 }
 
@@ -97,7 +97,7 @@ func (c *Client) WatchWarehouse(
 	project string,
 	warehouse string,
 ) (<-chan Event[*kargoapi.Warehouse], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/warehouses/%s?watch=true", c.baseURL, project, warehouse)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/warehouses/%s?watch=true", c.baseURL, project, warehouse)
 	return watchResource[*kargoapi.Warehouse](ctx, c, url)
 }
 
@@ -108,7 +108,7 @@ func (c *Client) WatchPromotion(
 	project string,
 	promotion string,
 ) (<-chan Event[*kargoapi.Promotion], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/promotions/%s?watch=true", c.baseURL, project, promotion)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/promotions/%s?watch=true", c.baseURL, project, promotion)
 	return watchResource[*kargoapi.Promotion](ctx, c, url)
 }
 
@@ -118,7 +118,7 @@ func (c *Client) WatchProjectConfig(
 	ctx context.Context,
 	project string,
 ) (<-chan Event[*kargoapi.ProjectConfig], <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/config?watch=true", c.baseURL, project)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/config?watch=true", c.baseURL, project)
 	return watchResource[*kargoapi.ProjectConfig](ctx, c, url)
 }
 
@@ -127,7 +127,7 @@ func (c *Client) WatchProjectConfig(
 func (c *Client) WatchClusterConfig(
 	ctx context.Context,
 ) (<-chan Event[*kargoapi.ClusterConfig], <-chan error) {
-	url := fmt.Sprintf("%s/v2/cluster-config?watch=true", c.baseURL)
+	url := fmt.Sprintf("%s/v1beta1/cluster-config?watch=true", c.baseURL)
 	return watchResource[*kargoapi.ClusterConfig](ctx, c, url)
 }
 
@@ -298,7 +298,7 @@ func (c *Client) StreamAnalysisRunLogs(
 	metricName string,
 	containerName string,
 ) (<-chan string, <-chan error) {
-	url := fmt.Sprintf("%s/v2/projects/%s/analysis-runs/%s/logs", c.baseURL, project, analysisRun)
+	url := fmt.Sprintf("%s/v1beta1/projects/%s/analysis-runs/%s/logs", c.baseURL, project, analysisRun)
 
 	// Add query parameters if provided
 	params := make([]string, 0)
