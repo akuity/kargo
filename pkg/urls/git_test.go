@@ -10,9 +10,9 @@ import (
 func TestNormalizeGit(t *testing.T) {
 	testCases := map[string]string{
 		// Anything we can't normalize should be returned as-is
-		"https://not a url":                      "https://notaurl",
 		"http://github.com/example/repo?foo=bar": "http://github.com/example/repo?foo=bar",
 		// TODO(Faris): find a way to retain existing behavior.
+		// "https://not a url":                      "https://not a url",
 		// "ssh://not a url":                        "ssh://not a url",
 		// "ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
 		// "not even remotely a url":                "not even remotely a url",

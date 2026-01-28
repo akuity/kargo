@@ -44,7 +44,6 @@ func NormalizeGit(repo string) string {
 		if err != nil {
 			return origRepo
 		}
-		println("made it here ssh: ", repoURL.String())
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
 		return repoURL.String()
@@ -66,7 +65,6 @@ func NormalizeGit(repo string) string {
 	if err != nil {
 		return origRepo
 	}
-	println("made it here")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
 	if pathURL.Path == "" {
