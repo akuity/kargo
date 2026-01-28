@@ -26,7 +26,7 @@ func NormalizeGit(repo string) string {
 
 	// HTTP/S URLs
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
-		repoURL, err := getURL(repo)
+		repoURL, err := safeParseURL(repo)
 		if err != nil {
 			return repo
 		}
@@ -38,7 +38,7 @@ func NormalizeGit(repo string) string {
 
 	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
 	if strings.HasPrefix(repo, "ssh://") {
-		repoURL, err := getURL(repo)
+		repoURL, err := safeParseURL(repo)
 		if err != nil {
 			return repo
 		}
@@ -70,7 +70,7 @@ func NormalizeGit(repo string) string {
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
 }
 
-func getURL(repo string) (*url.URL, error) {
+func safeParseURL(repo string) (*url.URL, error) {
 	repoURL, err := url.Parse(repo)
 	if err != nil {
 		return nil, fmt.Errorf("parsing URL: %w", err)
@@ -78,10 +78,6 @@ func getURL(repo string) (*url.URL, error) {
 	if len(repoURL.Query()) > 0 {
 		// Query parameters are not permitted
 		return nil, fmt.Errorf("URL contains %d query parameters; not permitted", len(repoURL.Query()))
-	}
-	decodedPath, err := url.PathUnescape(repoURL.Path)
-	if err == nil {
-		repoURL.Path = decodedPath
 	}
 	return repoURL, nil
 }
