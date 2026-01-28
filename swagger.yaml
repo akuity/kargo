@@ -291,7 +291,7 @@ definitions:
           $ref: '#/definitions/Claim'
         type: array
     type: object
-  github_com_akuity_kargo_pkg_x_version.Version:
+  VersionInfo:
     properties:
       buildDate:
         description: BuildDate is the date/time on which the application was built.
@@ -3492,7 +3492,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_akuity_kargo_pkg_x_version.Version'
+            $ref: '#/definitions/VersionInfo'
       security:
       - BearerAuth: []
       summary: Retrieve API Server version information

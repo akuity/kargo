@@ -12,10 +12,10 @@ import (
 	"github.com/go-openapi/swag"
 )
 
-// GithubComAkuityKargoPkgxVersionVersion github com akuity kargo pkg x version version
+// VersionInfo version info
 //
-// swagger:model github_com_akuity_kargo_pkg_x_version.Version
-type GithubComAkuityKargoPkgxVersionVersion struct {
+// swagger:model VersionInfo
+type VersionInfo struct {
 
 	// BuildDate is the date/time on which the application was built.
 	BuildDate string `json:"buildDate,omitempty"`
@@ -42,18 +42,18 @@ type GithubComAkuityKargoPkgxVersionVersion struct {
 	Version string `json:"version,omitempty"`
 }
 
-// Validate validates this github com akuity kargo pkg x version version
-func (m *GithubComAkuityKargoPkgxVersionVersion) Validate(formats strfmt.Registry) error {
+// Validate validates this version info
+func (m *VersionInfo) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
-// ContextValidate validates this github com akuity kargo pkg x version version based on context it is used
-func (m *GithubComAkuityKargoPkgxVersionVersion) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
+// ContextValidate validates this version info based on context it is used
+func (m *VersionInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	return nil
 }
 
 // MarshalBinary interface implementation
-func (m *GithubComAkuityKargoPkgxVersionVersion) MarshalBinary() ([]byte, error) {
+func (m *VersionInfo) MarshalBinary() ([]byte, error) {
 	if m == nil {
 		return nil, nil
 	}
@@ -61,8 +61,8 @@ func (m *GithubComAkuityKargoPkgxVersionVersion) MarshalBinary() ([]byte, error)
 }
 
 // UnmarshalBinary interface implementation
-func (m *GithubComAkuityKargoPkgxVersionVersion) UnmarshalBinary(b []byte) error {
-	var res GithubComAkuityKargoPkgxVersionVersion
+func (m *VersionInfo) UnmarshalBinary(b []byte) error {
+	var res VersionInfo
 	if err := swag.ReadJSON(b, &res); err != nil {
 		return err
 	}

@@ -6,23 +6,20 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/models"
 	"github.com/akuity/kargo/pkg/client/generated/system"
-	versionpkg "github.com/akuity/kargo/pkg/x/version"
+	"github.com/akuity/kargo/pkg/x/version"
 )
 
 type versionOptions struct {
@@ -79,12 +76,11 @@ func (o *versionOptions) addFlags(cmd *cobra.Command) {
 func (o *versionOptions) run(ctx context.Context) error {
 	printToStdout := o.OutputFlagSpecified == nil || !o.OutputFlagSpecified()
 
-	cliVersion := api.ToVersionProto(versionpkg.GetVersion())
 	if printToStdout {
-		_, _ = fmt.Fprintln(o.Out, "Client Version:", cliVersion.GetVersion())
+		_, _ = fmt.Fprintln(o.Out, "Client Version:", version.GetVersion().Version)
 	}
 
-	var serverVersion *svcv1alpha1.VersionInfo
+	var serverVersion *models.VersionInfo
 	var serverErr error
 	if !o.ClientOnly {
 		serverVersion, serverErr = getServerVersion(ctx, o.Config, o.ClientOptions)
@@ -92,7 +88,7 @@ func (o *versionOptions) run(ctx context.Context) error {
 
 	if printToStdout {
 		if serverVersion != nil {
-			_, _ = fmt.Fprintln(o.Out, "Server Version:", serverVersion.GetVersion())
+			_, _ = fmt.Fprintln(o.Out, "Server Version:", serverVersion.Version)
 		}
 		return serverErr
 	}
@@ -101,10 +97,11 @@ func (o *versionOptions) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("new printer: %w", err)
 	}
-	obj, err := componentVersionsToRuntimeObject(&svcv1alpha1.ComponentVersions{
-		Server: serverVersion,
-		Cli:    cliVersion,
-	})
+	// Convert to something compatible with the printer
+	obj, err := componentVersionsToRuntimeObject(
+		version.GetVersion(),
+		serverVersion,
+	)
 	if err != nil {
 		return fmt.Errorf("map component versions to runtime object: %w", err)
 	}
@@ -119,7 +116,8 @@ func getServerVersion(
 	ctx context.Context,
 	cfg config.CLIConfig,
 	opts client.Options,
-) (*svcv1alpha1.VersionInfo, error) {
+) (*models.VersionInfo, error) {
+	// Don't bother if definitely not authenticated to a specified server
 	if cfg.APIAddress == "" || cfg.BearerToken == "" {
 		return nil, nil
 	}
@@ -137,31 +135,43 @@ func getServerVersion(
 		return nil, fmt.Errorf("get version info from server: %w", err)
 	}
 
-	// Convert response payload to typed struct
-	respBytes, err := json.Marshal(res.Payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal response: %w", err)
-	}
-	var versionInfo svcv1alpha1.VersionInfo
-	if err := json.Unmarshal(respBytes, &versionInfo); err != nil {
-		return nil, fmt.Errorf("unmarshal response: %w", err)
-	}
-
-	return &versionInfo, nil
+	return res.Payload, nil
 }
 
-func componentVersionsToRuntimeObject(v *svcv1alpha1.ComponentVersions) (runtime.Object, error) {
-	data, err := protojson.Marshal(v)
+func componentVersionsToRuntimeObject(
+	cliVersion version.Version,
+	serverVersion *models.VersionInfo,
+) (runtime.Object, error) {
+	content := map[string]any{
+		"apiVersion": "kargo.akuity.io/v1alpha1",
+		"kind":       "ComponentVersions",
+	}
+
+	// Add client version
+	clientData, err := json.Marshal(cliVersion)
 	if err != nil {
-		return nil, fmt.Errorf("marshal component versions: %w", err)
+		return nil, fmt.Errorf("marshal client version: %w", err)
 	}
-	var content map[string]any
-	if err := json.Unmarshal(data, &content); err != nil {
-		return nil, fmt.Errorf("unmarshal component versions: %w", err)
+	var clientContent map[string]any
+	if err := json.Unmarshal(clientData, &clientContent); err != nil {
+		return nil, fmt.Errorf("unmarshal client version: %w", err)
 	}
+	content["client"] = clientContent
+
+	// Add server version
+	if serverVersion != nil {
+		serverData, err := json.Marshal(serverVersion)
+		if err != nil {
+			return nil, fmt.Errorf("marshal server version: %w", err)
+		}
+		var serverContent map[string]any
+		if err := json.Unmarshal(serverData, &serverContent); err != nil {
+			return nil, fmt.Errorf("unmarshal server version: %w", err)
+		}
+		content["server"] = serverContent
+	}
+
 	u := &unstructured.Unstructured{}
 	u.SetUnstructuredContent(content)
-	u.SetAPIVersion(kargoapi.GroupVersion.String())
-	u.SetKind("ComponentVersions")
 	return u, nil
 }

@@ -25,8 +25,8 @@ import type {
   AdminLoginResponse,
   GetClusterConfig200,
   GetConfigResponse,
-  GithubComAkuityKargoPkgXVersionVersion,
-  PublicConfig
+  PublicConfig,
+  VersionInfo
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -632,7 +632,7 @@ export function useGetConfig<TData = Awaited<ReturnType<typeof getConfig>>, TErr
  * @summary Retrieve API Server version information
  */
 export type getVersionInfoResponse200 = {
-  data: GithubComAkuityKargoPkgXVersionVersion;
+  data: VersionInfo;
   status: 200;
 };
 
