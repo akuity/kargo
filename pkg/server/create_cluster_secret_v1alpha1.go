@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
 
 type clusterSecret struct {
@@ -40,6 +41,7 @@ func (s *server) CreateClusterSecret(
 	}
 
 	secret := s.clusterSecretToK8sSecret(clsSecret)
+	ensureCredentialTypeLabel(secret)
 	if err := s.client.Create(ctx, secret); err != nil {
 		return nil, fmt.Errorf("create secret: %w", err)
 	}
@@ -79,4 +81,13 @@ func (s *server) clusterSecretToK8sSecret(clsSecret clusterSecret) *corev1.Secre
 	}
 
 	return secret
+}
+
+func ensureCredentialTypeLabel(secret *corev1.Secret) {
+	if secret.Labels == nil {
+		secret.Labels = map[string]string{}
+	}
+	if secret.Labels[kargoapi.LabelKeyCredentialType] == "" {
+		secret.Labels[kargoapi.LabelKeyCredentialType] = kargoapi.LabelValueCredentialTypeGeneric
+	}
 }
