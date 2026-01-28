@@ -30,14 +30,16 @@ func (s *server) GetVersionInfo(
 	), nil
 }
 
+type versionInfo version.Version // @name VersionInfo
+
 // @id GetVersionInfo
 // @Summary Retrieve API Server version information
 // @Description Retrieve API Server version information.
 // @Tags System
 // @Security BearerAuth
 // @Produce json
-// @Success 200 {object} version.Version
+// @Success 200 {object} versionInfo
 // @Router /v1beta1/system/server-version [get]
 func (s *server) getVersionInfo(c *gin.Context) {
-	c.JSON(http.StatusOK, version.GetVersion())
+	c.JSON(http.StatusOK, versionInfo(version.GetVersion()))
 }
