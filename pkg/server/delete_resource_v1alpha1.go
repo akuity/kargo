@@ -121,7 +121,12 @@ func (s *server) deleteResources(c *gin.Context) {
 	results := make([]deleteResourceResult, 0, len(resources))
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		results = append(results, s.deleteResource(ctx, &resource))
+		result, err := s.deleteResource(ctx, &resource)
+		if err != nil && len(resources) == 1 {
+			_ = c.Error(err)
+			return
+		}
+		results = append(results, result)
 	}
 
 	c.JSON(http.StatusOK, deleteResourceResponse{Results: results})
@@ -130,18 +135,16 @@ func (s *server) deleteResources(c *gin.Context) {
 func (s *server) deleteResource(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
-) deleteResourceResult {
+) (deleteResourceResult, error) {
 	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
 		return deleteResourceResult{
 			Error: errSecretManagementDisabled.Error(),
-		}
+		}, errSecretManagementDisabled
 	}
 	if err := s.client.Delete(ctx, obj); err != nil {
 		return deleteResourceResult{
 			Error: fmt.Errorf("delete resource: %w", err).Error(),
-		}
+		}, err
 	}
-	return deleteResourceResult{
-		DeletedResourceManifest: obj.Object,
-	}
+	return deleteResourceResult{DeletedResourceManifest: obj.Object}, nil
 }
