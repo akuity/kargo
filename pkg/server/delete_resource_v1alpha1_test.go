@@ -63,14 +63,7 @@ func Test_server_deleteResources(t *testing.T) {
 				name: "resource does not exist",
 				body: mustJSONBody(testProject),
 				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
-					require.Equal(t, http.StatusOK, w.Code)
-
-					var res deleteResourceResponse
-					err := json.Unmarshal(w.Body.Bytes(), &res)
-					require.NoError(t, err)
-					require.Len(t, res.Results, 1)
-					require.NotEmpty(t, res.Results[0].Error)
-					require.Contains(t, res.Results[0].Error, "not found")
+					require.Equal(t, http.StatusNotFound, w.Code)
 				},
 			},
 			{
