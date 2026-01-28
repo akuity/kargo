@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
@@ -77,6 +79,7 @@ func TestCreateClusterSecret(t *testing.T) {
 	secret := resp.Msg.GetSecret()
 	assert.Equal(t, "kargo-cluster-secrts", secret.Namespace)
 	assert.Equal(t, "secret-1", secret.Name)
+	assert.Equal(t, kargoapi.LabelValueCredentialTypeGeneric, secret.Labels[kargoapi.LabelKeyCredentialType])
 	assert.Equal(t, redacted, secret.StringData["foo"])
 	assert.Equal(t, redacted, secret.StringData["baz"])
 
@@ -94,6 +97,11 @@ func TestCreateClusterSecret(t *testing.T) {
 	data := k8sSecret.Data
 	assert.Equal(t, "bar", string(data["foo"]))
 	assert.Equal(t, "bax", string(data["baz"]))
+	assert.Equal(
+		t,
+		kargoapi.LabelValueCredentialTypeGeneric,
+		k8sSecret.Labels[kargoapi.LabelKeyCredentialType],
+	)
 }
 
 func TestValidateSecrets(t *testing.T) {
@@ -117,4 +125,44 @@ func TestValidateSecrets(t *testing.T) {
 		},
 	})
 	require.NoError(t, err)
+}
+
+func TestEnsureCredentialTypeLabel(t *testing.T) {
+	t.Run("sets label when labels nil", func(t *testing.T) {
+		secret := &corev1.Secret{}
+		ensureCredentialTypeLabel(secret)
+		require.Equal(
+			t,
+			kargoapi.LabelValueCredentialTypeGeneric,
+			secret.Labels[kargoapi.LabelKeyCredentialType],
+		)
+	})
+
+	t.Run("sets label when label value empty", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					kargoapi.LabelKeyCredentialType: "",
+				},
+			},
+		}
+		ensureCredentialTypeLabel(secret)
+		require.Equal(
+			t,
+			kargoapi.LabelValueCredentialTypeGeneric,
+			secret.Labels[kargoapi.LabelKeyCredentialType],
+		)
+	})
+
+	t.Run("does not overwrite non-empty label", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Labels: map[string]string{
+					kargoapi.LabelKeyCredentialType: "repository",
+				},
+			},
+		}
+		ensureCredentialTypeLabel(secret)
+		require.Equal(t, "repository", secret.Labels[kargoapi.LabelKeyCredentialType])
+	})
 }
