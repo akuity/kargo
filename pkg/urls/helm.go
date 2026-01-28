@@ -8,7 +8,7 @@ import (
 // Crucially, this function removes the oci:// prefix from the URL if there is
 // one.
 func NormalizeChart(repo string) string {
-	repo = sanitize(repo)
+	repo = rmSpaces(repo)
 	if repo == "" {
 		return repo
 	}

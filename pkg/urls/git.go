@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
@@ -19,7 +20,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
-	repo = sanitize(repo)
+	repo = rmSpaces(repo)
 	if repo == "" {
 		return repo
 	}
@@ -80,4 +81,27 @@ func safeParseURL(repo string) (*url.URL, error) {
 		return nil, fmt.Errorf("URL contains %d query parameters; not permitted", len(repoURL.Query()))
 	}
 	return repoURL, nil
+}
+
+const (
+	zeroWidthNoBreakSpace = '\uFEFF' // BOM
+	zeroWidthSpace        = '\u200B'
+	noBreakSpace          = '\u00A0'
+)
+
+// rmSpaces removes all leading, trailing, and internal whitespace characters
+// from the given repository string. It also decodes any percent-encoded
+// characters in the string before processing.
+func rmSpaces(repo string) string {
+	decodedPath, err := url.PathUnescape(repo)
+	if err == nil {
+		repo = decodedPath
+	}
+	repo = strings.TrimSpace(strings.ToLower(repo))
+	return strings.Map(func(r rune) rune {
+		if unicode.IsSpace(r) || r == zeroWidthNoBreakSpace || r == zeroWidthSpace || r == noBreakSpace {
+			return -1 // Remove the character
+		}
+		return r
+	}, repo)
 }
