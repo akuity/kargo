@@ -213,6 +213,10 @@ type GitCommitConfigAuthor struct {
 type GitMergePRConfig struct {
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The merge method to use when merging the pull request. Options are 'merge' (traditional
+	// merge commit), 'squash' (squash all commits into one), or 'rebase' (rebase and merge). If
+	// not specified, the default merge method configured on the repository will be used.
+	MergeMethod *MergeMethod `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
@@ -622,6 +626,17 @@ const (
 	Exists       Operator = "Exists"
 	In           Operator = "In"
 	NotIn        Operator = "NotIn"
+)
+
+// The merge method to use when merging the pull request. Options are 'merge' (traditional
+// merge commit), 'squash' (squash all commits into one), or 'rebase' (rebase and merge). If
+// not specified, the default merge method configured on the repository will be used.
+type MergeMethod string
+
+const (
+	Merge  MergeMethod = "merge"
+	Rebase MergeMethod = "rebase"
+	Squash MergeMethod = "squash"
 )
 
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
