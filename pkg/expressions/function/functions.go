@@ -113,7 +113,7 @@ func SharedSecret(ctx context.Context, c client.Client, cache *gocache.Cache) ex
 	return expr.Function(
 		"sharedSecret",
 		getSecret(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE"), false),
-		new(func(name string) *corev1.Secret),
+		new(func(name string) map[string]string),
 	)
 }
 
@@ -121,7 +121,7 @@ func SharedConfigMap(ctx context.Context, c client.Client, cache *gocache.Cache)
 	return expr.Function(
 		"sharedConfigMap",
 		getConfigMap(ctx, c, cache, os.Getenv("SHARED_RESOURCES_NAMESPACE")),
-		new(func(name string) *corev1.ConfigMap),
+		new(func(name string) map[string]string),
 	)
 }
 
