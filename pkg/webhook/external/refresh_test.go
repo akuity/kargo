@@ -211,6 +211,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				tt.client,
 				tt.project,
 				testRepoURLs,
+				nil, // filePaths
 			)
 			tt.assertions(t, w)
 		})
@@ -340,6 +341,150 @@ func TestShouldRefresh(t *testing.T) {
 				t.Context(),
 				tc.wh,
 				tc.repoURL,
+				nil, // filePaths
+				tc.qualifiers...,
+			)
+			require.NoError(t, err)
+			require.Equal(t, tc.expect, result)
+		})
+	}
+}
+
+func TestShouldRefreshWithPathFilters(t *testing.T) {
+	testCases := []struct {
+		name       string
+		wh         kargoapi.Warehouse
+		qualifiers []string
+		repoURL    string
+		filePaths  []string
+		expect     bool
+	}{
+		{
+			name: "Git subscription with matching path",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/project-a"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			filePaths:  []string{"apps/project-a/deployment.yaml"},
+			expect:     true,
+		},
+		{
+			name: "Git subscription with non-matching path",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/project-a"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			filePaths:  []string{"apps/project-b/deployment.yaml"},
+			expect:     false,
+		},
+		{
+			name: "Git subscription with excluded path",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/project-a"},
+							ExcludePaths:            []string{"apps/project-a/.kargo"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			filePaths:  []string{"apps/project-a/.kargo/metadata.yaml"},
+			expect:     false,
+		},
+		{
+			name: "Git subscription with multiple paths - one matches",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/project-a"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			filePaths: []string{
+				"apps/project-b/deployment.yaml",
+				"apps/project-a/config.yaml",
+				"README.md",
+			},
+			expect: true,
+		},
+		{
+			name: "Git subscription with no path filters - accepts all",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			filePaths:  []string{"any/path/deployment.yaml"},
+			expect:     true,
+		},
+		{
+			name: "Git subscription path matches but ref doesn't",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/project-a"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/feature"},
+			filePaths:  []string{"apps/project-a/deployment.yaml"},
+			expect:     false,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := shouldRefresh(
+				t.Context(),
+				tc.wh,
+				tc.repoURL,
+				tc.filePaths,
 				tc.qualifiers...,
 			)
 			require.NoError(t, err)
