@@ -60,6 +60,12 @@ func (s *server) WatchWarehouses(
 			if !ok {
 				return fmt.Errorf("unexpected object type %T", e.Object)
 			}
+			// Necessary because serializing a Warehouse as part of a protobuf
+			// message does not apply custom marshaling. The call to this helper
+			// compensates for that.
+			if err := prepareOutboundWarehouse(warehouse); err != nil {
+				return fmt.Errorf("prepare outbound warehouse: %w", err)
+			}
 			if err := stream.Send(&svcv1alpha1.WatchWarehousesResponse{
 				Warehouse: warehouse,
 				Type:      string(e.Type),
