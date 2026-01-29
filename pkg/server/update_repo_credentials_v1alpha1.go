@@ -26,10 +26,6 @@ func (s *server) UpdateRepoCredentials(
 		return nil, connect.NewError(connect.CodeUnimplemented, errSecretManagementDisabled)
 	}
 
-	if err := validateFieldNotEmpty("project", req.Msg.Project); err != nil {
-		return nil, err
-	}
-
 	project := req.Msg.GetProject()
 	if project != "" {
 		if err := s.validateProjectExists(ctx, project); err != nil {
