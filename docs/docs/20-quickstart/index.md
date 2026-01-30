@@ -48,7 +48,7 @@ remove not just Kargo-related resources, but _all_ your workloads and data.
 :::
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/install.sh | sh
 ```
 
 </TabItem>
@@ -67,7 +67,7 @@ remove not just Kargo-related resources, but _all_ your workloads and data.
 :::
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/install.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/install.sh/hack/quickstart/install.sh | sh
 ```
 
 </TabItem>
@@ -79,7 +79,7 @@ just for this quickstart using
 [kind](https://kind.sigs.k8s.io/#installation-and-usage).
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/install.sh/hack/quickstart/kind.sh | sh
 ```
 
 :::info
@@ -97,7 +97,7 @@ Docker, Docker Desktop, or OrbStack), you can easily launch a disposable cluster
 just for this quickstart using [k3d](https://k3d.io).
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/k3d.sh | sh
 ```
 
 :::info
@@ -764,7 +764,7 @@ If, instead, you wish to preserve non-Kargo-related workloads and data, you
 will need to manually uninstall Kargo and its prerequisites:
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/uninstall.sh | sh
 ```
 
 </TabItem>
@@ -782,7 +782,7 @@ If, instead, you wish to preserve non-Kargo-related workloads and data, you
 will need to manually uninstall Kargo and its prerequisites:
 
 ```shell
-curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
+curl -L https://raw.githubusercontent.com/akuity/kargo/refs/heads/release-1.8/hack/quickstart/uninstall.sh | sh
 ```
 
 </TabItem>
