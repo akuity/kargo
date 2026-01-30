@@ -107,7 +107,7 @@ display_summary() {
     echo "Use the Netlify Dashboard to follow up on build + deployment progress: https://app.netlify.com/sites/$NETLIFY_SITE_ID"
     echo "=================================================================="
 }
-=
+
 main() {
     local new_prod_branch="${1:-}"
 
