@@ -29,28 +29,35 @@ every submission.
 
 ## In Progress
 
+### v1.10.0
+
+**Expected:** TBD
+
+* UI to begin transition to new API
+
+* Remaining scope TBD
+
+## Completed
+
 ### v1.9.0
 
-__Expected:__ November, 2025
+Focused on stability, performance, and usability.
 
-This release is focused on:
+Introduced:
 
-* Facilitating external automation and other integrations via Kargo-managed
-  service accounts.
-* Improving Warehouse performance through more aggressive caching.
-* Relieving confusion over "global" vs "cluster-scoped" credentials and other
-  Secrets through careful, minimally breaking refactoring.
-* Extending webhook compatibility to unspecified repository hosts via a generic
-  webhook receiver.
+* A new, RESTful API
+* User-generated API tokens
+* Opt-in Warehouse caching
+* Configurable rate limits
+* Refined everything related to Secret/credentials management
+* A large slate of small
+
+See [release notes](./80-release-notes/90-v1.9.0.md) for full details.
 
 ### v1.8.0
 
-__Expected:__ October, 2025
-
-This release is focused on UI enhancements and general "quality-of-life"
-improvements, but also boasts a grab bag of small features.
-
-## Completed
+This small release focused on UI enhancements and general "quality-of-life"
+improvements, as well as a grab bag of small features.
 
 ### v1.7.0
 
