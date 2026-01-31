@@ -125,11 +125,14 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone(opts *BareCloneOptions) error {
+func (b *bareRepo) clone(_ *BareCloneOptions) error {
 	args := []string{"clone", "--bare"}
-	if opts.Filter != "" {
-		args = append(args, "--filter", opts.Filter)
-	}
+	// NOTE(hidde): Temporarily disabled until we figure out why this can result
+	// in "could not fetch <commit> from promisor remote" errors.
+	//
+	// if opts.Filter != "" {
+	//  	args = append(args, "--filter", opts.Filter)
+	// }
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
