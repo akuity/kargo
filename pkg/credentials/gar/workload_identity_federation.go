@@ -37,7 +37,10 @@ type WorkloadIdentityFederationProvider struct {
 
 	projectID string
 
-	getAccessTokenFn func(ctx context.Context, project string) (string, error)
+	getAccessTokenFn func(
+		ctx context.Context,
+		project string,
+	) (string, time.Time, error)
 
 	tokenSource oauth2.TokenSource
 }
@@ -74,7 +77,9 @@ func NewWorkloadIdentityFederationProvider(
 
 	p := &WorkloadIdentityFederationProvider{
 		tokenCache: cache.New(
-			// Access tokens live for one hour. We'll hang on to them for 40 minutes.
+			// Access tokens live for one hour. We'll hang on to them for 40
+			// minutes by default. When the actual token expiry is available, it
+			// is used (minus a safety margin) instead of this default.
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
@@ -111,8 +116,14 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 ) (*credentials.Credentials, error) {
 	cacheKey := tokenCacheKey(req.Project)
 
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"provider", "garWorkloadIdentityFederation",
+		"repoURL", req.RepoURL,
+	)
+
 	// Check the token cache for a Project-specific token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
+		logger.Debug("access token cache hit")
 		return &credentials.Credentials{
 			Username: accessTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
@@ -121,6 +132,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 
 	// Check the token source cache for a long-lived token source
 	if entry, exists := p.tokenSourceCache.Get(cacheKey); exists {
+		logger.Debug("token source cache hit")
 		tokenSource := entry.(oauth2.TokenSource) // nolint: forcetypeassert
 		token, err := tokenSource.Token()
 		if err != nil {
@@ -131,15 +143,30 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 			Password: token.AccessToken,
 		}, nil
 	}
+	logger.Debug("access token cache miss")
 
 	// We had a miss in both caches, so we'll try to get a new Project-specific
 	// token.
-	accessToken, err := p.getAccessTokenFn(ctx, req.Project)
+	accessToken, expiry, err := p.getAccessTokenFn(ctx, req.Project)
 	if err != nil {
 		return nil, fmt.Errorf("error getting GCP access token: %w", err)
 	}
 	if accessToken != "" {
-		p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
+		logger.Debug("obtained new access token")
+		// Cache the token, preferring a TTL derived from the actual token
+		// expiry when available.
+		ttl := cache.DefaultExpiration
+		if !expiry.IsZero() {
+			if remaining := time.Until(expiry) - tokenCacheExpiryMargin; remaining > 0 {
+				ttl = remaining
+			}
+		}
+		logger.Debug(
+			"caching access token",
+			"expiry", expiry,
+			"ttl", ttl,
+		)
+		p.tokenCache.Set(cacheKey, accessToken, ttl)
 		return &credentials.Credentials{
 			Username: accessTokenUsername,
 			Password: accessToken,
@@ -148,6 +175,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 
 	// If we get to here, we found no Project-specific token and we'll cache the
 	// token source instead.
+	logger.Debug("no project-specific token found; caching default token source")
 	p.tokenSourceCache.Set(cacheKey, p.tokenSource, cache.DefaultExpiration)
 	token, err := p.tokenSource.Token()
 	if err != nil {
@@ -164,13 +192,13 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 func (p *WorkloadIdentityFederationProvider) getAccessToken(
 	ctx context.Context,
 	kargoProject string,
-) (string, error) {
+) (string, time.Time, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	iamSvc, err := iamcredentials.NewService(ctx)
 	if err != nil {
 		logger.Error(err, "error creating IAM Credentials service client")
-		return "", nil
+		return "", time.Time{}, nil
 	}
 
 	logger = logger.WithValues("gcpProjectID", p.projectID, "kargoProject", kargoProject)
@@ -187,12 +215,20 @@ func (p *WorkloadIdentityFederationProvider) getAccessToken(
 		var googleErr *googleapi.Error
 		if errors.As(err, &googleErr) && googleErr.Code == http.StatusNotFound {
 			logger.Debug("no Project-specific service account found; will fall back to default token source")
-			return "", nil
+			return "", time.Time{}, nil
 		}
 		logger.Error(err, "error generating access token")
-		return "", nil
+		return "", time.Time{}, nil
+	}
+
+	var expiry time.Time
+	if resp.ExpireTime != "" {
+		if expiry, err = time.Parse(time.RFC3339, resp.ExpireTime); err != nil {
+			logger.Error(err, "error parsing token expiry time; will use default cache TTL")
+			expiry = time.Time{}
+		}
 	}
 
 	logger.Debug("generated Artifact Registry access token")
-	return resp.AccessToken, nil
+	return resp.AccessToken, expiry, nil
 }

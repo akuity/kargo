@@ -76,8 +76,8 @@ recommended.
 :::
 
 Tokens Kargo obtains for accessing any specific ECR repository on behalf of any
-specific Kargo Project are valid for 12 hours and cached for 10. A controller
-restart clears the cache.
+specific Kargo Project are valid for 12 hours and cached until shortly before
+they expire. A controller restart clears the cache.
 
 ## Google Artifact Registry (GAR)
 
@@ -172,8 +172,8 @@ recommended.
 :::
 
 Tokens Kargo obtains for accessing any specific GAR repository on behalf of any
-specific Kargo Project are valid for 60 minutes and cached for 40. A controller
-restart clears the cache.
+specific Kargo Project are valid for 60 minutes and cached until shortly before
+they expire. A controller restart clears the cache.
 
 ## Azure Container Registry (ACR)
 
