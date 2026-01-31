@@ -136,8 +136,8 @@ importers:
         specifier: ^5.1.0
         version: 5.1.0
       '@orval/core':
-        specifier: ^8.1.0
-        version: 8.1.0(typescript@5.9.3)
+        specifier: ^8.2.0
+        version: 8.2.0(typescript@5.9.3)
       '@tanstack/react-query-devtools':
         specifier: ^5.90.2
         version: 5.90.2(@tanstack/react-query@5.90.16(react@19.1.0))(react@19.1.0)
@@ -266,8 +266,8 @@ packages:
     resolution: {integrity: sha512-y2217gk4NqL35giHl72o6Zzqji9O7vHh9YmhUVkPtAOpoTCH4uWxo/pr4VE8t0+ChEPs0qo4eJRC5Q1eXWo3vA==}
     engines: {node: '>=8.x'}
 
-  '@ant-design/fast-color@3.0.0':
-    resolution: {integrity: sha512-eqvpP7xEDm2S7dUzl5srEQCBTXZMmY3ekf97zI+M2DHOYyKdJGH0qua0JACHTqbkRnD/KHFQP9J1uMJ/XWVzzA==}
+  '@ant-design/fast-color@3.0.1':
+    resolution: {integrity: sha512-esKJegpW4nckh0o6kV3Tkb7NPIZYbPnnFxmQDUmL08ukXZAvV85TZBr70eGuke/CIArLaP6aw8lt9KILjnWuOw==}
     engines: {node: '>=8.x'}
 
   '@ant-design/icons-svg@4.4.2':
@@ -1147,8 +1147,8 @@ packages:
   '@orval/core@7.19.0':
     resolution: {integrity: sha512-2kfYo2zNMTJ+O4rdpDzpH0qw8gDvMjaxi0LB0NIzQdFsV2x+KPYThTk3xTAtrBSpVgKh1BQLmiAzYk6rtPfaJQ==}
 
-  '@orval/core@8.1.0':
-    resolution: {integrity: sha512-dQoNy77ckcfpKT8pWJrRzrMK8OapuJtUscqZ4iDMk2XGBh0EEAVNmobEXAj7dzTPaDFuB5LJpQ9LiU+/NDdlfg==}
+  '@orval/core@8.2.0':
+    resolution: {integrity: sha512-opnmNg03nZJ6rXGyMDJJ2UrsrMpINYHcJQIeCH+7WV8IHn8nBtgC7fZBeFpFkw2yK8cLyP7h+q5TDy8rkPEYPw==}
 
   '@orval/fetch@7.19.0':
     resolution: {integrity: sha512-OEwuE84GfJo1545jap35twBuyRvBBvfki8Iv4OUTlmmq8bWLKA8sxYZZpqxCwvXvjg656RnnM9PHt6rdOo5EqA==}
@@ -1234,8 +1234,8 @@ packages:
       react: '>=16.9.0'
       react-dom: '>=16.9.0'
 
-  '@rc-component/util@1.7.0':
-    resolution: {integrity: sha512-tIvIGj4Vl6fsZFvWSkYw9sAfiCKUXMyhVz6kpKyZbwyZyRPqv2vxYZROdaO1VB4gqTNvUZFXh6i3APUiterw5g==}
+  '@rc-component/util@1.8.1':
+    resolution: {integrity: sha512-Ku6BzF0Ov5L9U3ewFJZDQ//iWCR2nIkLBBiYSrhxIVl3PqeUqiYP2W8gNI8qoKAFQKZdYcS0+B6+SQTDtv/erw==}
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
@@ -2898,6 +2898,9 @@ packages:
 
   jsonfile@6.1.0:
     resolution: {integrity: sha512-5dgndWOriYSm5cnYaJNhalLNDKOqFwyDB/rr1E9ZsGciGvKPs8R2xYGCacuf3z6K1YKDz182fd+fY3cn3pMqXQ==}
+
+  jsonfile@6.2.0:
+    resolution: {integrity: sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg==}
 
   jsonify@0.0.1:
     resolution: {integrity: sha512-2/Ki0GcmuqSrgFyelQq9M05y7PS0mEwuIzrf3f1fPqkVDVRvZrPZtVSMHxdgo8Aq0sxAOb/cr2aqqA3LeWHVPg==}
@@ -4592,7 +4595,7 @@ snapshots:
 
   '@ant-design/colors@8.0.1':
     dependencies:
-      '@ant-design/fast-color': 3.0.0
+      '@ant-design/fast-color': 3.0.1
 
   '@ant-design/cssinjs-utils@1.1.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
@@ -4618,7 +4621,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.28.4
 
-  '@ant-design/fast-color@3.0.0': {}
+  '@ant-design/fast-color@3.0.1': {}
 
   '@ant-design/icons-svg@4.4.2': {}
 
@@ -4636,7 +4639,7 @@ snapshots:
     dependencies:
       '@ant-design/colors': 8.0.1
       '@ant-design/icons-svg': 4.4.2
-      '@rc-component/util': 1.7.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@rc-component/util': 1.8.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       clsx: 2.1.1
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
@@ -5343,7 +5346,7 @@ snapshots:
       - supports-color
       - typescript
 
-  '@orval/core@8.1.0(typescript@5.9.3)':
+  '@orval/core@8.2.0(typescript@5.9.3)':
     dependencies:
       '@scalar/openapi-types': 0.5.3
       acorn: 8.15.0
@@ -5510,7 +5513,7 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
-  '@rc-component/util@1.7.0(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
+  '@rc-component/util@1.8.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)':
     dependencies:
       is-mobile: 5.0.0
       react: 19.1.0
@@ -7255,7 +7258,7 @@ snapshots:
   fs-extra@11.3.3:
     dependencies:
       graceful-fs: 4.2.11
-      jsonfile: 6.1.0
+      jsonfile: 6.2.0
       universalify: 2.0.1
 
   fsevents@2.3.3:
@@ -7627,6 +7630,12 @@ snapshots:
   jsonc-parser@3.3.1: {}
 
   jsonfile@6.1.0:
+    dependencies:
+      universalify: 2.0.1
+    optionalDependencies:
+      graceful-fs: 4.2.11
+
+  jsonfile@6.2.0:
     dependencies:
       universalify: 2.0.1
     optionalDependencies:
