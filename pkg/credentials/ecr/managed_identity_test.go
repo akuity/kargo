@@ -151,8 +151,12 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 			provider: &ManagedIdentityProvider{
 				accountID:  fakeAccountID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
-					return fakeToken, nil
+				getAuthTokenFn: func(
+					context.Context,
+					string,
+					string,
+				) (string, time.Time, error) {
+					return fakeToken, time.Now().Add(12 * time.Hour), nil
 				},
 			},
 			project:  fakeProject,
@@ -164,10 +168,14 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, "AWS", creds.Username)
 				assert.Equal(t, "password", creds.Password)
 
-				// Verify the token was cached
-				cachedToken, found := c.Get(tokenCacheKey(fakeRegion, fakeProject))
+				// Verify the token was cached with a TTL based on the
+				// token's actual expiry
+				items := c.Items()
+				item, found := items[tokenCacheKey(fakeRegion, fakeProject)]
 				assert.True(t, found)
-				assert.Equal(t, fakeToken, cachedToken)
+				expectedTTL := 12*time.Hour - 5*time.Minute // 12h expiry - 5m margin
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
@@ -175,8 +183,12 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 			provider: &ManagedIdentityProvider{
 				accountID:  fakeAccountID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
-					return "", errors.New("auth token error")
+				getAuthTokenFn: func(
+					context.Context,
+					string,
+					string,
+				) (string, time.Time, error) {
+					return "", time.Time{}, errors.New("auth token error")
 				},
 			},
 			project:  fakeProject,
@@ -192,8 +204,12 @@ func TestManagedIdentityProvider_GetCredentials(t *testing.T) {
 			provider: &ManagedIdentityProvider{
 				accountID:  fakeAccountID,
 				tokenCache: cache.New(10*time.Hour, time.Hour),
-				getAuthTokenFn: func(_ context.Context, _, _ string) (string, error) {
-					return "", nil
+				getAuthTokenFn: func(
+					context.Context,
+					string,
+					string,
+				) (string, time.Time, error) {
+					return "", time.Time{}, nil
 				},
 			},
 			project:  fakeProject,

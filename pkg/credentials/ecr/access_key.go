@@ -13,6 +13,7 @@ import (
 	"github.com/patrickmn/go-cache"
 
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -35,13 +36,20 @@ func init() {
 type AccessKeyProvider struct {
 	tokenCache *cache.Cache
 
-	getAuthTokenFn func(ctx context.Context, region, accessKeyID, secretAccessKey string) (string, error)
+	getAuthTokenFn func(
+		ctx context.Context,
+		region string,
+		accessKeyID string,
+		secretAccessKey string,
+	) (string, time.Time, error)
 }
 
 func NewAccessKeyProvider() credentials.Provider {
 	p := &AccessKeyProvider{
 		tokenCache: cache.New(
-			// Tokens live for 12 hours. We'll hang on to them for 10.
+			// Tokens live for 12 hours. We'll hang on to them for 10 by default.
+			// When the actual token expiry is available, it is used (minus a
+			// safety margin) instead of this default.
 			10*time.Hour, // Default ttl for each entry
 			time.Hour,    // Cleanup interval
 		),
@@ -75,13 +83,20 @@ func (p *AccessKeyProvider) GetCredentials(
 	secretAccessKey := string(req.Data[secretKey])
 	cacheKey := tokenCacheKey(region, accessKeyID, secretAccessKey)
 
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"provider", "ecrAccessKey",
+		"repoURL", req.RepoURL,
+	)
+
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
+		logger.Debug("auth token cache hit")
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
+	logger.Debug("auth token cache miss")
 
 	// Cache miss, get a new token
-	encodedToken, err := p.getAuthTokenFn(
+	encodedToken, expiry, err := p.getAuthTokenFn(
 		ctx,
 		region,
 		accessKeyID,
@@ -93,9 +108,22 @@ func (p *AccessKeyProvider) GetCredentials(
 		}
 		return nil, err
 	}
+	logger.Debug("obtained new auth token")
 
-	// Cache the encoded token
-	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
+	// Cache the encoded token, preferring a TTL derived from the actual token
+	// expiry when available.
+	ttl := cache.DefaultExpiration
+	if !expiry.IsZero() {
+		if remaining := time.Until(expiry) - tokenCacheExpiryMargin; remaining > 0 {
+			ttl = remaining
+		}
+	}
+	logger.Debug(
+		"caching auth token",
+		"expiry", expiry,
+		"ttl", ttl,
+	)
+	p.tokenCache.Set(cacheKey, encodedToken, ttl)
 
 	return decodeAuthToken(encodedToken)
 }
@@ -105,7 +133,7 @@ func (p *AccessKeyProvider) GetCredentials(
 // containing a username and password separated by a colon.
 func (p *AccessKeyProvider) getAuthToken(
 	ctx context.Context, region, accessKeyID, secretAccessKey string,
-) (string, error) {
+) (string, time.Time, error) {
 	svc := ecr.NewFromConfig(aws.Config{
 		Region:      region,
 		Credentials: awscreds.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, ""),
@@ -113,18 +141,23 @@ func (p *AccessKeyProvider) getAuthToken(
 
 	output, err := svc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 	if err != nil {
-		return "", fmt.Errorf("error getting ECR authorization token: %w", err)
+		return "", time.Time{}, fmt.Errorf("error getting ECR authorization token: %w", err)
 	}
 
 	if output == nil || len(output.AuthorizationData) == 0 {
-		return "", fmt.Errorf("no authorization data returned")
+		return "", time.Time{}, fmt.Errorf("no authorization data returned")
+	}
+
+	var expiry time.Time
+	if output.AuthorizationData[0].ExpiresAt != nil {
+		expiry = *output.AuthorizationData[0].ExpiresAt
 	}
 
 	if token := output.AuthorizationData[0].AuthorizationToken; token != nil {
-		return *token, nil
+		return *token, expiry, nil
 	}
 
-	return "", fmt.Errorf("no authorization token returned")
+	return "", time.Time{}, fmt.Errorf("no authorization token returned")
 }
 
 // decodeAuthToken decodes an ECR authorization token by base64 decoding it and
