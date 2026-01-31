@@ -199,3 +199,141 @@ characters:
 		})
 	}
 }
+
+func TestSplitKeyPath(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected []string
+	}{
+		{
+			input:    "image.tag",
+			expected: []string{"image", "tag"},
+		},
+		{
+			input:    "example\\.com/version",
+			expected: []string{"example.com/version"},
+		},
+		{
+			input:    "configs.example\\.com/feature",
+			expected: []string{"configs", "example.com/feature"},
+		},
+		{
+			input:    "containers.0.image",
+			expected: []string{"containers", "0", "image"},
+		},
+		{
+			input:    "nested.key.with\\.dots.and\\.more",
+			expected: []string{"nested", "key", "with.dots", "and.more"},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			got := splitKeyPath(tc.input)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestSetValuesInBytesWithEscapedDots(t *testing.T) {
+	yamlBytes := []byte(`
+example.com/version: v1.0.0
+image:
+  tag: v1.0.0
+configs:
+  example.com/feature: false
+containers:
+  - name: my-app
+    image: my-app:v1.0
+`)
+	updates := []Update{
+		{
+			Key:   "example\\.com/version",
+			Value: "v2.0.0",
+		},
+		{
+			Key:   "image.tag",
+			Value: "v2.0.0",
+		},
+		{
+			Key:   "configs.example\\.com/feature",
+			Value: true,
+		},
+		{
+			Key:   "containers.0.image",
+			Value: "my-app:v2.0.0",
+		},
+	}
+
+	expected := []byte(`
+example.com/version: v2.0.0
+image:
+  tag: v2.0.0
+configs:
+  example.com/feature: true
+containers:
+  - name: my-app
+    image: my-app:v2.0.0
+`)
+
+	out, err := SetValuesInBytes(yamlBytes, updates)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
+}
+
+func TestSetValuesInBytesWithEscapedDotNested(t *testing.T) {
+	yamlBytes := []byte(`
+configs:
+  example.com/feature:
+    enabled: false
+`)
+
+	updates := []Update{
+		{
+			Key:   "configs.example\\.com/feature.enabled",
+			Value: true,
+		},
+	}
+
+	expected := []byte(`
+configs:
+  example.com/feature:
+    enabled: true
+`)
+
+	out, err := SetValuesInBytes(yamlBytes, updates)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
+}
+
+func TestSequenceAndLiteralDotTogether(t *testing.T) {
+	yamlBytes := []byte(`
+services:
+  - name: api.example.com
+    port: 8080
+  - name: web
+    port: 80
+`)
+
+	updates := []Update{
+		{
+			Key:   "services.0.name",
+			Value: "api.newdomain.com",
+		},
+		{
+			Key:   "services.0.port",
+			Value: 9090,
+		},
+	}
+
+	expected := []byte(`
+services:
+  - name: api.newdomain.com
+    port: 9090
+  - name: web
+    port: 80
+`)
+
+	out, err := SetValuesInBytes(yamlBytes, updates)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
+}
