@@ -128,9 +128,12 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	if opts.Filter != "" {
-		args = append(args, "--filter", opts.Filter)
-	}
+	// NOTE(hidde): Temporarily disabled until we figure out why this can result
+	// in "could not fetch <commit> from promisor remote" errors.
+	//
+	// if opts.Filter != "" {
+	//  	args = append(args, "--filter", opts.Filter)
+	// }
 	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
