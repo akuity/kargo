@@ -37,7 +37,7 @@ multiple working trees.
 | `checkout[].commit` | `string` | N | A specific commit to check out. Mutually exclusive with `branch` and `tag`. If none of these is specified, the default branch will be checked out. |
 | `checkout[].path` | `string` | Y | The path for a working tree that will be created from the checked out revision. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `checkout[].tag` | `string` | N | A tag to check out. Mutually exclusive with `branch` and `commit`. If none of these is specified, the default branch will be checked out. |
-| `checkout[].sparse` | `[]string` | N | Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., `src/app`, `configs/prod`). Glob patterns are not supported. When all checkouts use sparse patterns, a [blobless clone][] is performed automatically to reduce clone time and disk usage. |
+| `checkout[].sparse` | `[]string` | N | Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., `src/app`, `configs/prod`). Glob patterns are not supported. |
 
 ## Output
 
