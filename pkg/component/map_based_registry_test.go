@@ -145,15 +145,28 @@ func TestMapBasedRegistry_Register(t *testing.T) {
 		Metadata: "meta",
 	}
 	testCases := []struct {
-		name       string
-		registry   *namedRegistry
-		assertions func(*testing.T, *namedRegistry, error)
+		name            string
+		registry        *namedRegistry
+		newRegistration namedRegistration
+		assertions      func(*testing.T, *namedRegistry, error)
 	}{
+		{
+			name: "no name",
+			registry: &namedRegistry{
+				registrations: map[string]namedRegistration{},
+			},
+			newRegistration: namedRegistration{},
+			assertions: func(t *testing.T, registry *namedRegistry, err error) {
+				require.ErrorContains(t, err, "registration name cannot be empty")
+				require.Empty(t, registry.registrations)
+			},
+		},
 		{
 			name: "basic registration",
 			registry: &namedRegistry{
 				registrations: map[string]namedRegistration{},
 			},
+			newRegistration: testReg,
 			assertions: func(t *testing.T, registry *namedRegistry, err error) {
 				require.NoError(t, err)
 				require.Equal(
@@ -169,6 +182,7 @@ func TestMapBasedRegistry_Register(t *testing.T) {
 				opts:          NameBasedRegistryOptions{AllowOverwriting: false},
 				registrations: map[string]namedRegistration{testReg.Name: testReg},
 			},
+			newRegistration: testReg,
 			assertions: func(t *testing.T, registry *namedRegistry, err error) {
 				require.ErrorContains(t, err, "cannot overwrite registration")
 				require.Equal(
@@ -184,6 +198,7 @@ func TestMapBasedRegistry_Register(t *testing.T) {
 				opts:          NameBasedRegistryOptions{AllowOverwriting: false},
 				registrations: map[string]namedRegistration{testReg.Name: testReg},
 			},
+			newRegistration: testReg,
 			assertions: func(t *testing.T, registry *namedRegistry, err error) {
 				require.ErrorContains(t, err, "cannot overwrite registration")
 				require.Equal(
@@ -199,7 +214,7 @@ func TestMapBasedRegistry_Register(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.registry,
-				testCase.registry.Register(testReg),
+				testCase.registry.Register(testCase.newRegistration),
 			)
 		})
 	}
