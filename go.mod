@@ -44,7 +44,7 @@ require (
 	github.com/go-openapi/swag v0.23.0
 	github.com/go-openapi/validate v0.25.1
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/go-containerregistry v0.20.7
 	github.com/google/go-github/v76 v76.0.0
 	github.com/google/uuid v1.6.0
