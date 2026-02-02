@@ -165,22 +165,37 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 
 // splitKeyPath splits a key string into path elements for traversal.
 //
-// Rules:
-// 1. "." is treated as a path separator (original behavior).
-// 2. "\." is treated as a literal dot in the key name (new behavior).
+// Escape sequences:
+//   - \. → literal dot (not a separator)
+//   - \\ → literal backslash
+//   - \x → x (any other escaped char becomes itself)
 //
 // Examples:
-// - "image.tag" -> ["image", "tag"]
-// - "example\.com/version" -> ["example.com", "version"]
+//   - "image.tag"              → ["image", "tag"]
+//   - "example\.com/version"   → ["example.com/version"]
+//   - "path\\to.file"          → ["path\to", "file"]
 func splitKeyPath(key string) []string {
-	placeholder := "__DOT__"
-	// Replace all escaped dots with a placeholder
-	key = strings.ReplaceAll(key, `\.`, placeholder)
-	// Split on unescaped dots
-	parts := strings.Split(key, ".")
-	// Finally,restore literal dots in each part
-	for i := range parts {
-		parts[i] = strings.ReplaceAll(parts[i], placeholder, ".")
+	var parts []string
+	var current strings.Builder
+	escaped := false
+	for _, r := range key {
+		switch {
+		case escaped:
+			current.WriteRune(r)
+			escaped = false
+		case r == '\\':
+			escaped = true
+		case r == '.':
+			parts = append(parts, current.String())
+			current.Reset()
+		default:
+			current.WriteRune(r)
+		}
 	}
+	// Trailing backslash is preserved literally
+	if escaped {
+		current.WriteRune('\\')
+	}
+	parts = append(parts, current.String())
 	return parts
 }

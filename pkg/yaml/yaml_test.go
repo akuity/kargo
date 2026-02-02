@@ -222,8 +222,20 @@ func TestSplitKeyPath(t *testing.T) {
 			expected: []string{"containers", "0", "image"},
 		},
 		{
-			input:    "nested.key.with\\.dots.and\\.more",
-			expected: []string{"nested", "key", "with.dots", "and.more"},
+			input:    "foo\\\\bar",
+			expected: []string{"foo\\bar"},
+		},
+		{
+			input:    "foo\\\\.bar",
+			expected: []string{"foo\\", "bar"},
+		},
+		{
+			input:    "foo\\",
+			expected: []string{"foo\\"},
+		},
+		{
+			input:    "foo\\.\\.bar",
+			expected: []string{"foo..bar"},
 		},
 	}
 	for _, tc := range testCases {

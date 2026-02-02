@@ -34,7 +34,7 @@ image:
 ```
 Update key: `image.tag`
 
-2**Keys with literal dots:**
+2. **Keys with literal dots:**
 
 ```yaml
 example.com/version: v1.0.0
@@ -55,7 +55,11 @@ configs:
   example.com/feature:
     enabled: false
 ```
-Update key: `configs.example\.com/feature.enabled`
+
+:::note
+Use `\\` to represent a literal backslash in keys. For example, `path\\to.file`
+results in the path `["path\to", "file"]`.
+:::
 
 ## Examples
 
