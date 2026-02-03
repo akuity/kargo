@@ -20,8 +20,11 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
+	if hasInternalSpaces(repo) {
+		return repo
+	}
 	origRepo := repo
-	repo = rmSpaces(repo)
+	repo = rmSpaces(origRepo)
 	if repo == "" {
 		return origRepo
 	}
@@ -37,7 +40,7 @@ func NormalizeGit(repo string) string {
 		}
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
-		return repoURL.String()
+		return strings.ToLower(repoURL.String())
 	}
 
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
@@ -59,9 +62,9 @@ func NormalizeGit(repo string) string {
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
 	if pathURL.Path == "" {
-		return fmt.Sprintf("ssh://%s", userHost)
+		return strings.ToLower(fmt.Sprintf("ssh://%s", userHost))
 	}
-	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
+	return strings.ToLower(fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String()))
 }
 
 func hasProtocolPrefix(repo string) bool {
@@ -86,15 +89,37 @@ func safeParseURL(repo string) (*url.URL, error) {
 // from the given repository string. It also decodes any percent-encoded
 // characters in the string before processing.
 func rmSpaces(repo string) string {
-	decodedPath, err := url.PathUnescape(repo)
+	return strings.Map(rmRuneFuncfunc, repo)
+}
+
+// hasInternalSpaces checks if the given repository URL string contains any
+// any non-leading or non-trailing whitespace characters.
+func hasInternalSpaces(repo string) bool {
+	// First remove leading and trailing spaces and use this to compare.
+	// trimmed := strings.TrimSpace(repo)
+	// Remove unusual whitespace characters that strings.TrimSpace doesn't remove.
+	trimmed := trimSpace(repo)
+	return strings.Map(rmRuneFuncfunc, trimmed) != trimmed
+}
+
+func trimSpace(repo string) string {
+	unespaced, err := url.PathUnescape(repo)
 	if err == nil {
-		repo = decodedPath
+		repo = unespaced
 	}
-	repo = strings.TrimSpace(strings.ToLower(repo))
-	return strings.Map(func(r rune) rune {
-		if unicode.IsSpace(r) || !unicode.IsPrint(r) {
-			return -1 // Remove the character
-		}
-		return r
-	}, repo)
+	return strings.TrimRightFunc(
+		strings.TrimLeftFunc(repo, isSpace),
+		isSpace,
+	)
+}
+
+func isSpace(r rune) bool {
+	return unicode.IsSpace(r) || !unicode.IsPrint(r)
+}
+
+func rmRuneFuncfunc(r rune) rune {
+	if isSpace(r) {
+		return -1 // Remove the character
+	}
+	return r
 }

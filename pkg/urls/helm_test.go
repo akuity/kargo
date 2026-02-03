@@ -129,15 +129,17 @@ func TestNormalizeChart(t *testing.T) {
 			input:    "\ufeff\ufeffoci://example/repo",
 			expected: "example/repo",
 		},
+		// Internal spaces ( encoded or otherwise ) are invalid and so
+		// they should be returned as-is.
 		{
 			name:     "internal spaces",
 			input:    "oci://example /repo",
-			expected: "example/repo",
+			expected: "oci://example /repo",
 		},
 		{
 			name:     "encoded spaces",
 			input:    "oci://example%20repo",
-			expected: "examplerepo",
+			expected: "oci://example%20repo",
 		},
 	}
 

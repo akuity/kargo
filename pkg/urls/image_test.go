@@ -31,7 +31,9 @@ func TestNormalizeImage(t *testing.T) {
 		{"quay.io/example/repo", "quay.io/example/repo"},
 
 		// Input that cannot be normalized (invalid URL)
-		{"invalid url", "invalidurl"},
+		{"invalid url", "invalid url"},
+		{"docker.io/example /repo", "docker.io/example /repo"},   // Internal spaces
+		{"docker.io/example%20repo", "docker.io/example%20repo"}, // Encoded internal spaces
 
 		// Edge cases for unusual whitespace characters
 		{" \ufeffdocker.io/example/repo", "example/repo"},      // Leading BOM
@@ -44,8 +46,6 @@ func TestNormalizeImage(t *testing.T) {
 		{"\u00A0docker.io/example/repo\u00A0", "example/repo"}, // Non-breaking spaces
 		{"\u200Bdocker.io/example/repo\u200B", "example/repo"}, // Zero-width spaces
 		{"\ufeff\ufeffdocker.io/example/repo", "example/repo"}, // Multiple BOMs
-		{"docker.io/example /repo", "example/repo"},            // Internal spaces
-		{"docker.io/example%20repo", "examplerepo"},            // Encoded spaces
 	}
 
 	for _, tc := range tests {

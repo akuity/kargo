@@ -11,11 +11,12 @@ func TestNormalizeGit(t *testing.T) {
 	testCases := map[string]string{
 		// Anything we can't normalize should be returned as-is
 		"http://github.com/example/repo?foo=bar": "http://github.com/example/repo?foo=bar",
-		// TODO(Faris): find a way to retain existing behavior.
-		"https://not a url":                     "https://not a url",
-		"ssh://not a url":                       "ssh://not a url",
-		"ssh://github.com/example/repo?foo=bar": "ssh://github.com/example/repo?foo=bar",
-		"not even remotely a url":               "not even remotely a url",
+		"https://not a url":                      "https://not a url",
+		"ssh://not a url":                        "ssh://not a url",
+		"ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
+		"not even remotely a url":                "not even remotely a url",
+		"https://github.com /example/repo":       "https://github.com /example/repo",  // Internal spaces
+		"https://github.com/example%20repo":      "https://github.com/example%20repo", // Encoded internal spaces
 		// URLs of the form http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 		"https://github.com":          "https://github.com",
 		"https://github.com/":         "https://github.com",
@@ -94,8 +95,6 @@ func TestNormalizeGit(t *testing.T) {
 		"\u00A0https://github.com/example/repo\u00A0": "https://github.com/example/repo", // Non-breaking spaces
 		"\u200Bhttps://github.com/example/repo\u200B": "https://github.com/example/repo", // Zero-width spaces
 		"\ufeff\ufeffhttps://github.com/example/repo": "https://github.com/example/repo", // Multiple BOMs
-		"https://github.com /example/repo":            "https://github.com/example/repo", // Internal spaces
-		"https://github.com/example%20repo":           "https://github.com/examplerepo",  // Encoded spaces
 	}
 	for in, out := range testCases {
 		t.Run(in, func(t *testing.T) {
