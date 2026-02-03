@@ -10,8 +10,8 @@ import (
 func TestNormalizeGit(t *testing.T) {
 	testCases := map[string]string{
 		// Anything we can't normalize should be returned as-is
-		"http://github.com/example/repo?foo=bar": "http://github.com/example/repo?foo=bar",
 		"https://not a url":                      "https://not a url",
+		"http://github.com/example/repo?foo=bar": "http://github.com/example/repo?foo=bar",
 		"ssh://not a url":                        "ssh://not a url",
 		"ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
 		"not even remotely a url":                "not even remotely a url",
@@ -85,6 +85,7 @@ func TestNormalizeGit(t *testing.T) {
 		"git@github.com:example/repo.git":  "ssh://git@github.com/example/repo", // 110
 		"git@github.com:example/repo.git/": "ssh://git@github.com/example/repo", // 111
 		// Test cases involving edgecases related to unusual whitespace characters
+		// that should get normalized.
 		" \ufeffhttps://github.com/example/repo":      "https://github.com/example/repo", // Leading BOM
 		"https://github.com/example/repo\ufeff":       "https://github.com/example/repo", // Trailing BOM
 		" https://github.com/example/repo ":           "https://github.com/example/repo", // Leading and trailing spaces

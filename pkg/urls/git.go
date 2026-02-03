@@ -85,20 +85,32 @@ func safeParseURL(repo string) (*url.URL, error) {
 	return repoURL, nil
 }
 
-// rmSpaces removes all leading, trailing, and internal whitespace characters
-// from the given repository string. It also decodes any percent-encoded
-// characters in the string before processing.
-func rmSpaces(repo string) string {
-	return strings.Map(rmRuneFuncfunc, repo)
-}
-
 // hasInternalSpaces checks if the given repository URL string contains
 // any non-leading or non-trailing (encoded-or-non-encoded) whitespace characters.
 func hasInternalSpaces(repo string) bool {
 	// First remove leading and trailing spaces and use this as a point of reference.
-	// Remove unusual whitespace characters that strings.TrimSpace doesn't remove.
 	trimmed := trimSpace(repo)
-	return strings.Map(rmRuneFuncfunc, trimmed) != trimmed
+	// Now compare the trimmed version against a version with all spaces removed.
+	// If they differ, then there were internal spaces.
+	return strings.Map(rmSpaceRune, trimmed) != trimmed
+}
+
+// rmSpaces removes all leading, trailing, and internal whitespace characters
+// from the given repository string. It also decodes any percent-encoded
+// characters in the string before processing.
+func rmSpaces(repo string) string {
+	return strings.Map(rmSpaceRune, repo)
+}
+
+func rmSpaceRune(r rune) rune {
+	if isSpace(r) {
+		return -1 // Remove the character
+	}
+	return r
+}
+
+func isSpace(r rune) bool {
+	return unicode.IsSpace(r) || !unicode.IsPrint(r)
 }
 
 // trimSpace removes leading and trailing whitespace characters from the given
@@ -113,15 +125,4 @@ func trimSpace(repo string) string {
 		strings.TrimLeftFunc(repo, isSpace),
 		isSpace,
 	)
-}
-
-func isSpace(r rune) bool {
-	return unicode.IsSpace(r) || !unicode.IsPrint(r)
-}
-
-func rmRuneFuncfunc(r rune) rune {
-	if isSpace(r) {
-		return -1 // Remove the character
-	}
-	return r
 }
