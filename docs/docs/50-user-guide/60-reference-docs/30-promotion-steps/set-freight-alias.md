@@ -45,8 +45,8 @@ intended purpose or lifecycle state within the organization:
 steps:
 - uses: set-freight-alias
   config:
-  freightName: ${{ ctx.targetFreight.name }}
-  newAlias: "candidate-for-staging"
+    freightName: ${{ ctx.targetFreight.name }}
+    newAlias: "candidate-for-staging"
 ```
 
 In this example, the `Freight` currently being promoted is identified using its
