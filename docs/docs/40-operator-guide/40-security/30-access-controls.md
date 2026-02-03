@@ -79,7 +79,7 @@ that rule._
 
 ServiceAccount resources may be mapped to users via the
 `rbac.kargo.akuity.io/claims` annotation, whose value is a string representation
-of a JSON or YAML object with claim names as its keys and lists of claim values
+of a JSON object with claim names as its keys and lists of claim values
 as its values.
 
 In the following example, the `ServiceAccount` resource is mapped to all of:
