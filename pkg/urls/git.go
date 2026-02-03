@@ -23,7 +23,7 @@ func NormalizeGit(repo string) string {
 	if hasInternalSpaces(repo) {
 		return repo
 	}
-	origRepo := repo
+	origRepo := strings.ToLower(repo)
 	repo = rmSpaces(origRepo)
 	if repo == "" {
 		return origRepo
