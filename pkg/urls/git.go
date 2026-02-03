@@ -20,11 +20,11 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // canonical representation of a Git URL is needed. Any URL that cannot be
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
-	if hasInternalSpaces(repo) {
-		return repo
+	origRepo := repo
+	if hasInternalSpaces(origRepo) {
+		return origRepo
 	}
-	origRepo := strings.ToLower(repo)
-	repo = rmSpaces(origRepo)
+	repo = rmSpaces(strings.ToLower(origRepo))
 	if repo == "" {
 		return origRepo
 	}
