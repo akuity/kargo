@@ -40,7 +40,7 @@ func NormalizeGit(repo string) string {
 		}
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
-		return strings.ToLower(repoURL.String())
+		return repoURL.String()
 	}
 
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
@@ -62,9 +62,9 @@ func NormalizeGit(repo string) string {
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, "/")
 	pathURL.Path = strings.TrimSuffix(pathURL.Path, ".git")
 	if pathURL.Path == "" {
-		return strings.ToLower(fmt.Sprintf("ssh://%s", userHost))
+		return fmt.Sprintf("ssh://%s", userHost)
 	}
-	return strings.ToLower(fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String()))
+	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
 }
 
 func hasProtocolPrefix(repo string) bool {
