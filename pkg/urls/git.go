@@ -92,16 +92,18 @@ func rmSpaces(repo string) string {
 	return strings.Map(rmRuneFuncfunc, repo)
 }
 
-// hasInternalSpaces checks if the given repository URL string contains any
-// any non-leading or non-trailing whitespace characters.
+// hasInternalSpaces checks if the given repository URL string contains
+// any non-leading or non-trailing (encoded-or-non-encoded) whitespace characters.
 func hasInternalSpaces(repo string) bool {
-	// First remove leading and trailing spaces and use this to compare.
-	// trimmed := strings.TrimSpace(repo)
+	// First remove leading and trailing spaces and use this as a point of reference.
 	// Remove unusual whitespace characters that strings.TrimSpace doesn't remove.
 	trimmed := trimSpace(repo)
 	return strings.Map(rmRuneFuncfunc, trimmed) != trimmed
 }
 
+// trimSpace removes leading and trailing whitespace characters from the given
+// repository string. It also decodes any percent-encoded characters in the
+// string before processing.
 func trimSpace(repo string) string {
 	unespaced, err := url.PathUnescape(repo)
 	if err == nil {
