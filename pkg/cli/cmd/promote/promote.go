@@ -212,10 +212,14 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("marshal promotion: %w", err)
 		}
-		promo := &kargoapi.Promotion{}
-		if err = json.Unmarshal(promoJSON, promo); err != nil {
+		// The response is {"promotion": {...}}
+		var result struct {
+			Promotion *kargoapi.Promotion `json:"promotion"`
+		}
+		if err = json.Unmarshal(promoJSON, &result); err != nil {
 			return fmt.Errorf("unmarshal promotion: %w", err)
 		}
+		promo := result.Promotion
 		if o.Wait {
 			if err = o.waitForPromotion(ctx, nil, promo); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
@@ -237,14 +241,18 @@ func (o *promotionOptions) run(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		var promotions []*kargoapi.Promotion
 		promotionsJSON, err := json.Marshal(res.Payload)
 		if err != nil {
 			return fmt.Errorf("marshal promotions: %w", err)
 		}
-		if err = json.Unmarshal(promotionsJSON, &promotions); err != nil {
+		// The response is {"promotions": [...]}
+		var result struct {
+			Promotions []*kargoapi.Promotion `json:"promotions"`
+		}
+		if err = json.Unmarshal(promotionsJSON, &result); err != nil {
 			return fmt.Errorf("unmarshal promotions: %w", err)
 		}
+		promotions := result.Promotions
 		if o.Wait {
 			if err = o.waitForPromotions(ctx, promotions...); err != nil {
 				return fmt.Errorf("wait for promotion: %w", err)
