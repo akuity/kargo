@@ -78,18 +78,14 @@ func safeParseURL(repo string) (*url.URL, error) {
 	return repoURL, nil
 }
 
-func isSpace(r rune) bool {
-	return unicode.IsSpace(r) || !unicode.IsPrint(r)
-}
-
-// trimSpace removes leading and trailing whitespace characters from the given
-// repository string. It also decodes any percent-encoded characters in the
-// string before processing.
+// This handles trimming unusual whitespace characters that
+// strings.TrimSpace does not.
 func trimSpace(repo string) string {
-	// This handles additional unusual whitespace characters that
-	// strings.TrimSpace does not.
+	isSpaceOrUnprintable := func(r rune) bool {
+		return unicode.IsSpace(r) || !unicode.IsPrint(r)
+	}
 	return strings.TrimRightFunc(
-		strings.TrimLeftFunc(repo, isSpace),
-		isSpace,
+		strings.TrimLeftFunc(repo, isSpaceOrUnprintable),
+		isSpaceOrUnprintable,
 	)
 }
