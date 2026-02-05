@@ -86,12 +86,6 @@ func isSpace(r rune) bool {
 // repository string. It also decodes any percent-encoded characters in the
 // string before processing.
 func trimSpace(repo string) string {
-	// escaped/encoded characters may include spaces, so decode them first.
-	// This otherwise results in false negatives.
-	unespaced, err := url.PathUnescape(repo)
-	if err == nil {
-		repo = unespaced
-	}
 	// This handles additional unusual whitespace characters that
 	// strings.TrimSpace does not.
 	return strings.TrimRightFunc(
