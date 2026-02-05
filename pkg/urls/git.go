@@ -23,20 +23,37 @@ func NormalizeGit(repo string) string {
 	origRepo := repo
 	repo = trimSpace(strings.ToLower(repo))
 
-	if hasProtocolPrefix(repo) {
-		repoURL, err := safeParseURL(repo)
+	// HTTP/S URLs
+	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
+		repoURL, err := url.Parse(repo)
 		if err != nil {
 			return origRepo
 		}
-		// Remove user info for HTTP/S URLs
-		if !strings.HasPrefix(repo, "ssh://") {
-			repoURL.User = nil
+		if len(repoURL.Query()) > 0 {
+			// Query parameters are not permitted
+			return origRepo
 		}
+		repoURL.User = nil // Remove user info if there is any
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
 		return repoURL.String()
 	}
 
+	// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
+	if strings.HasPrefix(repo, "ssh://") {
+		// repo = strings.TrimPrefix(repo, "ssh://")
+		repoURL, err := url.Parse(repo)
+		if err != nil {
+			return origRepo
+		}
+		if len(repoURL.Query()) > 0 {
+			// Query parameters are not permitted
+			return origRepo
+		}
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, "/")
+		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
+		return repoURL.String()
+	}
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
 	matches := scpSyntaxRegex.FindStringSubmatch(repo)
 	if len(matches) != 2 && len(matches) != 3 {
@@ -58,24 +75,6 @@ func NormalizeGit(repo string) string {
 		return fmt.Sprintf("ssh://%s", userHost)
 	}
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
-}
-
-func hasProtocolPrefix(repo string) bool {
-	return strings.HasPrefix(repo, "http://") ||
-		strings.HasPrefix(repo, "https://") ||
-		strings.HasPrefix(repo, "ssh://")
-}
-
-func safeParseURL(repo string) (*url.URL, error) {
-	repoURL, err := url.Parse(repo)
-	if err != nil {
-		return nil, fmt.Errorf("parsing URL: %w", err)
-	}
-	if len(repoURL.Query()) > 0 {
-		// Query parameters are not permitted
-		return nil, fmt.Errorf("URL contains %d query parameters; not permitted", len(repoURL.Query()))
-	}
-	return repoURL, nil
 }
 
 // This handles trimming unusual whitespace characters that
