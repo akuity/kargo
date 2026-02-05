@@ -1,6 +1,7 @@
 package urls
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -8,12 +9,14 @@ import (
 // Crucially, this function removes the oci:// prefix from the URL if there is
 // one.
 func NormalizeChart(repo string) string {
-	if hasInternalSpaces(repo) {
-		return repo
-	}
-	repo = rmSpaces(repo)
+	ogRepo := repo
+	repo = trimSpace(repo)
 	if repo == "" {
-		return repo
+		return ogRepo
+	}
+	// just to check validity
+	if _, err := url.Parse(repo); err != nil {
+		return ogRepo
 	}
 	// Note: We lean a bit on image.NormalizeURL() because it is excellent at
 	// normalizing the many different forms of equivalent URLs for Docker Hub
