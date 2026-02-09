@@ -50,7 +50,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/golang-lru/v2 v2.0.7
-	github.com/jferrl/go-githubauth v1.5.0
+	github.com/jferrl/go-githubauth v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/klauspost/compress v1.18.3
 	github.com/ktrysmt/go-bitbucket v0.9.87
