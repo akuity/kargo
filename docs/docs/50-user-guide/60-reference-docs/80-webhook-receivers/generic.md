@@ -96,8 +96,8 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
+        actions:
+          - actionType: Refresh
 ```
 
 :::note
@@ -126,9 +126,9 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header("X-Event-Type") == 'push'"
+        actions:
+          - actionType: Refresh
+            whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
 :::note
@@ -174,12 +174,12 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: my-warehouse
+        actions:
+          - actionType: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: my-warehouse
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -198,12 +198,12 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: "${{ normalizeGit(request.body.repository.name) }}"
+        actions:
+          - actionType: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
 ##### By Labels
@@ -223,14 +223,14 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchLabels:
-                  environment: prod
+        actions:
+          - actionType: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchLabels:
+                    environment: prod
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -249,16 +249,16 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchExpressions:
-                  - key: service
-                    operator: In
-                    values: ["ui", "api"]
+        actions:
+          - actionType: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchExpressions:
+                    - key: service
+                      operator: In
+                      values: ["ui", "api"]
 ```
 
 ##### By Values in an Index
