@@ -18,7 +18,7 @@ spec:
   ingressClassName: {{ .Values.api.ingress.ingressClassName }}
   {{- end }}
   rules:
-  - host: {{ quote .Values.api.host }}
+  - host: {{ include "kargo.api.baseHost" . | quote }}
     http:
       paths:
       - pathType: {{ .Values.api.ingress.pathType | default "ImplementationSpecific" }}
@@ -48,7 +48,7 @@ spec:
   {{- if .Values.api.ingress.tls.enabled }}
   tls:
   - hosts:
-    - {{ quote .Values.api.host }}
+    - {{ include "kargo.api.baseHost" . | quote }}
     secretName: {{ .Values.api.ingress.tls.secretName }}
   {{- end }}
 {{- end }}
