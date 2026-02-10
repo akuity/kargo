@@ -35,7 +35,7 @@ require (
 	github.com/fatih/structtag v1.2.0
 	github.com/fluxcd/pkg/kustomize v1.24.0
 	github.com/gin-gonic/gin v1.11.0
-	github.com/go-git/go-git/v5 v5.16.4
+	github.com/go-git/go-git/v5 v5.16.5
 	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/go-openapi/errors v0.22.6
