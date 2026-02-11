@@ -29,6 +29,9 @@ func TestNormalizeImage(t *testing.T) {
 		// Images from other registries
 		{"ghcr.io/example/repo", "ghcr.io/example/repo"},
 		{"quay.io/example/repo", "quay.io/example/repo"},
+
+		// Input that cannot be normalized (invalid URL)
+		{"invalid url", "invalid url"},
 	}
 
 	for _, tc := range tests {
