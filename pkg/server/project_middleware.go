@@ -18,7 +18,11 @@ func (s *server) projectExistsMiddleware() gin.HandlerFunc {
 			return
 		}
 		p := &kargoapi.Project{}
-		if err := s.client.Get(
+		var cl client.Client = s.client
+		if s.client != nil && s.client.InternalClient() != nil {
+			cl = s.client.InternalClient()
+		}
+		if err := cl.Get(
 			c.Request.Context(),
 			client.ObjectKey{Name: project},
 			p,
