@@ -19,9 +19,6 @@ func NormalizeChart(repo string) string {
 	// normalizing the many different forms of equivalent URLs for Docker Hub
 	// repositories.
 	return NormalizeImage(
-		strings.TrimPrefix(
-			strings.ToLower(repo),
-			"oci://",
-		),
+		strings.TrimPrefix(repo, "oci://"),
 	)
 }
