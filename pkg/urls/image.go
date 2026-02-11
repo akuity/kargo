@@ -17,7 +17,7 @@ import (
 // be normalized will be returned as-is.
 func NormalizeImage(repoURL string) string {
 	ogRepoURL := repoURL
-	repoURL = trimSpace(strings.ToLower(repoURL))
+	repoURL = SanitizeURL(strings.ToLower(repoURL))
 	parsed, err := name.ParseReference(repoURL, name.WeakValidation)
 	if err != nil {
 		return ogRepoURL

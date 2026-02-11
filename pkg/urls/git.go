@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
-	"unicode"
 )
 
 var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(.*))?$`)
@@ -21,7 +20,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
 	origRepo := repo
-	repo = trimSpace(strings.ToLower(repo))
+	repo = SanitizeURL(strings.ToLower(repo))
 
 	// HTTP/S URLs
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
@@ -75,16 +74,4 @@ func NormalizeGit(repo string) string {
 		return fmt.Sprintf("ssh://%s", userHost)
 	}
 	return fmt.Sprintf("ssh://%s/%s", userHost, pathURL.String())
-}
-
-// This handles trimming unusual whitespace characters that
-// strings.TrimSpace does not.
-func trimSpace(repo string) string {
-	isSpaceOrUnprintable := func(r rune) bool {
-		return unicode.IsSpace(r) || !unicode.IsPrint(r)
-	}
-	return strings.TrimRightFunc(
-		strings.TrimLeftFunc(repo, isSpaceOrUnprintable),
-		isSpaceOrUnprintable,
-	)
 }

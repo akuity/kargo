@@ -10,7 +10,7 @@ import (
 // one.
 func NormalizeChart(repo string) string {
 	ogRepo := repo
-	repo = trimSpace(repo)
+	repo = SanitizeURL(repo)
 	// just to check validity
 	if _, err := url.Parse(repo); err != nil {
 		return ogRepo
