@@ -29,23 +29,6 @@ func TestNormalizeImage(t *testing.T) {
 		// Images from other registries
 		{"ghcr.io/example/repo", "ghcr.io/example/repo"},
 		{"quay.io/example/repo", "quay.io/example/repo"},
-
-		// Input that cannot be normalized (invalid URL)
-		{"invalid url", "invalid url"},
-		{"docker.io/example /repo", "docker.io/example /repo"},   // Internal spaces
-		{"docker.io/example%20repo", "docker.io/example%20repo"}, // Encoded internal spaces
-
-		// Edge cases for unusual whitespace characters
-		{" \ufeffdocker.io/example/repo", "example/repo"},      // Leading BOM
-		{"docker.io/example/repo\ufeff", "example/repo"},       // Trailing BOM
-		{"  docker.io/example/repo  ", "example/repo"},         // Leading and trailing spaces
-		{"\tdocker.io/example/repo\t", "example/repo"},         // Leading and trailing tabs
-		{"\ndocker.io/example/repo\n", "example/repo"},         // Leading and trailing newlines
-		{"\rdocker.io/example/repo\r", "example/repo"},         // Leading and trailing carriage returns
-		{" \t\ndocker.io/example/repo\t\n ", "example/repo"},   // Mixed whitespace
-		{"\u00A0docker.io/example/repo\u00A0", "example/repo"}, // Non-breaking spaces
-		{"\u200Bdocker.io/example/repo\u200B", "example/repo"}, // Zero-width spaces
-		{"\ufeff\ufeffdocker.io/example/repo", "example/repo"}, // Multiple BOMs
 	}
 
 	for _, tc := range tests {

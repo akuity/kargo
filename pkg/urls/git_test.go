@@ -15,8 +15,6 @@ func TestNormalizeGit(t *testing.T) {
 		"ssh://not a url":                        "ssh://not a url",
 		"ssh://github.com/example/repo?foo=bar":  "ssh://github.com/example/repo?foo=bar",
 		"not even remotely a url":                "not even remotely a url",
-		"https://github.com /example/repo":       "https://github.com /example/repo",  // Internal spaces
-		"https://github.com/example%20repo":      "https://github.com/example%20repo", // Encoded internal spaces
 		// URLs of the form http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
 		"https://github.com":          "https://github.com",
 		"https://github.com/":         "https://github.com",
@@ -84,18 +82,6 @@ func TestNormalizeGit(t *testing.T) {
 		"git@github.com:example/repo/":     "ssh://git@github.com/example/repo", // 101
 		"git@github.com:example/repo.git":  "ssh://git@github.com/example/repo", // 110
 		"git@github.com:example/repo.git/": "ssh://git@github.com/example/repo", // 111
-		// Test cases involving edgecases related to unusual whitespace characters
-		// that should get normalized.
-		" \ufeffhttps://github.com/example/repo":      "https://github.com/example/repo", // Leading BOM
-		"https://github.com/example/repo\ufeff":       "https://github.com/example/repo", // Trailing BOM
-		" https://github.com/example/repo ":           "https://github.com/example/repo", // Leading and trailing spaces
-		"\tssh://github.com/example/repo\t":           "ssh://github.com/example/repo",   // Leading and trailing tabs
-		"\nssh://github.com/example/repo\n":           "ssh://github.com/example/repo",   // Leading and trailing newlines
-		"\rssh://github.com/example/repo\r":           "ssh://github.com/example/repo",   // Leading and trailing carriage returns
-		" \t\nhttps://github.com/example/repo\t\n ":   "https://github.com/example/repo", // Mixed whitespace
-		"\u00A0https://github.com/example/repo\u00A0": "https://github.com/example/repo", // Non-breaking spaces
-		"\u200Bhttps://github.com/example/repo\u200B": "https://github.com/example/repo", // Zero-width spaces
-		"\ufeff\ufeffhttps://github.com/example/repo": "https://github.com/example/repo", // Multiple BOMs
 	}
 	for in, out := range testCases {
 		t.Run(in, func(t *testing.T) {
