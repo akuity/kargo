@@ -8,13 +8,14 @@ import { generatePath, useNavigate } from 'react-router-dom';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { useActionContext } from '@ui/features/project/pipelines/context/action-context';
+import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import {
   promoteDownstream,
   promoteToStage
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Freight, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
+import { useDictionaryContext } from '../context/dictionary-context';
 import { isStageControlFlow } from '../nodes/stage-meta-utils';
 
 import { FreightDetails } from './freight-details';
@@ -30,7 +31,10 @@ export const Promote = (props: PromoteProps) => {
   const navigate = useNavigate();
   const { promoteTabs } = useExtensionsContext();
 
-  const isControlFlow = isStageControlFlow(props.stage);
+  const dictionaryContext = useDictionaryContext();
+
+  const isDownstreamPromotion =
+    actionContext?.action?.type === IAction.PROMOTE_DOWNSTREAM || isStageControlFlow(props.stage);
 
   const freightAlias = props.freight?.alias;
   const stageName = props.stage?.metadata?.name;
@@ -70,7 +74,7 @@ export const Promote = (props: PromoteProps) => {
       freight: props.freight?.metadata?.name
     };
 
-    if (isControlFlow) {
+    if (isDownstreamPromotion) {
       promoteDownstreamActionMutation.mutate(payload);
       return;
     }
@@ -78,13 +82,19 @@ export const Promote = (props: PromoteProps) => {
     promoteActionMutation.mutate(payload);
   };
 
+  let promotingTo = stageName || '';
+
+  if (isDownstreamPromotion) {
+    promotingTo = [...(dictionaryContext?.subscribersByStage?.[promotingTo] || [])].join(', ');
+  }
+
   return (
     <Drawer
       open={props.visible}
       onClose={props.hide}
       title={
         <Flex align='center'>
-          Promote {freightAlias} to {stageName}
+          Promote {freightAlias} to {promotingTo}
         </Flex>
       }
       size='large'
@@ -97,7 +107,7 @@ export const Promote = (props: PromoteProps) => {
           onClick={onPromote}
           loading={promoteActionMutation.isPending || promoteDownstreamActionMutation.isPending}
         >
-          Promote{isControlFlow && ' to downstream'}
+          Promote{isDownstreamPromotion && ' to downstream'}
         </Button>
       }
     >
