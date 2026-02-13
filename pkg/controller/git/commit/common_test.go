@@ -198,12 +198,12 @@ func TestMatchesPathsFilters(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			includeSelectors, err := getPathSelectors(testCase.includePaths)
+			includeSelectors, err := GetPathSelectors(testCase.includePaths)
 			require.NoError(t, err)
-			excludeSelectors, err := getPathSelectors(testCase.excludePaths)
+			excludeSelectors, err := GetPathSelectors(testCase.excludePaths)
 			require.NoError(t, err)
 
-			matchFound := matchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
+			matchFound := MatchesPathFilters(includeSelectors, excludeSelectors, testCase.diffs)
 			testCase.assertions(t, matchFound)
 		})
 	}
