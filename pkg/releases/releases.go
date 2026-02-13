@@ -76,7 +76,7 @@ type Release struct {
 	// CLIBinaries maps OS and architecture combinations to their corresponding
 	// download URLs for the kargo CLI binary.
 	CLIBinaries CLIBinaries `json:"cliBinaries"`
-}
+} // @name Release
 
 // MarshalJSON formats the Release for JSON output, notably converting the
 // semver Version to a string.

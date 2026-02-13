@@ -8,6 +8,32 @@
     },
     "basePath": "/",
     "paths": {
+        "/v1beta1/kargo-releases/best": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the latest patch release for each minor version of Kargo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Utility"
+                ],
+                "summary": "List latest patch release for each minor version of Kargo",
+                "operationId": "GetBestReleases",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/BestReleasesResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1beta1/login": {
             "post": {
                 "security": [
@@ -4619,6 +4645,17 @@
                 }
             }
         },
+        "BestReleasesResponse": {
+            "type": "object",
+            "properties": {
+                "releases": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/Release"
+                    }
+                }
+            }
+        },
         "Claim": {
             "type": "object",
             "properties": {
@@ -4945,6 +4982,35 @@
                 }
             }
         },
+        "Release": {
+            "type": "object",
+            "properties": {
+                "cliBinaries": {
+                    "description": "CLIBinaries maps OS and architecture combinations to their corresponding\ndownload URLs for the kargo CLI binary.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/github_com_akuity_kargo_pkg_releases.CLIBinaries"
+                        }
+                    ]
+                },
+                "current": {
+                    "description": "Current indicates whether this release matches the minor version of the\nAPI server.",
+                    "type": "boolean"
+                },
+                "latest": {
+                    "description": "Latest indicates whether this release is the latest release.",
+                    "type": "boolean"
+                },
+                "version": {
+                    "description": "Version is the semver version of the release, parsed from the GitHub tag\nname.",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/semver.Version"
+                        }
+                    ]
+                }
+            }
+        },
         "ResourceDetails": {
             "type": "object",
             "properties": {
@@ -5081,6 +5147,18 @@
                     "type": "string"
                 }
             }
+        },
+        "github_com_akuity_kargo_pkg_releases.CLIBinaries": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "object",
+                "additionalProperties": {
+                    "type": "string"
+                }
+            }
+        },
+        "semver.Version": {
+            "type": "object"
         }
     },
     "securityDefinitions": {
