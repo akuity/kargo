@@ -537,7 +537,7 @@ Elastic Container Registries do not _directly_ support long-lived credentials,
 however, an AWS access key ID and secret access key
 [can be used to obtain an authorization token](https://docs.aws.amazon.com/AmazonECR/latest/userguide/registry_auth.html#registry-auth-token)
 that is valid for 12 hours. Kargo can seamlessly obtain such a token and will
-cache it for a period of 10 hours.
+cache it until shortly before it expires.
 
 To use this option, your `Secret` should take the following form:
 
@@ -632,7 +632,8 @@ Google documentation recommends
 that is valid for 60 minutes. Compared to the discouraged method of using the
 service account key to authenticate to the registry directly, this process does
 _not_ transmit the service account key over the wire. Kargo can seamlessly carry
-out this process and will cache the access token for a period of 40 minutes.
+out this process and will cache the access token until shortly before it
+expires.
 
 To use this option, your `Secret` should take the following form:
 
