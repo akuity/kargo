@@ -9,7 +9,7 @@ metadata:
     {{- include "kargo.externalWebhooksServer.labels" . | nindent 4 }}
 spec:
   dnsNames:
-  - {{ quote .Values.externalWebhooksServer.host }}
+  - {{ include "kargo.externalWebhooksServer.baseHost" . | quote }}
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
