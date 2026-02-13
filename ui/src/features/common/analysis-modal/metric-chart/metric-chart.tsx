@@ -91,7 +91,7 @@ const TooltipContent = ({
   return (
     <div className={styles['metric-chart-tooltip']}>
       <Text className='ml-4' type='secondary' style={{ fontSize: 12 }}>
-        {moment(data.startedAt).format('LTS')}
+        {moment(timestampDate(data.startedAt)).format('LTS')}
       </Text>
       <div className={styles['metric-chart-tooltip-status']}>
         <StatusIndicator size='small' status={data.phase} />
