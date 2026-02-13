@@ -7,11 +7,13 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/releases"
 	"github.com/akuity/kargo/pkg/server"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -130,6 +132,13 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
+	releaseSvc, err := releases.NewService(
+		ctx,
+		ptr.To(releases.ServiceConfigFromEnv()),
+	)
+	if err != nil {
+		return fmt.Errorf("error initializing releases service: %w", err)
+	}
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
@@ -145,6 +154,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 				"api",
 			),
 		),
+		releaseSvc,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

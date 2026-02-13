@@ -5,6 +5,8 @@ import (
 	"log"
 	"runtime"
 	"time"
+
+	"github.com/Masterminds/semver/v3"
 )
 
 var (
@@ -19,6 +21,8 @@ var (
 type Version struct {
 	// Version is a human-friendly version string.
 	Version string `json:"version"`
+	// Semver is the parsed semver version.
+	Semver semver.Version `json:"-"`
 	// BuildDate is the date/time on which the application was built.
 	BuildDate time.Time `json:"buildDate"`
 	// GitCommit is the ID (sha) of the last commit to the application's source
@@ -69,6 +73,12 @@ func init() {
 		if ver.GitTreeDirty {
 			ver.Version = fmt.Sprintf("%s.dirty", ver.Version)
 		}
+	} else {
+		sv, err := semver.NewVersion(ver.Version)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse %q version as semver", ver.Version))
+		}
+		ver.Semver = *sv
 	}
 }
 
