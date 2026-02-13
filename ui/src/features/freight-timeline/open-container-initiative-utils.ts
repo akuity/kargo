@@ -29,29 +29,38 @@ export const getImageSource = (annotation: Annotation) => {
 };
 
 export const getGitCommitURL = (url: string, revision: string) => {
-  let baseUrl;
-
-  if (url.includes('github.com')) {
-    baseUrl = url
-      .replace(/^git@github.com:/, 'https://github.com/')
-      .replace(/^https?:\/\/github.com\//, 'https://github.com/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/commit/${revision}`;
-  } else if (url.includes('gitlab.com')) {
-    baseUrl = url
-      .replace(/^git@gitlab.com:/, 'https://gitlab.com/')
-      .replace(/^https?:\/\/gitlab.com\//, 'https://gitlab.com/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/-/commit/${revision}`;
-  } else if (url.includes('bitbucket.org')) {
-    baseUrl = url
-      .replace(/^git@bitbucket.org:/, 'https://bitbucket.org/')
-      .replace(/^https?:\/\/bitbucket.org\//, 'https://bitbucket.org/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/commits/${revision}`;
+  if (!url) {
+    return '';
   }
 
-  return url;
+  let baseUrl = url;
+
+  if (baseUrl.startsWith('git@')) {
+    baseUrl = baseUrl.replace(':', '/').replace(/^git@/, 'https://');
+  } else if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    baseUrl = `https://${baseUrl}`;
+  }
+
+  baseUrl = baseUrl.replace(/\.git$/, '');
+
+  try {
+    const urlObj = new URL(baseUrl);
+    const hostname = urlObj.hostname.toLowerCase();
+
+    if (hostname.includes('github')) {
+      return `${baseUrl}/commit/${revision}`;
+    }
+    if (hostname.includes('gitlab')) {
+      return `${baseUrl}/-/commit/${revision}`;
+    }
+    if (hostname.includes('bitbucket')) {
+      return `${baseUrl}/commits/${revision}`;
+    }
+  } catch {
+    // If URL parsing fails, we simply return the baseUrl below
+  }
+
+  return baseUrl;
 };
 
 export const getImageBuiltDate = (annotation: Annotation) => {
