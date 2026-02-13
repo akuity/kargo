@@ -30,6 +30,109 @@ import (
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 )
 
+func TestReconcilerConfigFromEnv(t *testing.T) {
+	cfg := ReconcilerConfigFromEnv()
+	assert.Equal(t, 5*time.Minute, cfg.ReconciliationInterval)
+}
+
+func TestNewRegularStageReconciler(t *testing.T) {
+	interval := 3 * time.Minute
+	cfg := ReconcilerConfig{
+		ReconciliationInterval: interval,
+		IsDefaultController:    true,
+		ShardName:              "test-shard",
+	}
+	r := NewRegularStageReconciler(cfg, nil)
+	require.NotNil(t, r)
+	assert.Equal(t, interval, r.cfg.ReconciliationInterval)
+	assert.True(t, r.cfg.IsDefaultController)
+	assert.Equal(t, "test-shard", r.cfg.ShardName)
+}
+
+func TestRegularStageReconciler_ReconciliationInterval(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, kargoapi.AddToScheme(scheme))
+
+	stage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:  "default",
+			Name:       "test-stage",
+			Finalizers: []string{kargoapi.FinalizerName},
+		},
+		Spec: kargoapi.StageSpec{
+			PromotionTemplate: &kargoapi.PromotionTemplate{
+				Spec: kargoapi.PromotionTemplateSpec{
+					Steps: []kargoapi.PromotionStep{{}, {}},
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name     string
+		interval time.Duration
+	}{
+		{name: "30 seconds", interval: 30 * time.Second},
+		{name: "10 minutes", interval: 10 * time.Minute},
+		{name: "1 hour", interval: time.Hour},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(stage.DeepCopy()).
+				WithStatusSubresource(&kargoapi.Stage{}).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageField,
+					indexer.PromotionsByStage,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByWarehouseField,
+					indexer.FreightByWarehouse,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByCurrentStagesField,
+					indexer.FreightByCurrentStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightByVerifiedStagesField,
+					indexer.FreightByVerifiedStages,
+				).
+				WithIndex(
+					&kargoapi.Freight{},
+					indexer.FreightApprovedForStagesField,
+					indexer.FreightApprovedForStages,
+				).
+				WithIndex(
+					&kargoapi.Promotion{},
+					indexer.PromotionsByStageAndFreightField,
+					indexer.PromotionsByStageAndFreight,
+				).
+				Build()
+
+			r := &RegularStageReconciler{
+				cfg:         ReconcilerConfig{ReconciliationInterval: tt.interval},
+				client:      c,
+				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
+			}
+
+			result, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "default",
+					Name:      "test-stage",
+				},
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.interval, result.RequeueAfter)
+		})
+	}
+}
+
 func TestRegularStageReconciler_Reconcile(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, kargoapi.AddToScheme(scheme))
@@ -357,7 +460,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 			},
 			assertions: func(t *testing.T, c client.Client, result ctrl.Result, err error) {
 				require.NoError(t, err)
-				assert.Equal(t, ctrl.Result{RequeueAfter: 5 * time.Minute}, result)
+				assert.Equal(t, ctrl.Result{RequeueAfter: 10 * time.Minute}, result)
 
 				// Verify status was updated
 				stage := &kargoapi.Stage{}
@@ -419,6 +522,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			r := &RegularStageReconciler{
+				cfg:         ReconcilerConfig{ReconciliationInterval: 10 * time.Minute},
 				client:      c,
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
