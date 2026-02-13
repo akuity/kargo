@@ -513,6 +513,8 @@ controller:
     stages:
       ## @param controller.reconcilers.stages.maxConcurrentReconciles optionally overrides the maximum number of (non-control flow) Stage resources the controller can reconcile concurrently.
       maxConcurrentReconciles:
+      ## @param controller.reconcilers.stages.reconciliationInterval optionally sets the reconciliation interval for Stage resources. Accepts duration format (e.g., "5m", "1h", "30s"). This determines how frequently Stages are re-reconciled after a successful reconciliation.
+      reconciliationInterval: "5m0s"
     warehouses:
       ## @param controller.reconcilers.warehouses.maxConcurrentReconciles optionally overrides the maximum number of Warehouse resources the controller can reconcile concurrently.
       maxConcurrentReconciles:

@@ -49,6 +49,9 @@ data:
   MAX_CONCURRENT_CONTROL_FLOW_RECONCILES: {{ .Values.controller.reconcilers.controlFlowStages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_PROMOTION_RECONCILES: {{ .Values.controller.reconcilers.promotions.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
   MAX_CONCURRENT_STAGE_RECONCILES: {{ .Values.controller.reconcilers.stages.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
+  {{- if .Values.controller.reconcilers.stages.reconciliationInterval }}
+  STAGE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.stages.reconciliationInterval | quote }}
+  {{- end }}
   MAX_CONCURRENT_WAREHOUSE_RECONCILES: {{ .Values.controller.reconcilers.warehouses.maxConcurrentReconciles | default .Values.controller.reconcilers.maxConcurrentReconciles | quote }}
   {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
   MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
