@@ -28,7 +28,7 @@ type Update struct {
 }
 
 // SetValuesInFile overwrites the specified file with the changes specified by
-// the the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
+// the list of Updates. Keys are of the form <key 0>.<key 1>...<key n>.
 // Integers may be used as keys in cases where a specific node needs to be
 // selected from a sequence. An error is returned for any attempted update to a
 // key that does not exist or does not address a scalar node. Importantly, all
@@ -79,7 +79,7 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
-		keyPath := strings.Split(update.Key, ".")
+		keyPath := splitKeyPath(update.Key)
 		line, col, err := findScalarNode(doc, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)
@@ -161,4 +161,41 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
 	return 0, 0, fmt.Errorf("key path not found")
+}
+
+// splitKeyPath splits a key string into path elements for traversal.
+//
+// Escape sequences:
+//   - \. → literal dot (not a separator)
+//   - \\ → literal backslash
+//   - \x → x (any other escaped char becomes itself)
+//
+// Examples:
+//   - "image.tag"              → ["image", "tag"]
+//   - "example\.com/version"   → ["example.com/version"]
+//   - "path\\to.file"          → ["path\to", "file"]
+func splitKeyPath(key string) []string {
+	var parts []string
+	var current strings.Builder
+	escaped := false
+	for _, r := range key {
+		switch {
+		case escaped:
+			current.WriteRune(r)
+			escaped = false
+		case r == '\\':
+			escaped = true
+		case r == '.':
+			parts = append(parts, current.String())
+			current.Reset()
+		default:
+			current.WriteRune(r)
+		}
+	}
+	// Trailing backslash is preserved literally
+	if escaped {
+		current.WriteRune('\\')
+	}
+	parts = append(parts, current.String())
+	return parts
 }
