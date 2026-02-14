@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/client/generated/rbac"
 	"github.com/akuity/kargo/pkg/client/generated/resources"
 	"github.com/akuity/kargo/pkg/client/generated/system"
+	"github.com/akuity/kargo/pkg/client/generated/utility"
 	"github.com/akuity/kargo/pkg/client/generated/verifications"
 )
 
@@ -67,6 +68,7 @@ func New(transport runtime.ClientTransport, formats strfmt.Registry) *KargoAPI {
 	cli.Rbac = rbac.New(transport, formats)
 	cli.Resources = resources.New(transport, formats)
 	cli.System = system.New(transport, formats)
+	cli.Utility = utility.New(transport, formats)
 	cli.Verifications = verifications.New(transport, formats)
 	return cli
 }
@@ -124,6 +126,8 @@ type KargoAPI struct {
 
 	System system.ClientService
 
+	Utility utility.ClientService
+
 	Verifications verifications.ClientService
 
 	Transport runtime.ClientTransport
@@ -138,5 +142,6 @@ func (c *KargoAPI) SetTransport(transport runtime.ClientTransport) {
 	c.Rbac.SetTransport(transport)
 	c.Resources.SetTransport(transport)
 	c.System.SetTransport(transport)
+	c.Utility.SetTransport(transport)
 	c.Verifications.SetTransport(transport)
 }

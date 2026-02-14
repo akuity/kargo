@@ -92,6 +92,11 @@ func (s *server) setupRESTRouter(ctx context.Context) *gin.Engine {
 		}
 
 		// =====================================================================
+		// Kargo Releases (/v1beta1/kargo-releases/*)
+		// =====================================================================
+		v1beta1.GET("/kargo-releases/best", defaultLimit, s.getBestReleases)
+
+		// =====================================================================
 		// Shared Resources (/v1beta1/shared/*)
 		// =====================================================================
 		shared := v1beta1.Group("/shared")

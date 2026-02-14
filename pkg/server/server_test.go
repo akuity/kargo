@@ -12,6 +12,7 @@ import (
 
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/releases"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -35,6 +36,8 @@ func TestNewServer(t *testing.T) {
 	require.NoError(t, err)
 	testSender := k8sevent.NewEventSender(fakeevent.NewEventRecorder(0))
 
+	releaseSvc, err := releases.NewService(context.Background(), nil)
+	require.NoError(t, err)
 	s, ok := NewServer(
 		testServerConfig,
 		testClient,
@@ -43,6 +46,7 @@ func TestNewServer(t *testing.T) {
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,
+		releaseSvc,
 	).(*server)
 
 	require.True(t, ok)
@@ -50,6 +54,7 @@ func TestNewServer(t *testing.T) {
 	require.Same(t, testClient, s.client)
 	require.NotNil(t, testClient, s.rolesDB)
 	require.Same(t, testSender, s.sender)
+	require.NotNil(t, s.releaseSvc)
 	require.Equal(t, testServerConfig, s.cfg)
 	require.NotNil(t, s.validateProjectExistsFn)
 	require.NotNil(t, s.externalValidateProjectFn)

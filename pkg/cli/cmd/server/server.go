@@ -7,12 +7,14 @@ import (
 	"net"
 
 	"github.com/spf13/cobra"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
+	"github.com/akuity/kargo/pkg/releases"
 	"github.com/akuity/kargo/pkg/server"
 	apiconfig "github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -90,6 +92,13 @@ func (o *serverOptions) run(ctx context.Context) error {
 	}
 	defer l.Close() // nolint: errcheck
 
+	releaseSvc, err := releases.NewService(
+		ctx,
+		ptr.To(releases.ServiceConfigFromEnv()),
+	)
+	if err != nil {
+		return fmt.Errorf("error initializing releases service: %w", err)
+	}
 	srv := server.NewServer(
 		apiconfig.ServerConfig{
 			RestConfig: restCfg,
@@ -98,6 +107,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		client,
 		rbac.NewKubernetesRolesDatabase(client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		releaseSvc,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)
