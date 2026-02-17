@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
@@ -229,51 +230,6 @@ func TestPromoteToStage(t *testing.T) {
 			},
 		},
 		{
-			name: "Freight not available",
-			req: &svcv1alpha1.PromoteToStageRequest{
-				Project: "fake-project",
-				Stage:   "fake-stage",
-				Freight: "fake-freight",
-			},
-			server: &server{
-				validateProjectExistsFn: func(context.Context, string) error {
-					return nil
-				},
-				getStageFn: func(
-					context.Context,
-					client.Client,
-					types.NamespacedName,
-				) (*kargoapi.Stage, error) {
-					return &kargoapi.Stage{
-						Spec: testStageSpec,
-					}, nil
-				},
-				getFreightByNameOrAliasFn: func(
-					context.Context,
-					client.Client,
-					string, string, string,
-				) (*kargoapi.Freight, error) {
-					return &kargoapi.Freight{}, nil
-				},
-				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
-					return false
-				},
-			},
-			assertions: func(
-				t *testing.T,
-				_ *fakeevent.EventRecorder,
-				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
-				err error,
-			) {
-				require.Error(t, err)
-				var connErr *connect.Error
-				require.True(t, errors.As(err, &connErr))
-				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
-				require.Contains(t, connErr.Message(), "Freight")
-				require.Contains(t, connErr.Message(), "is not available to Stage")
-			},
-		},
-		{
 			name: "promoting not authorized",
 			req: &svcv1alpha1.PromoteToStageRequest{
 				Project: "fake-project",
@@ -325,6 +281,60 @@ func TestPromoteToStage(t *testing.T) {
 			},
 		},
 		{
+			name: "Freight not available",
+			req: &svcv1alpha1.PromoteToStageRequest{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				Freight: "fake-freight",
+			},
+			server: &server{
+				validateProjectExistsFn: func(context.Context, string) error {
+					return nil
+				},
+				getStageFn: func(
+					context.Context,
+					client.Client,
+					types.NamespacedName,
+				) (*kargoapi.Stage, error) {
+					return &kargoapi.Stage{
+						Spec: testStageSpec,
+					}, nil
+				},
+				getFreightByNameOrAliasFn: func(
+					context.Context,
+					client.Client,
+					string, string, string,
+				) (*kargoapi.Freight, error) {
+					return &kargoapi.Freight{}, nil
+				},
+				authorizeFn: func(
+					context.Context,
+					string,
+					schema.GroupVersionResource,
+					string,
+					client.ObjectKey,
+				) error {
+					return nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return false
+				},
+			},
+			assertions: func(
+				t *testing.T,
+				_ *fakeevent.EventRecorder,
+				_ *connect.Response[svcv1alpha1.PromoteToStageResponse],
+				err error,
+			) {
+				require.Error(t, err)
+				var connErr *connect.Error
+				require.True(t, errors.As(err, &connErr))
+				require.Equal(t, connect.CodeInvalidArgument, connErr.Code())
+				require.Contains(t, connErr.Message(), "Freight")
+				require.Contains(t, connErr.Message(), "is not available to Stage")
+			},
+		},
+		{
 			name: "error building Promotion",
 			req: &svcv1alpha1.PromoteToStageRequest{
 				Project: "fake-project",
@@ -355,9 +365,6 @@ func TestPromoteToStage(t *testing.T) {
 				) (*kargoapi.Freight, error) {
 					return &kargoapi.Freight{}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
-					return true
-				},
 				authorizeFn: func(
 					context.Context,
 					string,
@@ -366,6 +373,9 @@ func TestPromoteToStage(t *testing.T) {
 					client.ObjectKey,
 				) error {
 					return nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
 				},
 			},
 			assertions: func(
@@ -413,9 +423,6 @@ func TestPromoteToStage(t *testing.T) {
 						},
 					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
-					return true
-				},
 				authorizeFn: func(
 					context.Context,
 					string,
@@ -424,6 +431,9 @@ func TestPromoteToStage(t *testing.T) {
 					client.ObjectKey,
 				) error {
 					return nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
 				},
 				createPromotionFn: func(
 					context.Context,
@@ -478,9 +488,6 @@ func TestPromoteToStage(t *testing.T) {
 						},
 					}, nil
 				},
-				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
-					return true
-				},
 				authorizeFn: func(
 					context.Context,
 					string,
@@ -489,6 +496,9 @@ func TestPromoteToStage(t *testing.T) {
 					client.ObjectKey,
 				) error {
 					return nil
+				},
+				isFreightAvailableFn: func(*kargoapi.Stage, *kargoapi.Freight) bool {
+					return true
 				},
 				createPromotionFn: func(
 					context.Context,
@@ -641,8 +651,75 @@ func Test_server_promoteToStage(t *testing.T) {
 				},
 			},
 			{
+				name:          "promoting not authorized",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return apierrors.NewForbidden(
+							kargoapi.GroupVersion.WithResource("stages").GroupResource(),
+							testStage.Name,
+							errors.New("not authorized"),
+						)
+					}
+				},
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusForbidden, w.Code)
+				},
+			},
+			{
+				name: "Freight not available to Stage",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					func() *kargoapi.Stage {
+						s := testStage.DeepCopy()
+						s.Spec.RequestedFreight[0].Sources = kargoapi.FreightSources{
+							Stages: []string{"some-other-stage"},
+						}
+						return s
+					}(),
+					testFreight,
+				),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
+				body: mustJSONBody(promoteToStageRequest{
+					Freight: testFreight.Name,
+				}),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
 				name:          "Successfully promote by freight name",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
 				body: mustJSONBody(promoteToStageRequest{
 					Freight: testFreight.Name,
 				}),
@@ -661,6 +738,17 @@ func Test_server_promoteToStage(t *testing.T) {
 			{
 				name:          "Successfully promote by freight alias",
 				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testFreight),
+				serverSetup: func(_ *testing.T, s *server) {
+					s.authorizeFn = func(
+						context.Context,
+						string,
+						schema.GroupVersionResource,
+						string,
+						client.ObjectKey,
+					) error {
+						return nil
+					}
+				},
 				body: mustJSONBody(promoteToStageRequest{
 					FreightAlias: "fake-alias",
 				}),
