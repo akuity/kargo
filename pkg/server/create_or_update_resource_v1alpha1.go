@@ -46,7 +46,8 @@ func (s *server) CreateOrUpdateResource(
 		}
 		// If we just created a Project successfully, keep track of this Project
 		// being one that was created in the course of this API call.
-		if result.GetCreatedResourceManifest() != nil &&
+		if err == nil &&
+			result.GetCreatedResourceManifest() != nil &&
 			resource.GroupVersionKind() == projectGVK {
 			createdProjects[resource.GetName()] = struct{}{}
 		}
