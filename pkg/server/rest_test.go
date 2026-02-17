@@ -41,7 +41,10 @@ type restTestCase struct {
 	headers       map[string]string
 	clientBuilder *fake.ClientBuilder
 	serverConfig  *config.ServerConfig
-	assertions    func(*testing.T, *httptest.ResponseRecorder, client.Client)
+	// serverSetup is an optional function that can be used to perform additional
+	// case-specific server initialization.
+	serverSetup func(*testing.T, *server)
+	assertions  func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }
 
 func testRESTEndpoint(
@@ -107,6 +110,10 @@ func testRESTEndpoint(
 				internalClient,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
+
+			if testCase.serverSetup != nil {
+				testCase.serverSetup(t, s)
+			}
 
 			u := url
 			if testCase.url != "" {

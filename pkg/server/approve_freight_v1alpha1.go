@@ -9,7 +9,6 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -92,11 +91,7 @@ func (s *server) ApproveFreight(
 	if err := s.authorizeFn(
 		ctx,
 		"promote",
-		schema.GroupVersionResource{
-			Group:    kargoapi.GroupVersion.Group,
-			Version:  kargoapi.GroupVersion.Version,
-			Resource: "stages",
-		},
+		kargoapi.GroupVersion.WithResource("stages"),
 		"",
 		types.NamespacedName{
 			Namespace: project,
@@ -194,6 +189,20 @@ func (s *server) approveFreight(c *gin.Context) {
 		ctx,
 		client.ObjectKey{Name: stageName, Namespace: project},
 		stage,
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
 	); err != nil {
 		_ = c.Error(err)
 		return

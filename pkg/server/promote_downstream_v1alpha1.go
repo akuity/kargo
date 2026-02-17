@@ -300,6 +300,22 @@ func (s *server) promoteDownstream(c *gin.Context) {
 		return
 	}
 
+	for _, downstream := range downstreams {
+		if err := s.authorizeFn(
+			ctx,
+			"promote",
+			kargoapi.GroupVersion.WithResource("stages"),
+			"",
+			types.NamespacedName{
+				Namespace: downstream.Namespace,
+				Name:      downstream.Name,
+			},
+		); err != nil {
+			_ = c.Error(err)
+			return
+		}
+	}
+
 	// Validate that freight is available to all downstream stages
 	for _, downstream := range downstreams {
 		if !downstream.IsFreightAvailable(freight) {

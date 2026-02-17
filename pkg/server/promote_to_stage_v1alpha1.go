@@ -9,7 +9,6 @@ import (
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -94,6 +93,19 @@ func (s *server) PromoteToStage(
 		return nil, connect.NewError(connect.CodeNotFound, err)
 	}
 
+	if err = s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		return nil, err
+	}
+
 	if !s.isFreightAvailableFn(stage, freight) {
 		// nolint:staticcheck
 		return nil, connect.NewError(
@@ -104,23 +116,6 @@ func (s *server) PromoteToStage(
 				stageName,
 			),
 		)
-	}
-
-	if err = s.authorizeFn(
-		ctx,
-		"promote",
-		schema.GroupVersionResource{
-			Group:    kargoapi.GroupVersion.Group,
-			Version:  kargoapi.GroupVersion.Version,
-			Resource: "stages",
-		},
-		"",
-		types.NamespacedName{
-			Namespace: project,
-			Name:      stageName,
-		},
-	); err != nil {
-		return nil, err
 	}
 
 	promotion, err := kargo.NewPromotionBuilder(s.client).Build(ctx, *stage, freight.Name)
@@ -248,6 +243,20 @@ func (s *server) promoteToStage(c *gin.Context) {
 			return
 		}
 		freight = &list.Items[0]
+	}
+
+	if err := s.authorizeFn(
+		ctx,
+		"promote",
+		kargoapi.GroupVersion.WithResource("stages"),
+		"",
+		types.NamespacedName{
+			Namespace: project,
+			Name:      stageName,
+		},
+	); err != nil {
+		_ = c.Error(err)
+		return
 	}
 
 	// Validate that the Freight is available to the Stage
