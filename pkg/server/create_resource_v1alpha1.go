@@ -64,7 +64,7 @@ func (s *server) CreateResource(
 		}
 		// If we just created a Project successfully, keep track of this Project
 		// being one that was created in the course of this API call.
-		if resource.GroupVersionKind() == projectGVK {
+		if err == nil && resource.GroupVersionKind() == projectGVK {
 			createdProjects[resource.GetName()] = struct{}{}
 		}
 		// Convert to protobuf result
@@ -158,7 +158,7 @@ func (s *server) createResources(c *gin.Context) {
 		}
 		// If we just created a Project successfully, keep track of this Project
 		// being one that was created in the course of this API call.
-		if resource.GroupVersionKind() == projectGVK {
+		if err == nil && resource.GroupVersionKind() == projectGVK {
 			createdProjects[resource.GetName()] = struct{}{}
 		}
 		results = append(results, result)
