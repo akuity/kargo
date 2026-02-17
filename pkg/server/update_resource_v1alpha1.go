@@ -133,7 +133,7 @@ func (s *server) updateResources(c *gin.Context) {
 		}
 		// If we just created a Project successfully, keep track of this Project
 		// being one that was created in the course of this API call.
-		if result.CreatedResourceManifest != nil && resource.GroupVersionKind() == projectGVK {
+		if err == nil && result.CreatedResourceManifest != nil && resource.GroupVersionKind() == projectGVK {
 			createdProjects[resource.GetName()] = struct{}{}
 		}
 		results = append(results, result)
