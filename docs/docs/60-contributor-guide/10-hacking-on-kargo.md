@@ -18,7 +18,7 @@ integration process due to environmental differences, we've made it easy to
 execute tests within a container that is maximally similar to those used in CI.
 
 To take advantage of this, you only need `make` and
-[Docker](https://docs.docker.com/engine/install/) (or a Docker-compatible 
+[Docker](https://docs.docker.com/engine/install/) (or a Docker-compatible
 container-runtime).
 
 To run all unit tests:
@@ -163,7 +163,8 @@ this.
     [Docker Desktop](https://www.docker.com/products/docker-desktop/)
     user, you can follow
     [these instructions](https://docs.docker.com/desktop/kubernetes/) to enable
-    its built-in Kubernetes support.
+    its built-in Kubernetes support. If it's already enabled, you're ready to
+    go.
 
     :::info
 
@@ -172,6 +173,7 @@ this.
     Additionally, this approach requires no specific port-forwarding rules to be
     defined.
     :::
+
     :::info
 
     Although this is one of the fastest paths to a local Kubernetes cluster, be
@@ -179,14 +181,6 @@ this.
     that cluster reaches a state you are dissatisfied with, resetting it will
     remove not just Kargo-related resources, but _all_ your workloads and data.
     :::
-
-    To install Kargo's prerequisites, you will need
-    [Helm](https://helm.sh/docs/intro/install/) installed first, and can then
-    execute a convenient `make` target:
-
-    ```shell
-    make hack-install-prereqs
-    ```
    
     </TabItem>
     <TabItem value="orbstack" label="OrbStack">
@@ -194,7 +188,8 @@ this.
     [OrbStack](https://orbstack.dev/) is a fast, lightweight, drop-in replacement
     for Docker Desktop for Mac OS only. You can follow
     [these instructions](https://docs.docker.com/desktop/kubernetes/) to enable
-    its built-in Kubernetes support.
+    its built-in Kubernetes support. If it's already enabled, you're ready to
+    go.
 
     :::info
 
@@ -203,6 +198,7 @@ this.
     Additionally, this approach requires no specific port-forwarding rules to be
     defined.
     :::
+
     :::info
 
     Although this is one of the fastest paths to a local Kubernetes cluster, be
@@ -211,25 +207,14 @@ this.
     remove not just Kargo-related resources, but _all_ your workloads and data.
     :::
 
-    To install Kargo's prerequisites, you will need
-    [Helm](https://helm.sh/docs/intro/install/) installed first, and can then
-    execute a convenient `make` target:
-
-    ```shell
-    make hack-install-prereqs
-    ```
-
     </TabItem>
     <TabItem value="kind" label="kind">
 
     If you have any Docker-compatible container runtime installed (including
     native Docker, Docker Desktop, or OrbStack), you can easily launch a
     disposable cluster to facilitate Kargo development using
-    [kind](https://kind.sigs.k8s.io/#installation-and-usage).
-
-    This option also requires
-    [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) and
-    [Helm](https://helm.sh/docs/intro/install/) to be installed.
+    [kind](https://kind.sigs.k8s.io/#installation-and-usage). You do not need to
+    install it in advance.
 
     The following `make` target will launch a kind cluster with a local image
     registry wired into it, various port-forwarding rules pre-configured, and
@@ -241,10 +226,18 @@ this.
 
     :::info
 
-    While this option is a bit more complex than using Docker Desktop or OrbStack
-    directly, it offers the advantage of being fully-disposable. If your cluster
-    reaches a state you are dissatisfied with, you can simply destroy it and
-    launch a new one.
+    The `hack-kind-up` target will ensure the installation of suitable versions
+    of `kind` and [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it)
+    (used for declarative kind configuration) into `hack/bind/`.
+
+    :::
+
+    :::info
+
+    While this option is a bit more complex than using Docker Desktop or
+    OrbStack directly, it offers the advantage of being fully-disposable. If
+    your cluster reaches a state you are dissatisfied with, you can simply
+    destroy it and launch a new one.
     :::
 
     </TabItem>
@@ -253,11 +246,7 @@ this.
     If you have any Docker-compatible container runtime installed (including
     native Docker, Docker Desktop, or OrbStack), you can easily launch a
     disposable cluster to facilitate Kargo development using
-    [k3d](https://k3d.io).
-
-    This option also requires
-    [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) and
-    [Helm](https://helm.sh/docs/intro/install/) to be installed.
+    [k3d](https://k3d.io). You do not need to install it in advance.
 
     The following `make` target will launch a kind cluster with a local image
     registry wired into it, various port-forwarding rules pre-configured, and
@@ -269,28 +258,23 @@ this.
 
     :::info
 
-    While this option is a bit more complex than using Docker Desktop or OrbStack
-    directly, it offers the advantage of being fully-disposable. If your cluster
-    reaches a state you are dissatisfied with, you can simply destroy it and
-    launch a new one.
+    The `hack-k3d-up` target will ensure the installation of suitable versions
+    of `k3d` and
+    [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) (used for
+    declarative k3d configuration) into `hack/bind/`.
+
+    :::
+
+    :::info
+
+    While this option is a bit more complex than using Docker Desktop or
+    OrbStack directly, it offers the advantage of being fully-disposable. If
+    your cluster reaches a state you are dissatisfied with, you can simply
+    destroy it and launch a new one.
     :::
 
     </TabItem>
     </Tabs>
-
-    Whichever approach you choose, your cluster will end up with recent, stable
-    versions of [cert-manager](https://cert-manager.io/) and 
-    [Argo CD](https://argoproj.github.io/cd/) installed.
-
-    :::info
-
-    The Argo CD dashboard will be exposed at
-    [localhost:30080](https://localhost:30080).
-
-    The username and password are both `admin`.
-
-    You may safely ignore any certificate warnings.
-    :::
 
 1. Optional: Configure and start a tunnel for the external webhooks server:
 
@@ -333,19 +317,34 @@ this.
     [Tilt](https://docs.tilt.dev/#macoslinux) is a convenient tool that builds
     container images from source and seamlessly deploys them to a local
     Kubernetes cluster. More importantly, it enables developers to rapidly
-    rebuild and replace running components with the click of a button.
-
-    :::warning
-
-    If using OrbStack, be advised it is only compatible with Tilt as of Tilt
-    v0.33.6. Please use that version or greater.
-    :::
+    rebuild and replace running components with the click of a button. You do
+    not need to install it in advance.
 
     ```shell
-    tilt up
+    make hack-tilt-up
     ```
 
-    Tilt will also launch a web-based UI running at
+    :::info
+
+    The `hack-tilt-up` target will ensure the installation of a suitable
+    versions of `tilt` and `helm` into `hack/bind/`.
+
+    When run for the first time on a new development cluster, `make
+    hack-tilt-up` will install suitable versions of
+    [cert-manager](https://cert-manager.io/),
+    [Argo CD](https://argoproj.github.io/cd/), and
+    [Argo Rollouts](https://argoproj.github.io/rollouts/) into your cluster
+    using `helm`.
+
+    The Argo CD dashboard will be exposed at
+    [localhost:30080](https://localhost:30080).
+
+    The username and password are both `admin`.
+
+    You may safely ignore any certificate warnings.
+    :::
+
+    Tilt will launch a web-based UI running at
     [http://localhost:10350](http://localhost:10350). Visit this in your web
     browser to view the build and deployment status of each Kargo component as
     well as the logs from each component.
@@ -365,13 +364,14 @@ this.
     If you specified a custom domain name for a tunnel to the external webhooks
     server in the previous step by defining a value for the
     `KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME` environment variable, you should
-    export the same value for that environment variable before running `tilt up`
-    as well:
+    export the same value for that environment variable before running `make
+    tilt up` as well:
 
     ```shell
     export KARGO_EXTERNAL_WEBHOOKS_SERVER_HOSTNAME=my-tunnel.ngrok.io
-    tilt up
+    make hack-tilt-up
     ```
+
     :::
 
 1. If necessary, build the CLI from source:
@@ -398,13 +398,13 @@ this.
 
     You may safely ignore any certificate warnings.
 
-1. When you are done with Tilt, interrupt the running `tilt up` process with
-   `ctrl + c`. Components _will remain running in the cluster_, but Tilt will no
-   longer be in control. If Tilt is restarted later, it will retake control of
-   the already-running components.
+1. When you are done with Tilt, interrupt the running `make hack-tilt-up`
+   process with `ctrl + c`. Components _will remain running in the cluster_, but
+   Tilt will no longer be in control. If Tilt is restarted later, it will retake
+   control of the already-running components.
 
-    If you wish to undeploy everything Tilt has deployed for you, use `tilt
-    down`.
+    If you wish to undeploy everything Tilt has deployed for you (except for
+    prerequisites), use `make hack-tilt-down`.
 
 1. Clean up your local Kubernetes cluster.
 

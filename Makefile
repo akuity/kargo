@@ -379,22 +379,28 @@ hack-build-cli: hack-build-dev-tools
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
 
 .PHONY: hack-kind-up
-hack-kind-up:
-	ctlptl apply -f hack/kind/cluster.yaml
-	make hack-install-prereqs
+hack-kind-up: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
-hack-k3d-up:
-	ctlptl apply -f hack/k3d/cluster.yaml
-	make hack-install-prereqs
+hack-k3d-up: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/k3d/cluster.yaml
+
+.PHONY: hack-tilt-up
+hack-tilt-up: install-tilt install-helm
+	PATH=$(EXTENDED_PATH) $(TILT) up
+
+.PHONY: hack-tilt-down
+hack-tilt-down: install-tilt
+	PATH=$(EXTENDED_PATH) $(TILT) down
 
 .PHONY: hack-kind-down
-hack-kind-down:
-	ctlptl delete -f hack/kind/cluster.yaml
+hack-kind-down: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
-hack-k3d-down:
-	ctlptl delete -f hack/k3d/cluster.yaml
+hack-k3d-down: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts

@@ -30,6 +30,10 @@ QUILL_VERSION			?= v0.5.1
 PROTOC_GEN_DOC_VERSION	?= v1.5.1
 SWAG_VERSION			?= $(shell grep github.com/swaggo/swag $(TOOLS_MOD_FILE) | awk '{print $$2}')
 GO_SWAGGER_VERSION		?= $(shell grep github.com/go-swagger/go-swagger $(TOOLS_MOD_FILE) | awk '{print $$2}')
+TILT_VERSION			?= v0.36.3
+CTLPTL_VERSION			?= v0.9.0
+KIND_VERSION			?= v0.31.0
+K3D_VERSION				?= v5.8.3
 
 ################################################################################
 # Tool targets                                                                 #
@@ -47,6 +51,10 @@ QUILL		   	:= $(BIN_DIR)/quill-$(OS)-$(ARCH)-$(QUILL_VERSION)
 PROTOC_GEN_DOC  := $(BIN_DIR)/protoc-gen-doc-$(OS)-$(ARCH)-$(PROTOC_GEN_DOC_VERSION)
 SWAG            := $(BIN_DIR)/swag-$(OS)-$(ARCH)-$(SWAG_VERSION)
 GO_SWAGGER      := $(BIN_DIR)/go-swagger-$(OS)-$(ARCH)-$(GO_SWAGGER_VERSION)
+TILT            := $(BIN_DIR)/tilt-$(OS)-$(ARCH)-$(TILT_VERSION)
+CTLPTL          := $(BIN_DIR)/ctlptl-$(OS)-$(ARCH)-$(CTLPTL_VERSION)
+KIND            := $(BIN_DIR)/kind-$(OS)-$(ARCH)-$(KIND_VERSION)
+K3D             := $(BIN_DIR)/k3d-$(OS)-$(ARCH)-$(K3D_VERSION)
 
 $(GOLANGCI_LINT):
 	$(call install-golangci-lint,$@,$(GOLANGCI_LINT_VERSION))
@@ -84,6 +92,18 @@ $(SWAG):
 $(GO_SWAGGER):
 	$(call go-install-tool,$@,github.com/go-swagger/go-swagger/cmd/swagger,$(GO_SWAGGER_VERSION))
 
+$(TILT):
+	$(call install-tilt,$@,$(TILT_VERSION))
+
+$(CTLPTL):
+	$(call go-install-tool,$@,github.com/tilt-dev/ctlptl/cmd/ctlptl,$(CTLPTL_VERSION))
+
+$(KIND):
+	$(call go-install-tool,$@,sigs.k8s.io/kind,$(KIND_VERSION))
+
+$(K3D):
+	$(call install-k3d,$@,$(K3D_VERSION))
+
 ################################################################################
 # Symlink targets                                                              #
 ################################################################################
@@ -100,6 +120,10 @@ QUILL_LINK			:= $(BIN_DIR)/quill
 PROTOC_GEN_DOC_LINK	:= $(BIN_DIR)/protoc-gen-doc
 SWAG_LINK			:= $(BIN_DIR)/swag
 GO_SWAGGER_LINK		:= $(BIN_DIR)/go-swagger
+TILT_LINK			:= $(BIN_DIR)/tilt
+CTLPTL_LINK			:= $(BIN_DIR)/ctlptl
+KIND_LINK			:= $(BIN_DIR)/kind
+K3D_LINK			:= $(BIN_DIR)/k3d
 
 .PHONY: $(GOLANGCI_LINT_LINK)
 $(GOLANGCI_LINT_LINK): $(GOLANGCI_LINT)
@@ -149,11 +173,27 @@ $(SWAG_LINK): $(SWAG)
 $(GO_SWAGGER_LINK): $(GO_SWAGGER)
 	$(call create-symlink,$(GO_SWAGGER),$(GO_SWAGGER_LINK))
 
+.PHONY: $(TILT_LINK)
+$(TILT_LINK): $(TILT)
+	$(call create-symlink,$(TILT),$(TILT_LINK))
+
+.PHONY: $(CTLPTL_LINK)
+$(CTLPTL_LINK): $(CTLPTL)
+	$(call create-symlink,$(CTLPTL),$(CTLPTL_LINK))
+
+.PHONY: $(KIND_LINK)
+$(KIND_LINK): $(KIND)
+	$(call create-symlink,$(KIND),$(KIND_LINK))
+
+.PHONY: $(K3D_LINK)
+$(K3D_LINK): $(K3D)
+	$(call create-symlink,$(K3D),$(K3D_LINK))
+
 ################################################################################
 # Alias targets                                                                #
 ################################################################################
 
-TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger
+TOOLS := install-golangci-lint install-helm install-goimports install-go-to-protobuf install-protoc-gen-gogo install-controller-gen install-protoc install-buf install-quill install-protoc-gen-doc install-swag install-go-swagger install-tilt install-ctlptl install-kind install-k3d
 
 .PHONY: install-tools
 install-tools: $(TOOLS)
@@ -193,6 +233,18 @@ install-swag: $(SWAG) $(SWAG_LINK)
 
 .PHONY: install-go-swagger
 install-go-swagger: $(GO_SWAGGER) $(GO_SWAGGER_LINK)
+
+.PHONY: install-tilt
+install-tilt: $(TILT) $(TILT_LINK)
+
+.PHONY: install-ctlptl
+install-ctlptl: $(CTLPTL) $(CTLPTL_LINK)
+
+.PHONY: install-kind
+install-kind: $(KIND) $(KIND_LINK)
+
+.PHONY: install-k3d
+install-k3d: $(K3D) $(K3D_LINK)
 
 ################################################################################
 # Clean up targets                                                             #
@@ -321,6 +373,58 @@ define install-protoc
 	mv $$TMP_DIR/bin/protoc $(1) ;\
 	mv -f $$TMP_DIR/include/* $(3) ;\
 	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# TILT_OS and TILT_ARCH are used to determine the platform-specific tarball to
+# download for tilt.
+TILT_OS ?= $(OS)
+ifeq ($(TILT_OS),darwin)
+	TILT_OS := mac
+endif
+
+TILT_ARCH ?= $(ARCH)
+ifeq ($(TILT_ARCH),aarch64)
+	override TILT_ARCH = arm64
+endif
+
+# install-tilt installs Tilt.
+#
+# $(1) binary path
+# $(2) version
+define install-tilt
+	@[ -f $(1) ] || { \
+	set -e ;\
+	TMP_DIR=$$(mktemp -d) ;\
+	cd $$TMP_DIR ;\
+	echo "Installing tilt $(2) to $(1)" ;\
+	curl -fsSL -o tilt.tar.gz https://github.com/tilt-dev/tilt/releases/download/$(2)/tilt.$(patsubst v%,%,$(2)).$(TILT_OS).$(TILT_ARCH).tar.gz ;\
+	tar xzf tilt.tar.gz ;\
+	mkdir -p $(dir $(1)) ;\
+	mv $$TMP_DIR/tilt $(1) ;\
+	rm -rf $$TMP_DIR ;\
+	}
+endef
+
+# K3D_ARCH is used to determine the platform-specific binary to download for k3d.
+K3D_ARCH ?= $(ARCH)
+ifeq ($(K3D_ARCH),x86_64)
+	override K3D_ARCH = amd64
+else ifeq ($(K3D_ARCH),aarch64)
+	override K3D_ARCH = arm64
+endif
+
+# install-k3d installs k3d.
+#
+# $(1) binary path
+# $(2) version
+define install-k3d
+	@[ -f $(1) ] || { \
+	set -e ;\
+	echo "Installing k3d $(2) to $(1)" ;\
+	mkdir -p $(dir $(1)) ;\
+	curl -fsSL -o $(1) https://github.com/k3d-io/k3d/releases/download/$(2)/k3d-$(OS)-$(K3D_ARCH) ;\
+	chmod 0755 $(1) ;\
 	}
 endef
 
