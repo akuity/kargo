@@ -7,7 +7,7 @@ load('ext://namespace', 'namespace_create')
 # so that tilt down will NOT remove them.
 local_resource(
   'ensure-cert-manager',
-  'helm status cert-manager -n cert-manager > /dev/null 2>&1 || make hack-ensure-cert-manager',
+  'helm status cert-manager -n cert-manager > /dev/null 2>&1 || make hack-install-cert-manager',
   labels = ['prereqs'],
 )
 local_resource(
