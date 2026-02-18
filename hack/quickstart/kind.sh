@@ -2,9 +2,9 @@
 
 set -x
 
-argo_cd_chart_version=8.1.4
-argo_rollouts_chart_version=2.40.1
-cert_manager_chart_version=1.18.2
+argo_cd_chart_version=9.4.3
+argo_rollouts_chart_version=2.40.6
+cert_manager_chart_version=1.19.3
 
 kind create cluster \
   --wait 120s \
@@ -48,8 +48,9 @@ helm install argocd argo-cd \
   --set server.service.type=NodePort \
   --set server.service.nodePortHttp=31443 \
   --set server.extensions.enabled=true \
-  --set 'server.extensions.contents[0].name=argo-rollouts' \
-  --set 'server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar' \
+  --set 'server.extensions.extensionList[0].name=argo-rollouts' \
+  --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
+  --set 'server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar' \
   --wait
 
 helm install argo-rollouts argo-rollouts \

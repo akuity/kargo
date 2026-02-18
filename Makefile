@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 8.1.4
-ARGO_ROLLOUTS_CHART_VERSION := 2.40.1
-CERT_MANAGER_CHART_VERSION 	:= 1.18.2
+ARGO_CD_CHART_VERSION		:= 9.4.3
+ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
+CERT_MANAGER_CHART_VERSION 	:= 1.19.3
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
@@ -429,8 +429,9 @@ hack-install-argocd: install-helm
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
 		--set server.extensions.enabled=true \
-		--set server.extensions.contents[0].name=argo-rollouts \
-		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar \
+		--set server.extensions.extensionList[0].name=argo-rollouts \
+		--set server.extensions.extensionList[0].env[0].name=EXTENSION_URL \
+		--set server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar \
 		--wait
 
 .PHONY: hack-install-argo-rollouts
