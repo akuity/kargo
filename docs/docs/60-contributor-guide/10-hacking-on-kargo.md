@@ -228,7 +228,7 @@ this.
 
     The `hack-kind-up` target will ensure the installation of suitable versions
     of `kind` and [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it)
-    (used for declarative kind configuration) into `hack/bind/`.
+    (used for declarative kind configuration) into `hack/bin/`.
 
     :::
 
@@ -261,7 +261,7 @@ this.
     The `hack-k3d-up` target will ensure the installation of suitable versions
     of `k3d` and
     [ctlptl](https://github.com/tilt-dev/ctlptl#how-do-i-install-it) (used for
-    declarative k3d configuration) into `hack/bind/`.
+    declarative k3d configuration) into `hack/bin/`.
 
     :::
 
@@ -327,7 +327,7 @@ this.
     :::info
 
     The `hack-tilt-up` target will ensure the installation of a suitable
-    versions of `tilt` and `helm` into `hack/bind/`.
+    versions of `tilt` and `helm` into `hack/bin/`.
 
     When run for the first time on a new development cluster, `make
     hack-tilt-up` will install suitable versions of
