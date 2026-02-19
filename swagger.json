@@ -4712,6 +4712,7 @@
                     "type": "string"
                 },
                 "password": {
+                    "description": "#nosec G117 -- Request data is unmarshaled into this struct, but the struct\nis never marshaled and transmitted to anywhere.",
                     "type": "string"
                 },
                 "repoUrl": {
@@ -4893,6 +4894,7 @@
                     "type": "string"
                 },
                 "password": {
+                    "description": "#nosec G117 -- Request data is unmarshaled into this struct, but the struct\nis never marshaled and transmitted to anywhere.",
                     "type": "string"
                 },
                 "repoUrl": {
@@ -5022,6 +5024,7 @@
                     "type": "string"
                 },
                 "password": {
+                    "description": "#nosec G117 -- Request data is unmarshaled into this struct, but the struct\nis never marshaled and transmitted to anywhere.",
                     "type": "string"
                 },
                 "repoUrl": {

@@ -398,6 +398,10 @@ func (h *helmTemplateRunner) writeResourcesFlat(outPath, manifest string) error 
 		}
 
 		// Write the resource to the output directory.
+		//
+		// #nosec G703 -- Contextually, if this was constructed from a
+		// user-specified, relative path, the absolute path was constructed using
+		// securejoin.SecureJoin().
 		if err = os.WriteFile(filepath.Join(outPath, fileName), resource, 0o600); err != nil {
 			return fmt.Errorf("failed to write resource to file %q: %w", fileName, err)
 		}

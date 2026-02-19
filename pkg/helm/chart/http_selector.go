@@ -52,6 +52,10 @@ func (h *httpSelector) Select(context.Context) ([]string, error) {
 	if h.creds != nil {
 		req.SetBasicAuth(h.creds.Username, h.creds.Password)
 	}
+	// #nosec G704 -- Despite the user-specified URL, the possibility of SSRF here
+	// is mitigated by many factors, including the user's inability to specify an
+	// HTTP method or request headers, and the fact of the user having no access
+	// to the response.
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil,

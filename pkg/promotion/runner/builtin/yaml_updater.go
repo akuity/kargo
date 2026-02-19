@@ -103,14 +103,12 @@ func (y *yamlUpdater) generateCommitMessage(path string, updates []builtin.YAMLU
 	}
 
 	var commitMsg strings.Builder
-	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s\n", path))
+	_, _ = fmt.Fprintf(&commitMsg, "Updated %s\n", path)
 	for _, update := range updates {
-		_, _ = commitMsg.WriteString(
-			fmt.Sprintf(
-				"\n- %s: %v",
-				update.Key,
-				yaml.QuoteIfNecessary(update.Value),
-			),
+		_, _ = fmt.Fprintf(
+			&commitMsg,
+			"\n- %s: %v",
+			update.Key, yaml.QuoteIfNecessary(update.Value),
 		)
 	}
 

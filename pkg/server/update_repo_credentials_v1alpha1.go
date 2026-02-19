@@ -92,7 +92,9 @@ type updateRepoCredentialsRequest struct {
 	RepoURL        string `json:"repoUrl"`
 	RepoURLIsRegex bool   `json:"repoUrlIsRegex,omitempty"`
 	Username       string `json:"username"`
-	Password       string `json:"password"`
+	// #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+	// is never marshaled and transmitted to anywhere.
+	Password string `json:"password"`
 } // @name UpdateRepoCredentialsRequest
 
 // @id UpdateProjectRepoCredentials

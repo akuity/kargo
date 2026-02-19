@@ -112,7 +112,7 @@ func (h *helmChartUpdater) generateCommitMessage(chartPath string, newVersions m
 		if change == "" {
 			change = "removed"
 		}
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s: %s", name, change))
+		_, _ = fmt.Fprintf(&commitMsg, "\n- %s: %s", name, change)
 	}
 	return commitMsg.String()
 }

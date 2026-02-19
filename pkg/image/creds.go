@@ -8,5 +8,7 @@ type Credentials struct {
 	Username string
 	// Password, when combined with the principal identified by the Username
 	// field, can be used for reading from some image repository.
+	//
+	// #nosec G117 -- This struct is never marshaled.
 	Password string
 }

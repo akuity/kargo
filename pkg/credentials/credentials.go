@@ -43,6 +43,9 @@ type Credentials struct {
 	Username string
 	// Password, when combined with the principal identified by the Username
 	// field, can be used for access to some repository.
+	//
+	// #nosec G117 -- This struct is an internal representation of credentials
+	// that is not transmitted anywhere directly.
 	Password string
 	// SSHPrivateKey is a private key that can be used for access to some remote
 	// repository. This is primarily applicable for Git repositories.

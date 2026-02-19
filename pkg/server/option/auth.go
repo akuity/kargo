@@ -546,6 +546,8 @@ func (a *authInterceptor) verifyKubernetesToken(
 	}
 	req.Header.Set("Authorization", "Bearer "+rawToken)
 
+	// #nosec G704 -- This request is not for a user-specified URL, so there is
+	// virtually no risk of SSRF here.
 	resp, err := (&http.Client{Transport: transport}).Do(req)
 	if err != nil {
 		return fmt.Errorf("execute request: %w", err)
