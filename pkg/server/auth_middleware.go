@@ -494,6 +494,9 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		var caCertPool *x509.CertPool
 		if cfg.DexProxyConfig.CACertPath != "" {
 			var caCertBytes []byte
+			// #nosec G703 -- Contextually, this was an operator-specified path;
+			// typically having been specified by the chart, and without even a
+			// an option for specifying an alternate path.
 			if caCertBytes, err = os.ReadFile(cfg.DexProxyConfig.CACertPath); err != nil {
 				return nil, fmt.Errorf("error reading CA cert file %q: %w", cfg.DexProxyConfig.CACertPath, err)
 			}
@@ -510,6 +513,8 @@ func getKeySet(ctx context.Context, cfg config.ServerConfig) (oidc.KeySet, error
 		}
 	}
 
+	// #nosec G704 -- Contextually, this URL is specified by an operator and not
+	// by an end user.
 	discoResp, err := httpClient.Get(discoURL)
 	if err != nil {
 		return nil, fmt.Errorf("error making discovery request to OpenID Connect identity provider: %w", err)
