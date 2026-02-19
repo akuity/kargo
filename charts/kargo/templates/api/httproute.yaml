@@ -1,0 +1,46 @@
+{{- if and .Values.api.enabled .Values.api.httproute.enabled -}}
+{{- $apiPort := ternary 443 80 .Values.api.tls.enabled -}}
+{{- $webhookPort := ternary 443 80 .Values.externalWebhooksServer.tls.enabled -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: kargo-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+    {{- include "kargo.api.labels" . | nindent 4 }}
+  {{- with (mergeOverwrite (deepCopy .Values.global.annotations) .Values.api.httproute.annotations) }}
+  annotations:
+    {{- range $key, $value := . }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- with .Values.api.httproute.parentRefs }}
+      {{- toYaml . | nindent 4 }}
+    {{- end }}
+  hostnames:
+    - {{ quote .Values.api.host }}
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - kind: Service
+          name: kargo-api
+          port: {{ $apiPort }}
+          weight: 1
+    {{- if and .Values.externalWebhooksServer.enabled (not .Values.externalWebhooksServer.httproute.enabled) }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /webhooks
+      backendRefs:
+        - kind: Service
+          name: kargo-external-webhooks-server
+          port: {{ $webhookPort }}
+          weight: 1
+    {{- end }}
+{{- end }}

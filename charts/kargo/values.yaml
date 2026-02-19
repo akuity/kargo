@@ -467,6 +467,22 @@ api:
     ## @param api.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific
 
+  httproute:
+    ## @param api.httproute.enabled Whether to enable HTTPRoute by creating an HTTPRoute resource. By default, this is disabled. Enabling HTTPRoute is advanced usage.
+    ## @param externalWebhooksServer.httproute.enabled -- Enable Gateway API HTTPRoute.
+    ## Gateway API support is in EXPERIMENTAL status. Support depends on your Gateway controller implementation.
+    ## See the [Gateway API documentation](https://gateway-api.sigs.k8s.io/) for details. By default, this is disabled.
+    enabled: false
+    ## @param api.httproute.annotations Annotations specified by your gateway controller to customize the behavior of the HTTPRoute resource.
+    annotations: {}
+    ## @param api.httproute.parentRefs Parent references to bind the HTTPRoute to one or more Gateways. If not specified, no parentRefs will be set and the HTTPRoute will not be bound to any Gateway.
+    ## See the Gateway API documentation for details on configuring parentRefs.
+    parentRefs: []
+      # - name: gateway
+      # namespace: gateway-system
+      # sectionName: https
+      # port: 443
+
   service:
     ## @param api.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
     type: ClusterIP
@@ -793,6 +809,21 @@ externalWebhooksServer:
       secretName: kargo-external-webhooks-server-ingress-cert
     ## @param externalWebhooksServer.ingress.pathType You may want to use `Prefix` for some controllers (like AWS LoadBalancer Ingress controller), which don't support `/` as wildcard path when pathType is set to `ImplementationSpecific`
     pathType: ImplementationSpecific
+
+  httproute:
+    ## @param externalWebhooksServer.httproute.enabled -- Enable Gateway API HTTPRoute.
+    ## Gateway API support is in EXPERIMENTAL status. Support depends on your Gateway controller implementation.
+    ## See the [Gateway API documentation](https://gateway-api.sigs.k8s.io/) for details. By default, this is disabled.
+    enabled: false
+    ## @param externalWebhooksServer.httproute.annotations -- Annotations to be added to the HTTPRoute.
+    annotations: {}
+    ## @param externalWebhooksServer.httproute.parentRefs Parent references to bind the HTTPRoute to one or more Gateways. If not specified, no parentRefs will be set and the HTTPRoute will not be bound to any Gateway.
+    ## See the [API reference](https://gateway-api.sigs.k8s.io/reference/spec/#gateway.networking.k8s.io/v1.ParentReference) for details.
+    parentRefs: []
+      # - name: gateway
+      # namespace: gateway-system
+      # sectionName: https
+      # port: 443
 
   service:
     ## @param externalWebhooksServer.service.type If you're not going to use an ingress controller, you may want to change this value to `LoadBalancer` for production deployments. If running locally, you may want to change it to `NodePort` OR leave it as `ClusterIP` and use `kubectl port-forward` to map a port on the local network interface to the service.
