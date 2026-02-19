@@ -186,7 +186,7 @@ func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[str
 	}
 
 	var commitMsg strings.Builder
-	_, _ = commitMsg.WriteString(fmt.Sprintf("Updated %s to use new image", path))
+	_, _ = fmt.Fprintf(&commitMsg, "Updated %s to use new image", path)
 	if len(images) > 1 {
 		_, _ = commitMsg.WriteString("s")
 	}
@@ -213,7 +213,7 @@ func (k *kustomizeImageSetter) generateCommitMessage(path string, images map[str
 		if i.Digest != "" {
 			ref = fmt.Sprintf("%s@%s", ref, i.Digest)
 		}
-		_, _ = commitMsg.WriteString(fmt.Sprintf("\n- %s", ref))
+		_, _ = fmt.Fprintf(&commitMsg, "\n- %s", ref)
 	}
 
 	return commitMsg.String()

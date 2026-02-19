@@ -274,6 +274,9 @@ func (t *tarExtractor) extractToDir(
 		}
 
 		destDir := filepath.Dir(targetPath)
+		// #nosec G703 -- Contextually, if this was constructed from a
+		// user-specified, relative path, the absolute path was constructed using
+		// securejoin.SecureJoin().
 		if err = os.MkdirAll(destDir, defaultDirPermissions); err != nil {
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 				fmt.Errorf("failed to create directory %s: %w", destDir, err)
@@ -282,6 +285,10 @@ func (t *tarExtractor) extractToDir(
 		switch header.Typeflag {
 		case tar.TypeDir:
 			// Create directory
+			//
+			// #nosec G703 -- Contextually, if this was constructed from a
+			// user-specified, relative path, the absolute path was constructed using
+			// securejoin.SecureJoin().
 			if err = os.MkdirAll(targetPath, defaultDirPermissions); err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 					fmt.Errorf("failed to create directory %s: %w", targetPath, err)
@@ -323,6 +330,9 @@ func (t *tarExtractor) extractToDir(
 			dir := filepath.Dir(targetPath)
 			// Create the directory if it doesn't exist
 			if !madeDir[dir] {
+				// #nosec G703 -- Contextually, if this was constructed from a
+				// user-specified, relative path, the absolute path was constructed
+				// using securejoin.SecureJoin().
 				if err = os.MkdirAll(dir, defaultDirPermissions); err != nil {
 					return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 						fmt.Errorf("failed to create directory %s: %w", dir, err)
@@ -336,6 +346,9 @@ func (t *tarExtractor) extractToDir(
 				mode = 0o600 // Default to 0o600 if mode is invalid
 			}
 			safeMode := fs.FileMode(mode) // nolint:gosec
+			// #nosec G703 -- Contextually, if this was constructed from a
+			// user-specified, relative path, the absolute path was constructed using
+			// securejoin.SecureJoin().
 			outFile, err := os.OpenFile(targetPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, safeMode)
 			if err != nil {
 				return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},

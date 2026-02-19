@@ -36,6 +36,8 @@ func GetCredential(ctx context.Context, cfg *rest.Config) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	// #nosec G704 -- This code executes client-side and does not, therefore,
+	// represent a vector for SSRF attacks.
 	res, err := rc.Do(req)
 	defer func() {
 		_ = res.Body.Close()

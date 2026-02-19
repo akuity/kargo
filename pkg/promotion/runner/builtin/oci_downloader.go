@@ -338,6 +338,9 @@ func (d *ociDownloader) createTempFile(absOutPath string) (*os.File, string, err
 
 	if err = tempFile.Chmod(0o600); err != nil {
 		_ = tempFile.Close()
+		// #nosec G703 -- Contextually, if this was constructed from a
+		// user-specified, relative path, the absolute path was constructed using
+		// securejoin.SecureJoin().
 		_ = os.Remove(tempFile.Name())
 		return nil, "", fmt.Errorf("failed to set permissions on temporary file: %w", err)
 	}

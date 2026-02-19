@@ -1,7 +1,7 @@
 version: "2"
 run:
   # Go version to use for running golangci-lint
-  go: "1.24"
+  go: "1.26"
   # Build tags to be passed to all linters
   build-tags:
     - dockerhub
@@ -141,6 +141,7 @@ linters:
     rules:
       - linters:
           - goconst
+          - gosec
         path: (.+)_test\.go
     paths:
       - .*/*_types.go
