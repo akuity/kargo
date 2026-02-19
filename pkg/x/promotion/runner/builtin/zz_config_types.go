@@ -548,6 +548,15 @@ type OCIDownloadConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type SetFreightAliasConfig struct {
+	// The immutable name of the Freight resource to update. This must be the Freight's name
+	// (its stable identifier), not an alias.
+	FreightName string `json:"freightName"`
+	// The new human-readable alias to assign to the Freight. Aliases must be unique within the
+	// project.
+	NewAlias string `json:"newAlias"`
+}
+
 type SetMetadataConfig struct {
 	// List of metadata updates to apply to various resources
 	Updates []Update `json:"updates"`

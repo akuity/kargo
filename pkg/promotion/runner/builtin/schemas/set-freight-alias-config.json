@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SetFreightAliasConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["freightName", "newAlias"],
+  "properties": {
+    "freightName": {
+      "type": "string",
+      "description": "The immutable name of the Freight resource to update. This must be the Freight's name (its stable identifier), not an alias.",
+      "minLength": 1
+    },
+    "newAlias": {
+      "type": "string",
+      "description": "The new human-readable alias to assign to the Freight. Aliases must be unique within the project.",
+      "minLength": 1
+    }
+  }
+}

@@ -44,13 +44,23 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
-  - freights
   - promotions
   verbs:
   - create
   - get
   - list
   - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
+  - freights
+  verbs:
+  - create
+  - get
+  - list
+  - watch
+  - patch
+  - update
 - apiGroups:
   - kargo.akuity.io
   resources:
