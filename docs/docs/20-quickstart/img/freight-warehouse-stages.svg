@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 240" width="760" height="240" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+
+  <!-- Card 1: Freight -->
+  <rect x="0" y="0" width="240" height="232" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="0" y="0" width="240" height="4" rx="4" fill="#3578e5"/>
+  <text x="20" y="46" font-size="26">📦</text>
+  <text x="20" y="72" font-size="11" fill="#3578e5" font-weight="700" letter-spacing="0.1em">FREIGHT</text>
+  <text x="20" y="96" font-size="16" fill="#111827" font-weight="600">A versioned artifact bundle</text>
+  <text x="20" y="120" font-size="14" fill="#6b7280">Think of Freight as a "shipping</text>
+  <text x="20" y="139" font-size="14" fill="#6b7280">container" — it holds a snapshot</text>
+  <text x="20" y="158" font-size="14" fill="#6b7280">of your app (image, chart, etc.)</text>
+  <text x="20" y="177" font-size="14" fill="#6b7280">that travels through your pipeline.</text>
+
+  <!-- Card 2: Warehouse -->
+  <rect x="260" y="0" width="240" height="232" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="260" y="0" width="240" height="4" rx="4" fill="#3578e5"/>
+  <text x="280" y="46" font-size="26">🏭</text>
+  <text x="280" y="72" font-size="11" fill="#3578e5" font-weight="700" letter-spacing="0.1em">WAREHOUSE</text>
+  <text x="280" y="96" font-size="16" fill="#111827" font-weight="600">Watches for new versions</text>
+  <text x="280" y="120" font-size="14" fill="#6b7280">Automatically detects when a</text>
+  <text x="280" y="139" font-size="14" fill="#6b7280">new container image is pushed.</text>
+  <text x="280" y="158" font-size="14" fill="#6b7280">Produces new Freight ready to</text>
+  <text x="280" y="177" font-size="14" fill="#6b7280">promote — no manual tagging.</text>
+
+  <!-- Card 3: Stages -->
+  <rect x="520" y="0" width="240" height="232" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="520" y="0" width="240" height="4" rx="4" fill="#3578e5"/>
+  <text x="540" y="46" font-size="26">🚦</text>
+  <text x="540" y="72" font-size="11" fill="#3578e5" font-weight="700" letter-spacing="0.1em">STAGES</text>
+  <text x="540" y="96" font-size="16" fill="#111827" font-weight="600">Gate every environment</text>
+  <text x="540" y="120" font-size="14" fill="#6b7280">Test, UAT, and Prod are each a</text>
+  <text x="540" y="139" font-size="14" fill="#6b7280">Stage. Freight must pass through</text>
+  <text x="540" y="158" font-size="14" fill="#6b7280">them in order. You control when</text>
+  <text x="540" y="177" font-size="14" fill="#6b7280">it advances — manually or auto.</text>
+
+</svg>
