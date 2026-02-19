@@ -36,6 +36,7 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.patchProjectStatusFn)
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
+	require.NotNil(t, r.deleteNamespaceFn)
 	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.removeFinalizerFn)
@@ -128,6 +129,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
 					}
 					ns.Finalizers = []string{kargoapi.FinalizerName}
+					return nil
+				},
+				deleteNamespaceFn: func(
+					_ context.Context,
+					_ client.Object,
+					_ ...client.DeleteOption,
+				) error {
 					return nil
 				},
 				deleteClusterRoleBindingFn: func(
@@ -236,7 +244,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.reconciler.Reconcile(context.Background(), ctrl.Request{})
+			res, err := testCase.reconciler.Reconcile(t.Context(), ctrl.Request{})
 			testCase.assertions(t, res, err)
 		})
 	}
@@ -737,111 +745,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 			},
 		},
 		{
-			name: "keep namespace - error patching owner references",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-project",
-					UID:  "project-uid",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
-					},
-				},
-			},
-			reconciler: &reconciler{
-				deleteClusterRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
-				deleteClusterRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Name = "test-project"
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{UID: "project-uid"},
-					}
-					return nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return errors.New("patch failed")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "failed to patch namespace")
-				require.ErrorContains(t, err, "patch failed")
-			},
-		},
-		{
-			name: "keep namespace - no owner reference to remove",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-project",
-					UID:  "project-uid",
-					Annotations: map[string]string{
-						kargoapi.AnnotationKeyKeepNamespace: kargoapi.AnnotationValueTrue,
-					},
-				},
-			},
-			reconciler: &reconciler{
-				deleteClusterRoleBindingFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
-				deleteClusterRoleFn: func(
-					context.Context,
-					client.Object,
-					...client.DeleteOption,
-				) error {
-					return nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Name = "test-project"
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{UID: "other-uid"},
-					}
-					return nil
-				},
-				removeFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
 			name: "delete namespace - success",
 			project: &kargoapi.Project{
 				ObjectMeta: metav1.ObjectMeta{
@@ -879,6 +782,13 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					context.Context,
 					client.Client,
 					client.Object,
+				) error {
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
 				) error {
 					return nil
 				},
@@ -925,6 +835,13 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					context.Context,
 					client.Client,
 					client.Object,
+				) error {
+					return nil
+				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
 				) error {
 					return nil
 				},
@@ -1014,6 +931,13 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns.Name = "test-project"
 					return nil
 				},
+				deleteNamespaceFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
 				removeFinalizerFn: func() func(context.Context, client.Client, client.Object) error {
 					var count int
 					return func(
@@ -1038,7 +962,7 @@ func TestReconciler_cleanupProject(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			err := testCase.reconciler.cleanupProject(context.Background(), testCase.project)
+			err := testCase.reconciler.cleanupProject(t.Context(), testCase.project)
 			testCase.assertions(t, err)
 		})
 	}
