@@ -3,6 +3,7 @@ package namespaces
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +56,12 @@ type reconciler struct {
 		client.Client,
 		client.Object,
 	) error
+
+	patchOwnerReferencesFn func(
+		context.Context,
+		client.Client,
+		client.Object,
+	) error
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Namespace resources
@@ -96,6 +103,7 @@ func newReconciler(kubeClient client.Client) *reconciler {
 	r.getNamespaceFn = r.client.Get
 	r.deleteProjectFn = r.client.Delete
 	r.removeFinalizerFn = api.RemoveFinalizer
+	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	return r
 }
 
@@ -117,6 +125,20 @@ func (r *reconciler) Reconcile(
 		// Ignore if not found. This can happen if the Namespace was deleted after
 		// the current reconciliation request was issued.
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Ensure existing namespaces don't have a project owner reference.
+	// This ensures cascading foreground deletion works as expected,
+	// and that we don't end up with namespaces that can't be deleted
+	// because they have a non-existent project owner reference.
+	// For more information see: https://github.com/akuity/kargo/issues/4627#issuecomment-3821967156
+	if slices.ContainsFunc(ns.OwnerReferences, isProjectOwnerRef) {
+		logger.Debug("Namespace has a Project owner reference, removing.")
+		ns.OwnerReferences = slices.DeleteFunc(ns.OwnerReferences, isProjectOwnerRef)
+		if err := r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
+		}
+		return ctrl.Result{}, nil
 	}
 
 	// We're only interested in deletes
@@ -148,4 +170,8 @@ func (r *reconciler) Reconcile(
 	}
 	logger.Debug("done reconciling Namespace")
 	return ctrl.Result{}, nil
+}
+
+func isProjectOwnerRef(ownerRef metav1.OwnerReference) bool {
+	return ownerRef.Kind == "Project" && ownerRef.APIVersion == kargoapi.GroupVersion.String()
 }
