@@ -8,11 +8,13 @@ import (
 
 	"github.com/spf13/cobra"
 
+	libargocd "github.com/akuity/kargo/pkg/argocd"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	"github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/argocd"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -130,6 +132,21 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
+	// Initialize ArgoCD URL store with static configuration from Helm values
+	argoCDURLStore := argocd.NewURLStore()
+	argoCDURLStore.SetStaticShards(serverCfg.ArgoCDConfig.URLs, libargocd.Namespace())
+
+	// Start ArgoCD shard secret watcher
+	argoCDWatcher, err := argocd.NewWatcher(restCfg, argoCDURLStore)
+	if err != nil {
+		return fmt.Errorf("error creating ArgoCD shard watcher: %w", err)
+	}
+	go func() {
+		if watchErr := argoCDWatcher.Start(ctx); watchErr != nil && ctx.Err() == nil {
+			o.Logger.Error(watchErr, "ArgoCD shard watcher stopped with error")
+		}
+	}()
+
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
@@ -145,6 +162,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 				"api",
 			),
 		),
+		argoCDURLStore,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {

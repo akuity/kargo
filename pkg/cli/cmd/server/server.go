@@ -14,6 +14,7 @@ import (
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/server"
+	"github.com/akuity/kargo/pkg/server/argocd"
 	apiconfig "github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/rbac"
@@ -90,6 +91,10 @@ func (o *serverOptions) run(ctx context.Context) error {
 	}
 	defer l.Close() // nolint: errcheck
 
+	// Create a simple URL store for local mode (no watcher needed)
+	argoCDURLStore := argocd.NewURLStore()
+	argoCDURLStore.SetStaticShards(nil, "argocd")
+
 	srv := server.NewServer(
 		apiconfig.ServerConfig{
 			RestConfig: restCfg,
@@ -98,6 +103,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 		client,
 		rbac.NewKubernetesRolesDatabase(client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
+		argoCDURLStore,
 	)
 	if err := srv.Serve(ctx, l); err != nil {
 		return fmt.Errorf("serve error: %w", err)
