@@ -159,6 +159,7 @@ func (a *argocdChecker) check(
 var healthErrorConditions = []argocd.ApplicationConditionType{
 	argocd.ApplicationConditionComparisonError,
 	argocd.ApplicationConditionInvalidSpecError,
+	argocd.ApplicationConditionSyncError,
 }
 
 // getApplicationHealth assesses the health of an Argo CD Application by looking
