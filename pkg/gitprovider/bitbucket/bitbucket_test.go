@@ -1097,3 +1097,30 @@ func TestGetCommitURL(t *testing.T) {
 		})
 	}
 }
+
+func TestUnsupportedMergeMethod(t *testing.T) {
+	mergeMethods := []gitprovider.MergeMethod{
+		gitprovider.MergeMethodSquash, gitprovider.MergeMethodRebase,
+	}
+
+	for _, mergeMethod := range mergeMethods {
+		t.Run(string(mergeMethod), func(t *testing.T) {
+			mockClient := &mockPullRequestClient{}
+			provider := &provider{
+				owner:    "owner",
+				repoSlug: "repo",
+				client:   mockClient,
+			}
+
+			ctx := context.Background()
+			opts := &gitprovider.MergePullRequestOpts{
+				MergeMethod: mergeMethod,
+			}
+
+			pr, merged, err := provider.MergePullRequest(ctx, opts)
+			assert.Error(t, err)
+			assert.Nil(t, pr)
+			assert.False(t, merged)
+		})
+	}
+}

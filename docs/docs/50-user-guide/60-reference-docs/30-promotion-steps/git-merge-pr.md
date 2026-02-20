@@ -34,18 +34,31 @@ to merge will fail.
 ## Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                                                    |
-| ----------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repoURL`               | `string`  | Y        | The URL of a remote Git repository.                                                                                                                                                                            |
-| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
-| `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                   |
-| `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
-| `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
+| ----------------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repoURL`               | `string`  | Y        | The URL of a remote Git repository.                                                                                                                                                                                               |
+| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                                       |
+| `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                                      |
+| `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                                                 |
+| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are `merge`, `squash` or `rebase`. Not all merge methods are supported by all providers, refer to [Merge Method](#merge-method). Default is `merge`. |
+| `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`.                    |
 
 :::warning
 
 The `wait` option is unreliable for repositories hosted by Bitbucket due to API limitations.
 
 :::
+
+### Merge Method
+
+The table below documents the supported merge methods for each of the currently supported providers.
+
+|           | Merge              | Squash             | Rebase             |
+|-----------|--------------------|--------------------|--------------------|
+| Azure     | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| BitBucket | :white_check_mark: | :x:                | :x:                |
+| Gitea     | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| GitHub    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| GitLab    | :white_check_mark: | :white_check_mark: | :x:                |
 
 ## Output
 
@@ -82,4 +95,19 @@ steps:
     repoURL: https://github.com/example/repo.git
     prNumber: 42
     wait: true
+```
+
+### Merge Method
+
+This example demonstrates merging a pull request with a merge method. The squash method
+combines all commits in the pull request into a single commit. This is useful for
+maintaining a clean commit history.
+
+```yaml
+steps:
+- uses: git-merge-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: 42
+    mergeMethod: squash
 ```

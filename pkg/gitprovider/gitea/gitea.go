@@ -279,14 +279,14 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
-	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
 	}
 	if giteaPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", id)
+		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
 	}
 
 	switch {
@@ -295,22 +295,38 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case giteaPR.State != gitea.StateOpen:
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
 
 	case giteaPR.Draft || !giteaPR.Mergeable:
 		return nil, false, nil
 	}
 
 	// Merge the PR
+	mergeOpts := &gitea.MergePullRequestOption{}
+	if opts.MergeMethod != "" {
+		// Convert to Gitea's MergeStyle type
+		var style gitea.MergeStyle
+		switch opts.MergeMethod {
+		case gitprovider.MergeMethodMerge:
+			style = gitea.MergeStyleMerge
+		case gitprovider.MergeMethodSquash:
+			style = gitea.MergeStyleSquash
+		case gitprovider.MergeMethodRebase:
+			style = gitea.MergeStyleRebase
+		default:
+			style = gitea.MergeStyleMerge
+		}
+		mergeOpts.Style = style
+	}
 	if _, err = p.client.MergePullRequest(
-		ctx, p.owner, p.repo, int(id), &gitea.MergePullRequestOption{},
+		ctx, p.owner, p.repo, int(opts.Number), mergeOpts,
 	); err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
 	}
 
-	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
 	if err != nil {
-		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
+		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", opts.Number, err)
 	}
 	if updatedPR == nil {
 		return nil, false, fmt.Errorf("unexpected nil PR after merge")
