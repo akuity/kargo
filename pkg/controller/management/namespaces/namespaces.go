@@ -140,7 +140,7 @@ func (r *reconciler) Reconcile(
 	}
 	hasProjectOwnerRef, err := controllerutil.HasOwnerReference(ns.OwnerReferences, project, r.client.Scheme())
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to check for owner reference on namespace %q: %w", ns.Name, err)
+		return ctrl.Result{}, fmt.Errorf("failed to check for project owner reference on namespace %q: %w", ns.Name, err)
 	}
 	if hasProjectOwnerRef {
 		logger.Debug("Namespace has project owner reference; removing")
@@ -150,7 +150,7 @@ func (r *reconciler) Reconcile(
 			r.client.Scheme(),
 		)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to remove owner reference from namespace %q: %w", ns.Name, err)
+			return ctrl.Result{}, fmt.Errorf("failed to remove project owner reference from namespace %q: %w", ns.Name, err)
 		}
 		if err := r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to patch owner references for namespace %q: %w", ns.Name, err)
