@@ -17,6 +17,7 @@ import (
 )
 
 func TestBareRepo(t *testing.T) {
+	initBranch := defaultInitBranch(t)
 	testRepoCreds := RepoCredentials{
 		Username: "fake-username",
 		Password: "fake-password",
@@ -111,8 +112,7 @@ func TestBareRepo(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-
-		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
+		&AddWorkTreeOptions{Ref: initBranch},
 	)
 
 	require.NoError(t, err)
@@ -179,7 +179,7 @@ branch %s
 				assert.NoError(t, err)
 				assert.Len(t, result, 1)
 				assert.Equal(t, result, []workTreeInfo{
-					{Path: "/path/to/worktree", HEAD: "abcdef1234567890", Branch: defaultInitBranch(t)},
+					{Path: "/path/to/worktree", HEAD: "abcdef1234567890", Branch: initBranch},
 				})
 			},
 		},
@@ -324,6 +324,7 @@ func Test_bareRepo_filterNonBarePaths(t *testing.T) {
 }
 
 func TestBareRepo_SparseCheckout(t *testing.T) {
+	initBranch := defaultInitBranch(t)
 	testRepoCreds := RepoCredentials{
 		Username: "fake-username",
 		Password: "fake-password",
@@ -391,7 +392,6 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, rep)
 	defer rep.Close()
-	initBranch := defaultInitBranch(t)
 
 	t.Run("sparse checkout includes only specified directories", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "sparse-worktree")
@@ -532,6 +532,8 @@ func Test_validateSparsePatterns(t *testing.T) {
 }
 
 func TestBareRepo_WithFilter(t *testing.T) {
+	initBranch := defaultInitBranch(t)
+
 	testRepoCreds := RepoCredentials{
 		Username: "fake-username",
 		Password: "fake-password",
@@ -605,7 +607,7 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
+		&AddWorkTreeOptions{Ref: initBranch},
 	)
 	require.NoError(t, err)
 	defer workTree.Close()

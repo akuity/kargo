@@ -187,10 +187,12 @@ func mustParseTime(s string) time.Time {
 func defaultInitBranch(t *testing.T) string {
 	t.Helper()
 	cmd := exec.Command("git", "config", "init.defaultBranch")
-	// The repository is initialized in a temporary directory, so we can use that
-	// as the working directory for this command to ensure we get the default branch name for the repository we're testing with.
 	cmd.Dir = t.TempDir()
 	out, err := cmd.Output()
-	require.NoError(t, err, "failed to get default branch from git config")
+	if err != nil {
+		// if the command fails, it's likely because the git version is older than 2.28 and
+		// doesn't support init.defaultBranch, in which case we can assume the default branch name is "master".
+		return "master"
+	}
 	return strings.TrimSpace(string(out))
 }
