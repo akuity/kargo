@@ -277,6 +277,9 @@ type GitPushConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
+	// An optional tag to push to the remote repository. Mutually exclusive with
+	// 'generateTargetBranch=true' and 'targetBranch'.
+	Tag string `json:"tag,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
