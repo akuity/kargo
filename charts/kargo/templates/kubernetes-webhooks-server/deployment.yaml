@@ -82,7 +82,7 @@ spec:
           {{- toYaml . | nindent 8 }}
         {{- end }}
         ports:
-        - containerPort: 9443
+        - containerPort: {{ .Values.webhooksServer.port }}
           name: webhooks-server
           protocol: TCP
         volumeMounts:
