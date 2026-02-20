@@ -139,7 +139,7 @@ with a body
 
 	t.Run("can check if remote branch exists -- negative result", func(t *testing.T) {
 		var exists bool
-		exists, err = rep.RemoteBranchExists("master") // The remote repo is empty!
+		exists, err = rep.RemoteBranchExists("doesntexist") // The remote repo is empty!
 		require.NoError(t, err)
 		require.False(t, exists)
 	})
