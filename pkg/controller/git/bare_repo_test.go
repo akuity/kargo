@@ -163,6 +163,7 @@ func TestBareRepo(t *testing.T) {
 }
 
 func Test_bareRepo_parseWorkTreeOutput(t *testing.T) {
+	initBranch := defaultInitBranch(t)
 	tests := []struct {
 		name       string
 		input      []byte
@@ -170,30 +171,30 @@ func Test_bareRepo_parseWorkTreeOutput(t *testing.T) {
 	}{
 		{
 			name: "single worktree",
-			input: []byte(`worktree /path/to/worktree
+			input: []byte(fmt.Sprintf(`worktree /path/to/worktree
 HEAD abcdef1234567890
-branch main
-`),
+branch %s
+`, initBranch)),
 			assertions: func(t *testing.T, result []workTreeInfo, err error) {
 				assert.NoError(t, err)
 				assert.Len(t, result, 1)
 				assert.Equal(t, result, []workTreeInfo{
-					{Path: "/path/to/worktree", HEAD: "abcdef1234567890", Branch: "main"},
+					{Path: "/path/to/worktree", HEAD: "abcdef1234567890", Branch: defaultInitBranch(t)},
 				})
 			},
 		},
 		{
 			name: "multiple worktrees",
-			input: []byte(`worktree /path/to/worktree1
+			input: []byte(fmt.Sprintf(`worktree /path/to/worktree1
 HEAD abcdef1234567890
-branch main
+branch %s
 
 worktree /path/to/worktree2
 HEAD fedcba9876543210
 branch feature
 bare
 detached
-`),
+`, initBranch)),
 			assertions: func(t *testing.T, result []workTreeInfo, err error) {
 				assert.NoError(t, err)
 				assert.Len(t, result, 2)
@@ -201,7 +202,7 @@ detached
 					{
 						Path:   "/path/to/worktree1",
 						HEAD:   "abcdef1234567890",
-						Branch: "main",
+						Branch: initBranch,
 					},
 					{
 						Path:     "/path/to/worktree2",
@@ -223,14 +224,14 @@ detached
 		},
 		{
 			name: "incomplete worktree info",
-			input: []byte(`worktree /path/to/incomplete
+			input: []byte(fmt.Sprintf(`worktree /path/to/incomplete
 HEAD
 branch
 
 worktree /path/to/complete
 HEAD abcdef1234567890
-branch main
-`),
+branch %s
+`, initBranch)),
 			assertions: func(t *testing.T, result []workTreeInfo, err error) {
 				assert.NoError(t, err)
 				assert.Len(t, result, 2)
@@ -239,7 +240,7 @@ branch main
 					{
 						Path:   "/path/to/complete",
 						HEAD:   "abcdef1234567890",
-						Branch: "main",
+						Branch: initBranch,
 					},
 				})
 			},
@@ -390,13 +391,14 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, rep)
 	defer rep.Close()
+	initBranch := defaultInitBranch(t)
 
 	t.Run("sparse checkout includes only specified directories", func(t *testing.T) {
 		workingTreePath := filepath.Join(rep.HomeDir(), "sparse-worktree")
 		workTree, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "main",
+				Ref:    initBranch,
 				Sparse: []string{"dir1", "dir2"},
 			},
 		)
@@ -421,7 +423,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		workTree, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref: "main",
+				Ref: initBranch,
 			},
 		)
 		require.NoError(t, err)
@@ -439,7 +441,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "main",
+				Ref:    initBranch,
 				Sparse: []string{"/absolute/path"},
 			},
 		)
@@ -451,7 +453,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "main",
+				Ref:    initBranch,
 				Sparse: []string{"../escape"},
 			},
 		)
@@ -463,7 +465,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "main",
+				Ref:    initBranch,
 				Sparse: []string{"dir*"},
 			},
 		)
@@ -603,7 +605,7 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		&AddWorkTreeOptions{Ref: "main"},
+		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
 	)
 	require.NoError(t, err)
 	defer workTree.Close()
