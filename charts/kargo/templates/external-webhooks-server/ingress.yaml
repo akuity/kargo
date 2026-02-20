@@ -18,7 +18,7 @@ spec:
   ingressClassName: {{ .Values.externalWebhooksServer.ingress.ingressClassName }}
   {{- end }}
   rules:
-  - host: {{ quote .Values.externalWebhooksServer.host }}
+  - host: {{ include "kargo.externalWebhooksServer.baseHost" . | quote }}
     http:
       paths:
       - pathType: {{ .Values.externalWebhooksServer.ingress.pathType | default "ImplementationSpecific" }}
@@ -35,7 +35,7 @@ spec:
   {{- if .Values.externalWebhooksServer.ingress.tls.enabled }}
   tls:
   - hosts:
-    - {{ quote .Values.externalWebhooksServer.host }}
+    - {{ include "kargo.externalWebhooksServer.baseHost" . | quote }}
     secretName: {{ .Values.externalWebhooksServer.ingress.tls.secretName }}
   {{- end }}
 {{- end }}

@@ -9,7 +9,7 @@ metadata:
     {{- include "kargo.api.labels" . | nindent 4 }}
 spec:
   dnsNames:
-  - {{ quote .Values.api.host }}
+  - {{ include "kargo.api.baseHost" . | quote }}
   issuerRef:
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
