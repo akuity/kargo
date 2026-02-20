@@ -190,8 +190,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
 				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return fakeToken, nil
+				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+					return fakeToken, time.Now().Add(time.Hour), nil
 				},
 			},
 			setupTokenSourceCache: func(c *cache.Cache) {
@@ -213,8 +213,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
 				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return fakeToken, nil
+				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+					return fakeToken, time.Now().Add(time.Hour), nil
 				},
 			},
 			project:  fakeProject,
@@ -226,10 +226,14 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeToken, creds.Password)
 
-				// Verify the token was cached
-				token, found := tokenCache.Get(tokenCacheKey(fakeProject))
+				// Verify the token was cached with a TTL based on the
+				// token's actual expiry
+				items := tokenCache.Items()
+				item, found := items[tokenCacheKey(fakeProject)]
 				assert.True(t, found)
-				assert.Equal(t, fakeToken, token)
+				expectedTTL := 55 * time.Minute // 1h expiry - 5m margin
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
@@ -238,8 +242,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
 				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", fmt.Errorf("token fetch error")
+				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+					return "", time.Time{}, fmt.Errorf("token fetch error")
 				},
 			},
 			project:  fakeProject,
@@ -256,8 +260,8 @@ func TestWorkloadIdentityFederationProvider_GetCredentials(t *testing.T) {
 				projectID:        fakeProjectID,
 				tokenCache:       cache.New(10*time.Hour, time.Hour),
 				tokenSourceCache: cache.New(10*time.Hour, time.Hour),
-				getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-					return "", nil
+				getAccessTokenFn: func(context.Context, string) (string, time.Time, error) {
+					return "", time.Time{}, nil
 				},
 				tokenSource: newFakeTokenSource(fakeToken),
 			},

@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 
 	"github.com/akuity/kargo/pkg/credentials"
 )
@@ -151,9 +153,12 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 		credType         credentials.Type
 		repoURL          string
 		data             map[string][]byte
-		getAccessTokenFn func(ctx context.Context, encodedServiceAccountKey string) (string, error)
-		setupCache       func(c *cache.Cache)
-		assertions       func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		getAccessTokenFn func(
+			ctx context.Context,
+			encodedServiceAccountKey string,
+		) (*oauth2.Token, error)
+		setupCache func(c *cache.Cache)
+		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
 		{
 			name:     "cache hit",
@@ -180,8 +185,11 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
-			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-				return fakeAccessToken, nil
+			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
+				return &oauth2.Token{
+					AccessToken: fakeAccessToken,
+					Expiry:      time.Now().Add(time.Hour),
+				}, nil
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
@@ -189,10 +197,14 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeAccessToken, creds.Password)
 
-				// Verify the token was cached
-				cachedToken, found := c.Get(tokenCacheKey(fakeServiceAccountKey))
+				// Verify the token was cached with a TTL based on the
+				// token's actual expiry
+				items := c.Items()
+				item, found := items[tokenCacheKey(fakeServiceAccountKey)]
 				assert.True(t, found)
-				assert.Equal(t, fakeAccessToken, cachedToken)
+				expectedTTL := 55 * time.Minute // 1h expiry - 5m margin
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
@@ -202,8 +214,8 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
-			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-				return "", errors.New("access token error")
+			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
+				return nil, errors.New("access token error")
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.ErrorContains(t, err, "error getting GCP access token")
@@ -217,8 +229,8 @@ func TestServiceAccountKeyProvider_GetCredentials(t *testing.T) {
 			data: map[string][]byte{
 				serviceAccountKeyKey: []byte(fakeServiceAccountKey),
 			},
-			getAccessTokenFn: func(_ context.Context, _ string) (string, error) {
-				return "", nil
+			getAccessTokenFn: func(context.Context, string) (*oauth2.Token, error) {
+				return nil, nil
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)

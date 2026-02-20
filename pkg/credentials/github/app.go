@@ -17,9 +17,11 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
 	"github.com/patrickmn/go-cache"
+	"golang.org/x/oauth2"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -31,6 +33,8 @@ const (
 	githubBaseURL = "https://github.com"
 
 	accessTokenUsername = "kargo"
+
+	tokenCacheExpiryMargin = 5 * time.Minute
 )
 
 var base64Regex = regexp.MustCompile(`^[a-zA-Z0-9+/]*={0,2}$`)
@@ -54,14 +58,16 @@ type AppCredentialProvider struct {
 		installationID int64,
 		encodedPrivateKey string,
 		repoURL string,
-	) (string, error)
+	) (*oauth2.Token, error)
 }
 
 // NewAppCredentialProvider returns an implementation of credentials.Provider.
 func NewAppCredentialProvider() credentials.Provider {
 	p := &AppCredentialProvider{
 		tokenCache: cache.New(
-			// Access tokens live for one hour. We'll hang on to them for 40 minutes.
+			// Access tokens live for one hour. We'll hang on to them for 40
+			// minutes by default. When the actual token expiry is available, it
+			// is used (minus a safety margin) instead of this default.
 			40*time.Minute, // Default ttl for each entry
 			time.Hour,      // Cleanup interval
 		),
@@ -89,7 +95,7 @@ func (p *AppCredentialProvider) Supports(
 // an App installation access token that is scoped only to the repository
 // specified by repoURL.
 func (p *AppCredentialProvider) GetCredentials(
-	_ context.Context,
+	ctx context.Context,
 	req credentials.Request,
 ) (*credentials.Credentials, error) {
 	repoName := p.extractRepoName(req.RepoURL)
@@ -124,6 +130,7 @@ func (p *AppCredentialProvider) GetCredentials(
 	}
 
 	return p.getUsernameAndPassword(
+		ctx,
 		appOrClientID,
 		installID,
 		string(req.Data[privateKeyKey]),
@@ -135,6 +142,7 @@ func (p *AppCredentialProvider) GetCredentials(
 // access token) for the given app/client ID, installation ID, PEM-encoded
 // GitHub App private key, and repo URL.
 func (p *AppCredentialProvider) getUsernameAndPassword(
+	ctx context.Context,
 	appOrClientID string,
 	installationID int64,
 	encodedPrivateKey string,
@@ -147,16 +155,23 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 		repoURL,
 	)
 
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"provider", "githubApp",
+		"repoURL", repoURL,
+	)
+
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
+		logger.Debug("installation access token cache hit")
 		return &credentials.Credentials{
 			Username: accessTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
 		}, nil
 	}
+	logger.Debug("installation access token cache miss")
 
 	// Cache miss, get a new token
-	accessToken, err := p.getAccessTokenFn(
+	token, err := p.getAccessTokenFn(
 		appOrClientID,
 		installationID,
 		encodedPrivateKey,
@@ -165,13 +180,26 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	if err != nil {
 		return nil, fmt.Errorf("error getting installation access token: %w", err)
 	}
+	logger.Debug("obtained new installation access token")
 
-	// Cache the new token
-	p.tokenCache.Set(cacheKey, accessToken, cache.DefaultExpiration)
+	// Cache the new token, preferring a TTL derived from the actual token
+	// expiry when available.
+	ttl := cache.DefaultExpiration
+	if !token.Expiry.IsZero() {
+		if remaining := time.Until(token.Expiry) - tokenCacheExpiryMargin; remaining > 0 {
+			ttl = remaining
+		}
+	}
+	logger.Debug(
+		"caching installation access token",
+		"expiry", token.Expiry,
+		"ttl", ttl,
+	)
+	p.tokenCache.Set(cacheKey, token.AccessToken, ttl)
 
 	return &credentials.Credentials{
 		Username: accessTokenUsername,
-		Password: accessToken,
+		Password: token.AccessToken,
 	}, nil
 }
 
@@ -182,15 +210,15 @@ func (p *AppCredentialProvider) getAccessToken(
 	installationID int64,
 	encodedPrivateKey string,
 	repoURL string,
-) (string, error) {
+) (*oauth2.Token, error) {
 	decodedKey, err := p.decodeKey(encodedPrivateKey)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	appTokenSource, err := githubauth.NewApplicationTokenSource(appOrClientID, decodedKey)
 	if err != nil {
-		return "", fmt.Errorf("error creating application token source: %w", err)
+		return nil, fmt.Errorf("error creating application token source: %w", err)
 	}
 
 	installationOpts := []githubauth.InstallationTokenSourceOpt{
@@ -205,7 +233,7 @@ func (p *AppCredentialProvider) getAccessToken(
 	}
 	baseURL, err := p.extractBaseURL(repoURL)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if baseURL != githubBaseURL {
 		// This looks like a GitHub Enterprise URL
@@ -220,9 +248,9 @@ func (p *AppCredentialProvider) getAccessToken(
 
 	token, err := installationTokenSource.Token()
 	if err != nil {
-		return "", fmt.Errorf("error getting installation access token: %w", err)
+		return nil, fmt.Errorf("error getting installation access token: %w", err)
 	}
-	return token.AccessToken, nil
+	return token, nil
 }
 
 // tokenCacheKey returns a cache key for an installation access token. The key

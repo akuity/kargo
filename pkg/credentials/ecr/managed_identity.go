@@ -39,7 +39,11 @@ type ManagedIdentityProvider struct {
 
 	accountID string
 
-	getAuthTokenFn func(ctx context.Context, region, project string) (string, error)
+	getAuthTokenFn func(
+		ctx context.Context,
+		region string,
+		project string,
+	) (string, time.Time, error)
 }
 
 func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
@@ -80,7 +84,9 @@ func NewManagedIdentityProvider(ctx context.Context) credentials.Provider {
 
 	p := &ManagedIdentityProvider{
 		tokenCache: cache.New(
-			// Tokens live for 12 hours. We'll hang on to them for 10.
+			// Tokens live for 12 hours. We'll hang on to them for 10 by default.
+			// When the actual token expiry is available, it is used (minus a
+			// safety margin) instead of this default.
 			10*time.Hour, // Default ttl for each entry
 			time.Hour,    // Cleanup interval
 		),
@@ -116,13 +122,20 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	region := matches[1]
 	cacheKey := tokenCacheKey(region, req.Project)
 
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"provider", "ecrManagedIdentity",
+		"repoURL", req.RepoURL,
+	)
+
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(cacheKey); exists {
+		logger.Debug("auth token cache hit")
 		return decodeAuthToken(entry.(string)) // nolint: forcetypeassert
 	}
+	logger.Debug("auth token cache miss")
 
 	// Cache miss, get a new token
-	encodedToken, err := p.getAuthTokenFn(ctx, region, req.Project)
+	encodedToken, expiry, err := p.getAuthTokenFn(ctx, region, req.Project)
 	if err != nil {
 		// This might mean the controller's IAM role isn't authorized to assume the
 		// project-specific IAM role, or that the project-specific IAM role doesn't
@@ -136,9 +149,22 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	if encodedToken == "" {
 		return nil, nil
 	}
+	logger.Debug("obtained new auth token")
 
-	// Cache the encoded token
-	p.tokenCache.Set(cacheKey, encodedToken, cache.DefaultExpiration)
+	// Cache the encoded token, preferring a TTL derived from the actual token
+	// expiry when available.
+	ttl := cache.DefaultExpiration
+	if !expiry.IsZero() {
+		if remaining := time.Until(expiry) - tokenCacheExpiryMargin; remaining > 0 {
+			ttl = remaining
+		}
+	}
+	logger.Debug(
+		"caching auth token",
+		"expiry", expiry,
+		"ttl", ttl,
+	)
+	p.tokenCache.Set(cacheKey, encodedToken, ttl)
 
 	return decodeAuthToken(encodedToken)
 }
@@ -150,13 +176,13 @@ func (p *ManagedIdentityProvider) getAuthToken(
 	ctx context.Context,
 	region string,
 	project string,
-) (string, error) {
+) (string, time.Time, error) {
 	logger := logging.LoggerFromContext(ctx)
 
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		logger.Error(err, "error loading AWS config")
-		return "", nil
+		return "", time.Time{}, nil
 	}
 	cfg.HTTPClient = cleanhttp.DefaultClient()
 
@@ -182,7 +208,7 @@ func (p *ManagedIdentityProvider) getAuthToken(
 	if err != nil {
 		var re *awshttp.ResponseError
 		if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
-			return "", err
+			return "", time.Time{}, err
 		}
 		logger.Debug(
 			"Controller IAM role is not authorized to assume project-specific role " +
@@ -195,15 +221,21 @@ func (p *ManagedIdentityProvider) getAuthToken(
 		output, err = ecrSvc.GetAuthorizationToken(ctx, &ecr.GetAuthorizationTokenInput{})
 		if err != nil {
 			if !errors.As(err, &re) || re.HTTPStatusCode() != http.StatusForbidden {
-				return "", err
+				return "", time.Time{}, err
 			}
 			logger.Debug(
 				"Controller's IAM role is not authorized to obtain an ECR auth token. " +
 					"Treating this as no credentials found.",
 			)
-			return "", nil
+			return "", time.Time{}, nil
 		}
 	}
+
+	var expiry time.Time
+	if output.AuthorizationData[0].ExpiresAt != nil {
+		expiry = *output.AuthorizationData[0].ExpiresAt
+	}
+
 	logger.Debug("got ECR authorization token")
-	return *output.AuthorizationData[0].AuthorizationToken, nil
+	return *output.AuthorizationData[0].AuthorizationToken, expiry, nil
 }
