@@ -85,7 +85,7 @@ func Test_gitPusher_convert(t *testing.T) {
 			},
 		},
 		{
-			name: "generateTargetBranch not specified and targetBranch not specified",
+			name: "generateTargetBranch, targetBranch, and tag not specified",
 			config: promotion.Config{ // Should be completely valid
 				"path": "/fake/path",
 			},
@@ -138,6 +138,28 @@ func Test_gitPusher_convert(t *testing.T) {
 			config: promotion.Config{ // Should be completely valid
 				"path":  "/fake/path",
 				"force": false,
+			},
+		},
+		{
+			name: "tag and generateTargetBranch both specified",
+			config: promotion.Config{
+				"path":                 "/fake/path",
+				"generateTargetBranch": true,
+				"tag":                  "v1.0.0",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema",
+			},
+		},
+		{
+			name: "tag and targetBranch both specified",
+			config: promotion.Config{
+				"path":         "/fake/path",
+				"targetBranch": "fake-branch",
+				"tag":          "v1.0.0",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema",
 			},
 		},
 	}
