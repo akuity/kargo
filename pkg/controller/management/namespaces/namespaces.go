@@ -3,7 +3,6 @@ package namespaces
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
@@ -132,11 +131,29 @@ func (r *reconciler) Reconcile(
 	// and that we don't end up with namespaces that can't be deleted
 	// because they have a non-existent project owner reference.
 	// For more information see: https://github.com/akuity/kargo/issues/4627#issuecomment-3821967156
-	if slices.ContainsFunc(ns.OwnerReferences, isProjectOwnerRef) {
-		logger.Debug("Namespace has a Project owner reference, removing.")
-		ns.OwnerReferences = slices.DeleteFunc(ns.OwnerReferences, isProjectOwnerRef)
+	project := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: ns.Name},
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: kargoapi.GroupVersion.String(),
+			Kind:       "Project",
+		},
+	}
+	hasProjectOwnerRef, err := controllerutil.HasOwnerReference(ns.OwnerReferences, project, r.client.Scheme())
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to check for owner reference on namespace %q: %w", ns.Name, err)
+	}
+	if hasProjectOwnerRef {
+		logger.Info("Namespace has project owner reference; removing")
+		err := controllerutil.RemoveOwnerReference(
+			project,
+			ns,
+			r.client.Scheme(),
+		)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to remove owner reference from namespace %q: %w", ns.Name, err)
+		}
 		if err := r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
+			return ctrl.Result{}, fmt.Errorf("failed to patch owner references for namespace %q: %w", ns.Name, err)
 		}
 		return ctrl.Result{}, nil
 	}
@@ -170,8 +187,4 @@ func (r *reconciler) Reconcile(
 	}
 	logger.Debug("done reconciling Namespace")
 	return ctrl.Result{}, nil
-}
-
-func isProjectOwnerRef(ownerRef metav1.OwnerReference) bool {
-	return ownerRef.Kind == "Project" && ownerRef.APIVersion == kargoapi.GroupVersion.String()
 }
