@@ -1,54 +1,69 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 150" width="760" height="150" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 220" width="760" height="220" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
+
+  <!-- ── Row 1: pipeline nodes ── -->
 
   <!-- Node 1: nginx image repo -->
-  <!-- box: x=0, width=128, center=64 -->
-  <rect x="0" y="30" width="128" height="90" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
-  <text x="64" y="68" font-size="26" text-anchor="middle">🐳</text>
-  <text x="64" y="92" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">nginx</text>
-  <text x="64" y="109" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">image repo</text>
+  <rect x="0" y="10" width="118" height="90" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
+  <text x="59" y="48" font-size="26" text-anchor="middle">🐳</text>
+  <text x="59" y="72" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">nginx</text>
+  <text x="59" y="89" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">image repo</text>
 
-  <!-- Arrow 1: x=128 to 168, center=148 -->
-  <line x1="130" y1="75" x2="163" y2="75" stroke="#d1d5db" stroke-width="1.5"/>
-  <polygon points="163,70 173,75 163,80" fill="#d1d5db"/>
-  <text x="148" y="63" font-size="10" fill="#9ca3af" text-anchor="middle" letter-spacing="0.06em">DISCOVERS</text>
+  <!-- Arrow 1 -->
+  <line x1="120" y1="55" x2="152" y2="55" stroke="#d1d5db" stroke-width="1.5"/>
+  <polygon points="150,50 160,55 150,60" fill="#d1d5db"/>
 
   <!-- Node 2: Warehouse -->
-  <!-- box: x=175, width=120, center=235 -->
-  <rect x="175" y="30" width="120" height="90" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
-  <text x="235" y="68" font-size="26" text-anchor="middle">🏭</text>
-  <text x="235" y="98" font-size="13" fill="#166534" font-weight="600" text-anchor="middle">Warehouse</text>
+  <rect x="162" y="10" width="118" height="90" rx="8" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1.5"/>
+  <text x="221" y="48" font-size="26" text-anchor="middle">🏭</text>
+  <text x="221" y="79" font-size="13" fill="#166534" font-weight="600" text-anchor="middle">Warehouse</text>
 
-  <!-- Arrow 2: x=295 to 335, center=315 -->
-  <line x1="297" y1="75" x2="330" y2="75" stroke="#d1d5db" stroke-width="1.5"/>
-  <polygon points="330,70 340,75 330,80" fill="#d1d5db"/>
-  <text x="315" y="63" font-size="10" fill="#9ca3af" text-anchor="middle" letter-spacing="0.06em">FREIGHT</text>
+  <!-- Arrow 2 -->
+  <line x1="282" y1="55" x2="314" y2="55" stroke="#d1d5db" stroke-width="1.5"/>
+  <polygon points="312,50 322,55 312,60" fill="#d1d5db"/>
 
-  <!-- Node 3: test -->
-  <!-- box: x=342, width=96, center=390 -->
-  <rect x="342" y="30" width="96" height="90" rx="8" fill="#fefce8" stroke="#fde68a" stroke-width="1.5"/>
-  <text x="390" y="68" font-size="26" text-anchor="middle">🧪</text>
-  <text x="390" y="98" font-size="13" fill="#92400e" font-weight="600" text-anchor="middle">test</text>
+  <!-- Node 3: test Stage -->
+  <rect x="324" y="10" width="118" height="90" rx="8" fill="#fefce8" stroke="#fde68a" stroke-width="1.5"/>
+  <text x="383" y="48" font-size="26" text-anchor="middle">🧪</text>
+  <text x="383" y="79" font-size="13" fill="#92400e" font-weight="600" text-anchor="middle">test</text>
 
-  <!-- Arrow 3: x=438 to 478, center=458 -->
-  <line x1="440" y1="75" x2="473" y2="75" stroke="#d1d5db" stroke-width="1.5"/>
-  <polygon points="473,70 483,75 473,80" fill="#d1d5db"/>
-  <text x="458" y="63" font-size="10" fill="#9ca3af" text-anchor="middle" letter-spacing="0.06em">VERIFIED</text>
+  <!-- Arrow 3 -->
+  <line x1="444" y1="55" x2="476" y2="55" stroke="#d1d5db" stroke-width="1.5"/>
+  <polygon points="474,50 484,55 474,60" fill="#d1d5db"/>
 
-  <!-- Node 4: uat -->
-  <!-- box: x=485, width=96, center=533 -->
-  <rect x="485" y="30" width="96" height="90" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
-  <text x="533" y="68" font-size="26" text-anchor="middle">🔬</text>
-  <text x="533" y="98" font-size="13" fill="#9a3412" font-weight="600" text-anchor="middle">uat</text>
+  <!-- Node 4: uat Stage -->
+  <rect x="486" y="10" width="118" height="90" rx="8" fill="#fff7ed" stroke="#fed7aa" stroke-width="1.5"/>
+  <text x="545" y="48" font-size="26" text-anchor="middle">🔬</text>
+  <text x="545" y="79" font-size="13" fill="#9a3412" font-weight="600" text-anchor="middle">uat</text>
 
-  <!-- Arrow 4: x=581 to 621, center=601 -->
-  <line x1="583" y1="75" x2="616" y2="75" stroke="#d1d5db" stroke-width="1.5"/>
-  <polygon points="616,70 626,75 616,80" fill="#d1d5db"/>
-  <text x="601" y="63" font-size="10" fill="#9ca3af" text-anchor="middle" letter-spacing="0.06em">APPROVED</text>
+  <!-- Arrow 4 -->
+  <line x1="606" y1="55" x2="638" y2="55" stroke="#d1d5db" stroke-width="1.5"/>
+  <polygon points="636,50 646,55 636,60" fill="#d1d5db"/>
 
-  <!-- Node 5: prod -->
-  <!-- box: x=628, width=132, center=694 -->
-  <rect x="628" y="30" width="132" height="90" rx="8" fill="#fff1f2" stroke="#fecdd3" stroke-width="1.5"/>
-  <text x="694" y="68" font-size="26" text-anchor="middle">🚀</text>
-  <text x="694" y="98" font-size="13" fill="#9f1239" font-weight="600" text-anchor="middle">prod</text>
+  <!-- Node 5: prod Stage -->
+  <rect x="648" y="10" width="112" height="90" rx="8" fill="#fff1f2" stroke="#fecdd3" stroke-width="1.5"/>
+  <text x="704" y="48" font-size="26" text-anchor="middle">🚀</text>
+  <text x="704" y="79" font-size="13" fill="#9f1239" font-weight="600" text-anchor="middle">prod</text>
+
+  <!-- ── Row 2: concept labels beneath each relevant node ── -->
+
+  <!-- Warehouse label -->
+  <rect x="162" y="118" width="118" height="90" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="162" y="118" width="118" height="4" rx="4" fill="#3578e5"/>
+  <text x="221" y="143" font-size="10" fill="#3578e5" font-weight="700" letter-spacing="0.08em" text-anchor="middle">WAREHOUSE</text>
+  <text x="221" y="161" font-size="12" fill="#374151" text-anchor="middle">Monitors repos,</text>
+  <text x="221" y="177" font-size="12" fill="#374151" text-anchor="middle">packages Freight</text>
+
+  <!-- Stages label (spans test → prod) -->
+  <rect x="324" y="118" width="436" height="90" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="324" y="118" width="436" height="4" rx="4" fill="#3578e5"/>
+  <text x="542" y="143" font-size="10" fill="#3578e5" font-weight="700" letter-spacing="0.08em" text-anchor="middle">STAGES</text>
+  <text x="542" y="165" font-size="12" fill="#374151" text-anchor="middle">Each stage verifies Freight before it becomes available downstream.</text>
+
+  <!-- Freight label (spans warehouse → prod, shown as a pill under the arrows) -->
+  <rect x="0" y="118" width="118" height="90" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <rect x="0" y="118" width="118" height="4" rx="4" fill="#3578e5"/>
+  <text x="59" y="143" font-size="10" fill="#3578e5" font-weight="700" letter-spacing="0.08em" text-anchor="middle">REGISTRY</text>
+  <text x="59" y="161" font-size="12" fill="#374151" text-anchor="middle">Watched by the</text>
+  <text x="59" y="177" font-size="12" fill="#374151" text-anchor="middle">Warehouse</text>
 
 </svg>
