@@ -24,6 +24,43 @@ followed by a [`helm-template` step](helm-template.md).
 |------|------|-------------|
 | `commitMessage` | `string` | A description of the change(s) applied by this step. Typically, a subsequent [`git-commit` step](git-commit.md) will reference this output and aggregate this commit message fragment with others like it to build a comprehensive commit message that describes all changes. |
 
+
+## Writing Keys
+
+1. **Nested keys:**
+```yaml
+image:
+  tag: v1.0.0
+```
+Update key: `image.tag`
+
+2. **Keys with literal dots:**
+
+```yaml
+example.com/version: v1.0.0
+```
+Update key: `example\.com/version`
+
+3. **Sequences/arrays:**
+```yaml
+containers:
+  - name: my-app
+    image: my-app:v1.0
+```
+Update key: `containers.0.image`
+
+4. **Combination of literal dots and nested maps:**
+```yaml
+configs:
+  example.com/feature:
+    enabled: false
+```
+
+:::note
+Use `\\` to represent a literal backslash in keys. For example, `path\\to.file`
+results in the path `["path\to", "file"]`.
+:::
+
 ## Examples
 
 ### Common Usage
