@@ -143,7 +143,7 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to check for owner reference on namespace %q: %w", ns.Name, err)
 	}
 	if hasProjectOwnerRef {
-		logger.Info("Namespace has project owner reference; removing")
+		logger.Debug("Namespace has project owner reference; removing")
 		err := controllerutil.RemoveOwnerReference(
 			project,
 			ns,
