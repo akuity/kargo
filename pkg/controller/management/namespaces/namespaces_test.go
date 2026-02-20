@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -16,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 )
 
 func TestNewReconciler(t *testing.T) {
@@ -24,9 +26,29 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.deleteProjectFn)
 	require.NotNil(t, r.removeFinalizerFn)
+	require.NotNil(t, r.patchOwnerReferencesFn)
 }
 
 func TestReconcile(t *testing.T) {
+	const testProjectName = "fake-project"
+	testScheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(testScheme))
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(testScheme))
+	kClient := fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+		&corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: testProjectName,
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: kargoapi.GroupVersion.String(),
+						Kind:       "Project",
+						Name:       testProjectName,
+					},
+				},
+			},
+		},
+	).Build()
+
 	testCases := []struct {
 		name       string
 		reconciler *reconciler
@@ -35,6 +57,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "namespace not not found",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -58,6 +81,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "error getting namespace",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -72,8 +96,113 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			name: "ensure project ownership relationship is removed if present",
+			reconciler: &reconciler{
+				client: kClient,
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					o client.Object,
+					_ ...client.GetOption,
+				) error {
+					// return the Namespace with a Project owner reference to test that the reconciler removes it.
+					ns := o.(*corev1.Namespace) // nolint: forcetypeassert
+					ns.Name = testProjectName
+					ns.OwnerReferences = []metav1.OwnerReference{
+						{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Project",
+							Name:       testProjectName,
+						},
+					}
+					return nil
+				},
+				deleteProjectFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				patchOwnerReferencesFn: api.PatchOwnerReferences,
+			},
+			assertions: func(t *testing.T, result ctrl.Result, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					ctrl.Result{
+						RequeueAfter: 0,
+					},
+					result,
+				)
+				ns := new(corev1.Namespace)
+				name := types.NamespacedName{Name: testProjectName}
+				require.NoError(t, kClient.Get(t.Context(), name, ns))
+				require.Len(t, ns.OwnerReferences, 0)
+				require.Empty(t, ns.OwnerReferences)
+			},
+		},
+		{
+			name: "error patching ownership references",
+			reconciler: &reconciler{
+				client: kClient,
+				getNamespaceFn: func(
+					_ context.Context,
+					_ types.NamespacedName,
+					o client.Object,
+					_ ...client.GetOption,
+				) error {
+					// return the Namespace with a Project owner reference.
+					ns := o.(*corev1.Namespace) // nolint: forcetypeassert
+					ns.Name = testProjectName
+					ns.OwnerReferences = []metav1.OwnerReference{
+						{
+							APIVersion: kargoapi.GroupVersion.String(),
+							Kind:       "Project",
+							Name:       testProjectName,
+						},
+					}
+					return nil
+				},
+				deleteProjectFn: func(
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
+				) error {
+					return nil
+				},
+				removeFinalizerFn: func(
+					context.Context,
+					client.Client,
+					client.Object,
+				) error {
+					return nil
+				},
+				patchOwnerReferencesFn: func(
+					context.Context,
+					client.Client,
+					client.Object) error {
+					return errors.New("something went wrong")
+				},
+			},
+			assertions: func(t *testing.T, _ ctrl.Result, err error) {
+				require.Error(t, err)
+				require.ErrorContains(t, err,
+					"failed to patch owner references for namespace \"fake-project\": something went wrong",
+				)
+			},
+		},
+		{
 			name: "namespace is not being deleted",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					context.Context,
 					types.NamespacedName,
@@ -99,6 +228,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "namespace does not need finalizing",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -124,6 +254,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "project not found",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -164,6 +295,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "error deleting project",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -191,6 +323,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "error removing finalizer",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -225,6 +358,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name: "success",
 			reconciler: &reconciler{
+				client: kClient,
 				getNamespaceFn: func(
 					_ context.Context,
 					_ types.NamespacedName,
@@ -265,7 +399,7 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			res, err := testCase.reconciler.Reconcile(context.Background(), ctrl.Request{})
+			res, err := testCase.reconciler.Reconcile(t.Context(), ctrl.Request{})
 			testCase.assertions(t, res, err)
 		})
 	}
