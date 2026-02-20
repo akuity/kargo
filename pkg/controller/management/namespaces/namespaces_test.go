@@ -116,16 +116,16 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 				deleteProjectFn: func(
-					_ context.Context,
-					_ client.Object,
-					_ ...client.DeleteOption,
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
 				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
-					_ context.Context,
-					_ client.Client,
-					_ client.Object,
+					context.Context,
+					client.Client,
+					client.Object,
 				) error {
 					return nil
 				},
@@ -170,23 +170,23 @@ func TestReconcile(t *testing.T) {
 					return nil
 				},
 				deleteProjectFn: func(
-					_ context.Context,
-					_ client.Object,
-					_ ...client.DeleteOption,
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
 				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
-					_ context.Context,
-					_ client.Client,
-					_ client.Object,
+					context.Context,
+					client.Client,
+					client.Object,
 				) error {
 					return nil
 				},
 				patchOwnerReferencesFn: func(
-					_ context.Context,
-					_ client.Client,
-					_ client.Object) error {
+					context.Context,
+					client.Client,
+					client.Object) error {
 					return errors.New("something went wrong")
 				},
 			},
@@ -201,10 +201,10 @@ func TestReconcile(t *testing.T) {
 			name: "namespace is not being deleted",
 			reconciler: &reconciler{
 				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					_ client.Object,
-					_ ...client.GetOption,
+					context.Context,
+					types.NamespacedName,
+					client.Object,
+					...client.GetOption,
 				) error {
 					// The empty ns object that gets passed in should already not have
 					// a deletion timestamp set.
