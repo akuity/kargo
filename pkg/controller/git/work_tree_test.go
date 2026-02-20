@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -93,9 +95,7 @@ func TestWorkTree(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		// "main" is the default branch name for a new repository unless
-		// you configure it otherwise.
-		&AddWorkTreeOptions{Ref: "main"},
+		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
 	)
 	require.NoError(t, err)
 	defer workTree.Close()
@@ -177,4 +177,20 @@ func Test_parseTagMetadataLine(t *testing.T) {
 func mustParseTime(s string) time.Time {
 	t, _ := time.Parse("2006-01-02 15:04:05 -0700", s)
 	return t
+}
+
+// this is a bit of a hack to get the default branch name of the repository,
+// which is necessary because it can differ based on git version and user configuration.
+// Git 2.28+ allows configuring the default branch name via the init.defaultBranch config,
+// and gitkit doesn't appear to provide a way to specify the initial branch name when initializing a repository,
+// so we have to query git directly here.
+func defaultInitBranch(t *testing.T) string {
+	t.Helper()
+	cmd := exec.Command("git", "config", "init.defaultBranch")
+	// The repository is initialized in a temporary directory, so we can use that
+	// as the working directory for this command to ensure we get the default branch name for the repository we're testing with.
+	cmd.Dir = t.TempDir()
+	out, err := cmd.Output()
+	require.NoError(t, err, "failed to get default branch from git config")
+	return strings.TrimSpace(string(out))
 }

@@ -111,9 +111,8 @@ func TestBareRepo(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		// "main" is the default branch name for a new repository unless
-		// you configure it otherwise.
-		&AddWorkTreeOptions{Ref: "main"},
+
+		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
 	)
 
 	require.NoError(t, err)
