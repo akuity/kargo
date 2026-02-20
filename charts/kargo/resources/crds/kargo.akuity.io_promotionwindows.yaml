@@ -1,0 +1,82 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.19.0
+  name: promotionwindows.kargo.akuity.io
+spec:
+  group: kargo.akuity.io
+  names:
+    kind: PromotionWindow
+    listKind: PromotionWindowList
+    plural: promotionwindows
+    shortNames:
+    - promotionwindow
+    - promotionwindows
+    singular: promotionwindow
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.timeZone
+      name: TimeZone
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: |-
+              Spec describes the composition of an AutoPromotionWindow, including the
+              recurring time window and time zone.
+            properties:
+              duration:
+                description: |-
+                  Duration is the length of time that the window lasts after the start
+                  time defined by the Schedule.
+                type: string
+              kind:
+                description: |-
+                  Kind is either "deny" or "allow", indicating whether the time window
+                  represents a period during which promotions are denied or allowed.
+                enum:
+                - deny
+                - allow
+                type: string
+              schedule:
+                description: |-
+                  Schedule describes a recurring time window.
+                  Example: "0 0 * * 1-5" means every weekday at midnight.
+                type: string
+              timeZone:
+                description: |-
+                  TimeZone is the IANA time zone name that applies to the time window.
+                  If not specified, UTC is assumed.
+                type: string
+            required:
+            - duration
+            - schedule
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources: {}

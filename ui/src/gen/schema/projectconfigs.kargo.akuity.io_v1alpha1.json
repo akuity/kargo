@@ -25,6 +25,30 @@
                 "description": "AutoPromotionEnabled indicates whether new Freight can automatically be\npromoted into the Stage referenced by the Stage field. Note: There are may\nbe other conditions also required for an auto-promotion to occur. This\nfield defaults to false, but is commonly set to true for Stages that\nsubscribe to Warehouses instead of other, upstream Stages. This allows\nusers to define Stages that are automatically updated as soon as new\nartifacts are detected.",
                 "type": "boolean"
               },
+              "promotionWindows": {
+                "description": "PromotionWindows defines time windows during which automatic promotions\nare allowed to occur. If not specified, automatic promotions can occur at\nany time.",
+                "items": {
+                  "properties": {
+                    "kind": {
+                      "description": "Kind is the kind of the time window",
+                      "enum": [
+                        "PromotionWindow",
+                        "ClusterPromotionWindow"
+                      ],
+                      "type": "string"
+                    },
+                    "name": {
+                      "description": "Name is the name of the time window.",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
               "stage": {
                 "description": "Stage is the name of the Stage to which this policy applies.\n\nDeprecated: Use StageSelector instead.",
                 "pattern": "^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$",
