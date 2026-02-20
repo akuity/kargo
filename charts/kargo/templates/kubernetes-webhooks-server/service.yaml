@@ -12,7 +12,7 @@ spec:
   ports:
   - port: 443
     protocol: TCP
-    targetPort: 9443
+    targetPort: {{ .Values.webhooksServer.port }}
   selector:
     {{- include "kargo.selectorLabels" . | nindent 4 }}
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}

@@ -38,6 +38,8 @@ type kubernetesWebhooksServerOptions struct {
 	QPS        float32
 	Burst      int
 
+	WebhookServerPort int
+
 	MetricsBindAddress string
 	PprofBindAddress   string
 
@@ -80,6 +82,8 @@ func (o *kubernetesWebhooksServerOptions) complete() {
 	o.QPS = types.MustParseFloat32(os.GetEnv("KUBE_API_QPS", "50.0"))
 	o.Burst = types.MustParseInt(os.GetEnv("KUBE_API_BURST", "300"))
 
+	o.WebhookServerPort = types.MustParseInt(os.GetEnv("WEBHOOK_SERVER_PORT", "9443"))
+
 	o.MetricsBindAddress = os.GetEnv("METRICS_BIND_ADDRESS", "0")
 	o.PprofBindAddress = os.GetEnv("PPROF_BIND_ADDRESS", "")
 
@@ -117,7 +121,7 @@ func (o *kubernetesWebhooksServerOptions) run(ctx context.Context) error {
 			Scheme: scheme,
 			WebhookServer: webhook.NewServer(
 				webhook.Options{
-					Port: 9443,
+					Port: o.WebhookServerPort,
 				},
 			),
 			Metrics: server.Options{
