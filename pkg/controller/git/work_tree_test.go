@@ -47,6 +47,11 @@ func TestWorkTree(t *testing.T) {
 			Dir:        t.TempDir(),
 			AutoCreate: true,
 			Auth:       useAuth,
+			Hooks: &gitkit.HookScripts{
+				PreReceive: `#!/bin/sh
+					git checkout -b main || true
+				`,
+			},
 		},
 	)
 	require.NoError(t, service.Setup())
