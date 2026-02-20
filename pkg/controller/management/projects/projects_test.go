@@ -132,9 +132,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 					return nil
 				},
 				deleteNamespaceFn: func(
-					_ context.Context,
-					_ client.Object,
-					_ ...client.DeleteOption,
+					context.Context,
+					client.Object,
+					...client.DeleteOption,
 				) error {
 					return nil
 				},
