@@ -111,9 +111,9 @@ func TestBareRepo(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		// "master" is still the default branch name for a new repository unless
+		// "main" is the default branch name for a new repository unless
 		// you configure it otherwise.
-		&AddWorkTreeOptions{Ref: "master"},
+		&AddWorkTreeOptions{Ref: "main"},
 	)
 
 	require.NoError(t, err)
@@ -397,7 +397,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		workTree, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "master",
+				Ref:    "main",
 				Sparse: []string{"dir1", "dir2"},
 			},
 		)
@@ -422,7 +422,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		workTree, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref: "master",
+				Ref: "main",
 			},
 		)
 		require.NoError(t, err)
@@ -440,7 +440,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "master",
+				Ref:    "main",
 				Sparse: []string{"/absolute/path"},
 			},
 		)
@@ -452,7 +452,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "master",
+				Ref:    "main",
 				Sparse: []string{"../escape"},
 			},
 		)
@@ -464,7 +464,7 @@ func TestBareRepo_SparseCheckout(t *testing.T) {
 		_, err := rep.AddWorkTree(
 			workingTreePath,
 			&AddWorkTreeOptions{
-				Ref:    "master",
+				Ref:    "main",
 				Sparse: []string{"dir*"},
 			},
 		)
@@ -604,7 +604,7 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		&AddWorkTreeOptions{Ref: "master"},
+		&AddWorkTreeOptions{Ref: "main"},
 	)
 	require.NoError(t, err)
 	defer workTree.Close()
