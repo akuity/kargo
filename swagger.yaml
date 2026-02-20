@@ -12,6 +12,13 @@ definitions:
       url:
         type: string
     type: object
+  BestReleasesResponse:
+    properties:
+      releases:
+        items:
+          $ref: '#/definitions/Release'
+        type: array
+    type: object
   Claim:
     properties:
       name:
@@ -230,6 +237,29 @@ definitions:
       skipAuth:
         type: boolean
     type: object
+  Release:
+    properties:
+      cliBinaries:
+        allOf:
+        - $ref: '#/definitions/github_com_akuity_kargo_pkg_releases.CLIBinaries'
+        description: |-
+          CLIBinaries maps OS and architecture combinations to their corresponding
+          download URLs for the kargo CLI binary.
+      current:
+        description: |-
+          Current indicates whether this release matches the minor version of the
+          API server.
+        type: boolean
+      latest:
+        description: Latest indicates whether this release is the latest release.
+        type: boolean
+      version:
+        allOf:
+        - $ref: '#/definitions/semver.Version'
+        description: |-
+          Version is the semver version of the release, parsed from the GitHub tag
+          name.
+    type: object
   ResourceDetails:
     properties:
       resourceName:
@@ -330,12 +360,36 @@ definitions:
         description: Version is a human-friendly version string.
         type: string
     type: object
+  github_com_akuity_kargo_pkg_releases.CLIBinaries:
+    additionalProperties:
+      additionalProperties:
+        type: string
+      type: object
+    type: object
+  semver.Version:
+    type: object
 info:
   contact: {}
   description: REST API for Kargo
   title: Kargo API
   version: v1alpha1
 paths:
+  /v1beta1/kargo-releases/best:
+    get:
+      description: Returns the latest patch release for each minor version of Kargo.
+      operationId: GetBestReleases
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/BestReleasesResponse'
+      security:
+      - BearerAuth: []
+      summary: List latest patch release for each minor version of Kargo
+      tags:
+      - Utility
   /v1beta1/login:
     post:
       description: Authenticate as the admin user if enabled.

@@ -30,6 +30,7 @@ import (
 	"github.com/akuity/kargo/pkg/event"
 	httputil "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/releases"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -46,10 +47,11 @@ var (
 )
 
 type server struct {
-	cfg     config.ServerConfig
-	client  kubernetes.Client
-	rolesDB rbac.RolesDatabase
-	sender  event.Sender
+	cfg        config.ServerConfig
+	client     kubernetes.Client
+	rolesDB    rbac.RolesDatabase
+	sender     event.Sender
+	releaseSvc releases.Service
 
 	// The following behaviors are overridable for testing purposes:
 
@@ -167,12 +169,14 @@ func NewServer(
 	kubeClient kubernetes.Client,
 	rolesDB rbac.RolesDatabase,
 	sender event.Sender,
+	releaseSvc releases.Service,
 ) Server {
 	s := &server{
-		cfg:     cfg,
-		client:  kubeClient,
-		rolesDB: rolesDB,
-		sender:  sender,
+		cfg:        cfg,
+		client:     kubeClient,
+		rolesDB:    rolesDB,
+		sender:     sender,
+		releaseSvc: releaseSvc,
 	}
 
 	s.validateProjectExistsFn = s.validateProjectExists
@@ -198,6 +202,7 @@ func NewServer(
 
 func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	logger := logging.LoggerFromContext(ctx)
+
 	mux := http.NewServeMux()
 
 	opts, err := option.NewHandlerOption(ctx, s.cfg, s.client.InternalClient())
