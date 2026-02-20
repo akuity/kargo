@@ -584,6 +584,9 @@ type PushOptions struct {
 	// be useful when pushing changes to a remote branch that has been updated
 	// in the time since the local branch was last pulled.
 	PullRebase bool
+	// Tag specifies an optional tag to push to the remote repository. Mutually
+	// exclusive with TargetBranch.
+	Tag string
 }
 
 // https://regex101.com/r/f7kTjs/1
@@ -596,13 +599,13 @@ func (w *workTree) Push(opts *PushOptions) error {
 		opts = &PushOptions{}
 	}
 	targetBranch := opts.TargetBranch
-	if targetBranch == "" {
+	if targetBranch == "" && opts.Tag == "" {
 		var err error
 		if targetBranch, err = w.CurrentBranch(); err != nil {
 			return err
 		}
 	}
-	if opts.PullRebase {
+	if opts.PullRebase && targetBranch != "" {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
 			return err
@@ -622,7 +625,13 @@ func (w *workTree) Push(opts *PushOptions) error {
 			}
 		}
 	}
-	args := []string{"push", "origin", fmt.Sprintf("HEAD:%s", targetBranch)}
+	args := []string{"push", "origin"}
+	switch {
+	case opts.Tag != "":
+		args = append(args, "tag", opts.Tag)
+	case opts.TargetBranch != "":
+		args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
+	}
 	if opts.Force {
 		args = append(args, "--force")
 	}

@@ -155,6 +155,13 @@ func (g *gitPushPusher) run(
 		pushOpts.Force = true
 	}
 
+	if cfg.Tag != "" {
+		pushOpts.Tag = cfg.Tag
+		// If we're pushing a tag, we should not attempt to pull/rebase first as
+		// tags are immutable and any existing tag with the same name on the remote
+		// would cause the pull/rebase to fail.
+		pushOpts.PullRebase = false
+	}
 	// Disable pull/rebase when force pushing to allow overwriting remote history
 	if pushOpts.Force {
 		pushOpts.PullRebase = false
