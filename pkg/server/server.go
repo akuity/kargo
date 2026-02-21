@@ -208,6 +208,10 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
 
+	for p, h := range s.cfg.AdditionalHandlers {
+		mux.Handle(p, h)
+	}
+
 	// Add Gin REST router
 	ginRouter := s.setupRESTRouter(ctx)
 	mux.Handle("/v1beta1/", ginRouter)

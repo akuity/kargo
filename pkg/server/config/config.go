@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -36,6 +37,12 @@ type ServerConfig struct {
 	SystemResourcesNamespace    string
 	KargoNamespace              string
 	RestConfig                  *rest.Config
+
+	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
+	// be registered on the server's HTTP mux alongside its own handlers. This
+	// permits downstream consumers to extend the server with additional
+	// endpoints.
+	AdditionalHandlers map[string]http.Handler
 }
 
 func ServerConfigFromEnv() ServerConfig {
