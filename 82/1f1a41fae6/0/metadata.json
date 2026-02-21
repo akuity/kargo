@@ -3,7 +3,7 @@
   "checkpoint_id": "821f1a41fae6",
   "session_id": "5537a41b-1284-489e-85bb-3fb299db8460",
   "strategy": "manual-commit",
-  "created_at": "2026-02-21T02:32:39.294408Z",
+  "created_at": "2026-02-21T02:55:15.757316Z",
   "branch": "issue-5728",
   "checkpoints_count": 1,
   "files_touched": [
@@ -21,12 +21,12 @@
     "api_call_count": 21
   },
   "initial_attribution": {
-    "calculated_at": "2026-02-21T02:32:39.083003Z",
+    "calculated_at": "2026-02-21T02:55:15.548933Z",
     "agent_lines": 0,
-    "human_added": 32,
-    "human_modified": 5,
+    "human_added": 674,
+    "human_modified": 0,
     "human_removed": 0,
-    "total_committed": 32,
+    "total_committed": 674,
     "agent_percentage": 0
   },
   "transcript_path": ".claude/projects/-Users-eron-Projects-kargo/5537a41b-1284-489e-85bb-3fb299db8460.jsonl"
