@@ -634,6 +634,38 @@ func Test_reconciler_deletePromotion(t *testing.T) {
 			},
 		},
 		{
+			name:      "deleted promotion with wrong shard is ignored",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					p.Labels = map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					}
+					controllerutil.AddFinalizer(p, kargoapi.FinalizerName)
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, recorder *fakeevent.EventRecorder,
+				nn types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+
+				var promo kargoapi.Promotion
+				require.NoError(t, r.kargoClient.Get(context.Background(), nn, &promo))
+				// Phase must NOT have been changed to Aborted.
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
+				// Finalizer must still be present.
+				require.True(t, controllerutil.ContainsFinalizer(&promo, kargoapi.FinalizerName))
+				// No events should have been emitted.
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
 			name:      "pending to running adds finalizer",
 			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
 			objects: []client.Object{

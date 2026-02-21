@@ -240,6 +240,11 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	if !r.shardPredicate.IsResponsible(promo) {
+		logger.Debug("ignoring Promotion because it is not assigned to this shard")
+		return ctrl.Result{}, nil
+	}
+
 	if promo.Status.Phase.IsTerminal() {
 		// Clean up any finalizer left on a terminal Promotion (whether deleted or not).
 		return ctrl.Result{}, r.handleCleanup(ctx, promo)
@@ -248,11 +253,6 @@ func (r *reconciler) Reconcile(
 	// Handle premature deletion of a non-terminal Promotion.
 	if !promo.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
-	}
-
-	if !r.shardPredicate.IsResponsible(promo) {
-		logger.Debug("ignoring Promotion because it is not assigned to this shard")
-		return ctrl.Result{}, nil
 	}
 
 	// Find the Freight
