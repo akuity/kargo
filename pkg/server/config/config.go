@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"io/fs"
+	"net/http"
 	"strings"
 	"time"
 
@@ -36,6 +38,17 @@ type ServerConfig struct {
 	SystemResourcesNamespace    string
 	KargoNamespace              string
 	RestConfig                  *rest.Config
+
+	// AdditionalHandlers is a map of path patterns to HTTP handlers that will
+	// be registered on the server's HTTP mux alongside its own handlers. This
+	// permits downstream consumers to extend the server with additional
+	// endpoints.
+	AdditionalHandlers map[string]http.Handler
+
+	// DashboardFS, when set, overrides the embedded UI filesystem used by the
+	// dashboard handler. The filesystem should contain the built UI assets at
+	// its root (i.e., index.html should be at the top level).
+	DashboardFS fs.FS
 }
 
 func ServerConfigFromEnv() ServerConfig {
