@@ -330,11 +330,14 @@ func (r *reconciler) Reconcile(
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
+	// Add finalizer to ensure cleanup of the working directory.
+	// This is outside the phase check so that Promotions that were already
+	// Running before the finalizer was introduced also get one.
+	if _, err = api.EnsureFinalizer(ctx, r.kargoClient, promo); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
+	}
+
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		// Add finalizer first to ensure cleanup of the working directory.
-		if _, err = api.EnsureFinalizer(ctx, r.kargoClient, promo); err != nil {
-			return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
-		}
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
 			status.StartedAt = &metav1.Time{Time: time.Now()}
@@ -733,8 +736,6 @@ func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promot
 
 	logger.Info("aborting deleted Promotion")
 
-	// Set Aborted status so observers (UI, other controllers, logging tools)
-	// see a proper terminal state.
 	newStatus := promo.Status.DeepCopy()
 	now := &metav1.Time{Time: time.Now()}
 
