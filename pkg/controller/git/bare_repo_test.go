@@ -109,10 +109,9 @@ func TestBareRepo(t *testing.T) {
 	})
 
 	workingTreePath := filepath.Join(rep.HomeDir(), "working-tree")
-	initBranch := defaultInitBranch(t)
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		&AddWorkTreeOptions{Ref: initBranch},
+		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
 	)
 
 	require.NoError(t, err)
@@ -532,8 +531,6 @@ func Test_validateSparsePatterns(t *testing.T) {
 }
 
 func TestBareRepo_WithFilter(t *testing.T) {
-	initBranch := defaultInitBranch(t)
-
 	testRepoCreds := RepoCredentials{
 		Username: "fake-username",
 		Password: "fake-password",
@@ -607,7 +604,7 @@ func TestBareRepo_WithFilter(t *testing.T) {
 	workingTreePath := filepath.Join(rep.HomeDir(), "worktree")
 	workTree, err := rep.AddWorkTree(
 		workingTreePath,
-		&AddWorkTreeOptions{Ref: initBranch},
+		&AddWorkTreeOptions{Ref: defaultInitBranch(t)},
 	)
 	require.NoError(t, err)
 	defer workTree.Close()
