@@ -3,7 +3,7 @@
   "checkpoint_id": "27a4e7582a10",
   "strategy": "manual-commit",
   "branch": "issue-5728",
-  "checkpoints_count": 1,
+  "checkpoints_count": 2,
   "files_touched": [
     "pkg/controller/promotions/promotions.go"
   ],
@@ -14,13 +14,20 @@
       "context": "/27/a4e7582a10/0/context.md",
       "content_hash": "/27/a4e7582a10/0/content_hash.txt",
       "prompt": "/27/a4e7582a10/0/prompt.txt"
+    },
+    {
+      "metadata": "/27/a4e7582a10/1/metadata.json",
+      "transcript": "/27/a4e7582a10/1/full.jsonl",
+      "context": "/27/a4e7582a10/1/context.md",
+      "content_hash": "/27/a4e7582a10/1/content_hash.txt",
+      "prompt": "/27/a4e7582a10/1/prompt.txt"
     }
   ],
   "token_usage": {
-    "input_tokens": 33,
-    "cache_creation_tokens": 43063,
-    "cache_read_tokens": 940917,
-    "output_tokens": 270,
-    "api_call_count": 21
+    "input_tokens": 2789,
+    "cache_creation_tokens": 564689,
+    "cache_read_tokens": 16415836,
+    "output_tokens": 2112,
+    "api_call_count": 187
   }
 }
