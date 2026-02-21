@@ -241,14 +241,11 @@ func (r *reconciler) Reconcile(
 	}
 
 	if promo.Status.Phase.IsTerminal() {
-		// Clean up any finalizer left on a terminal Promotion.
-		// This covers the crash window between terminal status patch
-		// and finalizer removal, and also handles deletion of a
-		// Promotion that already reached a terminal phase.
+		// Clean up any finalizer left on a terminal Promotion (whether deleted or not).
 		return ctrl.Result{}, r.handleCleanup(ctx, promo)
 	}
 
-	// Handle deletion of a non-terminal Promotion.
+	// Handle premature deletion of a non-terminal Promotion.
 	if !promo.DeletionTimestamp.IsZero() {
 		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
 	}
@@ -335,9 +332,6 @@ func (r *reconciler) Reconcile(
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		// Add finalizer first to ensure cleanup of the working directory.
-		// This must happen before transitioning to Running to prevent a
-		// race where the Promotion is deleted after the phase is set but
-		// before the finalizer is added.
 		if _, err = api.EnsureFinalizer(ctx, r.kargoClient, promo); err != nil {
 			return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
 		}
