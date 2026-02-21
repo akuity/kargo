@@ -1,0 +1,26 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "27a4e7582a10",
+  "strategy": "manual-commit",
+  "branch": "issue-5728",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "pkg/controller/promotions/promotions.go"
+  ],
+  "sessions": [
+    {
+      "metadata": "/27/a4e7582a10/0/metadata.json",
+      "transcript": "/27/a4e7582a10/0/full.jsonl",
+      "context": "/27/a4e7582a10/0/context.md",
+      "content_hash": "/27/a4e7582a10/0/content_hash.txt",
+      "prompt": "/27/a4e7582a10/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 33,
+    "cache_creation_tokens": 43063,
+    "cache_read_tokens": 940917,
+    "output_tokens": 270,
+    "api_call_count": 21
+  }
+}

@@ -1,0 +1,25 @@
+Study the promotion controller implementation; the watches, the finalizer lifecycle, the CRUD operations (SSA?).  Also, the associated tests.
+
+---
+
+write the report to /Users/eron/Projects/kargo/docs/design/
+
+---
+
+what is aharding?
+
+---
+
+[Request interrupted by user]
+
+---
+
+what is sharding?
+
+---
+
+add a section
+
+---
+
+remove the example deployment (too much detail)
