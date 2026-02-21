@@ -15,6 +15,7 @@ import (
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
@@ -30,7 +31,6 @@ import (
 	"github.com/akuity/kargo/pkg/kubeclient"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
-	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -88,6 +88,13 @@ type reconciler struct {
 		*kargoapi.Promotion,
 		*kargoapi.Freight,
 	) error
+
+	deletePromotionFn func(
+		context.Context,
+		*kargoapi.Promotion,
+	) error
+
+	cleanupWorkDirFn func(ctx context.Context, promoUID types.UID)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -129,7 +136,6 @@ func SetupReconcilerWithManager(
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		}).
-		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
@@ -205,6 +211,8 @@ func newReconciler(
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
+	r.deletePromotionFn = r.deletePromotion
+	r.cleanupWorkDirFn = r.cleanupWorkDir
 	return r
 }
 
@@ -226,15 +234,25 @@ func (r *reconciler) Reconcile(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if promo == nil || promo.Status.Phase.IsTerminal() {
-		// Ignore if not found or already finished. Promo might be nil if the
-		// Promotion was deleted after the current reconciliation request was issued.
+	if promo == nil {
+		// Promo might be nil if the Promotion was deleted after the current
+		// reconciliation request was issued.
 		return ctrl.Result{}, nil
 	}
 
 	if !r.shardPredicate.IsResponsible(promo) {
 		logger.Debug("ignoring Promotion because it is not assigned to this shard")
 		return ctrl.Result{}, nil
+	}
+
+	if promo.Status.Phase.IsTerminal() {
+		// Clean up any finalizer left on a terminal Promotion (whether deleted or not).
+		return ctrl.Result{}, r.handleCleanup(ctx, promo)
+	}
+
+	// Handle premature deletion of a non-terminal Promotion.
+	if !promo.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
 	}
 
 	// Find the Freight
@@ -312,6 +330,13 @@ func (r *reconciler) Reconcile(
 
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
+	// Add finalizer to ensure cleanup of the working directory.
+	// This is outside the phase check so that Promotions that were already
+	// Running before the finalizer was introduced also get one.
+	if _, err = api.EnsureFinalizer(ctx, r.kargoClient, promo); err != nil {
+		return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
+	}
+
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
@@ -392,6 +417,13 @@ func (r *reconciler) Reconcile(
 				status.Phase = kargoapi.PromotionPhaseErrored
 				status.Message = fmt.Sprintf("error updating status: %v", err)
 			})
+		}
+	}
+
+	// Clean up working directory and remove finalizer on terminal state.
+	if newStatus.Phase.IsTerminal() {
+		if clearErr := r.handleCleanup(ctx, promo); clearErr != nil {
+			return ctrl.Result{}, clearErr
 		}
 	}
 
@@ -544,14 +576,6 @@ func (r *reconciler) promote(
 	} else if !os.IsExist(err) {
 		return nil, nil, fmt.Errorf("error creating working directory: %w", err)
 	}
-	defer func() {
-		if workingPromo.Status.Phase.IsTerminal() {
-			if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
-				logger.Error(err, "could not remove working directory")
-			}
-		}
-	}()
-
 	res, err := r.promoEngine.Promote(ctx, promoCtx, steps)
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
@@ -687,12 +711,96 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
+	// Clean up working directory and remove finalizer.
+	if err := r.handleCleanup(ctx, promo); err != nil {
+		return err
+	}
+
 	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
 
 	if err := r.sender.Send(ctx, evt); err != nil {
 		logger.Error(err, "error sending Promotion aborted event")
 	}
 
+	return nil
+}
+
+// deletePromotion aborts the given Promotion with a message indicating
+// that the object was deleted. It assumes that the Promotion is NOT in a terminal phase.
+func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promotion) error {
+	logger := logging.LoggerFromContext(ctx)
+
+	if !controllerutil.ContainsFinalizer(promo, kargoapi.FinalizerName) {
+		return nil
+	}
+
+	logger.Info("aborting deleted Promotion")
+
+	newStatus := promo.Status.DeepCopy()
+	now := &metav1.Time{Time: time.Now()}
+
+	if api.IsCurrentStepRunning(promo) {
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].Status = kargoapi.PromotionStepStatusAborted
+		newStatus.StepExecutionMetadata[promo.Status.CurrentStep].FinishedAt = now
+	}
+
+	newStatus.Phase = kargoapi.PromotionPhaseAborted
+	newStatus.Message = "Promotion deleted"
+	newStatus.FinishedAt = now
+
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		*status = *newStatus
+	}); err != nil {
+		return err
+	}
+
+	if err := r.handleCleanup(ctx, promo); err != nil {
+		return err
+	}
+
+	// Best-effort Freight fetch for the event. Tolerate not-found (Freight
+	// may also have been deleted).
+	freight, _ := api.GetFreight(ctx, r.kargoClient, types.NamespacedName{
+		Namespace: promo.Namespace,
+		Name:      promo.Spec.Freight,
+	})
+
+	actor := api.FormatEventControllerActor(r.cfg.Name())
+	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
+	if err := r.sender.Send(ctx, evt); err != nil {
+		logger.Error(err, "error sending Promotion aborted event")
+	}
+
+	return nil
+}
+
+// handleCleanup cleans up the working directory for a Promotion and removes
+// the finalizer. It is a no-op if the finalizer has already been removed.
+func (r *reconciler) handleCleanup(ctx context.Context, promo *kargoapi.Promotion) error {
+	if !controllerutil.ContainsFinalizer(promo, kargoapi.FinalizerName) {
+		return nil
+	}
+	r.cleanupWorkDirFn(ctx, promo.UID)
+	return r.removeFinalizer(ctx, promo)
+}
+
+// cleanupWorkDir removes the temporary working directory for a Promotion.
+// This is safe to call even if the directory does not exist.
+func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
+	workDir := filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+	if err := os.RemoveAll(workDir); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "could not remove working directory", "path", workDir)
+	}
+}
+
+func (r *reconciler) removeFinalizer(ctx context.Context, promo *kargoapi.Promotion) error {
+	if err := api.RemoveFinalizer(ctx, r.kargoClient, promo); err != nil {
+		return fmt.Errorf(
+			"error removing finalizer from source Promotion %q in namespace %q: %w",
+			promo.Name, promo.Namespace, err,
+		)
+	}
+	logging.LoggerFromContext(ctx).Debug("removed finalizer from source Promotion")
 	return nil
 }
 

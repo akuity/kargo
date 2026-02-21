@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,6 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
@@ -40,6 +42,8 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
+	require.NotNil(t, r.deletePromotionFn)
+	require.NotNil(t, r.cleanupWorkDirFn)
 }
 
 func newFakeReconciler(
@@ -522,6 +526,9 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			r := &reconciler{
 				kargoClient: c,
 				sender:      k8sevent.NewEventSender(recorder),
+				cleanupWorkDirFn: func(context.Context, types.UID) {
+					// no-op for tests
+				},
 			}
 
 			req := tt.req
@@ -529,6 +536,238 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
+}
+
+func Test_reconciler_deletePromotion(t *testing.T) {
+	testCases := []struct {
+		name       string
+		objects    []client.Object
+		reconcile  types.NamespacedName
+		assertions func(
+			*testing.T, *reconciler, *fakeevent.EventRecorder,
+			types.NamespacedName, ctrl.Result, error,
+		)
+	}{
+		{
+			name:      "deleted promotion with finalizer sets aborted status and emits event",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					controllerutil.AddFinalizer(p, kargoapi.FinalizerName)
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					// Fake client requires a finalizer to accept a non-zero DeletionTimestamp.
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, recorder *fakeevent.EventRecorder,
+				nn types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+
+				// Once the finalizer is removed from a deleted object, the
+				// fake client completes the deletion — the object is gone.
+				var promo kargoapi.Promotion
+				getErr := r.kargoClient.Get(context.Background(), nn, &promo)
+				require.True(t, apierrors.IsNotFound(getErr))
+
+				// Verify a PromotionAborted event was emitted.
+				require.Len(t, recorder.Events, 1)
+				evt := <-recorder.Events
+				require.Equal(t, string(kargoapi.EventTypePromotionAborted), evt.Reason)
+			},
+		},
+		{
+			name:      "deleted promotion without finalizer is a no-op",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "deleted-promo"},
+			objects:   []client.Object{},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				_ types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "terminal promotion with stale finalizer clears it",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now)
+					controllerutil.AddFinalizer(p, kargoapi.FinalizerName)
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, _ *fakeevent.EventRecorder,
+				nn types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+
+				var promo kargoapi.Promotion
+				require.NoError(t, r.kargoClient.Get(context.Background(), nn, &promo))
+				require.False(t, controllerutil.ContainsFinalizer(&promo, kargoapi.FinalizerName))
+			},
+		},
+		{
+			name:      "terminal promotion without finalizer is a no-op",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, _ *fakeevent.EventRecorder,
+				nn types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+
+				var promo kargoapi.Promotion
+				require.NoError(t, r.kargoClient.Get(context.Background(), nn, &promo))
+				require.False(t, controllerutil.ContainsFinalizer(&promo, kargoapi.FinalizerName))
+			},
+		},
+		{
+			name:      "deleted promotion with wrong shard is ignored",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					p.Labels = map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					}
+					controllerutil.AddFinalizer(p, kargoapi.FinalizerName)
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, recorder *fakeevent.EventRecorder,
+				nn types.NamespacedName, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+
+				var promo kargoapi.Promotion
+				require.NoError(t, r.kargoClient.Get(context.Background(), nn, &promo))
+				// Phase must NOT have been changed to Aborted.
+				require.Equal(t, kargoapi.PromotionPhaseRunning, promo.Status.Phase)
+				// Finalizer must still be present.
+				require.True(t, controllerutil.ContainsFinalizer(&promo, kargoapi.FinalizerName))
+				// No events should have been emitted.
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "pending to running adds finalizer",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-ns",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhasePending, now),
+			},
+			assertions: func(
+				t *testing.T, r *reconciler, _ *fakeevent.EventRecorder,
+				nn types.NamespacedName, _ ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+
+				var promo kargoapi.Promotion
+				require.NoError(t, r.kargoClient.Get(context.Background(), nn, &promo))
+				// Promotion should have reached terminal (Succeeded from mock) and
+				// the finalizer should have been cleared.
+				require.Equal(t, kargoapi.PromotionPhaseSucceeded, promo.Status.Phase)
+				require.False(t, controllerutil.ContainsFinalizer(&promo, kargoapi.FinalizerName))
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			recorder := fakeevent.NewEventRecorder(1)
+			r := newFakeReconciler(t, recorder, tc.objects...)
+
+			cleanupCalled := false
+			r.cleanupWorkDirFn = func(context.Context, types.UID) {
+				cleanupCalled = true
+			}
+
+			r.promoteFn = func(
+				context.Context,
+				kargoapi.Promotion,
+				*kargoapi.Stage,
+				*kargoapi.Freight,
+			) (*kargoapi.PromotionStatus, *time.Duration, error) {
+				return &kargoapi.PromotionStatus{
+					Phase: kargoapi.PromotionPhaseSucceeded,
+				}, nil, nil
+			}
+
+			result, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: tc.reconcile})
+			tc.assertions(t, r, recorder, tc.reconcile, result, err)
+			_ = cleanupCalled // Available for assertions if needed
+		})
+	}
+}
+
+func Test_reconciler_terminatePromotion_clearsFinalizer(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	promo := func() *kargoapi.Promotion {
+		p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+		controllerutil.AddFinalizer(p, kargoapi.FinalizerName)
+		return p
+	}()
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(promo).
+		WithStatusSubresource(&kargoapi.Promotion{}).
+		Build()
+	recorder := fakeevent.NewEventRecorder(1)
+
+	cleanupCalled := false
+	r := &reconciler{
+		kargoClient: c,
+		sender:      k8sevent.NewEventSender(recorder),
+		cleanupWorkDirFn: func(context.Context, types.UID) {
+			cleanupCalled = true
+		},
+	}
+
+	req := kargoapi.AbortPromotionRequest{Action: kargoapi.AbortActionTerminate}
+	err := r.terminatePromotion(context.Background(), &req, promo, nil)
+	require.NoError(t, err)
+
+	// Verify cleanup was called and finalizer was removed.
+	require.True(t, cleanupCalled)
+	require.False(t, controllerutil.ContainsFinalizer(promo, kargoapi.FinalizerName))
+
+	// Verify on the server too.
+	var updated kargoapi.Promotion
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+		Namespace: "fake-ns",
+		Name:      "fake-promo",
+	}, &updated))
+	require.False(t, controllerutil.ContainsFinalizer(&updated, kargoapi.FinalizerName))
+	require.Equal(t, kargoapi.PromotionPhaseAborted, updated.Status.Phase)
 }
 
 func Test_calculateRequeueInterval(t *testing.T) {
