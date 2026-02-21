@@ -1,0 +1,33 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "74eaa09fb10a",
+  "session_id": "5537a41b-1284-489e-85bb-3fb299db8460",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-21T00:43:18.900066Z",
+  "branch": "issue-5728",
+  "checkpoints_count": 3,
+  "files_touched": [
+    "pkg/controller/promotions/promotions.go",
+    "pkg/controller/promotions/promotions_test.go"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "8cc91fd4f39b",
+  "transcript_identifier_at_start": "9f6176cf-c004-4c78-885e-7725c90dee11",
+  "token_usage": {
+    "input_tokens": 33,
+    "cache_creation_tokens": 43063,
+    "cache_read_tokens": 940917,
+    "output_tokens": 270,
+    "api_call_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-21T00:43:18.690265Z",
+    "agent_lines": 329,
+    "human_added": 0,
+    "human_modified": 2,
+    "human_removed": 1,
+    "total_committed": 331,
+    "agent_percentage": 99.39577039274926
+  },
+  "transcript_path": ".claude/projects/-Users-eron-Projects-kargo/5537a41b-1284-489e-85bb-3fb299db8460.jsonl"
+}
