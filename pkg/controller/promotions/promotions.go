@@ -240,16 +240,17 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Handle deletion of the Promotion.
-	if !promo.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
-	}
-
 	if promo.Status.Phase.IsTerminal() {
 		// Clean up any finalizer left on a terminal Promotion.
 		// This covers the crash window between terminal status patch
-		// and finalizer removal.
+		// and finalizer removal, and also handles deletion of a
+		// Promotion that already reached a terminal phase.
 		return ctrl.Result{}, r.handleCleanup(ctx, promo)
+	}
+
+	// Handle deletion of a non-terminal Promotion.
+	if !promo.DeletionTimestamp.IsZero() {
+		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
 	}
 
 	if !r.shardPredicate.IsResponsible(promo) {
@@ -727,37 +728,8 @@ func (r *reconciler) terminatePromotion(
 	return nil
 }
 
-// handleCleanup cleans up the working directory for a Promotion and removes
-// the finalizer. Both operations are individually idempotent, so this is safe
-// to call unconditionally.
-func (r *reconciler) handleCleanup(ctx context.Context, promo *kargoapi.Promotion) error {
-	r.cleanupWorkDirFn(ctx, promo.UID)
-	return r.removeFinalizer(ctx, promo)
-}
-
-// cleanupWorkDir removes the temporary working directory for a Promotion.
-// This is safe to call even if the directory does not exist.
-func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
-	workDir := filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
-	if err := os.RemoveAll(workDir); err != nil {
-		logging.LoggerFromContext(ctx).Error(err, "could not remove working directory", "path", workDir)
-	}
-}
-
-func (r *reconciler) removeFinalizer(ctx context.Context, promo *kargoapi.Promotion) error {
-	if err := api.RemoveFinalizer(ctx, r.kargoClient, promo); err != nil {
-		return fmt.Errorf(
-			"error removing finalizer from source Promotion %q in namespace %q: %w",
-			promo.Name, promo.Namespace, err,
-		)
-	}
-	logging.LoggerFromContext(ctx).Debug("removed finalizer from source Promotion")
-	return nil
-}
-
-// deletePromotion handles deletion of a Promotion by setting a terminal
-// Aborted status, cleaning up the working directory, removing the finalizer,
-// and emitting a PromotionAborted event.
+// deletePromotion aborts the given Promotion with a message indicating
+// that the object was deleted. It assumes that the Promotion is NOT in a terminal phase.
 func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promotion) error {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -765,7 +737,7 @@ func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promot
 		return nil
 	}
 
-	logger.Info("cleaning up deleted Promotion")
+	logger.Info("aborting deleted Promotion")
 
 	// Set Aborted status so observers (UI, other controllers, logging tools)
 	// see a proper terminal state.
@@ -804,6 +776,36 @@ func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promot
 		logger.Error(err, "error sending Promotion aborted event")
 	}
 
+	return nil
+}
+
+// handleCleanup cleans up the working directory for a Promotion and removes
+// the finalizer. It is a no-op if the finalizer has already been removed.
+func (r *reconciler) handleCleanup(ctx context.Context, promo *kargoapi.Promotion) error {
+	if !controllerutil.ContainsFinalizer(promo, kargoapi.FinalizerName) {
+		return nil
+	}
+	r.cleanupWorkDirFn(ctx, promo.UID)
+	return r.removeFinalizer(ctx, promo)
+}
+
+// cleanupWorkDir removes the temporary working directory for a Promotion.
+// This is safe to call even if the directory does not exist.
+func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
+	workDir := filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+	if err := os.RemoveAll(workDir); err != nil {
+		logging.LoggerFromContext(ctx).Error(err, "could not remove working directory", "path", workDir)
+	}
+}
+
+func (r *reconciler) removeFinalizer(ctx context.Context, promo *kargoapi.Promotion) error {
+	if err := api.RemoveFinalizer(ctx, r.kargoClient, promo); err != nil {
+		return fmt.Errorf(
+			"error removing finalizer from source Promotion %q in namespace %q: %w",
+			promo.Name, promo.Namespace, err,
+		)
+	}
+	logging.LoggerFromContext(ctx).Debug("removed finalizer from source Promotion")
 	return nil
 }
 
