@@ -1,0 +1,387 @@
+Let's fix: https://github.com/akuity/kargo/issues/5728
+
+---
+
+(5) adds th finalizer after transitioning, and that could be a race.  also, would PatchStatus update the promo object with the latest resourceVersion?
+
+---
+
+commit
+
+---
+
+[Request interrupted by user]
+
+---
+
+please review the promotion controller  study to double-check your plan.  Pay attention to the impact of writing to the finalizer field (will it cause a reconciliation loop? are we at risk of writing to an outdated resourceVersion and seing conflicts?).
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+please review for relevant insights: @docs/design/promotion-controller.md 
+
+Let's be cognizant of possible race conditions w.r.t. to the cache, and of optimistic concurrency w.r.t. resourceVersion.
+
+---
+
+[Request interrupted by user]
+
+---
+
+In the crash window case, should cleanupWorkDirFn be called on restart?
+
+Consider making a function for the cleanupWorkDirFn..RemoveFinalizer block.
+
+---
+
+i was thinking of a private cleanup func that would call always call cleanupWorkDirFn (idempotent?) and then remove the finalizer.
+
+---
+
+proced
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. **Initial Request**: User asked to fix GitHub issue #5728 about orphaned temporary directories when a running promotion is deleted in the Kargo project.
+
+2. **Issue Investigation**: Fetched issue details - promotions don't have finalizers, so when a Running promotion is deleted, its temp working directory (`/tmp/promotion-<UID>`) is never cleaned up. Solution: add finalizers when entering Running state, clear them after cleanup on terminal state or deletion.
+
+3. **Exploration Phase**: Explored the codebase extensively:
+   - Promotion reconciler in `pkg/controller/promotions/promotions.go`
+   - Existing finalizer pattern in Stages controller (`pkg/controller/stages/regular_stages.go`)
+   - Finalizer utilities in `pkg/api/finalizers.go`
+   - Predicate filters in `pkg/kargo/kargo.go` and `pkg/predicate/ignore_delete.go`
+   - Test patterns in `pkg/controller/promotions/promotions_test.go`
+
+4. **Planning Phase**: Created a detailed plan at `/Users/eron/.claude/plans/peaceful-leaping-hinton.md`
+
+5. **User Feedback #1**: User pointed out that step 5 adds the finalizer AFTER transitioning to Running, creating a race condition. Also asked about PatchStatus updating resourceVersion. I confirmed both concerns and updated the plan to add finalizer BEFORE Running.
+
+6. **User opened design doc**: User asked me to review `docs/design/promotion-controller.md` for cache and resourceVersion concerns.
+
+7. **Deep Analysis of Concurrency**: 
+   - Confirmed no reconciliation loop from finalizer patches (generation doesn't change)
+   - Confirmed delete events pass through predicate filter (all predicates default to true for Delete)
+   - Confirmed no resourceVersion conflict (merge patches don't use optimistic concurrency)
+   - Discovered crash window issue: terminal status patch succeeds but finalizer removal fails → stale finalizer on terminal promo. Fixed by adding `RemoveFinalizer` in the terminal early-return path.
+
+8. **User Feedback #2**: Asked about calling cleanupWorkDirFn on restart in crash window case. Suggested making a function for the cleanup+RemoveFinalizer block. I refactored to use a single `clearFinalizerFn` overridable field.
+
+9. **User Feedback #3**: Preferred keeping `cleanupWorkDirFn` as the overridable field (for testing filesystem cleanup) and having a private `clearFinalizer` method that composes cleanup + finalizer removal. Both operations are individually idempotent so no guard needed. I updated the plan accordingly.
+
+10. **Implementation**: All 9 steps implemented:
+    - Removed `IgnoreDelete` filter
+    - Added `cleanupWorkDirFn` overridable field and private `clearFinalizer` method
+    - Added `handleDelete` method
+    - Modified `Reconcile()` with deletion handling, terminal finalizer cleanup, finalizer-before-Running
+    - Removed defer cleanup in `promote()`
+    - Added `clearFinalizer` in terminal path and `terminatePromotion()`
+    - Wrote tests
+
+11. **Errors Fixed**:
+    - Unused import `intpredicate` after removing IgnoreDelete
+    - Compilation error for undefined `cleanupWorkDir` method before it was added
+    - Test failure: deleted promo with finalizer - fake client completes deletion when finalizer removed, so Get returns NotFound
+    - Lint issue: unused `result` parameter in test assertion function
+
+Let me now compile all the details into the summary.
+
+Summary:
+1. Primary Request and Intent:
+   The user asked to fix GitHub issue #5728 (https://github.com/akuity/kargo/issues/5728): "bug: temporary promo dirs on controller fs are orphaned if a running promo is deleted." When a Promotion is deleted while in `Running` state, its temporary working directory (`/tmp/promotion-<UID>`) is never cleaned up. The solution is to add Kubernetes finalizers to Promotions as they enter `Running` state, and clear them after cleanup when reaching a terminal state or upon deletion. The user guided the design iteratively, focusing on race conditions, cache staleness, optimistic concurrency, and clean code structure.
+
+2. Key Technical Concepts:
+   - **Kubernetes Finalizers**: Block object deletion until cleanup is performed. Added when entering Running, removed after cleanup.
+   - **JSON Merge Patch (RFC 7386)**: Used by both `PatchStatus` and `patchFinalizers` via `client.RawPatch(MergePatchType)`. No `resourceVersion` in body, no optimistic concurrency, patches applied unconditionally to server state.
+   - **controller-runtime Predicate Filters**: `predicate.Or(GenerationChangedPredicate, RefreshRequested, PromotionAbortRequested)` — finalizer patches don't trigger reconciliation (generation unchanged), but Delete events pass through (all predicates inherit `Funcs.Delete → true`).
+   - **Informer Cache**: `Reconcile()` reads from cache which may be stale. Patches are content-based merge patches so staleness only affects decision-making, not patch correctness.
+   - **Crash Window Recovery**: If controller crashes between terminal status patch and finalizer removal, on restart the informer LIST generates synthetic Create events that pass all predicates, allowing cleanup.
+   - **Idempotent Operations**: `os.RemoveAll` on non-existent path returns nil; `api.RemoveFinalizer` is a no-op when finalizer absent.
+   - **Race Prevention**: Finalizer must be added BEFORE transitioning to Running to prevent deletion in the window between status patch and finalizer addition.
+
+3. Files and Code Sections:
+
+   - **`pkg/controller/promotions/promotions.go`** — Main reconciler, all production changes made here.
+     - Removed `IgnoreDelete` event filter (line 132) and unused `intpredicate` import
+     - Added `cleanupWorkDirFn` field to reconciler struct
+     - Added `cleanupWorkDir`, `clearFinalizer`, `handleDelete` methods
+     - Modified `Reconcile()`: split nil/terminal check, added deletion handling, terminal finalizer safety, finalizer-before-Running
+     - Removed defer cleanup in `promote()`
+     - Added `clearFinalizer` call in terminal path after status patch
+     - Added `clearFinalizer` call in `terminatePromotion()` after abort status patch
+     
+     Key new methods:
+     ```go
+     func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
+         workDir := filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+         if err := os.RemoveAll(workDir); err != nil {
+             logging.LoggerFromContext(ctx).Error(err, "could not remove working directory", "path", workDir)
+         }
+     }
+
+     func (r *reconciler) clearFinalizer(ctx context.Context, promo *kargoapi.Promotion) error {
+         r.cleanupWorkDirFn(ctx, promo.UID)
+         return api.RemoveFinalizer(ctx, r.kargoClient, promo)
+     }
+
+     func (r *reconciler) handleDelete(ctx context.Context, promo *kargoapi.Promotion) error {
+         logging.LoggerFromContext(ctx).Info("cleaning up deleted Promotion")
+         return r.clearFinalizer(ctx, promo)
+     }
+     ```
+     
+     Modified Reconcile() early-return block:
+     ```go
+     if promo == nil {
+         return ctrl.Result{}, nil
+     }
+     if !promo.DeletionTimestamp.IsZero() {
+         return ctrl.Result{}, r.handleDelete(ctx, promo)
+     }
+     if promo.Status.Phase.IsTerminal() {
+         return ctrl.Result{}, r.clearFinalizer(ctx, promo)
+     }
+     ```
+     
+     Finalizer added before Running transition:
+     ```go
+     if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+         if _, err = api.EnsureFinalizer(ctx, r.kargoClient, promo); err != nil {
+             return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
+         }
+         if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+             status.Phase = kargoapi.PromotionPhaseRunning
+             status.StartedAt = &metav1.Time{Time: time.Now()}
+         }); err != nil {
+             return ctrl.Result{}, err
+         }
+         logger.Info("began promotion")
+     }
+     ```
+
+   - **`pkg/controller/promotions/promotions_test.go`** — Tests updated and added.
+     - Added `apierrors` and `controllerutil` imports
+     - Updated `TestNewPromotionReconciler` to verify `cleanupWorkDirFn` is set
+     - Fixed `Test_reconciler_terminatePromotion` to provide `cleanupWorkDirFn` in manually-created reconciler
+     - Added `TestReconcile_Finalizer` with 5 test cases: deleted with finalizer, deleted without finalizer, terminal with stale finalizer, terminal without finalizer, pending-to-running adds finalizer
+     - Added `TestTerminatePromotion_ClearsFinalizer`
+
+   - **`pkg/api/finalizers.go`** — Read only, reused `EnsureFinalizer` and `RemoveFinalizer` utilities.
+   - **`pkg/controller/stages/regular_stages.go`** — Read only, used as reference pattern for `handleDelete` and finalizer lifecycle.
+   - **`pkg/kargo/kargo.go`** — Read only, analyzed predicate behavior for Delete events.
+   - **`pkg/predicate/ignore_delete.go`** — Read only, understood the filter being removed.
+   - **`pkg/kubeclient/patch.go`** — Read only, analyzed `PatchStatus` merge patch behavior.
+   - **`docs/design/promotion-controller.md`** — Read only, comprehensive study document used to verify cache/concurrency analysis.
+   - **`/Users/eron/.claude/plans/peaceful-leaping-hinton.md`** — Plan file, iteratively updated through planning phase.
+
+4. Errors and fixes:
+   - **Unused import after removing IgnoreDelete**: Removed `intpredicate "github.com/akuity/kargo/pkg/predicate"` import.
+   - **Undefined `cleanupWorkDir` method**: Added the method implementations before they were referenced (sequencing issue during incremental edits).
+   - **Test failure: "deleted promotion with finalizer cleans up"**: Fake client completes deletion when the last finalizer is removed from an object with DeletionTimestamp. Fixed assertion to check `apierrors.IsNotFound(getErr)` instead of trying to Get the object.
+   - **Lint: unused `result` parameter**: Changed `result ctrl.Result` to `_ ctrl.Result` in the "pending to running adds finalizer" test assertion function.
+   - **Race condition (user feedback)**: Originally plan had finalizer added AFTER transitioning to Running. User pointed out the race window. Fixed to add finalizer BEFORE the Running status patch.
+   - **Crash window (user + self-discovery)**: Discovered that terminal promo with stale finalizer would be stuck. Added `clearFinalizer` call in the terminal early-return path of `Reconcile()`.
+   - **cleanupWorkDir not called on restart (user feedback)**: Originally the terminal early-return only called `RemoveFinalizer`. User noted the work dir could still be on disk after a crash. Changed to call `clearFinalizer` (which does both cleanup and finalizer removal).
+   - **Code structure (user feedback)**: User preferred `cleanupWorkDirFn` as overridable + private `clearFinalizer` method, rather than a single overridable `clearFinalizerFn`. Refactored accordingly.
+
+5. Problem Solving:
+   - Solved the core issue: orphaned temp dirs when Running promotions are deleted
+   - Solved race condition: finalizer added before Running transition
+   - Solved crash recovery: terminal early-return cleans up stale finalizers
+   - Verified no reconciliation loops from finalizer patches
+   - Verified delete events pass through predicate filters
+   - Verified no resourceVersion conflicts with merge patches
+   - Verified cache staleness is benign for merge patch operations
+   - All tests passing (including existing tests), no lint issues in modified files
+
+6. All user messages:
+   - "Let's fix: https://github.com/akuity/kargo/issues/5728"
+   - "(5) adds the finalizer after transitioning, and that could be a race. also, would PatchStatus update the promo object with the latest resourceVersion?"
+   - "please review the promotion controller study to double-check your plan. Pay attention to the impact of writing to the finalizer field (will it cause a reconciliation loop? are we at risk of writing to an outdated resourceVersion and seeing conflicts?)."
+   - "In the crash window case, should cleanupWorkDirFn be called on restart? Consider making a function for the cleanupWorkDirFn..RemoveFinalizer block."
+   - "i was thinking of a private cleanup func that would call always call cleanupWorkDirFn (idempotent?) and then remove the finalizer."
+   - "proced" (proceed with implementation)
+
+7. Pending Tasks:
+   - None. All implementation steps completed, tests pass, lint is clean.
+
+8. Current Work:
+   Implementation is complete. All 7 todo items are marked completed:
+   1. ✅ Remove IgnoreDelete event filter from controller builder
+   2. ✅ Add cleanupWorkDirFn and clearFinalizer to reconciler
+   3. ✅ Add handleDelete method
+   4. ✅ Modify Reconcile() — deletion handling, terminal finalizer cleanup, finalizer-before-Running
+   5. ✅ Remove defer cleanup in promote(), add clearFinalizer in terminal path and terminatePromotion()
+   6. ✅ Write tests
+   7. ✅ Run tests and linter
+
+   Final test results: `ok github.com/akuity/kargo/pkg/controller/promotions 2.361s` — all tests pass with `-race` flag. Lint shows no issues in modified files.
+
+9. Optional Next Step:
+   The implementation is complete. A natural next step would be to commit the changes, but the user hasn't explicitly asked for that. The user may want to review the final code or run additional integration testing.
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/eron/.claude/projects/-Users-eron-Projects-kargo/8eb4d6f6-e810-4e3f-b433-cddcbe8350e6.jsonl
+
+---
+
+should we do more to terminate the promotion in the case where a promotion is deleted while running?  There's a user-driven termination flow, how is this different?
+
+---
+
+Yes.
+Also, since our controller might not be the only finalizer, and for sake of logging tools, please emit the proper aborted status even though the object is probably going away.
+in handleDelete, use early termination (call handleCleanup) if finalizer not present.
+
+---
+
+rename handleDelete to deletePromotion and introduce a deletePromotionFn
+
+---
+
+commit to a branch
+
+---
+
+[Request interrupted by user]
+
+---
+
+commit the staged changes to a branch
+
+---
+
+[Request interrupted by user for tool use]
+
+---
+
+rename the new tests to have names more consistent with existing tetst.
+
+---
+
+This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion of the conversation.
+
+Analysis:
+Let me chronologically analyze the conversation:
+
+1. This is a continuation of a previous conversation about fixing GitHub issue #5728 - orphaned temporary directories when a running promotion is deleted in the Kargo project.
+
+2. The conversation started with the user asking about whether `handleDelete` should do more to terminate the promotion (comparing with the user-driven termination flow). I explored the codebase and explained that controller-runtime serializes reconciles per key, so there's no concurrent execution issue. The main gap was that `handleDelete` didn't set Aborted status or emit events.
+
+3. The user agreed and asked for:
+   - Aborted status to be set even though the object is being deleted (other finalizers may keep it alive, and logging tools benefit)
+   - Early return in `handleDelete` if finalizer not present
+   - Event emission
+
+4. I updated the plan and implemented these changes to `handleDelete` (later renamed to `deletePromotion`).
+
+5. The user then asked to rename `handleDelete` to `deletePromotion` and introduce a `deletePromotionFn` overridable field.
+
+6. The user asked to commit to a branch named "issue-5728".
+
+7. The user asked to rename tests to be consistent with existing test naming conventions.
+
+8. The user's final message was "commit" - asking me to commit the changes.
+
+Key files modified:
+- `pkg/controller/promotions/promotions.go` - Main reconciler with all production changes
+- `pkg/controller/promotions/promotions_test.go` - Tests
+
+Current state: All changes are staged and ready to commit on the `issue-5728` branch. Tests pass, lint is clean. The user last said "commit" and I need to create the commit.
+
+Summary:
+1. Primary Request and Intent:
+   Fix GitHub issue #5728: orphaned temporary directories when a running Promotion is deleted. The solution adds finalizers to Promotions entering `Running` state, ensuring deletion triggers proper cleanup. The user iteratively refined the design through multiple rounds of feedback:
+   - Add finalizers before transitioning to Running (race prevention)
+   - Handle crash windows (terminal status with stale finalizer)
+   - Set Aborted status and emit events on deletion (for other finalizers and audit tools)
+   - Early return in delete handler if no finalizer present
+   - Rename `handleDelete` to `deletePromotion` with overridable `deletePromotionFn`
+   - Rename tests to match existing naming conventions
+   - Commit staged changes to branch `issue-5728`
+
+2. Key Technical Concepts:
+   - Kubernetes finalizers for cleanup-on-delete
+   - JSON Merge Patch (RFC 7386) — no optimistic concurrency, no resourceVersion conflicts
+   - controller-runtime predicate filters — `IgnoreDelete` removed, Delete events pass through `predicate.Or(...)` by default
+   - Informer cache staleness — benign for merge patches
+   - Crash window recovery — terminal promos with stale finalizers cleaned on restart
+   - Race prevention — finalizer added BEFORE Running status patch
+   - controller-runtime serializes reconciles per key — no concurrent execution between `promote()` and `deletePromotion()`
+
+3. Files and Code Sections:
+   - **`pkg/controller/promotions/promotions.go`** — Main reconciler, all production changes
+     - Removed `IgnoreDelete` event filter and `intpredicate` import
+     - Added `controllerutil` import
+     - Added `deletePromotionFn` and `cleanupWorkDirFn` overridable fields to reconciler struct
+     - Modified `Reconcile()`: split nil/terminal check, added deletion handling via `r.deletePromotionFn`, terminal finalizer safety via `r.handleCleanup`, finalizer-before-Running via `api.EnsureFinalizer`
+     - Added terminal cleanup after status patch (`handleCleanup` call)
+     - Removed defer cleanup in `promote()`
+     - Added `handleCleanup` in `terminatePromotion()` after abort status patch
+     - Added new methods: `handleCleanup`, `cleanupWorkDir`, `removeFinalizer`, `deletePromotion`
+     - `deletePromotion` method: checks finalizer presence, sets Aborted status (phase, message, step metadata, FinishedAt), patches status, calls handleCleanup, best-effort freight fetch, emits PromotionAborted event
+     - Wired in `newReconciler`: `r.deletePromotionFn = r.deletePromotion`, `r.cleanupWorkDirFn = r.cleanupWorkDir`
+
+   - **`pkg/controller/promotions/promotions_test.go`** — Tests
+     - Added imports: `apierrors`, `controllerutil`
+     - Updated `TestNewPromotionReconciler` to verify `deletePromotionFn` and `cleanupWorkDirFn` are set
+     - Updated `Test_reconciler_terminatePromotion` to provide `cleanupWorkDirFn` no-op
+     - Added `Test_reconciler_deletePromotion` with 5 test cases: deleted with finalizer (verifies Aborted status + event + NotFound), deleted without finalizer (no-op), terminal with stale finalizer, terminal without finalizer, pending-to-running adds finalizer
+     - Added `Test_reconciler_terminatePromotion_clearsFinalizer` — verifies cleanup called, finalizer removed, Aborted status on server
+
+   - **`/Users/eron/.claude/plans/peaceful-leaping-hinton.md`** — Plan file with full design, iteratively updated
+
+4. Errors and fixes:
+   - **Line length lint errors (lll)**: Assertion function signatures with added `*fakeevent.EventRecorder` parameter exceeded 120 chars. Fixed by breaking signatures across multiple lines.
+   - **Unused import after removing IgnoreDelete**: Removed `intpredicate` import (from earlier in conversation history).
+   - **Test naming inconsistency**: User asked to rename `TestReconcile_Finalizer` → `Test_reconciler_deletePromotion` and `TestTerminatePromotion_ClearsFinalizer` → `Test_reconciler_terminatePromotion_clearsFinalizer` to match existing convention.
+   - **Race condition (user feedback from earlier)**: Originally plan had finalizer added AFTER Running. User pointed out the race. Fixed to add finalizer BEFORE.
+   - **handleDelete too simple (user feedback)**: User asked to add Aborted status, event emission, and finalizer guard. Implemented all three.
+   - **Naming (user feedback)**: User asked to rename `handleDelete` to `deletePromotion` and add `deletePromotionFn` overridable field.
+   - **Branch name**: User rejected `fix/promotion-workdir-cleanup-on-delete`, asked for `issue-5728`.
+
+5. Problem Solving:
+   - Solved core issue: orphaned temp dirs when Running promotions are deleted
+   - Solved race condition: finalizer added before Running transition
+   - Solved crash recovery: terminal early-return cleans up stale finalizers
+   - Solved audit gap: `deletePromotion` now sets Aborted status and emits events
+   - All tests passing, no lint issues in modified files
+
+6. All user messages:
+   - "should we do more to terminate the promotion in the case where a promotion is deleted while running? There's a user-driven termination flow, how is this different?"
+   - "Yes. Also, since our controller might not be the only finalizer, and for sake of logging tools, please emit the proper aborted status even though the object is probably going away. in handleDelete, use early termination (call handleCleanup) if finalizer not present."
+   - "rename handleDelete to deletePromotion and introduce a deletePromotionFn"
+   - "commit to a branch" (interrupted)
+   - "commit the staged changes to a branch"
+   - (rejected branch name, asked for "issue-5728")
+   - (rejected commit, stopped for unknown reason)
+   - "rename the new tests to have names more consistent with existing tetst."
+   - "commit"
+
+7. Pending Tasks:
+   - Create the git commit on branch `issue-5728` with the staged changes
+
+8. Current Work:
+   The user's most recent message is "commit". All changes are staged on branch `issue-5728`. Tests pass, lint is clean. The two modified files are `pkg/controller/promotions/promotions.go` and `pkg/controller/promotions/promotions_test.go`. I need to create the commit.
+
+9. Optional Next Step:
+   Create the git commit on branch `issue-5728`. The user said "commit" as their last message. The previous commit attempt was rejected by the user (reason unclear — possibly the commit message or the `--no-verify` issue). I should create a new commit with an appropriate message following the repo's commit style (seen from `git log`: `chore:`, `fix:` prefixes).
+
+If you need specific details from before compaction (like exact code snippets, error messages, or content you generated), read the full transcript at: /Users/eron/.claude/projects/-Users-eron-Projects-kargo/8eb4d6f6-e810-4e3f-b433-cddcbe8350e6.jsonl
+Please continue the conversation from where we left off without asking the user any further questions. Continue with the last task that you were asked to work on.
+
+---
+
+open a draft PR for this fix.
+
+---
+
+rewrite the PR description to be more conceptual and based on our orignal plan.
