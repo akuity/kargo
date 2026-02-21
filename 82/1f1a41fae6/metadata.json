@@ -3,7 +3,7 @@
   "checkpoint_id": "821f1a41fae6",
   "strategy": "manual-commit",
   "branch": "issue-5728",
-  "checkpoints_count": 2,
+  "checkpoints_count": 1,
   "files_touched": [
     "pkg/controller/promotions/promotions.go",
     "pkg/controller/promotions/promotions_test.go"
