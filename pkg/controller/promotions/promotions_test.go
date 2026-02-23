@@ -42,7 +42,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
-	require.NotNil(t, r.deletePromotionFn)
+	require.NotNil(t, r.handleDeleteFn)
 	require.NotNil(t, r.cleanupWorkDirFn)
 }
 
@@ -326,7 +326,7 @@ func TestReconcile(t *testing.T) {
 			}
 
 			terminateWasCalled := false
-			r.terminatePromotionFn = func(
+			r.handleAbortFn = func(
 				_ context.Context,
 				_ *kargoapi.AbortPromotionRequest,
 				promotion *kargoapi.Promotion,
@@ -374,7 +374,7 @@ func TestReconcile(t *testing.T) {
 	}
 }
 
-func Test_reconciler_terminatePromotion(t *testing.T) {
+func Test_reconciler_handleAbort(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
@@ -532,13 +532,13 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			}
 
 			req := tt.req
-			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
+			err := r.handleAbort(context.Background(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
 }
 
-func Test_reconciler_deletePromotion(t *testing.T) {
+func Test_reconciler_handleDelete(t *testing.T) {
 	testCases := []struct {
 		name       string
 		objects    []client.Object
@@ -726,7 +726,7 @@ func Test_reconciler_deletePromotion(t *testing.T) {
 	}
 }
 
-func Test_reconciler_terminatePromotion_clearsFinalizer(t *testing.T) {
+func Test_reconciler_handleAbort_clearsFinalizer(t *testing.T) {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
 
@@ -753,7 +753,7 @@ func Test_reconciler_terminatePromotion_clearsFinalizer(t *testing.T) {
 	}
 
 	req := kargoapi.AbortPromotionRequest{Action: kargoapi.AbortActionTerminate}
-	err := r.terminatePromotion(context.Background(), &req, promo, nil)
+	err := r.handleAbort(context.Background(), &req, promo, nil)
 	require.NoError(t, err)
 
 	// Verify cleanup was called and finalizer was removed.

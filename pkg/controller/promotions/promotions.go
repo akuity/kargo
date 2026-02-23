@@ -31,6 +31,7 @@ import (
 	"github.com/akuity/kargo/pkg/kubeclient"
 	libEvent "github.com/akuity/kargo/pkg/kubernetes/event"
 	"github.com/akuity/kargo/pkg/logging"
+	intpredicate "github.com/akuity/kargo/pkg/predicate"
 	"github.com/akuity/kargo/pkg/promotion"
 )
 
@@ -82,14 +83,14 @@ type reconciler struct {
 		*kargoapi.Freight,
 	) (*kargoapi.PromotionStatus, *time.Duration, error)
 
-	terminatePromotionFn func(
+	handleAbortFn func(
 		context.Context,
 		*kargoapi.AbortPromotionRequest,
 		*kargoapi.Promotion,
 		*kargoapi.Freight,
 	) error
 
-	deletePromotionFn func(
+	handleDeleteFn func(
 		context.Context,
 		*kargoapi.Promotion,
 	) error
@@ -136,6 +137,7 @@ func SetupReconcilerWithManager(
 			IsDefaultController: cfg.IsDefaultController,
 			ShardName:           cfg.ShardName,
 		}).
+		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
 		WithEventFilter(predicate.Or(
 			predicate.GenerationChangedPredicate{},
 			kargo.RefreshRequested{},
@@ -210,8 +212,8 @@ func newReconciler(
 	}
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
-	r.terminatePromotionFn = r.terminatePromotion
-	r.deletePromotionFn = r.deletePromotion
+	r.handleAbortFn = r.handleAbort
+	r.handleDeleteFn = r.handleDelete
 	r.cleanupWorkDirFn = r.cleanupWorkDir
 	return r
 }
@@ -247,12 +249,13 @@ func (r *reconciler) Reconcile(
 
 	if promo.Status.Phase.IsTerminal() {
 		// Clean up any finalizer left on a terminal Promotion (whether deleted or not).
+		// This is a no-op if the finalizer has already been removed.
 		return ctrl.Result{}, r.handleCleanup(ctx, promo)
 	}
 
 	// Handle premature deletion of a non-terminal Promotion.
 	if !promo.DeletionTimestamp.IsZero() {
-		return ctrl.Result{}, r.deletePromotionFn(ctx, promo)
+		return ctrl.Result{}, r.handleDeleteFn(ctx, promo)
 	}
 
 	// Find the Freight
@@ -280,7 +283,7 @@ func (r *reconciler) Reconcile(
 	if req, ok := api.AbortPromotionAnnotationValue(
 		promo.GetAnnotations(),
 	); ok && req.Action == kargoapi.AbortActionTerminate {
-		if err = r.terminatePromotionFn(ctx, req, promo, freight); err != nil {
+		if err = r.handleAbortFn(ctx, req, promo, freight); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -328,8 +331,6 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	// Update promo status as Running to give visibility in UI. Also, a promo which
-	// has already entered Running status will be allowed to continue to reconcile.
 	// Add finalizer to ensure cleanup of the working directory.
 	// This is outside the phase check so that Promotions that were already
 	// Running before the finalizer was introduced also get one.
@@ -337,6 +338,8 @@ func (r *reconciler) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("error adding finalizer to Promotion: %w", err)
 	}
 
+	// Update promo status as Running to give visibility in UI. Also, a promo which
+	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
 		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
@@ -563,7 +566,7 @@ func (r *reconciler) promote(
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
-		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
+		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -660,10 +663,10 @@ func (r *reconciler) buildTargetFreightCollection(
 	return freightCol
 }
 
-// terminatePromotion terminates the given Promotion with a message indicating
+// handleAbort terminates the given Promotion with a message indicating
 // that it was terminated on user request. It does nothing if the Promotion is
 // already in a terminal phase.
-func (r *reconciler) terminatePromotion(
+func (r *reconciler) handleAbort(
 	ctx context.Context,
 	req *kargoapi.AbortPromotionRequest,
 	promo *kargoapi.Promotion,
@@ -725,9 +728,9 @@ func (r *reconciler) terminatePromotion(
 	return nil
 }
 
-// deletePromotion aborts the given Promotion with a message indicating
+// handleDelete terminates the given Promotion with a message indicating
 // that the object was deleted. It assumes that the Promotion is NOT in a terminal phase.
-func (r *reconciler) deletePromotion(ctx context.Context, promo *kargoapi.Promotion) error {
+func (r *reconciler) handleDelete(ctx context.Context, promo *kargoapi.Promotion) error {
 	logger := logging.LoggerFromContext(ctx)
 
 	if !controllerutil.ContainsFinalizer(promo, kargoapi.FinalizerName) {
@@ -784,10 +787,16 @@ func (r *reconciler) handleCleanup(ctx context.Context, promo *kargoapi.Promotio
 	return r.removeFinalizer(ctx, promo)
 }
 
+// promotionWorkDir returns the path to the temporary working directory for a
+// Promotion, based on its UID.
+func promotionWorkDir(promoUID types.UID) string {
+	return filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+}
+
 // cleanupWorkDir removes the temporary working directory for a Promotion.
 // This is safe to call even if the directory does not exist.
 func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
-	workDir := filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+	workDir := promotionWorkDir(promoUID)
 	if err := os.RemoveAll(workDir); err != nil {
 		logging.LoggerFromContext(ctx).Error(err, "could not remove working directory", "path", workDir)
 	}
