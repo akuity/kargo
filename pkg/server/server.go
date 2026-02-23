@@ -225,11 +225,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 			return fmt.Errorf("error initializing UI file system: %w", err)
 		}
 	}
-	dashboardHandler, err := newDashboardRequestHandler(dashboardFS)
-	if err != nil {
-		return fmt.Errorf("error initializing dashboard handler: %w", err)
-	}
-	mux.Handle("/", dashboardHandler)
+	mux.Handle("/", newDashboardRequestHandler(dashboardFS))
 	if s.cfg.DexProxyConfig != nil {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
@@ -288,7 +284,7 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func newDashboardRequestHandler(uiFS fs.FS) (http.HandlerFunc, error) {
+func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 	const indexHTML = "index.html"
 
 	handler := http.FileServer(http.FS(uiFS))
@@ -340,5 +336,5 @@ func newDashboardRequestHandler(uiFS fs.FS) (http.HandlerFunc, error) {
 	})
 
 	withGz := gzhttp.GzipHandler(withoutGzip)
-	return http.HandlerFunc(withGz.ServeHTTP), nil
+	return http.HandlerFunc(withGz.ServeHTTP)
 }
