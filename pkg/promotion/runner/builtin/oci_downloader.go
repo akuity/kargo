@@ -2,20 +2,14 @@ package builtin
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/google/go-containerregistry/pkg/authn"
-	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -146,12 +140,14 @@ func (d *ociDownloader) resolveImage(
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIDownloadConfig,
 ) (v1.Image, error) {
-	ref, credType, err := d.parseImageReference(cfg.ImageRef)
+	ref, credType, err := parseOCIReference(cfg.ImageRef)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse image reference %q: %w", cfg.ImageRef, err)
 	}
 
-	remoteOpts, err := d.buildRemoteOptions(ctx, stepCtx, cfg, ref, credType)
+	remoteOpts, err := buildOCIRemoteOptions(
+		ctx, d.credsDB, stepCtx.Project, ref, credType, cfg.InsecureSkipTLSVerify,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -162,93 +158,6 @@ func (d *ociDownloader) resolveImage(
 	}
 
 	return img, nil
-}
-
-// parseImageReference parses the image reference and determines credential type.
-func (d *ociDownloader) parseImageReference(imageRef string) (name.Reference, credentials.Type, error) {
-	credType := credentials.TypeImage
-
-	// To support Helm OCI repositories, we check if the image reference
-	// starts with "oci://". If it does, we treat it as a Helm repository
-	// and set the credential type accordingly.
-	if strings.HasPrefix(imageRef, "oci://") {
-		// Remove the "oci://" prefix if present, as the parser expects a
-		// standard image reference format.
-		imageRef = strings.TrimPrefix(imageRef, "oci://")
-		credType = credentials.TypeHelm
-	}
-
-	ref, err := name.ParseReference(imageRef)
-	if err != nil {
-		return nil, "", fmt.Errorf("invalid image reference %q: %w", imageRef, err)
-	}
-
-	return ref, credType, nil
-}
-
-// buildRemoteOptions constructs the remote options for the registry.
-func (d *ociDownloader) buildRemoteOptions(
-	ctx context.Context,
-	stepCtx *promotion.StepContext,
-	cfg builtin.OCIDownloadConfig,
-	ref name.Reference,
-	credType credentials.Type,
-) ([]remote.Option, error) {
-	remoteOpts := []remote.Option{
-		remote.WithContext(ctx),
-		remote.WithTransport(d.buildHTTPTransport(cfg)),
-	}
-
-	// Configure authentication
-	if authOpt, err := d.getAuthOption(ctx, stepCtx, ref, credType); err != nil {
-		return nil, err
-	} else if authOpt != nil {
-		remoteOpts = append(remoteOpts, authOpt)
-	}
-
-	return remoteOpts, nil
-}
-
-// buildHTTPTransport creates a new HTTP transport with TLS settings based on
-// the configuration.
-func (d *ociDownloader) buildHTTPTransport(cfg builtin.OCIDownloadConfig) *http.Transport {
-	httpTransport := cleanhttp.DefaultTransport()
-	if cfg.InsecureSkipTLSVerify {
-		httpTransport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // nolint: gosec
-		}
-	}
-	return httpTransport
-}
-
-// getAuthOption retrieves and configures authentication for the registry.
-func (d *ociDownloader) getAuthOption(
-	ctx context.Context,
-	stepCtx *promotion.StepContext,
-	ref name.Reference,
-	credType credentials.Type,
-) (remote.Option, error) {
-	repoURL := ref.Context().String()
-
-	// NB: Some credential database implementations expect the URL to be
-	// prefixed with "oci://".
-	if credType == credentials.TypeHelm {
-		repoURL = "oci://" + repoURL
-	}
-
-	creds, err := d.credsDB.Get(ctx, stepCtx.Project, credType, repoURL)
-	if err != nil {
-		return nil, fmt.Errorf("error obtaining credentials for image repo %q: %w", repoURL, err)
-	}
-
-	if creds != nil && (creds.Username != "" || creds.Password != "") {
-		return remote.WithAuth(&authn.Basic{
-			Username: creds.Username,
-			Password: creds.Password,
-		}), nil
-	}
-
-	return nil, nil
 }
 
 // extractLayerToFile extracts the target layer from the image to the specified
