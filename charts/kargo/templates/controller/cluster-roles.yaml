@@ -50,6 +50,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - watch
 - apiGroups:
   - kargo.akuity.io
@@ -75,6 +76,7 @@ rules:
   - kargo.akuity.io
   resources:
   - freights/status
+  - promotions/finalizers
   - promotions/status
   - stages/status
   - warehouses/finalizers
