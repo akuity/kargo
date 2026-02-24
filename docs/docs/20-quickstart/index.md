@@ -649,15 +649,9 @@ Repeat the same steps for **uat**, then **prod**. Click the truck icon on each s
     <th width="33%">🚀 prod</th>
   </tr>
   <tr>
-    <td align="center">
-[localhost:30081](http://localhost:30081)
-    </td>
-    <td align="center">
-[localhost:30082](http://localhost:30082)
-    </td>
-    <td align="center">
-[localhost:30083](http://localhost:30083)
-    </td>
+    <td align="center">http://localhost:32080</td>
+    <td align="center">http://localhost:32081</td>
+    <td align="center">http://localhost:32082</td>
   </tr>
 </table>
 
