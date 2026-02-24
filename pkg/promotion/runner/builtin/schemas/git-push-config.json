@@ -7,7 +7,7 @@
   "properties": {
     "generateTargetBranch": {
       "type": "boolean",
-      "description": "Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive with 'targetBranch'. If neither of these is provided, the target branch will be the currently checked out branch."
+      "description": "Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive with 'targetBranch' and 'tag'. If neither of these is provided, the target branch will be the currently checked out branch."
     },
     "maxAttempts": {
       "type": "integer",
@@ -22,7 +22,7 @@
     },
     "targetBranch": {
       "type": "string",
-      "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If neither of these is provided, the target branch will be the currently checked out branch."
+      "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and 'tag'. If neither of these is provided, the target branch will be the currently checked out branch."
     },
     "provider": {
       "type": "string",
