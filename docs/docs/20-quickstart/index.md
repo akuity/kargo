@@ -430,10 +430,9 @@ Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and move it
 Log in:
 
 ```shell
-kargo login https://localhost:31444 \
+kargo login http://localhost:31081 \
   --admin \
-  --password admin \
-  --insecure-skip-tls-verify
+  --password admin
 ```
 
 To create Kargo resources, use the following command:
