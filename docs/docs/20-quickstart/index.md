@@ -141,22 +141,21 @@ Any approach you select should only:
 </details>
   
   
-  <table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
+<table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
   <tr>
     <th width="50%">🚀 Argo CD</th>
     <th width="50%">📦 Kargo</th>
   </tr>
   <tr>
     <td>
-URL: http://localhost:31080  
-Username: `admin`
-Password: `admin`
-</td>
-<td>
-URL: http://localhost:31081
-Password: `admin`
-<br/>
-</td>
+      URL: http://localhost:31080<br/>
+      Username: `admin`<br/>
+      Password: `admin`
+    </td>
+    <td>
+      URL: http://localhost:31081<br/>
+      Password: `admin`
+    </td>
   </tr>
 </table>
 
