@@ -2,12 +2,15 @@ package builtin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"maps"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
-	"github.com/google/go-containerregistry/pkg/v1/mutate"
+	"github.com/google/go-containerregistry/pkg/v1/partial"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/types"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -166,11 +169,7 @@ func (p *ociPusher) pushImage(
 	}
 
 	if len(annotations) > 0 {
-		annotated, ok := mutate.Annotations(img, annotations).(v1.Image)
-		if !ok {
-			return v1.Hash{}, fmt.Errorf("failed to apply annotations to image")
-		}
-		img = annotated
+		img = &annotatedImage{Image: img, annotations: annotations}
 	}
 
 	if err = remote.Write(dstRef, img, dstOpts...); err != nil {
@@ -198,11 +197,7 @@ func (p *ociPusher) pushIndex(
 	}
 
 	if len(annotations) > 0 {
-		annotated, ok := mutate.Annotations(idx, annotations).(v1.ImageIndex)
-		if !ok {
-			return v1.Hash{}, fmt.Errorf("failed to apply annotations to image index")
-		}
-		idx = annotated
+		idx = &annotatedIndex{base: idx, annotations: annotations}
 	}
 
 	if err = remote.WriteIndex(dstRef, idx, dstOpts...); err != nil {
@@ -215,4 +210,96 @@ func (p *ociPusher) pushIndex(
 	}
 
 	return digest, nil
+}
+
+// annotatedImage wraps a v1.Image to add annotations to its manifest without
+// using mutate.Annotations. We avoid mutate.Annotations because its internal
+// Layers() implementation enumerates layers via ConfigFile().RootFS.DiffIDs,
+// which is empty for non-Docker OCI artifacts (e.g. Helm charts). This causes
+// layers to be omitted from the push, leading to MANIFEST_BLOB_UNKNOWN errors
+// on cross-repository pushes. This wrapper delegates Layers() and all other
+// methods to the base image, overriding only the manifest to include
+// annotations.
+type annotatedImage struct {
+	v1.Image
+	annotations map[string]string
+}
+
+func (a *annotatedImage) Manifest() (*v1.Manifest, error) {
+	m, err := a.Image.Manifest()
+	if err != nil {
+		return nil, err
+	}
+	m = m.DeepCopy()
+	if m.Annotations == nil {
+		m.Annotations = map[string]string{}
+	}
+	maps.Copy(m.Annotations, a.annotations)
+	return m, nil
+}
+
+func (a *annotatedImage) RawManifest() ([]byte, error) {
+	m, err := a.Manifest()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(m)
+}
+
+func (a *annotatedImage) Digest() (v1.Hash, error) {
+	return partial.Digest(a)
+}
+
+func (a *annotatedImage) Size() (int64, error) {
+	return partial.Size(a)
+}
+
+// annotatedIndex wraps a v1.ImageIndex to add annotations to its index
+// manifest. See annotatedImage for rationale. The base field is unexported
+// because v1.ImageIndex has an ImageIndex() method that would collide with
+// an embedded field of the same name.
+type annotatedIndex struct {
+	base        v1.ImageIndex
+	annotations map[string]string
+}
+
+func (a *annotatedIndex) MediaType() (types.MediaType, error) {
+	return a.base.MediaType()
+}
+
+func (a *annotatedIndex) IndexManifest() (*v1.IndexManifest, error) {
+	m, err := a.base.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	m = m.DeepCopy()
+	if m.Annotations == nil {
+		m.Annotations = map[string]string{}
+	}
+	maps.Copy(m.Annotations, a.annotations)
+	return m, nil
+}
+
+func (a *annotatedIndex) RawManifest() ([]byte, error) {
+	m, err := a.IndexManifest()
+	if err != nil {
+		return nil, err
+	}
+	return json.Marshal(m)
+}
+
+func (a *annotatedIndex) Digest() (v1.Hash, error) {
+	return partial.Digest(a)
+}
+
+func (a *annotatedIndex) Size() (int64, error) {
+	return partial.Size(a)
+}
+
+func (a *annotatedIndex) Image(h v1.Hash) (v1.Image, error) {
+	return a.base.Image(h)
+}
+
+func (a *annotatedIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {
+	return a.base.ImageIndex(h)
 }
