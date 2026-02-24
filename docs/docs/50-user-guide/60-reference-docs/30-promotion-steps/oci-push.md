@@ -17,7 +17,7 @@ copying it to a production registry. Multi-arch image indexes are copied in full
 |------|------|----------|-------------|
 | `imageRef` | `string` | Y | Reference to the source OCI artifact. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. For Helm OCI artifacts, the `oci://` prefix is supported (e.g., `oci://registry/repository:tag`) and will use Helm-specific credential lookup. |
 | `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For Helm OCI artifacts, the `oci://` prefix is supported. For retag-in-place, use the same repository as `imageRef` with the new tag. |
-| `annotations` | `object` | N | Annotations to set on the destination manifest. Values support expressions. Existing annotations on the source artifact are preserved; specified annotations are added or overwritten. |
+| `annotations` | `object` | N | Annotations to set on the destination artifact. Keys may be prefixed with `index:` or `manifest:` to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images, `index:`-prefixed keys are ignored. Values support expressions. Existing annotations on the source artifact are preserved; specified annotations are added or overwritten. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification for both source and destination registries. Defaults to `false`. |
 
 ## Outputs
@@ -103,6 +103,24 @@ steps:
     annotations:
       org.opencontainers.image.source: "https://github.com/example/myapp"
       io.kargo.promotion: ${{ ctx.promotion }}
+```
+
+### Scoped Annotations for Multi-Arch Images
+
+When pushing image indexes (multi-arch), annotation keys can be prefixed with
+`index:` or `manifest:` to control where they are applied. Unprefixed keys
+default to the image manifest.
+
+```yaml
+steps:
+- uses: oci-push
+  config:
+    imageRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
+    destRef: registry.example.com/myapp:v1.2.3
+    annotations:
+      org.opencontainers.image.source: "https://github.com/example/myapp"
+      index:org.opencontainers.image.revision: ${{ commitFrom("https://github.com/example/myapp").id }}
+      manifest:org.opencontainers.image.description: "my app image"
 ```
 
 ### Copying with TLS Verification Disabled

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"maps"
+	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -156,6 +157,35 @@ func (p *ociPusher) push(
 	}
 }
 
+// annotationScopes holds annotations separated by their target scope.
+// Keys prefixed with "index:" target the image index manifest, keys prefixed
+// with "manifest:" or unprefixed target image manifests.
+type annotationScopes struct {
+	index    map[string]string // applied to the image index manifest
+	manifest map[string]string // applied to each image manifest
+}
+
+// parseAnnotationScopes splits annotation keys by their scope prefix.
+// Keys prefixed with "index:" are routed to the index manifest, keys prefixed
+// with "manifest:" or unprefixed are routed to image manifests.
+func parseAnnotationScopes(annotations map[string]string) annotationScopes {
+	scopes := annotationScopes{
+		index:    make(map[string]string),
+		manifest: make(map[string]string),
+	}
+	for k, v := range annotations {
+		switch {
+		case strings.HasPrefix(k, "index:"):
+			scopes.index[strings.TrimPrefix(k, "index:")] = v
+		case strings.HasPrefix(k, "manifest:"):
+			scopes.manifest[strings.TrimPrefix(k, "manifest:")] = v
+		default:
+			scopes.manifest[k] = v
+		}
+	}
+	return scopes
+}
+
 // pushImage pushes a single image to the destination.
 func (p *ociPusher) pushImage(
 	desc *remote.Descriptor,
@@ -168,8 +198,9 @@ func (p *ociPusher) pushImage(
 		return v1.Hash{}, fmt.Errorf("failed to resolve source image: %w", err)
 	}
 
-	if len(annotations) > 0 {
-		img = &annotatedImage{Image: img, annotations: annotations}
+	scopes := parseAnnotationScopes(annotations)
+	if len(scopes.manifest) > 0 {
+		img = &annotatedImage{Image: img, annotations: scopes.manifest}
 	}
 
 	if err = remote.Write(dstRef, img, dstOpts...); err != nil {
@@ -196,8 +227,12 @@ func (p *ociPusher) pushIndex(
 		return v1.Hash{}, fmt.Errorf("failed to resolve source image index: %w", err)
 	}
 
-	if len(annotations) > 0 {
-		idx = &annotatedIndex{base: idx, annotations: annotations}
+	scopes := parseAnnotationScopes(annotations)
+	if len(scopes.index) > 0 || len(scopes.manifest) > 0 {
+		idx, err = newAnnotatedIndex(idx, scopes.index, scopes.manifest)
+		if err != nil {
+			return v1.Hash{}, fmt.Errorf("failed to prepare annotated index: %w", err)
+		}
 	}
 
 	if err = remote.WriteIndex(dstRef, idx, dstOpts...); err != nil {
@@ -254,13 +289,79 @@ func (a *annotatedImage) Size() (int64, error) {
 	return partial.Size(a)
 }
 
-// annotatedIndex wraps a v1.ImageIndex to add annotations to its index
-// manifest. See annotatedImage for rationale. The base field is unexported
-// because v1.ImageIndex has an ImageIndex() method that would collide with
-// an embedded field of the same name.
+// annotatedChild holds the precomputed digest and size of an annotated child
+// image, used to rewrite index manifest descriptors.
+type annotatedChild struct {
+	digest v1.Hash
+	size   int64
+}
+
+// annotatedIndex wraps a v1.ImageIndex to add scoped annotations. Index-scoped
+// annotations are applied to the index manifest; manifest-scoped annotations
+// are applied to each child image manifest via the Image() method. When
+// manifest annotations are present, child descriptors in the index manifest are
+// rewritten with new digests/sizes to stay consistent with the annotated
+// content. See annotatedImage for rationale on avoiding mutate.Annotations.
+// The base field is unexported because v1.ImageIndex has an ImageIndex() method
+// that would collide with an embedded field of the same name.
 type annotatedIndex struct {
-	base        v1.ImageIndex
-	annotations map[string]string
+	base                v1.ImageIndex
+	indexAnnotations    map[string]string
+	manifestAnnotations map[string]string
+	// childMap maps original child digest → annotated digest/size.
+	// Populated by newAnnotatedIndex when manifestAnnotations is non-empty.
+	childMap map[v1.Hash]annotatedChild
+}
+
+// newAnnotatedIndex creates an annotatedIndex wrapper. When manifest
+// annotations are provided, it eagerly computes the annotated digest and size
+// for each child image so that IndexManifest() and Image() stay consistent.
+func newAnnotatedIndex(
+	base v1.ImageIndex,
+	indexAnnotations, manifestAnnotations map[string]string,
+) (*annotatedIndex, error) {
+	ai := &annotatedIndex{
+		base:                base,
+		indexAnnotations:    indexAnnotations,
+		manifestAnnotations: manifestAnnotations,
+		childMap:            make(map[v1.Hash]annotatedChild),
+	}
+	if len(manifestAnnotations) > 0 {
+		m, err := base.IndexManifest()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get index manifest: %w", err)
+		}
+		for _, desc := range m.Manifests {
+			if !desc.MediaType.IsImage() {
+				continue
+			}
+			img, err := base.Image(desc.Digest)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to resolve child image %s: %w", desc.Digest, err,
+				)
+			}
+			wrapped := &annotatedImage{
+				Image: img, annotations: manifestAnnotations,
+			}
+			d, err := wrapped.Digest()
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to compute annotated digest for %s: %w",
+					desc.Digest, err,
+				)
+			}
+			s, err := wrapped.Size()
+			if err != nil {
+				return nil, fmt.Errorf(
+					"failed to compute annotated size for %s: %w",
+					desc.Digest, err,
+				)
+			}
+			ai.childMap[desc.Digest] = annotatedChild{digest: d, size: s}
+		}
+	}
+	return ai, nil
 }
 
 func (a *annotatedIndex) MediaType() (types.MediaType, error) {
@@ -273,10 +374,19 @@ func (a *annotatedIndex) IndexManifest() (*v1.IndexManifest, error) {
 		return nil, err
 	}
 	m = m.DeepCopy()
-	if m.Annotations == nil {
-		m.Annotations = map[string]string{}
+	if len(a.indexAnnotations) > 0 {
+		if m.Annotations == nil {
+			m.Annotations = map[string]string{}
+		}
+		maps.Copy(m.Annotations, a.indexAnnotations)
 	}
-	maps.Copy(m.Annotations, a.annotations)
+	// Rewrite child descriptors with annotated digests/sizes.
+	for i, desc := range m.Manifests {
+		if child, ok := a.childMap[desc.Digest]; ok {
+			m.Manifests[i].Digest = child.digest
+			m.Manifests[i].Size = child.size
+		}
+	}
 	return m, nil
 }
 
@@ -297,7 +407,22 @@ func (a *annotatedIndex) Size() (int64, error) {
 }
 
 func (a *annotatedIndex) Image(h v1.Hash) (v1.Image, error) {
-	return a.base.Image(h)
+	// Reverse-map: if h is an annotated digest, find the original.
+	origHash := h
+	for orig, child := range a.childMap {
+		if child.digest == h {
+			origHash = orig
+			break
+		}
+	}
+	img, err := a.base.Image(origHash)
+	if err != nil {
+		return nil, err
+	}
+	if len(a.manifestAnnotations) > 0 {
+		return &annotatedImage{Image: img, annotations: a.manifestAnnotations}, nil
+	}
+	return img, nil
 }
 
 func (a *annotatedIndex) ImageIndex(h v1.Hash) (v1.ImageIndex, error) {

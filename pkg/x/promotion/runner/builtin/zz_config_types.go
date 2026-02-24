@@ -549,8 +549,9 @@ type OCIDownloadConfig struct {
 }
 
 type OCIPushConfig struct {
-	// Annotations to set on the destination manifest. For image indexes, annotations are
-	// applied to the index manifest.
+	// Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or
+	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
+	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
 	Annotations map[string]string `json:"annotations,omitempty"`
 	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
 	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as imageRef with the
