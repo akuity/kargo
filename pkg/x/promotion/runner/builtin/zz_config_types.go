@@ -262,8 +262,8 @@ type GitPushConfig struct {
 	// will overwrite any commits that exist on the remote branch but not in your local branch.
 	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
-	// with 'targetBranch'. If neither of these is provided, the target branch will be the
-	// currently checked out branch.
+	// with 'targetBranch' and 'tag'. If neither of these is provided, the target branch will be
+	// the currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
 	// This step implements its own internal retry logic for cases where a push is determined to
 	// have failed due to the remote branch having commits that that are not present locally.
@@ -280,8 +280,9 @@ type GitPushConfig struct {
 	// An optional tag to push to the remote repository. Mutually exclusive with
 	// 'generateTargetBranch=true' and 'targetBranch'.
 	Tag string `json:"tag,omitempty"`
-	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
-	// neither of these is provided, the target branch will be the currently checked out branch.
+	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
+	// 'tag'. If neither of these is provided, the target branch will be the currently checked
+	// out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
