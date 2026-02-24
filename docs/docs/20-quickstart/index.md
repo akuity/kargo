@@ -167,8 +167,6 @@ Any approach you select should only:
   Go to https://github.com/akuity/kargo-demo and click <Hlt>Fork</Hlt>.  
   (In a real setup, you would create your own repository from scratch.)
 
-1. Copy your fork URL `https://github.com/YOUR_NAME/kargo-demo`
-
 1. Get a GitHub personal access token (PAT):  
   Kargo will push changes to your fork for **test**, **uat**, and **prod** environments. You need a PAT with **write access** to your fork.
 
