@@ -5,9 +5,9 @@ description: Pushes the committed changes in a specified working tree to a speci
 
 # `git-push`
 
-`git-push` pushes the committed changes in a specified working tree to a
-specified branch in the remote repository. This step typically follows a
-[`git-commit` step](git-commit.md) and is often followed by a
+`git-push` can either push committed changes in a specified working tree to a
+specified branch or a new tag to the remote repository. This step typically 
+follows a [`git-commit` step](git-commit.md) and is often followed by a
 [`git-open-pr` step](git-open-pr.md).
 
 This step also implements its own, internal retry logic. If a push fails, with
@@ -25,6 +25,15 @@ repository.
 Because conflicts requiring manual resolution will halt further attempts, it is
 recommended to design your Promotion processes such that Promotions to multiple
 Stages that write to the same branch do not write to the same files.
+
+:::
+
+
+:::note
+
+For a tag push, an attempt to pull/rebase first is not made as tags are 
+immutable and any existing tag with the same name on the remote would cause 
+the pull/rebase to fail.
 
 :::
 
