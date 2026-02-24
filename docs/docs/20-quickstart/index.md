@@ -155,6 +155,7 @@ Any approach you select should only:
     <td>
       URL: http://localhost:31081<br/>
       Password: `admin`<br/>
+      <br/>
     </td>
   </tr>
 </table>
