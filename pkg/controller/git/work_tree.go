@@ -42,6 +42,8 @@ type WorkTree interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
+	// CreateTag creates a new tag.
+	CreateTag(tag string) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -294,6 +296,13 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 		)
 	}
 	return w.Clean()
+}
+
+func (w *workTree) CreateTag(tag string) error {
+	if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
+		return fmt.Errorf("error creating tag %q", err)
+	}
+	return nil
 }
 
 func (w *workTree) CurrentBranch() (string, error) {
