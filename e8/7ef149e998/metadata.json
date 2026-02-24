@@ -1,0 +1,30 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "e87ef149e998",
+  "strategy": "manual-commit",
+  "branch": "EronWright/issue-3762",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/docs/50-user-guide/60-reference-docs/30-promotion-steps/oci-push.md",
+    "pkg/promotion/runner/builtin/oci_pusher.go",
+    "pkg/promotion/runner/builtin/oci_pusher_test.go",
+    "pkg/promotion/runner/builtin/schemas/oci-push-config.json",
+    "pkg/x/promotion/runner/builtin/zz_config_types.go"
+  ],
+  "sessions": [
+    {
+      "metadata": "/e8/7ef149e998/0/metadata.json",
+      "transcript": "/e8/7ef149e998/0/full.jsonl",
+      "context": "/e8/7ef149e998/0/context.md",
+      "content_hash": "/e8/7ef149e998/0/content_hash.txt",
+      "prompt": "/e8/7ef149e998/0/prompt.txt"
+    }
+  ],
+  "token_usage": {
+    "input_tokens": 33,
+    "cache_creation_tokens": 43063,
+    "cache_read_tokens": 940917,
+    "output_tokens": 270,
+    "api_call_count": 21
+  }
+}

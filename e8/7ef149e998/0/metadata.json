@@ -1,0 +1,36 @@
+{
+  "cli_version": "0.4.5",
+  "checkpoint_id": "e87ef149e998",
+  "session_id": "5537a41b-1284-489e-85bb-3fb299db8460",
+  "strategy": "manual-commit",
+  "created_at": "2026-02-24T16:59:47.400944Z",
+  "branch": "EronWright/issue-3762",
+  "checkpoints_count": 1,
+  "files_touched": [
+    "docs/docs/50-user-guide/60-reference-docs/30-promotion-steps/oci-push.md",
+    "pkg/promotion/runner/builtin/oci_pusher.go",
+    "pkg/promotion/runner/builtin/oci_pusher_test.go",
+    "pkg/promotion/runner/builtin/schemas/oci-push-config.json",
+    "pkg/x/promotion/runner/builtin/zz_config_types.go"
+  ],
+  "agent": "Claude Code",
+  "turn_id": "8cc91fd4f39b",
+  "transcript_identifier_at_start": "9f6176cf-c004-4c78-885e-7725c90dee11",
+  "token_usage": {
+    "input_tokens": 33,
+    "cache_creation_tokens": 43063,
+    "cache_read_tokens": 940917,
+    "output_tokens": 270,
+    "api_call_count": 21
+  },
+  "initial_attribution": {
+    "calculated_at": "2026-02-24T16:59:47.189902Z",
+    "agent_lines": 0,
+    "human_added": 1957,
+    "human_modified": 0,
+    "human_removed": 0,
+    "total_committed": 1957,
+    "agent_percentage": 0
+  },
+  "transcript_path": ".claude/projects/-Users-eron-Projects-kargo/5537a41b-1284-489e-85bb-3fb299db8460.jsonl"
+}
