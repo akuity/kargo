@@ -148,15 +148,13 @@ Any approach you select should only:
   </tr>
   <tr>
     <td>
-URL: https://localhost:31443  
-Username: `admin`  
-Password: `admin`  
-⚠️ Ignore certificate warnings
+URL: http://localhost:31080  
+Username: `admin`
+Password: `admin`
 </td>
 <td>
-URL: https://localhost:31444  
-Password: `admin`  
-⚠️ Ignore certificate warnings
+URL: http://localhost:31081
+Password: `admin`
 <br/>
 </td>
   </tr>
@@ -188,10 +186,10 @@ Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> → <Hlt>
 
 </details>
 
-3. Save it in your terminal:
+3. Set environment variables:
 
 ``` bash
-export GITOPS_REPO_URL=<your fork URL>
+export GITOPS_REPO_URL=https://github.com/<your github username>/kargo-demo
 
 export GITHUB_USERNAME=<your github username>
 
@@ -200,7 +198,7 @@ export GITHUB_PAT=<your personal access token>
 
 :::info Why Kargo writes to Git
 
-Kargo follows GitOps principles: your cluster's desired state always comes from Git. Kargo promotes artifacts by committing updated configurations to Git. Argo CD picks it up and syncs the cluster. Git becomes a full audit trail of every promotion.
+Kargo follows GitOps principles: Your cluster's desired state always comes from Git. Kargo promotes artifacts by committing updated configurations to Git. Argo CD picks it up and syncs the cluster. Git becomes a full audit trail of every promotion.
 
 :::
 
@@ -216,7 +214,7 @@ You can explore the repository and see that the `main` branch contains common co
 
 ## Create Argo CD Applications For Each Stage
 
-We’ll use an Argo CD `ApplicationSet` to create and manage three `Applications`, deploying the sample app to **test**, **uat**, and **prod** namespaces—each with its own configuration.
+We’ll use an Argo CD `ApplicationSet` to create and manage three `Applications`, deploying the sample app to **test**, **uat**, and **prod** namespaces, each with its own configuration.
 
 ```yaml {18,23}
 cat <<EOF | kubectl apply -f -
@@ -257,7 +255,7 @@ EOF
 <details>
 <summary>What you'll see in Argo CD</summary>
 
-When you visit the [Argo CD dashboard](https://localhost:31443), the branches referenced by the `targetRevision` fields do not exist yet, and the `Applications` will be out of sync. Kargo will create them on first promotion.
+When you visit the [Argo CD dashboard](http://localhost:31080), the branches referenced by the `targetRevision` fields do not exist yet, and the `Applications` will be out of sync. Kargo will create them on first promotion.
 
 ![Argo CD Dashboard](img/argo-dashboard.png)
 
@@ -267,9 +265,9 @@ When you visit the [Argo CD dashboard](https://localhost:31443), the branches re
 
 Run the following command to set up your pipeline. This will create:
 
-- A `Warehouse` that polls the nginx image registry for new versions  
+- A `Warehouse` that polls the public ECR registry for new versions of the Nginx image
 - A `PromotionTask` which is a reusable recipe: clone the repo, run `kustomize` to stamp in the new image version, push to the stage branch, and tell Argo CD to sync  
-- 3 `Stages` that define how Freight moves through your pipeline
+- Three `Stage` resources that define how Freight move through your pipeline
 
 <Tabs groupId="login-method">
 <TabItem value="kubectl" label="Using kubectl" default>
@@ -303,7 +301,7 @@ spec:
   subscriptions:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
-      constraint: ^1.26.0
+      constraint: ^1.29.0
       discoveryLimit: 5
 ---
 apiVersion: kargo.akuity.io/v1alpha1
@@ -423,7 +421,7 @@ EOF
 <TabItem value="kargo-cli" label="Using the Kargo CLI">
 
 Download the Kargo CLI for your operating system and CPU architecture from
-the [Kargo Dashboard's Downloads page](https://localhost:31444/downloads):
+the [Kargo Dashboard's Downloads page](http://localhost:31081/downloads):
 
 ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
@@ -587,7 +585,7 @@ EOF
 </TabItem>
 </Tabs>
 
-Open the [Kargo Dashboard](https://localhost:31444/) and select the `kargo-demo` project. You should see the pipeline, and `Freight` should appear in the upper left after a few seconds.
+Open the [Kargo Dashboard](http://localhost:31081/) and select the `kargo-demo` project. You should see the pipeline, and `Freight` should appear in the upper left after a few seconds.
 
 <details>
 <summary>What you'll see in Kargo</summary>
@@ -600,7 +598,7 @@ Open the [Kargo Dashboard](https://localhost:31444/) and select the `kargo-demo`
 
 ## Promote Freight to "test"
 
-In the Kargo dashboard, locate the `Freight` in the top menu.
+In the Kargo dashboard, locate the `Freight` in the timeline at the top of the screen.
 
 - Drag it using the <strong>⋮⋮</strong> handle.
 - Drop it into the **test** `Stage`.
@@ -631,7 +629,7 @@ A summary of the `Promotion` will pop up and will be updated in real-time as the
 <details>
 <summary>What happened behind the scenes?</summary>
 
-When you visit your fork `https://github.com/YOUR_NAME/kargo-demo`:  
+When you visit your fork at `https://github.com/<your github username>/kargo-demo`:  
 
 - Kargo created a **stage/test** branch  
 - It read the latest manifests from `main`, ran `kustomize edit set image` and `kustomize build` in `stages/test/`  
