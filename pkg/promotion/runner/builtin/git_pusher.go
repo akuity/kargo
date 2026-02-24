@@ -30,6 +30,9 @@ const (
 	// stateKeyCommitURL is the key used to store the URL of the commit that was
 	// pushed to in the shared State.
 	stateKeyCommitURL = "commitURL"
+
+	// stateKeyCommit is the key used to store the tag that was pushed in the shared State.
+	stateKeyTag = "tag"
 )
 
 func init() {
@@ -245,6 +248,7 @@ func (g *gitPushPusher) run(
 			stateKeyBranch:    pushOpts.TargetBranch,
 			stateKeyCommit:    commitID,
 			stateKeyCommitURL: commitURL,
+			stateKeyTag:       pushOpts.Tag,
 		},
 	}, nil
 }
