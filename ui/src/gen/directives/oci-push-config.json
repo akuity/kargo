@@ -18,7 +18,7 @@
   },
   "annotations": {
    "type": "object",
-   "description": "Annotations to set on the destination manifest. For image indexes, annotations are applied to the index manifest.",
+   "description": "Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images, 'index:'-prefixed keys are ignored.",
    "additionalProperties": {
     "type": "string"
    }
