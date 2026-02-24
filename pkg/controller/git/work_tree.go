@@ -629,7 +629,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 	switch {
 	case opts.Tag != "":
 		args = append(args, "tag", opts.Tag)
-	case opts.TargetBranch != "":
+	default:
 		args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
 	}
 	if opts.Force {
