@@ -464,7 +464,7 @@ spec:
   subscriptions:
   - image:
       repoURL: public.ecr.aws/nginx/nginx
-      constraint: ^1.26.0
+      constraint: ^1.29.0
       discoveryLimit: 5
 ---
 apiVersion: kargo.akuity.io/v1alpha1
