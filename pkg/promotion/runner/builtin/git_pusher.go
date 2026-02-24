@@ -50,7 +50,7 @@ func init() {
 }
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
-// pushes commits from a local Git repository to a remote Git repository.
+// pushes commits and tags from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
