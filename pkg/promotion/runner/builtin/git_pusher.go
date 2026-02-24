@@ -157,7 +157,6 @@ func (g *gitPushPusher) run(
 		// branch is specific to this Promotion only holds, it is also safe to do this.
 		pushOpts.Force = true
 	}
-
 	if cfg.Tag != "" {
 		pushOpts.Tag = cfg.Tag
 		// If we're pushing a tag, we should not attempt to pull/rebase first as

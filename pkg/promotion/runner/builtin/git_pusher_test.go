@@ -172,71 +172,105 @@ func Test_gitPusher_convert(t *testing.T) {
 }
 
 func Test_gitPusher_run(t *testing.T) {
-	withGitPusherTestSuite(t, "push commit to generated branch", func(suite *gitPusherTestSuite) {
-		// Write a file.
-		require.NoError(t,
-			os.WriteFile(filepath.Join(suite.workingTree.Dir(), "test.txt"), []byte("foo"), 0600),
-		)
+	t.Run("push commit to generated branch", func(t *testing.T) {
+		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
+			// Write a file.
+			require.NoError(t,
+				os.WriteFile(filepath.Join(suite.workingTree.Dir(), "test.txt"), []byte("foo"), 0600),
+			)
 
-		// Commit the changes similarly to how gitCommitter would
-		// have. It will be gitPushStepRunner's job to push this commit.
-		require.NoError(t,
-			suite.workingTree.AddAllAndCommit("Initial commit", nil),
-		)
+			// Commit the changes similarly to how gitCommitter would
+			// have. It will be gitPushStepRunner's job to push this commit.
+			require.NoError(t,
+				suite.workingTree.AddAllAndCommit("Initial commit", nil),
+			)
 
-		// run the step
-		res, err := suite.runner.run(
-			context.Background(),
-			&promotion.StepContext{
-				Project:   "fake-project",
-				Stage:     "fake-stage",
-				Promotion: "fake-promotion",
-				WorkDir:   suite.workDir,
-			},
-			builtin.GitPushConfig{
-				Path:                 "master",
-				GenerateTargetBranch: true,
-				Provider:             ptr.To(builtin.Provider(suite.fakeGitProviderName)),
-			},
-		)
+			// run the step
+			res, err := suite.runner.run(
+				context.Background(),
+				&promotion.StepContext{
+					Project:   "fake-project",
+					Stage:     "fake-stage",
+					Promotion: "fake-promotion",
+					WorkDir:   suite.workDir,
+				},
+				builtin.GitPushConfig{
+					Path:                 "master",
+					GenerateTargetBranch: true,
+					Provider:             ptr.To(builtin.Provider(suite.fakeGitProviderName)),
+				},
+			)
 
-		// verify results
-		require.NoError(t, err)
-		branchName, ok := res.Output[stateKeyBranch]
-		require.True(t, ok)
-		require.Equal(t, "kargo/promotion/fake-promotion", branchName)
-		expectedCommit, err := suite.workingTree.LastCommitID()
-		require.NoError(t, err)
-		actualCommit, ok := res.Output[stateKeyCommit]
-		require.True(t, ok)
-		require.Equal(t, expectedCommit, actualCommit)
-		expectedCommitURL := fmt.Sprintf("%s/commit/%s", suite.testRepoURL, expectedCommit)
-		actualCommitURL := res.Output[stateKeyCommitURL]
-		require.Equal(t, expectedCommitURL, actualCommitURL)
+			// verify results
+			require.NoError(t, err)
+			branchName, ok := res.Output[stateKeyBranch]
+			require.True(t, ok)
+			require.Equal(t, "kargo/promotion/fake-promotion", branchName)
+			expectedCommit, err := suite.workingTree.LastCommitID()
+			require.NoError(t, err)
+			actualCommit, ok := res.Output[stateKeyCommit]
+			require.True(t, ok)
+			require.Equal(t, expectedCommit, actualCommit)
+			expectedCommitURL := fmt.Sprintf("%s/commit/%s", suite.testRepoURL, expectedCommit)
+			actualCommitURL := res.Output[stateKeyCommitURL]
+			require.Equal(t, expectedCommitURL, actualCommitURL)
+		})
 	})
-	withGitPusherTestSuite(t, "push tag", func(suite *gitPusherTestSuite) {
-		t.Skip("skipping until wtree.AddTag is implemented")
+	t.Run("push tag", func(t *testing.T) {
+		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
+			// working tree needs to have a commit to successfully create a tag
+			require.NoError(t,
+				os.WriteFile(filepath.Join(suite.workingTree.Dir(), "test.txt"), []byte("foo"), 0600),
+			)
 
-		// require.NoError(t,
-		// 	suite.workingTree.AddTag("v1.0.0", "Initial tag", nil),
-		// )
+			// Commit the changes similarly to how gitCommitter would
+			// have. It will be gitPushStepRunner's job to push this commit.
+			require.NoError(t,
+				suite.workingTree.AddAllAndCommit("Initial commit", nil),
+			)
 
-		res, err := suite.runner.run(
-			context.Background(),
-			&promotion.StepContext{
-				Project:   "fake-project",
-				Stage:     "fake-stage",
-				Promotion: "fake-promotion",
-				WorkDir:   suite.workDir,
-			},
-			builtin.GitPushConfig{
-				Tag: "v1.0.0",
-			},
-		)
-		require.NoError(t, err)
-		actualTag, ok := res.Output[stateKeyTag]
-		require.True(t, ok)
-		require.Equal(t, "v1.0.0", actualTag)
+			// run the runner so the commit gets pushed to the remote repository.
+			// This is necessary before we can create a tag, since tags must point to commits that exist in the repository.
+			_, err := suite.runner.run(
+				t.Context(),
+				&promotion.StepContext{
+					Project:   "fake-project",
+					Stage:     "fake-stage",
+					Promotion: "fake-promotion",
+					WorkDir:   suite.workDir,
+				},
+				builtin.GitPushConfig{
+					Path:                 "master",
+					GenerateTargetBranch: true,
+					Provider:             ptr.To(builtin.Provider(suite.fakeGitProviderName)),
+				},
+			)
+			require.NoError(t, err)
+			// no further assertions for the commit push since the previous sub-test does that already.
+
+			// create the tag
+			require.NoError(t,
+				suite.workingTree.CreateTag("v1.0.0"),
+			)
+
+			// run the runner again
+			pushTagResult, err := suite.runner.run(
+				t.Context(),
+				&promotion.StepContext{
+					Project:   "fake-project",
+					Stage:     "fake-stage",
+					Promotion: "fake-promotion",
+					WorkDir:   suite.workDir,
+				},
+				builtin.GitPushConfig{
+					Path: "master",
+					Tag:  "v1.0.0",
+				},
+			)
+			actualTag, ok := pushTagResult.Output[stateKeyTag]
+			require.True(t, ok)
+			require.Equal(t, "v1.0.0", actualTag)
+		})
 	})
 }
 
@@ -259,7 +293,7 @@ type gitPusherTestFn func(suite *gitPusherTestSuite)
 //
 // it then collects those components for use in testFn.
 // It is safe to run in parallel with other tests that also use withGitPusherTestSuite.
-func withGitPusherTestSuite(t *testing.T, name string, testFn gitPusherTestFn) {
+func withGitPusherTestSuite(t *testing.T, testFn gitPusherTestFn) {
 	// server
 	workDir := t.TempDir()
 	service := gitkit.New(
@@ -328,7 +362,6 @@ func withGitPusherTestSuite(t *testing.T, name string, testFn gitPusherTestFn) {
 			},
 		},
 	)
-
 	testFn(&gitPusherTestSuite{
 		testRepoURL:         testRepoURL,
 		fakeGitProviderName: uniqueFakeGitProviderName,
