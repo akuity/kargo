@@ -201,7 +201,7 @@ func Test_ociPusher_run(t *testing.T) {
 			},
 		},
 		{
-			name: "push index with annotations",
+			name: "push index with unprefixed annotations goes to child manifests",
 			cfg: builtin.OCIPushConfig{
 				ImageRef: srcIndexRef,
 				DestRef:  fmt.Sprintf("%s/test/multiarch:annotated", regHost),
@@ -213,16 +213,67 @@ func Test_ociPusher_run(t *testing.T) {
 				require.NoError(t, err)
 				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
 
-				// Verify annotations on the pushed index.
 				dstRef, parseErr := name.ParseReference(
 					fmt.Sprintf("%s/test/multiarch:annotated", regHost),
 				)
 				require.NoError(t, parseErr)
 				idx, getErr := remote.Index(dstRef)
 				require.NoError(t, getErr)
-				manifest, mErr := idx.IndexManifest()
+
+				// Unprefixed annotations should NOT be on the index.
+				idxManifest, mErr := idx.IndexManifest()
 				require.NoError(t, mErr)
-				assert.Equal(t, "true", manifest.Annotations["io.kargo.test"])
+				assert.Empty(t, idxManifest.Annotations["io.kargo.test"])
+
+				// Unprefixed annotations should be on each child manifest.
+				for _, desc := range idxManifest.Manifests {
+					img, imgErr := idx.Image(desc.Digest)
+					require.NoError(t, imgErr)
+					m, manifestErr := img.Manifest()
+					require.NoError(t, manifestErr)
+					assert.Equal(t, "true", m.Annotations["io.kargo.test"])
+				}
+			},
+		},
+		{
+			name: "push index with scoped annotations",
+			cfg: builtin.OCIPushConfig{
+				ImageRef: srcIndexRef,
+				DestRef:  fmt.Sprintf("%s/test/multiarch:scoped", regHost),
+				Annotations: map[string]string{
+					"index:io.kargo.index-only":       "idx",
+					"manifest:io.kargo.manifest-only": "mfst",
+					"io.kargo.default":                "both",
+				},
+			},
+			assertions: func(t *testing.T, result promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+
+				dstRef, parseErr := name.ParseReference(
+					fmt.Sprintf("%s/test/multiarch:scoped", regHost),
+				)
+				require.NoError(t, parseErr)
+				idx, getErr := remote.Index(dstRef)
+				require.NoError(t, getErr)
+
+				// Index annotations: only "index:" prefixed.
+				idxManifest, mErr := idx.IndexManifest()
+				require.NoError(t, mErr)
+				assert.Equal(t, "idx", idxManifest.Annotations["io.kargo.index-only"])
+				assert.Empty(t, idxManifest.Annotations["io.kargo.manifest-only"])
+				assert.Empty(t, idxManifest.Annotations["io.kargo.default"])
+
+				// Child manifest annotations: "manifest:" prefixed + unprefixed.
+				for _, desc := range idxManifest.Manifests {
+					img, imgErr := idx.Image(desc.Digest)
+					require.NoError(t, imgErr)
+					m, manifestErr := img.Manifest()
+					require.NoError(t, manifestErr)
+					assert.Equal(t, "mfst", m.Annotations["io.kargo.manifest-only"])
+					assert.Equal(t, "both", m.Annotations["io.kargo.default"])
+					assert.Empty(t, m.Annotations["io.kargo.index-only"])
+				}
 			},
 		},
 		{
@@ -405,6 +456,110 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	manifest, err := dstImg.Manifest()
 	require.NoError(t, err)
 	assert.Equal(t, "annotation", manifest.Annotations["existing"])
+}
+
+func Test_parseAnnotationScopes(t *testing.T) {
+	tests := []struct {
+		name         string
+		annotations  map[string]string
+		wantIndex    map[string]string
+		wantManifest map[string]string
+	}{
+		{
+			name:         "nil annotations",
+			annotations:  nil,
+			wantIndex:    map[string]string{},
+			wantManifest: map[string]string{},
+		},
+		{
+			name: "unprefixed go to manifest",
+			annotations: map[string]string{
+				"foo": "bar",
+			},
+			wantIndex:    map[string]string{},
+			wantManifest: map[string]string{"foo": "bar"},
+		},
+		{
+			name: "index prefix",
+			annotations: map[string]string{
+				"index:foo": "bar",
+			},
+			wantIndex:    map[string]string{"foo": "bar"},
+			wantManifest: map[string]string{},
+		},
+		{
+			name: "manifest prefix",
+			annotations: map[string]string{
+				"manifest:foo": "bar",
+			},
+			wantIndex:    map[string]string{},
+			wantManifest: map[string]string{"foo": "bar"},
+		},
+		{
+			name: "mixed scopes",
+			annotations: map[string]string{
+				"index:a":    "1",
+				"manifest:b": "2",
+				"c":          "3",
+			},
+			wantIndex:    map[string]string{"a": "1"},
+			wantManifest: map[string]string{"b": "2", "c": "3"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scopes := parseAnnotationScopes(tt.annotations)
+			assert.Equal(t, tt.wantIndex, scopes.index)
+			assert.Equal(t, tt.wantManifest, scopes.manifest)
+		})
+	}
+}
+
+func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+
+	srcImg, err := random.Image(256, 1)
+	require.NoError(t, err)
+	srcRef, err := name.ParseReference(fmt.Sprintf("%s/test/scoped:v1", regHost))
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(srcRef, srcImg))
+
+	runner := &ociPusher{
+		credsDB:      &credentials.FakeDB{},
+		schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+	}
+
+	// Push with mixed scoped annotations. "index:" should be ignored for images.
+	result, err := runner.run(context.Background(), &promotion.StepContext{
+		Project: "fake-project",
+	}, builtin.OCIPushConfig{
+		ImageRef: fmt.Sprintf("%s/test/scoped:v1", regHost),
+		DestRef:  fmt.Sprintf("%s/test/scoped:v2", regHost),
+		Annotations: map[string]string{
+			"index:ignored.key": "ignored",
+			"manifest:explicit": "yes",
+			"unprefixed":        "also-yes",
+		},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
+
+	dstRef, err := name.ParseReference(fmt.Sprintf("%s/test/scoped:v2", regHost))
+	require.NoError(t, err)
+	dstImg, err := remote.Image(dstRef)
+	require.NoError(t, err)
+	manifest, err := dstImg.Manifest()
+	require.NoError(t, err)
+
+	// manifest: and unprefixed should appear on the image manifest.
+	assert.Equal(t, "yes", manifest.Annotations["explicit"])
+	assert.Equal(t, "also-yes", manifest.Annotations["unprefixed"])
+	// index: should NOT appear.
+	assert.Empty(t, manifest.Annotations["ignored.key"])
 }
 
 // Test OCI image with an OCI manifest (not Docker) to ensure annotations work.
