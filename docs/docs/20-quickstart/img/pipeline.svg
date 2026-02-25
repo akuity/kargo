@@ -5,8 +5,7 @@
   <!-- Node 1: nginx image repo -->
   <rect x="0" y="10" width="118" height="90" rx="8" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1.5"/>
   <text x="59" y="48" font-size="26" text-anchor="middle">🐳</text>
-  <text x="59" y="72" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">nginx</text>
-  <text x="59" y="89" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">image repo</text>
+  <text x="59" y="82" font-size="13" fill="#1e40af" font-weight="600" text-anchor="middle">nginx</text>
 
   <!-- Arrow 1 -->
   <line x1="120" y1="55" x2="152" y2="55" stroke="#d1d5db" stroke-width="1.5"/>
@@ -62,7 +61,7 @@
   <!-- Freight label (spans warehouse → prod, shown as a pill under the arrows) -->
   <rect x="0" y="118" width="118" height="90" rx="8" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
   <rect x="0" y="118" width="118" height="4" rx="4" fill="#3578e5"/>
-  <text x="59" y="143" font-size="10" fill="#3578e5" font-weight="700" letter-spacing="0.08em" text-anchor="middle">REGISTRY</text>
+  <text x="59" y="143" font-size="10" fill="#3578e5" font-weight="700" letter-spacing="0.08em" text-anchor="middle">REPOSITORY</text>
   <text x="59" y="161" font-size="12" fill="#374151" text-anchor="middle">Watched by the</text>
   <text x="59" y="177" font-size="12" fill="#374151" text-anchor="middle">Warehouse</text>
 
