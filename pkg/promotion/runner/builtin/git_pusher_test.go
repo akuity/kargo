@@ -224,6 +224,7 @@ func (s *gitPusherTestSuite) addFileAndCommit(t *testing.T, filename, content, m
 }
 
 func (s *gitPusherTestSuite) pushCommit(t *testing.T) promotion.StepResult {
+	t.Helper()
 	result, err := s.runner.run(
 		t.Context(),
 		&promotion.StepContext{
@@ -250,6 +251,7 @@ func (s *gitPusherTestSuite) createTag(t *testing.T, tag string) {
 }
 
 func (s *gitPusherTestSuite) pushTag(t *testing.T) promotion.StepResult {
+	t.Helper()
 	result, err := s.runner.run(
 		t.Context(),
 		&promotion.StepContext{
