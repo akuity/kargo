@@ -70,6 +70,9 @@ func NewWorkloadIdentityProvider(ctx context.Context) credentials.Provider {
 
 	p := &WorkloadIdentityProvider{
 		tokenCache: cache.New(
+			// ACR refresh tokens expire in 3 hours. We'll hang on to them for
+			// 2.5 hours. The ACR refresh token exchange API does not expose
+			// actual token expiry, so a dynamic TTL is not possible here.
 			cacheTTLMinutes*time.Minute,        // Default ttl for each entry
 			cleanupIntervalMinutes*time.Minute, // Cleanup interval
 		),
@@ -101,13 +104,20 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	}
 	registryName := matches[1]
 
+	logger := logging.LoggerFromContext(ctx).WithValues(
+		"provider", "acrWorkloadIdentity",
+		"repoURL", req.RepoURL,
+	)
+
 	// Check the cache for the token
 	if entry, exists := p.tokenCache.Get(registryName); exists {
+		logger.Debug("access token cache hit")
 		return &credentials.Credentials{
 			Username: acrTokenUsername,
 			Password: entry.(string), // nolint: forcetypeassert
 		}, nil
 	}
+	logger.Debug("access token cache miss")
 
 	// Cache miss, get a new token
 	accessToken, err := p.getAccessTokenFn(ctx, registryName)
@@ -119,8 +129,14 @@ func (p *WorkloadIdentityProvider) GetCredentials(
 	if accessToken == "" {
 		return nil, nil
 	}
+	logger.Debug("obtained new access token")
 
-	// Cache the token
+	// Cache the token using the default TTL. The ACR refresh token exchange API
+	// does not expose token expiry, so a dynamic TTL is not possible here.
+	logger.Debug(
+		"caching access token",
+		"ttl", cache.DefaultExpiration,
+	)
 	p.tokenCache.Set(registryName, accessToken, cache.DefaultExpiration)
 
 	return &credentials.Credentials{
