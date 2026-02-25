@@ -82,7 +82,7 @@ as delimiters when an expression must contain the literal character sequence
 
 ```yaml
 config:
-  jsonData: %{{ {"labels": {"app": "nginx"}} }}
+  jsonData: ${% {"labels": {"app": "nginx"}} %}
 ```
 :::
 
