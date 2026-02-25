@@ -286,6 +286,13 @@ type GitPushConfig struct {
 	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
+type GitTagConfig struct {
+	// The path to the local Git repository.
+	Path string `json:"path"`
+	// The tag to create in the repository.
+	Tag string `json:"tag"`
+}
+
 type GitWaitForPRConfig struct {
 	// Indicates whether to skip TLS verification when cloning the repository. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
