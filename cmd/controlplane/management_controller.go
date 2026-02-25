@@ -22,6 +22,7 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/projects"
 	"github.com/akuity/kargo/pkg/controller/management/secrets"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
+	"github.com/akuity/kargo/pkg/controller/management/sharedsecrets"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -169,6 +170,17 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
+	if err := sharedsecrets.SetupReconcilerWithManager(
+		ctx,
+		kargoMgr,
+		sharedsecrets.ReconcilerConfig{
+			SharedResourcesNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+			MaxConcurrentReconciles:  4,
+		},
+	); err != nil {
+		return fmt.Errorf("error setting up SharedSecrets reconciler: %w", err)
+	}
+
 	if err := kargoMgr.Start(ctx); err != nil {
 		return fmt.Errorf("error starting kargo manager: %w", err)
 	}
@@ -215,6 +227,10 @@ func (o *managementControllerOptions) setupManager(
 		namespaceCacheConfigs[sharedResourcesCfg.SourceNamespace] = cache.Config{}
 		namespaceCacheConfigs[sharedResourcesCfg.DestinationNamespace] = cache.Config{}
 	}
+	// Always cache the shared resources namespace so the shared secret
+	// replication reconciler can watch source secrets even when the legacy
+	// migration controller is disabled (GLOBAL_CREDENTIALS_NAMESPACE unset).
+	namespaceCacheConfigs[os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources")] = cache.Config{}
 	return ctrl.NewManager(
 		restCfg,
 		ctrl.Options{

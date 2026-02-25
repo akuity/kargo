@@ -95,4 +95,15 @@ const (
 	//
 	// #nosec G101 -- This is not a credential, just an annotation key name.
 	AnnotationKeyGitHubTokenScope = "kargo.akuity.io/github-token-scopes"
+
+	// AnnotationKeyReplicateTo is an annotation key that can be set on a Secret
+	// in the shared resources namespace to indicate that it should be replicated
+	// to other namespaces. When the value is AnnotationValueReplicateToAll, the
+	// Secret is replicated to every Project namespace.
+	AnnotationKeyReplicateTo = "kargo.akuity.io/replicate-to"
+
+	// AnnotationValueReplicateToAll is the annotation value for
+	// AnnotationKeyReplicateTo that causes a Secret to be replicated to all
+	// Project namespaces.
+	AnnotationValueReplicateToAll = "*"
 )
