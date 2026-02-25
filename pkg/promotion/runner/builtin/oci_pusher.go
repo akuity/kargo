@@ -16,7 +16,13 @@ import (
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-const stepKindOCIPush = "oci-push"
+const (
+	stepKindOCIPush = "oci-push"
+
+	// maxOCIPushArtifactSize is the maximum total compressed size (config +
+	// layers) allowed for an OCI artifact pushed by the oci-push step.
+	maxOCIPushArtifactSize int64 = 1 << 30 // 1 GiB
+)
 
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -36,8 +42,9 @@ func init() {
 // copies/retags OCI artifacts (container images and Helm charts) between
 // registries.
 type ociPusher struct {
-	schemaLoader gojsonschema.JSONLoader
-	credsDB      credentials.Database
+	schemaLoader    gojsonschema.JSONLoader
+	credsDB         credentials.Database
+	maxArtifactSize int64 // maximum compressed artifact size in bytes
 }
 
 // newOCIPusher returns an implementation of the promotion.StepRunner interface
@@ -45,8 +52,9 @@ type ociPusher struct {
 // database to authenticate with source and destination registries.
 func newOCIPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &ociPusher{
-		credsDB:      caps.CredsDB,
-		schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+		credsDB:         caps.CredsDB,
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: maxOCIPushArtifactSize,
 	}
 }
 
@@ -112,7 +120,7 @@ func (p *ociPusher) run(
 			fmt.Errorf("failed to get source artifact %q: %w", cfg.ImageRef, err)
 	}
 
-	digest, err := p.push(desc, dstRef, cfg.Annotations, dstOpts)
+	digest, err := p.push(desc, srcRef, dstRef, cfg.Annotations, dstOpts)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
@@ -162,14 +170,94 @@ func parseAnnotationScopes(annotations map[string]string) annotationScopes {
 	return scopes
 }
 
+// imageSize returns the total compressed size of an image (config + layers)
+// using only manifest metadata — no blob downloads are performed.
+func imageSize(img v1.Image) (int64, error) {
+	m, err := img.Manifest()
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	total += m.Config.Size
+	for _, l := range m.Layers {
+		total += l.Size
+	}
+	return total, nil
+}
+
+// indexSize returns the total compressed size across all child images of an
+// image index. Each child manifest is fetched to read its layer sizes, but no
+// blobs are downloaded.
+func indexSize(idx v1.ImageIndex) (int64, error) {
+	im, err := idx.IndexManifest()
+	if err != nil {
+		return 0, err
+	}
+	var total int64
+	for _, desc := range im.Manifests {
+		img, err := idx.Image(desc.Digest)
+		if err != nil {
+			return 0, fmt.Errorf("failed to resolve child image %s: %w", desc.Digest, err)
+		}
+		sz, err := imageSize(img)
+		if err != nil {
+			return 0, fmt.Errorf("failed to compute size of child image %s: %w", desc.Digest, err)
+		}
+		total += sz
+	}
+	return total, nil
+}
+
+// artifactSize returns the total compressed size of an OCI artifact (config +
+// layers) from its descriptor metadata. For image indexes, this includes the
+// sum across all child images. No blobs are downloaded.
+func artifactSize(desc *remote.Descriptor) (int64, error) {
+	switch {
+	case desc.MediaType.IsImage():
+		img, err := desc.Image()
+		if err != nil {
+			return 0, fmt.Errorf("failed to resolve source image: %w", err)
+		}
+		return imageSize(img)
+	case desc.MediaType.IsIndex():
+		idx, err := desc.ImageIndex()
+		if err != nil {
+			return 0, fmt.Errorf("failed to resolve source image index: %w", err)
+		}
+		return indexSize(idx)
+	default:
+		return 0, &promotion.TerminalError{
+			Err: fmt.Errorf("unsupported media type %q", desc.MediaType),
+		}
+	}
+}
+
 // push pushes the described artifact to the destination reference, optionally
 // applying scoped annotations to the manifest.
 func (p *ociPusher) push(
 	desc *remote.Descriptor,
-	dstRef name.Reference,
+	srcRef, dstRef name.Reference,
 	annotations map[string]string,
 	dstOpts []remote.Option,
 ) (v1.Hash, error) {
+	// Enforce the size limit only when copying across repositories (registry +
+	// path). Within the same repository the blobs are already present, so no
+	// large transfer occurs.
+	if srcRef.Context().String() != dstRef.Context().String() {
+		sz, err := artifactSize(desc)
+		if err != nil {
+			return v1.Hash{}, err
+		}
+		if sz > p.maxArtifactSize {
+			return v1.Hash{}, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"compressed artifact size %.1f GiB exceeds maximum allowed size of %.1f GiB",
+					float64(sz)/(1<<30), float64(p.maxArtifactSize)/(1<<30),
+				),
+			}
+		}
+	}
+
 	scopes := parseAnnotationScopes(annotations)
 
 	switch {

@@ -28,6 +28,16 @@ copying it to a production registry. Multi-arch image indexes are copied in full
 | `digest` | `string` | Digest of the pushed artifact (e.g., `sha256:abc123...`). |
 | `tag` | `string` | Tag that was applied, parsed from `destRef`. |
 
+## Limits
+
+The total compressed size of the artifact (config blob and all layers) must not
+exceed 1 GiB. For multi-arch image indexes, this includes the sum across all
+child images. Exceeding this limit causes a terminal (non-retryable) error.
+
+This limit is not enforced when `imageRef` and `destRef` refer to the same
+repository (i.e. retagging within the same registry and path), since no blob
+transfer occurs in that case.
+
 ## Examples
 
 ### Retagging an Image After Verification
