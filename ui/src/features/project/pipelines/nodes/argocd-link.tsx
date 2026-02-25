@@ -130,18 +130,20 @@ type ArgoCDContext = z.infer<typeof argoCDContextSchema>[number];
 
 const getStatusFromHealthOutput = (healthOutputRaw: Uint8Array, app: string) => {
   try {
-    const decoded = decodeRawData({
-      result: {
-        case: 'raw',
-        value: healthOutputRaw
-      }
-    });
+    const parsed = JSON.parse(
+      decodeRawData({
+        result: {
+          case: 'raw',
+          value: healthOutputRaw
+        }
+      })
+    );
 
-    const parsed = JSON.parse(decoded);
-    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-    // @ts-ignore
-    const appStatus = parsed.find((item) => item.applicationStatuses[0].Name === app);
-    return appStatus.applicationStatuses[0].health;
+    const appStatus =
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      parsed.flatMap((item) => item.applicationStatuses).find((status) => status.Name === app);
+    return appStatus?.health;
   } catch {
     return undefined;
   }
