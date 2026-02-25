@@ -58,11 +58,11 @@ const (
 
 	// LabelKeyReplicatedFrom is a label key set on replicated Secrets to
 	// identify the name of the source Secret in the shared resources namespace.
-	LabelKeyReplicatedFrom = "kargo.akuity.io/replicated-from" // nolint: gosec
+	LabelKeyReplicatedFrom = "kargo.akuity.io/replicated-from"
 
 	// LabelKeyReplicatedSHA is a label key set on replicated Secrets to record
 	// the 16-character truncated SHA-256 hash of the source Secret's data at
 	// the time it was last replicated. This is used to detect external
 	// modifications to the replicated Secret.
-	LabelKeyReplicatedSHA = "kargo.akuity.io/replicated-sha" // nolint: gosec
+	LabelKeyReplicatedSHA = "kargo.akuity.io/replicated-sha"
 )

@@ -87,14 +87,14 @@ func project(name string) *kargoapi.Project {
 }
 
 // replicatedSecret builds a replicated Secret in the given namespace.
-func replicatedSecret(namespace, srcName string, data map[string][]byte) *corev1.Secret {
+func replicatedSecret(namespace string, data map[string][]byte) *corev1.Secret {
 	hash := computeDataHash(data)
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
-			Name:      srcName,
+			Name:      testSecretName,
 			Labels: map[string]string{
-				kargoapi.LabelKeyReplicatedFrom: srcName,
+				kargoapi.LabelKeyReplicatedFrom: testSecretName,
 				kargoapi.LabelKeyReplicatedSHA:  hash,
 			},
 		},
@@ -118,7 +118,7 @@ func reconcilerForTest(fc client.Client) *reconciler {
 }
 
 // doReconcile is a convenience wrapper.
-func doReconcile(t *testing.T, r *reconciler, name string) (ctrl.Result, error) {
+func doReconcile(t *testing.T, r *reconciler) (ctrl.Result, error) {
 	t.Helper()
 	l, err := logging.NewLogger(logging.DebugLevel, logging.DefaultFormat)
 	require.NoError(t, err)
@@ -126,7 +126,7 @@ func doReconcile(t *testing.T, r *reconciler, name string) (ctrl.Result, error) 
 	return r.Reconcile(ctx, ctrl.Request{
 		NamespacedName: types.NamespacedName{
 			Namespace: testSourceNS,
-			Name:      name,
+			Name:      testSecretName,
 		},
 	})
 }
@@ -134,7 +134,7 @@ func doReconcile(t *testing.T, r *reconciler, name string) (ctrl.Result, error) 
 func TestReconcile_SourceNotFound(t *testing.T) {
 	fc := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
 	r := reconcilerForTest(fc)
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 }
 
@@ -145,7 +145,7 @@ func TestReconcile_NoAnnotationNoFinalizer(t *testing.T) {
 		WithObjects(srcSecret()).
 		Build()
 	r := reconcilerForTest(fc)
-	result, err := doReconcile(t, r, testSecretName)
+	result, err := doReconcile(t, r)
 	require.NoError(t, err)
 	require.Equal(t, ctrl.Result{}, result)
 
@@ -163,7 +163,7 @@ func TestReconcile_AnnotationPresent_NoProjects_AddsFinalizerAndRequeues(t *test
 	r := reconcilerForTest(fc)
 
 	// First reconcile: should add finalizer and requeue.
-	result, err := doReconcile(t, r, testSecretName)
+	result, err := doReconcile(t, r)
 	require.NoError(t, err)
 	require.Equal(t, 100*time.Millisecond, result.RequeueAfter)
 
@@ -175,7 +175,7 @@ func TestReconcile_AnnotationPresent_NoProjects_AddsFinalizerAndRequeues(t *test
 	require.True(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
 
 	// Second reconcile (finalizer already present, no projects): no replicated secrets.
-	result, err = doReconcile(t, r, testSecretName)
+	result, err = doReconcile(t, r)
 	require.NoError(t, err)
 	require.Equal(t, ctrl.Result{}, result)
 
@@ -195,7 +195,7 @@ func TestReconcile_AnnotationPresent_TwoProjects_CreatesReplicas(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	result, err := doReconcile(t, r, testSecretName)
+	result, err := doReconcile(t, r)
 	require.NoError(t, err)
 	require.Equal(t, ctrl.Result{}, result)
 
@@ -222,7 +222,7 @@ func TestReconcile_AlreadyUpToDate_NoUpdate(t *testing.T) {
 		WithObjects(
 			withFinalizer(withReplicateTo(srcSecret())),
 			project(testProject1),
-			replicatedSecret(testProject1, testSecretName, sourceData),
+			replicatedSecret(testProject1, sourceData),
 		).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Update: func(
@@ -237,7 +237,7 @@ func TestReconcile_AlreadyUpToDate_NoUpdate(t *testing.T) {
 		}).Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 	require.False(t, updateCalled, "expected no update when replica is already up to date")
 }
@@ -255,12 +255,12 @@ func TestReconcile_SourceUpdated_UpdatesReplica(t *testing.T) {
 		WithObjects(
 			updatedSrc,
 			project(testProject1),
-			replicatedSecret(testProject1, testSecretName, oldData),
+			replicatedSecret(testProject1, oldData),
 		).
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	dest := &corev1.Secret{}
@@ -299,7 +299,7 @@ func TestReconcile_ExternallyModified_Skipped(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// Data should NOT have been reverted.
@@ -331,7 +331,7 @@ func TestReconcile_NoReplicatedFromLabel_Conflict_Skipped(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// User's secret data should be preserved.
@@ -347,13 +347,13 @@ func TestReconcile_DeletionTimestamp_CleansUpAndRemovesFinalizer(t *testing.T) {
 		WithScheme(testScheme(t)).
 		WithObjects(
 			withDeletionTimestamp(withFinalizer(withReplicateTo(srcSecret()))),
-			replicatedSecret(testProject1, testSecretName, srcSecret().Data),
-			replicatedSecret(testProject2, testSecretName, srcSecret().Data),
+			replicatedSecret(testProject1, srcSecret().Data),
+			replicatedSecret(testProject2, srcSecret().Data),
 		).
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// Replicated secrets should be deleted.
@@ -382,12 +382,12 @@ func TestReconcile_AnnotationRemoved_CleansUpAndRemovesFinalizer(t *testing.T) {
 		WithScheme(testScheme(t)).
 		WithObjects(
 			srcWithoutAnnotation,
-			replicatedSecret(testProject1, testSecretName, srcSecret().Data),
+			replicatedSecret(testProject1, srcSecret().Data),
 		).
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// Replicated secret should be deleted.
@@ -430,7 +430,7 @@ func TestReconcile_DeletionTimestamp_ExternallyModifiedReplica_Preserved(t *test
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// Externally modified replica should be preserved.
@@ -450,13 +450,13 @@ func TestReconcile_OrphanedNamespace_Cleaned(t *testing.T) {
 		WithObjects(
 			withFinalizer(withReplicateTo(srcSecret())),
 			project(testProject1),
-			replicatedSecret(testProject1, testSecretName, srcSecret().Data),
-			replicatedSecret(orphanedNS, testSecretName, srcSecret().Data),
+			replicatedSecret(testProject1, srcSecret().Data),
+			replicatedSecret(orphanedNS, srcSecret().Data),
 		).
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
 	// Secret in known project namespace should still exist.
@@ -496,7 +496,7 @@ func TestReconcile_CreateError(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.ErrorContains(t, err, "something went wrong")
 }
 
@@ -512,7 +512,7 @@ func TestReconcile_UpdateError(t *testing.T) {
 		WithObjects(
 			updatedSrc,
 			project(testProject1),
-			replicatedSecret(testProject1, testSecretName, oldData),
+			replicatedSecret(testProject1, oldData),
 		).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Update: func(
@@ -527,7 +527,7 @@ func TestReconcile_UpdateError(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.ErrorContains(t, err, "something went wrong")
 }
 
@@ -536,7 +536,7 @@ func TestReconcile_DeleteError_DuringCleanup(t *testing.T) {
 		WithScheme(testScheme(t)).
 		WithObjects(
 			withDeletionTimestamp(withFinalizer(withReplicateTo(srcSecret()))),
-			replicatedSecret(testProject1, testSecretName, srcSecret().Data),
+			replicatedSecret(testProject1, srcSecret().Data),
 		).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Delete: func(
@@ -551,7 +551,7 @@ func TestReconcile_DeleteError_DuringCleanup(t *testing.T) {
 		Build()
 	r := reconcilerForTest(fc)
 
-	_, err := doReconcile(t, r, testSecretName)
+	_, err := doReconcile(t, r)
 	require.ErrorContains(t, err, "something went wrong")
 }
 
@@ -584,8 +584,8 @@ func TestProjectCreatedEnqueuer(t *testing.T) {
 	)
 
 	require.Len(t, wq.items, 1)
-	require.Equal(t, testSecretName, wq.items[0].NamespacedName.Name)
-	require.Equal(t, testSourceNS, wq.items[0].NamespacedName.Namespace)
+	require.Equal(t, testSecretName, wq.items[0].Name)
+	require.Equal(t, testSourceNS, wq.items[0].Namespace)
 }
 
 func TestComputeDataHash(t *testing.T) {
@@ -633,11 +633,11 @@ func (q *fakeWorkQueue) AddAfter(item reconcile.Request, _ time.Duration) {
 func (q *fakeWorkQueue) AddRateLimited(item reconcile.Request) {
 	q.items = append(q.items, item)
 }
-func (q *fakeWorkQueue) Forget(_ reconcile.Request)               {}
-func (q *fakeWorkQueue) NumRequeues(_ reconcile.Request) int      { return 0 }
-func (q *fakeWorkQueue) Done(_ reconcile.Request)                 {}
-func (q *fakeWorkQueue) Get() (reconcile.Request, bool)           { return reconcile.Request{}, false }
-func (q *fakeWorkQueue) Len() int                                 { return len(q.items) }
-func (q *fakeWorkQueue) ShutDown()                                {}
-func (q *fakeWorkQueue) ShutDownWithDrain()                       {}
-func (q *fakeWorkQueue) ShuttingDown() bool                       { return false }
+func (q *fakeWorkQueue) Forget(_ reconcile.Request)          {}
+func (q *fakeWorkQueue) NumRequeues(_ reconcile.Request) int { return 0 }
+func (q *fakeWorkQueue) Done(_ reconcile.Request)            {}
+func (q *fakeWorkQueue) Get() (reconcile.Request, bool)      { return reconcile.Request{}, false }
+func (q *fakeWorkQueue) Len() int                            { return len(q.items) }
+func (q *fakeWorkQueue) ShutDown()                           {}
+func (q *fakeWorkQueue) ShutDownWithDrain()                  {}
+func (q *fakeWorkQueue) ShuttingDown() bool                  { return false }
