@@ -2,14 +2,11 @@ package replication
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
 	"hash"
 	"sort"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -43,7 +40,7 @@ type ReconcilerConfig struct {
 }
 
 // resourceAdapter abstracts the type-specific operations needed to replicate a
-// Kubernetes resource (Secret or ConfigMap).
+// Kubernetes resource.
 type resourceAdapter interface {
 	newObject() client.Object
 	newList() client.ObjectList
@@ -53,109 +50,9 @@ type resourceAdapter interface {
 	shouldReconcile(client.Object) bool
 }
 
-// ---- Secret adapter ----
-
-type secretAdapter struct{}
-
-var _ resourceAdapter = secretAdapter{}
-
-func (secretAdapter) newObject() client.Object   { return &corev1.Secret{} }
-func (secretAdapter) newList() client.ObjectList { return &corev1.SecretList{} }
-
-func (secretAdapter) getItems(l client.ObjectList) []client.Object {
-	list, ok := l.(*corev1.SecretList)
-	if !ok {
-		return nil
-	}
-	items := make([]client.Object, len(list.Items))
-	for i := range list.Items {
-		items[i] = &list.Items[i]
-	}
-	return items
-}
-
-func (secretAdapter) computeHash(obj client.Object) string {
-	s, ok := obj.(*corev1.Secret)
-	if !ok {
-		return ""
-	}
-	return computeSecretHash(s)
-}
-
-func (secretAdapter) copyFields(dst, src client.Object) {
-	d, ok := dst.(*corev1.Secret)
-	if !ok {
-		return
-	}
-	s, ok := src.(*corev1.Secret)
-	if !ok {
-		return
-	}
-	d.Data = s.Data
-	d.Type = s.Type
-}
-
-func (secretAdapter) shouldReconcile(obj client.Object) bool {
-	s, ok := obj.(*corev1.Secret)
-	if !ok {
-		return false
-	}
-	// only reconcile Secrets that are labeled with a credential type,
-	// to avoid replicating non-credential Secrets
-	_, ok = s.Labels[kargoapi.LabelKeyCredentialType]
-	return ok
-}
-
-// ---- ConfigMap adapter ----
-
-type configMapAdapter struct{}
-
-var _ resourceAdapter = configMapAdapter{}
-
-func (configMapAdapter) newObject() client.Object   { return &corev1.ConfigMap{} }
-func (configMapAdapter) newList() client.ObjectList { return &corev1.ConfigMapList{} }
-
-func (configMapAdapter) getItems(l client.ObjectList) []client.Object {
-	list, ok := l.(*corev1.ConfigMapList)
-	if !ok {
-		return nil
-	}
-	items := make([]client.Object, len(list.Items))
-	for i := range list.Items {
-		items[i] = &list.Items[i]
-	}
-	return items
-}
-
-func (configMapAdapter) computeHash(obj client.Object) string {
-	cm, ok := obj.(*corev1.ConfigMap)
-	if !ok {
-		return ""
-	}
-	return computeConfigMapHash(cm)
-}
-
-func (configMapAdapter) copyFields(dst, src client.Object) {
-	d, ok := dst.(*corev1.ConfigMap)
-	if !ok {
-		return
-	}
-	s, ok := src.(*corev1.ConfigMap)
-	if !ok {
-		return
-	}
-	d.Data = s.Data
-	d.BinaryData = s.BinaryData
-}
-
-func (configMapAdapter) shouldReconcile(_ client.Object) bool {
-	// All ConfigMaps in the shared resources namespace should be reconciled
-	return true
-}
-
 // ---- Reconciler ----
 
-// reconciler replicates Secrets or ConfigMaps annotated with
+// reconciler replicates Kubernetes resources annotated with
 // kargo.akuity.io/replicate-to: "*" from the shared resources namespace into
 // every Project namespace.
 type reconciler struct {
@@ -163,32 +60,6 @@ type reconciler struct {
 	client    client.Client // cached — source resources + project listing + writes
 	apiReader client.Reader // uncached — reading replicated resources in project namespaces
 	adapter   resourceAdapter
-}
-
-// SetupSecretReconcilerWithManager initializes the Secret replication
-// reconciler and registers it with the provided Manager.
-func SetupSecretReconcilerWithManager(
-	ctx context.Context,
-	kargoMgr manager.Manager,
-	cfg ReconcilerConfig,
-) error {
-	return setupReconcilerWithManager(
-		ctx, kargoMgr, cfg, secretAdapter{},
-		"shared-secrets-replication-controller",
-	)
-}
-
-// SetupConfigMapReconcilerWithManager initializes the ConfigMap replication
-// reconciler and registers it with the provided Manager.
-func SetupConfigMapReconcilerWithManager(
-	ctx context.Context,
-	kargoMgr manager.Manager,
-	cfg ReconcilerConfig,
-) error {
-	return setupReconcilerWithManager(
-		ctx, kargoMgr, cfg, configMapAdapter{},
-		"shared-configmaps-replication-controller",
-	)
 }
 
 func setupReconcilerWithManager(
@@ -243,8 +114,7 @@ func setupReconcilerWithManager(
 	return nil
 }
 
-// sharedEventFilter builds the predicate shared by both the Secret and
-// ConfigMap replication controllers.
+// sharedEventFilter builds the predicate shared by all replication controllers.
 func sharedEventFilter(cfg ReconcilerConfig) predicate.Predicate {
 	return predicate.And(
 		// Only reconcile resources from the shared resources namespace.
@@ -285,15 +155,15 @@ func (r *reconciler) Reconcile(
 	ctx context.Context,
 	req ctrl.Request,
 ) (ctrl.Result, error) {
+	srcObj := r.adapter.newObject()
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"name", req.Name,
 		"namespace", req.Namespace,
+		"kind", srcObj.GetObjectKind().GroupVersionKind().Kind,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
-
 	logger.Debug("reconciling shared resource")
 
-	srcObj := r.adapter.newObject()
 	if err := r.client.Get(ctx, req.NamespacedName, srcObj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -320,7 +190,7 @@ func (r *reconciler) Reconcile(
 
 	// Replication branch.
 
-	// Ensure the Secret/ConfigMap has a finalizer and requeue if it was added.
+	// Ensure the resource has a finalizer and requeue if it was added.
 	// The reason to requeue is to ensure that a possible deletion of the resource
 	// directly after the finalizer was added is handled without delay.
 	if ok, err := api.EnsureFinalizer(ctx, r.client, srcObj); ok || err != nil {
@@ -582,50 +452,4 @@ func hashMetadata(h hash.Hash, lbls, annotations map[string]string) {
 		h.Write([]byte(k))
 		h.Write([]byte(annotations[k]))
 	}
-}
-
-// computeSecretHash returns a deterministic 16-character truncated hex SHA-256
-// hash of a Secret's labels, annotations, and data.
-func computeSecretHash(secret *corev1.Secret) string {
-	h := sha256.New()
-	hashMetadata(h, secret.Labels, secret.Annotations)
-	h.Write([]byte("data"))
-	dataKeys := make([]string, 0, len(secret.Data))
-	for k := range secret.Data {
-		dataKeys = append(dataKeys, k)
-	}
-	sort.Strings(dataKeys)
-	for _, k := range dataKeys {
-		h.Write([]byte(k))
-		h.Write(secret.Data[k])
-	}
-	return hex.EncodeToString(h.Sum(nil))[:16]
-}
-
-// computeConfigMapHash returns a deterministic 16-character truncated hex
-// SHA-256 hash of a ConfigMap's labels, annotations, data, and binaryData.
-func computeConfigMapHash(cm *corev1.ConfigMap) string {
-	h := sha256.New()
-	hashMetadata(h, cm.Labels, cm.Annotations)
-	h.Write([]byte("data"))
-	dataKeys := make([]string, 0, len(cm.Data))
-	for k := range cm.Data {
-		dataKeys = append(dataKeys, k)
-	}
-	sort.Strings(dataKeys)
-	for _, k := range dataKeys {
-		h.Write([]byte(k))
-		h.Write([]byte(cm.Data[k]))
-	}
-	h.Write([]byte("binaryData"))
-	binaryDataKeys := make([]string, 0, len(cm.BinaryData))
-	for k := range cm.BinaryData {
-		binaryDataKeys = append(binaryDataKeys, k)
-	}
-	sort.Strings(binaryDataKeys)
-	for _, k := range binaryDataKeys {
-		h.Write([]byte(k))
-		h.Write(cm.BinaryData[k])
-	}
-	return hex.EncodeToString(h.Sum(nil))[:16]
 }

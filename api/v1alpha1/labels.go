@@ -51,13 +51,13 @@ const (
 	// FinalizerName is the name of the finalizer used by Kargo.
 	FinalizerName = "kargo.akuity.io/finalizer"
 
-	// LabelKeyReplicatedFrom is a label key set on replicated Secrets to
-	// identify the name of the source Secret in the shared resources namespace.
+	// LabelKeyReplicatedFrom is a label key set on replicated resources to
+	// identify the name of the source resource in the shared resources namespace.
 	LabelKeyReplicatedFrom = "kargo.akuity.io/replicated-from"
 
-	// LabelKeyReplicatedSHA is a label key set on replicated Secrets to record
-	// the 16-character truncated SHA-256 hash of the source Secret's data at
-	// the time it was last replicated. This is used to detect external
-	// modifications to the replicated Secret.
+	// LabelKeyReplicatedSHA is a label key set on replicated resources to record
+	// the 16-character truncated SHA-256 hash of the source resource's data at
+	// the time it was last replicated. This is used to optimize whether updates
+	// to replicated resources are needed.
 	LabelKeyReplicatedSHA = "kargo.akuity.io/replicated-sha"
 )
