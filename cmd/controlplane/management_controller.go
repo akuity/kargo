@@ -20,9 +20,9 @@ import (
 	"github.com/akuity/kargo/pkg/controller/management/namespaces"
 	"github.com/akuity/kargo/pkg/controller/management/projectconfigs"
 	"github.com/akuity/kargo/pkg/controller/management/projects"
+	"github.com/akuity/kargo/pkg/controller/management/replication"
 	"github.com/akuity/kargo/pkg/controller/management/secrets"
 	"github.com/akuity/kargo/pkg/controller/management/serviceaccounts"
-	"github.com/akuity/kargo/pkg/controller/management/sharedsecrets"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -170,15 +170,15 @@ func (o *managementControllerOptions) run(ctx context.Context) error {
 		}
 	}
 
-	if err := sharedsecrets.SetupReconcilerWithManager(
-		ctx,
-		kargoMgr,
-		sharedsecrets.ReconcilerConfig{
-			SharedResourcesNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
-			MaxConcurrentReconciles:  4,
-		},
-	); err != nil {
-		return fmt.Errorf("error setting up SharedSecrets reconciler: %w", err)
+	replicationCfg := replication.ReconcilerConfig{
+		SharedResourcesNamespace: os.GetEnv("SHARED_RESOURCES_NAMESPACE", "kargo-shared-resources"),
+		MaxConcurrentReconciles:  4,
+	}
+	if err := replication.SetupSecretReconcilerWithManager(ctx, kargoMgr, replicationCfg); err != nil {
+		return fmt.Errorf("error setting up shared Secret replication reconciler: %w", err)
+	}
+	if err := replication.SetupConfigMapReconcilerWithManager(ctx, kargoMgr, replicationCfg); err != nil {
+		return fmt.Errorf("error setting up shared ConfigMap replication reconciler: %w", err)
 	}
 
 	if err := kargoMgr.Start(ctx); err != nil {
@@ -247,6 +247,9 @@ func (o *managementControllerOptions) setupManager(
 						},
 					},
 					&corev1.Secret{}: {
+						Namespaces: namespaceCacheConfigs,
+					},
+					&corev1.ConfigMap{}: {
 						Namespaces: namespaceCacheConfigs,
 					},
 				},
