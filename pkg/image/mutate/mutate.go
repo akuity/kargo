@@ -1,4 +1,4 @@
-package builtin
+package mutate
 
 import (
 	"encoding/json"
@@ -17,6 +17,14 @@ import (
 // For a v1.Image, only manifestAnnotations are applied; indexAnnotations
 // are ignored. For a v1.ImageIndex, indexAnnotations are applied to the
 // index manifest and manifestAnnotations to each child image manifest.
+//
+// This function exists because go-containerregistry's mutate.Annotations has
+// a Layers() implementation that enumerates layers via
+// ConfigFile().RootFS.DiffIDs, which is empty for non-Docker OCI artifacts
+// (e.g. Helm charts). This causes layers to be omitted from the push, leading
+// to MANIFEST_BLOB_UNKNOWN errors on cross-repository pushes. The wrappers
+// here delegate Layers() and all other methods to the base artifact, overriding
+// only the manifest to include annotations.
 func Annotations(
 	f partial.WithRawManifest,
 	indexAnnotations, manifestAnnotations map[string]string,
@@ -37,14 +45,8 @@ func Annotations(
 	}
 }
 
-// image wraps a v1.Image to add annotations to its manifest without using
-// mutate.Annotations. We avoid mutate.Annotations because its internal
-// Layers() implementation enumerates layers via ConfigFile().RootFS.DiffIDs,
-// which is empty for non-Docker OCI artifacts (e.g. Helm charts). This causes
-// layers to be omitted from the push, leading to MANIFEST_BLOB_UNKNOWN errors
-// on cross-repository pushes. This wrapper delegates Layers() and all other
-// methods to the base image, overriding only the manifest to include
-// annotations.
+// image wraps a v1.Image to overlay annotations on its manifest. All methods
+// delegate to the base image; only the manifest is modified.
 type image struct {
 	base        v1.Image
 	annotations map[string]string
@@ -139,14 +141,11 @@ type annotatedChild struct {
 	size   int64
 }
 
-// index wraps a v1.ImageIndex to add scoped annotations. Index-scoped
+// index wraps a v1.ImageIndex to overlay scoped annotations. Index-scoped
 // annotations are applied to the index manifest; manifest-scoped annotations
-// are applied to each child image manifest via the Image() method. When
-// manifest annotations are present, child descriptors in the index manifest are
-// rewritten with new digests/sizes to stay consistent with the annotated
-// content. See image for rationale on avoiding mutate.Annotations. The base
-// field is unexported because v1.ImageIndex has an ImageIndex() method that
-// would collide with an embedded field of the same name.
+// are applied to each child image manifest via Image(). When manifest
+// annotations are present, child descriptors are rewritten with updated
+// digests/sizes to stay consistent with the annotated content.
 type index struct {
 	base                v1.ImageIndex
 	indexAnnotations    map[string]string

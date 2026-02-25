@@ -1,4 +1,4 @@
-package builtin
+package mutate
 
 import (
 	"testing"
@@ -56,8 +56,8 @@ func TestAnnotations_dockerImage(t *testing.T) {
 }
 
 // TestAnnotations_ociImage verifies that Annotations works on an OCI-format
-// image with empty DiffIDs (e.g. Helm charts). This is a regression test for
-// the mutate.Annotations bug where Layers() enumerated via DiffIDs, causing
+// image with empty DiffIDs (e.g. Helm charts), a regression case for
+// go-containerregistry's mutate.Annotations which would cause
 // MANIFEST_BLOB_UNKNOWN errors on cross-repo pushes.
 func TestAnnotations_ociImage(t *testing.T) {
 	base := empty.Image
