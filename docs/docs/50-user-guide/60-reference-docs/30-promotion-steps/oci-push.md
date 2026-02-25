@@ -31,7 +31,7 @@ copying it to a production registry. Multi-arch image indexes are copied in full
 ## Limits
 
 The total compressed size of the artifact (config blob and all layers) must not
-exceed 1 GiB. For multi-arch image indexes, this includes the sum across all
+exceed 1 GiB (or as configured by your administrator). For multi-arch image indexes, this includes the sum across all
 child images. Exceeding this limit causes a terminal (non-retryable) error.
 
 This limit is not enforced when `imageRef` and `destRef` refer to the same
