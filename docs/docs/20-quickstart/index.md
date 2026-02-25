@@ -166,7 +166,7 @@ Any approach you select should only:
 
 1. Fork the sample repository:  
   Go to https://github.com/akuity/kargo-demo and click <Hlt>Fork</Hlt>.  
-  (In a real setup, you would create your own repository from scratch.)
+  This repository contains application configurations (e.g. Kubernetes manifests) and is the source of truth for our demo cluster. In a real setup, you would create your own configuration repository from scratch.
 
 1. Get a GitHub personal access token (PAT):  
   Kargo will push changes to your fork for **test**, **uat**, and **prod** environments. You need a PAT with **write access** to your fork.
@@ -264,7 +264,7 @@ When you visit the [Argo CD dashboard](http://localhost:31080), the branches ref
 Run the following command to set up your pipeline. This will create:
 
 - A `Warehouse` that polls the public ECR registry for new versions of the Nginx image
-- A `PromotionTask` which is a reusable recipe: clone the repo, run `kustomize` to stamp in the new image version, push to the stage branch, and tell Argo CD to sync  
+- A `PromotionTask` that defines a reusable promotion process
 - Three `Stage` resources that define how Freight move through your pipeline
 
 <Tabs groupId="login-method">
