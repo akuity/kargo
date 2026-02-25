@@ -86,9 +86,12 @@ func project(name string) *kargoapi.Project {
 	}
 }
 
-// replicatedSecret builds a replicated Secret in the given namespace.
+// replicatedSecret builds a replicated Secret in the given namespace whose
+// SHA label matches what the reconciler would compute for a source with the
+// given data (and no labels/annotations).
 func replicatedSecret(namespace string, data map[string][]byte) *corev1.Secret {
-	hash := computeDataHash(data)
+	src := &corev1.Secret{Data: data}
+	hash := computeDataHash(src)
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
@@ -199,7 +202,7 @@ func TestReconcile_AnnotationPresent_TwoProjects_CreatesReplicas(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, ctrl.Result{}, result)
 
-	sourceHash := computeDataHash(srcSecret().Data)
+	sourceHash := computeDataHash(srcSecret())
 
 	for _, ns := range []string{testProject1, testProject2} {
 		dest := &corev1.Secret{}
@@ -211,6 +214,42 @@ func TestReconcile_AnnotationPresent_TwoProjects_CreatesReplicas(t *testing.T) {
 		require.Equal(t, testSecretName, dest.Labels[kargoapi.LabelKeyReplicatedFrom])
 		require.Equal(t, sourceHash, dest.Labels[kargoapi.LabelKeyReplicatedSHA])
 	}
+}
+
+func TestReconcile_LabelsAndAnnotationsCarriedOver(t *testing.T) {
+	// Source has extra labels and annotations that should be copied to replicas,
+	// minus the excluded ones.
+	src := withFinalizer(withReplicateTo(srcSecret()))
+	src.Labels = map[string]string{"team": "infra"}
+	src.Annotations = map[string]string{
+		kargoapi.AnnotationKeyReplicateTo: "*",
+		lastAppliedConfigAnnotation:       `{"big":"json"}`,
+		"custom.io/owner":                 "ops",
+	}
+
+	fc := fake.NewClientBuilder().
+		WithScheme(testScheme(t)).
+		WithObjects(src, project(testProject1)).
+		Build()
+	r := reconcilerForTest(fc)
+
+	_, err := doReconcile(t, r)
+	require.NoError(t, err)
+
+	dest := &corev1.Secret{}
+	require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
+		Namespace: testProject1, Name: testSecretName,
+	}, dest))
+
+	// Source labels merged with replication labels.
+	require.Equal(t, "infra", dest.Labels["team"])
+	require.Equal(t, testSecretName, dest.Labels[kargoapi.LabelKeyReplicatedFrom])
+	require.NotEmpty(t, dest.Labels[kargoapi.LabelKeyReplicatedSHA])
+
+	// Custom annotation carried over; excluded ones stripped.
+	require.Equal(t, "ops", dest.Annotations["custom.io/owner"])
+	require.NotContains(t, dest.Annotations, kargoapi.AnnotationKeyReplicateTo)
+	require.NotContains(t, dest.Annotations, lastAppliedConfigAnnotation)
 }
 
 func TestReconcile_AlreadyUpToDate_NoUpdate(t *testing.T) {
@@ -245,7 +284,7 @@ func TestReconcile_AlreadyUpToDate_NoUpdate(t *testing.T) {
 func TestReconcile_SourceUpdated_UpdatesReplica(t *testing.T) {
 	oldData := map[string][]byte{"key": []byte("old-value")}
 	newData := map[string][]byte{"key": []byte("new-value")}
-	newHash := computeDataHash(newData)
+	newHash := computeDataHash(&corev1.Secret{Data: newData})
 
 	updatedSrc := withFinalizer(withReplicateTo(srcSecret()))
 	updatedSrc.Data = newData
@@ -275,14 +314,15 @@ func TestReconcile_ExternallyModified_Skipped(t *testing.T) {
 	originalData := srcSecret().Data
 	modifiedData := map[string][]byte{"key": []byte("modified-externally")}
 
-	// SHA label records original hash but data was changed externally.
+	// SHA label records the hash of the original source secret's content, but
+	// the data was subsequently changed externally.
 	existingReplica := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testProject1,
 			Name:      testSecretName,
 			Labels: map[string]string{
 				kargoapi.LabelKeyReplicatedFrom: testSecretName,
-				kargoapi.LabelKeyReplicatedSHA:  computeDataHash(originalData),
+				kargoapi.LabelKeyReplicatedSHA:  computeDataHash(&corev1.Secret{Data: originalData}),
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -405,16 +445,16 @@ func TestReconcile_AnnotationRemoved_CleansUpAndRemovesFinalizer(t *testing.T) {
 	require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
 }
 
-func TestReconcile_DeletionTimestamp_ExternallyModifiedReplica_Preserved(t *testing.T) {
+func TestReconcile_DeletionTimestamp_DeletesAllReplicas(t *testing.T) {
+	// Cleanup deletes all replicas regardless of external modification.
 	modifiedData := map[string][]byte{"key": []byte("modified-externally")}
-	// SHA label records original hash but data was changed.
 	modifiedReplica := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testProject1,
 			Name:      testSecretName,
 			Labels: map[string]string{
 				kargoapi.LabelKeyReplicatedFrom: testSecretName,
-				kargoapi.LabelKeyReplicatedSHA:  computeDataHash(srcSecret().Data),
+				kargoapi.LabelKeyReplicatedSHA:  computeDataHash(srcSecret()),
 			},
 		},
 		Type: corev1.SecretTypeOpaque,
@@ -433,45 +473,14 @@ func TestReconcile_DeletionTimestamp_ExternallyModifiedReplica_Preserved(t *test
 	_, err := doReconcile(t, r)
 	require.NoError(t, err)
 
-	// Externally modified replica should be preserved.
+	// All replicas are deleted unconditionally during cleanup.
 	dest := &corev1.Secret{}
-	require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
-		Namespace: testProject1, Name: testSecretName,
-	}, dest))
-	require.Equal(t, modifiedData, dest.Data)
-}
-
-func TestReconcile_OrphanedNamespace_Cleaned(t *testing.T) {
-	// testProject1 is a known project; orphanedNS has a replica but no Project.
-	const orphanedNS = "orphaned-namespace"
-
-	fc := fake.NewClientBuilder().
-		WithScheme(testScheme(t)).
-		WithObjects(
-			withFinalizer(withReplicateTo(srcSecret())),
-			project(testProject1),
-			replicatedSecret(testProject1, srcSecret().Data),
-			replicatedSecret(orphanedNS, srcSecret().Data),
-		).
-		Build()
-	r := reconcilerForTest(fc)
-
-	_, err := doReconcile(t, r)
-	require.NoError(t, err)
-
-	// Secret in known project namespace should still exist.
-	dest := &corev1.Secret{}
-	require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
-		Namespace: testProject1, Name: testSecretName,
-	}, dest))
-
-	// Secret in orphaned namespace should be deleted.
-	orphaned := &corev1.Secret{}
 	getErr := fc.Get(t.Context(), types.NamespacedName{
-		Namespace: orphanedNS, Name: testSecretName,
-	}, orphaned)
+		Namespace: testProject1, Name: testSecretName,
+	}, dest)
 	require.True(t, apierrors.IsNotFound(getErr))
 }
+
 
 func TestReconcile_CreateError(t *testing.T) {
 	fc := fake.NewClientBuilder().
@@ -589,28 +598,73 @@ func TestProjectCreatedEnqueuer(t *testing.T) {
 }
 
 func TestComputeDataHash(t *testing.T) {
+	secret := func(labels, annotations map[string]string, data map[string][]byte) *corev1.Secret {
+		return &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Labels: labels, Annotations: annotations},
+			Data:       data,
+		}
+	}
+
 	t.Run("deterministic", func(t *testing.T) {
-		h1 := computeDataHash(map[string][]byte{"k": []byte("v")})
-		h2 := computeDataHash(map[string][]byte{"k": []byte("v")})
-		require.Equal(t, h1, h2)
-		require.Len(t, h1, 16)
+		s := secret(nil, nil, map[string][]byte{"k": []byte("v")})
+		require.Equal(t, computeDataHash(s), computeDataHash(s))
+		require.Len(t, computeDataHash(s), 16)
 	})
 
-	t.Run("order independent", func(t *testing.T) {
-		h1 := computeDataHash(map[string][]byte{"a": []byte("1"), "b": []byte("2")})
-		h2 := computeDataHash(map[string][]byte{"b": []byte("2"), "a": []byte("1")})
+	t.Run("data key order independent", func(t *testing.T) {
+		h1 := computeDataHash(secret(nil, nil, map[string][]byte{"a": []byte("1"), "b": []byte("2")}))
+		h2 := computeDataHash(secret(nil, nil, map[string][]byte{"b": []byte("2"), "a": []byte("1")}))
 		require.Equal(t, h1, h2)
 	})
 
 	t.Run("different data produces different hashes", func(t *testing.T) {
-		h1 := computeDataHash(map[string][]byte{"k": []byte("v1")})
-		h2 := computeDataHash(map[string][]byte{"k": []byte("v2")})
+		h1 := computeDataHash(secret(nil, nil, map[string][]byte{"k": []byte("v1")}))
+		h2 := computeDataHash(secret(nil, nil, map[string][]byte{"k": []byte("v2")}))
 		require.NotEqual(t, h1, h2)
 	})
 
-	t.Run("nil data", func(t *testing.T) {
-		h := computeDataHash(nil)
+	t.Run("empty secret", func(t *testing.T) {
+		h := computeDataHash(&corev1.Secret{})
 		require.Len(t, h, 16)
+	})
+
+	t.Run("label change produces different hash", func(t *testing.T) {
+		h1 := computeDataHash(secret(map[string]string{"env": "prod"}, nil, nil))
+		h2 := computeDataHash(secret(map[string]string{"env": "staging"}, nil, nil))
+		require.NotEqual(t, h1, h2)
+	})
+
+	t.Run("annotation change produces different hash", func(t *testing.T) {
+		h1 := computeDataHash(secret(nil, map[string]string{"owner": "team-a"}, nil))
+		h2 := computeDataHash(secret(nil, map[string]string{"owner": "team-b"}, nil))
+		require.NotEqual(t, h1, h2)
+	})
+
+	t.Run("replicate-to annotation excluded from hash", func(t *testing.T) {
+		h1 := computeDataHash(secret(nil, map[string]string{kargoapi.AnnotationKeyReplicateTo: "*"}, nil))
+		h2 := computeDataHash(secret(nil, nil, nil))
+		require.Equal(t, h1, h2)
+	})
+
+	t.Run("last-applied-configuration annotation excluded from hash", func(t *testing.T) {
+		h1 := computeDataHash(secret(nil, map[string]string{lastAppliedConfigAnnotation: `{"big":"json"}`}, nil))
+		h2 := computeDataHash(secret(nil, nil, nil))
+		require.Equal(t, h1, h2)
+	})
+
+	t.Run("replication labels excluded from hash", func(t *testing.T) {
+		h1 := computeDataHash(secret(map[string]string{
+			kargoapi.LabelKeyReplicatedFrom: "src",
+			kargoapi.LabelKeyReplicatedSHA:  "abc123",
+		}, nil, nil))
+		h2 := computeDataHash(secret(nil, nil, nil))
+		require.Equal(t, h1, h2)
+	})
+
+	t.Run("label order independent", func(t *testing.T) {
+		h1 := computeDataHash(secret(map[string]string{"a": "1", "b": "2"}, nil, nil))
+		h2 := computeDataHash(secret(map[string]string{"b": "2", "a": "1"}, nil, nil))
+		require.Equal(t, h1, h2)
 	})
 }
 

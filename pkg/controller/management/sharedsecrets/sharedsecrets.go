@@ -12,6 +12,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -27,6 +29,12 @@ import (
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/logging"
 )
+
+// lastAppliedConfigAnnotation is the kubectl annotation that stores a
+// JSON copy of the last-applied configuration. It is excluded from the
+// content hash and from replication because it is noisy, large, and
+// specific to the source object.
+const lastAppliedConfigAnnotation = "kubectl.kubernetes.io/last-applied-configuration"
 
 // ReconcilerConfig is the configuration for the shared secret replication
 // reconciler. It is populated manually in management_controller.go.
@@ -184,12 +192,25 @@ func (r *reconciler) Reconcile(
 		projectNamespaces[p.Name] = struct{}{}
 	}
 
-	sourceHash := computeDataHash(srcSecret.Data)
+	sourceHash := computeDataHash(srcSecret)
 
-	// List all existing replicated secrets cluster-wide.
+	// List replicated secrets cluster-wide that are out of date (SHA does not
+	// match sourceHash). Up-to-date replicas are excluded to avoid unnecessary
+	// network transfer; syncToProjectNamespace handles the AlreadyExists case
+	// gracefully when existing is nil.
+	replicatedFromReq, err := labels.NewRequirement(
+		kargoapi.LabelKeyReplicatedFrom, selection.Equals, []string{srcSecret.Name})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error building replicated-from label requirement: %w", err)
+	}
+	shaOutOfDateReq, err := labels.NewRequirement(
+		kargoapi.LabelKeyReplicatedSHA, selection.NotIn, []string{sourceHash})
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("error building replicated-sha label requirement: %w", err)
+	}
 	existingList := &corev1.SecretList{}
-	if err := r.apiReader.List(ctx, existingList, client.MatchingLabels{
-		kargoapi.LabelKeyReplicatedFrom: srcSecret.Name,
+	if err = r.apiReader.List(ctx, existingList, client.MatchingLabelsSelector{
+		Selector: labels.NewSelector().Add(*replicatedFromReq, *shaOutOfDateReq),
 	}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error listing replicated Secrets: %w", err)
 	}
@@ -203,19 +224,6 @@ func (r *reconciler) Reconcile(
 		existing := existingByNamespace[ns] // may be nil
 		if err := r.syncToProjectNamespace(ctx, srcSecret, ns, sourceHash, existing); err != nil {
 			return ctrl.Result{}, err
-		}
-	}
-
-	// Clean up replicated secrets in orphaned namespaces (project was deleted).
-	for ns, dest := range existingByNamespace {
-		if _, isProjectNS := projectNamespaces[ns]; !isProjectNS {
-			logger.Debug("deleting orphaned replicated Secret", "namespace", ns)
-			if err := r.client.Delete(ctx, dest); err != nil && !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, fmt.Errorf(
-					"error deleting orphaned replicated Secret %q in namespace %q: %w",
-					dest.Name, ns, err,
-				)
-			}
 		}
 	}
 
@@ -239,12 +247,10 @@ func (r *reconciler) syncToProjectNamespace(
 		// Create a new replicated Secret.
 		destSecret := &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: namespace,
-				Name:      srcSecret.Name,
-				Labels: map[string]string{
-					kargoapi.LabelKeyReplicatedFrom: srcSecret.Name,
-					kargoapi.LabelKeyReplicatedSHA:  sourceHash,
-				},
+				Namespace:   namespace,
+				Name:        srcSecret.Name,
+				Labels:      replicaLabels(srcSecret, sourceHash),
+				Annotations: replicaAnnotations(srcSecret),
 			},
 			Type: srcSecret.Type,
 			Data: srcSecret.Data,
@@ -271,17 +277,11 @@ func (r *reconciler) syncToProjectNamespace(
 		return nil
 	}
 
-	// Detect external modification: if the stored SHA differs from the actual
-	// data hash, the Secret was modified outside of Kargo's control.
-	replicatedSHA := existing.Labels[kargoapi.LabelKeyReplicatedSHA]
-	currentDataSHA := computeDataHash(existing.Data)
-	if replicatedSHA != currentDataSHA {
-		logger.Info("replicated Secret was modified externally; skipping update")
-		return nil
-	}
-
 	// Already up to date.
+	replicatedSHA := existing.Labels[kargoapi.LabelKeyReplicatedSHA]
 	if replicatedSHA == sourceHash {
+		// This technically shouldn't happen because we filtered the List to only include
+		// out-of-date replicas, but it's worth checking again before doing an update.
 		logger.Debug("replicated Secret is already up to date; skipping")
 		return nil
 	}
@@ -289,11 +289,8 @@ func (r *reconciler) syncToProjectNamespace(
 	// Source changed — update the replicated Secret.
 	existing.Data = srcSecret.Data
 	existing.Type = srcSecret.Type
-	if existing.Labels == nil {
-		existing.Labels = make(map[string]string)
-	}
-	existing.Labels[kargoapi.LabelKeyReplicatedFrom] = srcSecret.Name
-	existing.Labels[kargoapi.LabelKeyReplicatedSHA] = sourceHash
+	existing.Labels = replicaLabels(srcSecret, sourceHash)
+	existing.Annotations = replicaAnnotations(srcSecret)
 	if err := r.client.Update(ctx, existing); err != nil {
 		return fmt.Errorf(
 			"error updating replicated Secret %q in namespace %q: %w",
@@ -323,15 +320,6 @@ func (r *reconciler) cleanup(ctx context.Context, srcSecret *corev1.Secret) erro
 
 	for i := range existingList.Items {
 		dest := &existingList.Items[i]
-		replicatedSHA := dest.Labels[kargoapi.LabelKeyReplicatedSHA]
-		currentDataSHA := computeDataHash(dest.Data)
-		if replicatedSHA != currentDataSHA {
-			logger.Info(
-				"replicated Secret was modified externally; skipping delete",
-				"namespace", dest.Namespace,
-			)
-			continue
-		}
 		logger.Debug("deleting replicated Secret", "namespace", dest.Namespace)
 		if err := r.client.Delete(ctx, dest); err != nil && !apierrors.IsNotFound(err) {
 			return fmt.Errorf(
@@ -395,19 +383,83 @@ func (e *projectCreatedEnqueuer) Generic(
 ) {
 }
 
+// replicaLabels builds the label map for a replicated Secret: all source
+// labels plus the two replication-managed labels.
+func replicaLabels(src *corev1.Secret, sourceHash string) map[string]string {
+	labels := make(map[string]string, len(src.Labels)+2)
+	for k, v := range src.Labels {
+		labels[k] = v
+	}
+	labels[kargoapi.LabelKeyReplicatedFrom] = src.Name
+	labels[kargoapi.LabelKeyReplicatedSHA] = sourceHash
+	return labels
+}
+
+// replicaAnnotations builds the annotation map for a replicated Secret: all
+// source annotations except those that must not be propagated.
+func replicaAnnotations(src *corev1.Secret) map[string]string {
+	var annotations map[string]string
+	for k, v := range src.Annotations {
+		if k == kargoapi.AnnotationKeyReplicateTo || k == lastAppliedConfigAnnotation {
+			continue
+		}
+		if annotations == nil {
+			annotations = make(map[string]string, len(src.Annotations))
+		}
+		annotations[k] = v
+	}
+	return annotations
+}
+
 // computeDataHash returns a deterministic 16-character truncated hex SHA-256
-// hash of the secret data map. The hash is stable regardless of key ordering.
-func computeDataHash(data map[string][]byte) string {
+// hash covering the Secret's labels (excluding replication-managed labels),
+// annotations (excluding AnnotationKeyReplicateTo and
+// kubectl.kubernetes.io/last-applied-configuration), and data. The hash is
+// stable regardless of map key ordering.
+func computeDataHash(secret *corev1.Secret) string {
 	h := sha256.New()
-	keys := make([]string, 0, len(data))
-	for k := range data {
-		keys = append(keys, k)
+
+	// Hash labels, excluding labels managed by the replication controller.
+	h.Write([]byte("labels"))
+	labelKeys := make([]string, 0, len(secret.Labels))
+	for k := range secret.Labels {
+		if k != kargoapi.LabelKeyReplicatedFrom && k != kargoapi.LabelKeyReplicatedSHA {
+			labelKeys = append(labelKeys, k)
+		}
 	}
-	sort.Strings(keys)
-	for _, k := range keys {
+	sort.Strings(labelKeys)
+	for _, k := range labelKeys {
 		h.Write([]byte(k))
-		h.Write(data[k])
+		h.Write([]byte(secret.Labels[k]))
 	}
+
+	// Hash annotations, excluding operator-specific ones that should not
+	// influence whether a replica needs updating.
+	h.Write([]byte("annotations"))
+	annotationKeys := make([]string, 0, len(secret.Annotations))
+	for k := range secret.Annotations {
+		if k != kargoapi.AnnotationKeyReplicateTo && k != lastAppliedConfigAnnotation {
+			annotationKeys = append(annotationKeys, k)
+		}
+	}
+	sort.Strings(annotationKeys)
+	for _, k := range annotationKeys {
+		h.Write([]byte(k))
+		h.Write([]byte(secret.Annotations[k]))
+	}
+
+	// Hash data.
+	h.Write([]byte("data"))
+	dataKeys := make([]string, 0, len(secret.Data))
+	for k := range secret.Data {
+		dataKeys = append(dataKeys, k)
+	}
+	sort.Strings(dataKeys)
+	for _, k := range dataKeys {
+		h.Write([]byte(k))
+		h.Write(secret.Data[k])
+	}
+
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }
 
