@@ -11,6 +11,7 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	kargomutate "github.com/akuity/kargo/pkg/image/mutate"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -266,7 +267,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image: %w", err)
 		}
-		annotated, err := Annotations(img, nil, scopes.manifest)
+		annotated, err := kargomutate.Annotations(img, nil, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate image: %w", err)
 		}
@@ -281,7 +282,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image index: %w", err)
 		}
-		annotated, err := Annotations(idx, scopes.index, scopes.manifest)
+		annotated, err := kargomutate.Annotations(idx, scopes.index, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate index: %w", err)
 		}
