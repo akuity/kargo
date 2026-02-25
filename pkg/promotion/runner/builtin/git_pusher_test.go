@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"net/http/httptest"
@@ -174,100 +173,29 @@ func Test_gitPusher_convert(t *testing.T) {
 func Test_gitPusher_run(t *testing.T) {
 	t.Run("push commit to generated branch", func(t *testing.T) {
 		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
-			// Write a file.
-			require.NoError(t,
-				os.WriteFile(filepath.Join(suite.workingTree.Dir(), "test.txt"), []byte("foo"), 0600),
-			)
-
-			// Commit the changes similarly to how gitCommitter would
-			// have. It will be gitPushStepRunner's job to push this commit.
-			require.NoError(t,
-				suite.workingTree.AddAllAndCommit("Initial commit", nil),
-			)
-
-			// run the step
-			res, err := suite.runner.run(
-				context.Background(),
-				&promotion.StepContext{
-					Project:   "fake-project",
-					Stage:     "fake-stage",
-					Promotion: "fake-promotion",
-					WorkDir:   suite.workDir,
-				},
-				builtin.GitPushConfig{
-					Path:                 "master",
-					GenerateTargetBranch: true,
-					Provider:             ptr.To(builtin.Provider(suite.fakeGitProviderName)),
-				},
-			)
-
-			// verify results
-			require.NoError(t, err)
-			branchName, ok := res.Output[stateKeyBranch]
+			suite.addFileAndCommit(t, "test.txt", "foo", "Initial commit")
+			result := suite.pushCommit(t)
+			branchName, ok := result.Output[stateKeyBranch]
 			require.True(t, ok)
 			require.Equal(t, "kargo/promotion/fake-promotion", branchName)
 			expectedCommit, err := suite.workingTree.LastCommitID()
 			require.NoError(t, err)
-			actualCommit, ok := res.Output[stateKeyCommit]
+			actualCommit, ok := result.Output[stateKeyCommit]
 			require.True(t, ok)
 			require.Equal(t, expectedCommit, actualCommit)
 			expectedCommitURL := fmt.Sprintf("%s/commit/%s", suite.testRepoURL, expectedCommit)
-			actualCommitURL := res.Output[stateKeyCommitURL]
+			actualCommitURL := result.Output[stateKeyCommitURL]
 			require.Equal(t, expectedCommitURL, actualCommitURL)
 		})
 	})
 	t.Run("push tag", func(t *testing.T) {
 		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
 			// working tree needs to have a commit to successfully create a tag
-			require.NoError(t,
-				os.WriteFile(filepath.Join(suite.workingTree.Dir(), "test.txt"), []byte("foo"), 0600),
-			)
-
-			// Commit the changes similarly to how gitCommitter would
-			// have. It will be gitPushStepRunner's job to push this commit.
-			require.NoError(t,
-				suite.workingTree.AddAllAndCommit("Initial commit", nil),
-			)
-
-			// run the runner so the commit gets pushed to the remote repository.
-			// This is necessary before we can create a tag, since tags must point to commits that exist in the repository.
-			_, err := suite.runner.run(
-				t.Context(),
-				&promotion.StepContext{
-					Project:   "fake-project",
-					Stage:     "fake-stage",
-					Promotion: "fake-promotion",
-					WorkDir:   suite.workDir,
-				},
-				builtin.GitPushConfig{
-					Path:                 "master",
-					GenerateTargetBranch: true,
-					Provider:             ptr.To(builtin.Provider(suite.fakeGitProviderName)),
-				},
-			)
-			require.NoError(t, err)
-			// no further assertions for the commit push since the previous sub-test does that already.
-
-			// create the tag
-			require.NoError(t,
-				suite.workingTree.CreateTag("v1.0.0"),
-			)
-
-			// run the runner again
-			pushTagResult, err := suite.runner.run(
-				t.Context(),
-				&promotion.StepContext{
-					Project:   "fake-project",
-					Stage:     "fake-stage",
-					Promotion: "fake-promotion",
-					WorkDir:   suite.workDir,
-				},
-				builtin.GitPushConfig{
-					Path: "master",
-					Tag:  "v1.0.0",
-				},
-			)
-			actualTag, ok := pushTagResult.Output[stateKeyTag]
+			suite.addFileAndCommit(t, "test.txt", "foo", "Initial commit")
+			_ = suite.pushCommit(t)
+			suite.createTag(t, "v1.0.0")
+			result := suite.pushTag(t)
+			actualTag, ok := result.Output[stateKeyTag]
 			require.True(t, ok)
 			require.Equal(t, "v1.0.0", actualTag)
 		})
@@ -280,6 +208,63 @@ type gitPusherTestSuite struct {
 	runner              *gitPushPusher
 	workDir             string
 	workingTree         git.WorkTree
+}
+
+func (s *gitPusherTestSuite) addFileAndCommit(t *testing.T, filename, content, msg string) {
+	t.Helper()
+	require.NoError(t,
+		os.WriteFile(
+			filepath.Join(s.workingTree.Dir(), filename),
+			[]byte(content), 0600,
+		),
+	)
+	require.NoError(t,
+		s.workingTree.AddAllAndCommit(msg, nil),
+	)
+}
+
+func (s *gitPusherTestSuite) pushCommit(t *testing.T) promotion.StepResult {
+	result, err := s.runner.run(
+		t.Context(),
+		&promotion.StepContext{
+			Project:   "fake-project",
+			Stage:     "fake-stage",
+			Promotion: "fake-promotion",
+			WorkDir:   s.workDir,
+		},
+		builtin.GitPushConfig{
+			Path:                 "master",
+			GenerateTargetBranch: true,
+			Provider:             ptr.To(builtin.Provider(s.fakeGitProviderName)),
+		},
+	)
+	require.NoError(t, err)
+	return result
+}
+
+func (s *gitPusherTestSuite) createTag(t *testing.T, tag string) {
+	t.Helper()
+	require.NoError(t,
+		s.workingTree.CreateTag(tag),
+	)
+}
+
+func (s *gitPusherTestSuite) pushTag(t *testing.T) promotion.StepResult {
+	result, err := s.runner.run(
+		t.Context(),
+		&promotion.StepContext{
+			Project:   "fake-project",
+			Stage:     "fake-stage",
+			Promotion: "fake-promotion",
+			WorkDir:   s.workDir,
+		},
+		builtin.GitPushConfig{
+			Path: "master",
+			Tag:  "v1.0.0",
+		},
+	)
+	require.NoError(t, err)
+	return result
 }
 
 type gitPusherTestFn func(suite *gitPusherTestSuite)
