@@ -116,10 +116,20 @@ typically precedes the [`git-tag`](git-tag.md) in order to create the new tag.
 
 ```yaml
 steps:
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests
+- uses: git-push
+  as: push
+  config:
+    path: ./out
+    generateTargetBranch: true
 # Create a new tag
 - uses: git-tag
   config:
-    to: do
+    path: ./out
+    tag: v1.0.0
 - uses: git-push
   config:
     path: ./out
