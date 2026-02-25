@@ -147,6 +147,9 @@ func secretFixture() reconcilerTestFixture {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: testSourceNS,
 				Name:      testResourceName,
+				Labels: map[string]string{
+					kargoapi.LabelKeyCredentialType: "generic",
+				},
 			},
 			Type: corev1.SecretTypeOpaque,
 			Data: map[string][]byte{"key": []byte("value")},
@@ -431,7 +434,10 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 
 	t.Run("LabelsAndAnnotationsCarriedOver", func(t *testing.T) {
 		src := f.newSrc()
-		src.SetLabels(map[string]string{"team": "infra"})
+		src.SetLabels(map[string]string{
+			"team":                          "infra",
+			kargoapi.LabelKeyCredentialType: "generic",
+		})
 		src.SetAnnotations(map[string]string{
 			kargoapi.AnnotationKeyReplicateTo: "*",
 			lastAppliedConfigAnnotation:       `{"big":"json"}`,
@@ -797,6 +803,170 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 		require.Equal(t, testResourceName, wq.items[0].Name)
 		require.Equal(t, testSourceNS, wq.items[0].Namespace)
 	})
+}
+
+// ---- Adapter tests ----
+
+func TestSecretAdapter_ShouldReconcile(t *testing.T) {
+	adapter := secretAdapter{}
+
+	t.Run("Secret without credential type label should not reconcile", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: "test-ns",
+				Labels:    map[string]string{"other": "label"},
+			},
+		}
+		require.False(t, adapter.shouldReconcile(secret))
+	})
+
+	t.Run("Secret with credential type label should reconcile", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: "test-ns",
+				Labels:    map[string]string{kargoapi.LabelKeyCredentialType: "generic"},
+			},
+		}
+		require.True(t, adapter.shouldReconcile(secret))
+	})
+
+	t.Run("Secret with no labels should not reconcile", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-secret",
+				Namespace: "test-ns",
+			},
+		}
+		require.False(t, adapter.shouldReconcile(secret))
+	})
+
+	t.Run("Non-secret object should not reconcile", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cm",
+				Namespace: "test-ns",
+			},
+		}
+		require.False(t, adapter.shouldReconcile(cm))
+	})
+}
+
+func TestConfigMapAdapter_ShouldReconcile(t *testing.T) {
+	adapter := configMapAdapter{}
+
+	t.Run("ConfigMap should always reconcile", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cm",
+				Namespace: "test-ns",
+			},
+		}
+		require.True(t, adapter.shouldReconcile(cm))
+	})
+
+	t.Run("ConfigMap with no labels should reconcile", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cm",
+				Namespace: "test-ns",
+			},
+		}
+		require.True(t, adapter.shouldReconcile(cm))
+	})
+
+	t.Run("ConfigMap with labels should reconcile", func(t *testing.T) {
+		cm := &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cm",
+				Namespace: "test-ns",
+				Labels:    map[string]string{"env": "prod"},
+			},
+		}
+		require.True(t, adapter.shouldReconcile(cm))
+	})
+}
+
+func TestReconcile_SkipsReconcileWhenAdapterRetursFalse(t *testing.T) {
+	scheme := testScheme(t)
+	fc := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// Create a non-credential Secret in the shared resources namespace (no credential type label)
+	nonCredentialSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testResourceName,
+			Namespace: testSourceNS,
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyReplicateTo: kargoapi.AnnotationValueReplicateToAll,
+			},
+			Labels: map[string]string{}, // No credential type label
+		},
+		Data: map[string][]byte{"key": []byte("value")},
+		Type: corev1.SecretTypeOpaque,
+	}
+	require.NoError(t, fc.Create(context.Background(), nonCredentialSecret))
+
+	// Add the finalizer so it won't try to re-reconcile
+	controllerutil.AddFinalizer(nonCredentialSecret, kargoapi.FinalizerName)
+	require.NoError(t, fc.Update(context.Background(), nonCredentialSecret))
+
+	// Create a test project
+	require.NoError(t, fc.Create(context.Background(), project("test-project")))
+
+	r := reconcilerForTest(fc, secretFixture())
+
+	// Reconcile should succeed but not replicate because the Secret lacks the credential type label
+	result, err := doReconcile(t, r)
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{}, result)
+
+	// Verify the Secret was not replicated to the project namespace
+	replicatedList := &corev1.SecretList{}
+	require.NoError(t, fc.List(context.Background(), replicatedList, client.InNamespace("test-project")))
+	require.Empty(t, replicatedList.Items)
+}
+
+func TestReconcile_ReplicatesWhenAdapterReturnsTrue(t *testing.T) {
+	scheme := testScheme(t)
+	fc := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	// Create a credential Secret in the shared resources namespace (has credential type label)
+	credentialSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testResourceName,
+			Namespace: testSourceNS,
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyReplicateTo: kargoapi.AnnotationValueReplicateToAll,
+			},
+			Labels: map[string]string{
+				kargoapi.LabelKeyCredentialType: "generic", // Has credential type label
+			},
+		},
+		Data: map[string][]byte{"key": []byte("value")},
+		Type: corev1.SecretTypeOpaque,
+	}
+	require.NoError(t, fc.Create(context.Background(), credentialSecret))
+
+	// Add the finalizer
+	controllerutil.AddFinalizer(credentialSecret, kargoapi.FinalizerName)
+	require.NoError(t, fc.Update(context.Background(), credentialSecret))
+
+	// Create a test project
+	require.NoError(t, fc.Create(context.Background(), project("test-project")))
+
+	r := reconcilerForTest(fc, secretFixture())
+
+	// Reconcile should succeed and replicate because the Secret has the credential type label
+	result, err := doReconcile(t, r)
+	require.NoError(t, err)
+	require.Equal(t, ctrl.Result{}, result)
+
+	// Verify the Secret was replicated to the project namespace
+	replicatedList := &corev1.SecretList{}
+	require.NoError(t, fc.List(context.Background(), replicatedList, client.InNamespace("test-project")))
+	require.Len(t, replicatedList.Items, 1)
+	require.Equal(t, testResourceName, replicatedList.Items[0].GetName())
 }
 
 // ---- Hash function tests ----

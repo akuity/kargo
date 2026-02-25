@@ -50,6 +50,7 @@ type resourceAdapter interface {
 	getItems(client.ObjectList) []client.Object
 	computeHash(client.Object) string
 	copyFields(dst, src client.Object)
+	shouldReconcile(client.Object) bool
 }
 
 // ---- Secret adapter ----
@@ -94,6 +95,17 @@ func (secretAdapter) copyFields(dst, src client.Object) {
 	d.Type = s.Type
 }
 
+func (secretAdapter) shouldReconcile(obj client.Object) bool {
+	s, ok := obj.(*corev1.Secret)
+	if !ok {
+		return false
+	}
+	// only reconcile Secrets that are labeled with a credential type,
+	// to avoid replicating non-credential Secrets
+	_, ok = s.Labels[kargoapi.LabelKeyCredentialType]
+	return ok
+}
+
 // ---- ConfigMap adapter ----
 
 type configMapAdapter struct{}
@@ -134,6 +146,11 @@ func (configMapAdapter) copyFields(dst, src client.Object) {
 	}
 	d.Data = s.Data
 	d.BinaryData = s.BinaryData
+}
+
+func (configMapAdapter) shouldReconcile(_ client.Object) bool {
+	// All ConfigMaps in the shared resources namespace should be reconciled
+	return true
 }
 
 // ---- Reconciler ----
@@ -293,6 +310,11 @@ func (r *reconciler) Reconcile(
 
 	// No-op branch: no annotation and no finalizer.
 	if !hasAnnotation {
+		return ctrl.Result{}, nil
+	}
+	// Skip reconcile if the adapter determines this resource should
+	// not be reconciled (e.g. non-credential Secret).
+	if !r.adapter.shouldReconcile(srcObj) {
 		return ctrl.Result{}, nil
 	}
 
