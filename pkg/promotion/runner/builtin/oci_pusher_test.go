@@ -337,8 +337,9 @@ func Test_ociPusher_run(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &ociPusher{
-				credsDB:      &credentials.FakeDB{},
-				schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+				credsDB:         &credentials.FakeDB{},
+				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+				maxArtifactSize: maxOCIPushArtifactSize,
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -359,11 +360,13 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 		},
 	}
 
-	runner := &ociPusher{}
+	runner := &ociPusher{maxArtifactSize: maxOCIPushArtifactSize}
+	srcRef, err := name.ParseReference("localhost:5000/src:tag")
+	require.NoError(t, err)
 	dstRef, err := name.ParseReference("localhost:5000/test:tag")
 	require.NoError(t, err)
 
-	_, err = runner.push(desc, dstRef, nil, nil)
+	_, err = runner.push(desc, srcRef, dstRef, nil, nil)
 	assert.ErrorContains(t, err, "unsupported media type")
 	var termErr *promotion.TerminalError
 	assert.ErrorAs(t, err, &termErr)
@@ -399,8 +402,9 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &ociPusher{
-				credsDB:      tt.credsDB,
-				schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+				credsDB:         tt.credsDB,
+				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+				maxArtifactSize: maxOCIPushArtifactSize,
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -434,8 +438,9 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
 	runner := &ociPusher{
-		credsDB:      &credentials.FakeDB{},
-		schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: maxOCIPushArtifactSize,
 	}
 
 	// Push without specifying annotations.
@@ -529,8 +534,9 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
 	runner := &ociPusher{
-		credsDB:      &credentials.FakeDB{},
-		schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: maxOCIPushArtifactSize,
 	}
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
@@ -576,8 +582,9 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	require.NoError(t, remote.Write(srcRef, srcImg))
 
 	runner := &ociPusher{
-		credsDB:      &credentials.FakeDB{},
-		schemaLoader: getConfigSchemaLoader(stepKindOCIPush),
+		credsDB:         &credentials.FakeDB{},
+		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+		maxArtifactSize: maxOCIPushArtifactSize,
 	}
 
 	result, err := runner.run(context.Background(), &promotion.StepContext{
@@ -599,4 +606,101 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	manifest, err := dstImg.Manifest()
 	require.NoError(t, err)
 	assert.Equal(t, "test.value", manifest.Annotations["test.key"])
+}
+
+func Test_imageSize(t *testing.T) {
+	img, err := random.Image(256, 3)
+	require.NoError(t, err)
+
+	sz, err := imageSize(img)
+	require.NoError(t, err)
+	assert.Greater(t, sz, int64(0))
+
+	// Verify it matches the sum of config + layers from the manifest.
+	m, err := img.Manifest()
+	require.NoError(t, err)
+	var expected int64
+	expected += m.Config.Size
+	for _, l := range m.Layers {
+		expected += l.Size
+	}
+	assert.Equal(t, expected, sz)
+}
+
+func Test_indexSize(t *testing.T) {
+	idx, err := random.Index(256, 2, 3) // 3 platform images, 2 layers each
+	require.NoError(t, err)
+
+	sz, err := indexSize(idx)
+	require.NoError(t, err)
+	assert.Greater(t, sz, int64(0))
+
+	// Verify it equals the sum of imageSize for each child.
+	im, err := idx.IndexManifest()
+	require.NoError(t, err)
+	var expected int64
+	for _, desc := range im.Manifests {
+		child, imgErr := idx.Image(desc.Digest)
+		require.NoError(t, imgErr)
+		childSz, szErr := imageSize(child)
+		require.NoError(t, szErr)
+		expected += childSz
+	}
+	assert.Equal(t, expected, sz)
+}
+
+func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
+	regHandler := registry.New()
+	srv := httptest.NewServer(regHandler)
+	t.Cleanup(srv.Close)
+	regHost := srv.Listener.Addr().String()
+
+	// Push a test image (will exceed our tiny limit).
+	srcImg, err := random.Image(256, 1)
+	require.NoError(t, err)
+	srcRef, err := name.ParseReference(fmt.Sprintf("%s/test/big:v1", regHost))
+	require.NoError(t, err)
+	require.NoError(t, remote.Write(srcRef, srcImg))
+
+	// Push a test index.
+	srcIdx, err := random.Index(256, 1, 2)
+	require.NoError(t, err)
+	idxRef, err := name.ParseReference(fmt.Sprintf("%s/test/bigidx:v1", regHost))
+	require.NoError(t, err)
+	require.NoError(t, remote.WriteIndex(idxRef, srcIdx))
+
+	tests := []struct {
+		name     string
+		imageRef string
+	}{
+		{
+			name:     "image exceeds size limit",
+			imageRef: fmt.Sprintf("%s/test/big:v1", regHost),
+		},
+		{
+			name:     "index exceeds size limit",
+			imageRef: fmt.Sprintf("%s/test/bigidx:v1", regHost),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			runner := &ociPusher{
+				credsDB:         &credentials.FakeDB{},
+				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
+				maxArtifactSize: 100, // tiny limit to trigger the error
+			}
+
+			result, err := runner.run(context.Background(), &promotion.StepContext{
+				Project: "fake-project",
+			}, builtin.OCIPushConfig{
+				ImageRef: tt.imageRef,
+				DestRef:  fmt.Sprintf("%s/test/dst:v1", regHost),
+			})
+			assert.Equal(t, string(kargoapi.PromotionStepStatusErrored), string(result.Status))
+			assert.ErrorContains(t, err, "exceeds maximum allowed size of")
+			var termErr *promotion.TerminalError
+			assert.ErrorAs(t, err, &termErr)
+		})
+	}
 }
