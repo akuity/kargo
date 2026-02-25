@@ -333,8 +333,8 @@ func withGitPusherTestSuite(t *testing.T, testFn gitPusherTestFn) {
 	gitprovider.Register(
 		uniqueFakeGitProviderName,
 		gitprovider.Registration{
-			Predicate: func(_ string) bool {
-				return true
+			Predicate: func(repoURL string) bool {
+				return repoURL == uniqueFakeGitProviderName
 			},
 			NewProvider: func(
 				string,
