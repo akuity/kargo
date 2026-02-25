@@ -59,7 +59,7 @@ func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, erro
 }
 
 func (g *gitTagTagger) run(
-	ctx context.Context,
+	_ context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {

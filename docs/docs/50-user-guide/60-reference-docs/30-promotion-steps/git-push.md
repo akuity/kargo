@@ -115,16 +115,6 @@ In this example, a tag is pushed to the remote repository. The `git-tag` step
 typically precedes the [`git-tag`](git-tag.md) in order to create the new tag.
 
 ```yaml
-steps:
-- uses: git-commit
-  config:
-    path: ./out
-    message: rendered updated manifests
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
 # Create a new tag
 - uses: git-tag
   config:
