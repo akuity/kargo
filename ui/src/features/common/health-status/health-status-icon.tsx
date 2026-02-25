@@ -70,6 +70,7 @@ const iconForHealthStatus = (health?: Health): IconDefinition => {
     case HealthStatus.HEALTHY:
       return faHeart;
     case HealthStatus.UNHEALTHY:
+    case HealthStatus.DEGRADED:
       return faHeartBroken;
     case HealthStatus.PROGRESSING:
       return faCircleNotch;
@@ -84,6 +85,7 @@ const colorForHealthStatus = (health?: Health): string => {
   switch (healthStatusToEnum(health?.status)) {
     case HealthStatus.HEALTHY:
       return '#52c41a';
+    case HealthStatus.DEGRADED:
     case HealthStatus.UNHEALTHY:
       return '#f5222d';
     case HealthStatus.PROGRESSING:
