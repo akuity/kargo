@@ -103,14 +103,7 @@ func (p *ServiceAccountKeyProvider) GetCredentials(
 	}
 	logger.Debug("obtained new access token")
 
-	// Cache the token, preferring a TTL derived from the actual token expiry
-	// when available.
-	ttl := cache.DefaultExpiration
-	if !token.Expiry.IsZero() {
-		if remaining := time.Until(token.Expiry) - tokenCacheExpiryMargin; remaining > 0 {
-			ttl = remaining
-		}
-	}
+	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
 	logger.Debug(
 		"caching access token",
 		"expiry", token.Expiry,

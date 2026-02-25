@@ -182,14 +182,7 @@ func (p *AppCredentialProvider) getUsernameAndPassword(
 	}
 	logger.Debug("obtained new installation access token")
 
-	// Cache the new token, preferring a TTL derived from the actual token
-	// expiry when available.
-	ttl := cache.DefaultExpiration
-	if !token.Expiry.IsZero() {
-		if remaining := time.Until(token.Expiry) - tokenCacheExpiryMargin; remaining > 0 {
-			ttl = remaining
-		}
-	}
+	ttl := credentials.CalculateCacheTTL(token.Expiry, tokenCacheExpiryMargin)
 	logger.Debug(
 		"caching installation access token",
 		"expiry", token.Expiry,

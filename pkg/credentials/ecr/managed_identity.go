@@ -151,14 +151,7 @@ func (p *ManagedIdentityProvider) GetCredentials(
 	}
 	logger.Debug("obtained new auth token")
 
-	// Cache the encoded token, preferring a TTL derived from the actual token
-	// expiry when available.
-	ttl := cache.DefaultExpiration
-	if !expiry.IsZero() {
-		if remaining := time.Until(expiry) - tokenCacheExpiryMargin; remaining > 0 {
-			ttl = remaining
-		}
-	}
+	ttl := credentials.CalculateCacheTTL(expiry, tokenCacheExpiryMargin)
 	logger.Debug(
 		"caching auth token",
 		"expiry", expiry,

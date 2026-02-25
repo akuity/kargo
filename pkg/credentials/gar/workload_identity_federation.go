@@ -153,14 +153,7 @@ func (p *WorkloadIdentityFederationProvider) GetCredentials(
 	}
 	if accessToken != "" {
 		logger.Debug("obtained new access token")
-		// Cache the token, preferring a TTL derived from the actual token
-		// expiry when available.
-		ttl := cache.DefaultExpiration
-		if !expiry.IsZero() {
-			if remaining := time.Until(expiry) - tokenCacheExpiryMargin; remaining > 0 {
-				ttl = remaining
-			}
-		}
+		ttl := credentials.CalculateCacheTTL(expiry, tokenCacheExpiryMargin)
 		logger.Debug(
 			"caching access token",
 			"expiry", expiry,
