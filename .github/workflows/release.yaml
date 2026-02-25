@@ -364,3 +364,33 @@ jobs:
       base64-subjects: "${{ needs.combine_hashes.outputs.hashes }}"
       upload-assets: true # Optional: Upload to a new release
       provenance-name: kargo-cli.intoto.jsonl
+
+  publish-best-releases:
+    needs: [publish-cli]
+    if: github.event_name == 'release'
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    container:
+      image: *golangImage
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Generate best releases JSON
+      run: |
+        mkdir _site
+        go run ./hack/best-releases > _site/best-releases.json
+    - name: Configure Pages
+      uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5.0.0
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+      with:
+        path: _site
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5
