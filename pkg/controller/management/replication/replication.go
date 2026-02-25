@@ -211,8 +211,12 @@ func sharedEventFilter(cfg ReconcilerConfig) predicate.Predicate {
 		// Update: old OR new object must have it (to catch annotation removal).
 		predicate.Funcs{
 			CreateFunc: func(e event.CreateEvent) bool {
+				// Also allow through objects that have our finalizer but lost the
+				// annotation while the controller was down, so the cleanup path
+				// runs on startup.
 				return e.Object.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] ==
-					kargoapi.AnnotationValueReplicateToAll
+					kargoapi.AnnotationValueReplicateToAll ||
+					controllerutil.ContainsFinalizer(e.Object, kargoapi.FinalizerNameReplicated)
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
 				return e.Object.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] ==

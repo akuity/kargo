@@ -555,6 +555,36 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 		require.True(t, apierrors.IsNotFound(getErr))
 	})
 
+	t.Run("FinalizerPresentNoAnnotation_CleansUpOnStartup", func(t *testing.T) {
+		// Simulates startup after the replicate-to annotation was removed while
+		// the controller was down. The CreateFunc predicate now passes these
+		// objects through, so the cleanup path must run.
+		srcWithFinalizer := withFinalizer(f.newSrc()) // finalizer present, no annotation
+
+		fc := fake.NewClientBuilder().
+			WithScheme(testScheme(t)).
+			WithObjects(srcWithFinalizer, f.newReplica(testProject1, f.newSrc())).
+			Build()
+		r := reconcilerForTest(fc, f)
+
+		_, err := doReconcile(t, r)
+		require.NoError(t, err)
+
+		// Replicated resource should be deleted.
+		dest := f.adapter.newObject()
+		getErr := fc.Get(t.Context(), types.NamespacedName{
+			Namespace: testProject1, Name: testResourceName,
+		}, dest)
+		require.True(t, apierrors.IsNotFound(getErr))
+
+		// Source should have its replication finalizer removed.
+		src := f.adapter.newObject()
+		require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
+			Namespace: testSourceNS, Name: testResourceName,
+		}, src))
+		require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
+	})
+
 	t.Run("AnnotationRemoved_CleansUpAndRemovesFinalizer", func(t *testing.T) {
 		srcWithoutAnnotation := withFinalizer(f.newSrc()) // finalizer present, no annotation
 
