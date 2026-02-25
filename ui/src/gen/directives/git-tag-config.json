@@ -5,11 +5,13 @@
  "properties": {
   "path": {
    "type": "string",
-   "description": "The path to the local Git repository."
+   "description": "The path to the local Git repository.",
+   "minLength": 1
   },
   "tag": {
    "type": "string",
-   "description": "The tag to create in the repository."
+   "description": "The tag to create in the repository.",
+   "minLength": 1
   }
  }
 }
