@@ -173,6 +173,7 @@ func Test_gitPusher_convert(t *testing.T) {
 func Test_gitPusher_run(t *testing.T) {
 	t.Run("push commit to generated branch", func(t *testing.T) {
 		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
+			t.Parallel()
 			suite.addFileAndCommit(t, "test.txt", "foo", "Initial commit")
 			result := suite.pushCommit(t)
 			branchName, ok := result.Output[stateKeyBranch]
@@ -190,6 +191,7 @@ func Test_gitPusher_run(t *testing.T) {
 	})
 	t.Run("push tag", func(t *testing.T) {
 		withGitPusherTestSuite(t, func(suite *gitPusherTestSuite) {
+			t.Parallel()
 			// working tree needs to have a commit to successfully create a tag
 			suite.addFileAndCommit(t, "test.txt", "foo", "Initial commit")
 			_ = suite.pushCommit(t)
