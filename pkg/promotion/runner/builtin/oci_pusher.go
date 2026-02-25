@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
@@ -11,18 +12,21 @@ import (
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	kargomutate "github.com/akuity/kargo/pkg/image/mutate"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargomutate "github.com/akuity/kargo/pkg/image/mutate"
+	libos "github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/types"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
 	stepKindOCIPush = "oci-push"
 
-	// maxOCIPushArtifactSize is the maximum total compressed size (config +
-	// layers) allowed for an OCI artifact pushed by the oci-push step.
-	maxOCIPushArtifactSize int64 = 1 << 30 // 1 GiB
+	// defaultMaxOCIPushArtifactSize is the default maximum total compressed
+	// size (config + layers) allowed for an OCI artifact pushed by the
+	// oci-push step. Override with the MAX_OCI_PUSH_ARTIFACT_SIZE env var.
+	defaultMaxOCIPushArtifactSize int64 = 1 << 30 // 1 GiB
 )
 
 func init() {
@@ -48,6 +52,15 @@ type ociPusher struct {
 	maxArtifactSize int64 // maximum compressed artifact size in bytes
 }
 
+// maxArtifactSizeFromEnv reads the MAX_OCI_PUSH_ARTIFACT_SIZE environment
+// variable and returns the configured limit in bytes. When unset the default
+// 1 GiB limit is used. A value of -1 disables the limit entirely.
+func maxArtifactSizeFromEnv() int64 {
+	return int64(types.MustParseInt(
+		libos.GetEnv("MAX_OCI_PUSH_ARTIFACT_SIZE", strconv.FormatInt(defaultMaxOCIPushArtifactSize, 10)),
+	))
+}
+
 // newOCIPusher returns an implementation of the promotion.StepRunner interface
 // that pushes OCI artifacts to a registry. It uses the provided credentials
 // database to authenticate with source and destination registries.
@@ -55,7 +68,7 @@ func newOCIPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &ociPusher{
 		credsDB:         caps.CredsDB,
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: maxOCIPushArtifactSize,
+		maxArtifactSize: maxArtifactSizeFromEnv(),
 	}
 }
 
@@ -243,8 +256,8 @@ func (p *ociPusher) push(
 ) (v1.Hash, error) {
 	// Enforce the size limit only when copying across repositories (registry +
 	// path). Within the same repository the blobs are already present, so no
-	// large transfer occurs.
-	if srcRef.Context().String() != dstRef.Context().String() {
+	// large transfer occurs. A negative maxArtifactSize disables the check.
+	if p.maxArtifactSize >= 0 && srcRef.Context().String() != dstRef.Context().String() {
 		sz, err := artifactSize(desc)
 		if err != nil {
 			return v1.Hash{}, err
