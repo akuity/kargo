@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"hash"
 	"sort"
@@ -26,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/controller"
 	"github.com/akuity/kargo/pkg/logging"
 )
@@ -58,11 +58,14 @@ type secretAdapter struct{}
 
 var _ resourceAdapter = secretAdapter{}
 
-func (secretAdapter) newObject() client.Object { return &corev1.Secret{} }
+func (secretAdapter) newObject() client.Object   { return &corev1.Secret{} }
 func (secretAdapter) newList() client.ObjectList { return &corev1.SecretList{} }
 
 func (secretAdapter) getItems(l client.ObjectList) []client.Object {
-	list := l.(*corev1.SecretList)
+	list, ok := l.(*corev1.SecretList)
+	if !ok {
+		return nil
+	}
 	items := make([]client.Object, len(list.Items))
 	for i := range list.Items {
 		items[i] = &list.Items[i]
@@ -71,11 +74,22 @@ func (secretAdapter) getItems(l client.ObjectList) []client.Object {
 }
 
 func (secretAdapter) computeHash(obj client.Object) string {
-	return computeSecretHash(obj.(*corev1.Secret))
+	s, ok := obj.(*corev1.Secret)
+	if !ok {
+		return ""
+	}
+	return computeSecretHash(s)
 }
 
 func (secretAdapter) copyFields(dst, src client.Object) {
-	d, s := dst.(*corev1.Secret), src.(*corev1.Secret)
+	d, ok := dst.(*corev1.Secret)
+	if !ok {
+		return
+	}
+	s, ok := src.(*corev1.Secret)
+	if !ok {
+		return
+	}
 	d.Data = s.Data
 	d.Type = s.Type
 }
@@ -86,11 +100,14 @@ type configMapAdapter struct{}
 
 var _ resourceAdapter = configMapAdapter{}
 
-func (configMapAdapter) newObject() client.Object { return &corev1.ConfigMap{} }
+func (configMapAdapter) newObject() client.Object   { return &corev1.ConfigMap{} }
 func (configMapAdapter) newList() client.ObjectList { return &corev1.ConfigMapList{} }
 
 func (configMapAdapter) getItems(l client.ObjectList) []client.Object {
-	list := l.(*corev1.ConfigMapList)
+	list, ok := l.(*corev1.ConfigMapList)
+	if !ok {
+		return nil
+	}
 	items := make([]client.Object, len(list.Items))
 	for i := range list.Items {
 		items[i] = &list.Items[i]
@@ -99,11 +116,22 @@ func (configMapAdapter) getItems(l client.ObjectList) []client.Object {
 }
 
 func (configMapAdapter) computeHash(obj client.Object) string {
-	return computeConfigMapHash(obj.(*corev1.ConfigMap))
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		return ""
+	}
+	return computeConfigMapHash(cm)
 }
 
 func (configMapAdapter) copyFields(dst, src client.Object) {
-	d, s := dst.(*corev1.ConfigMap), src.(*corev1.ConfigMap)
+	d, ok := dst.(*corev1.ConfigMap)
+	if !ok {
+		return
+	}
+	s, ok := src.(*corev1.ConfigMap)
+	if !ok {
+		return
+	}
 	d.Data = s.Data
 	d.BinaryData = s.BinaryData
 }
@@ -216,7 +244,7 @@ func sharedEventFilter(cfg ReconcilerConfig) predicate.Predicate {
 				// runs on startup.
 				return e.Object.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] ==
 					kargoapi.AnnotationValueReplicateToAll ||
-					controllerutil.ContainsFinalizer(e.Object, kargoapi.FinalizerNameReplicated)
+					controllerutil.ContainsFinalizer(e.Object, kargoapi.FinalizerName)
 			},
 			DeleteFunc: func(e event.DeleteEvent) bool {
 				return e.Object.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] ==
@@ -227,7 +255,7 @@ func sharedEventFilter(cfg ReconcilerConfig) predicate.Predicate {
 					kargoapi.AnnotationValueReplicateToAll
 				newHas := e.ObjectNew.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] ==
 					kargoapi.AnnotationValueReplicateToAll
-				hasFinalizer := controllerutil.ContainsFinalizer(e.ObjectNew, kargoapi.FinalizerNameReplicated)
+				hasFinalizer := controllerutil.ContainsFinalizer(e.ObjectNew, kargoapi.FinalizerName)
 				return oldHas || newHas || hasFinalizer
 			},
 			GenericFunc: func(event.GenericEvent) bool { return false },
@@ -255,7 +283,7 @@ func (r *reconciler) Reconcile(
 
 	isBeingDeleted := !srcObj.GetDeletionTimestamp().IsZero()
 	hasAnnotation := srcObj.GetAnnotations()[kargoapi.AnnotationKeyReplicateTo] == kargoapi.AnnotationValueReplicateToAll
-	hasFinalizer := controllerutil.ContainsFinalizer(srcObj, kargoapi.FinalizerNameReplicated)
+	hasFinalizer := controllerutil.ContainsFinalizer(srcObj, kargoapi.FinalizerName)
 
 	// Cleanup branch: being deleted OR annotation removed but finalizer still present.
 	if isBeingDeleted || (!hasAnnotation && hasFinalizer) {
@@ -270,13 +298,12 @@ func (r *reconciler) Reconcile(
 
 	// Replication branch.
 
-	// Ensure the finalizer is present and requeue if just added.
-	if controllerutil.AddFinalizer(srcObj, kargoapi.FinalizerNameReplicated) {
-		if err := patchFinalizers(ctx, r.client, srcObj); err != nil {
-			return ctrl.Result{}, fmt.Errorf("error adding finalizer to source resource: %w", err)
-		}
-		logger.Debug("added finalizer to source resource; requeuing")
-		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, nil
+	// Ensure the Secret/ConfigMap has a finalizer and requeue if it was added.
+	// The reason to requeue is to ensure that a possible deletion of the resource
+	// directly after the finalizer was added is handled without delay.
+	if ok, err := api.EnsureFinalizer(ctx, r.client, srcObj); ok || err != nil {
+		logger.Debug("ensured finalizer on source resource; requeuing")
+		return ctrl.Result{RequeueAfter: 100 * time.Millisecond}, err
 	}
 
 	// List all Projects to build the set of target namespaces.
@@ -394,7 +421,7 @@ func (r *reconciler) syncToProjectNamespace(
 // finalizer from the source resource. It is called when the source resource is
 // being deleted or when its replicate-to annotation has been removed.
 func (r *reconciler) cleanup(ctx context.Context, src client.Object) error {
-	if !controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated) {
+	if !controllerutil.ContainsFinalizer(src, kargoapi.FinalizerName) {
 		return nil
 	}
 
@@ -417,7 +444,7 @@ func (r *reconciler) cleanup(ctx context.Context, src client.Object) error {
 		}
 	}
 
-	return removeReplicatedFinalizer(ctx, r.client, src)
+	return api.RemoveFinalizer(ctx, r.client, src)
 }
 
 // ---- Project-created enqueuer ----
@@ -580,40 +607,3 @@ func computeConfigMapHash(cm *corev1.ConfigMap) string {
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }
-
-// patchFinalizers patches only the finalizers field of the given object.
-func patchFinalizers(ctx context.Context, c client.Client, obj client.Object) error {
-	type objectMeta struct {
-		Finalizers []string `json:"finalizers"`
-	}
-	type patch struct {
-		ObjectMeta objectMeta `json:"metadata"`
-	}
-	data, err := json.Marshal(patch{
-		ObjectMeta: objectMeta{
-			Finalizers: obj.GetFinalizers(),
-		},
-	})
-	if err != nil {
-		return fmt.Errorf("error marshaling finalizer patch: %w", err)
-	}
-	if err := c.Patch(ctx, obj, client.RawPatch(types.MergePatchType, data)); err != nil {
-		return fmt.Errorf("error patching finalizers: %w", err)
-	}
-	return nil
-}
-
-// removeReplicatedFinalizer removes FinalizerNameReplicated from the object.
-func removeReplicatedFinalizer(ctx context.Context, c client.Client, obj client.Object) error {
-	if controllerutil.RemoveFinalizer(obj, kargoapi.FinalizerNameReplicated) {
-		if err := patchFinalizers(ctx, c, obj); err != nil {
-			return fmt.Errorf(
-				"error removing replication finalizer from resource %q: %w",
-				obj.GetName(), err,
-			)
-		}
-		logging.LoggerFromContext(ctx).Debug("removed replication finalizer from source resource")
-	}
-	return nil
-}
-

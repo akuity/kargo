@@ -50,7 +50,10 @@ func project(name string) *kargoapi.Project {
 
 // withAnnotation adds the replicate-to: "*" annotation to a deep copy.
 func withAnnotation(obj client.Object) client.Object {
-	cp := obj.DeepCopyObject().(client.Object)
+	cp, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		panic("failed to cast DeepCopyObject to client.Object")
+	}
 	anns := cp.GetAnnotations()
 	if anns == nil {
 		anns = make(map[string]string)
@@ -62,8 +65,11 @@ func withAnnotation(obj client.Object) client.Object {
 
 // withFinalizer adds FinalizerNameReplicated to a deep copy.
 func withFinalizer(obj client.Object) client.Object {
-	cp := obj.DeepCopyObject().(client.Object)
-	controllerutil.AddFinalizer(cp, kargoapi.FinalizerNameReplicated)
+	cp, ok := obj.DeepCopyObject().(client.Object)
+	if !ok {
+		panic("failed to cast DeepCopyObject to client.Object")
+	}
+	controllerutil.AddFinalizer(cp, kargoapi.FinalizerName)
 	return cp
 }
 
@@ -147,19 +153,30 @@ func secretFixture() reconcilerTestFixture {
 		}
 	}
 	hashOf := func(obj client.Object) string {
-		return computeSecretHash(obj.(*corev1.Secret))
+		s, ok := obj.(*corev1.Secret)
+		if !ok {
+			panic("failed to cast object to Secret")
+		}
+		return computeSecretHash(s)
 	}
 	return reconcilerTestFixture{
 		adapter: secretAdapter{},
 		newSrc:  newSrc,
 		withDeletion: func(obj client.Object) client.Object {
-			cp := obj.(*corev1.Secret).DeepCopy()
+			s, ok := obj.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast object to Secret")
+			}
+			cp := s.DeepCopy()
 			now := metav1.NewTime(time.Now())
 			cp.DeletionTimestamp = &now
 			return cp
 		},
 		newReplica: func(ns string, src client.Object) client.Object {
-			s := src.(*corev1.Secret)
+			s, ok := src.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast source to Secret")
+			}
 			return &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,
@@ -174,12 +191,19 @@ func secretFixture() reconcilerTestFixture {
 			}
 		},
 		withUpdatedData: func(obj client.Object) client.Object {
-			cp := obj.(*corev1.Secret).DeepCopy()
+			s, ok := obj.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast object to Secret")
+			}
+			cp := s.DeepCopy()
 			cp.Data = map[string][]byte{"key": []byte("new-value")}
 			return cp
 		},
 		newExternallyModifiedReplica: func(ns string, src client.Object) client.Object {
-			s := src.(*corev1.Secret)
+			s, ok := src.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast source to Secret")
+			}
 			return &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,
@@ -202,7 +226,14 @@ func secretFixture() reconcilerTestFixture {
 		},
 		checkReplica: func(t *testing.T, replica, expectedSrc client.Object) {
 			t.Helper()
-			d, s := replica.(*corev1.Secret), expectedSrc.(*corev1.Secret)
+			d, ok := replica.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast replica to Secret")
+			}
+			s, ok := expectedSrc.(*corev1.Secret)
+			if !ok {
+				panic("failed to cast expectedSrc to Secret")
+			}
 			require.Equal(t, s.Data, d.Data)
 			require.Equal(t, s.Type, d.Type)
 		},
@@ -221,19 +252,30 @@ func configMapFixture() reconcilerTestFixture {
 		}
 	}
 	hashOf := func(obj client.Object) string {
-		return computeConfigMapHash(obj.(*corev1.ConfigMap))
+		cm, ok := obj.(*corev1.ConfigMap)
+		if !ok {
+			panic("failed to cast object to ConfigMap")
+		}
+		return computeConfigMapHash(cm)
 	}
 	return reconcilerTestFixture{
 		adapter: configMapAdapter{},
 		newSrc:  newSrc,
 		withDeletion: func(obj client.Object) client.Object {
-			cp := obj.(*corev1.ConfigMap).DeepCopy()
+			cm, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast object to ConfigMap")
+			}
+			cp := cm.DeepCopy()
 			now := metav1.NewTime(time.Now())
 			cp.DeletionTimestamp = &now
 			return cp
 		},
 		newReplica: func(ns string, src client.Object) client.Object {
-			cm := src.(*corev1.ConfigMap)
+			cm, ok := src.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast source to ConfigMap")
+			}
 			return &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,
@@ -248,12 +290,19 @@ func configMapFixture() reconcilerTestFixture {
 			}
 		},
 		withUpdatedData: func(obj client.Object) client.Object {
-			cp := obj.(*corev1.ConfigMap).DeepCopy()
+			cm, ok := obj.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast object to ConfigMap")
+			}
+			cp := cm.DeepCopy()
 			cp.Data = map[string]string{"key": "new-value"}
 			return cp
 		},
 		newExternallyModifiedReplica: func(ns string, src client.Object) client.Object {
-			cm := src.(*corev1.ConfigMap)
+			cm, ok := src.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast source to ConfigMap")
+			}
 			return &corev1.ConfigMap{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: ns,
@@ -274,7 +323,14 @@ func configMapFixture() reconcilerTestFixture {
 		},
 		checkReplica: func(t *testing.T, replica, expectedSrc client.Object) {
 			t.Helper()
-			d, s := replica.(*corev1.ConfigMap), expectedSrc.(*corev1.ConfigMap)
+			d, ok := replica.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast replica to ConfigMap")
+			}
+			s, ok := expectedSrc.(*corev1.ConfigMap)
+			if !ok {
+				panic("failed to cast expectedSrc to ConfigMap")
+			}
 			require.Equal(t, s.Data, d.Data)
 			require.Equal(t, s.BinaryData, d.BinaryData)
 		},
@@ -337,7 +393,7 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 		require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
 			Namespace: testSourceNS, Name: testResourceName,
 		}, src))
-		require.True(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
+		require.True(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerName))
 
 		// Second reconcile (finalizer present, no projects): no replicas created.
 		result, err = doReconcile(t, r)
@@ -582,7 +638,7 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 		require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
 			Namespace: testSourceNS, Name: testResourceName,
 		}, src))
-		require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
+		require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerName))
 	})
 
 	t.Run("AnnotationRemoved_CleansUpAndRemovesFinalizer", func(t *testing.T) {
@@ -612,7 +668,7 @@ func runReconcilerTests(t *testing.T, f reconcilerTestFixture) {
 		require.NoError(t, fc.Get(t.Context(), types.NamespacedName{
 			Namespace: testSourceNS, Name: testResourceName,
 		}, src))
-		require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerNameReplicated))
+		require.False(t, controllerutil.ContainsFinalizer(src, kargoapi.FinalizerName))
 	})
 
 	t.Run("DeletionTimestamp_DeletesAllReplicas", func(t *testing.T) {
@@ -816,7 +872,11 @@ func TestComputeSecretHash(t *testing.T) {
 }
 
 func TestComputeConfigMapHash(t *testing.T) {
-	mk := func(labels, annotations map[string]string, data map[string]string, binaryData map[string][]byte) *corev1.ConfigMap {
+	mk := func(
+		labels, annotations map[string]string,
+		data map[string]string,
+		binaryData map[string][]byte,
+	) *corev1.ConfigMap {
 		return &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{Labels: labels, Annotations: annotations},
 			Data:       data,
@@ -889,14 +949,16 @@ type fakeWorkQueue struct {
 
 var _ workqueue.TypedRateLimitingInterface[reconcile.Request] = &fakeWorkQueue{}
 
-func (q *fakeWorkQueue) Add(item reconcile.Request)                       { q.items = append(q.items, item) }
-func (q *fakeWorkQueue) AddAfter(item reconcile.Request, _ time.Duration) { q.items = append(q.items, item) }
-func (q *fakeWorkQueue) AddRateLimited(item reconcile.Request)            { q.items = append(q.items, item) }
-func (q *fakeWorkQueue) Forget(_ reconcile.Request)                       {}
-func (q *fakeWorkQueue) NumRequeues(_ reconcile.Request) int              { return 0 }
-func (q *fakeWorkQueue) Done(_ reconcile.Request)                         {}
-func (q *fakeWorkQueue) Get() (reconcile.Request, bool)                   { return reconcile.Request{}, false }
-func (q *fakeWorkQueue) Len() int                                         { return len(q.items) }
-func (q *fakeWorkQueue) ShutDown()                                        {}
-func (q *fakeWorkQueue) ShutDownWithDrain()                               {}
-func (q *fakeWorkQueue) ShuttingDown() bool                               { return false }
+func (q *fakeWorkQueue) Add(item reconcile.Request) { q.items = append(q.items, item) }
+func (q *fakeWorkQueue) AddAfter(item reconcile.Request, _ time.Duration) {
+	q.items = append(q.items, item)
+}
+func (q *fakeWorkQueue) AddRateLimited(item reconcile.Request) { q.items = append(q.items, item) }
+func (q *fakeWorkQueue) Forget(_ reconcile.Request)            {}
+func (q *fakeWorkQueue) NumRequeues(_ reconcile.Request) int   { return 0 }
+func (q *fakeWorkQueue) Done(_ reconcile.Request)              {}
+func (q *fakeWorkQueue) Get() (reconcile.Request, bool)        { return reconcile.Request{}, false }
+func (q *fakeWorkQueue) Len() int                              { return len(q.items) }
+func (q *fakeWorkQueue) ShutDown()                             {}
+func (q *fakeWorkQueue) ShutDownWithDrain()                    {}
+func (q *fakeWorkQueue) ShuttingDown() bool                    { return false }

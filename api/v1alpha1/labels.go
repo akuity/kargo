@@ -51,11 +51,6 @@ const (
 	// FinalizerName is the name of the finalizer used by Kargo.
 	FinalizerName = "kargo.akuity.io/finalizer"
 
-	// FinalizerNameReplicated is the name of the finalizer added by the shared
-	// secret replication reconciler to source Secrets that are being replicated
-	// to Project namespaces.
-	FinalizerNameReplicated = "kargo.akuity.io/replicated"
-
 	// LabelKeyReplicatedFrom is a label key set on replicated Secrets to
 	// identify the name of the source Secret in the shared resources namespace.
 	LabelKeyReplicatedFrom = "kargo.akuity.io/replicated-from"
