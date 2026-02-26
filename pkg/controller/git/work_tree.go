@@ -634,11 +634,14 @@ func (w *workTree) Push(opts *PushOptions) error {
 			}
 		}
 	}
+	var artifact string
 	args := []string{"push", "origin"}
 	switch {
 	case opts.Tag != "":
+		artifact = "tag"
 		args = append(args, "tag", opts.Tag)
 	default:
+		artifact = "branch"
 		args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
 	}
 	if opts.Force {
@@ -646,9 +649,9 @@ func (w *workTree) Push(opts *PushOptions) error {
 	}
 	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
 		if nonFastForwardRegex.MatchString(string(res)) {
-			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
+			return fmt.Errorf("error pushing %s: %w", artifact, ErrNonFastForward)
 		}
-		return fmt.Errorf("error pushing branch: %w", err)
+		return fmt.Errorf("error pushing %s: %w", artifact, err)
 	}
 	return nil
 }

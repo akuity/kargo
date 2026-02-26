@@ -60,7 +60,7 @@
       "properties": {
         "generateTargetBranch": { "enum": [false, null] },
         "targetBranch": { "enum": ["", null] },
-        "tag": { "enum": ["", null] }
+        "tag": { "minLength": 1 }
       },
       "required": ["tag"]
     },
