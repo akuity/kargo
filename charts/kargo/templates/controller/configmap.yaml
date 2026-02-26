@@ -34,6 +34,11 @@ data:
   CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
   MAX_IMAGE_CACHE_ENTRIES: {{ quote .Values.controller.images.cache.maxEntries }}
   IMAGE_REGISTRY_RATE_LIMIT: {{ quote .Values.controller.images.registries.rateLimit }}
+  {{- with .Values.controller.images.push }}
+  {{- if not (kindIs "invalid" .maxArtifactSize) }}
+  MAX_OCI_PUSH_ARTIFACT_SIZE: {{ int64 .maxArtifactSize | quote }}
+  {{- end }}
+  {{- end }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}
