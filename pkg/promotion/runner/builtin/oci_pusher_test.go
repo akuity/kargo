@@ -730,7 +730,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 			DestRef:  fmt.Sprintf("%s/other/repo:v1", regHost),
 		})
 		assert.Equal(t, string(kargoapi.PromotionStepStatusErrored), string(result.Status))
-		assert.ErrorContains(t, err, "exceeds maximum allowed size of")
+		assert.ErrorContains(t, err, "cross-repository push is disabled")
 	})
 
 	t.Run("same-repo retag succeeds", func(t *testing.T) {
