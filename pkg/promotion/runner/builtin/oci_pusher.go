@@ -13,6 +13,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargofmt "github.com/akuity/kargo/pkg/fmt"
 	kargomutate "github.com/akuity/kargo/pkg/image/mutate"
 	libos "github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/promotion"
@@ -258,6 +259,11 @@ func (p *ociPusher) push(
 	// path). Within the same repository the blobs are already present, so no
 	// large transfer occurs. A negative maxArtifactSize disables the check.
 	if p.maxArtifactSize >= 0 && srcRef.Context().String() != dstRef.Context().String() {
+		if p.maxArtifactSize == 0 {
+			return v1.Hash{}, &promotion.TerminalError{
+				Err: fmt.Errorf("cross-repository push is disabled"),
+			}
+		}
 		sz, err := artifactSize(desc)
 		if err != nil {
 			return v1.Hash{}, err
@@ -265,8 +271,8 @@ func (p *ociPusher) push(
 		if sz > p.maxArtifactSize {
 			return v1.Hash{}, &promotion.TerminalError{
 				Err: fmt.Errorf(
-					"compressed artifact size %.1f GiB exceeds maximum allowed size of %.1f GiB",
-					float64(sz)/(1<<30), float64(p.maxArtifactSize)/(1<<30),
+					"compressed artifact size %s exceeds maximum allowed size of %s",
+					kargofmt.FormatBytes(sz), kargofmt.FormatBytes(p.maxArtifactSize),
 				),
 			}
 		}
