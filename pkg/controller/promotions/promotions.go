@@ -741,7 +741,11 @@ func setupDeleteCleanup(
 			if !shardPredicate.IsResponsible(meta) {
 				return
 			}
-			cleanupFn(ctx, meta.GetUID())
+			cleanupCtx := logging.ContextWithLogger(ctx, logger.WithValues(
+				"namespace", meta.GetNamespace(),
+				"promotion", meta.GetName(),
+			))
+			cleanupFn(cleanupCtx, meta.GetUID())
 		},
 	})
 	if err != nil {
@@ -779,7 +783,7 @@ func promotionWorkDir(promoUID types.UID) string {
 func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
 	workDir := promotionWorkDir(promoUID)
 	logger := logging.LoggerFromContext(ctx)
-	logger.Debug("removing promotion working directory", "uid", promoUID, "path", workDir)
+	logger.Debug("removing promotion working directory", "path", workDir)
 	if err := os.RemoveAll(workDir); err != nil {
 		logger.Error(err, "could not remove working directory", "path", workDir)
 	}
