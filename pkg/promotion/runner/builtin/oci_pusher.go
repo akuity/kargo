@@ -13,8 +13,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
-	kargofmt "github.com/akuity/kargo/pkg/fmt"
-	kargomutate "github.com/akuity/kargo/pkg/image/mutate"
+	libfmt "github.com/akuity/kargo/pkg/fmt"
+	libmutate "github.com/akuity/kargo/pkg/image/mutate"
 	libos "github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/types"
@@ -272,7 +272,7 @@ func (p *ociPusher) push(
 			return v1.Hash{}, &promotion.TerminalError{
 				Err: fmt.Errorf(
 					"compressed artifact size %s exceeds maximum allowed size of %s",
-					kargofmt.FormatBytes(sz), kargofmt.FormatBytes(p.maxArtifactSize),
+					libfmt.FormatBytes(sz), libfmt.FormatBytes(p.maxArtifactSize),
 				),
 			}
 		}
@@ -286,7 +286,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image: %w", err)
 		}
-		annotated, err := kargomutate.Annotations(img, nil, scopes.manifest)
+		annotated, err := libmutate.Annotations(img, nil, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate image: %w", err)
 		}
@@ -301,7 +301,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image index: %w", err)
 		}
-		annotated, err := kargomutate.Annotations(idx, scopes.index, scopes.manifest)
+		annotated, err := libmutate.Annotations(idx, scopes.index, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate index: %w", err)
 		}
