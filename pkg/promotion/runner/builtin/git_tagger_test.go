@@ -8,11 +8,14 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -136,17 +139,52 @@ func Test_gitTagger_run(t *testing.T) {
 	runner, ok := r.(*gitTagTagger)
 	require.True(t, ok)
 
+	// Set up a fake git provider
+	// Cannot register multiple providers with the same name, so this takes
+	// care of that problem
+	fakeGitProviderName := uuid.NewString()
+	gitprovider.Register(
+		fakeGitProviderName,
+		gitprovider.Registration{
+			Predicate: func(_ string) bool {
+				return true
+			},
+			NewProvider: func(
+				string,
+				*gitprovider.Options,
+			) (gitprovider.Interface, error) {
+				return &gitprovider.Fake{
+					GetCommitURLFn: func(
+						repoURL string,
+						sha string,
+					) (string, error) {
+						return fmt.Sprintf("%s/commit/%s", repoURL, sha), nil
+					},
+				}, nil
+			},
+		},
+	)
+
 	// Test creating a tag
 	res, err := runner.run(
 		context.Background(),
 		&promotion.StepContext{WorkDir: workDir},
 		builtin.GitTagConfig{
-			Path: "master",
-			Tag:  "v1.0.0",
+			Provider: ptr.To(builtin.Provider(fakeGitProviderName)),
+			Path:     "master",
+			Tag:      "v1.0.0",
 		},
 	)
 	// Verify
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 	require.Equal(t, "v1.0.0", res.Output[stateKeyTag])
+	expectedCommit, err := workTree.LastCommitID()
+	require.NoError(t, err)
+	actualCommit, ok := res.Output[stateKeyCommit]
+	require.True(t, ok)
+	require.Equal(t, expectedCommit, actualCommit)
+	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+	actualCommitURL := res.Output[stateKeyCommitURL]
+	require.Equal(t, expectedCommitURL, actualCommitURL)
 }

@@ -12,6 +12,11 @@
       "type": "string",
       "description": "The tag to create in the repository.",
       "minLength": 1
+    },
+    "provider": {
+      "type": "string",
+      "description": "The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified.",
+      "enum": ["azure", "bitbucket", "gitea", "github", "gitlab"]
     }
   },
   "required": ["path", "tag"]

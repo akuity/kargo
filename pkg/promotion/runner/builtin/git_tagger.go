@@ -9,6 +9,8 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/gitprovider"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -59,10 +61,12 @@ func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, erro
 }
 
 func (g *gitTagTagger) run(
-	_ context.Context,
+	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
@@ -70,17 +74,44 @@ func (g *gitTagTagger) run(
 			cfg.Path, stepCtx.WorkDir, err,
 		)
 	}
+
 	workTree, err := git.LoadWorkTree(path, nil)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
+
 	if err = workTree.CreateTag(cfg.Tag); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating tag %s: %w", cfg.Tag, err)
 	}
+
+	commitID, err := workTree.LastCommitID()
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+			fmt.Errorf("error getting last commit ID: %w", err)
+	}
+
+	// Use the Git provider to get the commit URL, if possible. We continue
+	// even if the provider or URL cannot be determined, as the push will
+	// still have succeeded which is the primary goal of this step.
+	gpOpts := gitprovider.Options{}
+	if cfg.Provider != nil {
+		gpOpts.Name = string(*cfg.Provider)
+	}
+	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
+	var commitURL string
+	if err == nil {
+		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
+			logger.Error(err, "unable to get commit URL from Git provider")
+		}
+	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{stateKeyTag: cfg.Tag},
+		Output: map[string]any{
+			stateKeyTag:       cfg.Tag,
+			stateKeyCommit:    commitID,
+			stateKeyCommitURL: commitURL,
+		},
 	}, nil
 }
