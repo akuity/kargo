@@ -99,19 +99,23 @@ func (g *gitTagTagger) run(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
+
+	output := map[string]any{
+		stateKeyTag:    cfg.Tag,
+		stateKeyCommit: commitID,
+	}
+
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	var commitURL string
 	if err == nil {
 		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
 			logger.Error(err, "unable to get commit URL from Git provider")
+		} else {
+			output[stateKeyCommitURL] = commitURL
 		}
 	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{
-			stateKeyTag:       cfg.Tag,
-			stateKeyCommit:    commitID,
-			stateKeyCommitURL: commitURL,
-		},
+		Output: output,
 	}, nil
 }

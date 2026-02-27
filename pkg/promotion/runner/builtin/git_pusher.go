@@ -233,23 +233,24 @@ func (g *gitPushPusher) run(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
+
+	output := map[string]any{
+		stateKeyBranch: pushOpts.TargetBranch,
+		stateKeyCommit: commitID,
+	}
+
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	var commitURL string
 	if err == nil {
 		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
 			logger.Error(err, "unable to get commit URL from Git provider")
+		} else {
+			output[stateKeyCommitURL] = commitURL
 		}
-	}
-
-	output := map[string]any{
-		stateKeyBranch:    pushOpts.TargetBranch,
-		stateKeyCommit:    commitID,
-		stateKeyCommitURL: commitURL,
 	}
 	if pushOpts.Tag != "" {
 		output[stateKeyTag] = pushOpts.Tag
 	}
-
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: output,
