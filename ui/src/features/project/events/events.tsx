@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import moment from 'moment';
 import { useParams } from 'react-router-dom';
 
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { listProjectEvents } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { Event } from '@ui/gen/k8s.io/api/core/v1/generated_pb';
@@ -125,6 +126,7 @@ export const Events = () => {
   const { name } = useParams();
   const { data } = useQuery(listProjectEvents, { project: name });
   const projectBreadcrumbs = useProjectBreadcrumbs();
+  useDocumentTitle(['Events', name]);
 
   return (
     <Flex vertical className='min-h-full'>
