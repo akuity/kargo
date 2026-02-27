@@ -241,14 +241,19 @@ func (g *gitPushPusher) run(
 		}
 	}
 
+	output := map[string]any{
+		stateKeyBranch:    pushOpts.TargetBranch,
+		stateKeyCommit:    commitID,
+		stateKeyCommitURL: commitURL,
+		stateKeyTag:       pushOpts.Tag,
+	}
+	if pushOpts.Tag != "" {
+		output[stateKeyTag] = pushOpts.Tag
+	}
+
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{
-			stateKeyBranch:    pushOpts.TargetBranch,
-			stateKeyCommit:    commitID,
-			stateKeyCommitURL: commitURL,
-			stateKeyTag:       pushOpts.Tag,
-		},
+		Output: output,
 	}, nil
 }
 
