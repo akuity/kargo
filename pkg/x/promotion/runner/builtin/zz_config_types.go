@@ -281,13 +281,13 @@ type GitPushConfig struct {
 	// 'generateTargetBranch=true' and 'targetBranch'.
 	Tag string `json:"tag,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
-	// 'tag'. If neither of these is provided, the target branch will be the currently checked
-	// out branch.
+	// 'tag'. If none of these are provided, the target branch will be the currently checked out
+	// branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
 type GitTagConfig struct {
-	// The path to the local Git repository.
+	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`

@@ -21,7 +21,7 @@
   },
   "targetBranch": {
    "type": "string",
-   "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and 'tag'. If neither of these is provided, the target branch will be the currently checked out branch."
+   "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and 'tag'. If none of these are provided, the target branch will be the currently checked out branch."
   },
   "provider": {
    "type": "string",
