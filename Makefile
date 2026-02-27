@@ -140,6 +140,7 @@ test-unit: install-helm
 				-race \
 				-coverprofile=coverage.txt \
 				-covermode=atomic \
+				-count=1 \
 				./... $(GO_TEST_ARGS); \
 			cd - > /dev/null; \
 		done; \
