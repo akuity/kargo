@@ -364,4 +364,5 @@ type DatadogMetric struct {
 	Queries    map[string]string `json:"queries,omitempty" protobuf:"bytes,3,rep,name=queries"`
 	Formula    string            `json:"formula,omitempty" protobuf:"bytes,4,opt,name=formula"`
 	ApiVersion string            `json:"apiVersion,omitempty" protobuf:"bytes,5,opt,name=apiVersion"`
+	Aggregator string            `json:"aggregator,omitempty" protobuf:"bytes,6,opt,name=aggregator"`
 }
