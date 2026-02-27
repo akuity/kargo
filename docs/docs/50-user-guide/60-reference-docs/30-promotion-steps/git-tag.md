@@ -11,7 +11,7 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 
 | Name   | Type     | Required | Description                                                                 |
 |--------|----------|----------|-----------------------------------------------------------------------------|
-| `path` | `string` | Y        | Path to the local Git repository where the tag should be created. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The name of the tag to create. |
 
 ## Output
@@ -22,7 +22,8 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 
 :::caution
 
-If the specified tag already exists, the git-tag step will fail.
+If the specified tag already exists in the remote repository, the `git-tag` step
+will fail.
 
 :::
 
@@ -30,7 +31,7 @@ If the specified tag already exists, the git-tag step will fail.
 
 ### Basic Usage
 
-In this example, the `git-tag` step creates a tag named `v1.0.0` in the local Git repository located at `./out`.
+In this example, the `git-tag` step creates a tag named `v1.0.0` in a local Git repository.
 
 ```yaml
 steps:

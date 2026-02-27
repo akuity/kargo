@@ -5,7 +5,7 @@
   "properties": {
     "path": {
       "type": "string",
-      "description": "The path to the local Git repository.",
+      "description": "The path to a working directory of a local repository.",
       "minLength": 1
     },
     "tag": {

@@ -42,8 +42,8 @@ type WorkTree interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
-	// CreateTag creates a new tag.
-	CreateTag(tag string) error
+	// Tag creates a new tag with the specified name.
+	Tag(name string) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
