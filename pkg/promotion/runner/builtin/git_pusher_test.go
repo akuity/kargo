@@ -307,5 +307,13 @@ func Test_gitPusher_run(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, "v1.0.0", actualTag)
 		require.NoError(t, workTree.Checkout("v1.0.0"))
+		expectedCommit, err := workTree.LastCommitID()
+		require.NoError(t, err)
+		actualCommit, ok := res.Output[stateKeyCommit]
+		require.True(t, ok)
+		require.Equal(t, expectedCommit, actualCommit)
+		expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+		actualCommitURL := res.Output[stateKeyCommitURL]
+		require.Equal(t, expectedCommitURL, actualCommitURL)
 	})
 }
