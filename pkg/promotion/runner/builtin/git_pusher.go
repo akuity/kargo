@@ -245,7 +245,6 @@ func (g *gitPushPusher) run(
 		stateKeyBranch:    pushOpts.TargetBranch,
 		stateKeyCommit:    commitID,
 		stateKeyCommitURL: commitURL,
-		stateKeyTag:       pushOpts.Tag,
 	}
 	if pushOpts.Tag != "" {
 		output[stateKeyTag] = pushOpts.Tag
