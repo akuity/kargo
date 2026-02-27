@@ -3,11 +3,13 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Flex } from 'antd';
 
 import { PageTitle } from '@ui/features/common';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { CreateProjectModal } from '@ui/features/project/list/create-project-modal';
 import { ProjectsList } from '@ui/features/project/list/projects-list';
 
 export const Projects = () => {
+  useDocumentTitle(['Projects']);
   const { show } = useModal((p) => <CreateProjectModal {...p} />);
 
   return (
