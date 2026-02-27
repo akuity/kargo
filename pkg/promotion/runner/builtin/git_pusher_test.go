@@ -306,5 +306,6 @@ func Test_gitPusher_run(t *testing.T) {
 		actualTag, ok := res.Output[stateKeyTag]
 		require.True(t, ok)
 		require.Equal(t, "v1.0.0", actualTag)
+		require.NoError(t, workTree.Checkout("v1.0.0"))
 	})
 }
