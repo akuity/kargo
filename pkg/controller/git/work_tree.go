@@ -616,26 +616,6 @@ func (w *workTree) Push(opts *PushOptions) error {
 			return err
 		}
 	}
-	if opts.PullRebase && targetBranch != "" {
-		exists, err := w.RemoteBranchExists(targetBranch)
-		if err != nil {
-			return err
-		}
-		// We only want to pull and rebase if the remote branch exists.
-		if exists {
-			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
-				// The error we're most concerned with is a merge conflict requiring
-				// manual resolution, because it's an error that no amount of retries
-				// will fix. If we find that a rebase is in progress, this is what
-				// has happened.
-				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
-					return ErrMergeConflict
-				}
-				// If we get to here, the error isn't a merge conflict.
-				return fmt.Errorf("error pulling and rebasing branch: %w", err)
-			}
-		}
-	}
 	var artifact string
 	args := []string{"push", "origin"}
 	switch {
@@ -645,6 +625,26 @@ func (w *workTree) Push(opts *PushOptions) error {
 	default:
 		artifact = "branch"
 		args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
+		if opts.PullRebase && targetBranch != "" {
+			exists, err := w.RemoteBranchExists(targetBranch)
+			if err != nil {
+				return err
+			}
+			// We only want to pull and rebase if the remote branch exists.
+			if exists {
+				if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
+					// The error we're most concerned with is a merge conflict requiring
+					// manual resolution, because it's an error that no amount of retries
+					// will fix. If we find that a rebase is in progress, this is what
+					// has happened.
+					if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
+						return ErrMergeConflict
+					}
+					// If we get to here, the error isn't a merge conflict.
+					return fmt.Errorf("error pulling and rebasing branch: %w", err)
+				}
+			}
+		}
 	}
 	if opts.Force {
 		args = append(args, "--force")
