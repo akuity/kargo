@@ -30,7 +30,7 @@ const (
 
 // defaultWaitFor is the default set of conditions to wait for, matching the
 // behavior of `argocd app wait` when no flags are specified.
-var defaultWaitFor = []string{"health", "sync", "operation"}
+var defaultWaitFor = []builtin.WaitFor{builtin.Health, builtin.Sync, builtin.Operation}
 
 // waitHealthCooldownDuration is the duration after a completed operation during
 // which the health status is not trusted, used as a fallback for older ArgoCD
@@ -220,7 +220,7 @@ func (w *argocdWaiter) run(
 func (w *argocdWaiter) checkAppReadiness(
 	ctx context.Context,
 	app *argocd.Application,
-	waitFor []string,
+	waitFor []builtin.WaitFor,
 	prevHealthStatus string,
 ) (ready bool, healthStatus string, retryAfter time.Duration, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(

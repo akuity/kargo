@@ -353,7 +353,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{},
 			stepCfg: builtin.ArgoCDWaitConfig{
 				Apps: []builtin.ArgoCDAppWait{
-					{Name: "my-app", WaitFor: []string{"sync"}},
+					{Name: "my-app", WaitFor: []builtin.WaitFor{builtin.Sync}},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
@@ -384,7 +384,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 				Apps: []builtin.ArgoCDAppWait{
 					{
 						Name:    "my-app",
-						WaitFor: []string{"health", "suspended"},
+						WaitFor: []builtin.WaitFor{builtin.Health, builtin.Suspended},
 					},
 				},
 			},
@@ -601,7 +601,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{},
 			stepCfg: builtin.ArgoCDWaitConfig{
 				Apps: []builtin.ArgoCDAppWait{
-					{Name: "my-app", WaitFor: []string{"operation"}},
+					{Name: "my-app", WaitFor: []builtin.WaitFor{builtin.Operation}},
 				},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {

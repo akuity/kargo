@@ -2,6 +2,8 @@
 
 package builtin
 
+type ArgoCDCommonDefs interface{}
+
 type CommonDefs interface{}
 
 type ComposeOutput map[string]interface{}
@@ -25,6 +27,9 @@ type ArgoCDAppUpdate struct {
 }
 
 // Specifies a label selector to match Argo CD Application resources to be updated. Mutually
+// exclusive with 'name'.
+//
+// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
 // exclusive with 'name'.
 //
 // Selector to match Argo CD Application resources by labels. Must contain at least one
@@ -109,6 +114,27 @@ type ArgoCDKustomizeImageUpdate struct {
 	RepoURL string `json:"repoURL"`
 	// Tag of the image to set. Mutually exclusive with 'digest'.
 	Tag string `json:"tag,omitempty"`
+}
+
+type ArgoCDWaitConfig struct {
+	Apps []ArgoCDAppWait `json:"apps"`
+}
+
+type ArgoCDAppWait struct {
+	// Specifies the exact name of an Argo CD Application resource to wait for. Mutually
+	// exclusive with 'selector'.
+	Name string `json:"name,omitempty"`
+	// Specifies the namespace of the Argo CD Application. If left unspecified, the namespace
+	// will be the controller's configured default.
+	Namespace string `json:"namespace,omitempty"`
+	// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
+	// exclusive with 'name'.
+	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
+	// Specifies the conditions to wait for. Valid values are 'health', 'sync', 'operation',
+	// 'suspended', and 'degraded'. Health-related conditions (health, suspended, degraded) are
+	// OR'd. All other conditions are AND'd. Defaults to ['health', 'sync', 'operation'] when
+	// omitted.
+	WaitFor []WaitFor `json:"waitFor,omitempty"`
 }
 
 type CopyConfig struct {
@@ -624,6 +650,16 @@ const (
 	NotIn        Operator = "NotIn"
 )
 
+type WaitFor string
+
+const (
+	Degraded  WaitFor = "degraded"
+	Health    WaitFor = "health"
+	Operation WaitFor = "operation"
+	Suspended WaitFor = "suspended"
+	Sync      WaitFor = "sync"
+)
+
 // The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
 // and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 // specified.
@@ -658,27 +694,6 @@ const (
 	Kargo     OutputFormat = "kargo"
 	Kustomize OutputFormat = "kustomize"
 )
-
-type ArgoCDWaitConfig struct {
-	Apps []ArgoCDAppWait `json:"apps"`
-}
-
-type ArgoCDAppWait struct {
-	// Specifies the exact name of an Argo CD Application resource to wait for. Mutually
-	// exclusive with 'selector'.
-	Name string `json:"name,omitempty"`
-	// Specifies the namespace of the Argo CD Application. If left unspecified, the namespace
-	// will be the controller's configured default.
-	Namespace string `json:"namespace,omitempty"`
-	// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
-	// exclusive with 'name'.
-	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
-	// Specifies the conditions to wait for. Valid values are 'health', 'sync', 'operation',
-	// 'suspended', and 'degraded'. Health-related conditions (health, suspended, degraded) are
-	// OR'd. All other conditions are AND'd. Defaults to ['health', 'sync', 'operation'] when
-	// omitted.
-	WaitFor []string `json:"waitFor,omitempty"`
-}
 
 // Kind of resource to update metadata for
 type Kind string
