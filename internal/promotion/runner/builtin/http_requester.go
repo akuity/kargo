@@ -17,14 +17,15 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/internal/io"
 	"github.com/akuity/kargo/internal/logging"
+	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 const (
-	contentTypeHeader = "Content-Type"
-	contentTypeJSON   = "application/json"
-	maxResponseBytes = 2 << 20
+	contentTypeHeader     = "Content-Type"
+	contentTypeJSON       = "application/json"
+	maxResponseBytes      = 2 << 20
 	requestTimeoutDefault = 10 * time.Second
 )
 
@@ -83,6 +84,8 @@ func (h *httpRequester) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating HTTP client: %w", err)
 	}
+	// #nosec G704 -- The client is using a custom dialer that mitigates the worst
+	// practical risks of SSRF by refusing to dial link-local addresses.
 	resp, err := client.Do(req)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
@@ -149,7 +152,7 @@ func (h *httpRequester) buildRequest(cfg builtin.HTTPConfig) (*http.Request, err
 }
 
 func (h *httpRequester) getClient(cfg builtin.HTTPConfig) (*http.Client, error) {
-	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport := kargonet.SafeTransport(cleanhttp.DefaultTransport())
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
