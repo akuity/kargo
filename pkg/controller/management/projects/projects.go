@@ -2,6 +2,7 @@ package projects
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -41,6 +42,17 @@ const (
 	projectSecretsReaderClusterRoleName = "kargo-project-secrets-reader"
 )
 
+// PolicyRules is a wrapper around []rbacv1.PolicyRule that implements
+// envconfig.Decoder for JSON deserialization from environment variables.
+type PolicyRules []rbacv1.PolicyRule
+
+func (p *PolicyRules) Decode(value string) error {
+	if value == "" {
+		return nil
+	}
+	return json.Unmarshal([]byte(value), p)
+}
+
 type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
@@ -65,6 +77,10 @@ type ReconcilerConfig struct {
 	ArgoCDClusterRoleName    string `envconfig:"ARGOCD_CLUSTER_ROLE_NAME" default:""`
 	ArgoCDNamespace          string `envconfig:"ARGOCD_NAMESPACE" default:"argocd"`
 	ArgoCDWatchNamespaceOnly bool   `envconfig:"ARGOCD_WATCH_ARGOCD_NAMESPACE_ONLY" default:"false"`
+
+	AdditionalAdminRules    PolicyRules `envconfig:"ADDITIONAL_ADMIN_RULES"`
+	AdditionalViewerRules   PolicyRules `envconfig:"ADDITIONAL_VIEWER_RULES"`
+	AdditionalPromoterRules PolicyRules `envconfig:"ADDITIONAL_PROMOTER_RULES"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -1023,6 +1039,19 @@ func (r *reconciler) ensureDefaultUserRoles(
 			},
 		},
 	}
+
+	// Append any additional rules configured for each role.
+	additionalRulesByRole := map[string]PolicyRules{
+		adminRoleName:    r.cfg.AdditionalAdminRules,
+		viewerRoleName:   r.cfg.AdditionalViewerRules,
+		promoterRoleName: r.cfg.AdditionalPromoterRules,
+	}
+	for _, role := range roles {
+		if additional, ok := additionalRulesByRole[role.Name]; ok {
+			role.Rules = append(role.Rules, additional...)
+		}
+	}
+
 	for _, role := range roles {
 		roleLogger := logger.WithValues(
 			"name", role.Name,

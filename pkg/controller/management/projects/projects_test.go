@@ -25,6 +25,29 @@ import (
 	"github.com/akuity/kargo/pkg/kubernetes"
 )
 
+func TestPolicyRules_Decode(t *testing.T) {
+	t.Run("empty string", func(t *testing.T) {
+		var rules PolicyRules
+		require.NoError(t, rules.Decode(""))
+		require.Nil(t, rules)
+	})
+
+	t.Run("valid JSON", func(t *testing.T) {
+		var rules PolicyRules
+		input := `[{"apiGroups":["ee.kargo.akuity.io"],"resources":["eventrouters"],"verbs":["get","list"]}]`
+		require.NoError(t, rules.Decode(input))
+		require.Len(t, rules, 1)
+		require.Equal(t, []string{"ee.kargo.akuity.io"}, rules[0].APIGroups)
+		require.Equal(t, []string{"eventrouters"}, rules[0].Resources)
+		require.Equal(t, []string{"get", "list"}, rules[0].Verbs)
+	})
+
+	t.Run("invalid JSON", func(t *testing.T) {
+		var rules PolicyRules
+		require.Error(t, rules.Decode("not json"))
+	})
+}
+
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
 	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
@@ -1975,6 +1998,89 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 					client.Object,
 					...client.CreateOption,
 				) error {
+					return nil
+				},
+				createRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "success with additional rules",
+			reconciler: &reconciler{
+				cfg: ReconcilerConfig{
+					AdditionalAdminRules: PolicyRules{
+						{
+							APIGroups: []string{"ee.kargo.akuity.io"},
+							Resources: []string{"eventrouters", "messagechannels"},
+							Verbs:     []string{"*"},
+						},
+					},
+					AdditionalViewerRules: PolicyRules{
+						{
+							APIGroups: []string{"ee.kargo.akuity.io"},
+							Resources: []string{"eventrouters", "messagechannels"},
+							Verbs:     []string{"get", "list", "watch"},
+						},
+					},
+					AdditionalPromoterRules: PolicyRules{
+						{
+							APIGroups: []string{"ee.kargo.akuity.io"},
+							Resources: []string{"eventrouters"},
+							Verbs:     []string{"get", "list", "watch"},
+						},
+					},
+				},
+				createClusterRoleFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createClusterRoleBindingFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createServiceAccountFn: func(
+					context.Context,
+					client.Object,
+					...client.CreateOption,
+				) error {
+					return nil
+				},
+				createRoleFn: func(
+					_ context.Context,
+					obj client.Object,
+					_ ...client.CreateOption,
+				) error {
+					role, ok := obj.(*rbacv1.Role)
+					require.True(t, ok)
+					lastRule := role.Rules[len(role.Rules)-1]
+					switch role.Name {
+					case "kargo-admin":
+						require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+						require.Equal(t, []string{"eventrouters", "messagechannels"}, lastRule.Resources)
+						require.Equal(t, []string{"*"}, lastRule.Verbs)
+					case "kargo-viewer":
+						require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+						require.Equal(t, []string{"eventrouters", "messagechannels"}, lastRule.Resources)
+						require.Equal(t, []string{"get", "list", "watch"}, lastRule.Verbs)
+					case "kargo-promoter":
+						require.Equal(t, []string{"ee.kargo.akuity.io"}, lastRule.APIGroups)
+						require.Equal(t, []string{"eventrouters"}, lastRule.Resources)
+						require.Equal(t, []string{"get", "list", "watch"}, lastRule.Verbs)
+					}
 					return nil
 				},
 				createRoleBindingFn: func(

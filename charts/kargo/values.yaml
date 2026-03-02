@@ -830,6 +830,18 @@ managementController:
       ## @param managementController.reconcilers.serviceAccounts.maxConcurrentReconciles optionally overrides the maximum number of ServiceAccount resources the management controller can reconcile concurrently.
       maxConcurrentReconciles:
 
+  ## Project-level role settings
+  projectRoles:
+    admin:
+      ## @param managementController.projectRoles.admin.additionalRules Additional PolicyRules to include in the default kargo-admin Role created in each project namespace.
+      additionalRules: []
+    viewer:
+      ## @param managementController.projectRoles.viewer.additionalRules Additional PolicyRules to include in the default kargo-viewer Role created in each project namespace.
+      additionalRules: []
+    promoter:
+      ## @param managementController.projectRoles.promoter.additionalRules Additional PolicyRules to include in the default kargo-promoter Role created in each project namespace.
+      additionalRules: []
+
   ## @param managementController.labels Labels to add to the api resources. Merges with `global.labels`, allowing you to override or add to the global labels.
   labels: {}
   ## @param managementController.annotations Annotations to add to the api resources. Merges with `global.annotations`, allowing you to override or add to the global annotations.
