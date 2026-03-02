@@ -131,6 +131,7 @@ func (w *argocdWaiter) run(
 	newHealthStatuses := make(map[string]string, len(prevHealthStatuses))
 	maps.Copy(newHealthStatuses, prevHealthStatuses)
 
+	retryAfter := 30 * time.Second
 	allReady := true
 	for i := range stepCfg.Apps {
 		appSpec := &stepCfg.Apps[i]
@@ -162,7 +163,7 @@ func (w *argocdWaiter) run(
 				"app", app.Name, "namespace", app.Namespace,
 			)
 
-			ready, healthStatus, err :=
+			ready, healthStatus, appRetryAfter, err :=
 				w.checkAppReadiness(ctx, app, waitFor, prevHealthStatuses[appKey])
 			if healthStatus != "" {
 				newHealthStatuses[appKey] = healthStatus
@@ -178,6 +179,9 @@ func (w *argocdWaiter) run(
 			if !ready {
 				appLogger.Info("application is not ready")
 				allReady = false
+				if appRetryAfter > 0 && appRetryAfter < retryAfter {
+					retryAfter = appRetryAfter
+				}
 			} else {
 				appLogger.Info("application is ready")
 			}
@@ -194,10 +198,12 @@ func (w *argocdWaiter) run(
 		}, nil
 	}
 
-	logger.Info("waiting for applications to become ready")
+	logger.Info("waiting for applications to become ready",
+		"retryAfter", retryAfter,
+	)
 	return promotion.StepResult{
 		Status:     kargoapi.PromotionStepStatusRunning,
-		RetryAfter: ptr.To(30 * time.Second),
+		RetryAfter: ptr.To(retryAfter),
 		Output: map[string]any{
 			healthStatusKey: newHealthStatuses,
 		},
@@ -208,13 +214,15 @@ func (w *argocdWaiter) run(
 // desired conditions specified by waitFor. It returns:
 //   - ready: whether all conditions are met
 //   - healthStatus: the current health status string (for tracking)
+//   - retryAfter: a suggested retry duration when not ready due to a
+//     time-bound condition (e.g. health cooldown); zero means use default
 //   - err: a TerminalError if a non-recoverable condition is detected
 func (w *argocdWaiter) checkAppReadiness(
 	ctx context.Context,
 	app *argocd.Application,
 	waitFor []string,
 	prevHealthStatus string,
-) (ready bool, healthStatus string, err error) {
+) (ready bool, healthStatus string, retryAfter time.Duration, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"app", app.Name, "namespace", app.Namespace,
 	)
@@ -231,7 +239,7 @@ func (w *argocdWaiter) checkAppReadiness(
 				app.Name, app.Namespace, condition.Type, condition.Message,
 			)
 		}
-		return false, healthStatus, &promotion.TerminalError{
+		return false, healthStatus, 0, &promotion.TerminalError{
 			Err: errors.Join(issues...),
 		}
 	}
@@ -240,7 +248,7 @@ func (w *argocdWaiter) checkAppReadiness(
 	if slices.Contains(waitFor, "operation") {
 		if operationInProgress(app) {
 			logger.Info("operation is in progress")
-			return false, healthStatus, nil
+			return false, healthStatus, 0, nil
 		}
 	}
 
@@ -259,8 +267,11 @@ func (w *argocdWaiter) checkAppReadiness(
 			// operation finished, the health assessment is fresh.
 			if app.Status.Health.LastTransitionTime == nil ||
 				app.Status.Health.LastTransitionTime.Before(app.Status.OperationState.FinishedAt) {
-				logger.Info("operation completed recently, health status not yet trusted")
-				return false, healthStatus, nil
+				remaining := waitHealthCooldownDuration - time.Since(app.Status.OperationState.FinishedAt.Time)
+				logger.Info("operation completed recently, health status not yet trusted",
+					"retryAfter", remaining,
+				)
+				return false, healthStatus, remaining, nil
 			}
 		}
 	}
@@ -288,7 +299,7 @@ func (w *argocdWaiter) checkAppReadiness(
 			prevHealthStatus != "" &&
 			prevHealthStatus != string(argocd.HealthStatusDegraded) &&
 			prevHealthStatus != string(argocd.HealthStatusUnknown) {
-			return false, healthStatus, &promotion.TerminalError{
+			return false, healthStatus, 0, &promotion.TerminalError{
 				Err: fmt.Errorf( // nolint:staticcheck
 					"Argo CD Application %q in namespace %q health has "+
 						"regressed from %s to %s",
@@ -303,7 +314,7 @@ func (w *argocdWaiter) checkAppReadiness(
 				"health check not passed",
 				"currentHealth", app.Status.Health.Status,
 			)
-			return false, healthStatus, nil
+			return false, healthStatus, 0, nil
 		}
 	}
 
@@ -314,11 +325,11 @@ func (w *argocdWaiter) checkAppReadiness(
 				"sync check not passed",
 				"currentSync", app.Status.Sync.Status,
 			)
-			return false, healthStatus, nil
+			return false, healthStatus, 0, nil
 		}
 	}
 
-	return true, healthStatus, nil
+	return true, healthStatus, 0, nil
 }
 
 // operationInProgress returns true if the Application has an operation that is

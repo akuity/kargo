@@ -97,3 +97,145 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 		})
 	}
 }
+
+func TestArgoCDAppHealthChanged_Update(t *testing.T) {
+	testCases := []struct {
+		name string
+		e    event.TypedUpdateEvent[*argocd.Application]
+		want bool
+	}{
+		{
+			name: "ObjectOld is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "ObjectNew is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "Health unchanged",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+					},
+				},
+				ObjectNew: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Health changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusProgressing,
+						},
+					},
+				},
+				ObjectNew: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+					},
+				},
+			},
+			want: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := ArgoCDAppHealthChanged[*argocd.Application]{
+				logger: logging.NewDiscardLoggerOrDie(),
+			}
+			require.Equal(t, testCase.want, p.Update(testCase.e))
+		})
+	}
+}
+
+func TestArgoCDAppSyncChanged_Update(t *testing.T) {
+	testCases := []struct {
+		name string
+		e    event.TypedUpdateEvent[*argocd.Application]
+		want bool
+	}{
+		{
+			name: "ObjectOld is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectNew: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "ObjectNew is nil",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{},
+			},
+			want: false,
+		},
+		{
+			name: "Sync unchanged",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+					},
+				},
+				ObjectNew: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			want: false,
+		},
+		{
+			name: "Sync changed",
+			e: event.TypedUpdateEvent[*argocd.Application]{
+				ObjectOld: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeOutOfSync,
+						},
+					},
+				},
+				ObjectNew: &argocd.Application{
+					Status: argocd.ApplicationStatus{
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+					},
+				},
+			},
+			want: true,
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			p := ArgoCDAppSyncChanged[*argocd.Application]{
+				logger: logging.NewDiscardLoggerOrDie(),
+			}
+			require.Equal(t, testCase.want, p.Update(testCase.e))
+		})
+	}
+}
