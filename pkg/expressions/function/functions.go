@@ -287,7 +287,6 @@ func FreightMetadata(
 	return expr.Function(
 		"freightMetadata",
 		freightMetadata(ctx, c, project),
-		new(func(freightRefName, key string) any), // Deprecated
 		new(func(freightRefName string) map[string]any),
 	)
 }
@@ -298,7 +297,7 @@ func freightMetadata(
 	project string,
 ) exprFn {
 	return func(a ...any) (any, error) {
-		if len(a) != 1 && len(a) != 2 {
+		if len(a) != 1 {
 			return nil, fmt.Errorf("expected 1 argument, got %d", len(a))
 		}
 
@@ -339,41 +338,19 @@ func freightMetadata(
 			)
 		}
 
-		// If only one argument, return the whole metadata map
-		if len(a) == 1 {
-			if freight.Status.Metadata == nil {
-				return nil, nil
-			}
-
-			decoded := make(map[string]any, len(freight.Status.Metadata))
-			for k, v := range freight.Status.Metadata {
-				var val any
-				if err := json.Unmarshal(v.Raw, &val); err != nil {
-					return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
-				}
-				decoded[k] = val
-			}
-			return decoded, nil
-		}
-
-		// Deprecated: If two arguments, return the value for the key
-		key, ok := a[1].(string)
-		if !ok {
-			return nil, fmt.Errorf("second argument must be string, got %T", a[1])
-		}
-		if key == "" {
-			return nil, fmt.Errorf("metadata key must not be empty")
-		}
-
-		var data any
-		found, err := freight.Status.GetMetadata(key, &data)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get metadata %s from freight %s: %w", key, freightRefName, err)
-		}
-		if !found {
+		if freight.Status.Metadata == nil {
 			return nil, nil
 		}
-		return data, nil
+
+		decoded := make(map[string]any, len(freight.Status.Metadata))
+		for k, v := range freight.Status.Metadata {
+			var val any
+			if err := json.Unmarshal(v.Raw, &val); err != nil {
+				return nil, fmt.Errorf("failed to unmarshal metadata value for key %s: %w", k, err)
+			}
+			decoded[k] = val
+		}
+		return decoded, nil
 	}
 }
 
