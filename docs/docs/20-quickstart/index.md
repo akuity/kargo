@@ -6,8 +6,8 @@ slug: /quickstart
 
 # Kargo Quickstart
 
-**Kargo** is an open-source project that streamlines how applications are promoted across
-environments, extending GitOps beyond deployment.
+**Kargo** is an open-source project that streamlines how applications are
+promoted across environments, extending GitOps beyond deployment.
 
 ## The Pipeline You'll Create
 
@@ -15,7 +15,8 @@ environments, extending GitOps beyond deployment.
 
 ## Spin Up a Local Cluster With Kargo Installed
 
-Pick your local Kubernetes setup. One command installs cert-manager, Argo CD, and Kargo.
+Pick your local Kubernetes setup. One command installs cert-manager, Argo CD,
+and Kargo.
 
 :::info Requires Helm v3.13.1+
 
@@ -36,10 +37,10 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/inst
 
 :::info
 
-This is one of the fastest paths to a local Kubernetes cluster, but be
-aware that Docker Desktop supports only a _single_ Kubernetes cluster. If
-that cluster reaches a state you are dissatisfied with, resetting it will
-remove not just Kargo-related resources, but _all_ your workloads and data.
+This is one of the fastest paths to a local Kubernetes cluster, but be aware
+that Docker Desktop supports only a _single_ Kubernetes cluster. If that cluster
+reaches a state you are dissatisfied with, resetting it will remove not just
+Kargo-related resources, but _all_ your workloads and data.
 
 :::
 
@@ -47,7 +48,7 @@ remove not just Kargo-related resources, but _all_ your workloads and data.
 <TabItem value="orbstack" label="OrbStack">
 
 [OrbStack](https://orbstack.dev/) is a fast, lightweight, drop-in replacement
-for Docker Desktop for Mac OS only. You can follow
+for Docker Desktop for macOS only. You can follow
 [these instructions](https://docs.orbstack.dev/kubernetes/) to enable its
 built-in Kubernetes support.
 
@@ -57,10 +58,10 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/inst
 
 :::info
 
-This is one of the fastest paths to a local Kubernetes cluster, but be
-aware that OrbStack supports only a _single_ Kubernetes cluster. If
-that cluster reaches a state you are dissatisfied with, resetting it will
-remove not just Kargo-related resources, but _all_ your workloads and data.
+This is one of the fastest paths to a local Kubernetes cluster, but be aware
+that OrbStack supports only a _single_ Kubernetes cluster. If that cluster
+reaches a state you are dissatisfied with, resetting it will remove not just
+Kargo-related resources, but _all_ your workloads and data.
 
 :::
 
@@ -80,8 +81,8 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/kind
 
 While this option is a bit more complex than using Docker Desktop or OrbStack
 directly, it offers the advantage of being fully-disposable. If your cluster
-reaches a state you are dissatisfied with, you can simply destroy it and
-launch a new one.
+reaches a state you are dissatisfied with, you can simply destroy it and launch
+a new one.
 
 :::
 
@@ -100,8 +101,8 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/k3d.
 
 While this option is a bit more complex than using Docker Desktop or OrbStack
 directly, it offers the advantage of being fully-disposable. If your cluster
-reaches a state you are dissatisfied with, you can simply destroy it and
-launch a new one.
+reaches a state you are dissatisfied with, you can simply destroy it and launch
+a new one.
 
 :::
 
@@ -110,14 +111,19 @@ launch a new one.
 
 :::info
 
-If you are averse to piping a downloaded script directly into a shell, feel free to download the applicable script and inspect its contents prior to execution.
+If you are averse to piping a downloaded script directly into a shell, feel free
+to download the applicable script and inspect its contents prior to execution.
 
 Any approach you select should only:
 
 1. Launch a new, local Kubernetes cluster, if applicable
+
 1. Install cert-manager
+
 1. Install Argo CD
+
 1. Install Argo Rollouts
+
 1. Install Kargo
 
 :::
@@ -126,23 +132,32 @@ Any approach you select should only:
 </Tabs>
 
 <details>
+
 <summary>Troubleshooting</summary>
 
 - **401 Unauthorized:**  
-  Ensure you are using **Helm v3.13.1 or later**. Earlier versions may not authenticate properly when pulling the Kargo chart.
+
+  Ensure you are using **Helm v3.13.1 or later**. Earlier versions may not
+  authenticate properly when pulling the Kargo chart.
 
 - **403 Forbidden:**  
-  This is commonly caused by Docker attempting to authenticate to `ghcr.io` with an expired token. The Kargo chart and container images are publicly accessible and do not require authentication. To resolve the issue, log out of `ghcr.io`:
 
-  ```bash
+  This is commonly caused by Docker attempting to authenticate to `ghcr.io` with
+  an expired token. The Kargo chart and container images are publicly accessible
+  and do not require authentication. To resolve the issue, log out of `ghcr.io`:
+
+  ```shell
   docker logout ghcr.io
   ```
 
 - **Argo CD UI flashes on login with no error message:**  
-  If the Argo CD UI/dashboard briefly flashes or redirects back to the login screen without displaying an error, this may be caused by stale or corrupted browser cookies. Clear your browser cookies for `localhost` or open a new private/incognito window and try logging in again.
+
+  If the Argo CD UI/dashboard briefly flashes or redirects back to the login
+  screen without displaying an error, this may be caused by stale or corrupted
+  browser cookies. Clear your browser cookies for `localhost` or open a new
+  private/incognito window and try logging in again.
 
 </details>
-  
   
 <table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
   <tr>
@@ -168,28 +183,38 @@ Any approach you select should only:
 ## Set Up Your Demo Repository
 
 1. Fork the sample repository:  
-  Go to https://github.com/akuity/kargo-demo and click <Hlt>Fork</Hlt>.  
-  This repository contains application configurations (e.g. Kubernetes manifests) and is the source of truth for our demo cluster. In a real setup, you would create your own configuration repository from scratch.
+   Go to https://github.com/akuity/kargo-demo and click <Hlt>Fork</Hlt>.  
+   This repository contains application configurations (e.g. Kubernetes
+   manifests) and is the source of truth for our demo cluster. In a real setup,
+   you would create your own configuration repository from scratch.
 
 1. Get a GitHub personal access token (PAT):  
-  Kargo will push changes to your fork for **test**, **uat**, and **prod** environments. You need a PAT with **write access** to your fork.
+   Kargo will push changes to your fork for **test**, **uat**, and **prod**
+   environments. You need a PAT with **write access** to your fork.
 
 <details>
+
 <summary>Need a GitHub personal access token (PAT)?</summary>
 
-Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> → <Hlt>Personal Access Tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt> → <Hlt>Generate new token</Hlt>
+Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> →
+<Hlt>Personal Access Tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt> →
+<Hlt>Generate new token</Hlt>.
 
 - Select your forked repository
-- Under <Hlt>Permissions</Hlt>, enable <Hlt>Actions</Hlt> → <Hlt>Read and Write</Hlt>
+
+- Under <Hlt>Permissions</Hlt>, enable <Hlt>Contents</Hlt> →
+  <Hlt>Read and write</Hlt>
+
 - Generate the token and copy it — this is your GITHUB_PAT
 
-⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be able to push changes.
+⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be
+able to push changes.
 
 </details>
 
-3. Set environment variables:
+1. Set environment variables:
 
-``` bash
+```shell
 export GITOPS_REPO_URL=https://github.com/<your github username>/kargo-demo
 
 export GITHUB_USERNAME=<your github username>
@@ -199,23 +224,34 @@ export GITHUB_PAT=<your personal access token>
 
 :::info Why Kargo writes to Git
 
-Kargo follows GitOps principles: Your cluster's desired state always comes from Git. Kargo promotes artifacts by committing updated configurations to Git. Argo CD picks it up and syncs the cluster. Git becomes a full audit trail of every promotion.
+Kargo follows GitOps principles: Your cluster's desired state always comes from
+Git. Kargo promotes artifacts by committing updated configurations to Git. Argo
+CD picks it up and syncs the cluster. Git becomes a full audit trail of every
+promotion.
 
 :::
 
 <details>
+
 <summary>What's in the `kargo-demo` repository?</summary>
 
-You can explore the repository and see that the `main` branch contains common configuration in a `base/` directory as well as stage-specific overlays in `stages/<stage name>/` directories.
+You can explore the repository and see that the `main` branch contains common
+configuration in a `base/` directory as well as stage-specific overlays in
+`stages/<stage name>/` directories.
 
-- This layout is typical of a GitOps repository using [Kustomize](https://kustomize.io/) for configuration management of Kubernetes manifests and is not specific to Kargo.
+- This layout is typical of a GitOps repository using
+  [Kustomize](https://kustomize.io/) for configuration management of Kubernetes
+  manifests and is not specific to Kargo.
+
 - Kargo also works just as well with [Helm](https://helm.sh).
 
 </details>
 
 ## Create Argo CD Applications For Each Stage
 
-We’ll use an Argo CD `ApplicationSet` to create and manage three `Applications`, deploying the sample app to **test**, **uat**, and **prod** namespaces, each with its own configuration.
+We’ll use an Argo CD `ApplicationSet` to create and manage three `Applications`,
+deploying the sample app to **test**, **uat**, and **prod** namespaces, each
+with its own configuration.
 
 ```yaml {18,23}
 cat <<EOF | kubectl apply -f -
@@ -254,9 +290,12 @@ EOF
 ✅ Argo CD Applications created.
 
 <details>
+
 <summary>What you'll see in Argo CD</summary>
 
-When you visit the [Argo CD dashboard](http://localhost:31080), the branches referenced by the `targetRevision` fields do not exist yet, and the `Applications` will be out of sync. Kargo will create them on first promotion.
+When you visit the [Argo CD dashboard](http://localhost:31080), the branches
+referenced by the `targetRevision` fields do not exist yet, and the
+`Applications` will be out of sync. Kargo will create them on first promotion.
 
 ![Argo CD Dashboard](img/argo-dashboard.png)
 
@@ -266,9 +305,12 @@ When you visit the [Argo CD dashboard](http://localhost:31080), the branches ref
 
 Run the following command to set up your pipeline. This will create:
 
-- A `Warehouse` that polls the public ECR registry for new versions of the Nginx image
+- A `Warehouse` that polls the public ECR registry for new versions of the Nginx
+  image
+
 - A `PromotionTask` that defines a reusable promotion process
-- Three `Stage` resources that define how Freight move through your pipeline
+
+- Three `Stage` resources that define how Freight moves through your pipeline
 
 <Tabs groupId="login-method">
 <TabItem value="kubectl" label="Using kubectl" default>
@@ -426,7 +468,9 @@ the [Kargo Dashboard's Downloads page](http://localhost:31081/downloads):
 
 ![CLI Tab in Kargo UI](./img/cli-installation.png)
 
-Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and move it to a location in your file system that is included in the value of your `PATH` environment variable.
+Rename the downloaded binary to `kargo` (or `kargo.exe` for Windows) and move it
+to a location in your file system that is included in the value of your `PATH`
+environment variable.
 
 Log in:
 
@@ -585,9 +629,12 @@ EOF
 </TabItem>
 </Tabs>
 
-Open the [Kargo Dashboard](http://localhost:31081/) and select the `kargo-demo` project. You should see the pipeline, and `Freight` should appear in the upper left after a few seconds.
+Open the [Kargo Dashboard](http://localhost:31081/) and select the `kargo-demo`
+project. You should see the pipeline, and `Freight` should appear in the upper
+left after a few seconds.
 
 <details>
+
 <summary>What you'll see in Kargo</summary>
 
 ![Kargo Project View](img/kargo-dashboard-projects.png)
@@ -598,64 +645,86 @@ Open the [Kargo Dashboard](http://localhost:31081/) and select the `kargo-demo` 
 
 ## Promote Freight to "test"
 
-In the Kargo Dashboard, locate the `Freight` in the timeline at the top of the screen.
+In the Kargo Dashboard, locate the `Freight` in the timeline at the top of the
+screen.
 
 - Drag it using the <strong>⋮⋮</strong> handle.
+
 - Drop it into the **test** `Stage`.
 
 <details>
+
 <summary>Alternative: Promote from the `Stage` Menu</summary>
 
 In the **test** `Stage`, click the truck icon (🚚) in the header.
 
 1. Select <Hlt>Promote</Hlt>
+
 1. Choose the `Freight` you want to promote
+
 1. Click <Hlt>Promote</Hlt> to confirm
 
 </details>
 
-A summary of the `Promotion` will pop up and will be updated in real-time as the steps of the promotion process complete. Once the steps have completed, the `Promotion`'s status will change to <Hlt>Succeeded</Hlt>.
+A summary of the `Promotion` will pop up and will be updated in real-time as the
+steps of the promotion process complete. Once the steps have completed, the
+`Promotion`'s status will change to <Hlt>Succeeded</Hlt>.
 
 ![Kargo Promotion View](img/kargo-promotion-view.png)
 
 <details>
+
 <summary>What `Freight` is deployed to what `Stage`?</summary>
 
-- Every piece of `Freight` in the timeline is color-coded to indicate which `Stages` (if any) are actively using it.
-- In this example, `Freight` matches the **test** `Stage`’s color once it has been successfully promoted.
+- Every piece of `Freight` in the timeline is color-coded to indicate which
+  `Stages` (if any) are actively using it.
+
+- In this example, `Freight` matches the **test** `Stage`’s color once it has
+  been successfully promoted.
 
 </details>
 
 <details>
+
 <summary>What happened behind the scenes?</summary>
 
 When you visit your fork at `https://github.com/<your github username>/kargo-demo`:  
 
 - Kargo created a **stage/test** branch  
-- It read the latest manifests from `main`, ran `kustomize edit set image` and `kustomize build` in `stages/test/`  
-- The resulting manifests were committed to the stage-specific branch — the same branch referenced by the **test** Argo CD `Application`’s `targetRevision` field  
 
-**Best Practice:** The Kargo team recommmends using stage-specific branches.
+- It read the latest manifests from `main`, ran `kustomize edit set image` and
+  `kustomize build` in `stages/test/`  
+
+- The resulting manifests were committed to the stage-specific branch — the same
+  branch referenced by the **test** Argo CD `Application`’s `targetRevision`
+  field  
+
+**Best Practice:** The Kargo team recommends using stage-specific branches.
 
 </details>
 
-✅ After the `Freight` passes the health checks, you'll see a ❤️ on the **test** node. Click the `Freight` to confirm it shows <Hlt>Verified</Hlt> in **test** which will unlock it for promotion to **uat**.
+✅ After the `Freight` passes the health checks, you'll see a ❤️ on the **test**
+node. Click the `Freight` to confirm it shows <Hlt>Verified</Hlt> in **test**
+which will unlock it for promotion to **uat**.
 
 ## Promote to UAT and then Production
 
-Repeat the same steps for **uat**, then **prod**:<br />
-(The `Freight` node will progressively color-match each stage as it passes through.)
+Repeat the same steps for **uat**, then **prod**:<br /> (The `Freight` node will
+progressively color-match each stage as it passes through.)
 
 1. Click the truck icon on each `Stage`
+
 1. Select `Freight`
+
 1. Click <Hlt>Promote</Hlt>
 
 :::info
 
-`Freight` cannot be promoted to the **prod** `Stage` until **uat** verification has passed and the `Stage` reaches a **Healthy** state. Verification checks may take a few minutes to reconcile.
+`Freight` cannot be promoted to the **prod** `Stage` until **uat** verification
+has passed and the `Stage` reaches a **Healthy** state. Verification checks may
+take a few minutes to reconcile.
 
 :::
-
 
 <table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
   <tr>
@@ -670,32 +739,45 @@ Repeat the same steps for **uat**, then **prod**:<br />
   </tr>
 </table>
 
- ✅ **All stages promoted!** 🎉
+✅ **All stages promoted!** 🎉
 
 <details>
+
 <summary>Why can’t I promote directly from **test** to **prod**?</summary>
 
-Unlike the **test** `Stage`, which subscribes to a `Warehouse` that polls an image repository in ECR, the **uat** and **prod** `Stages` subscribe to other, _upstream_ `Stages`, forming a promotion pipeline:
+Unlike the **test** `Stage`, which subscribes to a `Warehouse` that polls an
+image repository in ECR, the **uat** and **prod** `Stages` subscribe to other,
+_upstream_ `Stages`, forming a promotion pipeline:
 
 1. `uat` subscribes to `test`
 2. `prod` subscribes to `uat`
 
-This means `Freight` must flow through each `Stage` in order: **test** → **uat** → **prod**
+This means `Freight` must flow through each `Stage` in order: **test** → **uat**
+→ **prod**.
 
 </details>
 
 <details>
+
 <summary>Exploring the **Kargo Dashboard**</summary>
 
 The Kargo Dashboard gives you visibility into how `Freight` moves through your environments.
 
 Within a `Stage`, you can explore:
 
-- **Promotions** – See when `Freight` was promoted, by whom, and to which `Stage`.
+- **Promotions** – See when `Freight` was promoted, by whom, and to which
+  `Stage`.
+
 - **Verifications** – View the status and logs of verification steps.
-- **Freight History** – Track which versions have flowed through the environment over time.
-- **Settings** – _(Desired State)_ - The configured behavior of the `Stage`: what it subscribes to and how promotions and verifications are defined.
-- **Live Manifest** – _(Observed State)_ - The actual current state of the `Stage` resource as it exists in the cluster.
+
+- **Freight History** – Track which versions have flowed through the environment
+  over time.
+
+- **Settings** – _(Desired State)_ - The configured behavior of the `Stage`:
+  what it subscribes to and how promotions and verifications are defined.
+
+- **Live Manifest** – _(Observed State)_ - The actual current state of the
+  `Stage` resource as it exists in the cluster.
 
 If things go wrong, you can often find answers in the **Live Manifest**:
 
@@ -722,10 +804,10 @@ If things go wrong, you can often find answers in the **Live Manifest**:
   </tr>
 </table>
 
-Together, these views provide a clear audit trail and real-time insight into your promotion pipeline.
+Together, these views provide a clear audit trail and real-time insight into
+your promotion pipeline.
 
 </details>
-
 
 ## Cleaning up
 
@@ -737,12 +819,11 @@ Now let's clean up!
 <TabItem value="docker-desktop" label="Docker Desktop">
 
 Docker Desktop supports only a _single_ Kubernetes cluster. If you are
-comfortable deleting not just just Kargo-related resources, but _all_ your
-workloads and data, the cluster can be reset from the Docker Desktop
-Dashboard.
+comfortable deleting not just Kargo-related resources, but _all_ your workloads
+and data, the cluster can be reset from the Docker Desktop Dashboard.
 
-If, instead, you wish to preserve non-Kargo-related workloads and data, you
-will need to manually uninstall Kargo and its prerequisites:
+If, instead, you wish to preserve non-Kargo-related workloads and data, you will
+need to manually uninstall Kargo and its prerequisites:
 
 ```shell
 curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
@@ -751,16 +832,16 @@ curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/unin
 </TabItem>
 <TabItem value="orbstack" label="OrbStack">
 
-OrbStack supports only a _single_ Kubernetes cluster. If you are
-comfortable deleting not just just Kargo-related resources, but _all_ your
-workloads and data, you can destroy the cluster with:
+OrbStack supports only a _single_ Kubernetes cluster. If you are comfortable
+deleting not just Kargo-related resources, but _all_ your workloads and data,
+you can destroy the cluster with:
 
 ```shell
 orb delete k8s
 ```
 
-If, instead, you wish to preserve non-Kargo-related workloads and data, you
-will need to manually uninstall Kargo and its prerequisites:
+If, instead, you wish to preserve non-Kargo-related workloads and data, you will
+need to manually uninstall Kargo and its prerequisites:
 
 ```shell
 curl -L https://raw.githubusercontent.com/akuity/kargo/main/hack/quickstart/uninstall.sh | sh
