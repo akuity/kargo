@@ -138,6 +138,9 @@ Any approach you select should only:
   docker logout ghcr.io
   ```
 
+- **Argo CD UI flashes on login with no error message:**  
+  If the Argo CD UI/dashboard briefly flashes or redirects back to the login screen without displaying an error, this may be caused by stale or corrupted browser cookies. Clear your browser cookies for `localhost` or open a new private/incognito window and try logging in again.
+
 </details>
   
   
@@ -595,13 +598,13 @@ Open the [Kargo Dashboard](http://localhost:31081/) and select the `kargo-demo` 
 
 ## Promote Freight to "test"
 
-In the Kargo dashboard, locate the `Freight` in the timeline at the top of the screen.
+In the Kargo Dashboard, locate the `Freight` in the timeline at the top of the screen.
 
 - Drag it using the <strong>⋮⋮</strong> handle.
 - Drop it into the **test** `Stage`.
 
 <details>
-<summary>Alternative: Use the Promote action</summary>
+<summary>Alternative: Promote from the `Stage` Menu</summary>
 
 In the **test** `Stage`, click the truck icon (🚚) in the header.
 
@@ -616,7 +619,7 @@ A summary of the `Promotion` will pop up and will be updated in real-time as the
 ![Kargo Promotion View](img/kargo-promotion-view.png)
 
 <details>
-<summary>What Freight is deployed to what Stage?</summary>
+<summary>What `Freight` is deployed to what `Stage`?</summary>
 
 - Every piece of `Freight` in the timeline is color-coded to indicate which `Stages` (if any) are actively using it.
 - In this example, `Freight` matches the **test** `Stage`’s color once it has been successfully promoted.
@@ -640,7 +643,19 @@ When you visit your fork at `https://github.com/<your github username>/kargo-dem
 
 ## Promote to UAT and then Production
 
-Repeat the same steps for **uat**, then **prod**. Click the truck icon on each stage, select `Freight`, and confirm. The `Freight` node will progressively color-match each stage as it passes through.
+Repeat the same steps for **uat**, then **prod**:<br />
+(The `Freight` node will progressively color-match each stage as it passes through.)
+
+1. Click the truck icon on each `Stage`
+1. Select `Freight`
+1. Click <Hlt>Promote</Hlt>
+
+:::info
+
+`Freight` cannot be promoted to the **prod** `Stage` until **uat** verification has passed and the `Stage` reaches a **Healthy** state. Verification checks may take a few minutes to reconcile.
+
+:::
+
 
 <table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
   <tr>
@@ -656,6 +671,61 @@ Repeat the same steps for **uat**, then **prod**. Click the truck icon on each s
 </table>
 
  ✅ **All stages promoted!** 🎉
+
+<details>
+<summary>Why can’t I promote directly from **test** to **prod**?</summary>
+
+Unlike the **test** `Stage`, which subscribes to a `Warehouse` that polls an image repository in ECR, the **uat** and **prod** `Stages` subscribe to other, _upstream_ `Stages`, forming a promotion pipeline:
+
+1. `uat` subscribes to `test`
+2. `prod` subscribes to `uat`
+
+This means `Freight` must flow through each `Stage` in order: **test** → **uat** → **prod**
+
+</details>
+
+<details>
+<summary>Exploring the **Kargo Dashboard**</summary>
+
+The Kargo Dashboard gives you visibility into how `Freight` moves through your environments.
+
+Within a `Stage`, you can explore:
+
+- **Promotions** – See when `Freight` was promoted, by whom, and to which `Stage`.
+- **Verifications** – View the status and logs of verification steps.
+- **Freight History** – Track which versions have flowed through the environment over time.
+- **Settings** – _(Desired State)_ - The configured behavior of the `Stage`: what it subscribes to and how promotions and verifications are defined.
+- **Live Manifest** – _(Observed State)_ - The actual current state of the `Stage` resource as it exists in the cluster.
+
+If things go wrong, you can often find answers in the **Live Manifest**:
+
+<table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
+  <tr>
+    <th width="40%">Attribute</th>
+    <th width="60%">Description</th>
+  </tr>
+  <tr>
+    <td>
+      **`status.conditions`**
+    </td>
+    <td>
+      Look for `Ready: False` and associated messages to understand why a `Stage` is not healthy.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      **`status.lastPromotion.status`**
+    </td>
+    <td>
+      Shows where a promotion failed (e.g., step-6 during the `git push`).
+    </td>
+  </tr>
+</table>
+
+Together, these views provide a clear audit trail and real-time insight into your promotion pipeline.
+
+</details>
+
 
 ## Cleaning up
 
