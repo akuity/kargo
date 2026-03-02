@@ -33,8 +33,9 @@ const (
 var defaultWaitFor = []string{"health", "sync", "operation"}
 
 // waitHealthCooldownDuration is the duration after a completed operation during
-// which the health status is not trusted. This matches the cooldown in the
-// ArgoCD health checker.
+// which the health status is not trusted, used as a fallback for older ArgoCD
+// versions that do not report status.health.lastTransitionTime. This matches
+// the cooldown in the ArgoCD health checker.
 var waitHealthCooldownDuration = 10 * time.Second
 
 // healthErrorConditions are the ApplicationConditionType conditions that
@@ -244,7 +245,9 @@ func (w *argocdWaiter) checkAppReadiness(
 	}
 
 	// Health cooldown: don't trust health status right after an operation
-	// completes.
+	// completes, unless the health status has a LastTransitionTime that is
+	// after the operation finished (meaning ArgoCD has re-assessed health
+	// post-operation).
 	healthBeingChecked := slices.Contains(waitFor, "health") ||
 		slices.Contains(waitFor, "suspended") ||
 		slices.Contains(waitFor, "degraded")
@@ -252,8 +255,13 @@ func (w *argocdWaiter) checkAppReadiness(
 		if app.Status.OperationState != nil &&
 			app.Status.OperationState.FinishedAt != nil &&
 			time.Since(app.Status.OperationState.FinishedAt.Time) < waitHealthCooldownDuration {
-			logger.Info("operation completed recently, health status not yet trusted")
-			return false, healthStatus, nil
+			// If the health status has a LastTransitionTime after the
+			// operation finished, the health assessment is fresh.
+			if app.Status.Health.LastTransitionTime == nil ||
+				app.Status.Health.LastTransitionTime.Before(app.Status.OperationState.FinishedAt) {
+				logger.Info("operation completed recently, health status not yet trusted")
+				return false, healthStatus, nil
+			}
 		}
 	}
 

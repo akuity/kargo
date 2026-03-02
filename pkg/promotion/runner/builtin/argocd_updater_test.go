@@ -1958,7 +1958,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 
 func Test_argoCDUpdater_authorizeArgoCDAppUpdate(t *testing.T) {
 	const (
-		permErr           = "does not permit mutation"
+		permErr           = "does not permit access"
 		parseErr          = "unable to parse"
 		deprecatedGlobErr = "deprecated glob expression"
 	)

@@ -232,22 +232,24 @@ func (a *argocdChecker) getApplicationHealth(
 	// backoff. This will continue until the App's health status is considered
 	// reliable.
 	//
-	// TODO(krancour): This workaround can be revisited if/when
-	// https://github.com/argoproj/argo-cd/pull/21120 is merged, as (for newer
-	// versions of Argo CD, at least) it will allow us to accurately determine
-	// whether an App's health was last assessed before or after its most recent
-	// operation completed.
+	// If the health status has a LastTransitionTime that is after the
+	// operation finished, ArgoCD has re-assessed health post-operation and
+	// the status is trustworthy. Otherwise, fall back to the cooldown.
+	// See: https://github.com/argoproj/argo-cd/issues/16972
 	if app.Status.OperationState != nil && app.Status.OperationState.FinishedAt != nil {
 		if time.Since(app.Status.OperationState.FinishedAt.Time) < appHealthCooldownDuration {
-			return kargoapi.HealthStateUnknown,
-				appStatus,
-				fmt.Errorf(
-					"last operation of Argo CD Application %q in namespace %q completed "+
-						"less than %s ago; Application health status not trusted",
-					appKey.Name,
-					appKey.Namespace,
-					appHealthCooldownDuration,
-				)
+			if app.Status.Health.LastTransitionTime == nil ||
+				app.Status.Health.LastTransitionTime.Before(app.Status.OperationState.FinishedAt) {
+				return kargoapi.HealthStateUnknown,
+					appStatus,
+					fmt.Errorf(
+						"last operation of Argo CD Application %q in namespace %q completed "+
+							"less than %s ago; Application health status not trusted",
+						appKey.Name,
+						appKey.Namespace,
+						appHealthCooldownDuration,
+					)
+			}
 		}
 	}
 
