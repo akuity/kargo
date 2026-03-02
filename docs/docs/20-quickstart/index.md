@@ -197,15 +197,17 @@ Any approach you select should only:
 <summary>Need a GitHub personal access token (PAT)?</summary>
 
 Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> →
-<Hlt>Personal Access Tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt> →
+<Hlt>Personal access tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt>, then click
 <Hlt>Generate new token</Hlt>.
 
-- Select your forked repository
+- Under <Hlt>Repository access</Hlt>, select <Hlt>Only select repositories</Hlt>
+  and choose your fork.
 
-- Under <Hlt>Permissions</Hlt>, enable <Hlt>Contents</Hlt> →
-  <Hlt>Read and write</Hlt>
+- Under <Hlt>Permissions</Hlt> → <Hlt>Repository permissions</Hlt>, set
+  <Hlt>Contents</Hlt> to <Hlt>Read and write</Hlt>.
 
-- Generate the token and copy it — this is your GITHUB_PAT
+- Click <Hlt>Generate token</Hlt> and copy it — it won't be displayed again
+  after navigating away from that page.
 
 ⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be
 able to push changes.
