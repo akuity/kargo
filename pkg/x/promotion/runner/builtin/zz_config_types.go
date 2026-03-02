@@ -659,6 +659,27 @@ const (
 	Kustomize OutputFormat = "kustomize"
 )
 
+type ArgoCDWaitConfig struct {
+	Apps []ArgoCDAppWait `json:"apps"`
+}
+
+type ArgoCDAppWait struct {
+	// Specifies the exact name of an Argo CD Application resource to wait for. Mutually
+	// exclusive with 'selector'.
+	Name string `json:"name,omitempty"`
+	// Specifies the namespace of the Argo CD Application. If left unspecified, the namespace
+	// will be the controller's configured default.
+	Namespace string `json:"namespace,omitempty"`
+	// Specifies a label selector to match Argo CD Application resources to wait for. Mutually
+	// exclusive with 'name'.
+	Selector *ArgoCDAppSelector `json:"selector,omitempty"`
+	// Specifies the conditions to wait for. Valid values are 'health', 'sync', 'operation',
+	// 'suspended', and 'degraded'. Health-related conditions (health, suspended, degraded) are
+	// OR'd. All other conditions are AND'd. Defaults to ['health', 'sync', 'operation'] when
+	// omitted.
+	WaitFor []string `json:"waitFor,omitempty"`
+}
+
 // Kind of resource to update metadata for
 type Kind string
 
