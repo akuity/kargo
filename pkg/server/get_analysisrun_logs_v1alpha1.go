@@ -118,6 +118,9 @@ func (s *server) GetAnalysisRunLogs(
 		return err
 	}
 
+	// #nosec G704 -- The risk of SSRF is mitigated by the fact of this URL being
+	// constructed using an operator-defined template. End users have no control
+	// over the URL.
 	httpResp, err := cleanhttp.DefaultClient().Do(httpReq)
 	if err != nil {
 		return fmt.Errorf(
@@ -414,6 +417,9 @@ func (s *server) buildRequest(
 		// type.
 		return nil, fmt.Errorf("constructed log url %v is not a string", urlAny)
 	}
+	// #nosec G704 -- The risk of SSRF is mitigated by the fact of this URL being
+	// constructed using an operator-defined template. End users have no control
+	// over the URL.
 	httpReq, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating GET request for log url %s: %w", url, err)
@@ -602,6 +608,9 @@ func (s *server) getAnalysisRunLogs(c *gin.Context) {
 		return
 	}
 
+	// #nosec G704 -- The risk of SSRF is mitigated by the fact of this URL being
+	// constructed using an operator-defined template. End users have no control
+	// over the URL.
 	httpResp, err := cleanhttp.DefaultClient().Do(httpReq)
 	if err != nil {
 		_ = c.Error(fmt.Errorf(

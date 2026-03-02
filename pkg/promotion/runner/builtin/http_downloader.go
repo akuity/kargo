@@ -18,6 +18,7 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/io/fs"
 	"github.com/akuity/kargo/pkg/logging"
+	kargonet "github.com/akuity/kargo/pkg/net"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -156,6 +157,8 @@ func (d *httpDownloader) performHTTPRequest(cfg builtin.HTTPDownloadConfig) (*ht
 		return nil, fmt.Errorf("error creating HTTP client: %w", err)
 	}
 
+	// #nosec G704 -- The client is using a custom dialer that mitigates the worst
+	// practical risks of SSRF by refusing to dial link-local addresses.
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("error sending HTTP request: %w", err)
@@ -190,7 +193,7 @@ func (d *httpDownloader) buildRequest(cfg builtin.HTTPDownloadConfig) (*http.Req
 
 // buildHTTPClient creates an HTTP client with the specified configuration.
 func (d *httpDownloader) buildHTTPClient(cfg builtin.HTTPDownloadConfig) (*http.Client, error) {
-	httpTransport := cleanhttp.DefaultTransport()
+	httpTransport := kargonet.SafeTransport(cleanhttp.DefaultTransport())
 	if cfg.InsecureSkipTLSVerify {
 		httpTransport.TLSClientConfig = &tls.Config{
 			InsecureSkipVerify: true, // nolint: gosec
@@ -271,6 +274,9 @@ func (d *httpDownloader) createTempFile(absOutPath string) (*os.File, string, er
 
 	if err = tempFile.Chmod(0o600); err != nil {
 		_ = tempFile.Close()
+		// #nosec G703 -- Contextually, if this was constructed from a
+		// user-specified, relative path, the absolute path was constructed using
+		// securejoin.SecureJoin().
 		_ = os.Remove(tempFile.Name())
 		return nil, "", fmt.Errorf("failed to set permissions on temporary file: %w", err)
 	}

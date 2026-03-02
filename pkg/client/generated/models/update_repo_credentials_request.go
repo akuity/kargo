@@ -20,7 +20,8 @@ type UpdateRepoCredentialsRequest struct {
 	// description
 	Description string `json:"description,omitempty"`
 
-	// password
+	// #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+	// is never marshaled and transmitted to anywhere.
 	Password string `json:"password,omitempty"`
 
 	// repo Url

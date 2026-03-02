@@ -50,6 +50,8 @@ type loginOptions struct {
 	UseAdmin      bool
 	UseKubeconfig bool
 	UseSSO        bool
+	// #nosec G117 -- This struct binds to CLI flags and is not transmitted
+	// anywhere directly.
 	Password      string
 	CallbackPort  int
 	ServerAddress string

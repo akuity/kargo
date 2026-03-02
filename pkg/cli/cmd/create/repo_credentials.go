@@ -41,7 +41,9 @@ type createRepoCredentialsOptions struct {
 	RepoURL     string
 	Regex       bool
 	Username    string
-	Password    string
+	// #nosec G117 -- This struct binds to CLI flags and is not transmitted
+	// anywhere directly.
+	Password string
 }
 
 func newRepoCredentialsCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {

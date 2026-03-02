@@ -73,6 +73,9 @@ definitions:
       name:
         type: string
       password:
+        description: |-
+          #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+          is never marshaled and transmitted to anywhere.
         type: string
       repoUrl:
         type: string
@@ -191,6 +194,9 @@ definitions:
       description:
         type: string
       password:
+        description: |-
+          #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+          is never marshaled and transmitted to anywhere.
         type: string
       repoUrl:
         type: string
@@ -274,6 +280,9 @@ definitions:
       description:
         type: string
       password:
+        description: |-
+          #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+          is never marshaled and transmitted to anywhere.
         type: string
       repoUrl:
         type: string

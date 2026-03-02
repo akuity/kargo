@@ -156,6 +156,8 @@ func (c *Client) doSSERequest(
 		req.Header.Set("Authorization", "Bearer "+c.token)
 	}
 
+	// #nosec G704 -- This code executes client-side and does not, therefore,
+	// represent a vector for SSRF attacks.
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("executing request: %w", err)

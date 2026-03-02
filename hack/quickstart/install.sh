@@ -26,8 +26,9 @@ helm install argocd argo-cd \
   --set server.service.nodePortHttp=31080 \
   --set 'server.extraArgs={--insecure}' \
   --set server.extensions.enabled=true \
-  --set 'server.extensions.contents[0].name=argo-rollouts' \
-  --set 'server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar' \
+  --set 'server.extensions.extensionList[0].name=argo-rollouts' \
+  --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
+  --set 'server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar' \
   --wait
 
 helm install argo-rollouts argo-rollouts \

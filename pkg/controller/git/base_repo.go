@@ -50,29 +50,50 @@ type ClientOptions struct {
 	InsecureSkipTLSVerify bool
 }
 
+func (b *baseRepo) setupDirs(baseDir string) error {
+	var err error
+	if b.homeDir, err = os.MkdirTemp(baseDir, "repo-"); err != nil {
+		return fmt.Errorf(
+			"error creating home directory for repo %q: %w",
+			b.originalURL, err,
+		)
+	}
+	if b.homeDir, err = filepath.EvalSymlinks(b.homeDir); err != nil {
+		return fmt.Errorf("error resolving symlinks in path %s: %w", b.homeDir, err)
+	}
+	b.dir = filepath.Join(b.homeDir, "repo")
+	cmd := b.buildGitCommand("config", "--global", "init.defaultBranch", "main")
+	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
+	// repository's path, but if this method was called as part of the cloning
+	// process, that path may not exist yet.
+	cmd.Dir = b.homeDir
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error configuring init.defaultBranch: %w", err)
+	}
+	return nil
+}
+
 // setupClient sets up "global" git configuration with author and authentication
 // details in the specified virtual home directory.
-func (b *baseRepo) setupClient(homeDir string, opts *ClientOptions) error {
+func (b *baseRepo) setupClient(opts *ClientOptions) error {
 	if opts == nil {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupAuthor(homeDir, opts.User); err != nil {
+	if err := b.setupAuthor(b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
-	if err := b.setupAuth(homeDir); err != nil {
+	if err := b.setupAuth(b.homeDir); err != nil {
 		return fmt.Errorf("error configuring the credentials: %w", err)
 	}
 
 	if opts.InsecureSkipTLSVerify {
 		cmd := b.buildGitCommand("config", "--global", "http.sslVerify", "false")
-		// Override the home directory set by b.buildGitCommand().
-		b.setCmdHome(cmd, homeDir)
 		// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 		// repository's path, but if this method was called as part of the cloning
 		// process, that path may not exist yet.
-		cmd.Dir = homeDir
+		cmd.Dir = b.homeDir
 		if _, err := libExec.Exec(cmd); err != nil {
 			return fmt.Errorf("error configuring http.sslVerify: %w", err)
 		}
@@ -112,8 +133,6 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
-	// Override the home directory set by b.buildGitCommand().
-	b.setCmdHome(cmd, homeDir)
 	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 	// repository's path, but if this method was called as part of the cloning
 	// process, that path may not exist yet.
@@ -127,8 +146,6 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
-	// Override the home directory set by b.buildGitCommand().
-	b.setCmdHome(cmd, homeDir)
 	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 	// repository's path, but if this method was called as part of the cloning
 	// process, that path may not exist yet.
@@ -163,8 +180,6 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 
 		if author.SigningKeyPath != "" {
 			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
-			// Override the home directory set by b.buildGitCommand().
-			b.setCmdHome(cmd, homeDir)
 			// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 			// repository's path, but if this method was called as part of the cloning
 			// process, that path may not exist yet.
@@ -174,8 +189,6 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 			}
 
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			// Override the home directory set by b.buildCommand().
-			b.setCmdHome(cmd, homeDir)
 			// Override the cmd.Dir that's set by b.buildCommand(). It's normally the
 			// repository's path, but if this method was called as part of the cloning
 			// process, that path may not exist yet.

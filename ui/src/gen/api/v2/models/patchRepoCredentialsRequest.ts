@@ -8,6 +8,8 @@
 
 export interface PatchRepoCredentialsRequest {
   description?: string;
+  /** #nosec G117 -- Request data is unmarshaled into this struct, but the struct
+is never marshaled and transmitted to anywhere. */
   password?: string;
   repoUrl?: string;
   repoUrlIsRegex?: boolean;

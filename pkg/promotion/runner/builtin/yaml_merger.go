@@ -122,13 +122,11 @@ func (y *yamlMerger) generateCommitMessage(
 	}
 	var msg strings.Builder
 	if len(inPaths) == 1 {
-		_, _ = msg.WriteString(fmt.Sprintf("Wrote %s to %s", inPaths[0], outPath))
+		_, _ = fmt.Fprintf(&msg, "Wrote %s to %s", inPaths[0], outPath)
 	} else {
-		_, _ = msg.WriteString(
-			fmt.Sprintf("Merged %d YAML files to %s", len(inPaths), outPath),
-		)
+		_, _ = fmt.Fprintf(&msg, "Merged %d YAML files to %s", len(inPaths), outPath)
 		for _, path := range inPaths {
-			_, _ = msg.WriteString(fmt.Sprintf("\n- %s", path))
+			_, _ = fmt.Fprintf(&msg, "\n- %s", path)
 		}
 	}
 	return msg.String()
