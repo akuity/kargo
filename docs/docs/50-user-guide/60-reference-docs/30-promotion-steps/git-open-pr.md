@@ -13,6 +13,11 @@ specified source and target branches. This step is often used after a
 At present, this feature only supports GitHub, Gitea, Azure DevOps, and
 GitLab pull/merge requests.
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
