@@ -161,6 +161,7 @@ type ApplicationConditionType string
 var (
 	ApplicationConditionInvalidSpecError ApplicationConditionType = "InvalidSpecError"
 	ApplicationConditionComparisonError  ApplicationConditionType = "ComparisonError"
+	ApplicationConditionSyncError        ApplicationConditionType = "SyncError"
 )
 
 type ApplicationCondition struct {
