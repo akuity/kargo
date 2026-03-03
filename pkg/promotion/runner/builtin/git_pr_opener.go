@@ -324,7 +324,8 @@ func (g *gitPROpener) getPRID(
 
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the
 // branch does not exist, an empty orphaned branch is created and pushed to the
-// remote.
+// remote. If the branch already exists, no action is taken. The boolean return value
+// indicates whether the branch already exists.
 func (g *gitPROpener) ensureRemoteTargetBranch(
 	repo git.Repo,
 	branch string, create bool,
