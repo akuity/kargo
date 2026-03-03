@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitHubSignConfig",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["repoURL", "branch", "base"],
+  "properties": {
+    "repoURL": {
+      "type": "string",
+      "description": "The URL of the GitHub repository.",
+      "minLength": 1
+    },
+    "branch": {
+      "type": "string",
+      "description": "The branch to operate on. Revisions in the range base..branch (exclusive base, inclusive HEAD) will be replayed as GitHub-signed revisions.",
+      "minLength": 1
+    },
+    "base": {
+      "type": "string",
+      "description": "The exclusive base of the revision range. All revisions after this one up to the branch HEAD will be replayed as GitHub-signed revisions. Typically set from a prior step's output, e.g. ${{ outputs.clone.commits.main }}.",
+      "minLength": 1
+    },
+    "insecureSkipTLSVerify": {
+      "type": "boolean",
+      "description": "Indicates whether to skip TLS verification when communicating with the GitHub API. Default is false."
+    }
+  }
+}

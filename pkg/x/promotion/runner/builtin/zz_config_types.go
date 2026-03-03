@@ -295,6 +295,21 @@ type GitWaitForPRConfig struct {
 	RepoURL string `json:"repoURL"`
 }
 
+type GitHubSignConfig struct {
+	// The exclusive base of the revision range. All revisions after this one up to the branch
+	// HEAD will be replayed as GitHub-signed revisions. Typically set from a prior step's
+	// output, e.g. ${{ outputs.clone.commits.main }}.
+	Base string `json:"base"`
+	// The branch to operate on. Revisions in the range base..branch (exclusive base, inclusive
+	// HEAD) will be replayed as GitHub-signed revisions.
+	Branch string `json:"branch"`
+	// Indicates whether to skip TLS verification when communicating with the GitHub API.
+	// Default is false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The URL of the GitHub repository.
+	RepoURL string `json:"repoURL"`
+}
+
 type HelmTemplateConfig struct {
 	// APIVersions allows a manual set of supported API Versions to be passed when rendering the
 	// manifests.
