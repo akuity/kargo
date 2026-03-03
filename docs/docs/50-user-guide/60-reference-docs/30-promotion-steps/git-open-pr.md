@@ -97,3 +97,10 @@ steps:
     labels: ["infra", "needs-review"]
 # Wait for the PR to be merged or closed...
 ```
+
+:::note
+
+If there are no changes between the `sourceBranch` and `targetBranch` and
+the `targetBranch` already exists, the `git-open-pr` step will be skipped.
+
+:::
