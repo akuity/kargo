@@ -209,37 +209,6 @@ func Test_gitPROpener_run(t *testing.T) {
 	)
 
 	// Now we can proceed to test gitPROpener...
-
-	t.Run("skips opening PR if target branch already exists and has no changes compared to source", func(t *testing.T) {
-		// push the target branch with no changes compared to the source branch
-		require.NoError(t, repo.CreateChildBranch(testTargetBranch))
-		require.NoError(t, repo.Push(nil))
-
-		r := newGitPROpener(promotion.StepRunnerCapabilities{
-			CredsDB: &credentials.FakeDB{},
-		})
-		runner, ok := r.(*gitPROpener)
-		require.True(t, ok)
-
-		res, err := runner.run(
-			t.Context(),
-			&promotion.StepContext{
-				Project: "fake-project",
-				Stage:   "fake-stage",
-				WorkDir: workDir,
-			},
-			builtin.GitOpenPRConfig{
-				RepoURL: testRepoURL,
-				// We get slightly better coverage by using this option
-				SourceBranch: testSourceBranch,
-				TargetBranch: testTargetBranch,
-				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
-			},
-		)
-		require.NoError(t, err)
-		require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
-	})
-
 	t.Run("opens PR and creates target branch if it doesn't exist", func(t *testing.T) {
 		r := newGitPROpener(promotion.StepRunnerCapabilities{
 			CredsDB: &credentials.FakeDB{},
@@ -278,6 +247,36 @@ func Test_gitPROpener_run(t *testing.T) {
 		exists, err := repo.RemoteBranchExists(testTargetBranch)
 		require.NoError(t, err)
 		require.True(t, exists)
+	})
+
+	t.Run("skips opening PR if target branch already exists and has no changes compared to source", func(t *testing.T) {
+		// push the target branch with no changes compared to the source branch
+		require.NoError(t, repo.CreateChildBranch(testTargetBranch))
+		require.NoError(t, repo.Push(nil))
+
+		r := newGitPROpener(promotion.StepRunnerCapabilities{
+			CredsDB: &credentials.FakeDB{},
+		})
+		runner, ok := r.(*gitPROpener)
+		require.True(t, ok)
+
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				WorkDir: workDir,
+			},
+			builtin.GitOpenPRConfig{
+				RepoURL: testRepoURL,
+				// We get slightly better coverage by using this option
+				SourceBranch: testSourceBranch,
+				TargetBranch: testTargetBranch,
+				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
 	})
 }
 

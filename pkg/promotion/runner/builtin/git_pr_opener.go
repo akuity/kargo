@@ -192,11 +192,12 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	if err = g.ensureRemoteTargetBranch(
+	alreadyExists, err := g.ensureRemoteTargetBranch(
 		repo,
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
-	); err != nil {
+	)
+	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
@@ -219,7 +220,7 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	if !hasChanges && !cfg.CreateTargetBranch {
+	if !hasChanges && alreadyExists {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
 	}
 	title := cfg.Title
@@ -327,24 +328,24 @@ func (g *gitPROpener) getPRID(
 func (g *gitPROpener) ensureRemoteTargetBranch(
 	repo git.Repo,
 	branch string, create bool,
-) error {
+) (bool, error) {
 	exists, err := repo.RemoteBranchExists(branch)
 	if err != nil {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"error checking if remote branch %q of repo %s exists: %w",
 			branch, repo.URL(), err,
 		)
 	}
 	if exists {
-		return nil
+		return true, nil
 	}
 	if !create {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"remote branch %q does not exist in repo %s", branch, repo.URL(),
 		)
 	}
 	if err = repo.CreateOrphanedBranch(branch); err != nil {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"error creating orphaned branch %q in repo %s: %w",
 			branch, repo.URL(), err,
 		)
@@ -353,18 +354,18 @@ func (g *gitPROpener) ensureRemoteTargetBranch(
 		"Initial commit",
 		&git.CommitOptions{AllowEmpty: true},
 	); err != nil {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"error making initial commit to new branch %q of repo %s: %w",
 			branch, repo.URL(), err,
 		)
 	}
 	if err = repo.Push(&git.PushOptions{TargetBranch: branch}); err != nil {
-		return fmt.Errorf(
+		return false, fmt.Errorf(
 			"error pushing initial commit to new branch %q to repo %s: %w",
 			branch, repo.URL(), err,
 		)
 	}
-	return nil
+	return false, nil
 }
 
 // getExistingPR searches for an existing pull request from the head of the
