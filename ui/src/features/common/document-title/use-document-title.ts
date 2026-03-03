@@ -11,12 +11,12 @@ import { DocumentTitleContext } from './document-title-context';
  * params without extra guards.
  */
 export const useDocumentTitle = (parts: (string | undefined | null | false)[]) => {
-  const { formatTitle } = useContext(DocumentTitleContext);
+  const { appName } = useContext(DocumentTitleContext);
 
   const filtered = parts.filter(Boolean) as string[];
   const key = filtered.join('|');
 
   useEffect(() => {
-    document.title = formatTitle(filtered);
-  }, [key, formatTitle]);
+    document.title = [...parts, appName].join(' | ');
+  }, [key, appName]);
 };
