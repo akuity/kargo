@@ -14,6 +14,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
@@ -147,17 +148,30 @@ func (g *gitHubSigner) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitHubSignConfig,
 ) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
 	// Short-circuit if shared state has output from a previous execution of
 	// this step that contains a commit SHA matching the current branch HEAD.
 	if prevOutput, err := g.getPreviousOutput(stepCtx); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error checking previous step output: %w", err)
 	} else if prevOutput != nil {
+		logger.Debug(
+			"reusing output from previous execution",
+			"commit", prevOutput["commit"],
+		)
 		return promotion.StepResult{
 			Status: kargoapi.PromotionStepStatusSucceeded,
 			Output: prevOutput,
 		}, nil
 	}
+
+	logger.Debug(
+		"signing revision range",
+		"repoURL", cfg.RepoURL,
+		"branch", cfg.Branch,
+		"base", cfg.Base,
+	)
 
 	// Get credentials for the repository.
 	creds, err := g.credsDB.Get(
@@ -213,6 +227,7 @@ func (g *gitHubSigner) signRevisionRange(
 	owner, repo string,
 	cfg builtin.GitHubSignConfig,
 ) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
 	maxRevisions := g.cfg.MaxRevisions
 
 	// Enumerate revisions in the range base..branch.
@@ -228,6 +243,14 @@ func (g *gitHubSigner) signRevisionRange(
 	}
 
 	status := comparison.GetStatus()
+	logger.Debug(
+		"compared revision range",
+		"base", cfg.Base,
+		"branch", cfg.Branch,
+		"status", status,
+		"aheadBy", comparison.GetAheadBy(),
+		"totalCommits", comparison.GetTotalCommits(),
+	)
 	switch status {
 	case compareStatusAhead:
 		// Expected: base is behind branch HEAD.
@@ -304,6 +327,13 @@ func (g *gitHubSigner) signRevisionRange(
 		}
 		lastSignedSHA = newCommit.GetSHA()
 		parentSHA = lastSignedSHA
+		logger.Debug(
+			"created signed revision",
+			"index", i+1,
+			"total", len(commits),
+			"original", rc.GetSHA(),
+			"signed", lastSignedSHA,
+		)
 	}
 
 	// Update the branch ref to point to the final signed revision.
@@ -320,6 +350,7 @@ func (g *gitHubSigner) signRevisionRange(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error updating ref %s to %s: %w", branchRef, lastSignedSHA, err)
 	}
+	logger.Debug("updated branch ref", "ref", branchRef, "sha", lastSignedSHA)
 
 	commitURL := g.buildCommitURL(cfg.RepoURL, lastSignedSHA)
 
