@@ -17,6 +17,29 @@ import (
 	"github.com/akuity/kargo/pkg/credentials/basic"
 )
 
+func TestDatabaseConfigFromEnv(t *testing.T) {
+	t.Run("uses SHARED_RESOURCES_NAMESPACE when set", func(t *testing.T) {
+		t.Setenv("SHARED_RESOURCES_NAMESPACE", "my-shared-ns")
+		t.Setenv("GLOBAL_CREDENTIALS_NAMESPACES", "old-ns")
+		cfg := DatabaseConfigFromEnv()
+		require.Equal(t, "my-shared-ns", cfg.SharedResourcesNamespace)
+	})
+
+	t.Run("falls back to first GLOBAL_CREDENTIALS_NAMESPACES when SHARED_RESOURCES_NAMESPACE is unset", func(t *testing.T) {
+		t.Setenv("SHARED_RESOURCES_NAMESPACE", "")
+		t.Setenv("GLOBAL_CREDENTIALS_NAMESPACES", "kargo-cluster-secrets,other-ns")
+		cfg := DatabaseConfigFromEnv()
+		require.Equal(t, "kargo-cluster-secrets", cfg.SharedResourcesNamespace)
+	})
+
+	t.Run("empty config when neither env var is set", func(t *testing.T) {
+		t.Setenv("SHARED_RESOURCES_NAMESPACE", "")
+		t.Setenv("GLOBAL_CREDENTIALS_NAMESPACES", "")
+		cfg := DatabaseConfigFromEnv()
+		require.Equal(t, "", cfg.SharedResourcesNamespace)
+	})
+}
+
 func TestNewKubernetesDatabase(t *testing.T) {
 	testControlPlaneClient := fake.NewClientBuilder().Build()
 	testLocalClusterClient := fake.NewClientBuilder().Build()

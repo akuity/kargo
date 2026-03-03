@@ -19,6 +19,17 @@ import (
 	"github.com/akuity/kargo/pkg/urls"
 )
 
+// legacyConfig holds deprecated environment variables for backward compatibility.
+// These were renamed in v1.9.0 as part of the "Secret Shuffle" refactor.
+type legacyConfig struct {
+	// GlobalCredentialsNamespaces was renamed to SharedResourcesNamespace in
+	// v1.9.0. When SHARED_RESOURCES_NAMESPACE is unset, the first element of
+	// this slice is used as a fallback so that operators who have not yet
+	// migrated their Helm values (controller.globalCredentials.namespaces) do
+	// not silently lose credential resolution.
+	GlobalCredentialsNamespaces []string `envconfig:"GLOBAL_CREDENTIALS_NAMESPACES" default:""`
+}
+
 // database is an implementation of the credentials.Database interface that
 // utilizes a Kubernetes controller runtime client to retrieve credentials
 // stored in Kubernetes Secrets.
@@ -39,6 +50,18 @@ type DatabaseConfig struct {
 func DatabaseConfigFromEnv() DatabaseConfig {
 	cfg := DatabaseConfig{}
 	envconfig.MustProcess("", &cfg)
+	// Backward-compat: if SHARED_RESOURCES_NAMESPACE is not set, fall back to
+	// the first element of the deprecated GLOBAL_CREDENTIALS_NAMESPACES env var.
+	// This handles operators who upgraded to v1.9.x without migrating their Helm
+	// values from controller.globalCredentials.namespaces to
+	// global.sharedResources.namespace.
+	if cfg.SharedResourcesNamespace == "" {
+		legacy := legacyConfig{}
+		envconfig.MustProcess("", &legacy)
+		if len(legacy.GlobalCredentialsNamespaces) > 0 {
+			cfg.SharedResourcesNamespace = legacy.GlobalCredentialsNamespaces[0]
+		}
+	}
 	return cfg
 }
 
