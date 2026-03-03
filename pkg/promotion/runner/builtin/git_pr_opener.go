@@ -192,7 +192,7 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	alreadyExists, err := g.ensureRemoteTargetBranch(
+	alreadyExists, orphanBranchCreated, err := g.ensureRemoteTargetBranch(
 		repo,
 		cfg.TargetBranch,
 		cfg.CreateTargetBranch,
@@ -202,6 +202,12 @@ func (g *gitPROpener) run(
 			"error ensuring existence of remote branch %s: %w",
 			cfg.TargetBranch, err,
 		)
+	}
+
+	// We skip here otherwise we get:
+	// "The <src> branch has no history in common with <target>" error when attempting to create a PR.
+	if orphanBranchCreated {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
 	}
 
 	// Ensure we have the latest commits from the remote before checking for diffs.
@@ -220,6 +226,8 @@ func (g *gitPROpener) run(
 		)
 	}
 
+	// We skip here otherwise we get:
+	// "no commits between <src>..<target>" error when attempting to create a PR.
 	if !hasChanges && alreadyExists {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
 	}
@@ -324,29 +332,29 @@ func (g *gitPROpener) getPRID(
 
 // ensureRemoteTargetBranch ensures the existence of a remote branch. If the
 // branch does not exist, an empty orphaned branch is created and pushed to the
-// remote. If the branch already exists, no action is taken. The boolean return value
-// indicates whether the branch already exists.
+// remote. If the branch already exists, no action is taken. The first boolean return value
+// indicates whether the branch already exists. The second indicates whether it was created.
 func (g *gitPROpener) ensureRemoteTargetBranch(
 	repo git.Repo,
 	branch string, create bool,
-) (bool, error) {
+) (bool, bool, error) {
 	exists, err := repo.RemoteBranchExists(branch)
 	if err != nil {
-		return false, fmt.Errorf(
+		return false, false, fmt.Errorf(
 			"error checking if remote branch %q of repo %s exists: %w",
 			branch, repo.URL(), err,
 		)
 	}
 	if exists {
-		return true, nil
+		return true, false, nil
 	}
 	if !create {
-		return false, fmt.Errorf(
+		return false, false, fmt.Errorf(
 			"remote branch %q does not exist in repo %s", branch, repo.URL(),
 		)
 	}
 	if err = repo.CreateOrphanedBranch(branch); err != nil {
-		return false, fmt.Errorf(
+		return false, false, fmt.Errorf(
 			"error creating orphaned branch %q in repo %s: %w",
 			branch, repo.URL(), err,
 		)
@@ -355,18 +363,18 @@ func (g *gitPROpener) ensureRemoteTargetBranch(
 		"Initial commit",
 		&git.CommitOptions{AllowEmpty: true},
 	); err != nil {
-		return false, fmt.Errorf(
+		return false, false, fmt.Errorf(
 			"error making initial commit to new branch %q of repo %s: %w",
 			branch, repo.URL(), err,
 		)
 	}
 	if err = repo.Push(&git.PushOptions{TargetBranch: branch}); err != nil {
-		return false, fmt.Errorf(
+		return false, false, fmt.Errorf(
 			"error pushing initial commit to new branch %q to repo %s: %w",
 			branch, repo.URL(), err,
 		)
 	}
-	return false, nil
+	return false, true, nil
 }
 
 // getExistingPR searches for an existing pull request from the head of the
