@@ -296,18 +296,20 @@ type GitWaitForPRConfig struct {
 }
 
 type GitHubSignConfig struct {
-	// The exclusive base of the revision range. All revisions after this one up to the branch
-	// HEAD will be replayed as GitHub-signed revisions. Typically set from a prior step's
-	// output, e.g. ${{ outputs.clone.commits.main }}.
+	// The exclusive base of the revision range (commit SHA). Typically set from a prior
+	// git-clone step's output, e.g. ${{ outputs.clone.commits.main }}.
 	Base string `json:"base"`
-	// The branch to operate on. Revisions in the range base..branch (exclusive base, inclusive
-	// HEAD) will be replayed as GitHub-signed revisions.
-	Branch string `json:"branch"`
+	// The inclusive head of the revision range (commit SHA). All revisions in the range
+	// base..head will be replayed as GitHub-signed commits. Typically set from a prior git-push
+	// step's output, e.g. ${{ outputs.push.commit }}.
+	Head string `json:"head"`
 	// Indicates whether to skip TLS verification when communicating with the GitHub API.
 	// Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The URL of the GitHub repository.
 	RepoURL string `json:"repoURL"`
+	// The branch whose ref will be force-updated to point to the final signed commit.
+	TargetBranch string `json:"targetBranch"`
 }
 
 type HelmTemplateConfig struct {

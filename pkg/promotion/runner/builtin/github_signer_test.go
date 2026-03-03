@@ -33,19 +33,35 @@ func Test_gitHubSigner_convert(t *testing.T) {
 			},
 		},
 		{
-			name:   "branch not specified",
+			name:   "targetBranch not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{
-				"(root): branch is required",
+				"(root): targetBranch is required",
 			},
 		},
 		{
-			name: "branch is empty string",
+			name: "targetBranch is empty string",
 			config: promotion.Config{
-				"branch": "",
+				"targetBranch": "",
 			},
 			expectedProblems: []string{
-				"branch: String length must be greater than or equal to 1",
+				"targetBranch: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name:   "head not specified",
+			config: promotion.Config{},
+			expectedProblems: []string{
+				"(root): head is required",
+			},
+		},
+		{
+			name: "head is empty string",
+			config: promotion.Config{
+				"head": "",
+			},
+			expectedProblems: []string{
+				"head: String length must be greater than or equal to 1",
 			},
 		},
 		{
@@ -67,16 +83,18 @@ func Test_gitHubSigner_convert(t *testing.T) {
 		{
 			name: "valid minimal config",
 			config: promotion.Config{
-				"repoURL": "https://github.com/example/repo",
-				"branch":  "main",
-				"base":    "abc123",
+				"repoURL":      "https://github.com/example/repo",
+				"targetBranch": "main",
+				"head":         "def456",
+				"base":         "abc123",
 			},
 		},
 		{
 			name: "valid full config",
 			config: promotion.Config{
 				"repoURL":               "https://github.com/example/repo",
-				"branch":                "main",
+				"targetBranch":          "main",
+				"head":                  "def456",
 				"base":                  "abc123",
 				"insecureSkipTLSVerify": true,
 			},
@@ -149,12 +167,13 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusErrored,
-			expectedErr:    "error comparing abc123...main",
+			expectedErr:    "error comparing abc123...def456",
 		},
 		{
 			name: "identical range (nothing to sign)",
@@ -167,9 +186,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusSkipped,
 			expectedOutput: map[string]any{
@@ -188,9 +208,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusFailed,
 			expectedErr:    "cannot sign revision range",
@@ -213,9 +234,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			maxRevisions:   2,
 			expectedStatus: kargoapi.PromotionStepStatusFailed,
@@ -261,9 +283,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusSucceeded,
 			expectedOutput: map[string]any{
@@ -341,9 +364,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusSucceeded,
 			expectedOutput: map[string]any{
@@ -382,9 +406,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusErrored,
 			expectedErr:    "error creating signed revision 1/1",
@@ -425,9 +450,10 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				},
 			},
 			cfg: builtin.GitHubSignConfig{
-				RepoURL: "https://github.com/org/repo",
-				Branch:  "main",
-				Base:    "abc123",
+				RepoURL:      "https://github.com/org/repo",
+				TargetBranch: "main",
+				Head:         "def456",
+				Base:         "abc123",
 			},
 			expectedStatus: kargoapi.PromotionStepStatusErrored,
 			expectedErr:    "error updating ref",

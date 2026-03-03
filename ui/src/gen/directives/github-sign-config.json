@@ -1,0 +1,32 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "GitHubSignConfig",
+ "type": "object",
+ "additionalProperties": false,
+ "properties": {
+  "repoURL": {
+   "type": "string",
+   "description": "The URL of the GitHub repository.",
+   "minLength": 1
+  },
+  "targetBranch": {
+   "type": "string",
+   "description": "The branch whose ref will be force-updated to point to the final signed commit.",
+   "minLength": 1
+  },
+  "head": {
+   "type": "string",
+   "description": "The inclusive head of the revision range (commit SHA). All revisions in the range base..head will be replayed as GitHub-signed commits. Typically set from a prior git-push step's output, e.g. ${{ outputs.push.commit }}.",
+   "minLength": 1
+  },
+  "base": {
+   "type": "string",
+   "description": "The exclusive base of the revision range (commit SHA). Typically set from a prior git-clone step's output, e.g. ${{ outputs.clone.commits.main }}.",
+   "minLength": 1
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "Indicates whether to skip TLS verification when communicating with the GitHub API. Default is false."
+  }
+ }
+}

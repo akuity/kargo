@@ -169,7 +169,8 @@ func (g *gitHubSigner) run(
 	logger.Debug(
 		"signing revision range",
 		"repoURL", cfg.RepoURL,
-		"branch", cfg.Branch,
+		"targetBranch", cfg.TargetBranch,
+		"head", cfg.Head,
 		"base", cfg.Base,
 	)
 
@@ -219,7 +220,7 @@ func (g *gitHubSigner) run(
 	return result, nil
 }
 
-// signRevisionRange enumerates revisions in the range base..branch and replays
+// signRevisionRange enumerates revisions in the range base..head and replays
 // them as signed revisions via the GitHub REST API.
 func (g *gitHubSigner) signRevisionRange(
 	ctx context.Context,
@@ -230,15 +231,15 @@ func (g *gitHubSigner) signRevisionRange(
 	logger := logging.LoggerFromContext(ctx)
 	maxRevisions := g.cfg.MaxRevisions
 
-	// Enumerate revisions in the range base..branch.
+	// Enumerate revisions in the range base..head.
 	comparison, _, err := client.CompareCommits(
-		ctx, owner, repo, cfg.Base, cfg.Branch, nil,
+		ctx, owner, repo, cfg.Base, cfg.Head, nil,
 	)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf(
 				"error comparing %s...%s: %w",
-				cfg.Base, cfg.Branch, err,
+				cfg.Base, cfg.Head, err,
 			)
 	}
 
@@ -246,22 +247,25 @@ func (g *gitHubSigner) signRevisionRange(
 	logger.Debug(
 		"compared revision range",
 		"base", cfg.Base,
-		"branch", cfg.Branch,
+		"head", cfg.Head,
 		"status", status,
 		"aheadBy", comparison.GetAheadBy(),
 		"totalCommits", comparison.GetTotalCommits(),
 	)
 	switch status {
 	case compareStatusAhead:
-		// Expected: base is behind branch HEAD.
+		// Expected: base is behind head.
 	case compareStatusIdentical:
 		// No revisions to sign.
 		return promotion.StepResult{
-			Status:  kargoapi.PromotionStepStatusSkipped,
-			Message: fmt.Sprintf("no revisions to sign: %s and %s are identical", cfg.Base, cfg.Branch),
+			Status: kargoapi.PromotionStepStatusSkipped,
+			Message: fmt.Sprintf(
+				"no revisions to sign: %s and %s are identical",
+				cfg.Base, cfg.Head,
+			),
 			Output: map[string]any{
 				"commit": cfg.Base,
-				"branch": cfg.Branch,
+				"branch": cfg.TargetBranch,
 			},
 		}, nil
 	default:
@@ -269,8 +273,8 @@ func (g *gitHubSigner) signRevisionRange(
 			&promotion.TerminalError{
 				Err: fmt.Errorf(
 					"cannot sign revision range %s..%s: comparison status is %q "+
-						"(base must be an ancestor of branch HEAD)",
-					cfg.Base, cfg.Branch, status,
+						"(base must be an ancestor of head)",
+					cfg.Base, cfg.Head, status,
 				),
 			}
 	}
@@ -282,7 +286,7 @@ func (g *gitHubSigner) signRevisionRange(
 			Message: "no revisions to sign in range",
 			Output: map[string]any{
 				"commit": cfg.Base,
-				"branch": cfg.Branch,
+				"branch": cfg.TargetBranch,
 			},
 		}, nil
 	}
@@ -294,7 +298,7 @@ func (g *gitHubSigner) signRevisionRange(
 					"revision range %s..%s contains %d revisions, "+
 						"which exceeds the maximum of %d "+
 						"(configurable via GITHUB_SIGN_MAX_REVISIONS env var)",
-					cfg.Base, cfg.Branch, len(commits), maxRevisions,
+					cfg.Base, cfg.Head, len(commits), maxRevisions,
 				),
 			}
 	}
@@ -336,8 +340,8 @@ func (g *gitHubSigner) signRevisionRange(
 		)
 	}
 
-	// Update the branch ref to point to the final signed revision.
-	branchRef := "heads/" + cfg.Branch
+	// Update the target branch ref to point to the final signed revision.
+	branchRef := "heads/" + cfg.TargetBranch
 	_, _, err = client.UpdateRef(
 		ctx, owner, repo,
 		branchRef,
@@ -359,7 +363,7 @@ func (g *gitHubSigner) signRevisionRange(
 		Output: map[string]any{
 			"commit":    lastSignedSHA,
 			"commitURL": commitURL,
-			"branch":    cfg.Branch,
+			"branch":    cfg.TargetBranch,
 		},
 	}, nil
 }
