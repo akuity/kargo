@@ -329,7 +329,7 @@ func (w *workTree) Fetch() error {
 		"+refs/heads/*:refs/remotes/origin/*",
 	),
 	); err != nil {
-		return fmt.Errorf("error getting fetch refspecs for remote of repo %q: %w", w.originalURL, err)
+		return fmt.Errorf("error prepping git config to fetch all branches for repo %q: %w", w.originalURL, err)
 	}
 	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin")); err != nil {
 		return fmt.Errorf("error fetching updates from remote for repo %q: %w", w.originalURL, err)
