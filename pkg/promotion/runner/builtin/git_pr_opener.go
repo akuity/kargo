@@ -203,6 +203,25 @@ func (g *gitPROpener) run(
 		)
 	}
 
+	// Ensure we have the latest commits from the remote before checking for diffs.
+	if err = repo.Fetch(); err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
+	}
+
+	hasChanges, err := repo.RefsHaveDiffs(
+		fmt.Sprintf("origin/%s", sourceBranch),
+		fmt.Sprintf("origin/%s", cfg.TargetBranch),
+	)
+	if err != nil {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
+			"failed to check for changes between branch %s and branch %s: %w",
+			sourceBranch, cfg.TargetBranch, err,
+		)
+	}
+
+	if !hasChanges {
+		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
+	}
 	title := cfg.Title
 	description := commitMsg
 
