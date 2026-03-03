@@ -237,7 +237,7 @@ func Test_gitPROpener_run(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
-		require.Equal(t, promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, res)
+		require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
 	})
 
 	t.Run("opens PR and creates target branch if it doesn't exist", func(t *testing.T) {
@@ -266,6 +266,7 @@ func Test_gitPROpener_run(t *testing.T) {
 			},
 		)
 		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 
 		// Validate the pr.ID and pr.URL fields
 		prOutput, ok := res.Output["pr"].(map[string]any)
