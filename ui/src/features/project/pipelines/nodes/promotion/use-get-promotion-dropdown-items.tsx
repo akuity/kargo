@@ -125,7 +125,7 @@ export const useGetPromotionDropdownItems = (stage: Stage) => {
   const hasUpstreamFreights = (upstreamFreights?.length || 0) > 0;
   const hasMultipleUpstreamFreights = (upstreamFreights?.length || 0) > 1;
 
-  if (hasUpstreamFreights) {
+  if (hasUpstreamFreights && !controlFlow) {
     dropdownItems.push({
       key: 'upstream-freight-promo',
       label: 'Promote from upstream',
