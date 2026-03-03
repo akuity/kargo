@@ -44,7 +44,8 @@ func fetchBestReleases(ctx context.Context, baseURL string) ([]Release, error) {
 		}
 		req.Header.Set("Accept", "application/vnd.github+json")
 
-		// #G704 -- The URL is controlled by us, so this is not a security risk.
+		// #nosec G704 -- The URL is controlled by us, so this is not a security
+		// risk.
 		resp, err := httpClient.Do(req)
 		if err != nil {
 			return nil, fmt.Errorf("fetching releases page %d: %w", page, err)
