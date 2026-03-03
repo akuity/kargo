@@ -1,0 +1,175 @@
+{
+  "releases": [
+    {
+      "version": "v1.9.5",
+      "latest": true,
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.9.5/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.8.12",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.8.12/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.7.9",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.7.9/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.6.4",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.6.4/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.5.3",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.5.3/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.4.4",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.4.4/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.3.4",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.3.4/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.2.3",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.2.3/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.1.3",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.1.3/kargo-windows-arm64.exe"
+        }
+      }
+    },
+    {
+      "version": "v1.0.4",
+      "cliBinaries": {
+        "darwin": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-darwin-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-darwin-arm64"
+        },
+        "linux": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-linux-amd64",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-linux-arm64"
+        },
+        "windows": {
+          "amd64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-windows-amd64.exe",
+          "arm64": "https://github.com/akuity/kargo/releases/download/v1.0.4/kargo-windows-arm64.exe"
+        }
+      }
+    }
+  ]
+}
