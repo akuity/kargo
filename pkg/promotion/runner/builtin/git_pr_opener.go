@@ -219,7 +219,7 @@ func (g *gitPROpener) run(
 		)
 	}
 
-	if !hasChanges {
+	if !hasChanges && !cfg.CreateTargetBranch {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusSkipped}, nil
 	}
 	title := cfg.Title
