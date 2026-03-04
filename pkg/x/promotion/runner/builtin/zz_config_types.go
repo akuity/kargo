@@ -289,10 +289,6 @@ type GitPushConfig struct {
 type GitTagConfig struct {
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
-	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
-	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
-	// specified.
-	Provider *Provider `json:"provider,omitempty"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`
 }
