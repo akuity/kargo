@@ -120,7 +120,7 @@ by subsequent steps to determine if a preceding step was skipped.
       repoURL: https://github.com/example/repo.git
       sourceBranch: ${{ outputs.push.branch }}
       targetBranch: stage/${{ ctx.stage }}
-  - if: ${{ status('open-pr') == 'Skipped' }}
+  - if: ${{ status('open-pr') != 'Skipped' }}
     uses: git-wait-for-pr
     as: wait-for-pr
     config:
