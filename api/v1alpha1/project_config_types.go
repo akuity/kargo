@@ -140,8 +140,11 @@ type WebhookReceiverConfig struct {
 // with Gitea payloads.
 type GiteaWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "system resources" namespace.
@@ -151,36 +154,58 @@ type GiteaWebhookReceiverConfig struct {
 	// For more information please refer to the Gitea documentation:
 	//   https://docs.gitea.io/en-us/webhooks/
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Gitea. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by Gitea.
+	// For more information please refer to the Gitea documentation:
+	//   https://docs.gitea.io/en-us/webhooks/
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // BitbucketWebhookReceiverConfig describes a webhook receiver that is
 // compatible with Bitbucket payloads.
 type BitbucketWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "system resources" namespace.
 	//
-	// The Secret's data map is expected to contain a `secret` key whose
-	// value is the shared secret used to authenticate the webhook requests sent
-	// by Bitbucket. For more information please refer to the Bitbucket
-	// documentation:
+	// The Secret's data map is expected to contain a `secret` key whose value is
+	// the shared secret used to authenticate the webhook requests sent by Bitbucket.
+	// For more information please refer to the Bitbucket documentation:
 	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Bitbucket. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // DockerHubWebhookReceiverConfig describes a webhook receiver that is
 // compatible with Docker Hub payloads.
 type DockerHubWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// The Secret's data map is expected to contain a `secret` key whose value
 	// does NOT need to be shared directly with Docker Hub when registering a
@@ -189,16 +214,25 @@ type DockerHubWebhookReceiverConfig struct {
 	// Docker Hub webhooks, please refer to the Docker documentation:
 	//   https://docs.docker.com/docker-hub/webhooks/
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Docker Hub. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // GitHubWebhookReceiverConfig describes a webhook receiver that is compatible
 // with GitHub payloads.
 type GitHubWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "system resources" namespace.
@@ -208,16 +242,25 @@ type GitHubWebhookReceiverConfig struct {
 	// For more information please refer to GitHub documentation:
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by GitHub. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // GitLabWebhookReceiverConfig describes a webhook receiver that is compatible
 // with GitLab payloads.
 type GitLabWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "system resources" namespace.
@@ -227,16 +270,25 @@ type GitLabWebhookReceiverConfig struct {
 	// information about this token, please refer to the GitLab documentation:
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by GitLab. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // HarborWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Harbor payloads.
 type HarborWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
 	// designated "system resources" namespace.
@@ -246,49 +298,54 @@ type HarborWebhookReceiverConfig struct {
 	// information, please refer to the Harbor documentation:
 	//   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
 	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Harbor. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
+	//
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // QuayWebhookReceiverConfig describes a webhook receiver that is compatible
 // with Quay.io payloads.
 type QuayWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
-	// For cluster-scoped webhook receivers, the referenced Secret must be in the
-	// designated "system resources" namespace.
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Quay. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
 	//
-	// The Secret's data map is expected to contain a `secret` key whose value
-	// does NOT need to be shared directly with Quay when registering a
-	// webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
-	// which implicitly serves as a shared secret. For more information about
-	// Quay webhooks, please refer to the Quay documentation:
-	//   https://docs.quay.io/guides/notifications.html
-	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // ArtifactoryWebhookReceiverConfig describes a webhook receiver that is
 // compatible with JFrog Artifactory payloads.
 type ArtifactoryWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
-	// For cluster-scoped webhook receivers, the referenced Secret must be in the
-	// designated "system resources" namespace.
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Artifactory. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
 	//
-	// The Secret's data map is expected to contain a `secret-token` key whose
-	// value is the shared secret used to authenticate the webhook requests sent
-	// by JFrog Artifactory. For more information please refer to the JFrog
-	// Artifactory documentation:
-	//   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
-	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 	// VirtualRepoName is the name of an Artifactory virtual repository.
 	//
 	// When unspecified, the Artifactory webhook receiver depends on the value of
@@ -322,26 +379,20 @@ type ArtifactoryWebhookReceiverConfig struct {
 // with Azure Container Registry (ACR) and Azure DevOps payloads.
 type AzureWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
-	// For cluster-scoped webhook receivers, the referenced Secret must be in the
-	// designated "system resources" namespace.
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by Azure. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
 	//
-	// The Secret's data map is expected to contain a `secret` key whose value
-	// does NOT need to be shared directly with Azure when registering a webhook.
-	// It is used only by Kargo to create a complex, hard-to-guess URL,
-	// which implicitly serves as a shared secret. For more information about
-	// Azure webhooks, please refer to the Azure documentation:
-	//
-	//  Azure Container Registry:
-	//	https://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories
-	//
-	//  Azure DevOps:
-	//	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
-	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 }
 
 // GenericWebhookReceiverConfig describes a generic webhook receiver that can be
@@ -355,19 +406,20 @@ type AzureWebhookReceiverConfig struct {
 // artifact discovery process.
 type GenericWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
-	// receivers, the referenced Secret must be in the same namespace as the
-	// ProjectConfig.
+	// receivers, the referenced Secret can be in the same namespace as the
+	// ProjectConfig or in the designated "shared resources" namespace. If
+	// the referenced Secret is in the "shared resources" namespace, use the 
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
-	// For cluster-scoped webhook receivers, the referenced Secret must be in the
-	// designated "system resources" namespace.
+	// +optional
+	SecretRef corev1.LocalObjectReference `json:"secretRef,omitempty" protobuf:"bytes,1,opt,name=secretRef"`
+	// SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+	// used to authenticate the webhook requests sent by the sender. This field is mutually exclusive with SecretRef.
+	// If both are specified, the controller will return an error.
 	//
-	// The Secret's data map is expected to contain a `secret` key whose value
-	// does NOT need to be shared directly with the sender. It is used only by
-	// Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
-	// shared secret.
-	//
-	// +kubebuilder:validation:Required
-	SecretRef corev1.LocalObjectReference `json:"secretRef" protobuf:"bytes,1,opt,name=secretRef"`
+	// +optional
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
 
 	// Actions is a list of actions to be performed when a webhook event is received.
 	//
