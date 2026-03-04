@@ -254,8 +254,7 @@ func (r *reconciler) syncWebhookReceivers(
 			ctx,
 			r.client,
 			r.cfg.ExternalWebhookServerBaseURL,
-			"",                             // No Project name for cluster-level receivers
-			r.cfg.SystemResourcesNamespace, // Secret namespace is one designated for cluster-level Secrets
+			"", // No Project name for cluster-level receivers
 			receiverCfg,
 		)
 		if err != nil {

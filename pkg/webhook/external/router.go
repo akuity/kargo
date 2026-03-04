@@ -32,7 +32,6 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	// use that to obtain an appropriate handler to delegate the request to.
 
 	var project string
-	var secretsNamespace string
 	var receiverCfgs []kargoapi.WebhookReceiverConfig
 	var receivers []kargoapi.WebhookReceiverDetails
 
@@ -53,7 +52,6 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	if len(projectConfigs.Items) == 1 {
 		project = projectConfigs.Items[0].Namespace
 		logger.Debug("found ProjectConfig", "project", project)
-		secretsNamespace = project
 		receiverCfgs = projectConfigs.Items[0].Spec.WebhookReceivers
 		receivers = projectConfigs.Items[0].Status.WebhookReceivers
 	} else {
@@ -87,7 +85,6 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 			)
 			return
 		}
-		secretsNamespace = s.cfg.SystemResourcesNamespace
 		receiverCfgs = clusterCfg.Spec.WebhookReceivers
 		receivers = clusterCfg.Status.WebhookReceivers
 	}
@@ -105,7 +102,6 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 		s.client,
 		s.cfg.BaseURL,
 		project,
-		secretsNamespace,
 		*receiverCfg,
 	)
 	if err != nil {

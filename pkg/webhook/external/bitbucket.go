@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -61,22 +60,12 @@ func newBitbucketWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.Bitbucket.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.Bitbucket.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.Bitbucket.SecretRef.Name
-		secretNamespace = project
-	}
 	return &bitbucketWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.Bitbucket.SharedSecretRef, cfg.Bitbucket.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.Bitbucket.SharedSecretRef),
 		},
 	}
 }

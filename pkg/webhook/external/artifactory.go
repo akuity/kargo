@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"slices"
 	"strings"
 
@@ -61,22 +60,12 @@ func newArtifactoryWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.Artifactory.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.Artifactory.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.Artifactory.SecretRef.Name
-		secretNamespace = project
-	}
 	return &artifactoryWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.Artifactory.SharedSecretRef, cfg.Artifactory.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.Artifactory.SharedSecretRef),
 		},
 		virtualRepoName: cfg.Artifactory.VirtualRepoName,
 	}

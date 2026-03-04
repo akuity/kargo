@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,22 +49,12 @@ func newGiteaWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.Gitea.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.Gitea.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.Gitea.SecretRef.Name
-		secretNamespace = project
-	}
 	return &giteaWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.Gitea.SharedSecretRef, cfg.Gitea.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.Gitea.SharedSecretRef),
 		},
 	}
 }

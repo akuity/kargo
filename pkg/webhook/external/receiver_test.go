@@ -111,7 +111,6 @@ func TestNewReceiver(t *testing.T) {
 				testCase.client,
 				testBaseURL,
 				testProject,
-				testProject,
 				testCase.cfg,
 			)
 			testCase.assertions(t, receiver, err)

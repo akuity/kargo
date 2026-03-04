@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -44,22 +43,12 @@ func newDockerHubWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.DockerHub.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.DockerHub.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.DockerHub.SecretRef.Name
-		secretNamespace = project
-	}
 	return &dockerhubWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.DockerHub.SharedSecretRef, cfg.DockerHub.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.DockerHub.SharedSecretRef),
 		},
 	}
 }

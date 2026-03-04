@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	gl "gitlab.com/gitlab-org/api/client-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -48,22 +47,12 @@ func newGitLabWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.GitLab.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.GitLab.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.GitLab.SecretRef.Name
-		secretNamespace = project
-	}
 	return &gitlabWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.GitLab.SharedSecretRef, cfg.GitLab.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.GitLab.SharedSecretRef),
 		},
 	}
 }

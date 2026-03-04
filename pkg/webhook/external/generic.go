@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 	"slices"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -47,22 +46,12 @@ func newGenericWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
-	var secretName, secretNamespace string
-	if cfg.Generic.SharedSecretRef != "" {
-		// Use the shared secret
-		secretName = cfg.Generic.SharedSecretRef
-		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
-	} else {
-		// Use the project-scoped secret
-		secretName = cfg.Generic.SecretRef.Name
-		secretNamespace = project
-	}
 	return &genericWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
 			client:          c,
 			project:         project,
-			secretName:      secretName,
-			secretNamespace: secretNamespace,
+			secretName:      getSecretName(cfg.Generic.SharedSecretRef, cfg.Generic.SecretRef),
+			secretNamespace: getSecretNamespace(project, cfg.Generic.SharedSecretRef),
 		},
 		config: cfg.Generic,
 	}
