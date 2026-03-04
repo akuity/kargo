@@ -18,7 +18,7 @@ promoted across environments, extending GitOps beyond deployment.
 Pick your local Kubernetes setup. One command installs cert-manager, Argo CD,
 and Kargo.
 
-:::info Requires Helm v3.13.1+
+:::info All options require Helm v3.13.1+
 
 :::
 
@@ -182,47 +182,48 @@ Any approach you select should only:
 
 ## Set Up Your Demo Repository
 
-1. Fork the sample repository:  
-   Go to https://github.com/akuity/kargo-demo and click <Hlt>Fork</Hlt>.  
-   This repository contains application configurations (e.g. Kubernetes
-   manifests) and is the source of truth for our demo cluster. In a real setup,
-   you would create your own configuration repository from scratch.
+1. Fork the sample repository:
+
+    Go to
+    [https://github.com/akuity/kargo-demo](https://github.com/akuity/kargo-demo)
+    and click <Hlt>Fork</Hlt>. This repository contains application
+    configurations (e.g. Kubernetes manifests) and is the source of truth for
+    our demo cluster. In a real setup, you would create your own configuration
+    repository from scratch.
 
 1. Get a GitHub personal access token (PAT):  
-   Kargo will push changes to your fork for **test**, **uat**, and **prod**
-   environments. You need a PAT with **write access** to your fork.
+
+    Kargo will push changes to your fork for **test**, **uat**, and **prod**
+    environments. You need a PAT with **write access** to your fork.
 
     <details>
 
     <summary>Need a GitHub personal access token (PAT)?</summary>
 
-    Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> →
-    <Hlt>Personal access tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt>, then click
-    <Hlt>Generate new token</Hlt>.
+    1. Navigate to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt>
+       → <Hlt>Personal access tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt>,
+       then click <Hlt>Generate new token</Hlt>.
 
-    - Under <Hlt>Repository access</Hlt>, select <Hlt>Only select repositories</Hlt>
-      and choose your fork.
+    1. Under <Hlt>Repository access</Hlt>, select <Hlt>Only select
+       repositories</Hlt> and choose your fork.
 
-    - Under <Hlt>Permissions</Hlt> → <Hlt>Repository permissions</Hlt>, set
-      <Hlt>Contents</Hlt> to <Hlt>Read and write</Hlt>.
+    1. Under <Hlt>Permissions</Hlt> → <Hlt>Repository permissions</Hlt>, set
+       <Hlt>Contents</Hlt> to <Hlt>Read and write</Hlt>.
 
-    - Click <Hlt>Generate token</Hlt> and copy it — it won't be displayed again
-      after navigating away from that page.
-
-    ⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be
-    able to push changes.
+    1. Click <Hlt>Generate token</Hlt> and copy it — it won't be displayed again
+       after navigating away from that page.
 
     </details>
 
 1. Set environment variables:
 
-```shell
-export GITOPS_REPO_URL=https://github.com/<your github username>/kargo-demo
+    ```shell
+    export GITOPS_REPO_URL=https://github.com/<your github username>/kargo-demo
 
-export GITHUB_USERNAME=<your github username>
+    export GITHUB_USERNAME=<your github username>
 
-export GITHUB_PAT=<your personal access token>
-```
+    export GITHUB_PAT=<your personal access token>
+    ```
 
 :::info Why Kargo writes to Git
 
@@ -251,7 +252,7 @@ configuration in a `base/` directory as well as stage-specific overlays in
 
 ## Create Argo CD Applications For Each Stage
 
-We’ll use an Argo CD `ApplicationSet` to create and manage three `Applications`,
+We’ll use an Argo CD `ApplicationSet` to create and manage three `Application`s,
 deploying the sample app to **test**, **uat**, and **prod** namespaces, each
 with its own configuration.
 
@@ -297,7 +298,7 @@ EOF
 
 When you visit the [Argo CD dashboard](http://localhost:31080), the branches
 referenced by the `targetRevision` fields do not exist yet, and the
-`Applications` will be out of sync. Kargo will create them on first promotion.
+`Application`s will be out of sync. Kargo will create them on first promotion.
 
 ![Argo CD Dashboard](img/argo-dashboard.png)
 
@@ -645,14 +646,15 @@ left after a few seconds.
 
 ✅ Pipeline created, and `Freight` is available to promote.
 
-## Promote Freight to "test"
+## Promote Freight to the Test Stage
 
-In the Kargo Dashboard, locate the `Freight` in the timeline at the top of the
-screen.
+In the Kargo Dashboard:
 
-- Drag it using the <strong>⋮⋮</strong> handle.
+1. Locate the `Freight` in the timeline at the top of the screen.
 
-- Drop it into the **test** `Stage`.
+1. Drag it using the <strong>⋮⋮</strong> handle.
+
+1. Drop it into the **test** `Stage`.
 
 <details>
 
@@ -660,11 +662,11 @@ screen.
 
 In the **test** `Stage`, click the truck icon (🚚) in the header.
 
-1. Select <Hlt>Promote</Hlt>
+1. Select <Hlt>Promote</Hlt>.
 
-1. Choose the `Freight` you want to promote
+1. Choose the `Freight` you want to promote.
 
-1. Click <Hlt>Promote</Hlt> to confirm
+1. Click <Hlt>Promote</Hlt> to confirm.
 
 </details>
 
@@ -678,11 +680,11 @@ steps of the promotion process complete. Once the steps have completed, the
 
 <summary>What `Freight` is deployed to what `Stage`?</summary>
 
-- Every piece of `Freight` in the timeline is color-coded to indicate which
-  `Stages` (if any) are actively using it.
+Every piece of `Freight` in the timeline is color-coded to indicate which
+`Stage`s (if any) are actively using it.
 
-- In this example, `Freight` matches the **test** `Stage`’s color once it has
-  been successfully promoted.
+In this example, `Freight` matches the **test** `Stage`’s color once it has been
+successfully promoted.
 
 </details>
 
@@ -690,12 +692,13 @@ steps of the promotion process complete. Once the steps have completed, the
 
 <summary>What happened behind the scenes?</summary>
 
-When you visit your fork at `https://github.com/<your github username>/kargo-demo`:  
+When you visit your fork at
+`https://github.com/<your github username>/kargo-demo`, you'll see:
 
 - Kargo created a **stage/test** branch  
 
 - It read the latest manifests from `main`, ran `kustomize edit set image` and
-  `kustomize build` in `stages/test/`  
+  `kustomize build` in `stages/test/`
 
 - The resulting manifests were committed to the stage-specific branch — the same
   branch referenced by the **test** Argo CD `Application`’s `targetRevision`
@@ -730,11 +733,11 @@ This intermittent slowness will be addressed in an upcoming release.
 Repeat the same steps for **uat**, then **prod**:<br /> (The `Freight` node will
 progressively color-match each stage as it passes through.)
 
-1. Click the truck icon on each `Stage`
+1. Click the truck icon on each `Stage`.
 
-1. Select `Freight`
+1. Select `Freight`.
 
-1. Click <Hlt>Promote</Hlt>
+1. Click <Hlt>Promote</Hlt>.
 
 :::info
 
@@ -764,8 +767,8 @@ take a few minutes to reconcile.
 <summary>Why can’t I promote directly from **test** to **prod**?</summary>
 
 Unlike the **test** `Stage`, which subscribes to a `Warehouse` that polls an
-image repository in ECR, the **uat** and **prod** `Stages` subscribe to other,
-_upstream_ `Stages`, forming a promotion pipeline:
+image repository in ECR, the **uat** and **prod** `Stage`s subscribe to other,
+_upstream_ `Stage`s, forming a promotion pipeline:
 
 1. `uat` subscribes to `test`
 2. `prod` subscribes to `uat`
@@ -791,43 +794,19 @@ Within a `Stage`, you can explore:
 - **Freight History** – Track which versions have flowed through the environment
   over time.
 
-- **Settings** – _(Desired State)_ - The configured behavior of the `Stage`:
-  what it subscribes to and how promotions and verifications are defined.
+- **Settings** – The defined behavior of the `Stage`: what it subscribes to
+  and how promotions and verifications are defined.
 
-- **Live Manifest** – _(Observed State)_ - The actual current state of the
-  `Stage` resource as it exists in the cluster.
-
-If things go wrong, you can often find answers in the **Live Manifest**:
-
-<table style={{width: '100%', display: 'table', tableLayout: 'fixed'}}>
-  <tr>
-    <th width="40%">Attribute</th>
-    <th width="60%">Description</th>
-  </tr>
-  <tr>
-    <td>
-      **`status.conditions`**
-    </td>
-    <td>
-      Look for `Ready: False` and associated messages to understand why a `Stage` is not healthy.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      **`status.lastPromotion.status`**
-    </td>
-    <td>
-      Shows where a promotion failed (e.g., step-6 during the `git push`).
-    </td>
-  </tr>
-</table>
+- **Live Manifest** – The current state of the `Stage` resource as it exists in
+  the cluster. If things go wrong, the live manifest provides more depth of
+  detail than UI elements.
 
 Together, these views provide a clear audit trail and real-time insight into
 your promotion pipeline.
 
 </details>
 
-## Cleaning up
+## Cleaning Up
 
 Congratulations! You've successfully set up your first promotion pipeline!
 
