@@ -13,7 +13,6 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The name of the tag to create. |
-| `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
 
 ## Output
 
