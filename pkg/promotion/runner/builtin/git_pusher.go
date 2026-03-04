@@ -234,11 +234,14 @@ func (g *gitPushPusher) run(
 		gpOpts.Name = string(*cfg.Provider)
 	}
 
-	output := map[string]any{
-		stateKeyBranch: pushOpts.TargetBranch,
-		stateKeyCommit: commitID,
+	output := map[string]any{stateKeyCommit: commitID}
+	if pushOpts.TargetBranch != "" {
+		output[stateKeyBranch] = pushOpts.TargetBranch
 	}
-
+	if pushOpts.Tag != "" {
+		output[stateKeyTag] = pushOpts.Tag
+	}
+	
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	var commitURL string
 	if err == nil {
@@ -247,9 +250,6 @@ func (g *gitPushPusher) run(
 		} else {
 			output[stateKeyCommitURL] = commitURL
 		}
-	}
-	if pushOpts.Tag != "" {
-		output[stateKeyTag] = pushOpts.Tag
 	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
