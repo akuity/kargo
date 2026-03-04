@@ -15,6 +15,8 @@ import (
 func TestNewServer(t *testing.T) {
 	testCfg := ServerConfig{}
 	testClient := fake.NewFakeClient()
+	// we pass the same client for both the client and api-reader since the
+	// fake client doesn't use the cache at all.
 	s, ok := NewServer(ServerConfig{}, testClient, testClient).(*server)
 	require.True(t, ok)
 	require.Equal(t, testCfg, s.cfg)

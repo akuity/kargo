@@ -13,8 +13,9 @@ import (
 )
 
 type server struct {
-	cfg       ServerConfig
-	client    client.Client
+	cfg    ServerConfig
+	client client.Client
+	// project scoped secrets are not cached so we need to query the api-server directly
 	apiReader client.Reader
 }
 
