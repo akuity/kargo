@@ -609,23 +609,29 @@ func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
-	targetBranch := opts.TargetBranch
-	if targetBranch == "" && opts.Tag == "" {
-		var err error
-		if targetBranch, err = w.CurrentBranch(); err != nil {
-			return err
-		}
-	}
-	var artifact string
 	args := []string{"push", "origin"}
 	switch {
 	case opts.Tag != "":
-		artifact = "tag"
 		args = append(args, "tag", opts.Tag)
+		if opts.Force {
+			args = append(args, "--force")
+		}
+		if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+			if nonFastForwardRegex.MatchString(string(res)) {
+				return fmt.Errorf("error pushing tag: %w", ErrNonFastForward)
+			}
+			return fmt.Errorf("error pushing tag: %w", err)
+		}
 	default:
-		artifact = "branch"
+		targetBranch := opts.TargetBranch
+		if targetBranch == "" {
+			var err error
+			if targetBranch, err = w.CurrentBranch(); err != nil {
+				return err
+			}
+		}
 		args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-		if opts.PullRebase && targetBranch != "" {
+		if opts.PullRebase {
 			exists, err := w.RemoteBranchExists(targetBranch)
 			if err != nil {
 				return err
@@ -645,15 +651,15 @@ func (w *workTree) Push(opts *PushOptions) error {
 				}
 			}
 		}
-	}
-	if opts.Force {
-		args = append(args, "--force")
-	}
-	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
-		if nonFastForwardRegex.MatchString(string(res)) {
-			return fmt.Errorf("error pushing %s: %w", artifact, ErrNonFastForward)
+		if opts.Force {
+			args = append(args, "--force")
 		}
-		return fmt.Errorf("error pushing %s: %w", artifact, err)
+		if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+			if nonFastForwardRegex.MatchString(string(res)) {
+				return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
+			}
+			return fmt.Errorf("error pushing branch: %w", err)
+		}
 	}
 	return nil
 }
