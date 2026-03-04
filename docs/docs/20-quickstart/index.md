@@ -709,6 +709,21 @@ When you visit your fork at `https://github.com/<your github username>/kargo-dem
 node. Click the `Freight` to confirm it shows <Hlt>Verified</Hlt> in **test**
 which will unlock it for promotion to **uat**.
 
+::: note
+
+Kargo can intermittently be slow to recognize health status changes in an Argo
+CD `Application`, which can prevent a `Stage` itself from being counted as healthy.
+
+If your **test** `Stage` shows an unknown health status for a prolonged
+period, expand it by clicking the icon with three lines, then click 
+<Hlt>Refresh</Htl> in the upper right of the page. This will force any changes
+in the `Application`'s  health status to be observed, allowing the `Stage`
+itself to be counted as healthy.
+
+This intermittent slowness will be addressed in an upcoming release.
+
+:::
+
 ## Promote to UAT and then Production
 
 Repeat the same steps for **uat**, then **prod**:<br /> (The `Freight` node will
