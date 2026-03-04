@@ -71,17 +71,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
-
-                            For cluster-scoped webhook receivers, the referenced Secret must be in the
-                            designated "system resources" namespace.
-
-                            The Secret's data map is expected to contain a `secret-token` key whose
-                            value is the shared secret used to authenticate the webhook requests sent
-                            by JFrog Artifactory. For more information please refer to the JFrog
-                            Artifactory documentation:
-                              https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
                           properties:
                             name:
                               default: ""
@@ -94,6 +88,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Artifactory. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                         virtualRepoName:
                           description: |-
                             VirtualRepoName is the name of an Artifactory virtual repository.
@@ -121,8 +121,6 @@ spec:
                             receiver to refresh all Warehouses subscribed to
                             `example.frog.io/proj-virtual/<path>/image`.
                           type: string
-                      required:
-                      - secretRef
                       type: object
                     azure:
                       description: |-
@@ -130,19 +128,13 @@ spec:
                         with Azure Container Registry (ACR) and Azure DevOps payloads.
                       properties:
                         secretRef:
-                          description: "SecretRef contains a reference to a Secret.
-                            For Project-scoped webhook\nreceivers, the referenced
-                            Secret must be in the same namespace as the\nProjectConfig.\n\nFor
-                            cluster-scoped webhook receivers, the referenced Secret
-                            must be in the\ndesignated \"system resources\" namespace.\n\nThe
-                            Secret's data map is expected to contain a `secret` key
-                            whose value\ndoes NOT need to be shared directly with
-                            Azure when registering a webhook.\nIt is used only by
-                            Kargo to create a complex, hard-to-guess URL,\nwhich implicitly
-                            serves as a shared secret. For more information about\nAzure
-                            webhooks, please refer to the Azure documentation:\n\n
-                            Azure Container Registry:\n\thttps://learn.microsoft.com/en-us/azure/container-registry/container-registry-repositories\n\n
-                            Azure DevOps:\n\thttp://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops"
+                          description: |-
+                            SecretRef contains a reference to a Secret. For Project-scoped webhook
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
                           properties:
                             name:
                               default: ""
@@ -155,8 +147,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Azure. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     bitbucket:
                       description: |-
@@ -166,16 +162,18 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "system resources" namespace.
 
-                            The Secret's data map is expected to contain a `secret` key whose
-                            value is the shared secret used to authenticate the webhook requests sent
-                            by Bitbucket. For more information please refer to the Bitbucket
-                            documentation:
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by Bitbucket.
+                            For more information please refer to the Bitbucket documentation:
                               https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
                           properties:
                             name:
@@ -189,8 +187,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Bitbucket. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     dockerhub:
                       description: |-
@@ -200,8 +202,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             The Secret's data map is expected to contain a `secret` key whose value
                             does NOT need to be shared directly with Docker Hub when registering a
@@ -221,8 +226,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Docker Hub. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     generic:
                       description: Generic contains the configuration for a generic
@@ -380,16 +389,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
-
-                            For cluster-scoped webhook receivers, the referenced Secret must be in the
-                            designated "system resources" namespace.
-
-                            The Secret's data map is expected to contain a `secret` key whose value
-                            does NOT need to be shared directly with the sender. It is used only by
-                            Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
-                            shared secret.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
                           properties:
                             name:
                               default: ""
@@ -402,8 +406,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by the sender. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     gitea:
                       description: |-
@@ -413,8 +421,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "system resources" namespace.
@@ -435,8 +446,17 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Gitea. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+
+                            The Secret's data map is expected to contain a `secret` key whose value is
+                            the shared secret used to authenticate the webhook requests sent by Gitea.
+                            For more information please refer to the Gitea documentation:
+                              https://docs.gitea.io/en-us/webhooks/
+                          type: string
                       type: object
                     github:
                       description: |-
@@ -446,8 +466,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "system resources" namespace.
@@ -468,8 +491,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by GitHub. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     gitlab:
                       description: |-
@@ -479,8 +506,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "system resources" namespace.
@@ -501,8 +531,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by GitLab. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     harbor:
                       description: |-
@@ -512,8 +546,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
 
                             For cluster-scoped webhook receivers, the referenced Secret must be in the
                             designated "system resources" namespace.
@@ -534,8 +571,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Harbor. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                     name:
                       description: Name is the name of the webhook receiver.
@@ -551,18 +592,11 @@ spec:
                         secretRef:
                           description: |-
                             SecretRef contains a reference to a Secret. For Project-scoped webhook
-                            receivers, the referenced Secret must be in the same namespace as the
-                            ProjectConfig.
-
-                            For cluster-scoped webhook receivers, the referenced Secret must be in the
-                            designated "system resources" namespace.
-
-                            The Secret's data map is expected to contain a `secret` key whose value
-                            does NOT need to be shared directly with Quay when registering a
-                            webhook. It is used only by Kargo to create a complex, hard-to-guess URL,
-                            which implicitly serves as a shared secret. For more information about
-                            Quay webhooks, please refer to the Quay documentation:
-                              https://docs.quay.io/guides/notifications.html
+                            receivers, the referenced Secret can be in the same namespace as the
+                            ProjectConfig or in the designated "shared resources" namespace. If
+                            the referenced Secret is in the "shared resources" namespace, use the
+                            SharedSecretRef field instead. SecretRef is mutually exclusive with
+                            SharedSecretRef. If both are specified, the controller will return an error.
                           properties:
                             name:
                               default: ""
@@ -575,8 +609,12 @@ spec:
                               type: string
                           type: object
                           x-kubernetes-map-type: atomic
-                      required:
-                      - secretRef
+                        sharedSecretRef:
+                          description: |-
+                            SharedSecretRef is the name of the Secret in the "shared resources" namespace that contains the shared secret
+                            used to authenticate the webhook requests sent by Quay. This field is mutually exclusive with SecretRef.
+                            If both are specified, the controller will return an error.
+                          type: string
                       type: object
                   required:
                   - name

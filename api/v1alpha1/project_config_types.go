@@ -142,8 +142,8 @@ type GiteaWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
@@ -175,8 +175,8 @@ type BitbucketWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
@@ -203,8 +203,8 @@ type DockerHubWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// The Secret's data map is expected to contain a `secret` key whose value
@@ -230,8 +230,8 @@ type GitHubWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
@@ -258,8 +258,8 @@ type GitLabWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
@@ -286,8 +286,8 @@ type HarborWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// For cluster-scoped webhook receivers, the referenced Secret must be in the
@@ -314,8 +314,8 @@ type QuayWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// +optional
@@ -334,8 +334,8 @@ type ArtifactoryWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// +optional
@@ -345,7 +345,7 @@ type ArtifactoryWebhookReceiverConfig struct {
 	// If both are specified, the controller will return an error.
 	//
 	// +optional
-	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,3,opt,name=sharedSecretRef"`
 	// VirtualRepoName is the name of an Artifactory virtual repository.
 	//
 	// When unspecified, the Artifactory webhook receiver depends on the value of
@@ -381,8 +381,8 @@ type AzureWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// +optional
@@ -408,8 +408,8 @@ type GenericWebhookReceiverConfig struct {
 	// SecretRef contains a reference to a Secret. For Project-scoped webhook
 	// receivers, the referenced Secret can be in the same namespace as the
 	// ProjectConfig or in the designated "shared resources" namespace. If
-	// the referenced Secret is in the "shared resources" namespace, use the 
-	// SharedSecretRef field instead. SecretRef is mutually exclusive with 
+	// the referenced Secret is in the "shared resources" namespace, use the
+	// SharedSecretRef field instead. SecretRef is mutually exclusive with
 	// SharedSecretRef. If both are specified, the controller will return an error.
 	//
 	// +optional
@@ -419,7 +419,7 @@ type GenericWebhookReceiverConfig struct {
 	// If both are specified, the controller will return an error.
 	//
 	// +optional
-	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,2,opt,name=sharedSecretRef"`
+	SharedSecretRef string `json:"sharedSecretRef,omitempty" protobuf:"bytes,3,opt,name=sharedSecretRef"`
 
 	// Actions is a list of actions to be performed when a webhook event is received.
 	//
