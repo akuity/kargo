@@ -716,7 +716,7 @@ CD `Application`, which can prevent a `Stage` itself from being counted as healt
 
 If your **test** `Stage` shows an unknown health status for a prolonged
 period, expand it by clicking the icon with three lines, then click 
-<Hlt>Refresh</Htl> in the upper right of the page. This will force any changes
+<Hlt>Refresh</Hlt> in the upper right of the page. This will force any changes
 in the `Application`'s  health status to be observed, allowing the `Stage`
 itself to be counted as healthy.
 
