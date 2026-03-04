@@ -103,7 +103,7 @@ func (s *server) route(w http.ResponseWriter, r *http.Request) {
 	receiver, err := NewReceiver(
 		ctx,
 		s.client,
-		s.apiReader, // project scoped secrets are not cached so we need to query the api-server directly
+		s.apiReader,
 		s.cfg.BaseURL,
 		project,
 		secretsNamespace,
