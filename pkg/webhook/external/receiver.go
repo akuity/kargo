@@ -98,9 +98,11 @@ func NewReceiver(
 	}
 	factory := reg.Value
 
-	// project secrets are not cached so we need to query the api-server directly
 	receiver := factory(c, project, cfg)
 	secretName := receiver.getSecretName()
+	// we may or may not be querying the api server directly here depending
+	// on the client.Reader implementation. This is because project secrets
+	// are not cached but cluster secrets are.
 	secret := &corev1.Secret{}
 	if err = r.Get(
 		ctx,
