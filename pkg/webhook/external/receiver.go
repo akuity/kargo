@@ -94,7 +94,6 @@ func NewReceiver(
 	c client.Client,
 	baseURL string,
 	project string,
-	secretsNamespace string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) (WebhookReceiver, error) {
 	// Pick an appropriate WebhookReceiver implementation based on the
@@ -106,18 +105,19 @@ func NewReceiver(
 	factory := reg.Value
 	receiver := factory(c, project, cfg)
 	secretName := receiver.getSecretName()
+	secretNs := receiver.getSecretNamespace()
 	secret := &corev1.Secret{}
 	if err = c.Get(
 		ctx,
 		client.ObjectKey{
-			Namespace: secretsNamespace,
+			Namespace: secretNs,
 			Name:      secretName,
 		},
 		secret,
 	); err != nil {
 		return nil, fmt.Errorf(
 			"error getting Secret %q in namespace %q: %w",
-			secretName, secretsNamespace, err,
+			secretName, secretNs, err,
 		)
 	}
 	// The receiver is likely to rely on the Secret data when handling inbound
@@ -129,7 +129,7 @@ func NewReceiver(
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error extracting secret values from Secret %q in namespace %q: %w",
-			secretName, secretsNamespace, err,
+			secretName, secretNs, err,
 		)
 	}
 	// Build the details of the WebhookReceiver in the form of
