@@ -9,8 +9,6 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
-	"github.com/akuity/kargo/pkg/gitprovider"
-	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
@@ -65,8 +63,6 @@ func (g *gitTagTagger) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {
-	logger := logging.LoggerFromContext(ctx)
-
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
@@ -92,27 +88,9 @@ func (g *gitTagTagger) run(
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
 
-	// Use the Git provider to get the commit URL, if possible. We continue
-	// even if the provider or URL cannot be determined, as the push will
-	// still have succeeded which is the primary goal of this step.
-	gpOpts := gitprovider.Options{}
-	if cfg.Provider != nil {
-		gpOpts.Name = string(*cfg.Provider)
-	}
-
 	output := map[string]any{
 		stateKeyTag:    cfg.Tag,
 		stateKeyCommit: commitID,
-	}
-
-	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
-	var commitURL string
-	if err == nil {
-		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
-			logger.Error(err, "unable to get commit URL from Git provider")
-		} else {
-			output[stateKeyCommitURL] = commitURL
-		}
 	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
