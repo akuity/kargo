@@ -28,6 +28,11 @@ Stages that write to the same branch do not write to the same files.
 
 :::
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
