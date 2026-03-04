@@ -971,14 +971,64 @@ func Test_githubVerifiedPusher_verifyCommitSignatures(t *testing.T) {
 			},
 		},
 		{
-			name:    "rejects commits with expired signature",
+			name:    "accepts commits with expired signature",
 			gitUser: git.User{SigningKeyPath: "/some/key"},
 			workTree: &mockWorkTree{
 				commitSignatureStatusesFn: func(
 					_ []string,
 				) (map[string]git.CommitSignatureInfo, error) {
 					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "X"},
+						"abc123": {Status: "X", KeyID: "ABCD1234"},
+					}, nil
+				},
+			},
+			commits: []*github.RepositoryCommit{
+				{SHA: ptr.To("abc123")},
+			},
+			assert: func(
+				t *testing.T,
+				statuses map[string]git.CommitSignatureInfo,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, statuses)
+				require.Equal(t, "X", statuses["abc123"].Status)
+			},
+		},
+		{
+			name:    "accepts commits with expired key",
+			gitUser: git.User{SigningKeyPath: "/some/key"},
+			workTree: &mockWorkTree{
+				commitSignatureStatusesFn: func(
+					_ []string,
+				) (map[string]git.CommitSignatureInfo, error) {
+					return map[string]git.CommitSignatureInfo{
+						"abc123": {Status: "Y", KeyID: "ABCD1234"},
+					}, nil
+				},
+			},
+			commits: []*github.RepositoryCommit{
+				{SHA: ptr.To("abc123")},
+			},
+			assert: func(
+				t *testing.T,
+				statuses map[string]git.CommitSignatureInfo,
+				err error,
+			) {
+				require.NoError(t, err)
+				require.NotNil(t, statuses)
+				require.Equal(t, "Y", statuses["abc123"].Status)
+			},
+		},
+		{
+			name:    "rejects commits with revoked key",
+			gitUser: git.User{SigningKeyPath: "/some/key"},
+			workTree: &mockWorkTree{
+				commitSignatureStatusesFn: func(
+					_ []string,
+				) (map[string]git.CommitSignatureInfo, error) {
+					return map[string]git.CommitSignatureInfo{
+						"abc123": {Status: "R"},
 					}, nil
 				},
 			},
@@ -992,7 +1042,7 @@ func Test_githubVerifiedPusher_verifyCommitSignatures(t *testing.T) {
 			) {
 				require.Error(t, err)
 				assert.IsType(t, &promotion.TerminalError{}, err)
-				assert.ErrorContains(t, err, "status: X")
+				assert.ErrorContains(t, err, "revoked key")
 			},
 		},
 		{

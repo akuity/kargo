@@ -480,11 +480,14 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			Parents: []*github.Commit{{SHA: &parentSHA}},
 		}
 
-		// Only let GitHub sign commits that were GPG-signed by Kargo
-		// (G/U). All other commits preserve original authorship.
-		shouldSign := sigStatuses != nil &&
-			(sigStatuses[rc.GetSHA()].Status == "G" ||
-				sigStatuses[rc.GetSHA()].Status == "U")
+		// Only let GitHub sign commits that were GPG-signed by Kargo.
+		// All other commits preserve original authorship.
+		sigStatus := ""
+		if sigStatuses != nil {
+			sigStatus = sigStatuses[rc.GetSHA()].Status
+		}
+		shouldSign := sigStatus == "G" || sigStatus == "U" ||
+			sigStatus == "X" || sigStatus == "Y"
 		if !shouldSign {
 			commit.Author = rc.Commit.Author
 			commit.Committer = rc.Commit.Committer
@@ -732,11 +735,13 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 	for _, sha := range shas {
 		info := statuses[sha]
 		switch info.Status {
-		case "G", "U":
-			// Good or untrusted-but-valid signature from Kargo's key.
+		case "G", "U", "X", "Y":
+			// Good, untrusted, expired signature, or expired key.
+			// All indicate an authentic signature from Kargo's key.
 			logger.Debug(
 				"commit signature verified",
 				"commit", sha,
+				"status", info.Status,
 				"keyID", info.KeyID,
 				"signer", info.Signer,
 			)
@@ -760,8 +765,13 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 					"commit %s has a bad GPG signature", sha,
 				),
 			}
+		case "R":
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s was signed with a revoked key", sha,
+				),
+			}
 		default:
-			// X = expired signature, Y = expired key, R = revoked key
 			return nil, &promotion.TerminalError{
 				Err: fmt.Errorf(
 					"commit %s GPG signature verification failed "+
