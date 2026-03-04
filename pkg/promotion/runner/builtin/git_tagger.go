@@ -15,6 +15,9 @@ import (
 
 const (
 	stepKindGitTag = "git-tag"
+
+	// stateKeyTag is the key used to store the tag that was pushed in the shared State.
+	stateKeyTag = "tag"
 )
 
 func init() {

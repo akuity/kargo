@@ -56,7 +56,6 @@ the pull/rebase to fail.
 | `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 | `commitURL` | `string` | The URL of the commit that was pushed to the remote repository. |
-| `tag` | `string` | If applicable, the tag that was pushed to the remote repository. |
 
 ## Examples
 
