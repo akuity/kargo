@@ -9,6 +9,11 @@ description: Waits for a specified open pull request to be merged or closed.
 closed. This step commonly follows a [`git-open-pr` step](git-open-pr.md)
 and is commonly followed by an `argocd-update` step.
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
