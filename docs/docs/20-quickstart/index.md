@@ -192,27 +192,27 @@ Any approach you select should only:
    Kargo will push changes to your fork for **test**, **uat**, and **prod**
    environments. You need a PAT with **write access** to your fork.
 
-<details>
+    <details>
 
-<summary>Need a GitHub personal access token (PAT)?</summary>
+    <summary>Need a GitHub personal access token (PAT)?</summary>
 
-Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> →
-<Hlt>Personal access tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt>, then click
-<Hlt>Generate new token</Hlt>.
+    Go to GitHub → <Hlt>Settings</Hlt> → <Hlt>Developer settings</Hlt> →
+    <Hlt>Personal access tokens</Hlt> → <Hlt>Fine-grained tokens</Hlt>, then click
+    <Hlt>Generate new token</Hlt>.
 
-- Under <Hlt>Repository access</Hlt>, select <Hlt>Only select repositories</Hlt>
-  and choose your fork.
+    - Under <Hlt>Repository access</Hlt>, select <Hlt>Only select repositories</Hlt>
+      and choose your fork.
 
-- Under <Hlt>Permissions</Hlt> → <Hlt>Repository permissions</Hlt>, set
-  <Hlt>Contents</Hlt> to <Hlt>Read and write</Hlt>.
+    - Under <Hlt>Permissions</Hlt> → <Hlt>Repository permissions</Hlt>, set
+      <Hlt>Contents</Hlt> to <Hlt>Read and write</Hlt>.
 
-- Click <Hlt>Generate token</Hlt> and copy it — it won't be displayed again
-  after navigating away from that page.
+    - Click <Hlt>Generate token</Hlt> and copy it — it won't be displayed again
+      after navigating away from that page.
 
-⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be
-able to push changes.
+    ⚠️ Make sure the token has write access to your fork, otherwise Kargo won’t be
+    able to push changes.
 
-</details>
+    </details>
 
 1. Set environment variables:
 
@@ -709,16 +709,17 @@ When you visit your fork at `https://github.com/<your github username>/kargo-dem
 node. Click the `Freight` to confirm it shows <Hlt>Verified</Hlt> in **test**
 which will unlock it for promotion to **uat**.
 
-::: note
+:::warning
 
 Kargo can intermittently be slow to recognize health status changes in an Argo
-CD `Application`, which can prevent a `Stage` itself from being counted as healthy.
+CD `Application`, which can prevent a `Stage` that interacts with it from being
+counted as healthy.
 
-If your **test** `Stage` shows an unknown health status for a prolonged
-period, expand it by clicking the icon with three lines, then click 
-<Hlt>Refresh</Hlt> in the upper right of the page. This will force any changes
-in the `Application`'s  health status to be observed, allowing the `Stage`
-itself to be counted as healthy.
+If your **test** `Stage` shows an unknown health status for a prolonged period,
+expand it by clicking the icon with three lines, then click <Hlt>Refresh</Hlt>
+in the upper right of the page. This will force any changes in the
+`Application`'s  health status to be observed, allowing the `Stage` itself to be
+counted as healthy.
 
 This intermittent slowness will be addressed in an upcoming release.
 
