@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"slices"
 	"testing"
 	"time"
@@ -168,6 +170,14 @@ func Test_gitPROpener_run(t *testing.T) {
 	defer repo.Close()
 	err = repo.CreateOrphanedBranch(testSourceBranch)
 	require.NoError(t, err)
+
+	// Make a file with the same name as the branch
+	err = os.WriteFile(filepath.Join(repo.Dir(), testSourceBranch), []byte("foo"), 0600)
+	require.NoError(t, err)
+
+	err = repo.AddAll()
+	require.NoError(t, err)
+
 	err = repo.Commit("Initial commit", &git.CommitOptions{AllowEmpty: true})
 	require.NoError(t, err)
 	err = repo.Push(nil)
