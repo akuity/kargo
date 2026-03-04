@@ -148,7 +148,7 @@ func Test_gitTagger_run(t *testing.T) {
 	// Verify
 	require.NoError(t, err)
 	require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-	require.Equal(t, "v1.0.0", res.Output[stateKeyTag])
+	require.NoError(t, workTree.Checkout("v1.0.0"))
 	expectedCommit, err := workTree.LastCommitID()
 	require.NoError(t, err)
 	actualCommit, ok := res.Output[stateKeyCommit]
