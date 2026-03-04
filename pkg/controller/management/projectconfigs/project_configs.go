@@ -242,7 +242,6 @@ func (r *reconciler) syncWebhookReceivers(
 			r.client,
 			r.cfg.ExternalWebhookServerBaseURL,
 			projectCfg.Name,
-			projectCfg.Name, // Secret namespace is the same as the Project name/namespace
 			receiverCfg,
 		)
 		if err != nil {
