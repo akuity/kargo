@@ -15,14 +15,14 @@ import (
 func TestNewServer(t *testing.T) {
 	testCfg := ServerConfig{}
 	testClient := fake.NewFakeClient()
-	s, ok := NewServer(ServerConfig{}, testClient).(*server)
+	s, ok := NewServer(ServerConfig{}, testClient, testClient).(*server)
 	require.True(t, ok)
 	require.Equal(t, testCfg, s.cfg)
 	require.Same(t, testClient, s.client)
 }
 
 func TestServer_Healthz(t *testing.T) {
-	s, ok := NewServer(ServerConfig{}, nil).(*server)
+	s, ok := NewServer(ServerConfig{}, nil, nil).(*server)
 	require.True(t, ok)
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)

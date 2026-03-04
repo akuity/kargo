@@ -17,7 +17,8 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
+	kc := fake.NewClientBuilder().Build()
+	r := newReconciler(kc, kc, testCfg)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 }

@@ -84,6 +84,7 @@ func (b *baseWebhookReceiver) getMaxRequestBodyBytes() int64 {
 func NewReceiver(
 	ctx context.Context,
 	c client.Client,
+	r client.Reader,
 	baseURL string,
 	project string,
 	secretsNamespace string,
@@ -96,10 +97,12 @@ func NewReceiver(
 		return nil, fmt.Errorf("error getting receiver factory: %w", err)
 	}
 	factory := reg.Value
+
+	// project secrets are not cached so we need to query the api-server directly
 	receiver := factory(c, project, cfg)
 	secretName := receiver.getSecretName()
 	secret := &corev1.Secret{}
-	if err = c.Get(
+	if err = r.Get(
 		ctx,
 		client.ObjectKey{
 			Namespace: secretsNamespace,

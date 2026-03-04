@@ -109,6 +109,7 @@ func TestNewReceiver(t *testing.T) {
 			receiver, err := NewReceiver(
 				context.Background(),
 				testCase.client,
+				testCase.client,
 				testBaseURL,
 				testProject,
 				testProject,
