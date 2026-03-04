@@ -15,16 +15,19 @@ import (
 type server struct {
 	cfg    ServerConfig
 	client client.Client
+	// project scoped secrets are not cached so we need to query the api-server directly
+	apiReader client.Reader
 }
 
 type Server interface {
 	Serve(ctx context.Context, l net.Listener) error
 }
 
-func NewServer(cfg ServerConfig, cl client.Client) Server {
+func NewServer(cfg ServerConfig, cl client.Client, r client.Reader) Server {
 	return &server{
-		cfg:    cfg,
-		client: cl,
+		apiReader: r,
+		cfg:       cfg,
+		client:    cl,
 	}
 }
 
