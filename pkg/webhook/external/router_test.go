@@ -220,6 +220,7 @@ func TestServer_route(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
+			testCase.server.apiReader = testCase.server.client
 			testCase.server.route(
 				rr,
 				httptest.NewRequest(http.MethodPost, testURL, nil),
