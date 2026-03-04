@@ -21,13 +21,6 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 | `tag` | `string` | The name of the tag that was created by this step. This can be referenced in subsequent steps. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 
-:::caution
-
-If the specified tag already exists in the remote repository, the `git-tag` step
-will fail.
-
-:::
-
 ## Examples
 
 ### Basic Usage

@@ -124,3 +124,10 @@ In this example, a new tag is pushed to the remote repository.
     path: ./out
     tag: v1.0.0
 ```
+
+:::caution
+
+If the specified tag already exists in the remote repository, the `git-push` 
+step will fail.
+
+:::
