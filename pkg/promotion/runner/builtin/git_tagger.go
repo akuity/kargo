@@ -87,13 +87,11 @@ func (g *gitTagTagger) run(
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error getting last commit ID: %w", err)
 	}
-
-	output := map[string]any{
-		stateKeyTag:    cfg.Tag,
-		stateKeyCommit: commitID,
-	}
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: output,
+		Output: map[string]any{
+			stateKeyTag:    cfg.Tag,
+			stateKeyCommit: commitID,
+		},
 	}, nil
 }
