@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -45,11 +46,22 @@ func newHarborWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
+	var secretName, secretNamespace string
+	if cfg.Harbor.SharedSecretRef != "" {
+		// Use the shared secret
+		secretName = cfg.Harbor.SharedSecretRef
+		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
+	} else {
+		// Use the project-scoped secret
+		secretName = cfg.Harbor.SecretRef.Name
+		secretNamespace = project
+	}
 	return &harborWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
-			client:     c,
-			project:    project,
-			secretName: cfg.Harbor.SecretRef.Name,
+			client:          c,
+			project:         project,
+			secretName:      secretName,
+			secretNamespace: secretNamespace,
 		},
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	gh "github.com/google/go-github/v76/github"
@@ -61,11 +62,22 @@ func newGitHubWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
+	var secretName, secretNamespace string
+	if cfg.GitHub.SharedSecretRef != "" {
+		// Use the shared secret
+		secretName = cfg.GitHub.SharedSecretRef
+		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
+	} else {
+		// Use the project-scoped secret
+		secretName = cfg.GitHub.SecretRef.Name
+		secretNamespace = project
+	}
 	return &githubWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
-			client:     c,
-			project:    project,
-			secretName: cfg.GitHub.SecretRef.Name,
+			client:          c,
+			project:         project,
+			secretName:      secretName,
+			secretNamespace: secretNamespace,
 		},
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,11 +52,22 @@ func newAzureWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
+	var secretName, secretNamespace string
+	if cfg.Azure.SharedSecretRef != "" {
+		// Use the shared secret
+		secretName = cfg.Azure.SharedSecretRef
+		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
+	} else {
+		// Use the project-scoped secret
+		secretName = cfg.Azure.SecretRef.Name
+		secretNamespace = project
+	}
 	return &azureWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
-			client:     c,
-			project:    project,
-			secretName: cfg.Azure.SecretRef.Name,
+			client:          c,
+			project:         project,
+			secretName:      secretName,
+			secretNamespace: secretNamespace,
 		},
 	}
 }

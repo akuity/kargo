@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -43,11 +44,22 @@ func newQuayWebhookReceiver(
 	project string,
 	cfg kargoapi.WebhookReceiverConfig,
 ) WebhookReceiver {
+	var secretName, secretNamespace string
+	if cfg.Quay.SharedSecretRef != "" {
+		// Use the shared secret
+		secretName = cfg.Quay.SharedSecretRef
+		secretNamespace = os.Getenv("SHARED_RESOURCES_NAMESPACE")
+	} else {
+		// Use the project-scoped secret
+		secretName = cfg.Quay.SecretRef.Name
+		secretNamespace = project
+	}
 	return &quayWebhookReceiver{
 		baseWebhookReceiver: &baseWebhookReceiver{
-			client:     c,
-			project:    project,
-			secretName: cfg.Quay.SecretRef.Name,
+			client:          c,
+			project:         project,
+			secretName:      secretName,
+			secretNamespace: secretNamespace,
 		},
 	}
 }
