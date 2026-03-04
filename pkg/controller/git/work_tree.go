@@ -616,10 +616,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 		if opts.Force {
 			args = append(args, "--force")
 		}
-		if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
-			if nonFastForwardRegex.MatchString(string(res)) {
-				return fmt.Errorf("error pushing tag: %w", ErrNonFastForward)
-			}
+		if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
 			return fmt.Errorf("error pushing tag: %w", err)
 		}
 	default:
