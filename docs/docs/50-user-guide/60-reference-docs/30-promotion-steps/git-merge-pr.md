@@ -31,6 +31,11 @@ to merge will fail.
 
 :::
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                                                    |
