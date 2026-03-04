@@ -139,6 +139,7 @@ type githubVerifiedPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 	cfg          githubVerifiedPusherConfig
+	gitUser      git.User
 	branchMus    map[string]*sync.Mutex
 	masterMu     sync.Mutex
 }
@@ -155,6 +156,7 @@ func newGitHubVerifiedPusher(
 		credsDB:      caps.CredsDB,
 		schemaLoader: getConfigSchemaLoader(stepKindGitHubVerifiedPush),
 		cfg:          cfg,
+		gitUser:      gitUserFromEnv(),
 		branchMus:    map[string]*sync.Mutex{},
 	}
 }
@@ -349,7 +351,7 @@ func (g *githubVerifiedPusher) run(
 	// Enumerate commits to sign using the Compare API.
 	result, err := g.signAndUpdate(
 		ctx, ghClient, owner, repo, targetBranch, targetHead, localHead,
-		workTree.URL(),
+		workTree,
 	)
 	if err != nil {
 		return result, err
@@ -364,7 +366,8 @@ func (g *githubVerifiedPusher) run(
 func (g *githubVerifiedPusher) signAndUpdate(
 	ctx context.Context,
 	client githubVerifiedPushClient,
-	owner, repo, targetBranch, targetHead, localHead, repoURL string,
+	owner, repo, targetBranch, targetHead, localHead string,
+	workTree git.WorkTree,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -443,7 +446,20 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			}
 	}
 
-	// Replay each revision as a signed commit via the API.
+	// Verify GPG signatures on local commits before replaying them. This
+	// catches tampering of signed commits while allowing unsigned commits
+	// through. The returned map (nil when signing is not configured) tells
+	// the replay loop which commits to re-sign via the GitHub App.
+	sigStatuses, err := g.verifyCommitSignatures(ctx, workTree, commits)
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, err
+	}
+
+	// Replay each revision via the API. Only commits that Kargo
+	// GPG-signed (G/U) are re-signed by the GitHub App; all others
+	// preserve original authorship.
 	parentSHA := targetHead
 	var lastSignedSHA string
 	for i, rc := range commits {
@@ -458,20 +474,30 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		}
 		message := rc.Commit.GetMessage()
 
+		commit := github.Commit{
+			Message: &message,
+			Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
+			Parents: []*github.Commit{{SHA: &parentSHA}},
+		}
+
+		// Only let GitHub sign commits that were GPG-signed by Kargo
+		// (G/U). All other commits preserve original authorship.
+		shouldSign := sigStatuses != nil &&
+			(sigStatuses[rc.GetSHA()].Status == "G" ||
+				sigStatuses[rc.GetSHA()].Status == "U")
+		if !shouldSign {
+			commit.Author = rc.Commit.Author
+			commit.Committer = rc.Commit.Committer
+		}
+
 		newCommit, _, createErr := client.CreateCommit(
-			ctx, owner, repo,
-			github.Commit{
-				Message: &message,
-				Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
-				Parents: []*github.Commit{{SHA: &parentSHA}},
-			},
-			nil, // Let GitHub set author/committer and sign.
+			ctx, owner, repo, commit, nil,
 		)
 		if createErr != nil {
 			return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, fmt.Errorf(
-					"error creating signed revision %d/%d "+
+					"error creating revision %d/%d "+
 						"(original: %s): %w",
 					i+1, len(commits), rc.GetSHA(), createErr,
 				)
@@ -479,11 +505,12 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		lastSignedSHA = newCommit.GetSHA()
 		parentSHA = lastSignedSHA
 		logger.Debug(
-			"created signed revision",
+			"created revision",
 			"index", i+1,
 			"total", len(commits),
 			"original", rc.GetSHA(),
-			"signed", lastSignedSHA,
+			"new", lastSignedSHA,
+			"signed", shouldSign,
 		)
 	}
 
@@ -511,7 +538,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		"sha", lastSignedSHA,
 	)
 
-	commitURL := g.buildCommitURL(repoURL, lastSignedSHA)
+	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
@@ -656,4 +683,95 @@ func (g *githubVerifiedPusher) buildCommitURL(
 		"https://%s%s/commit/%s",
 		parsedURL.Host, parsedURL.Path, sha,
 	)
+}
+
+// verifyCommitSignatures verifies GPG signatures on local commits before they
+// are replayed via the GitHub API. When the controller is configured with a
+// signing key (GITCLIENT_SIGNING_KEY_PATH), this method uses the WorkTree's
+// GPG keyring (populated by git-clone's setupAuthor) to check signatures.
+//
+// Unsigned commits and commits signed by unknown keys are propagated without
+// error — the goal is to detect tampering of commits signed by Kargo's key.
+// Commits with invalid signatures cause a terminal error.
+func (g *githubVerifiedPusher) verifyCommitSignatures(
+	ctx context.Context,
+	workTree git.WorkTree,
+	commits []*github.RepositoryCommit,
+) (map[string]git.CommitSignatureInfo, error) {
+	if g.gitUser.SigningKeyPath == "" {
+		return nil, nil
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+
+	// Collect non-empty SHAs.
+	var shas []string
+	for _, rc := range commits {
+		if sha := rc.GetSHA(); sha != "" {
+			shas = append(shas, sha)
+		}
+	}
+	if len(shas) == 0 {
+		return nil, nil
+	}
+
+	logger.Debug(
+		"verifying commit signatures",
+		"signingKeyPath", g.gitUser.SigningKeyPath,
+		"numCommits", len(shas),
+	)
+
+	// Single batch call to get signature info for all commits.
+	statuses, err := workTree.CommitSignatureStatuses(shas)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error checking commit signatures: %w", err,
+		)
+	}
+
+	for _, sha := range shas {
+		info := statuses[sha]
+		switch info.Status {
+		case "G", "U":
+			// Good or untrusted-but-valid signature from Kargo's key.
+			logger.Debug(
+				"commit signature verified",
+				"commit", sha,
+				"keyID", info.KeyID,
+				"signer", info.Signer,
+			)
+		case "N", "":
+			// Unsigned commits are propagated without error.
+			logger.Debug(
+				"commit is unsigned, propagating",
+				"commit", sha,
+			)
+		case "E":
+			// Signed by a key not in Kargo's keyring — not our concern.
+			logger.Debug(
+				"commit signed by unknown key, propagating",
+				"commit", sha,
+				"keyID", info.KeyID,
+				"signer", info.Signer,
+			)
+		case "B":
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s has a bad GPG signature", sha,
+				),
+			}
+		default:
+			// X = expired signature, Y = expired key, R = revoked key
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s GPG signature verification failed "+
+						"(status: %s)",
+					sha, info.Status,
+				),
+			}
+		}
+	}
+
+	logger.Debug("all commit signatures verified")
+	return statuses, nil
 }

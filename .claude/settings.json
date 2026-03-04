@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make format-go)",
+      "Bash(hack/bin/tilt get uiresources --output json)",
+      "Bash(hack/bin/tilt get uiresources back-end-compile --output json)"
+    ]
+  }
+}
