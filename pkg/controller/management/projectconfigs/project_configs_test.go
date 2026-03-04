@@ -163,6 +163,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			testCase.reconciler.apiReader = testCase.reconciler.client
 			status, err := testCase.reconciler.syncWebhookReceivers(
 				context.Background(),
 				testCase.projectCfg,
