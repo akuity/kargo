@@ -21,6 +21,9 @@ type WebhookReceiver interface {
 	// getSecretName returns the name of the Secret upon which this receiver
 	// relies.
 	getSecretName() string
+	// getSecretNamespace returns the namespace of the Secret upon which this
+	// receiver's secret is located.
+	getSecretNamespace() string
 	// getSecretValues extracts a list of receiver-specific values from the
 	// provided Secret data.
 	getSecretValues(map[string][]byte) ([]string, error)
@@ -45,16 +48,21 @@ type WebhookReceiver interface {
 // common functionality for all WebhookReceiver implementations. It is not
 // intended to be used directly.
 type baseWebhookReceiver struct {
-	client     client.Client
-	project    string
-	secretName string
-	secretData map[string][]byte
-	details    kargoapi.WebhookReceiverDetails
+	client          client.Client
+	project         string
+	secretName      string
+	secretNamespace string
+	secretData      map[string][]byte
+	details         kargoapi.WebhookReceiverDetails
 }
 
 // getSecretName implements WebhookReceiver.
 func (b *baseWebhookReceiver) getSecretName() string {
 	return b.secretName
+}
+
+func (b *baseWebhookReceiver) getSecretNamespace() string {
+	return b.secretNamespace
 }
 
 // setSecretData implements WebhookReceiver.
