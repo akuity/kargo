@@ -308,7 +308,7 @@ type GitHubSignConfig struct {
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
 	// The URL of the GitHub repository.
 	RepoURL string `json:"repoURL"`
-	// The branch whose ref will be force-updated to point to the final signed commit.
+	// The branch whose ref will be updated to point to the final signed commit.
 	TargetBranch string `json:"targetBranch"`
 }
 

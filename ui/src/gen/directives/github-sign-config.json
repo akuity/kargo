@@ -11,7 +11,7 @@
   },
   "targetBranch": {
    "type": "string",
-   "description": "The branch whose ref will be force-updated to point to the final signed commit.",
+   "description": "The branch whose ref will be updated to point to the final signed commit.",
    "minLength": 1
   },
   "head": {
