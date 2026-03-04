@@ -117,6 +117,16 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
+	// Index running Promotions by pull requests they are waiting on
+	if err := kargoMgr.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Promotion{},
+		indexer.RunningPromotionsByPullRequestField,
+		indexer.RunningPromotionsByPullRequest(ctx, kargoMgr.GetClient()),
+	); err != nil {
+		return fmt.Errorf("index running Promotions by pull request: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
 		k8sevent.NewEventSender(
