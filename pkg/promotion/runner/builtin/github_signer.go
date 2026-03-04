@@ -347,7 +347,7 @@ func (g *gitHubSigner) signRevisionRange(
 		branchRef,
 		github.UpdateRef{
 			SHA:   lastSignedSHA,
-			Force: github.Ptr(true), // force: we are replacing the unsigned revisions
+			Force: new(bool),
 		},
 	)
 	if err != nil {

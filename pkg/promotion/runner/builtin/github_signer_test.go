@@ -278,7 +278,7 @@ func Test_gitHubSigner_signRevisionRange(t *testing.T) {
 				) (*github.Reference, *github.Response, error) {
 					assert.Equal(t, "heads/main", ref)
 					assert.Equal(t, "signed-1", ur.SHA)
-					assert.True(t, ur.GetForce())
+					assert.False(t, ur.GetForce())
 					return &github.Reference{}, nil, nil
 				},
 			},
