@@ -18,6 +18,8 @@ import (
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
 	kc := fake.NewClientBuilder().Build()
+	// we pass the same client for both the client since the fake client
+	// doesn't use the cache at all.
 	r := newReconciler(kc, kc, testCfg)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
