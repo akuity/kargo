@@ -188,6 +188,96 @@ func refreshWarehouses(
 	)
 }
 
+// refreshPromotions refreshes all running Promotions that are waiting on a
+// pull request matching any of the given repository URLs and PR number. If the
+// project is non-empty, only Promotions in that namespace are considered.
+// Note: Callers are responsible for normalizing the provided repository URLs.
+func refreshPromotions(
+	ctx context.Context,
+	w http.ResponseWriter,
+	c client.Client,
+	project string,
+	repoURLs []string,
+	prNumber int,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	// De-dupe repository URLs
+	slices.Sort(repoURLs)
+	repoURLs = slices.Compact(repoURLs)
+	// If there had been any empty strings in the slice, after sorting and
+	// compacting, at most the zero element will be empty. If it is, remove it.
+	if len(repoURLs) > 0 && repoURLs[0] == "" {
+		repoURLs = repoURLs[1:]
+	}
+
+	// The distinct set of all Promotions that should be refreshed
+	toRefresh := map[client.ObjectKey]*kargoapi.Promotion{}
+	for _, repoURL := range repoURLs {
+		key := fmt.Sprintf("%s:%d", repoURL, prNumber)
+		repoLogger := logger.WithValues("repositoryURL", repoURL, "prNumber", prNumber)
+
+		listOpts := make([]client.ListOption, 1, 2)
+		listOpts[0] = client.MatchingFields{
+			indexer.RunningPromotionsByPullRequestField: key,
+		}
+		if project != "" {
+			listOpts = append(listOpts, client.InNamespace(project))
+		}
+
+		promos := kargoapi.PromotionList{}
+		if err := c.List(ctx, &promos, listOpts...); err != nil {
+			repoLogger.Error(err, "error listing matching Promotions")
+			xhttp.WriteErrorJSON(w, err)
+			return
+		}
+
+		for _, promo := range promos.Items {
+			promoKey := client.ObjectKeyFromObject(&promo)
+			if _, alreadyRefreshing := toRefresh[promoKey]; !alreadyRefreshing {
+				toRefresh[promoKey] = &promo
+			}
+		}
+	}
+
+	logger.Debug("found Promotions to refresh", "count", len(toRefresh))
+
+	var failures int
+	for _, promo := range toRefresh {
+		promoLogger := logger.WithValues(
+			"namespace", promo.Namespace,
+			"name", promo.Name,
+		)
+		if err := api.RefreshObject(ctx, c, promo); err != nil {
+			failures++
+			promoLogger.Error(err, "failed to refresh Promotion")
+		} else {
+			promoLogger.Debug("marked Promotion for refresh")
+		}
+	}
+
+	if failures > 0 {
+		xhttp.WriteResponseJSON(
+			w,
+			http.StatusInternalServerError,
+			map[string]string{
+				"error": fmt.Sprintf("failed to refresh %d of %d promotion(s)",
+					failures,
+					len(toRefresh),
+				),
+			},
+		)
+		return
+	}
+	xhttp.WriteResponseJSON(
+		w,
+		http.StatusOK,
+		map[string]string{
+			"msg": fmt.Sprintf("refreshed %d promotion(s)", len(toRefresh)),
+		},
+	)
+}
+
 func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,
