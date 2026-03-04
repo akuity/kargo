@@ -38,14 +38,16 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	cfg    ReconcilerConfig
 	client client.Client
+	// project scoped secrets are not cached so we need to query the api-server directly
+	apiReader client.Reader
 }
 
 func SetupReconcilerWithManager(
 	ctx context.Context,
-	kargoMgr manager.Manager,
+	mgr manager.Manager,
 	cfg ReconcilerConfig,
 ) error {
-	_, err := ctrl.NewControllerManagedBy(kargoMgr).
+	_, err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.ProjectConfig{}).
 		WithOptions(controller.CommonOptions(cfg.MaxConcurrentReconciles)).
 		WithEventFilter(intpredicate.IgnoreDelete[client.Object]{}).
@@ -55,7 +57,7 @@ func SetupReconcilerWithManager(
 				kargo.RefreshRequested{},
 			),
 		).
-		Build(newReconciler(kargoMgr.GetClient(), cfg))
+		Build(newReconciler(mgr.GetClient(), mgr.GetAPIReader(), cfg))
 	if err != nil {
 		return fmt.Errorf("error creating ProjectConfig reconciler: %w", err)
 	}
@@ -67,10 +69,15 @@ func SetupReconcilerWithManager(
 	return nil
 }
 
-func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
+func newReconciler(
+	kubeClient client.Client,
+	apiReader client.Reader,
+	cfg ReconcilerConfig,
+) *reconciler {
 	return &reconciler{
-		cfg:    cfg,
-		client: kubeClient,
+		apiReader: apiReader,
+		cfg:       cfg,
+		client:    kubeClient,
 	}
 }
 
@@ -240,6 +247,7 @@ func (r *reconciler) syncWebhookReceivers(
 		receiver, err := external.NewReceiver(
 			ctx,
 			r.client,
+			r.apiReader, // project scoped secrets are not cached so we need to query the api-server directly
 			r.cfg.ExternalWebhookServerBaseURL,
 			projectCfg.Name,
 			projectCfg.Name, // Secret namespace is the same as the Project name/namespace

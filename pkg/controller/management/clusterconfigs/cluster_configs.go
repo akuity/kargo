@@ -253,6 +253,7 @@ func (r *reconciler) syncWebhookReceivers(
 		receiver, err := external.NewReceiver(
 			ctx,
 			r.client,
+			r.client, // cluster scoped secrets can be cached so we can use the regular client as the api reader
 			r.cfg.ExternalWebhookServerBaseURL,
 			"",                             // No Project name for cluster-level receivers
 			r.cfg.SystemResourcesNamespace, // Secret namespace is one designated for cluster-level Secrets
