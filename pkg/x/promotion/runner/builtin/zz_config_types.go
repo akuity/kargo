@@ -289,6 +289,8 @@ type GitPushConfig struct {
 type GitTagConfig struct {
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey,omitempty"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`
 }

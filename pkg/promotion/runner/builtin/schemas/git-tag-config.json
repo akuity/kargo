@@ -12,6 +12,10 @@
       "type": "string",
       "description": "The tag to create in the repository.",
       "minLength": 1
+    },
+    "signingKey": {
+      "type": "string",
+      "description": "The GPG signing key for the author."
     }
   },
   "required": ["path", "tag"]
