@@ -316,9 +316,6 @@ type TagOptions struct {
 	SigningMsg string
 }
 
-// CreateTag creates a new tag with the specified name. If the author field of
-// opts is non-nil, the tag will be signed using the provided author information
-// and signing message. If the author field is nil, the tag will be unsigned.
 func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	if opts == nil {
 		opts = &TagOptions{}
