@@ -14,10 +14,10 @@ referencing the current `HEAD` of a checked-out branch.
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The tag to create. |
-| `signer.name` | `string` | N | The signer's name. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
-| `signer.email` | `string` | N | The signer's email address. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
-| `signer.signingKey` | `string` | Y | The GPG signing key for the signer. |
-| `signer.signingMessage` | `string` | Y | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
+| `tagger.name` | `string` | N | The tagger's name. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
+| `tagger.email` | `string` | N | The tagger's email address. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
+| `tagger.signingKey` | `string` | Y | The GPG signing key for the tagger. |
+| `tagger.signingMessage` | `string` | Y | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 
 ## Output
 
@@ -73,13 +73,14 @@ steps:
 
 ### Creating A Signed Tag
 
-In this example, the `git-tag` step creates a signed tag using the provided signer information.
+In this example, the `git-tag` step creates a signed tag using the provided 
+tagger signing information.
 
 :::note
 
-Signing information may have been configured at the system level by a Kargo 
-admin. If a system-level configuration exists, the example shown below would 
-override it.
+Tagger signing information may have been configured at the system level by a 
+Kargo admin. If a system-level configuration exists, the example shown below 
+would override it.
 
 :::
 
@@ -89,7 +90,7 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
-    signer:
+    tagger:
       name: yourname
       email: your@inbox.com
       signingKey: ${{ secret('my-gpg-secret').privateKey }}
