@@ -613,9 +613,6 @@ func (w *workTree) Push(opts *PushOptions) error {
 	switch {
 	case opts.Tag != "":
 		args = append(args, "tag", opts.Tag)
-		if opts.Force {
-			args = append(args, "--force")
-		}
 		if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
 			return fmt.Errorf("error pushing tag: %w", err)
 		}
