@@ -2,22 +2,24 @@ package create
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type createTokenOptions struct {
@@ -130,24 +132,48 @@ func (o *createTokenOptions) validate() error {
 
 // run creates an API token and prints it to the console.
 func (o *createTokenOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	resp, err := kargoSvcCli.CreateAPIToken(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.CreateAPITokenRequest{
-				SystemLevel: o.SystemLevel,
-				Project:     o.Project,
-				RoleName:    o.RoleName,
-				Name:        o.Name,
-			},
-		),
-	)
+	var payload any
+	if o.SystemLevel {
+		var res *rbac.CreateSystemAPITokenCreated
+		if res, err = apiClient.Rbac.CreateSystemAPIToken(
+			rbac.NewCreateSystemAPITokenParams().
+				WithRole(o.RoleName).
+				WithBody(&models.CreateAPITokenRequest{
+					Name: o.Name,
+				}),
+			nil,
+		); err != nil {
+			return fmt.Errorf("create API token: %w", err)
+		}
+		payload = res.GetPayload()
+	} else {
+		var res *rbac.CreateProjectAPITokenCreated
+		if res, err = apiClient.Rbac.CreateProjectAPIToken(
+			rbac.NewCreateProjectAPITokenParams().
+				WithProject(o.Project).
+				WithRole(o.RoleName).
+				WithBody(&models.CreateAPITokenRequest{
+					Name: o.Name,
+				}),
+			nil,
+		); err != nil {
+			return fmt.Errorf("create API token: %w", err)
+		}
+		payload = res.GetPayload()
+	}
+
+	secretJSON, err := json.Marshal(payload)
 	if err != nil {
-		return fmt.Errorf("get API token: %w", err)
+		return fmt.Errorf("marshal response: %w", err)
+	}
+	var secret *corev1.Secret
+	if err = json.Unmarshal(secretJSON, &secret); err != nil {
+		return fmt.Errorf("unmarshal secret: %w", err)
 	}
 
 	// If user specified an output format (yaml, json, etc.), use it
@@ -156,11 +182,11 @@ func (o *createTokenOptions) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("new printer: %w", err)
 		}
-		return printer.PrintObj(resp.Msg.TokenSecret, o.Out)
+		return printer.PrintObj(secret, o.Out)
 	}
 
 	// Otherwise, print the token value clearly so users don't miss it
-	tokenValue := string(resp.Msg.TokenSecret.Data["token"])
+	tokenValue := string(secret.Data["token"])
 	if tokenValue == "" {
 		return fmt.Errorf("token data is empty")
 	}

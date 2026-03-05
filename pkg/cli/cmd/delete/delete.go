@@ -2,23 +2,22 @@ package delete
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	sigyaml "sigs.k8s.io/yaml"
 
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type deleteOptions struct {
@@ -76,7 +75,9 @@ kargo delete warehouse --project=my-project my-warehouse
 
 	// Register subcommands.
 	cmd.AddCommand(newClusterConfigCommand(cfg, streams))
-	cmd.AddCommand(newCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newGenericCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newProjectConfigCommand(cfg, streams))
 	cmd.AddCommand(newRoleCommand(cfg, streams))
@@ -125,43 +126,46 @@ func (o *deleteOptions) run(ctx context.Context) error {
 		return fmt.Errorf("read manifests: %w", err)
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
-	if err != nil {
-		return fmt.Errorf("get client from config: %w", err)
-	}
-
-	resp, err := kargoSvcCli.DeleteResource(ctx, connect.NewRequest(&kargosvcapi.DeleteResourceRequest{
-		Manifest: manifest,
-	}))
-	if err != nil {
-		return fmt.Errorf("delete resource: %w", err)
-	}
-
-	resCap := len(resp.Msg.GetResults())
-	successRes := make([]*kargosvcapi.DeleteResourceResult_DeletedResourceManifest, 0, resCap)
-	deleteErrs := make([]error, 0, resCap)
-	for _, r := range resp.Msg.GetResults() {
-		switch typedRes := r.GetResult().(type) {
-		case *kargosvcapi.DeleteResourceResult_DeletedResourceManifest:
-			successRes = append(successRes, typedRes)
-		case *kargosvcapi.DeleteResourceResult_Error:
-			deleteErrs = append(deleteErrs, errors.New(typedRes.Error))
-		}
-	}
-
 	printer, err := o.ToPrinter()
 	if err != nil {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	for _, r := range successRes {
-		var obj unstructured.Unstructured
-		if err := sigyaml.Unmarshal(r.DeletedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
-				fmt.Errorf("unmarshal deleted manifest: %w", err))
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	if err != nil {
+		return fmt.Errorf("get client from config: %w", err)
+	}
+
+	res, err := apiClient.Resources.DeleteResource(
+		resources.NewDeleteResourceParams().
+			WithManifest(string(manifest)),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("delete resource: %w", err)
+	}
+
+	deleteErrs := make([]error, 0, len(res.Payload.Results))
+	for _, r := range res.Payload.Results {
+		if r.Error != "" {
+			deleteErrs = append(deleteErrs, errors.New(r.Error))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.Out)
+		if len(r.DeletedResourceManifest) > 0 {
+			manifestJSON, err := json.Marshal(r.DeletedResourceManifest)
+			if err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("marshal created manifest: %w", err))
+				continue
+			}
+			var obj unstructured.Unstructured
+			if err := json.Unmarshal(manifestJSON, &obj); err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("unmarshal created manifest: %w", err))
+				continue
+			}
+			_ = printer.PrintObj(&obj, o.Out)
+		}
 	}
 	return errors.Join(deleteErrs...)
 }

@@ -2,12 +2,16 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/client-go/rest"
@@ -17,6 +21,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	rollouts "github.com/akuity/kargo/api/stubs/rollouts/v1alpha1"
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 )
@@ -185,7 +190,7 @@ func TestGetAnalysisRun(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -201,7 +206,7 @@ func TestGetAnalysisRun(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						return fake.NewClientBuilder().
 							WithScheme(scheme).
 							WithObjects(
@@ -223,4 +228,61 @@ func TestGetAnalysisRun(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_getAnalysisRun(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testRun := &rollouts.AnalysisRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-analysisrun",
+		},
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/"+testRun.Name,
+		[]restTestCase{
+			{
+				name:          "Rollouts integration disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig:  &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name: "Project does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "AnalysisRun does not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:         "gets AnalysisRun",
+				serverConfig: &config.ServerConfig{RolloutsIntegrationEnabled: true},
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testRun,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the AnalysisRun in the response
+					run := &rollouts.AnalysisRun{}
+					err := json.Unmarshal(w.Body.Bytes(), run)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, run.Namespace)
+					require.Equal(t, testRun.Name, run.Name)
+				},
+			},
+		},
+	)
 }

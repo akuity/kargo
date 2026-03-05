@@ -2,25 +2,25 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 	"github.com/akuity/kargo/pkg/conditions"
 )
 
@@ -91,41 +91,57 @@ func (o *getProjectsOptions) complete(args []string) {
 
 // run gets the projects from the server and prints them to the console.
 func (o *getProjectsOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListProjectsResponse]
-		if resp, err = kargoSvcCli.ListProjects(
-			ctx,
-			connect.NewRequest(&v1alpha1.ListProjectsRequest{}),
+		var res *core.ListProjectsOK
+		if res, err = apiClient.Core.ListProjects(
+			core.NewListProjectsParams(),
+			nil,
 		); err != nil {
 			return fmt.Errorf("list projects: %w", err)
 		}
-		return PrintObjects(resp.Msg.GetProjects(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		var projectsJSON []byte
+		if projectsJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		projectsList := struct {
+			Items []*kargoapi.Project `json:"items"`
+		}{}
+		if err = json.Unmarshal(projectsJSON, &projectsList); err != nil {
+			return err
+		}
+		return PrintObjects(projectsList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
-	res := make([]*kargoapi.Project, 0, len(o.Names))
+	projects := make([]*kargoapi.Project, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetProjectResponse]
-		if resp, err = kargoSvcCli.GetProject(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetProjectRequest{
-					Name: name,
-				},
-			),
+		var res *core.GetProjectOK
+		if res, err = apiClient.Core.GetProject(
+			core.NewGetProjectParams().WithProject(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetProject())
+		var projectJSON []byte
+		if projectJSON, err = json.Marshal(res.Payload); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		var project *kargoapi.Project
+		if err = json.Unmarshal(projectJSON, &project); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		projects = append(projects, project)
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(projects, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print projects: %w", err)
 	}
 	return errors.Join(errs...)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -18,6 +19,69 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
 )
+
+func TestComputeDataHash(t *testing.T) {
+	testCases := []struct {
+		name     string
+		data     map[string][]byte
+		expected string
+	}{
+		{
+			name:     "nil data",
+			data:     nil,
+			expected: computeDataHash(nil), // consistent hash for nil
+		},
+		{
+			name:     "empty data",
+			data:     map[string][]byte{},
+			expected: computeDataHash(map[string][]byte{}),
+		},
+		{
+			name: "single key",
+			data: map[string][]byte{"key": []byte("value")},
+		},
+		{
+			name: "multiple keys - order independent",
+			data: map[string][]byte{
+				"z-key": []byte("z-value"),
+				"a-key": []byte("a-value"),
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			hash1 := computeDataHash(tc.data)
+			hash2 := computeDataHash(tc.data)
+			// Hash should be deterministic
+			require.Equal(t, hash1, hash2)
+			// Hash should be 16 characters (truncated hex)
+			require.Len(t, hash1, 16)
+		})
+	}
+
+	// Test that different data produces different hashes
+	t.Run("different data produces different hashes", func(t *testing.T) {
+		hash1 := computeDataHash(map[string][]byte{"key": []byte("value1")})
+		hash2 := computeDataHash(map[string][]byte{"key": []byte("value2")})
+		require.NotEqual(t, hash1, hash2)
+	})
+
+	// Test order independence
+	t.Run("key order does not affect hash", func(t *testing.T) {
+		data1 := map[string][]byte{
+			"a": []byte("1"),
+			"b": []byte("2"),
+			"c": []byte("3"),
+		}
+		data2 := map[string][]byte{
+			"c": []byte("3"),
+			"a": []byte("1"),
+			"b": []byte("2"),
+		}
+		require.Equal(t, computeDataHash(data1), computeDataHash(data2))
+	})
+}
 
 func TestReconcile(t *testing.T) {
 	const (
@@ -35,10 +99,38 @@ func TestReconcile(t *testing.T) {
 	err := corev1.AddToScheme(testScheme)
 	require.NoError(t, err)
 
-	// some tests require a source Secret with a finalizer already present
+	// Helper to add finalizer to a secret
 	withFinalizer := func(s *corev1.Secret) *corev1.Secret {
 		secretCopy := s.DeepCopy()
 		secretCopy.Finalizers = []string{kargoapi.FinalizerName}
+		return secretCopy
+	}
+
+	// Helper to add hash annotation to a secret based on its data
+	withHashAnnotation := func(s *corev1.Secret) *corev1.Secret {
+		secretCopy := s.DeepCopy()
+		if secretCopy.Annotations == nil {
+			secretCopy.Annotations = make(map[string]string)
+		}
+		secretCopy.Annotations[syncedDataHashAnnotation] = computeDataHash(secretCopy.Data)
+		return secretCopy
+	}
+
+	// Helper to add a specific hash annotation (for mismatch testing)
+	withSpecificHash := func(s *corev1.Secret, hash string) *corev1.Secret {
+		secretCopy := s.DeepCopy()
+		if secretCopy.Annotations == nil {
+			secretCopy.Annotations = make(map[string]string)
+		}
+		secretCopy.Annotations[syncedDataHashAnnotation] = hash
+		return secretCopy
+	}
+
+	// Helper to mark a secret as being deleted
+	withDeletionTimestamp := func(s *corev1.Secret) *corev1.Secret {
+		secretCopy := s.DeepCopy()
+		now := metav1.Now()
+		secretCopy.DeletionTimestamp = &now
 		return secretCopy
 	}
 
@@ -49,29 +141,29 @@ func TestReconcile(t *testing.T) {
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"key": []byte("two-value"),
+			"key": []byte("source-value"),
 		},
 	}
 
-	testDestSecret1 := &corev1.Secret{
+	testDestSecretDifferentData := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testDestNamespace,
 			Name:      testSecretName,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"key": []byte("one-value"),
+			"key": []byte("different-value"),
 		},
 	}
 
-	testDestSecret2 := &corev1.Secret{
+	testDestSecretMatchingData := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: testDestNamespace,
 			Name:      testSecretName,
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
-			"key": []byte("two-value"),
+			"key": []byte("source-value"),
 		},
 	}
 
@@ -117,61 +209,23 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "source and destination both exist; error patching destination",
-			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(testSrcSecret, testDestSecret1).
-				WithInterceptorFuncs(
-					interceptor.Funcs{
-						Patch: func(
-							context.Context,
-							client.WithWatch,
-							client.Object,
-							client.Patch,
-							...client.PatchOption,
-						) error {
-							return fmt.Errorf("something went wrong")
-						},
-					},
-				).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "source and destination both exist; success patching destination",
-			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(withFinalizer(testSrcSecret), testDestSecret1).Build(),
-			assertions: func(t *testing.T, c client.Client, err error) {
-				require.NoError(t, err)
-				dest := &corev1.Secret{}
-				err = c.Get(t.Context(), types.NamespacedName{
-					Namespace: testDestNamespace,
-					Name:      testSecretName,
-				}, dest)
-				require.NoError(t, err)
-				require.Equal(t, testDestSecret2.Data, dest.Data)
-			},
-		},
-		{
 			name: "source with no finalizer gets finalizer added",
 			client: fake.NewClientBuilder().
 				WithScheme(testScheme).
 				WithObjects(testSrcSecret).
 				Build(),
 			assertions: func(t *testing.T, c client.Client, _ error) {
-				// make sure source secret now has finalizer
-				secret := new(corev1.Secret)
+				secret := &corev1.Secret{}
 				getErr := c.Get(t.Context(), types.NamespacedName{
 					Namespace: testSrcNamespace,
 					Name:      testSecretName,
 				}, secret)
 				require.NoError(t, getErr)
-				require.Len(t, secret.Finalizers, 1)
-				require.Equal(t, secret.Finalizers[0], kargoapi.FinalizerName)
+				require.Contains(t, secret.Finalizers, kargoapi.FinalizerName)
 			},
 		},
 		{
-			name: "source exists, destination does not; success creating destination",
+			name: "create: destination does not exist; creates with hash annotation",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
 				WithObjects(withFinalizer(testSrcSecret)).Build(),
 			assertions: func(t *testing.T, c client.Client, err error) {
@@ -182,31 +236,115 @@ func TestReconcile(t *testing.T) {
 					Name:      testSecretName,
 				}, dest)
 				require.NoError(t, err)
-				require.Equal(t, testDestSecret2.Data, dest.Data)
+				require.Equal(t, testSrcSecret.Data, dest.Data)
+				// Verify hash annotation was added
+				require.Contains(t, dest.Annotations, syncedDataHashAnnotation)
+				require.Equal(t, computeDataHash(testSrcSecret.Data), dest.Annotations[syncedDataHashAnnotation])
+				// Verify origin annotation was added
+				require.Equal(t, testSrcNamespace, dest.Annotations[originNamespaceAnnotation])
 			},
 		},
 		{
-			name: "successful delete",
+			name: "update: skipped when destination has no hash annotation",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(withFinalizer(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testSrcNamespace,
-						Name:      testSecretName,
-						DeletionTimestamp: &metav1.Time{
-							Time: metav1.Now().Time,
-						},
-					},
-				}), testDestSecret2).Build(),
+				WithObjects(
+					withFinalizer(testSrcSecret),
+					testDestSecretDifferentData, // no hash annotation
+				).Build(),
 			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
-				// Destination Secret should be deleted.
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Data should NOT have been updated
+				require.Equal(t, testDestSecretDifferentData.Data, dest.Data)
+			},
+		},
+		{
+			name: "update: skipped when destination was modified externally (hash mismatch)",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withFinalizer(testSrcSecret),
+					// Destination has hash annotation but data was modified
+					withSpecificHash(testDestSecretDifferentData, "old-hash-value"),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Data should NOT have been updated
+				require.Equal(t, testDestSecretDifferentData.Data, dest.Data)
+			},
+		},
+		{
+			name: "update: succeeds when hash matches",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withFinalizer(testSrcSecret),
+					// Destination has matching hash (as if previously synced with old data)
+					withHashAnnotation(testDestSecretDifferentData),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Data should have been updated to match source
+				require.Equal(t, testSrcSecret.Data, dest.Data)
+				// Hash annotation should be updated
+				require.Equal(t, computeDataHash(testSrcSecret.Data), dest.Annotations[syncedDataHashAnnotation])
+			},
+		},
+		{
+			name: "update: error updating destination",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withFinalizer(testSrcSecret),
+					withHashAnnotation(testDestSecretDifferentData),
+				).
+				WithInterceptorFuncs(
+					interceptor.Funcs{
+						Update: func(
+							context.Context,
+							client.WithWatch,
+							client.Object,
+							...client.UpdateOption,
+						) error {
+							return fmt.Errorf("something went wrong")
+						},
+					},
+				).Build(),
+			assertions: func(t *testing.T, _ client.Client, err error) {
+				require.ErrorContains(t, err, "something went wrong")
+			},
+		},
+		{
+			name: "delete: successful when hash matches",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+					withHashAnnotation(testDestSecretMatchingData),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				// Destination Secret should be deleted
 				dest := &corev1.Secret{}
 				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: testDestNamespace,
 					Name:      testSecretName,
 				}, dest)
 				require.ErrorContains(t, err, "not found")
-				// Finalizer should be removed from source Secret.
+				// Source should be gone (finalizer removed allowing deletion)
 				src := &corev1.Secret{}
 				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: testSrcNamespace,
@@ -216,33 +354,80 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "failed delete; destination does not exist error",
+			name: "delete: skipped when destination has no hash annotation",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(withFinalizer(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testSrcNamespace,
-						Name:      testSecretName,
-						DeletionTimestamp: &metav1.Time{
-							Time: metav1.Now().Time,
-						},
-					},
-				})).Build(),
-			assertions: func(t *testing.T, _ client.Client, err error) {
+				WithObjects(
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+					testDestSecretMatchingData, // no hash annotation
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
 				require.NoError(t, err)
+				// Destination should still exist
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Source finalizer should still be removed
+				src := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, src)
+				require.ErrorContains(t, err, "not found")
 			},
 		},
 		{
-			name: "failed delete; error deleting destination",
+			name: "delete: skipped when destination was modified externally",
 			client: fake.NewClientBuilder().WithScheme(testScheme).
-				WithObjects(withFinalizer(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testSrcNamespace,
-						Name:      testSecretName,
-						DeletionTimestamp: &metav1.Time{
-							Time: metav1.Now().Time,
-						},
-					},
-				}), testDestSecret2).
+				WithObjects(
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+					// Hash doesn't match current data
+					withSpecificHash(testDestSecretMatchingData, "old-hash"),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				// Destination should still exist
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Source finalizer should still be removed
+				src := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, src)
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "delete: destination does not exist; just removes finalizer",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				// Source should be gone (finalizer removed)
+				src := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, src)
+				require.ErrorContains(t, err, "not found")
+			},
+		},
+		{
+			name: "delete: error deleting destination",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+					withHashAnnotation(testDestSecretMatchingData),
+				).
 				WithInterceptorFuncs(
 					interceptor.Funcs{
 						Delete: func(
@@ -259,7 +444,42 @@ func TestReconcile(t *testing.T) {
 				require.ErrorContains(t, err, "something went wrong")
 			},
 		},
+		{
+			name: "delete: preserves destination when source namespace is being deleted",
+			client: fake.NewClientBuilder().WithScheme(testScheme).
+				WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testSrcNamespace,
+							DeletionTimestamp: &metav1.Time{
+								Time: time.Now(),
+							},
+							Finalizers: []string{"kubernetes"}, // Required by fake client
+						},
+					},
+					withDeletionTimestamp(withFinalizer(testSrcSecret)),
+					withHashAnnotation(testDestSecretMatchingData),
+				).Build(),
+			assertions: func(t *testing.T, c client.Client, err error) {
+				require.NoError(t, err)
+				// Destination should still exist (preserved)
+				dest := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testDestNamespace,
+					Name:      testSecretName,
+				}, dest)
+				require.NoError(t, err)
+				// Source finalizer should be removed
+				src := &corev1.Secret{}
+				err = c.Get(t.Context(), types.NamespacedName{
+					Namespace: testSrcNamespace,
+					Name:      testSecretName,
+				}, src)
+				require.ErrorContains(t, err, "not found")
+			},
+		},
 	}
+
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			req := ctrl.Request{

@@ -7,7 +7,7 @@
   "repoURL": {
    "type": "string",
    "minLength": 1,
-   "pattern": "^(((https?)|(oci))://)(([\\w\\d\\.\\-]+)(:([\\d]+)?)?(/.*)*$",
+   "pattern": "^(((https?)|(oci))://)(([\\w\\d\\.\\-]+)(:([\\d]+)?)?(/.*)*)$",
    "description": "RepoURL specifies the URL of a Helm chart repository. It may be a classic chart repository (using HTTP/S) OR a repository within an OCI registry. Classic chart repositories can contain differently named charts. When this field points to such a repository, the name field MUST also be used to specify the name of the desired chart within that repository. In the case of a repository within an OCI registry, the URL implicitly points to a specific chart and the name field MUST NOT be used. This field is required."
   },
   "name": {

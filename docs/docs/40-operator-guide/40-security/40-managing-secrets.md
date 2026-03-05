@@ -376,6 +376,29 @@ new locations, with a few exceptions:
 Kargo v1.12.0 will remove the automatic migration and upgrades to that version
 or greater will **fail** if values are detected for any of the old settings.
 
+**Sync Behavior:**
+
+The automatic sync from old to new locations works as follows:
+
+* **Unmodified secrets:** If a `Secret` in the new location has not been
+  modified since it was synced, updates from the old location will continue to
+  propagate. Deleting from the old location will also delete from the new
+  location.
+
+* **Modified secrets:** If you modify a `Secret` in the new location (via the
+  Kargo UI or otherwise), those changes are protected. Updates from the old
+  location will _not_ overwrite your modifications. Similarly, deleting from the
+  old location will _not_ delete a modified secret from the new location.
+
+* **Deleting from the new location:** If you delete a `Secret` from the new
+  location while it still exists in the old location, it will be recreated on
+  the next sync. To permanently remove a secret, delete it from the old
+  location.
+
+* **Namespace cleanup:** When the old namespace itself is deleted (bulk
+  cleanup), all secrets in the new location are preserved, regardless of whether
+  they were modified.
+
 **What this means, practically speaking:**
 
 * New installations of Kargo need not be concerned with any of this.
@@ -385,9 +408,11 @@ or greater will **fail** if values are detected for any of the old settings.
   * If you manually manage credentials using the Kargo UI, everything will just
     work. Post upgrade, `Secret`s will automatically sync from their old
     locations to their new locations. Kargo will use and manage `Secret`s in
-    their new locations. With due caution, you may manually delete the old
-    namespaces using `kubectl`.
-  
+    their new locations. Any modifications you make via the UI to secrets in the
+    new location will be preserved and not overwritten by subsequent syncs. When
+    you are ready, you may delete the old namespaces using `kubectl` -- all
+    secrets in the new locations will be preserved.
+
   * If you are a more advanced operator who GitOps'es your `Secret`s, you do
     not need to act with any urgency.
 

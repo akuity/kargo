@@ -76,13 +76,13 @@ spec:
 
 Actions are defined by:
 
-1. [`actionType`](#actiontype)
+1. [`action`](#action)
 1. [`whenExpression`](#whenexpression)
 1. [`targetSelectionCriteria`](#defining-targetselectioncriteria)
 
-#### actionType
+#### action
 
-The `actionType` field specifies the action that should be performed.
+The `action` field specifies the action that should be performed.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -96,13 +96,13 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
+        actions:
+          - action: Refresh
 ```
 
 :::note
 
-The only currently supported `actionType` is `Refresh`.
+The only currently supported `action` is `Refresh`.
 :::
 
 
@@ -126,9 +126,9 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header("X-Event-Type") == 'push'"
+        actions:
+          - action: Refresh
+            whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
 :::note
@@ -174,12 +174,12 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: my-warehouse
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: my-warehouse
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -198,12 +198,12 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              name: "${{ normalizeGit(request.body.repository.name) }}"
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                name: "${{ normalizeGit(request.body.repository.name) }}"
 ```
 
 ##### By Labels
@@ -223,14 +223,14 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchLabels:
-                  environment: prod
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchLabels:
+                    environment: prod
 ```
 
 The following example depicts `targetSelectionCriteria` that selects
@@ -249,16 +249,16 @@ spec:
       generic:
         secretRef:
           name: wh-secret
-      actions:
-        - actionType: Refresh
-          whenExpression: "request.header('X-Event-Type') == 'push'"
-          targetSelectionCriteria:
-            - kind: Warehouse
-              labelSelector:
-                matchExpressions:
-                  - key: service
-                    operator: In
-                    values: ["ui", "api"]
+        actions:
+          - action: Refresh
+            whenExpression: "request.header('X-Event-Type') == 'push'"
+            targetSelectionCriteria:
+              - kind: Warehouse
+                labelSelector:
+                  matchExpressions:
+                    - key: service
+                      operator: In
+                      values: ["ui", "api"]
 ```
 
 ##### By Values in an Index
@@ -271,7 +271,7 @@ URL from the request body.
 
 ```yaml
 actions:
-  - actionType: Refresh
+  - action: Refresh
     whenExpression: "request.header('X-Event-Type') == 'push'"
     targetSelectionCriteria:
       - kind: Warehouse

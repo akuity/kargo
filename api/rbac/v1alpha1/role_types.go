@@ -28,12 +28,12 @@ type ResourceDetails struct {
 	ResourceType string   `json:"resourceType,omitempty" protobuf:"bytes,1,opt,name=resourceType"`
 	ResourceName string   `json:"resourceName,omitempty" protobuf:"bytes,2,opt,name=resourceName"`
 	Verbs        []string `json:"verbs,omitempty" protobuf:"bytes,3,rep,name=verbs"`
-}
+} // @name ResourceDetails
 
 type Claim struct {
 	Name   string   `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`
 	Values []string `json:"values,omitempty" protobuf:"bytes,2,rep,name=values"`
-}
+} // @name Claim
 
 type ServiceAccountReference struct {
 	Name      string `json:"name,omitempty" protobuf:"bytes,1,opt,name=name"`

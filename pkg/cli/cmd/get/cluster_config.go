@@ -2,23 +2,23 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/system"
 )
 
 type getClusterConfigOptions struct {
@@ -75,28 +75,37 @@ func (o *getClusterConfigOptions) addFlags(cmd *cobra.Command) {
 
 // run gets the cluster config from the server and prints it to the console.
 func (o *getClusterConfigOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	res := make([]*kargoapi.ClusterConfig, 0, 1)
-	resp, err := kargoSvcCli.GetClusterConfig(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.GetClusterConfigRequest{},
-		),
+	res, err := apiClient.System.GetClusterConfig(
+		system.NewGetClusterConfigParams(),
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("get cluster configuration: %w", err)
 	}
-	if resp.Msg.GetClusterConfig() != nil {
-		res = append(res, resp.Msg.GetClusterConfig())
+	if res.Payload != nil {
+		var configJSON []byte
+		if configJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		var cfg *kargoapi.ClusterConfig
+		if err = json.Unmarshal(configJSON, &cfg); err != nil {
+			return err
+		}
+		if err = PrintObjects(
+			[]*kargoapi.ClusterConfig{cfg},
+			o.PrintFlags,
+			o.IOStreams,
+			o.NoHeaders,
+		); err != nil {
+			return fmt.Errorf("print cluster configuration: %w", err)
+		}
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-		return fmt.Errorf("print cluster configuration: %w", err)
-	}
 	return nil
 }
 

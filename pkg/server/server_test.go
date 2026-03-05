@@ -27,7 +27,7 @@ func TestNewServer(t *testing.T) {
 				context.Context,
 				*rest.Config,
 				*runtime.Scheme,
-			) (client.Client, error) {
+			) (client.WithWatch, error) {
 				return fake.NewClientBuilder().Build(), nil
 			},
 		},

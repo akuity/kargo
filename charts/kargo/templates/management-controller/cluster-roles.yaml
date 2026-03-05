@@ -13,6 +13,7 @@ rules:
   - namespaces
   verbs:
   - create
+  - delete
   - get
   - list
   - patch

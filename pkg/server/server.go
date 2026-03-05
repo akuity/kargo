@@ -207,11 +207,25 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	mux.Handle(grpchealth.NewHandler(NewHealthChecker(), opts))
 	path, svcHandler := svcv1alpha1connect.NewKargoServiceHandler(s, opts)
 	mux.Handle(path, svcHandler)
-	dashboardHandler, err := newDashboardRequestHandler()
-	if err != nil {
-		return fmt.Errorf("error initializing dashboard handler: %w", err)
+
+	for p, h := range s.cfg.AdditionalHandlers {
+		mux.Handle(p, h)
 	}
-	mux.Handle("/", dashboardHandler)
+
+	// Add Gin REST router
+	ginRouter := s.setupRESTRouter(ctx)
+	mux.Handle("/v1beta1/", ginRouter)
+
+	var dashboardFS fs.FS
+	if s.cfg.DashboardFS != nil {
+		dashboardFS = s.cfg.DashboardFS
+	} else {
+		dashboardFS, err = fs.Sub(ui, "ui")
+		if err != nil {
+			return fmt.Errorf("error initializing UI file system: %w", err)
+		}
+	}
+	mux.Handle("/", newDashboardRequestHandler(dashboardFS))
 	if s.cfg.DexProxyConfig != nil {
 		dexProxyCfg := dex.ProxyConfigFromEnv()
 		dexProxy, err := dex.NewProxy(dexProxyCfg)
@@ -270,14 +284,8 @@ func (s *server) Serve(ctx context.Context, l net.Listener) error {
 	}
 }
 
-func newDashboardRequestHandler() (http.HandlerFunc, error) {
+func newDashboardRequestHandler(uiFS fs.FS) http.HandlerFunc {
 	const indexHTML = "index.html"
-
-	uiFS := fs.FS(ui)
-	uiFS, err := fs.Sub(uiFS, "ui")
-	if err != nil {
-		return nil, fmt.Errorf("error initializing UI file system: %w", err)
-	}
 
 	handler := http.FileServer(http.FS(uiFS))
 	withoutGzip := http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -328,5 +336,5 @@ func newDashboardRequestHandler() (http.HandlerFunc, error) {
 	})
 
 	withGz := gzhttp.GzipHandler(withoutGzip)
-	return http.HandlerFunc(withGz.ServeHTTP), nil
+	return http.HandlerFunc(withGz.ServeHTTP)
 }

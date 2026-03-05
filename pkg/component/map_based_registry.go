@@ -41,6 +41,9 @@ func newMapBasedRegistry[V, MD any](
 func (r *mapBasedRegistry[V, MD]) Register(
 	reg NameBasedRegistration[V, MD],
 ) error {
+	if reg.Name == "" {
+		return fmt.Errorf("registration name cannot be empty")
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.registrations[reg.Name]; exists && !r.opts.AllowOverwriting {

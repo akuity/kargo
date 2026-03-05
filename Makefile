@@ -3,9 +3,9 @@ include $(CURDIR)/hack/tools.mk
 SHELL	      ?= /bin/bash
 EXTENDED_PATH ?= $(CURDIR)/hack/bin:$(PATH)
 
-ARGO_CD_CHART_VERSION		:= 8.1.4
-ARGO_ROLLOUTS_CHART_VERSION := 2.40.1
-CERT_MANAGER_CHART_VERSION 	:= 1.18.2
+ARGO_CD_CHART_VERSION		:= 9.4.3
+ARGO_ROLLOUTS_CHART_VERSION := 2.40.6
+CERT_MANAGER_CHART_VERSION 	:= 1.19.3
 
 BUF_LINT_ERROR_FORMAT	?= text
 GO_LINT_EXTRA_FLAGS 	?= --output.text.print-issued-lines --output.text.colors
@@ -140,6 +140,7 @@ test-unit: install-helm
 				-race \
 				-coverprofile=coverage.txt \
 				-covermode=atomic \
+				-count=1 \
 				./... $(GO_TEST_ARGS); \
 			cd - > /dev/null; \
 		done; \
@@ -215,7 +216,32 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+
+.PHONY: codegen-openapi
+codegen-openapi: install-swag install-go-swagger
+	rm -f swagger.yaml swagger.json
+	rm -rf pkg/client/generated
+	rm -rf /tmp/swagger-build
+	mkdir -p /tmp/swagger-build
+	$(SWAG_LINK) init \
+		--generalInfo pkg/server/rest_router.go \
+		--output /tmp/swagger-build \
+		--parseDependency \
+		--parseInternal \
+		--outputTypes yaml,json
+	mv /tmp/swagger-build/swagger.yaml .
+	mv /tmp/swagger-build/swagger.json .
+	rm -rf /tmp/swagger-build
+	mkdir -p pkg/client/generated
+	$(GO_SWAGGER_LINK) generate client \
+		-f swagger.json \
+		-t pkg \
+		--client-package client/generated \
+		--model-package client/generated/models \
+		--skip-validation
+	pnpm --dir=ui install --dev
+	pnpm --dir=ui run generate:api
 
 .PHONY: codegen-proto
 codegen-proto: install-protoc install-go-to-protobuf install-protoc-gen-gogo install-goimports install-buf install-protoc-gen-doc
@@ -354,22 +380,28 @@ hack-build-cli: hack-build-dev-tools
 	$(DOCKER_CMD) sh -c 'GOOS=$(GOOS) GOARCH=$(GOARCH) make build-cli'
 
 .PHONY: hack-kind-up
-hack-kind-up:
-	ctlptl apply -f hack/kind/cluster.yaml
-	make hack-install-prereqs
+hack-kind-up: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-up
-hack-k3d-up:
-	ctlptl apply -f hack/k3d/cluster.yaml
-	make hack-install-prereqs
+hack-k3d-up: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) apply -f hack/k3d/cluster.yaml
+
+.PHONY: hack-tilt-up
+hack-tilt-up: install-tilt install-helm
+	PATH=$(EXTENDED_PATH) $(TILT) up
+
+.PHONY: hack-tilt-down
+hack-tilt-down: install-tilt
+	PATH=$(EXTENDED_PATH) $(TILT) down
 
 .PHONY: hack-kind-down
-hack-kind-down:
-	ctlptl delete -f hack/kind/cluster.yaml
+hack-kind-down: install-ctlptl install-kind
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/kind/cluster.yaml
 
 .PHONY: hack-k3d-down
-hack-k3d-down:
-	ctlptl delete -f hack/k3d/cluster.yaml
+hack-k3d-down: install-ctlptl install-k3d
+	PATH=$(EXTENDED_PATH) $(CTLPTL) delete -f hack/k3d/cluster.yaml
 
 .PHONY: hack-install-prereqs
 hack-install-prereqs: hack-install-cert-manager hack-install-argocd hack-install-argo-rollouts
@@ -398,8 +430,9 @@ hack-install-argocd: install-helm
 		--set server.service.type=NodePort \
 		--set server.service.nodePortHttp=30080 \
 		--set server.extensions.enabled=true \
-		--set server.extensions.contents[0].name=argo-rollouts \
-		--set server.extensions.contents[0].url=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.3/extension.tar \
+		--set server.extensions.extensionList[0].name=argo-rollouts \
+		--set server.extensions.extensionList[0].env[0].name=EXTENSION_URL \
+		--set server.extensions.extensionList[0].env[0].value=https://github.com/argoproj-labs/rollout-extension/releases/download/v0.3.7/extension.tar \
 		--wait
 
 .PHONY: hack-install-argo-rollouts

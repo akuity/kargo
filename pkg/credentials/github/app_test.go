@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"maps"
 	"testing"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/oauth2"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
@@ -178,17 +180,6 @@ func TestAppCredentialProvider_Supports(t *testing.T) {
 			},
 			expected: true,
 		},
-		{
-			name:     "valid with .git suffix",
-			credType: credentials.TypeGit,
-			repoURL:  testRepoURL + ".git",
-			getDataMap: func() map[string][]byte {
-				dm := maps.Clone(supportedDataMap)
-				delete(dm, clientIDKey)
-				return dm
-			},
-			expected: true,
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -227,7 +218,7 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			repoURL string,
-		) (string, error)
+		) (*oauth2.Token, error)
 		assertions func(t *testing.T, creds *credentials.Credentials, err error)
 	}{
 		{
@@ -320,8 +311,8 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "", errors.New("token error")
+			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+				return nil, errors.New("token error")
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
@@ -334,8 +325,11 @@ func TestAppCredentialProvider_GetCredentials(t *testing.T) {
 			credType: credentials.TypeGit,
 			repoURL:  testRepoURL,
 			data:     testData,
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "test-token", nil
+			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+				return &oauth2.Token{
+					AccessToken: "test-token",
+					Expiry:      time.Now().Add(time.Hour),
+				}, nil
 			},
 			assertions: func(t *testing.T, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
@@ -396,7 +390,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			installationID int64,
 			encodedPrivateKey string,
 			repoURL string,
-		) (string, error)
+		) (*oauth2.Token, error)
 		assertions func(*testing.T, *cache.Cache, *credentials.Credentials, error)
 	}{
 		{
@@ -418,8 +412,11 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 		},
 		{
 			name: "cache miss, successful token fetch",
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return fakeAccessToken, nil
+			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+				return &oauth2.Token{
+					AccessToken: fakeAccessToken,
+					Expiry:      time.Now().Add(time.Hour),
+				}, nil
 			},
 			assertions: func(
 				t *testing.T,
@@ -432,16 +429,20 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 				assert.Equal(t, accessTokenUsername, creds.Username)
 				assert.Equal(t, fakeAccessToken, creds.Password)
 
-				// Verify the token was cached
-				cachedToken, found := c.Get(testTokenCacheKey)
+				// Verify the token was cached with a TTL based on the
+				// token's actual expiry
+				items := c.Items()
+				item, found := items[testTokenCacheKey]
 				assert.True(t, found)
-				assert.Equal(t, fakeAccessToken, cachedToken)
+				expectedTTL := 55 * time.Minute // 1h expiry - 5m margin
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
 			name: "error in getAccessToken",
-			getAccessTokenFn: func(_ string, _ int64, _, _ string) (string, error) {
-				return "", errors.New("token error")
+			getAccessTokenFn: func(string, int64, string, string) (*oauth2.Token, error) {
+				return nil, errors.New("token error")
 			},
 			assertions: func(
 				t *testing.T,
@@ -472,6 +473,7 @@ func TestAppCredentialProvider_getUsernameAndPassword(t *testing.T) {
 			}
 
 			creds, err := provider.getUsernameAndPassword(
+				t.Context(),
 				fakeAppOrClientID,
 				fakeInstallationID,
 				fakePrivateKey,
@@ -536,11 +538,6 @@ func TestAppCredentialProvider_extractRepoName(t *testing.T) {
 		{
 			name:     "GitHub URL",
 			repoURL:  "https://github.com/example/repo",
-			expected: "repo",
-		},
-		{
-			name:     "GitHub URL with .git suffix",
-			repoURL:  "https://github.com/example/repo.git",
 			expected: "repo",
 		},
 		{

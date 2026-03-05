@@ -3,6 +3,8 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -11,9 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/config"
 )
 
 func TestQueryFreight(t *testing.T) {
@@ -741,4 +745,95 @@ func TestSortFreightGroups(t *testing.T) {
 			testCase.assertions(t, testCase.groups)
 		})
 	}
+}
+
+func Test_server_queryFreight(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testWarehouse := &kargoapi.Warehouse{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-warehouse",
+			Namespace: testProject.Name,
+		},
+	}
+	testFreight1 := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight-1",
+			Namespace: testProject.Name,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: testWarehouse.Name,
+		},
+		Images: []kargoapi.Image{
+			{RepoURL: "example.com/image", Tag: "v1.0.0"},
+		},
+	}
+	testFreight2 := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-freight-2",
+			Namespace: testProject.Name,
+		},
+		Origin: kargoapi.FreightOrigin{
+			Kind: kargoapi.FreightOriginKindWarehouse,
+			Name: testWarehouse.Name,
+		},
+		Commits: []kargoapi.GitCommit{
+			{RepoURL: "https://github.com/example/repo", ID: "abc123"},
+		},
+	}
+
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/freight",
+		[]restTestCase{
+			{
+				name:          "Project not found",
+				clientBuilder: fake.NewClientBuilder(),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "List all freight",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight1, testFreight2),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+				},
+			},
+			{
+				name:          "Stage not found when filtering by stage",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?stage=nonexistent-stage",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Invalid groupBy value",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=invalid",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusBadRequest, w.Code)
+				},
+			},
+			{
+				name:          "Group by image repository",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=image_repo",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight1),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+				},
+			},
+			{
+				name:          "Group by git repository",
+				url:           "/v1beta1/projects/" + testProject.Name + "/freight?groupBy=git_repo",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testFreight2),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+				},
+			},
+		},
+	)
 }

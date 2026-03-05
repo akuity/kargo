@@ -14,6 +14,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 
 	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/dex"
@@ -52,6 +53,7 @@ func TestNewAuthInterceptor(t *testing.T) {
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
 	require.NotNil(t, a.verifyIDPIssuedTokenFn)
+	require.NotNil(t, a.verifyKubernetesTokenFn)
 	require.NotNil(t, a.oidcExtractClaimsFn)
 	require.NotNil(t, a.listServiceAccountsFn)
 }
@@ -199,14 +201,10 @@ func TestAuthenticate(t *testing.T) {
 				},
 			},
 			token: testToken,
-			// We can't parse the token as a JWT, so we assume it could be an opaque
-			// bearer token for the k8s API server. We expect user info containing the
-			// raw token to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
-				require.NoError(t, err)
-				u, ok := user.InfoFromContext(ctx)
-				require.True(t, ok)
-				require.Equal(t, testToken, u.BearerToken)
+				require.Equal(t, "invalid token", err.Error())
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
 			},
 		},
 		"failure verifying Kargo-issued token": {
@@ -354,7 +352,7 @@ func TestAuthenticate(t *testing.T) {
 				require.Equal(t, testToken, u.BearerToken)
 			},
 		},
-		"unrecognized JWT": {
+		"unrecognized JWT recognized by Kubernetes": {
 			procedure: testProcedure,
 			authInterceptor: &authInterceptor{
 				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
@@ -363,16 +361,42 @@ func TestAuthenticate(t *testing.T) {
 					rc.Issuer = "unrecognized-issuer"
 					return nil, nil, nil
 				},
+				verifyKubernetesTokenFn: func(context.Context, string) error {
+					return nil // Token is recognized by Kubernetes
+				},
 			},
 			token: testToken,
-			// We can't verify this token, so we assume it could be an an identity
-			// token from the k8s API server's identity provider. We expect user info
-			// containing the raw token to be bound to the context.
+			// We can't verify this token, so we check if Kubernetes recognizes it.
+			// In this case it does, so we expect user info containing the raw token
+			// to be bound to the context.
 			assertions: func(ctx context.Context, err error) {
 				require.NoError(t, err)
 				u, ok := user.InfoFromContext(ctx)
 				require.True(t, ok)
 				require.Equal(t, testToken, u.BearerToken)
+			},
+		},
+		"unrecognized JWT not recognized by Kubernetes": {
+			procedure: testProcedure,
+			authInterceptor: &authInterceptor{
+				parseUnverifiedJWTFn: func(_ string, claims jwt.Claims) (*jwt.Token, []string, error) {
+					rc, ok := claims.(*jwt.RegisteredClaims)
+					require.True(t, ok)
+					rc.Issuer = "unrecognized-issuer"
+					return nil, nil, nil
+				},
+				verifyKubernetesTokenFn: func(context.Context, string) error {
+					return errors.New("token not recognized")
+				},
+			},
+			token: testToken,
+			// We can't verify this token and Kubernetes doesn't recognize it either.
+			// This should result in an authentication error.
+			assertions: func(ctx context.Context, err error) {
+				require.Error(t, err)
+				require.Equal(t, "invalid token", err.Error())
+				_, ok := user.InfoFromContext(ctx)
+				require.False(t, ok)
 			},
 		},
 	}
@@ -591,6 +615,49 @@ func TestVerifyKargoIssuedToken(t *testing.T) {
 				testCase.valid,
 				testCase.authInterceptor.verifyKargoIssuedToken(testCase.tokenFn()),
 			)
+		})
+	}
+}
+
+func TestVerifyKubernetesToken(t *testing.T) {
+	const testToken = "test-bearer-token"
+
+	testCases := []struct {
+		name              string
+		mockK8sAPIHandler http.HandlerFunc
+		assertions        func(t *testing.T, err error)
+	}{
+		{
+			name: "Kubernetes API returns 200",
+			mockK8sAPIHandler: func(w http.ResponseWriter, r *http.Request) {
+				// Verify the token was passed correctly
+				require.Equal(t, "Bearer "+testToken, r.Header.Get("Authorization"))
+				require.Equal(t, "/api", r.URL.Path)
+				w.WriteHeader(http.StatusOK)
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "Kubernetes API returns non-200",
+			mockK8sAPIHandler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusUnauthorized)
+			},
+			assertions: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "unexpected response from Kubernetes API server: 401")
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			srv := httptest.NewServer(testCase.mockK8sAPIHandler)
+			t.Cleanup(srv.Close)
+			authenticator := &authInterceptor{
+				cfg: config.ServerConfig{RestConfig: &rest.Config{Host: srv.URL}},
+			}
+			err := authenticator.verifyKubernetesToken(t.Context(), testToken)
+			testCase.assertions(t, err)
 		})
 	}
 }

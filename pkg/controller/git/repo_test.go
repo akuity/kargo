@@ -153,9 +153,7 @@ with a body
 
 	t.Run("can check if remote branch exists -- positive result", func(t *testing.T) {
 		var exists bool
-		// "master" is still the default branch name for a new repository unless
-		// you configure it otherwise.
-		exists, err = rep.RemoteBranchExists("master")
+		exists, err = rep.RemoteBranchExists("main")
 		require.NoError(t, err)
 		require.True(t, exists)
 	})

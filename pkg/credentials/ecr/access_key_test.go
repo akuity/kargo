@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/assert"
@@ -163,17 +164,27 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 		credType       credentials.Type
 		repoURL        string
 		data           map[string][]byte
-		getAuthTokenFn func(ctx context.Context, region, accessKeyID, secretAccessKey string) (string, error)
-		setupCache     func(cache *cache.Cache)
-		assertions     func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
+		getAuthTokenFn func(
+			ctx context.Context,
+			region string,
+			accessKeyID string,
+			secretAccessKey string,
+		) (string, time.Time, error)
+		setupCache func(cache *cache.Cache)
+		assertions func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error)
 	}{
 		{
 			name:     "unsupported credentials",
 			credType: credentials.TypeGit,
 			repoURL:  "not-an-ecr-url",
 			data:     map[string][]byte{},
-			getAuthTokenFn: func(_ context.Context, _, _, _ string) (string, error) {
-				return "", nil
+			getAuthTokenFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+			) (string, time.Time, error) {
+				return "", time.Time{}, nil
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)
@@ -212,8 +223,13 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 				idKey:     []byte(fakeID),
 				secretKey: []byte(fakeSecret),
 			},
-			getAuthTokenFn: func(_ context.Context, _, _, _ string) (string, error) {
-				return fakeToken, nil
+			getAuthTokenFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+			) (string, time.Time, error) {
+				return fakeToken, time.Now().Add(12 * time.Hour), nil
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.NoError(t, err)
@@ -221,10 +237,14 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 				assert.Equal(t, "AWS", creds.Username)
 				assert.Equal(t, "password", creds.Password)
 
-				// Verify the token was cached
-				token, found := c.Get(tokenCacheKey(fakeRegion, fakeID, fakeSecret))
+				// Verify the token was cached with a TTL based on the
+				// token's actual expiry
+				items := c.Items()
+				item, found := items[tokenCacheKey(fakeRegion, fakeID, fakeSecret)]
 				assert.True(t, found)
-				assert.Equal(t, fakeToken, token)
+				expectedTTL := 12*time.Hour - 5*time.Minute // 12h expiry - 5m margin
+				actualTTL := time.Until(time.Unix(0, item.Expiration))
+				assert.InDelta(t, expectedTTL.Seconds(), actualTTL.Seconds(), 5)
 			},
 		},
 		{
@@ -236,8 +256,13 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 				idKey:     []byte(fakeID),
 				secretKey: []byte(fakeSecret),
 			},
-			getAuthTokenFn: func(_ context.Context, _, _, _ string) (string, error) {
-				return "", errors.New("auth token error")
+			getAuthTokenFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+			) (string, time.Time, error) {
+				return "", time.Time{}, errors.New("auth token error")
 			},
 			assertions: func(t *testing.T, _ *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.ErrorContains(t, err, "error getting ECR auth token")
@@ -253,8 +278,13 @@ func TestAccessKeyProvider_GetCredentials(t *testing.T) {
 				idKey:     []byte(fakeID),
 				secretKey: []byte(fakeSecret),
 			},
-			getAuthTokenFn: func(_ context.Context, _, _, _ string) (string, error) {
-				return "", nil
+			getAuthTokenFn: func(
+				context.Context,
+				string,
+				string,
+				string,
+			) (string, time.Time, error) {
+				return "", time.Time{}, nil
 			},
 			assertions: func(t *testing.T, c *cache.Cache, creds *credentials.Credentials, err error) {
 				assert.Nil(t, creds)

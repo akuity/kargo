@@ -92,44 +92,39 @@ func CloneBare(
 	if cloneOpts == nil {
 		cloneOpts = &BareCloneOptions{}
 	}
-	homeDir, err := os.MkdirTemp(cloneOpts.BaseDir, "repo-")
-	if err != nil {
-		return nil,
-			fmt.Errorf("error creating home directory for repo %q: %w", repoURL, err)
-	}
-	if homeDir, err = filepath.EvalSymlinks(homeDir); err != nil {
-		return nil,
-			fmt.Errorf("error resolving symlinks in path %s: %w", homeDir, err)
-	}
 	b := &bareRepo{
 		baseRepo: &baseRepo{
 			creds:       clientOpts.Credentials,
-			dir:         filepath.Join(homeDir, "repo"),
-			homeDir:     homeDir,
 			originalURL: repoURL,
 			accessURL:   repoURL,
 		},
 	}
-	if err = b.setupClient(homeDir, clientOpts); err != nil {
+	if err := b.setupDirs(cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err = b.clone(cloneOpts); err != nil {
+	if err := b.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	if err = b.saveDirs(); err != nil {
+	if err := b.clone(cloneOpts); err != nil {
 		return nil, err
 	}
-	if err = b.saveOriginalURL(); err != nil {
+	if err := b.saveDirs(); err != nil {
+		return nil, err
+	}
+	if err := b.saveOriginalURL(); err != nil {
 		return nil, err
 	}
 	return b, nil
 }
 
-func (b *bareRepo) clone(opts *BareCloneOptions) error {
+func (b *bareRepo) clone(_ *BareCloneOptions) error {
 	args := []string{"clone", "--bare"}
-	if opts.Filter != "" {
-		args = append(args, "--filter", opts.Filter)
-	}
+	// NOTE(hidde): Temporarily disabled until we figure out why this can result
+	// in "could not fetch <commit> from promisor remote" errors.
+	//
+	// if opts.Filter != "" {
+	//  	args = append(args, "--filter", opts.Filter)
+	// }
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()

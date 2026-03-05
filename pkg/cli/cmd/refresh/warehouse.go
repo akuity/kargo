@@ -5,16 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/server"
 )
 
@@ -57,43 +55,43 @@ kargo refresh warehouse my-warehouse
 
 func waitForWarehouse(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 	project string,
 	name string,
 ) error {
-	res, err := kargoSvcCli.WatchWarehouses(ctx, connect.NewRequest(&v1alpha1.WatchWarehousesRequest{
-		Project: project,
-		Name:    name,
-	}))
-	if err != nil {
-		return fmt.Errorf("watch warehouse: %w", err)
-	}
-	defer func() {
-		if conn, connErr := res.Conn(); connErr == nil {
-			_ = conn.CloseRequest()
-		}
-	}()
+	eventCh, errCh := watchClient.WatchWarehouse(ctx, project, name)
 	for {
-		if !res.Receive() {
-			if err = res.Err(); err != nil {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				select {
+				case err := <-errCh:
+					if err != nil {
+						return fmt.Errorf("watch warehouse: %w", err)
+					}
+				default:
+				}
+				return errors.New("unexpected end of watch stream")
+			}
+			if event.Object == nil {
+				return errors.New("unexpected response")
+			}
+			token, ok := api.RefreshAnnotationValue(event.Object.GetAnnotations())
+			if !ok {
+				return fmt.Errorf( // nolint: staticcheck
+					"Warehouse %q in Project %q has no %q annotation",
+					name, project, kargoapi.AnnotationKeyRefresh,
+				)
+			}
+			if event.Object.Status.LastHandledRefresh == token {
+				return nil
+			}
+		case err := <-errCh:
+			if err != nil {
 				return fmt.Errorf("watch warehouse: %w", err)
 			}
-			return errors.New("unexpected end of watch stream")
-		}
-		msg := res.Msg()
-		if msg == nil || msg.Warehouse == nil {
-			return errors.New("unexpected response")
-		}
-		token, ok := api.RefreshAnnotationValue(msg.Warehouse.GetAnnotations())
-		if !ok {
-			// nolint:staticcheck
-			return fmt.Errorf(
-				"Warehouse %q in Project %q has no %q annotation",
-				name, project, kargoapi.AnnotationKeyRefresh,
-			)
-		}
-		if msg.Warehouse.Status.LastHandledRefresh == token {
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

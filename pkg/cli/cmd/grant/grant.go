@@ -2,23 +2,24 @@ package grant
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type grantOptions struct {
@@ -133,40 +134,58 @@ func (o *grantOptions) validate() error {
 
 // run grants a role to users or grants permissions to a role.
 func (o *grantOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	req := &svcv1alpha1.GrantRequest{
-		Project: o.Project,
-		Role:    o.Role,
+	req := &models.GrantRequest{
+		Role: o.Role,
 	}
 	if o.ResourceType != "" {
-		req.Request = &svcv1alpha1.GrantRequest_ResourceDetails{
-			ResourceDetails: &rbacapi.ResourceDetails{
-				ResourceType: o.ResourceType,
-				ResourceName: o.ResourceName,
-				Verbs:        o.Verbs,
-			},
+		req.ResourceDetails = &models.ResourceDetails{
+			ResourceType: o.ResourceType,
+			ResourceName: o.ResourceName,
+			Verbs:        o.Verbs,
 		}
 	} else {
-		claims := svcv1alpha1.Claims{}
+		claims := make([]*models.Claim, 0, len(o.Claims))
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims.Claims = append(claims.Claims, &rbacapi.Claim{
+			claims = append(claims, &models.Claim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
-		req.Request = &svcv1alpha1.GrantRequest_UserClaims{
-			UserClaims: &claims,
+		req.UserClaims = &models.UserClaims{
+			Claims: claims,
 		}
 	}
 
-	resp, err := kargoSvcCli.Grant(ctx, connect.NewRequest(req))
+	_, err = apiClient.Rbac.Grant(
+		rbac.NewGrantParams().WithProject(o.Project).WithBody(req),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("grant: %w", err)
+	}
+
+	// Get the updated role after granting
+	res, err := apiClient.Rbac.GetProjectRole(
+		rbac.NewGetProjectRoleParams().WithProject(o.Project).WithRole(o.Role),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("get role: %w", err)
+	}
+
+	roleJSON, err := json.Marshal(res.Payload)
+	if err != nil {
+		return fmt.Errorf("marshal role: %w", err)
+	}
+	var role *rbacapi.Role
+	if err = json.Unmarshal(roleJSON, &role); err != nil {
+		return fmt.Errorf("unmarshal role: %w", err)
 	}
 
 	printer, err := o.ToPrinter()
@@ -174,5 +193,5 @@ func (o *grantOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(resp.Msg.Role, o.Out)
+	return printer.PrintObj(role, o.Out)
 }

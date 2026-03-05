@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,6 +41,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	require.NotNil(t, r.promoEngine)
 	require.NotNil(t, r.getStageFn)
 	require.NotNil(t, r.promoteFn)
+	require.NotNil(t, r.cleanupWorkDirFn)
 }
 
 func newFakeReconciler(
@@ -522,6 +524,9 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			r := &reconciler{
 				kargoClient: c,
 				sender:      k8sevent.NewEventSender(recorder),
+				cleanupWorkDirFn: func(context.Context, types.UID) {
+					// no-op for tests
+				},
 			}
 
 			req := tt.req
@@ -529,6 +534,191 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
+}
+
+func Test_reconciler_handleDeletion(t *testing.T) {
+	testCases := []struct {
+		name       string
+		objects    []client.Object
+		reconcile  types.NamespacedName
+		assertions func(
+			*testing.T, *reconciler, *fakeevent.EventRecorder,
+			bool, ctrl.Result, error,
+		)
+	}{
+		{
+			name:      "deleted promotion not found is a no-op",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "deleted-promo"},
+			objects:   []client.Object{},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "terminal promotion returns early without cleanup",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, _ *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+			},
+		},
+		{
+			name:      "promotion with DeletionTimestamp cleans up workdir and returns",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					// A finalizer from another controller keeps the object alive.
+					p.Finalizers = []string{"some-other-controller/finalizer"}
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.True(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+		{
+			name:      "deleted promotion with wrong shard is ignored",
+			reconcile: types.NamespacedName{Namespace: "fake-ns", Name: "fake-promo"},
+			objects: []client.Object{
+				func() *kargoapi.Promotion {
+					p := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+					p.Labels = map[string]string{
+						kargoapi.LabelKeyShard: "wrong-shard",
+					}
+					p.Finalizers = []string{"some-other-controller/finalizer"}
+					deletionTime := metav1.Now()
+					p.DeletionTimestamp = &deletionTime
+					return p
+				}(),
+			},
+			assertions: func(
+				t *testing.T, _ *reconciler, recorder *fakeevent.EventRecorder,
+				cleanupCalled bool, result ctrl.Result, err error,
+			) {
+				require.NoError(t, err)
+				require.Equal(t, ctrl.Result{}, result)
+				require.False(t, cleanupCalled)
+				require.Len(t, recorder.Events, 0)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			recorder := fakeevent.NewEventRecorder(1)
+			r := newFakeReconciler(t, recorder, tc.objects...)
+
+			cleanupCalled := false
+			r.cleanupWorkDirFn = func(context.Context, types.UID) {
+				cleanupCalled = true
+			}
+
+			result, err := r.Reconcile(ctx, ctrl.Request{NamespacedName: tc.reconcile})
+			tc.assertions(t, r, recorder, cleanupCalled, result, err)
+		})
+	}
+}
+
+func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+
+	promo := newPromo("fake-ns", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+
+	c := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(promo).
+		WithStatusSubresource(&kargoapi.Promotion{}).
+		Build()
+	recorder := fakeevent.NewEventRecorder(1)
+
+	cleanupCalled := false
+	r := &reconciler{
+		kargoClient: c,
+		sender:      k8sevent.NewEventSender(recorder),
+		cleanupWorkDirFn: func(context.Context, types.UID) {
+			cleanupCalled = true
+		},
+	}
+
+	req := kargoapi.AbortPromotionRequest{Action: kargoapi.AbortActionTerminate}
+	err := r.terminatePromotion(context.Background(), &req, promo, nil)
+	require.NoError(t, err)
+
+	require.True(t, cleanupCalled)
+
+	var updated kargoapi.Promotion
+	require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+		Namespace: "fake-ns",
+		Name:      "fake-promo",
+	}, &updated))
+	require.Equal(t, kargoapi.PromotionPhaseAborted, updated.Status.Phase)
+}
+
+func Test_extractDeletedObject(t *testing.T) {
+	t.Run("direct object", func(t *testing.T) {
+		obj := &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:  "test-uid-123",
+				Name: "test-promo",
+			},
+		}
+		result, err := extractDeletedObject(obj)
+		require.NoError(t, err)
+		require.Equal(t, types.UID("test-uid-123"), result.GetUID())
+	})
+
+	t.Run("tombstone", func(t *testing.T) {
+		obj := &kargoapi.Promotion{
+			ObjectMeta: metav1.ObjectMeta{
+				UID:  "test-uid-456",
+				Name: "tombstoned-promo",
+			},
+		}
+		tombstone := toolscache.DeletedFinalStateUnknown{
+			Key: "fake-ns/tombstoned-promo",
+			Obj: obj,
+		}
+		result, err := extractDeletedObject(tombstone)
+		require.NoError(t, err)
+		require.Equal(t, types.UID("test-uid-456"), result.GetUID())
+	})
+
+	t.Run("unexpected type", func(t *testing.T) {
+		_, err := extractDeletedObject("not-an-object")
+		require.ErrorContains(t, err, "unexpected object type")
+	})
+
+	t.Run("tombstone with unexpected inner type", func(t *testing.T) {
+		tombstone := toolscache.DeletedFinalStateUnknown{
+			Key: "fake-key",
+			Obj: "not-an-object",
+		}
+		_, err := extractDeletedObject(tombstone)
+		require.ErrorContains(t, err, "tombstone contained unexpected type")
+	})
 }
 
 func Test_calculateRequeueInterval(t *testing.T) {
