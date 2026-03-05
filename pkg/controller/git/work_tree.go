@@ -308,9 +308,9 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 
 // TagOptions represents options for creating a new git tag.
 type TagOptions struct {
-	// Signer is the signer of the tag. If nil, the default signer already
+	// Tagger is the tagger of the tag. If nil, the default tagger already
 	// configured in the git repository will be used.
-	Signer *User
+	Tagger *User
 	// SigningMsg is the message with which the tag will be annotated. If empty,
 	// a default message will be used.
 	SigningMsg string
@@ -321,7 +321,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		opts = &TagOptions{}
 	}
 
-	if opts.Signer == nil {
+	if opts.Tagger == nil {
 		if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
 			return fmt.Errorf("error creating tag %q", err)
 		}
@@ -329,7 +329,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	}
 
 	var homeDir string
-	if opts.Signer != nil {
+	if opts.Tagger != nil {
 		// This signing config is specific to this tag, so we will override
 		// repository-level signing config by creating a temporary home
 		// directory, setting the tag configuration "globally" within it, and
@@ -347,7 +347,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Signer); err != nil {
+		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for tag command: %w", err,
 			)
