@@ -76,13 +76,13 @@ spec:
 
 Actions are defined by:
 
-1. [`actionType`](#actiontype)
+1. [`action`](#action)
 1. [`whenExpression`](#whenexpression)
 1. [`targetSelectionCriteria`](#defining-targetselectioncriteria)
 
-#### actionType
+#### action
 
-The `actionType` field specifies the action that should be performed.
+The `action` field specifies the action that should be performed.
 
 ```yaml
 apiVersion: kargo.akuity.io/v1alpha1
@@ -97,12 +97,12 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
 ```
 
 :::note
 
-The only currently supported `actionType` is `Refresh`.
+The only currently supported `action` is `Refresh`.
 :::
 
 
@@ -127,7 +127,7 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
             whenExpression: "request.header("X-Event-Type") == 'push'"
 ```
 
@@ -175,7 +175,7 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
             whenExpression: "request.header('X-Event-Type') == 'push'"
             targetSelectionCriteria:
               - kind: Warehouse
@@ -199,7 +199,7 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
             whenExpression: "request.header('X-Event-Type') == 'push'"
             targetSelectionCriteria:
               - kind: Warehouse
@@ -224,7 +224,7 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
             whenExpression: "request.header('X-Event-Type') == 'push'"
             targetSelectionCriteria:
               - kind: Warehouse
@@ -250,7 +250,7 @@ spec:
         secretRef:
           name: wh-secret
         actions:
-          - actionType: Refresh
+          - action: Refresh
             whenExpression: "request.header('X-Event-Type') == 'push'"
             targetSelectionCriteria:
               - kind: Warehouse
@@ -271,7 +271,7 @@ URL from the request body.
 
 ```yaml
 actions:
-  - actionType: Refresh
+  - action: Refresh
     whenExpression: "request.header('X-Event-Type') == 'push'"
     targetSelectionCriteria:
       - kind: Warehouse

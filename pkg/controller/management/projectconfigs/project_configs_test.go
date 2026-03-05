@@ -1,7 +1,6 @@
 package projectconfigs
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -17,7 +16,10 @@ import (
 
 func TestNewReconciler(t *testing.T) {
 	testCfg := ReconcilerConfig{}
-	r := newReconciler(fake.NewClientBuilder().Build(), testCfg)
+	kc := fake.NewClientBuilder().Build()
+	// we pass the same client for both the client and api-reader since the
+	// fake client doesn't use the cache at all.
+	r := newReconciler(kc, kc, testCfg)
 	require.Equal(t, testCfg, r.cfg)
 	require.NotNil(t, r.client)
 }
@@ -162,8 +164,11 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			// succinct way of setting the apiReader to the same fake client
+			// since the fake client doesn't use the cache at all.
+			testCase.reconciler.apiReader = testCase.reconciler.client
 			status, err := testCase.reconciler.syncWebhookReceivers(
-				context.Background(),
+				t.Context(),
 				testCase.projectCfg,
 			)
 			testCase.assertions(t, status, err)

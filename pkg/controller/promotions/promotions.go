@@ -12,6 +12,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	toolscache "k8s.io/client-go/tools/cache"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,6 +89,8 @@ type reconciler struct {
 		*kargoapi.Promotion,
 		*kargoapi.Freight,
 	) error
+
+	cleanupWorkDirFn func(ctx context.Context, promoUID types.UID)
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Promotion resources
@@ -139,6 +142,13 @@ func SetupReconcilerWithManager(
 		Build(reconciler)
 	if err != nil {
 		return fmt.Errorf("error building Promotion controller: %w", err)
+	}
+
+	// Best-effort cleanup of Promotion working directories on delete events.
+	// This runs outside the reconcile loop because deleted objects (without our
+	// own finalizer) are gone before Reconcile sees them.
+	if err = setupDeleteCleanup(ctx, kargoMgr, reconciler.shardPredicate, reconciler.cleanupWorkDir); err != nil {
+		return fmt.Errorf("error setting up delete cleanup: %w", err)
 	}
 
 	logger := logging.LoggerFromContext(ctx)
@@ -205,6 +215,7 @@ func newReconciler(
 	r.getStageFn = api.GetStage
 	r.promoteFn = r.promote
 	r.terminatePromotionFn = r.terminatePromotion
+	r.cleanupWorkDirFn = r.cleanupWorkDir
 	return r
 }
 
@@ -234,6 +245,13 @@ func (r *reconciler) Reconcile(
 
 	if !r.shardPredicate.IsResponsible(promo) {
 		logger.Debug("ignoring Promotion because it is not assigned to this shard")
+		return ctrl.Result{}, nil
+	}
+
+	// Best-effort cleanup if the Promotion is being deleted (e.g. another
+	// controller's finalizer is keeping the object alive).
+	if !promo.DeletionTimestamp.IsZero() {
+		r.cleanupWorkDirFn(ctx, promo.UID)
 		return ctrl.Result{}, nil
 	}
 
@@ -395,6 +413,11 @@ func (r *reconciler) Reconcile(
 		}
 	}
 
+	// Best-effort cleanup of working directory on terminal state.
+	if newStatus.Phase.IsTerminal() {
+		r.cleanupWorkDirFn(ctx, promo.UID)
+	}
+
 	// Record event after patching status if new phase is terminal
 	if newStatus.Phase.IsTerminal() {
 		stage, getStageErr := r.getStageFn(
@@ -531,7 +554,7 @@ func (r *reconciler) promote(
 		stage,
 		promotion.WithActor(api.CreateActorAnnotationValue(&promo)),
 		promotion.WithUIBaseURL(r.cfg.APIServerBaseURL),
-		promotion.WithWorkDir(filepath.Join(os.TempDir(), "promotion-"+string(workingPromo.UID))),
+		promotion.WithWorkDir(promotionWorkDir(workingPromo.UID)),
 	)
 	if err := os.Mkdir(promoCtx.WorkDir, 0o700); err == nil {
 		// If we're working with a fresh directory, we should start the promotion
@@ -544,14 +567,6 @@ func (r *reconciler) promote(
 	} else if !os.IsExist(err) {
 		return nil, nil, fmt.Errorf("error creating working directory: %w", err)
 	}
-	defer func() {
-		if workingPromo.Status.Phase.IsTerminal() {
-			if err := os.RemoveAll(promoCtx.WorkDir); err != nil {
-				logger.Error(err, "could not remove working directory")
-			}
-		}
-	}()
-
 	res, err := r.promoEngine.Promote(ctx, promoCtx, steps)
 	workingPromo.Status.Phase = res.Status
 	workingPromo.Status.Message = res.Message
@@ -687,6 +702,9 @@ func (r *reconciler) terminatePromotion(
 		return err
 	}
 
+	// Best-effort cleanup of working directory.
+	r.cleanupWorkDirFn(ctx, promo.UID)
+
 	evt := event.NewPromotionAborted(newStatus.Message, actor, promo, freight)
 
 	if err := r.sender.Send(ctx, evt); err != nil {
@@ -694,6 +712,81 @@ func (r *reconciler) terminatePromotion(
 	}
 
 	return nil
+}
+
+// setupDeleteCleanup registers an informer event handler that performs
+// best-effort working directory cleanup when a Promotion is deleted. This runs
+// outside the reconcile loop because deleted objects (without our own finalizer)
+// are gone before Reconcile sees them.
+func setupDeleteCleanup(
+	ctx context.Context,
+	mgr manager.Manager,
+	shardPredicate controller.ResponsibleFor[kargoapi.Promotion],
+	cleanupFn func(ctx context.Context, promoUID types.UID),
+) error {
+	informer, err := mgr.GetCache().GetInformer(ctx, &kargoapi.Promotion{})
+	if err != nil {
+		return fmt.Errorf("getting Promotion informer: %w", err)
+	}
+
+	logger := logging.LoggerFromContext(ctx)
+
+	_, err = informer.AddEventHandler(toolscache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj any) {
+			meta, extractErr := extractDeletedObject(obj)
+			if extractErr != nil {
+				logger.Error(extractErr, "failed to extract deleted Promotion object")
+				return
+			}
+			if !shardPredicate.IsResponsible(meta) {
+				return
+			}
+			cleanupCtx := logging.ContextWithLogger(ctx, logger.WithValues(
+				"namespace", meta.GetNamespace(),
+				"promotion", meta.GetName(),
+			))
+			cleanupFn(cleanupCtx, meta.GetUID())
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("adding Promotion delete event handler: %w", err)
+	}
+
+	return nil
+}
+
+// extractDeletedObject extracts a client.Object from a delete event payload,
+// handling tombstones from missed deletes during watch reconnection.
+func extractDeletedObject(obj any) (client.Object, error) {
+	if o, ok := obj.(client.Object); ok {
+		return o, nil
+	}
+	tombstone, ok := obj.(toolscache.DeletedFinalStateUnknown)
+	if !ok {
+		return nil, fmt.Errorf("unexpected object type: %T", obj)
+	}
+	o, ok := tombstone.Obj.(client.Object)
+	if !ok {
+		return nil, fmt.Errorf("tombstone contained unexpected type: %T", tombstone.Obj)
+	}
+	return o, nil
+}
+
+// promotionWorkDir returns the path to the temporary working directory for a
+// Promotion, based on its UID.
+func promotionWorkDir(promoUID types.UID) string {
+	return filepath.Join(os.TempDir(), "promotion-"+string(promoUID))
+}
+
+// cleanupWorkDir removes the temporary working directory for a Promotion.
+// This is safe to call even if the directory does not exist.
+func (r *reconciler) cleanupWorkDir(ctx context.Context, promoUID types.UID) {
+	workDir := promotionWorkDir(promoUID)
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug("removing promotion working directory", "path", workDir)
+	if err := os.RemoveAll(workDir); err != nil {
+		logger.Error(err, "could not remove working directory", "path", workDir)
+	}
 }
 
 var defaultRequeueInterval = 5 * time.Minute
