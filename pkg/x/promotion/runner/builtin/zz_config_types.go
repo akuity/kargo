@@ -137,7 +137,7 @@ type GitClearConfig struct {
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
 	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` step can override this information.
+	// `git-commit` or `git-tag` step can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -153,7 +153,7 @@ type GitCloneConfig struct {
 
 // Default authorship information for any commits made to the cloned repository. If
 // provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` step can override this information.
+// `git-commit` or `git-tag` step can override this information.
 type GitCloneConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`
@@ -287,12 +287,28 @@ type GitPushConfig struct {
 }
 
 type GitTagConfig struct {
+	// Optional authorship information for the tag. If provided, this takes precedence over both
+	// system-level defaults and any optional, default authorship information configured in the
+	// `git-clone` step.
+	Author *GitTagConfigAuthor `json:"author,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
-	// The GPG signing key for the author.
-	SigningKey string `json:"signingKey,omitempty"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`
+}
+
+// Optional authorship information for the tag. If provided, this takes precedence over both
+// system-level defaults and any optional, default authorship information configured in the
+// `git-clone` step.
+type GitTagConfigAuthor struct {
+	// The email of the author. If not provided, the email 'no-reply@kargo.io' will be used.
+	Email string `json:"email,omitempty"`
+	// The name of the author. If not provided, the name 'Kargo' will be used.
+	Name string `json:"name,omitempty"`
+	// The GPG signing key for the author.
+	SigningKey string `json:"signingKey"`
+	// The message to include when signing the tag.
+	SigningMessage string `json:"signingMessage"`
 }
 
 type GitWaitForPRConfig struct {
