@@ -308,7 +308,7 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 
 // TagOptions represents options for creating a new git tag.
 type TagOptions struct {
-	// Author is the author of the commit. If nil, the default author already
+	// Author is the author of the tag. If nil, the default author already
 	// configured in the git repository will be used.
 	Author *User
 	// SigningMsg is the tag message to use if signing key is provided.
