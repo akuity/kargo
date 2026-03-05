@@ -13,24 +13,24 @@
    "description": "The tag to create in the repository.",
    "minLength": 1
   },
-  "signer": {
+  "tagger": {
    "type": "object",
-   "description": "Optional signer information for the tag. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
+   "description": "Optional tagger information for the tag. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
    "additionalProperties": false,
    "properties": {
     "email": {
      "type": "string",
-     "description": "The email of the signer. If not provided, the email 'no-reply@kargo.io' will be used.",
+     "description": "The email of the tagger. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level.",
      "format": "email"
     },
     "name": {
      "type": "string",
-     "description": "The name of the signer. If not provided, the name 'Kargo' will be used.",
+     "description": "The name of the tagger. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level.",
      "minLength": 1
     },
     "signingKey": {
      "type": "string",
-     "description": "The GPG signing key for the signer."
+     "description": "The GPG signing key for the tagger."
     },
     "signingMessage": {
      "type": "string",

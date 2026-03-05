@@ -290,23 +290,25 @@ type GitPushConfig struct {
 type GitTagConfig struct {
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
-	// Optional signer information for the tag. If provided, this takes precedence over both
-	// system-level defaults and any optional, default authorship information configured in the
-	// `git-clone` step.
-	Signer *Signer `json:"signer,omitempty"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`
+	// Optional tagger information for the tag. If provided, this takes precedence over both
+	// system-level defaults and any optional, default authorship information configured in the
+	// `git-clone` step.
+	Tagger *Tagger `json:"tagger,omitempty"`
 }
 
-// Optional signer information for the tag. If provided, this takes precedence over both
+// Optional tagger information for the tag. If provided, this takes precedence over both
 // system-level defaults and any optional, default authorship information configured in the
 // `git-clone` step.
-type Signer struct {
-	// The email of the signer. If not provided, the email 'no-reply@kargo.io' will be used.
+type Tagger struct {
+	// The email of the tagger. If unspecified, defaults to the repo-level configuration
+	// specified when the repo was cloned. Can also be configured at the system level.
 	Email string `json:"email,omitempty"`
-	// The name of the signer. If not provided, the name 'Kargo' will be used.
+	// The name of the tagger. If unspecified, defaults to the repo-level configuration
+	// specified when the repo was cloned. Can also be configured at the system level.
 	Name string `json:"name,omitempty"`
-	// The GPG signing key for the signer.
+	// The GPG signing key for the tagger.
 	SigningKey string `json:"signingKey"`
 	// The message to include when signing the tag.
 	SigningMessage string `json:"signingMessage"`
