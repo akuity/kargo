@@ -334,11 +334,11 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	// This signing config is specific to this tag, so we will override
 	// repository-level signing config by creating a temporary home
 	// directory, setting the tag configuration "globally" within it, and
-	// then ensuring the git commit command uses that home directory.
+	// then ensuring the git tag command uses that home directory.
 	var err error
 	if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
 		return fmt.Errorf(
-			"error creating virtual home directory %q for commit command: %w",
+			"error creating virtual home directory %q for tag command: %w",
 			homeDir, err,
 		)
 	}
@@ -350,7 +350,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	}()
 	if err = w.setupAuthor(homeDir, opts.Author); err != nil {
 		return fmt.Errorf(
-			"error setting up author information for commit command: %w", err,
+			"error setting up author information for tag command: %w", err,
 		)
 	}
 
