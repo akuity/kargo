@@ -1,6 +1,6 @@
 ---
 sidebar_label: github-verified-push
-description: Pushes committed changes to a GitHub repository by replaying commits through the GitHub REST API, with optional commit signing.
+description: Pushes committed changes to a GitHub repository by replaying commits through the GitHub REST API, producing commits that GitHub marks as "Verified".
 ---
 
 # `github-verified-push`
@@ -12,8 +12,11 @@ GitHub repository using the GitHub REST API. It is a drop-in replacement for
 [`git-push`](git-push.md) that replays commits through the API instead of using
 `git push`.
 
-This step is designed to work with repositories that enforce commit signing via
-branch protection rules. Under the hood it:
+This step is designed to work with repositories that enforce commit verification
+via branch protection rules. Unlike conventional GPG signing, this step achieves
+GitHub's "Verified" badge by creating commits through the GitHub API itself —
+GitHub trusts commits made through its own API and marks them as verified
+automatically. Under the hood it:
 
 1. Compares the local branch to the remote target branch to identify new commits
 2. Pushes local commits to a temporary, non-branch staging ref on GitHub
@@ -35,17 +38,20 @@ credentials for the repository. The GitHub App must have **Contents: read &
 write** permission on the target repository.
 :::
 
-## Commit Signing Behavior
+## Commit Verification Behavior
 
 Which commits receive GitHub's "Verified" badge depends on whether the Kargo
 controller is configured with a
 [GPG signing key](../../../40-operator-guide/20-advanced-installation/30-common-configurations.md#signing-commits).
 
-**When a signing key is configured**, this step verifies the GPG signature on
-each local commit before replaying it:
+**When a signing key is configured**, this step checks the GPG signature on
+each local commit before replaying it. The GPG signature is used as a trust
+signal to determine which commits are eligible for verification — it is not
+the mechanism that produces the "Verified" badge on GitHub. Instead,
+verification is achieved by replaying eligible commits through the GitHub API:
 
 - **Kargo-signed commits** (including those with expired signatures or keys)
-  are re-signed by the GitHub App and appear as "Verified" on GitHub.
+  are replayed through the GitHub API and appear as "Verified" on GitHub.
 - **Unsigned commits** (or commits signed by a different key) preserve their
   original author and committer and are _not_ marked as "Verified".
 - **Commits with bad or revoked signatures** cause the step to fail with a
@@ -55,7 +61,7 @@ each local commit before replaying it:
 author and committer. None are marked as "Verified" on GitHub.
 
 :::note
-To produce Kargo-signed commits that this step will re-sign, use the
+To produce Kargo-signed commits that this step will verify, use the
 [`git-commit`](git-commit.md) step while the controller has a signing key
 configured. The `git-commit` step automatically GPG-signs commits when a
 signing key is available.
@@ -84,7 +90,7 @@ signing key is available.
 
 In this example, changes are committed locally and then pushed to the same
 branch as verified commits. This replaces the typical
-`git-commit` + `git-push` pattern when signed commits are required.
+`git-commit` + `git-push` pattern when commit verification is required.
 
 ```yaml
 steps:
