@@ -366,7 +366,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		"-m",
 		signingMsg,
 	)); err != nil {
-		return fmt.Errorf("error creating tag %q", err)
+		return fmt.Errorf("error creating signed tag %q", err)
 	}
 	return nil
 }
