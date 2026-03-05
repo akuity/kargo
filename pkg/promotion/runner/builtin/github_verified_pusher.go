@@ -494,9 +494,9 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		}, err
 	}
 
-	// Replay each revision via the API. Only commits that Kargo
-	// GPG-signed (G/U) are re-signed by the GitHub App; all others
-	// preserve original authorship.
+	// Replay each revision via the API. Only commits signed by Kargo's
+	// trusted key(s) (status "G") are re-signed by the GitHub App; all
+	// others preserve original authorship.
 	parentSHA := targetHead
 	var lastSignedSHA string
 	for i, rc := range commits {
@@ -523,8 +523,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		if sigStatuses != nil {
 			sigStatus = sigStatuses[rc.GetSHA()].Status
 		}
-		shouldSign := sigStatus == "G" || sigStatus == "U" ||
-			sigStatus == "X" || sigStatus == "Y"
+		shouldSign := sigStatus == "G"
 		if !shouldSign {
 			commit.Author = rc.Commit.Author
 			commit.Committer = rc.Commit.Committer
@@ -754,9 +753,14 @@ func (g *githubVerifiedPusher) buildCommitURL(
 // signing key (GITCLIENT_SIGNING_KEY_PATH), this method uses the WorkTree's
 // GPG keyring (populated by git-clone's setupAuthor) to check signatures.
 //
-// Unsigned commits and commits signed by unknown keys are propagated without
-// error — the goal is to detect tampering of commits signed by Kargo's key.
-// Commits with invalid signatures cause a terminal error.
+// Only commits signed by Kargo's trusted key(s) (status "G") are considered
+// authentic and will be re-signed. Since commits are created during
+// promotion, the signing key cannot have expired between signing and
+// verification, so expired statuses ("X"/"Y") are treated as unexpected
+// and propagated without re-signing. Unsigned commits, commits signed by
+// untrusted keys ("U"), and commits signed by unknown keys ("E") are
+// propagated without error. Commits with invalid signatures ("B") or
+// revoked keys ("R") cause a terminal error.
 func (g *githubVerifiedPusher) verifyCommitSignatures(
 	ctx context.Context,
 	workTree git.WorkTree,
@@ -796,9 +800,8 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 	for _, sha := range shas {
 		info := statuses[sha]
 		switch info.Status {
-		case "G", "U", "X", "Y":
-			// Good, untrusted, expired signature, or expired key.
-			// All indicate an authentic signature from Kargo's key.
+		case "G":
+			// Good signature from Kargo's trusted key(s).
 			logger.Debug(
 				"commit signature verified",
 				"commit", sha,
@@ -806,11 +809,15 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 				"keyID", info.KeyID,
 				"signer", info.Signer,
 			)
-		case "N", "":
-			// Unsigned commits are propagated without error.
+		case "N", "", "U", "X", "Y":
+			// Unsigned, untrusted, or expired — propagated without
+			// re-signing. "U" means the key is in the keyring but not
+			// marked as trusted. "X"/"Y" indicate an expired signature
+			// or key, which is unexpected for freshly-created commits.
 			logger.Debug(
-				"commit is unsigned, propagating",
+				"commit not signed by trusted key, propagating",
 				"commit", sha,
+				"status", info.Status,
 			)
 		case "E":
 			// Signed by a key not in Kargo's keyring — not our concern.

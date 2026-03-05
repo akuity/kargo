@@ -1027,7 +1027,7 @@ func Test_githubVerifiedPusher_verifyCommitSignatures(t *testing.T) {
 			},
 		},
 		{
-			name:    "returns statuses for untrusted but valid signatures",
+			name:    "propagates commits with untrusted signatures",
 			gitUser: git.User{SigningKeyPath: "/some/key"},
 			workTree: &mockWorkTree{
 				commitSignatureStatusesFn: func(

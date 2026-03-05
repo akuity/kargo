@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
@@ -116,6 +117,10 @@ type User struct {
 	// SigningKeyPath is an optional path referencing a signing key for
 	// signing git objects. Ignored if SigningKey is provided.
 	SigningKeyPath string
+	// SigningKeyTrustLevel is the GPG trust level to assign to the imported
+	// signing key. When set, setupAuthor marks the key with the
+	// corresponding ownertrust level after import.
+	SigningKeyTrustLevel SigningKeyTrustLevel
 }
 
 // setupAuthor configures the git CLI with a default commit author.
@@ -190,18 +195,64 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
-			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			// See justification for both of these overrides above.
+			cmd = b.buildCommand(
+				"gpg", "--import",
+				"--import-options", "import-show",
+				"--with-colons",
+				author.SigningKeyPath,
+			)
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
-			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+			res, err := libExec.Exec(cmd)
+			if err != nil {
+				return fmt.Errorf(
+					"error importing gpg key %q: %w",
+					author.SigningKeyPath, err,
+				)
+			}
+
+			fingerprint := extractFingerprint(res)
+			logger := logging.LoggerFromContext(context.TODO())
+			logger.Debug(
+				"imported GPG signing key",
+				"path", author.SigningKeyPath,
+				"fingerprint", fingerprint,
+				"trustLevel", string(author.SigningKeyTrustLevel),
+			)
+
+			if trustLevel := gpgOwntrustLevel(author.SigningKeyTrustLevel); trustLevel != "" && fingerprint != "" {
+				cmd = b.buildCommand("gpg", "--import-ownertrust")
+				cmd.Dir = homeDir
+				b.setCmdHome(cmd, homeDir)
+				cmd.Stdin = strings.NewReader(
+					fingerprint + ":" + trustLevel + ":\n",
+				)
+				if _, err = libExec.Exec(cmd); err != nil {
+					return fmt.Errorf(
+						"error setting ownertrust for key %s: %w",
+						fingerprint, err,
+					)
+				}
 			}
 		}
 
 	}
 
 	return nil
+}
+
+// fprRegex matches the first fingerprint line in GPG's --with-colons output.
+// The format is: fpr:::::::::FINGERPRINT:
+var fprRegex = regexp.MustCompile(`(?m)^fpr:{9}([A-F0-9]+):`)
+
+// extractFingerprint parses the output of `gpg --with-colons` and returns the
+// first key fingerprint found.
+func extractFingerprint(output []byte) string {
+	matches := fprRegex.FindSubmatch(output)
+	if matches == nil {
+		return ""
+	}
+	return string(matches[1])
 }
 
 // setupAuth configures the git CLI with authentication information. The
