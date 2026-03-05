@@ -15,11 +15,19 @@ GitHub repository using the GitHub REST API. It is a drop-in replacement for
 This step is designed to work with repositories that enforce commit signing via
 branch protection rules. Under the hood it:
 
-1. Pushes local commits to a temporary, non-branch staging ref on GitHub
+1. Compares the local branch to the remote target branch to identify new commits
+2. Pushes local commits to a temporary, non-branch staging ref on GitHub
    (invisible in the branch list)
-2. Replays each commit via the GitHub REST API
-3. Fast-forwards the target branch to the final commit
-4. Deletes the staging ref
+3. Replays each commit from the staging ref onto the target branch via the
+   GitHub REST API, creating new commits with new SHAs
+4. Fast-forwards the target branch to the final replayed commit
+5. Deletes the staging ref
+
+Because commits are recreated through the API, the resulting remote commits have
+different SHAs than the original local commits — even when the content is
+identical. This means the local and remote branches will have diverged after this
+step completes. This is expected and does not affect subsequent promotions, since
+each promotion clones a fresh working tree.
 
 :::info
 This step requires a **GitHub App installation token** stored as Git
