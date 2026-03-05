@@ -17,7 +17,7 @@ referencing the current `HEAD` of a checked-out branch.
 | `signer.name` | `string` | N | The signer's name. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `signer.email` | `string` | N | The signer's email address. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `signer.signingKey` | `string` | Y | The GPG signing key for the signer. |
-| `signer.signingMessage` | `string` | Y | The message to annotate the tag with. |
+| `signer.signingMessage` | `string` | Y | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 
 ## Output
 
