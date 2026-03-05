@@ -5,7 +5,7 @@ description: Pushes the committed changes in a specified working tree to a speci
 
 # `git-push`
 
-`git-push` can push committed changes or new tags from specified working tree to
+`git-push` can push committed changes or new tags from a specified working tree to
 the remote repository. This step typically follows a
 [`git-commit` step](git-commit.md) and/or [`git-tag` step](git-tag.md) and is
 often followed by a [`git-open-pr` step](git-open-pr.md).
