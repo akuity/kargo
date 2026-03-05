@@ -16,6 +16,7 @@ import (
 	"github.com/akuity/kargo/pkg/image"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/pattern"
 	"github.com/akuity/kargo/pkg/urls"
 )
 
@@ -80,6 +81,7 @@ func refreshWarehouses(
 	c client.Client,
 	project string,
 	repoURLs []string,
+	changedFiles []string,
 	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -129,7 +131,7 @@ func refreshWarehouses(
 			}
 
 			if len(qualifiers) > 0 {
-				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -190,6 +192,7 @@ func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,
 	repoURL string,
+	changedFiles []string,
 	qualifiers ...string,
 ) (bool, error) {
 	var shouldRefresh bool
@@ -202,7 +205,13 @@ func shouldRefresh(
 					s.Git.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
+			if !slices.ContainsFunc(qualifiers, selector.MatchesRef) {
+				continue
+			}
+			if !matchesChangedFiles(s.Git.IncludePaths, s.Git.ExcludePaths, changedFiles) {
+				continue
+			}
+			shouldRefresh = true
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {
@@ -225,4 +234,57 @@ func shouldRefresh(
 		}
 	}
 	return false, nil
+}
+
+// parsePathMatchers parses a list of path selector strings into a single
+// Matcher. Returns nil if paths is empty. Returns an error if any pattern
+// is invalid.
+func parsePathMatchers(paths []string) (pattern.Matcher, error) {
+	if len(paths) == 0 {
+		return nil, nil
+	}
+	matchers := make(pattern.Matchers, 0, len(paths))
+	for _, p := range paths {
+		m, err := pattern.ParsePathPattern(p)
+		if err != nil {
+			return nil, err
+		}
+		matchers = append(matchers, m)
+	}
+	return matchers, nil
+}
+
+// matchesChangedFiles checks whether the given changedFiles match the
+// subscription's includePaths/excludePaths filters. Returns true (allow
+// refresh) when changedFiles is empty (provider didn't supply file data) or
+// when the subscription has no path filters configured.
+func matchesChangedFiles(
+	includePaths []string,
+	excludePaths []string,
+	changedFiles []string,
+) bool {
+	if len(changedFiles) == 0 ||
+		(len(includePaths) == 0 && len(excludePaths) == 0) {
+		return true
+	}
+	include, err := parsePathMatchers(includePaths)
+	if err != nil {
+		// If a pattern is invalid, fall back to allowing refresh
+		// so the controller can report the error during reconciliation.
+		return true
+	}
+	exclude, err := parsePathMatchers(excludePaths)
+	if err != nil {
+		return true
+	}
+	for _, path := range changedFiles {
+		if include != nil && !include.Matches(path) {
+			continue
+		}
+		if exclude != nil && exclude.Matches(path) {
+			continue
+		}
+		return true
+	}
+	return false
 }

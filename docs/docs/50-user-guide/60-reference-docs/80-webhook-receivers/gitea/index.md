@@ -5,8 +5,11 @@ sidebar_label: Gitea
 # The Gitea Webhook Receiver
 
 The Gitea webhook receiver responds to `push` events originating from Gitea
-repositories by _refreshing_ all `Warehouse` resources subscribed to those
-repositories.
+repositories by _refreshing_ `Warehouse` resources subscribed to those
+repositories. If a `Warehouse` has `includePaths` or `excludePaths` configured
+on its Git subscription, the receiver evaluates the changed files from the push
+payload against those filters and only refreshes the `Warehouse` if at least one
+changed file matches.
 
 :::info
 

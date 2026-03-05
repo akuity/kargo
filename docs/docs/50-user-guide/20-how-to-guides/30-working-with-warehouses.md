@@ -707,6 +707,21 @@ Paths may _also_ be specified using glob patterns (by prefixing the string with
 
 :::
 
+:::info
+
+When using
+[webhook receivers](../60-reference-docs/80-webhook-receivers/index.md) with
+GitHub, GitLab, or Gitea, `includePaths` and `excludePaths` are also evaluated
+at webhook time. Push event payloads from these providers include per-commit
+file change lists, which Kargo uses to determine whether a `Warehouse` needs to
+be refreshed. If none of the changed files match the subscription's path
+filters, the `Warehouse` is not refreshed, avoiding unnecessary artifact
+discovery. This is particularly beneficial for monorepo setups where many
+`Warehouse` resources subscribe to the same repository but watch different
+paths.
+
+:::
+
 ### Helm Chart Repository Subscriptions
 
 Helm chart repository subscriptions can be defined using the following fields:
@@ -1112,7 +1127,15 @@ contains structured information (usually JSON) the sender wishes to share about
 some event. Invariably, among this information, is the URL of the repository
 from which the event originated.
 
-A webhook receiver's only job is to extract a repository URL from the webhook
-request's payload, query for all `Warehouse` resources within the Project having
-subscriptions to that repository, and request each to execute their discovery
-process.
+A webhook receiver extracts a repository URL from the webhook request's payload,
+queries for all `Warehouse` resources within the Project having subscriptions to
+that repository, and requests each to execute their discovery process.
+
+For Git push events from GitHub, GitLab, and Gitea, the receiver additionally
+extracts the list of changed files from the webhook payload. If a `Warehouse`
+has
+[`includePaths` or `excludePaths`](#git-subscription-path-filtering)
+configured on its Git subscription, the receiver evaluates the changed files
+against those filters. Only `Warehouse` resources whose path filters match at
+least one changed file are refreshed. This avoids unnecessary artifact discovery
+for `Warehouse` resources that would not produce new Freight from the push.

@@ -147,6 +147,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var qualifiers []string
 		var repoURLs []string
+		var changedFiles []string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -216,6 +217,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			ref := e.GetRef()
 			qualifiers = []string{ref}
+			changedFiles = collectGitHubChangedFiles(e)
 			logger = logger.WithValues("ref", ref)
 
 		case *gh.RegistryPackageEvent:
@@ -270,6 +272,26 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, qualifiers...)
 	})
+}
+
+func collectGitHubChangedFiles(e *gh.PushEvent) []string {
+	seen := map[string]struct{}{}
+	var files []string
+	add := func(paths []string) {
+		for _, p := range paths {
+			if _, ok := seen[p]; !ok {
+				seen[p] = struct{}{}
+				files = append(files, p)
+			}
+		}
+	}
+	// nolint: staticcheck // Commits deprecation applies to Events API, not webhooks
+	for _, c := range e.Commits {
+		add(c.Added)
+		add(c.Modified)
+		add(c.Removed)
+	}
+	return files
 }

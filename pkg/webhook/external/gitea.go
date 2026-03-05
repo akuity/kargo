@@ -130,6 +130,11 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			Repo struct {
 				URL string `json:"clone_url"`
 			} `json:"repository"`
+			Commits []struct {
+				Added    []string `json:"added"`
+				Modified []string `json:"modified"`
+				Removed  []string `json:"removed"`
+			} `json:"commits"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
@@ -147,6 +152,18 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			"ref", payload.Ref,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, payload.Ref)
+		var changedFiles []string
+		seen := map[string]struct{}{}
+		for _, c := range payload.Commits {
+			for _, paths := range [][]string{c.Added, c.Modified, c.Removed} {
+				for _, p := range paths {
+					if _, ok := seen[p]; !ok {
+						seen[p] = struct{}{}
+						changedFiles = append(changedFiles, p)
+					}
+				}
+			}
+		}
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, payload.Ref)
 	})
 }
