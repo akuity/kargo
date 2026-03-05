@@ -311,7 +311,8 @@ type TagOptions struct {
 	// Author is the author of the tag. If nil, the default author already
 	// configured in the git repository will be used.
 	Author *User
-	// SigningMsg is the tag message to use if signing key is provided.
+	// SigningMsg is the message with which the tag will be annotated. If empty,
+	// a default message will be used.
 	SigningMsg string
 }
 
@@ -361,7 +362,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		signingMsg = opts.SigningMsg
 	}
 
-	cmd := w.buildGitCommand("tag", "-s", tag, "-m", signingMsg)
+	cmd := w.buildGitCommand("tag", "-a", tag, "-m", signingMsg)
 	if homeDir != "" {
 		// Override the home directory set by w.buildGitCommand().
 		w.setCmdHome(cmd, homeDir)
@@ -654,15 +655,18 @@ type PushOptions struct {
 	// Force indicates whether the push should be forced.
 	Force bool
 	// TargetBranch specifies the branch to push to. If empty, the current branch
-	// will be pushed to a remote branch by the same name.
+// TargetBranch specifies a remote branch to push to. If empty, the remote
+// branch's name will be assumed to be the same as the branch checked out
+// locally. Whether this field is empty or non-empty, if Tag is non-empty,
+// it takes precedence and the tag will be pushed -- the branch will not.
 	TargetBranch string
 	// PullRebase indicates whether to pull and rebase before pushing. This can
 	// be useful when pushing changes to a remote branch that has been updated
 	// in the time since the local branch was last pulled.
 	PullRebase bool
-	// Tag specifies an optional tag to push to the remote repository.
-	// If this field is non-empty along with TargetBranch, the tag will be
-	// pushed instead of a branch, and all other fields will be ignored.
+	// Tag specifies a tag to push to the remote repository. If this field and
+	// TargetBranch are both non-empty, this field takes precedence and the tag
+	// will be pushed -- the branch will not.
 	Tag string
 }
 

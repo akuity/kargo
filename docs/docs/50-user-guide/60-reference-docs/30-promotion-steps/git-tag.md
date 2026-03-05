@@ -5,7 +5,8 @@ description: Creates a new tag for the latest committed changes.
 
 # `git-tag`
 
-The `git-tag` step creates a new tag in a local Git repository. This step is commonly used to mark specific commits with a tag, which can be useful for versioning or tracking changes in a repository.
+The `git-tag` step creates a new, annotated tag in a local Git repository
+referencing the current `HEAD` of a checked-out branch.
 
 ## Configuration
 
