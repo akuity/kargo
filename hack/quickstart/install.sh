@@ -23,7 +23,8 @@ helm install argocd argo-cd \
   --set dex.enabled=false \
   --set notifications.enabled=false \
   --set server.service.type=NodePort \
-  --set server.service.nodePortHttp=31443 \
+  --set server.service.nodePortHttp=31080 \
+  --set 'server.extraArgs={--insecure}' \
   --set server.extensions.enabled=true \
   --set 'server.extensions.extensionList[0].name=argo-rollouts' \
   --set 'server.extensions.extensionList[0].env[0].name=EXTENSION_URL' \
@@ -43,9 +44,11 @@ helm install kargo \
   --namespace kargo \
   --create-namespace \
   --set api.service.type=NodePort \
-  --set api.service.nodePort=31444 \
+  --set api.service.nodePort=31081 \
+  --set api.tls.enabled=false \
   --set api.adminAccount.passwordHash='$2a$10$Zrhhie4vLz5ygtVSaif6o.qN36jgs6vjtMBdM6yrU1FOeiAAMMxOm' \
   --set api.adminAccount.tokenSigningKey=iwishtowashmyirishwristwatch \
   --set externalWebhooksServer.service.type=NodePort \
-  --set externalWebhooksServer.service.nodePort=31445 \
+  --set externalWebhooksServer.service.nodePort=31082 \
+  --set externalWebhooksServer.tls.enabled=false \
   --wait
