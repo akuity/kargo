@@ -14,10 +14,10 @@ referencing the current `HEAD` of a checked-out branch.
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The tag to create. |
-| `author.name` | `string` | N | The committer's name. Defaults to `Kargo` if not provided. |
-| `author.email` | `string` | N | The committer's email address. Defaults to `no-reply@kargo.io` if not provided. |
-| `author.signingKey` | `string` | Y | The GPG signing key for the author. |
-| `author.signingMessage` | `string` | Y | The message to annotate the tag with. |
+| `signer.name` | `string` | N | The signer's name. Defaults to `Kargo` if not provided. |
+| `signer.email` | `string` | N | The signer's email address. Defaults to `no-reply@kargo.io` if not provided. |
+| `signer.signingKey` | `string` | Y | The GPG signing key for the signer. |
+| `signer.signingMessage` | `string` | Y | The message to annotate the tag with. |
 
 ## Output
 
@@ -73,7 +73,7 @@ steps:
 
 ### Creating A Signed Tag
 
-In this example, the `git-tag` step creates a signed tag using the provided author information.
+In this example, the `git-tag` step creates a signed tag using the provided signer information.
 
 ```yaml
 steps:
@@ -81,7 +81,7 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
-    author:
+    signer:
       name: yourname
       email: your@inbox.com
       signingKey: <base64-encoded-ascii-armored-gpg-key>
