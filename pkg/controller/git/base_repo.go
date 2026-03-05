@@ -179,7 +179,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 		}
 
 		if author.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
 			// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
 			// repository's path, but if this method was called as part of the cloning
 			// process, that path may not exist yet.
@@ -188,9 +188,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
-			// Enable signing for tags as well. You'll notice the capital 'S' in
-			// 'gpgSign' - this is inentional, as git-config uses 'gpgSign' for
-			// tag signing and 'gpgsign' for commit signing.
+			// Enable signing for tags as well.
 			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
