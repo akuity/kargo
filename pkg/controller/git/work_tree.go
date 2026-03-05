@@ -310,7 +310,7 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 type TagOptions struct {
 	// Author is the author of the tag. If nil, the default author already
 	// configured in the git repository will be used.
-	Author *User
+	Signer *User
 	// SigningMsg is the message with which the tag will be annotated. If empty,
 	// a default message will be used.
 	SigningMsg string
@@ -324,7 +324,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		opts = &TagOptions{}
 	}
 
-	if opts.Author == nil {
+	if opts.Signer == nil {
 		if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
 			return fmt.Errorf("error creating tag %q", err)
 		}
@@ -332,7 +332,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	}
 
 	var homeDir string
-	if opts.Author != nil {
+	if opts.Signer != nil {
 		// This signing config is specific to this tag, so we will override
 		// repository-level signing config by creating a temporary home
 		// directory, setting the tag configuration "globally" within it, and
@@ -350,7 +350,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		if err = w.setupAuthor(homeDir, opts.Signer); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for tag command: %w", err,
 			)
@@ -655,10 +655,10 @@ type PushOptions struct {
 	// Force indicates whether the push should be forced.
 	Force bool
 	// TargetBranch specifies the branch to push to. If empty, the current branch
-// TargetBranch specifies a remote branch to push to. If empty, the remote
-// branch's name will be assumed to be the same as the branch checked out
-// locally. Whether this field is empty or non-empty, if Tag is non-empty,
-// it takes precedence and the tag will be pushed -- the branch will not.
+	// TargetBranch specifies a remote branch to push to. If empty, the remote
+	// branch's name will be assumed to be the same as the branch checked out
+	// locally. Whether this field is empty or non-empty, if Tag is non-empty,
+	// it takes precedence and the tag will be pushed -- the branch will not.
 	TargetBranch string
 	// PullRebase indicates whether to pull and rebase before pushing. This can
 	// be useful when pushing changes to a remote branch that has been updated

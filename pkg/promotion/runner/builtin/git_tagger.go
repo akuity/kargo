@@ -79,14 +79,14 @@ func (g *gitTagTagger) run(
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	var tagOpts *git.TagOptions
-	if cfg.Author != nil {
+	if cfg.Signer != nil {
 		tagOpts = &git.TagOptions{
-			Author: &git.User{
-				Name:       cfg.Author.Name,
-				Email:      cfg.Author.Email,
-				SigningKey: cfg.Author.SigningKey,
+			Signer: &git.User{
+				Name:       cfg.Signer.Name,
+				Email:      cfg.Signer.Email,
+				SigningKey: cfg.Signer.SigningKey,
 			},
-			SigningMsg: cfg.Author.SigningMessage,
+			SigningMsg: cfg.Signer.SigningMessage,
 		}
 	}
 	if err = workTree.CreateTag(cfg.Tag, tagOpts); err != nil {
