@@ -113,8 +113,8 @@ func Test_setFreightAlias_run(t *testing.T) {
 			name:   "freight not found",
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			cfg: builtin.SetFreightAliasConfig{
-				FreightName: testFreight,
-				NewAlias:    newAlias,
+				Name:  testFreight,
+				Alias: newAlias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, _ client.Client, err error) {
 				require.ErrorContains(t, err, "not found")
@@ -138,8 +138,8 @@ func Test_setFreightAlias_run(t *testing.T) {
 				).
 				Build(),
 			cfg: builtin.SetFreightAliasConfig{
-				FreightName: testFreight,
-				NewAlias:    newAlias,
+				Name:  testFreight,
+				Alias: newAlias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, _ client.Client, err error) {
 				require.ErrorContains(t, err, "failed to patch alias")
@@ -165,8 +165,8 @@ func Test_setFreightAlias_run(t *testing.T) {
 				).
 				Build(),
 			cfg: builtin.SetFreightAliasConfig{
-				FreightName: testFreight,
-				NewAlias:    newAlias,
+				Name:  testFreight,
+				Alias: newAlias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, c client.Client, err error) {
 				require.NoError(t, err)

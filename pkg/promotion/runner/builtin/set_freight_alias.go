@@ -72,29 +72,22 @@ func (s *setFreightAlias) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.SetFreightAliasConfig,
 ) (promotion.StepResult, error) {
-	// This step requires selecting a Freight by its immutable identifier
-	// (`freightID` / name) rather than by alias.
-	//
-	// Freight aliases are mutable and may be updated independently by multiple
-	// Stages within the same project. If alias-based selection were allowed,
-	// concurrent alias mutations could cause this step to resolve and mutate the
-	// wrong Freight.
-	//
-	// Using an immutable identifier guarantees deterministic behavior and avoids
-	// unintended cross-Stage side effects, even when multiple Stages update Freight
-	// aliases concurrently.
-	freight, err := api.GetFreightByNameOrAlias(
+	// Use the immutable name to avoid
+	// resolving the wrong Freight if an alias
+	// changes concurrently.
+	freight, err := api.GetFreight(
 		ctx,
 		s.kargoClient,
-		stepCtx.Project,
-		cfg.FreightName,
-		"",
+		types.NamespacedName{
+			Namespace: stepCtx.Project,
+			Name:      cfg.Name,
+		},
 	)
 	if err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.FreightName, stepCtx.Project, err),
+				Err: fmt.Errorf("failed to fetch Freight %q in project %q: %w", cfg.Name, stepCtx.Project, err),
 			}
 	}
 
@@ -102,7 +95,8 @@ func (s *setFreightAlias) run(
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("freight %q not found in project %q", cfg.FreightName, stepCtx.Project),
+				// nolint
+				Err: fmt.Errorf("Freight %q not found in project %q", cfg.Name, stepCtx.Project),
 			}
 	}
 
@@ -110,15 +104,13 @@ func (s *setFreightAlias) run(
 		fmt.Sprintf(
 			`{"metadata":{"labels":{%q:%q}},"alias":%q}`,
 			kargoapi.LabelKeyAlias,
-			cfg.NewAlias,
-			cfg.NewAlias,
+			cfg.Alias,
+			cfg.Alias,
 		),
 	)
 	patch := client.RawPatch(types.MergePatchType, patchBytes)
 
 	// Alias uniqueness is enforced by the admission webhook.
-	// Do not pre-check for conflicts here, as doing so would be
-	// vulnerable to TOCTOU races.
 	if err := s.kargoClient.Patch(ctx, freight, patch); err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
@@ -133,7 +125,7 @@ func (s *setFreightAlias) run(
 			"updated alias of Freight %q from %q to %q",
 			freight.Name,
 			freight.Alias,
-			cfg.NewAlias,
+			cfg.Alias,
 		),
 	}, nil
 }
