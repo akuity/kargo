@@ -3,14 +3,14 @@
   "title": "SetFreightAliasConfig",
   "type": "object",
   "additionalProperties": false,
-  "required": ["freightName", "newAlias"],
+  "required": ["name", "alias"],
   "properties": {
-    "freightName": {
+    "name": {
       "type": "string",
       "description": "The immutable name of the Freight resource to update. This must be the Freight's name (its stable identifier), not an alias.",
       "minLength": 1
     },
-    "newAlias": {
+    "alias": {
       "type": "string",
       "description": "The new human-readable alias to assign to the Freight. Aliases must be unique within the project.",
       "minLength": 1
