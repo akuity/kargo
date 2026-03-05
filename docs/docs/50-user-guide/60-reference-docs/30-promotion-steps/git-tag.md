@@ -13,6 +13,7 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The name of the tag to create. |
+| `signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
 
 ## Output
 
@@ -64,4 +65,15 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
+```
+
+### Signing a commit
+
+```yaml
+steps:
+- uses: git-tag
+  config:
+    path: ./out
+    tag: v1.0.0
+    signingKey: <base64-encoded-ascii-armored-gpg-key>
 ```
