@@ -14,9 +14,9 @@ export const useDocumentTitle = (parts: (string | undefined | null | false)[]) =
   const { appName } = useContext(DocumentTitleContext);
 
   const filtered = parts.filter(Boolean) as string[];
-  const key = filtered.join('|');
+  const key = filtered.join('-');
 
   useEffect(() => {
-    document.title = [...parts, appName].join(' | ');
+    document.title = [...parts, appName].join(' - ');
   }, [key, appName]);
 };
