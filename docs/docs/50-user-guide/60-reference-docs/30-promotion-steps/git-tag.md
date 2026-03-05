@@ -84,6 +84,6 @@ steps:
     signer:
       name: yourname
       email: your@inbox.com
-      signingKey: <base64-encoded-ascii-armored-gpg-key>
+      signingKey: ${{ secret('my-gpg-secret').privateKey }}
       signingMessage: legitness
 ```
