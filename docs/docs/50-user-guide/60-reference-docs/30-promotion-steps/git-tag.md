@@ -12,8 +12,11 @@ The `git-tag` step creates a new tag in a local Git repository. This step is com
 | Name   | Type     | Required | Description                                                                 |
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
-| `tag`  | `string` | Y        | The name of the tag to create. |
-| `signingKey` | `string` | N | The GPG signing key for the author. This field is optional. |
+| `tag`  | `string` | Y        | The tag to create. |
+| `author.name` | `string` | N | The committer's name. Defaults to `Kargo` if not provided. |
+| `author.email` | `string` | N | The committer's email address. Defaults to `no-reply@kargo.io` if not provided. |
+| `author.signingKey` | `string` | Y | The GPG signing key for the author. |
+| `author.signingMessage` | `string` | Y | The message to annotate the tag with. |
 
 ## Output
 
@@ -67,7 +70,9 @@ steps:
     tag: v1.0.0
 ```
 
-### Signing a commit
+### Creating A Signed Tag
+
+In this example, the `git-tag` step creates a signed tag using the provided author information.
 
 ```yaml
 steps:
@@ -75,5 +80,9 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
-    signingKey: <base64-encoded-ascii-armored-gpg-key>
+    author:
+      name: yourname
+      email: your@inbox.com
+      signingKey: <base64-encoded-ascii-armored-gpg-key>
+      signingMessage: legitness
 ```
