@@ -188,7 +188,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
-			// enable signing for tags as well. You'll notice the capital 'S' in
+			// Enable signing for tags as well. You'll notice the capital 'S' in
 			// 'gpgSign' - this is inentional, as git-config uses 'gpgSign' for
 			// tag signing and 'gpgsign' for commit signing.
 			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
