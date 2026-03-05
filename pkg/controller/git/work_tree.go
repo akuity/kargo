@@ -659,10 +659,9 @@ type PushOptions struct {
 	// be useful when pushing changes to a remote branch that has been updated
 	// in the time since the local branch was last pulled.
 	PullRebase bool
-	// Tag specifies an optional tag to push to the remote repository. Mutually
-	// exclusive with TargetBranch. Because tags are immutable and any existing
-	// tag with the same name on the remote would cause the pull/rebase to fail,
-	// PullRebase will be ignored if Tag is specified.
+	// Tag specifies an optional tag to push to the remote repository.
+	// If this field is non-empty along with TargetBranch, the tag will be
+	// pushed instead of a branch, and all other fields will be ignored.
 	Tag string
 }
 
