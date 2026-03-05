@@ -43,7 +43,7 @@ type WorkTree interface {
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
 	// CreateTag creates a new tag with the specified name.
-	CreateTag(name string) error
+	CreateTag(name string, opts *TagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -306,8 +306,66 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 	return w.Clean()
 }
 
-func (w *workTree) CreateTag(tag string) error {
-	if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
+// TagOptions represents options for creating a new git tag.
+type TagOptions struct {
+	// Author is the author of the commit. If nil, the default author already
+	// configured in the git repository will be used.
+	Author *User
+	// SigningMsg is the tag message to use if signing key is provided.
+	SigningMsg string
+}
+
+// CreateTag creates a new tag with the specified name. If the author field of
+// opts is non-nil, the tag will be signed using the provided author information
+// and signing message. If the author field is nil, the tag will be unsigned.
+func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
+	if opts == nil {
+		opts = &TagOptions{}
+	}
+
+	if opts.Author == nil {
+		if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
+			return fmt.Errorf("error creating tag %q", err)
+		}
+		return nil
+	}
+
+	var homeDir string
+	// This signing config is specific to this tag, so we will override
+	// repository-level signing config by creating a temporary home
+	// directory, setting the tag configuration "globally" within it, and
+	// then ensuring the git commit command uses that home directory.
+	var err error
+	if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+		return fmt.Errorf(
+			"error creating virtual home directory %q for commit command: %w",
+			homeDir, err,
+		)
+	}
+	defer func() {
+		if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+			logging.LoggerFromContext(context.TODO()).
+				Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+		}
+	}()
+	if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		return fmt.Errorf(
+			"error setting up author information for commit command: %w", err,
+		)
+	}
+
+	signingMsg := "signed by Kargo"
+	if opts.SigningMsg != "" {
+		signingMsg = opts.SigningMsg
+	}
+
+	if _, err := libExec.Exec(w.buildGitCommand(
+		"tag",
+		"-s",
+		tag,
+		"-m",
+		signingMsg,
+	)); err != nil {
 		return fmt.Errorf("error creating tag %q", err)
 	}
 	return nil

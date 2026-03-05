@@ -188,6 +188,15 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
+			// enable signing for tags as well. You'll notice the capital 'S' in
+			// 'gpgSign' - this is inentional, as git-config uses 'gpgSign' for
+			// tag signing and 'gpgsign' for commit signing.
+			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
+			cmd.Dir = homeDir
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error configuring tag gpg signing: %w", err)
+			}
+
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
 			// Override the cmd.Dir that's set by b.buildCommand(). It's normally the
 			// repository's path, but if this method was called as part of the cloning
