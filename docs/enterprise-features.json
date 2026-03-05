@@ -14,7 +14,8 @@
         "snow-update",
         "snow-delete",
         "snow-query-for-records",
-        "snow-wait-for-condition"
+        "snow-wait-for-condition",
+        "Custom steps"
     ],
     "pro": [
         "jira",
@@ -30,6 +31,7 @@
         "snow-update",
         "snow-delete",
         "snow-query-for-records",
-        "snow-wait-for-condition"
+        "snow-wait-for-condition",
+        "Custom steps"
     ]
 }
