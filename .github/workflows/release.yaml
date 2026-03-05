@@ -8,6 +8,9 @@ on:
   - cron: '0 1 * * 1-5' # 1 AM UTC is 5 PM PST/ 6 PM PDT
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   publish-image:
     permissions:
