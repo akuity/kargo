@@ -13,12 +13,7 @@ import (
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-const (
-	stepKindGitTag = "git-tag"
-
-	// stateKeyTag is the key used to store the tag that was pushed in the shared State.
-	stateKeyTag = "tag"
-)
+const stepKindGitTag = "git-tag"
 
 func init() {
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -62,7 +57,7 @@ func (g *gitTagTagger) convert(cfg promotion.Config) (builtin.GitTagConfig, erro
 }
 
 func (g *gitTagTagger) run(
-	ctx context.Context,
+	_ context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.GitTagConfig,
 ) (promotion.StepResult, error) {
