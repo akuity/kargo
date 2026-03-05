@@ -75,6 +75,14 @@ steps:
 
 In this example, the `git-tag` step creates a signed tag using the provided signer information.
 
+:::note
+
+Signing information may have been configured at the system level by a Kargo 
+admin. If a system-level configuration exists, the example shown below would 
+override it.
+
+:::
+
 ```yaml
 steps:
 - uses: git-tag
