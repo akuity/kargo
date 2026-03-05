@@ -260,6 +260,7 @@ type GitPushConfig struct {
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
 	// will overwrite any commits that exist on the remote branch but not in your local branch.
+	// Mutually exclusive with 'tag'.
 	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
 	// with 'targetBranch' and 'tag'. If neither of these is provided, the target branch will be
@@ -277,8 +278,8 @@ type GitPushConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// An optional tag to push to the remote repository. Mutually exclusive with
-	// 'generateTargetBranch=true' and 'targetBranch'.
+	// A tag to push to the remote repository. Mutually exclusive with
+	// 'generateTargetBranch=true', 'targetBranch', and 'force=true'.
 	Tag string `json:"tag,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
 	// 'tag'. If none of these are provided, the target branch will be the currently checked out
