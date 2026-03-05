@@ -68,6 +68,11 @@ type githubVerifiedPushClient interface {
 		ctx context.Context,
 		owner, repo, ref string,
 	) (*github.Reference, *github.Response, error)
+	CreateRef(
+		ctx context.Context,
+		owner, repo string,
+		ref github.CreateRef,
+	) (*github.Reference, *github.Response, error)
 	UpdateRef(
 		ctx context.Context,
 		owner, repo, ref string,
@@ -102,6 +107,14 @@ func (w *githubVerifiedPushClientWrapper) CreateCommit(
 	opts *github.CreateCommitOptions,
 ) (*github.Commit, *github.Response, error) {
 	return w.client.Git.CreateCommit(ctx, owner, repo, commit, opts)
+}
+
+func (w *githubVerifiedPushClientWrapper) CreateRef(
+	ctx context.Context,
+	owner, repo string,
+	ref github.CreateRef,
+) (*github.Reference, *github.Response, error) {
+	return w.client.Git.CreateRef(ctx, owner, repo, ref)
 }
 
 func (w *githubVerifiedPushClientWrapper) GetRef(
@@ -270,19 +283,23 @@ func (g *githubVerifiedPusher) run(
 			}
 	}
 
-	// Resolve the target branch.
+	// Resolve the current and target branches.
+	currentBranch, err := workTree.CurrentBranch()
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf("error getting current branch: %w", err)
+	}
 	targetBranch := cfg.TargetBranch
+	createBranch := false
 	if cfg.GenerateTargetBranch {
 		targetBranch = fmt.Sprintf(
 			"kargo/promotion/%s", stepCtx.Promotion,
 		)
+		createBranch = true
 	}
 	if targetBranch == "" {
-		if targetBranch, err = workTree.CurrentBranch(); err != nil {
-			return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf("error getting current branch: %w", err)
-		}
+		targetBranch = currentBranch
 	}
 
 	// Get the local HEAD SHA — this is what we'll push to the staging ref.
@@ -329,17 +346,33 @@ func (g *githubVerifiedPusher) run(
 	// Ensure the staging ref is cleaned up regardless of outcome.
 	defer g.cleanupStagingRef(ctx, ghClient, owner, repo, stagingRef)
 
-	// Get the current target branch HEAD from GitHub.
-	targetRef := "heads/" + targetBranch
-	targetHeadRef, _, err := ghClient.GetRef(ctx, owner, repo, targetRef)
-	if err != nil {
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf(
-				"error getting ref %s: %w", targetRef, err,
-			)
+	// Get the base SHA for comparison. For a new branch, use the source
+	// (current) branch HEAD; otherwise use the target branch HEAD.
+	var targetHead string
+	if createBranch {
+		sourceRef := "heads/" + currentBranch
+		ref, _, refErr := ghClient.GetRef(ctx, owner, repo, sourceRef)
+		if refErr != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error getting source branch ref %s: %w",
+					sourceRef, refErr,
+				)
+		}
+		targetHead = ref.GetObject().GetSHA()
+	} else {
+		targetRef := "heads/" + targetBranch
+		ref, _, refErr := ghClient.GetRef(ctx, owner, repo, targetRef)
+		if refErr != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error getting ref %s: %w", targetRef, refErr,
+				)
+		}
+		targetHead = ref.GetObject().GetSHA()
 	}
-	targetHead := targetHeadRef.GetObject().GetSHA()
 
 	logger.Debug(
 		"signing revision range",
@@ -350,7 +383,8 @@ func (g *githubVerifiedPusher) run(
 
 	// Enumerate commits to sign using the Compare API.
 	result, err := g.signAndUpdate(
-		ctx, ghClient, owner, repo, targetBranch, targetHead, localHead,
+		ctx, ghClient, owner, repo,
+		targetBranch, createBranch, targetHead, localHead,
 		workTree,
 	)
 	if err != nil {
@@ -362,11 +396,14 @@ func (g *githubVerifiedPusher) run(
 
 // signAndUpdate enumerates commits in the range targetHead..localHead,
 // replays them as signed commits via the GitHub REST API, and updates the
-// target branch ref to point to the final signed commit.
+// target branch ref to point to the final signed commit. When createBranch
+// is true, a new branch is created instead of updating an existing one.
 func (g *githubVerifiedPusher) signAndUpdate(
 	ctx context.Context,
 	client githubVerifiedPushClient,
-	owner, repo, targetBranch, targetHead, localHead string,
+	owner, repo, targetBranch string,
+	createBranch bool,
+	targetHead, localHead string,
 	workTree git.WorkTree,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
@@ -517,29 +554,53 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		)
 	}
 
-	// Update the target branch ref to the final signed commit. Using
-	// force=false ensures this is a fast-forward update only.
+	// Point the target branch at the final signed commit.
 	targetRef := "heads/" + targetBranch
-	_, _, err = client.UpdateRef(
-		ctx, owner, repo, targetRef,
-		github.UpdateRef{
-			SHA:   lastSignedSHA,
-			Force: new(bool),
-		},
-	)
-	if err != nil {
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf(
-				"error updating ref %s to %s: %w",
-				targetRef, lastSignedSHA, err,
-			)
+	if createBranch {
+		// Create a new branch ref.
+		_, _, err = client.CreateRef(
+			ctx, owner, repo,
+			github.CreateRef{
+				Ref: "refs/" + targetRef,
+				SHA: lastSignedSHA,
+			},
+		)
+		if err != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error creating ref %s at %s: %w",
+					targetRef, lastSignedSHA, err,
+				)
+		}
+		logger.Debug(
+			"created branch ref",
+			"ref", targetRef,
+			"sha", lastSignedSHA,
+		)
+	} else {
+		// Fast-forward update only (force=false).
+		_, _, err = client.UpdateRef(
+			ctx, owner, repo, targetRef,
+			github.UpdateRef{
+				SHA:   lastSignedSHA,
+				Force: new(bool),
+			},
+		)
+		if err != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error updating ref %s to %s: %w",
+					targetRef, lastSignedSHA, err,
+				)
+		}
+		logger.Debug(
+			"updated branch ref",
+			"ref", targetRef,
+			"sha", lastSignedSHA,
+		)
 	}
-	logger.Debug(
-		"updated branch ref",
-		"ref", targetRef,
-		"sha", lastSignedSHA,
-	)
 
 	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
 

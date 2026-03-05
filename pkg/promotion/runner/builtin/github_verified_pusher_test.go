@@ -131,6 +131,11 @@ type mockGitHubVerifiedPushClient struct {
 		commit github.Commit,
 		opts *github.CreateCommitOptions,
 	) (*github.Commit, *github.Response, error)
+	createRefFn func(
+		ctx context.Context,
+		owner, repo string,
+		ref github.CreateRef,
+	) (*github.Reference, *github.Response, error)
 	getRefFn func(
 		ctx context.Context,
 		owner, repo, ref string,
@@ -163,6 +168,14 @@ func (m *mockGitHubVerifiedPushClient) CreateCommit(
 	return m.createCommitFn(ctx, owner, repo, commit, opts)
 }
 
+func (m *mockGitHubVerifiedPushClient) CreateRef(
+	ctx context.Context,
+	owner, repo string,
+	ref github.CreateRef,
+) (*github.Reference, *github.Response, error) {
+	return m.createRefFn(ctx, owner, repo, ref)
+}
+
 func (m *mockGitHubVerifiedPushClient) GetRef(
 	ctx context.Context,
 	owner, repo, ref string,
@@ -187,9 +200,11 @@ func (m *mockGitHubVerifiedPushClient) DeleteRef(
 
 func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 	testCases := []struct {
-		name   string
-		client githubVerifiedPushClient
-		assert func(*testing.T, promotion.StepResult, error)
+		name         string
+		client       githubVerifiedPushClient
+		targetBranch string
+		createBranch bool
+		assert       func(*testing.T, promotion.StepResult, error)
 	}{
 		{
 			name: "compare API error",
@@ -502,6 +517,118 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			},
 		},
 		{
+			name: "create ref error for new branch",
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("ahead"),
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("orig-sha"),
+							Commit: &github.Commit{
+								Message: ptr.To("test commit"),
+								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
+							},
+						}},
+					}, nil, nil
+				},
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					_ github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					return &github.Commit{
+						SHA: ptr.To("signed-sha"),
+					}, nil, nil
+				},
+				createRefFn: func(
+					_ context.Context,
+					_, _ string,
+					_ github.CreateRef,
+				) (*github.Reference, *github.Response, error) {
+					return nil, nil, fmt.Errorf("ref create error")
+				},
+			},
+			createBranch: true,
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(t, err.Error(), "error creating ref")
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored, result.Status,
+				)
+			},
+		},
+		{
+			name: "successful create of new branch",
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("ahead"),
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("orig-sha"),
+							Commit: &github.Commit{
+								Message: ptr.To("test commit"),
+								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
+							},
+						}},
+					}, nil, nil
+				},
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					_ github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					return &github.Commit{
+						SHA: ptr.To("signed-sha"),
+					}, nil, nil
+				},
+				createRefFn: func(
+					_ context.Context,
+					_, _ string,
+					ref github.CreateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.Equal(
+						t,
+						"refs/heads/kargo/promotion/test",
+						ref.Ref,
+					)
+					require.Equal(t, "signed-sha", ref.SHA)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			createBranch: true,
+			targetBranch: "kargo/promotion/test",
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded, result.Status,
+				)
+				require.Equal(t, "signed-sha", result.Output["commit"])
+				require.Equal(
+					t,
+					"kargo/promotion/test",
+					result.Output["branch"],
+				)
+			},
+		},
+		{
 			name: "successful signing of multiple commits",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
@@ -592,11 +719,15 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			g := &githubVerifiedPusher{
 				cfg: githubVerifiedPusherConfig{MaxRevisions: 10},
 			}
+			targetBranch := tc.targetBranch
+			if targetBranch == "" {
+				targetBranch = "main"
+			}
 			result, err := g.signAndUpdate(
 				context.Background(),
 				tc.client,
 				"owner", "repo",
-				"main",
+				targetBranch, tc.createBranch,
 				"abc123",
 				"def456",
 				&mockWorkTree{url: "https://github.com/owner/repo"},
