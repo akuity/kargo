@@ -1096,6 +1096,7 @@ Stability is not guaranteed.
 | page | [int32](#int32) |  page specifies which page of results to return. |
 | filter | [string](#string) |  filter specifies an optional filter expression for projects. |
 | uid | [string](#string) |  ui store starred projects uids, so it needs to filter it when looking at starred projects |
+| mine | [bool](#bool) |  When true, filter results to only projects where the authenticated user has been mapped to a ServiceAccount in the project's namespace. |
 
 <a name="akuity-io-kargo-service-v1alpha1-ListProjectsResponse"></a>
 

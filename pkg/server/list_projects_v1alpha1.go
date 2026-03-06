@@ -12,6 +12,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/user"
 )
 
 func (s *server) ListProjects(
@@ -21,6 +22,10 @@ func (s *server) ListProjects(
 	var list kargoapi.ProjectList
 	if err := s.client.List(ctx, &list); err != nil {
 		return nil, fmt.Errorf("error listing Projects: %w", err)
+	}
+
+	if req.Msg.GetMine() {
+		list.Items = filterProjectsByAccess(ctx, list.Items)
 	}
 
 	slices.SortFunc(list.Items, func(a, b kargoapi.Project) int {
@@ -99,10 +104,31 @@ func (s *server) listProjects(c *gin.Context) {
 		return
 	}
 
+	if c.Query("mine") == trueStr {
+		list.Items = filterProjectsByAccess(ctx, list.Items)
+	}
+
 	// Sort ascending by name
 	slices.SortFunc(list.Items, func(lhs, rhs kargoapi.Project) int {
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
 	c.JSON(http.StatusOK, list)
+}
+
+// filterProjectsByAccess filters the given projects to only those where the
+// authenticated user has been mapped to a ServiceAccount in the project's
+// namespace.
+func filterProjectsByAccess(
+	ctx context.Context,
+	projects []kargoapi.Project,
+) []kargoapi.Project {
+	userInfo, _ := user.InfoFromContext(ctx)
+	filtered := make([]kargoapi.Project, 0, len(projects))
+	for _, project := range projects {
+		if _, has := userInfo.ServiceAccountsByNamespace[project.Name]; has {
+			filtered = append(filtered, project)
+		}
+	}
+	return filtered
 }

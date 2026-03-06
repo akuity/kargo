@@ -44,7 +44,10 @@ type restTestCase struct {
 	// serverSetup is an optional function that can be used to perform additional
 	// case-specific server initialization.
 	serverSetup func(*testing.T, *server)
-	assertions  func(*testing.T, *httptest.ResponseRecorder, client.Client)
+	// ctxSetup optionally transforms the request context before the request
+	// is served. Use this to inject context-bound values like user.Info.
+	ctxSetup   func(context.Context) context.Context
+	assertions func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }
 
 func testRESTEndpoint(
@@ -121,6 +124,9 @@ func testRESTEndpoint(
 			}
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(method, u, testCase.body)
+			if testCase.ctxSetup != nil {
+				req = req.WithContext(testCase.ctxSetup(req.Context()))
+			}
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
