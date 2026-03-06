@@ -28,6 +28,11 @@ jobs:
       kargo-repo: ${{ steps.repo.outputs.repo }}
       unstable-version: ${{ steps.unstable-version.outputs.unstable-version }}
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Determine which repository to use for images
       id: repo
       run: |
@@ -135,6 +140,11 @@ jobs:
       packages: write # Used to push images to `ghcr.io`
     runs-on: ubuntu-latest
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Determine which repository to use
       id: chart_repo
       run: |
@@ -182,6 +192,11 @@ jobs:
   build-ui:
     runs-on: ubuntu-latest
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Install pnpm
@@ -229,6 +244,11 @@ jobs:
       hash-windows-amd64: ${{ steps.hash.outputs.hash-windows-amd64 }}
       hash-windows-arm64: ${{ steps.hash.outputs.hash-windows-arm64 }}
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -287,6 +307,11 @@ jobs:
         os: [linux, darwin, windows]
         arch: [amd64, arm64]
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
@@ -349,6 +374,11 @@ jobs:
     env:
       HASHES: ${{ toJSON(needs.publish-cli.outputs) }}
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - id: hashes
       run: |
         echo "$HASHES" | jq -r '.[] | @base64d' | sed "/^$/d" > hashes.txt
@@ -382,6 +412,11 @@ jobs:
     container:
       image: *golangImage
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - name: Checkout code
       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Generate best releases JSON
