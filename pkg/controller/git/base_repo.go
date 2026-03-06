@@ -430,14 +430,14 @@ func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
 //
 // example input:
 //
-// gpg: directory '/tmp/.gnupg' created 
+// gpg: directory '/tmp/.gnupg' created
 // gpg: /tmp/.gnupg/trustdb.
-// gpg: trustdb created 
-// gpg: key FCD26DC67084B456: 
-// public key "FirstLast <user@kargo.io>" imported 
-// gpg: key FCD26DC67084B456: secret key imported 
-// gpg: Total number processed: 1 
-// gpg: imported: 1 
+// gpg: trustdb created
+// gpg: key FCD26DC67084B456:
+// public key "FirstLast <user@kargo.io>" imported
+// gpg: key FCD26DC67084B456: secret key imported
+// gpg: Total number processed: 1
+// gpg: imported: 1
 // gpg: secret keys read: 1 gpg: secret keys imported: 1
 func parseImportedKeyID(output string) (string, error) {
 	scanner := bufio.NewScanner(strings.NewReader(output))
