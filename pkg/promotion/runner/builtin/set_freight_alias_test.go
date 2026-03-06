@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -19,57 +18,57 @@ import (
 func Test_setFreightAlias_convert(t *testing.T) {
 	tests := []validationTestCase{
 		{
-			name:   "both freightName and newAlias are not specified",
+			name:   "both name and alias are not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{
-				"(root): freightName is required",
-				"(root): newAlias is required",
+				"(root): name is required",
+				"(root): alias is required",
 			},
 		},
 		{
-			name: "freightName is not specified",
+			name: "name is not specified",
 			config: promotion.Config{
-				"newAlias": "stable",
+				"alias": "stable",
 			},
 			expectedProblems: []string{
-				"(root): freightName is required",
+				"(root): name is required",
 			},
 		},
 		{
-			name: "freightName is empty",
+			name: "name is empty",
 			config: promotion.Config{
-				"freightName": "",
-				"newAlias":    "new-alias",
+				"name":  "",
+				"alias": "new-alias",
 			},
 			expectedProblems: []string{
-				"freightName: String length must be greater than or equal to 1",
+				"name: String length must be greater than or equal to 1",
 			},
 		},
 		{
-			name: "newAlias is not specified",
+			name: "alias is not specified",
 			config: promotion.Config{
-				"freightName": "fake-freight-id",
+				"name": "fake-freight-id",
 			},
 			expectedProblems: []string{
-				"(root): newAlias is required",
+				"(root): alias is required",
 			},
 		},
 		{
-			name: "newAlias is empty",
+			name: "alias is empty",
 			config: promotion.Config{
-				"freightName": "fake-freight-id",
-				"newAlias":    "",
+				"name":  "fake-freight-id",
+				"alias": "",
 			},
 			expectedProblems: []string{
-				"newAlias: String length must be greater than or equal to 1",
+				"alias: String length must be greater than or equal to 1",
 			},
 		},
 		{
 			name: "unknown field is not allowed",
 			config: promotion.Config{
-				"freightName": "fake-freight-id",
-				"newAlias":    "new-alias",
-				"unexpected":  "nope",
+				"name":       "fake-freight-id",
+				"alias":      "new-alias",
+				"unexpected": "nope",
 			},
 			expectedProblems: []string{
 				"(root): Additional property unexpected is not allowed",
@@ -78,8 +77,8 @@ func Test_setFreightAlias_convert(t *testing.T) {
 		{
 			name: "valid minimal config",
 			config: promotion.Config{
-				"freightName": "fake-freight-id",
-				"newAlias":    "new-alias",
+				"name":  "fake-freight-id",
+				"alias": "new-alias",
 			},
 		},
 	}
@@ -100,7 +99,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 		otherFreight = "freight-id-2"
 		testProject  = "test-project"
 		oldAlias     = "old-alias"
-		newAlias     = "new-alias"
+		alias        = "new-alias"
 	)
 
 	tests := []struct {
@@ -114,7 +113,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 			client: fake.NewClientBuilder().WithScheme(scheme).Build(),
 			cfg: builtin.SetFreightAliasConfig{
 				Name:  testFreight,
-				Alias: newAlias,
+				Alias: alias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, _ client.Client, err error) {
 				require.ErrorContains(t, err, "not found")
@@ -139,7 +138,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 				Build(),
 			cfg: builtin.SetFreightAliasConfig{
 				Name:  testFreight,
-				Alias: newAlias,
+				Alias: alias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, _ client.Client, err error) {
 				require.ErrorContains(t, err, "failed to patch alias")
@@ -166,7 +165,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 				Build(),
 			cfg: builtin.SetFreightAliasConfig{
 				Name:  testFreight,
-				Alias: newAlias,
+				Alias: alias,
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, c client.Client, err error) {
 				require.NoError(t, err)
@@ -183,8 +182,8 @@ func Test_setFreightAlias_run(t *testing.T) {
 				)
 				require.NoError(t, err)
 
-				require.Equal(t, newAlias, freight.Alias)
-				require.Equal(t, newAlias, freight.Labels[kargoapi.LabelKeyAlias])
+				require.Equal(t, alias, freight.Alias)
+				require.Equal(t, alias, freight.Labels[kargoapi.LabelKeyAlias])
 			},
 		},
 	}

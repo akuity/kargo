@@ -92,7 +92,7 @@ func (s *freightAliasSetter) run(
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				Err: fmt.Errorf("Freight %q not found in project %q", cfg.Name, stepCtx.Project), //nolint:revive
+				Err: fmt.Errorf("freight %q not found in project %q", cfg.Name, stepCtx.Project),
 			}
 	}
 
