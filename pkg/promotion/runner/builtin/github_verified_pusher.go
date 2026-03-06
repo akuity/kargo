@@ -516,6 +516,13 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		if !shouldSign {
 			commit.Author = rc.Commit.Author
 			commit.Committer = rc.Commit.Committer
+		} else if author := rc.Commit.GetAuthor(); author != nil {
+			// Credit the original author in the re-signed commit.
+			// GitHub renders Co-authored-by trailers as linked avatars.
+			if name, email := author.GetName(), author.GetEmail(); name != "" && email != "" {
+				message = appendCoAuthoredBy(message, name, email)
+				commit.Message = &message
+			}
 		}
 
 		newCommit, _, createErr := client.CreateCommit(
@@ -829,4 +836,17 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 
 	logger.Debug("all commit signatures verified")
 	return statuses, nil
+}
+
+// appendCoAuthoredBy appends a Co-authored-by trailer to a commit message,
+// adding a blank separator line before the trailer if needed.
+func appendCoAuthoredBy(message, name, email string) string {
+	trailer := fmt.Sprintf("Co-authored-by: %s <%s>", name, email)
+	if strings.HasSuffix(message, "\n\n") {
+		return message + trailer
+	}
+	if strings.HasSuffix(message, "\n") {
+		return message + "\n" + trailer
+	}
+	return message + "\n\n" + trailer
 }

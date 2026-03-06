@@ -216,6 +216,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	}
 
 	var homeDir string
+	var fingerprint string
 	if opts.Author != nil {
 		// This author information is specific to this commit, so we will override
 		// repository-level author information by creating a temporary home
@@ -234,7 +235,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		if fingerprint, err = w.setupAuthor(homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for commit command: %w", err,
 			)
@@ -254,6 +255,22 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error committing changes: %w", err)
 	}
+
+	// Import the per-commit author's public key into the repo-level GPG
+	// keyring so that downstream steps (e.g. github-verified-push) can
+	// verify the signature.
+	if fingerprint != "" {
+		if err := w.importGPGPublicKey(
+			homeDir, w.homeDir, fingerprint,
+			SigningKeyTrustLevelUltimate,
+		); err != nil {
+			return fmt.Errorf(
+				"error importing author signing key into repo keyring: %w",
+				err,
+			)
+		}
+	}
+
 	return nil
 }
 

@@ -1262,3 +1262,51 @@ func Test_githubVerifiedPusher_verifyCommitSignatures(t *testing.T) {
 		})
 	}
 }
+
+func Test_appendCoAuthoredBy(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name    string
+		message string
+		coName  string
+		coEmail string
+		expect  string
+	}{
+		{
+			name:    "simple message",
+			message: "fix: something",
+			coName:  "Alice",
+			coEmail: "alice@example.com",
+			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
+		},
+		{
+			name:    "message ending with newline",
+			message: "fix: something\n",
+			coName:  "Alice",
+			coEmail: "alice@example.com",
+			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
+		},
+		{
+			name:    "message ending with double newline",
+			message: "fix: something\n\n",
+			coName:  "Alice",
+			coEmail: "alice@example.com",
+			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
+		},
+		{
+			name:    "multiline message",
+			message: "fix: something\n\nLonger description here.",
+			coName:  "Bob",
+			coEmail: "bob@example.com",
+			expect: "fix: something\n\nLonger description here." +
+				"\n\nCo-authored-by: Bob <bob@example.com>",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result := appendCoAuthoredBy(tc.message, tc.coName, tc.coEmail)
+			require.Equal(t, tc.expect, result)
+		})
+	}
+}
