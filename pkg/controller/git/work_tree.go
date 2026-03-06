@@ -329,29 +329,27 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 	}
 
 	var homeDir string
-	if opts.Tagger != nil {
-		// This signing config is specific to this tag, so we will override
-		// repository-level signing config by creating a temporary home
-		// directory, setting the tag configuration "globally" within it, and
-		// then ensuring the git tag command uses that home directory.
-		var err error
-		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
-			return fmt.Errorf(
-				"error creating virtual home directory %q for tag command: %w",
-				homeDir, err,
-			)
+	// This signing config is specific to this tag, so we will override
+	// repository-level signing config by creating a temporary home
+	// directory, setting the tag configuration "globally" within it, and
+	// then ensuring the git tag command uses that home directory.
+	var err error
+	if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+		return fmt.Errorf(
+			"error creating virtual home directory %q for tag command: %w",
+			homeDir, err,
+		)
+	}
+	defer func() {
+		if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+			logging.LoggerFromContext(context.TODO()).
+				Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 		}
-		defer func() {
-			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-				logging.LoggerFromContext(context.TODO()).
-					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
-			}
-		}()
-		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
-			return fmt.Errorf(
-				"error setting up author information for tag command: %w", err,
-			)
-		}
+	}()
+	if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+		return fmt.Errorf(
+			"error setting up author information for tag command: %w", err,
+		)
 	}
 
 	signingMsg := "Signed by Kargo"
@@ -359,7 +357,9 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		signingMsg = opts.SigningMsg
 	}
 
-	cmd := w.buildGitCommand("tag", "-a", tag, "-m", signingMsg)
+	// we use -s because if we get here then the key should have successfully
+	// been configured
+	cmd := w.buildGitCommand("tag", "-s", tag, "-m", signingMsg)
 	if homeDir != "" {
 		// Override the home directory set by w.buildGitCommand().
 		w.setCmdHome(cmd, homeDir)
