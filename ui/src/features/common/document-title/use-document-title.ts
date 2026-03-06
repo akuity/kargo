@@ -13,9 +13,8 @@ import { DocumentTitleContext } from './document-title-context';
 export const useDocumentTitle = (parts: (string | undefined | null | false)[]) => {
   const { appName } = useContext(DocumentTitleContext);
 
-  const filtered = parts.filter(Boolean) as string[];
-
   useEffect(() => {
-    document.title = [...parts, appName].join(' - ');
-  }, [filtered, appName]);
+    const filtered = parts.filter(Boolean) as string[];
+    document.title = [...filtered, appName].join(' - ');
+  }, [parts, appName]);
 };
