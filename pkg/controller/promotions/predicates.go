@@ -55,3 +55,69 @@ func (p ArgoCDAppOperationCompleted[T]) Delete(event.TypedDeleteEvent[T]) bool {
 func (p ArgoCDAppOperationCompleted[T]) Generic(event.TypedGenericEvent[T]) bool {
 	return false
 }
+
+// ArgoCDAppHealthChanged is a predicate that fires when an ArgoCD
+// Application's health status changes (e.g. Progressing → Healthy). This
+// enables the Promotion reconciler to react promptly to health transitions
+// instead of waiting for a polling interval.
+type ArgoCDAppHealthChanged[T any] struct {
+	logger *logging.Logger
+}
+
+func (p ArgoCDAppHealthChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppHealthChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil || newApp == nil {
+		p.logger.Error(
+			nil, "Update event has no new or old object",
+			"event", e,
+		)
+		return false
+	}
+	return newApp.Status.Health.Status != oldApp.Status.Health.Status
+}
+
+func (p ArgoCDAppHealthChanged[T]) Delete(event.TypedDeleteEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppHealthChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
+
+// ArgoCDAppSyncChanged is a predicate that fires when an ArgoCD Application's
+// sync status changes (e.g. OutOfSync → Synced). This enables the Promotion
+// reconciler to react promptly to sync transitions instead of waiting for a
+// polling interval.
+type ArgoCDAppSyncChanged[T any] struct {
+	logger *logging.Logger
+}
+
+func (p ArgoCDAppSyncChanged[T]) Create(event.TypedCreateEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppSyncChanged[T]) Update(e event.TypedUpdateEvent[T]) bool {
+	oldApp := any(e.ObjectOld).(*argocd.Application) // nolint: forcetypeassert
+	newApp := any(e.ObjectNew).(*argocd.Application) // nolint: forcetypeassert
+	if oldApp == nil || newApp == nil {
+		p.logger.Error(
+			nil, "Update event has no new or old object",
+			"event", e,
+		)
+		return false
+	}
+	return newApp.Status.Sync.Status != oldApp.Status.Sync.Status
+}
+
+func (p ArgoCDAppSyncChanged[T]) Delete(event.TypedDeleteEvent[T]) bool {
+	return false
+}
+
+func (p ArgoCDAppSyncChanged[T]) Generic(event.TypedGenericEvent[T]) bool {
+	return false
+}
