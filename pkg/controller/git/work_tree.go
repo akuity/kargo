@@ -359,7 +359,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 
 	// we use -s because if we get here then the key should have successfully
 	// been configured
-	cmd := w.buildGitCommand("tag", "-s", tag, "-m", signingMsg)
+	cmd := w.buildGitCommand("tag", "-a", tag, "-m", signingMsg)
 	if homeDir != "" {
 		// Override the home directory set by w.buildGitCommand().
 		w.setCmdHome(cmd, homeDir)
