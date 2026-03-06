@@ -13,18 +13,19 @@ GitHub repository using the GitHub REST API. It is a drop-in replacement for
 `git push`.
 
 This step is designed to work with repositories that enforce commit verification
-via branch protection rules. Unlike conventional GPG signing, this step achieves
-GitHub's "Verified" badge by creating commits through the GitHub API itself —
-GitHub trusts commits made through its own API and marks them as verified
-automatically. Under the hood it:
+via branch protection rules. When used with a
+[GitHub App installation token](../../50-security/30-managing-secrets.md#github-app-authentication),
+commits created through the API are automatically trusted by GitHub and marked as
+"Verified" — without requiring GPG key management on the GitHub side. Under the
+hood it:
 
 1. Compares the local branch to the remote target branch to identify new commits
-2. Pushes local commits to a temporary, non-branch staging ref on GitHub
+1. Pushes local commits to a temporary, non-branch staging ref on GitHub
    (invisible in the branch list)
-3. Replays each commit from the staging ref onto the target branch via the
+1. Replays each commit from the staging ref onto the target branch via the
    GitHub REST API, creating new commits with new SHAs
-4. Fast-forwards the target branch to the final replayed commit
-5. Deletes the staging ref
+1. Fast-forwards the target branch to the final replayed commit
+1. Deletes the staging ref
 
 Because commits are recreated through the API, the resulting remote commits have
 different SHAs than the original local commits — even when the content is
@@ -33,15 +34,19 @@ step completes. This is expected and does not affect subsequent promotions, sinc
 each promotion clones a fresh working tree.
 
 :::info
+
 This step requires a **GitHub App installation token** stored as Git
 credentials for the repository. The GitHub App must have **Contents: read &
-write** permission on the target repository.
+write** permission on the target repository. See
+[GitHub App Authentication](../../50-security/30-managing-secrets.md#github-app-authentication)
+for setup instructions.
+
 :::
 
 ## Commit Verification Behavior
 
 Which commits receive GitHub's "Verified" badge depends on whether the Kargo
-controller is configured with a
+controller is configured with its own
 [GPG signing key](../../../40-operator-guide/20-advanced-installation/30-common-configurations.md#signing-commits).
 
 **When a signing key is configured**, this step checks the GPG signature on
@@ -50,8 +55,9 @@ signal to determine which commits are eligible for verification — it is not
 the mechanism that produces the "Verified" badge on GitHub. Instead,
 verification is achieved by replaying eligible commits through the GitHub API:
 
-- **Kargo-signed commits** (including those with expired signatures or keys)
-  are replayed through the GitHub API and appear as "Verified" on GitHub.
+- **Kargo-signed commits** are replayed through the GitHub API and appear as
+  "Verified" on GitHub. The original GPG signature is replaced by GitHub's
+  verification.
 - **Unsigned commits** (or commits signed by a different key) preserve their
   original author and committer and are _not_ marked as "Verified".
 - **Commits with bad or revoked signatures** cause the step to fail with a
@@ -61,10 +67,12 @@ verification is achieved by replaying eligible commits through the GitHub API:
 author and committer. None are marked as "Verified" on GitHub.
 
 :::note
+
 To produce Kargo-signed commits that this step will verify, use the
 [`git-commit`](git-commit.md) step while the controller has a signing key
 configured. The `git-commit` step automatically GPG-signs commits when a
 signing key is available.
+
 :::
 
 ## Configuration

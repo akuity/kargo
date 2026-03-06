@@ -37,6 +37,8 @@ const (
 )
 
 func init() {
+	cfg := githubVerifiedPusherConfig{}
+	envconfig.MustProcess("", &cfg)
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindGitHubVerifiedPush,
@@ -45,7 +47,11 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Value: newGitHubVerifiedPusher,
+			Value: func(
+				caps promotion.StepRunnerCapabilities,
+			) promotion.StepRunner {
+				return newGitHubVerifiedPusher(caps, cfg)
+			},
 		},
 	)
 }
@@ -162,9 +168,8 @@ type githubVerifiedPusher struct {
 // repository as verified commits.
 func newGitHubVerifiedPusher(
 	caps promotion.StepRunnerCapabilities,
+	cfg githubVerifiedPusherConfig,
 ) promotion.StepRunner {
-	cfg := githubVerifiedPusherConfig{}
-	envconfig.MustProcess("", &cfg)
 	return &githubVerifiedPusher{
 		credsDB:      caps.CredsDB,
 		schemaLoader: getConfigSchemaLoader(stepKindGitHubVerifiedPush),
@@ -204,23 +209,6 @@ func (g *githubVerifiedPusher) run(
 	cfg builtin.GitHubVerifiedPushConfig,
 ) (promotion.StepResult, error) {
 	logger := logging.LoggerFromContext(ctx)
-
-	// Short-circuit if shared state has output from a previous execution of
-	// this step that contains a commit SHA.
-	if prevOutput, err := g.getPreviousOutput(stepCtx); err != nil {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusErrored,
-		}, fmt.Errorf("error checking previous step output: %w", err)
-	} else if prevOutput != nil {
-		logger.Debug(
-			"reusing output from previous execution",
-			"commit", prevOutput["commit"],
-		)
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusSucceeded,
-			Output: prevOutput,
-		}, nil
-	}
 
 	// Load the working tree to get the repository URL.
 	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
@@ -343,7 +331,8 @@ func (g *githubVerifiedPusher) run(
 		}, fmt.Errorf("error creating GitHub client: %w", err)
 	}
 
-	// Ensure the staging ref is cleaned up regardless of outcome.
+	// Clean up the staging ref regardless of outcome. This defer is only
+	// reached after the push to the staging ref has succeeded.
 	defer g.cleanupStagingRef(ctx, ghClient, owner, repo, stagingRef)
 
 	// Get the base SHA for comparison. For a new branch, use the source
@@ -601,7 +590,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		)
 	}
 
-	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
+	commitURL := buildCommitURL(workTree.URL(), lastSignedSHA)
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
@@ -635,28 +624,6 @@ func (g *githubVerifiedPusher) cleanupStagingRef(
 	}
 }
 
-// getPreviousOutput checks shared state for output from a previous execution
-// of this step. If found, returns the output map; otherwise returns nil.
-func (g *githubVerifiedPusher) getPreviousOutput(
-	stepCtx *promotion.StepContext,
-) (map[string]any, error) {
-	stepOutput, exists := stepCtx.SharedState.Get(stepCtx.Alias)
-	if !exists {
-		return nil, nil
-	}
-	outputMap, ok := stepOutput.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf(
-			"output from step with alias %q is not a map[string]any",
-			stepCtx.Alias,
-		)
-	}
-	if _, hasCommit := outputMap["commit"]; !hasCommit {
-		return nil, nil
-	}
-	return outputMap, nil
-}
-
 // acquireBranchLock obtains a per-branch mutex to serialize concurrent
 // operations targeting the same branch.
 func (g *githubVerifiedPusher) acquireBranchLock(repoURL, branch string) {
@@ -679,33 +646,42 @@ func (g *githubVerifiedPusher) releaseBranchLock(repoURL, branch string) {
 	mu.Unlock()
 }
 
-// newGitHubClient parses a repository URL and creates an authenticated GitHub
-// API client. Returns the owner, repo name, and client.
-func (g *githubVerifiedPusher) newGitHubClient(
-	repoURL, token string,
-	insecureSkipTLSVerify bool,
-) (string, string, githubVerifiedPushClient, error) {
+// parseGitHubRepoURL extracts the scheme, host, owner, and repo name from a
+// Git repository URL.
+func parseGitHubRepoURL(
+	repoURL string,
+) (scheme, host, owner, repo string, err error) {
 	u, err := url.Parse(urls.NormalizeGit(repoURL))
 	if err != nil {
-		return "", "", nil, fmt.Errorf(
-			"error parsing repository URL %q: %w", repoURL, err,
-		)
+		return "", "", "", "",
+			fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
 	}
-
-	scheme := u.Scheme
+	scheme = u.Scheme
 	if scheme != "https" && scheme != "http" {
 		scheme = "https"
 	}
-
+	host = u.Host
 	path := strings.TrimPrefix(u.Path, "/")
 	parts := strings.Split(path, "/")
 	if len(parts) != 2 {
-		return "", "", nil, fmt.Errorf(
+		return "", "", "", "", fmt.Errorf(
 			"could not extract repository owner and name from URL %q",
 			repoURL,
 		)
 	}
-	owner, repo := parts[0], parts[1]
+	return scheme, host, parts[0], parts[1], nil
+}
+
+// newGitHubClient creates an authenticated GitHub API client for the given
+// repository.
+func (g *githubVerifiedPusher) newGitHubClient(
+	repoURL, token string,
+	insecureSkipTLSVerify bool,
+) (string, string, githubVerifiedPushClient, error) {
+	scheme, host, owner, repo, err := parseGitHubRepoURL(repoURL)
+	if err != nil {
+		return "", "", nil, err
+	}
 
 	httpClient := cleanhttp.DefaultClient()
 	if insecureSkipTLSVerify {
@@ -717,8 +693,8 @@ func (g *githubVerifiedPusher) newGitHubClient(
 	}
 
 	client := github.NewClient(httpClient)
-	if u.Host != "github.com" {
-		baseURL := fmt.Sprintf("%s://%s", scheme, u.Host)
+	if host != "github.com" {
+		baseURL := fmt.Sprintf("%s://%s", scheme, host)
 		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
 		if err != nil {
 			return "", "", nil, fmt.Errorf(
@@ -734,18 +710,16 @@ func (g *githubVerifiedPusher) newGitHubClient(
 
 // buildCommitURL constructs a human-readable commit URL from a repository URL
 // and commit SHA.
-func (g *githubVerifiedPusher) buildCommitURL(
-	repoURL, sha string,
-) string {
-	normalizedURL := urls.NormalizeGit(repoURL)
-	parsedURL, err := url.Parse(normalizedURL)
+func buildCommitURL(repoURL, sha string) string {
+	_, host, _, _, err := parseGitHubRepoURL(repoURL)
 	if err != nil {
 		return ""
 	}
-	return fmt.Sprintf(
-		"https://%s%s/commit/%s",
-		parsedURL.Host, parsedURL.Path, sha,
-	)
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("https://%s%s/commit/%s", host, u.Path, sha)
 }
 
 // verifyCommitSignatures verifies GPG signatures on local commits before they
@@ -772,11 +746,14 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 
 	logger := logging.LoggerFromContext(ctx)
 
-	// Collect non-empty SHAs.
+	// Collect non-empty SHAs. RepositoryCommit.SHA is a *string that could
+	// deserialize to nil from a malformed API response; skip defensively.
 	var shas []string
 	for _, rc := range commits {
 		if sha := rc.GetSHA(); sha != "" {
 			shas = append(shas, sha)
+		} else {
+			logger.Debug("skipping commit with empty SHA")
 		}
 	}
 	if len(shas) == 0 {

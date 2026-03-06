@@ -696,6 +696,10 @@ func (w *workTree) CommitSignatureStatuses(
 	if len(ids) == 0 {
 		return nil, nil
 	}
+	// Output format is tab-separated: SHA<TAB>status<TAB>keyID<TAB>signer
+	// Example:
+	//   abc123\tG\tABCD1234\tKargo Signer
+	//   def789\tN\t\t
 	args := append(
 		[]string{"log", "--no-walk", "--format=%H%x09%G?%x09%GK%x09%GS"},
 		ids...,

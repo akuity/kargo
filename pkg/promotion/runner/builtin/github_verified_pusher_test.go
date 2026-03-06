@@ -111,7 +111,10 @@ func Test_githubVerifiedPusher_convert(t *testing.T) {
 			},
 		},
 	}
-	r := newGitHubVerifiedPusher(promotion.StepRunnerCapabilities{})
+	r := newGitHubVerifiedPusher(
+		promotion.StepRunnerCapabilities{},
+		githubVerifiedPusherConfig{},
+	)
 	runner, ok := r.(*githubVerifiedPusher)
 	require.True(t, ok)
 	runValidationTests(t, runner.convert, tests)
@@ -737,80 +740,6 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 	}
 }
 
-func Test_githubVerifiedPusher_getPreviousOutput(t *testing.T) {
-	testCases := []struct {
-		name   string
-		state  promotion.State
-		alias  string
-		assert func(*testing.T, map[string]any, error)
-	}{
-		{
-			name:  "no previous output",
-			state: promotion.State{},
-			alias: "my-step",
-			assert: func(t *testing.T, output map[string]any, err error) {
-				t.Helper()
-				require.NoError(t, err)
-				require.Nil(t, output)
-			},
-		},
-		{
-			name: "previous output exists with commit",
-			state: promotion.State{
-				"my-step": map[string]any{
-					"commit": "abc123",
-					"branch": "main",
-				},
-			},
-			alias: "my-step",
-			assert: func(t *testing.T, output map[string]any, err error) {
-				t.Helper()
-				require.NoError(t, err)
-				require.NotNil(t, output)
-				require.Equal(t, "abc123", output["commit"])
-			},
-		},
-		{
-			name: "previous output exists without commit",
-			state: promotion.State{
-				"my-step": map[string]any{
-					"branch": "main",
-				},
-			},
-			alias: "my-step",
-			assert: func(t *testing.T, output map[string]any, err error) {
-				t.Helper()
-				require.NoError(t, err)
-				require.Nil(t, output)
-			},
-		},
-		{
-			name: "previous output is wrong type",
-			state: promotion.State{
-				"my-step": "not a map",
-			},
-			alias: "my-step",
-			assert: func(t *testing.T, _ map[string]any, err error) {
-				t.Helper()
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "not a map[string]any")
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := &githubVerifiedPusher{}
-			output, err := g.getPreviousOutput(
-				&promotion.StepContext{
-					Alias:       tc.alias,
-					SharedState: tc.state,
-				},
-			)
-			tc.assert(t, output, err)
-		})
-	}
-}
-
 func Test_githubVerifiedPusher_newGitHubClient(t *testing.T) {
 	testCases := []struct {
 		name      string
@@ -857,8 +786,58 @@ func Test_githubVerifiedPusher_newGitHubClient(t *testing.T) {
 	}
 }
 
-func Test_githubVerifiedPusher_buildCommitURL(t *testing.T) {
-	g := &githubVerifiedPusher{}
+func Test_parseGitHubRepoURL(t *testing.T) {
+	testCases := []struct {
+		name          string
+		repoURL       string
+		expectedOwner string
+		expectedRepo  string
+		expectedHost  string
+		expectErr     bool
+	}{
+		{
+			name:          "standard GitHub URL",
+			repoURL:       "https://github.com/owner/repo",
+			expectedOwner: "owner",
+			expectedRepo:  "repo",
+			expectedHost:  "github.com",
+		},
+		{
+			name:          "URL with .git suffix",
+			repoURL:       "https://github.com/owner/repo.git",
+			expectedOwner: "owner",
+			expectedRepo:  "repo",
+			expectedHost:  "github.com",
+		},
+		{
+			name:          "GitHub Enterprise URL",
+			repoURL:       "https://github.example.com/owner/repo",
+			expectedOwner: "owner",
+			expectedRepo:  "repo",
+			expectedHost:  "github.example.com",
+		},
+		{
+			name:      "invalid URL with wrong path segments",
+			repoURL:   "https://github.com/owner",
+			expectErr: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, host, owner, repo, err := parseGitHubRepoURL(tc.repoURL)
+			if tc.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedOwner, owner)
+			require.Equal(t, tc.expectedRepo, repo)
+			require.Equal(t, tc.expectedHost, host)
+		})
+	}
+}
+
+func Test_buildCommitURL(t *testing.T) {
 	testCases := []struct {
 		name     string
 		repoURL  string
@@ -886,7 +865,7 @@ func Test_githubVerifiedPusher_buildCommitURL(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := g.buildCommitURL(tc.repoURL, tc.sha)
+			result := buildCommitURL(tc.repoURL, tc.sha)
 			require.Equal(t, tc.expected, result)
 		})
 	}
