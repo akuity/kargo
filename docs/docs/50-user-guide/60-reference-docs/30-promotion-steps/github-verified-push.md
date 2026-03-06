@@ -24,7 +24,8 @@ hood it:
    (invisible in the branch list)
 1. Replays each commit from the staging ref onto the target branch via the
    GitHub REST API, creating new commits with new SHAs
-1. Fast-forwards the target branch to the final replayed commit
+1. Updates the target branch to the final replayed commit (fast-forward by
+   default, or force-update when `force: true`)
 1. Deletes the staging ref
 
 Because commits are recreated through the API, the resulting remote commits have
@@ -82,6 +83,7 @@ signing key is available.
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. A value of `true` is mutually exclusive with `targetBranch`. This is useful when a subsequent step will open a pull request. |
+| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification when communicating with the GitHub API. Default is `false`. Intended for GitHub Enterprise instances with self-signed certificates. |
 
 ## Output
@@ -155,4 +157,24 @@ steps:
   config:
     path: ./out
     targetBranch: main
+```
+
+### Force Push
+
+Force push to the target branch, replacing its history with the local branch
+content. This is useful when pushing rendered manifests that don't depend on
+previous state.
+
+```yaml
+steps:
+# Clone, prepare the contents of ./out, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests
+- uses: github-verified-push
+  config:
+    path: ./out
+    targetBranch: stage/test
+    force: true
 ```

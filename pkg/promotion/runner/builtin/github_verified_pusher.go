@@ -33,6 +33,8 @@ const (
 	// compareStatusAhead is the GitHub Compare API status indicating that the
 	// base is behind the head (i.e. there are revisions to replay).
 	compareStatusAhead     = "ahead"
+	compareStatusDiverged  = "diverged"
+	compareStatusBehind    = "behind"
 	compareStatusIdentical = "identical"
 )
 
@@ -280,11 +282,18 @@ func (g *githubVerifiedPusher) run(
 	}
 	targetBranch := cfg.TargetBranch
 	createBranch := false
+	force := cfg.Force
 	if cfg.GenerateTargetBranch {
 		targetBranch = fmt.Sprintf(
 			"kargo/promotion/%s", stepCtx.Promotion,
 		)
 		createBranch = true
+		// Since the generated branch name incorporates the Promotion's
+		// name (which includes a UUID), the only practical reason for
+		// the branch to already exist is a promotion restart. Force
+		// pushing is safe and prevents failures under those
+		// circumstances. This matches the git-push step's behavior.
+		force = true
 	}
 	if targetBranch == "" {
 		targetBranch = currentBranch
@@ -373,7 +382,7 @@ func (g *githubVerifiedPusher) run(
 	// Enumerate commits to sign using the Compare API.
 	result, err := g.signAndUpdate(
 		ctx, ghClient, owner, repo,
-		targetBranch, createBranch, targetHead, localHead,
+		targetBranch, createBranch, force, targetHead, localHead,
 		workTree,
 	)
 	if err != nil {
@@ -387,11 +396,13 @@ func (g *githubVerifiedPusher) run(
 // replays them as signed commits via the GitHub REST API, and updates the
 // target branch ref to point to the final signed commit. When createBranch
 // is true, a new branch is created instead of updating an existing one.
+// When force is true, diverged branches are accepted and the ref update
+// uses force semantics.
 func (g *githubVerifiedPusher) signAndUpdate(
 	ctx context.Context,
 	client githubVerifiedPushClient,
 	owner, repo, targetBranch string,
-	createBranch bool,
+	createBranch, force bool,
 	targetHead, localHead string,
 	workTree git.WorkTree,
 ) (promotion.StepResult, error) {
@@ -418,6 +429,9 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		"totalCommits", comparison.GetTotalCommits(),
 	)
 
+	// parentSHA is the parent for the first replayed commit.
+	parentSHA := targetHead
+
 	switch status {
 	case compareStatusAhead:
 		// Expected: target is behind local head.
@@ -433,14 +447,46 @@ func (g *githubVerifiedPusher) signAndUpdate(
 				stateKeyBranch: targetBranch,
 			},
 		}, nil
+	case compareStatusDiverged, compareStatusBehind:
+		if !force {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusFailed,
+				}, &promotion.TerminalError{
+					Err: fmt.Errorf(
+						"cannot sign revision range %s..%s: "+
+							"comparison status is %q "+
+							"(target branch may have diverged; "+
+							"use force to overwrite)",
+						targetHead, localHead, status,
+					),
+				}
+		}
+		// When force-pushing a diverged branch, start replay from the
+		// merge base so the remote branch ends up with the local
+		// history only, matching git push --force semantics.
+		if status == compareStatusDiverged {
+			mergeBase := comparison.GetMergeBaseCommit()
+			if mergeBase == nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"cannot determine merge base for %s..%s",
+						targetHead, localHead,
+					)
+			}
+			parentSHA = mergeBase.GetSHA()
+			logger.Debug(
+				"force push: using merge base as parent",
+				"mergeBase", parentSHA,
+			)
+		}
 	default:
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
 				Err: fmt.Errorf(
 					"cannot sign revision range %s..%s: "+
-						"comparison status is %q "+
-						"(target branch may have diverged)",
+						"comparison status is %q",
 					targetHead, localHead, status,
 				),
 			}
@@ -448,6 +494,14 @@ func (g *githubVerifiedPusher) signAndUpdate(
 
 	commits := comparison.Commits
 	if len(commits) == 0 {
+		if force && status == compareStatusBehind {
+			// Local is behind target — force-update the ref to the
+			// local HEAD without replaying any commits.
+			return g.forceUpdateRef(
+				ctx, client, owner, repo,
+				targetBranch, localHead, workTree,
+			)
+		}
 		return promotion.StepResult{
 			Status:  kargoapi.PromotionStepStatusSkipped,
 			Message: "no revisions to sign in range",
@@ -486,7 +540,6 @@ func (g *githubVerifiedPusher) signAndUpdate(
 	// Replay each revision via the API. Only commits signed by Kargo's
 	// trusted key(s) (status "G") are re-signed by the GitHub App; all
 	// others preserve original authorship.
-	parentSHA := targetHead
 	var lastSignedSHA string
 	for i, rc := range commits {
 		if rc.Commit == nil ||
@@ -574,12 +627,11 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			"sha", lastSignedSHA,
 		)
 	} else {
-		// Fast-forward update only (force=false).
 		_, _, err = client.UpdateRef(
 			ctx, owner, repo, targetRef,
 			github.UpdateRef{
 				SHA:   lastSignedSHA,
-				Force: new(bool),
+				Force: &force,
 			},
 		)
 		if err != nil {
@@ -603,6 +655,50 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
 			stateKeyCommit:    lastSignedSHA,
+			stateKeyCommitURL: commitURL,
+			stateKeyBranch:    targetBranch,
+		},
+	}, nil
+}
+
+// forceUpdateRef force-updates an existing branch ref without replaying any
+// commits. This handles the "behind" case when force is enabled: the local
+// HEAD has no new commits relative to the target, but we still want the
+// remote branch to point to the local HEAD.
+func (g *githubVerifiedPusher) forceUpdateRef(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, targetBranch, sha string,
+	workTree git.WorkTree,
+) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+	targetRef := "heads/" + targetBranch
+	force := true
+	_, _, err := client.UpdateRef(
+		ctx, owner, repo, targetRef,
+		github.UpdateRef{
+			SHA:   sha,
+			Force: &force,
+		},
+	)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error force-updating ref %s to %s: %w",
+				targetRef, sha, err,
+			)
+	}
+	logger.Debug(
+		"force-updated branch ref",
+		"ref", targetRef,
+		"sha", sha,
+	)
+	commitURL := buildCommitURL(workTree.URL(), sha)
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{
+			stateKeyCommit:    sha,
 			stateKeyCommitURL: commitURL,
 			stateKeyBranch:    targetBranch,
 		},

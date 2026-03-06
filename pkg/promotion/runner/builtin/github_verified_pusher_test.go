@@ -101,6 +101,20 @@ func Test_githubVerifiedPusher_convert(t *testing.T) {
 			},
 		},
 		{
+			name: "force is true",
+			config: promotion.Config{
+				"path":  "/fake/path",
+				"force": true,
+			},
+		},
+		{
+			name: "force is false",
+			config: promotion.Config{
+				"path":  "/fake/path",
+				"force": false,
+			},
+		},
+		{
 			name: "unknown field",
 			config: promotion.Config{
 				"path":    "/fake/path",
@@ -207,6 +221,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 		client       githubVerifiedPushClient
 		targetBranch string
 		createBranch bool
+		force        bool
 		assert       func(*testing.T, promotion.StepResult, error)
 	}{
 		{
@@ -259,7 +274,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "diverged commits",
+			name: "diverged commits without force",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -278,7 +293,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				require.Error(t, err)
 				require.True(t, promotion.IsTerminal(err))
 				require.Contains(
-					t, err.Error(), "target branch may have diverged",
+					t, err.Error(), "use force to overwrite",
 				)
 				require.Equal(
 					t,
@@ -632,6 +647,213 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			},
 		},
 		{
+			name:  "force push with diverged branches",
+			force: true,
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("diverged"),
+						MergeBaseCommit: &github.RepositoryCommit{
+							SHA: ptr.To("merge-base-sha"),
+						},
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("orig-sha"),
+							Commit: &github.Commit{
+								Message: ptr.To("test commit"),
+								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
+							},
+						}},
+					}, nil, nil
+				},
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					commit github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					// Verify the parent is the merge base, not targetHead.
+					require.Equal(
+						t, "merge-base-sha",
+						commit.Parents[0].GetSHA(),
+					)
+					return &github.Commit{
+						SHA: ptr.To("signed-sha"),
+					}, nil, nil
+				},
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					ref github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.Equal(t, "signed-sha", ref.SHA)
+					require.NotNil(t, ref.Force)
+					require.True(t, *ref.Force)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded, result.Status,
+				)
+				require.Equal(t, "signed-sha", result.Output["commit"])
+			},
+		},
+		{
+			name:  "force push with diverged branches missing merge base",
+			force: true,
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("diverged"),
+					}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "cannot determine merge base",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored, result.Status,
+				)
+			},
+		},
+		{
+			name:  "force push with behind status",
+			force: true,
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status:  ptr.To("behind"),
+						Commits: []*github.RepositoryCommit{},
+					}, nil, nil
+				},
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					ref github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					// For behind+force, the ref should be updated
+					// to localHead ("def456").
+					require.Equal(t, "def456", ref.SHA)
+					require.NotNil(t, ref.Force)
+					require.True(t, *ref.Force)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded, result.Status,
+				)
+				require.Equal(t, "def456", result.Output["commit"])
+			},
+		},
+		{
+			name: "behind status without force",
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("behind"),
+					}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.True(t, promotion.IsTerminal(err))
+				require.Contains(
+					t, err.Error(), "use force to overwrite",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusFailed, result.Status,
+				)
+			},
+		},
+		{
+			name:  "non-force update ref passes force=false",
+			force: false,
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					return &github.CommitsComparison{
+						Status: ptr.To("ahead"),
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("orig-sha"),
+							Commit: &github.Commit{
+								Message: ptr.To("test commit"),
+								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
+							},
+						}},
+					}, nil, nil
+				},
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					_ github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					return &github.Commit{
+						SHA: ptr.To("signed-sha"),
+					}, nil, nil
+				},
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					ref github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.NotNil(t, ref.Force)
+					require.False(t, *ref.Force)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded, result.Status,
+				)
+			},
+		},
+		{
 			name: "successful signing of multiple commits",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
@@ -730,7 +952,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				context.Background(),
 				tc.client,
 				"owner", "repo",
-				targetBranch, tc.createBranch,
+				targetBranch, tc.createBranch, tc.force,
 				"abc123",
 				"def456",
 				&mockWorkTree{url: "https://github.com/owner/repo"},
