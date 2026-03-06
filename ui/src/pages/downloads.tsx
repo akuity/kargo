@@ -3,6 +3,7 @@ import { faCircleDown, faCodeCommit, faExternalLink } from '@fortawesome/free-so
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 
 import { PageTitle } from '@ui/features/common';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 
 const DownloadLink = ({ url, children }: { url: string; children: React.ReactNode }) => (
   <a
@@ -43,47 +44,50 @@ const DownloadItem = ({
 const constructUrl = (platform: string, version?: string) =>
   `https://github.com/akuity/kargo/releases/${version ? '' : 'latest/'}download/${version ? `${version}/` : ''}${platform}`;
 
-export const Downloads = () => (
-  <div className='p-6'>
-    <PageTitle title='CLI Downloads' />
-    <div className='text-2xl mb-2 font-semibold flex items-center'>
-      <FontAwesomeIcon icon={faCodeCommit} className='mr-2' />
-      {__UI_VERSION__ === 'development' ? 'Latest version' : __UI_VERSION__}
+export const Downloads = () => {
+  useDocumentTitle(['CLI Downloads']);
+  return (
+    <div className='p-6'>
+      <PageTitle title='CLI Downloads' />
+      <div className='text-2xl mb-2 font-semibold flex items-center'>
+        <FontAwesomeIcon icon={faCodeCommit} className='mr-2' />
+        {__UI_VERSION__ === 'development' ? 'Latest version' : __UI_VERSION__}
+      </div>
+      <a
+        href='https://github.com/akuity/kargo/releases'
+        target='_blank'
+        rel='noreferrer'
+        className='mb-6 flex text-xs items-center text-blue-500 uppercase'
+      >
+        <FontAwesomeIcon icon={faExternalLink} className='mr-2' />
+        View all releases
+      </a>
+      <div className='flex items-center gap-4 flex-wrap'>
+        <DownloadItem
+          title='Mac'
+          icon={faApple}
+          links={[
+            { url: constructUrl('kargo-darwin-arm64'), title: 'Apple Silicon' },
+            { url: constructUrl('kargo-darwin-amd64'), title: 'Intel' }
+          ]}
+        />
+        <DownloadItem
+          title='Windows'
+          icon={faWindows}
+          links={[
+            { url: `${constructUrl('kargo-windows-arm64')}.exe`, title: 'ARM' },
+            { url: `${constructUrl('kargo-windows-amd64')}.exe`, title: 'x86' }
+          ]}
+        />
+        <DownloadItem
+          title='Linux'
+          icon={faLinux}
+          links={[
+            { url: constructUrl('kargo-linux-arm64'), title: 'ARM' },
+            { url: constructUrl('kargo-linux-amd64'), title: 'x86' }
+          ]}
+        />
+      </div>
     </div>
-    <a
-      href='https://github.com/akuity/kargo/releases'
-      target='_blank'
-      rel='noreferrer'
-      className='mb-6 flex text-xs items-center text-blue-500 uppercase'
-    >
-      <FontAwesomeIcon icon={faExternalLink} className='mr-2' />
-      View all releases
-    </a>
-    <div className='flex items-center gap-4 flex-wrap'>
-      <DownloadItem
-        title='Mac'
-        icon={faApple}
-        links={[
-          { url: constructUrl('kargo-darwin-arm64'), title: 'Apple Silicon' },
-          { url: constructUrl('kargo-darwin-amd64'), title: 'Intel' }
-        ]}
-      />
-      <DownloadItem
-        title='Windows'
-        icon={faWindows}
-        links={[
-          { url: `${constructUrl('kargo-windows-arm64')}.exe`, title: 'ARM' },
-          { url: `${constructUrl('kargo-windows-amd64')}.exe`, title: 'x86' }
-        ]}
-      />
-      <DownloadItem
-        title='Linux'
-        icon={faLinux}
-        links={[
-          { url: constructUrl('kargo-linux-arm64'), title: 'ARM' },
-          { url: constructUrl('kargo-linux-amd64'), title: 'x86' }
-        ]}
-      />
-    </div>
-  </div>
-);
+  );
+};

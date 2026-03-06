@@ -5,6 +5,7 @@ import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { Pipelines } from '@ui/features/project/pipelines/pipelines';
 import { useProjectBreadcrumbs } from '@ui/features/project/project-utils';
@@ -17,10 +18,18 @@ export const Project = ({
   creatingStage?: boolean;
   creatingWarehouse?: boolean;
 }) => {
-  const { name } = useParams();
+  const { name, stageName, warehouseName, promotionId, freightName } = useParams();
   const navigate = useNavigate();
   const projectBreadcrumbs = useProjectBreadcrumbs();
   const { projectSubpages } = useExtensionsContext();
+
+  const resourceLabel =
+    (stageName && `Stage: ${stageName}`) ||
+    (warehouseName && `Warehouse: ${warehouseName}`) ||
+    (promotionId && `Promotion: ${promotionId}`) ||
+    (freightName && `Freight: ${freightName}`);
+  const titleParts = resourceLabel ? [resourceLabel, name] : [name];
+  useDocumentTitle(titleParts);
 
   return (
     <div className='h-full flex flex-col'>

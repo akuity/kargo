@@ -11,9 +11,10 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Breadcrumb, Flex, Menu, Skeleton, Typography } from 'antd';
 import React from 'react';
-import { NavLink, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { NavLink, Route, Routes, useLocation, useParams, Navigate } from 'react-router-dom';
 
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 import { BaseHeader } from '@ui/features/common/layout/base-header';
 import { getConfig } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 
@@ -92,6 +93,8 @@ export const ProjectSettings = () => {
   );
 
   const projectBreadcrumbs = useProjectBreadcrumbs();
+  const { name } = useParams();
+  useDocumentTitle(['Settings', name]);
 
   return (
     <>
