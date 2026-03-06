@@ -5,10 +5,10 @@ description: Pushes the committed changes in a specified working tree to a speci
 
 # `git-push`
 
-`git-push` pushes the committed changes in a specified working tree to a
-specified branch in the remote repository. This step typically follows a
-[`git-commit` step](git-commit.md) and is often followed by a
-[`git-open-pr` step](git-open-pr.md).
+`git-push` pushes committed changes or new tags from a specified working tree to
+the remote repository. This step typically follows a
+[`git-commit` step](git-commit.md) and/or [`git-tag` step](git-tag.md) and is
+often followed by a [`git-open-pr` step](git-open-pr.md).
 
 This step also implements its own, internal retry logic. If a push fails, with
 the cause determined to be the presence of new commits in the remote branch that
@@ -28,6 +28,13 @@ Stages that write to the same branch do not write to the same files.
 
 :::
 
+
+:::note
+
+For a tag push, there is no pull/rebase retry loop.
+
+:::
+
 ## Credentials
 
 Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
@@ -38,10 +45,11 @@ system to access the git repos.
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
-| `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
+| `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true` and `tag`. If none of these are provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
-| `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of 'true' is mutually exclusive with `targetBranch`. If neither of these is provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
-| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
+| `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of `true` is mutually exclusive with `targetBranch` and `tag`. If none of these are provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
+| `tag` | `string` | N | An tag to push to the remote repository. Mutually exclusive with `generateTargetBranch` and `targetBranch`. |
+| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. A value of `true` is mutually exclusive with `tag`.  |
 | `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
 
 ## Output
@@ -102,3 +110,26 @@ steps:
     generateTargetBranch: true
 # Open a PR and wait for it to be merged or closed...
 ```
+
+### Pushing Tags
+
+In this example, a new tag is pushed to the remote repository.
+
+```yaml
+# Create a new tag
+- uses: git-tag
+  config:
+    path: ./out
+    tag: v1.0.0
+- uses: git-push
+  config:
+    path: ./out
+    tag: v1.0.0
+```
+
+:::caution
+
+If the specified tag already exists in the remote repository, the `git-push` 
+step will fail.
+
+:::

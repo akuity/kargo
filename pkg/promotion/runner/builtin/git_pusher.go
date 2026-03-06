@@ -47,7 +47,7 @@ func init() {
 }
 
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
-// pushes commits from a local Git repository to a remote Git repository.
+// pushes commits and tags from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
@@ -154,7 +154,13 @@ func (g *gitPushPusher) run(
 		// branch is specific to this Promotion only holds, it is also safe to do this.
 		pushOpts.Force = true
 	}
-
+	if cfg.Tag != "" {
+		pushOpts.Tag = cfg.Tag
+		// If we're pushing a tag, we should not attempt to pull/rebase first as
+		// tags are immutable and any existing tag with the same name on the remote
+		// would cause the pull/rebase to fail.
+		pushOpts.PullRebase = false
+	}
 	// Disable pull/rebase when force pushing to allow overwriting remote history
 	if pushOpts.Force {
 		pushOpts.PullRebase = false
@@ -224,21 +230,24 @@ func (g *gitPushPusher) run(
 	if cfg.Provider != nil {
 		gpOpts.Name = string(*cfg.Provider)
 	}
+
+	output := map[string]any{stateKeyCommit: commitID}
+	if pushOpts.TargetBranch != "" {
+		output[stateKeyBranch] = pushOpts.TargetBranch
+	}
+
 	gitProvider, err := gitprovider.New(workTree.URL(), &gpOpts)
 	var commitURL string
 	if err == nil {
 		if commitURL, err = gitProvider.GetCommitURL(workTree.URL(), commitID); err != nil {
 			logger.Error(err, "unable to get commit URL from Git provider")
+		} else {
+			output[stateKeyCommitURL] = commitURL
 		}
 	}
-
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
-		Output: map[string]any{
-			stateKeyBranch:    pushOpts.TargetBranch,
-			stateKeyCommit:    commitID,
-			stateKeyCommitURL: commitURL,
-		},
+		Output: output,
 	}, nil
 }
 

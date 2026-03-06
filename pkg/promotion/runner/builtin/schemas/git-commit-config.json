@@ -22,7 +22,7 @@
         },
         "signingKey": {
           "type": "string",
-          "description": "The GPG signing key for the author."
+          "description": "The GPG signing key for the author. If provided 'email' and 'name' must match the ones in the uid of the associated GPG key." 
         }
       },
       "required": ["name", "email"]

@@ -137,7 +137,7 @@ type GitClearConfig struct {
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
 	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` step can override this information.
+	// `git-commit` or `git-tag` step can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -153,7 +153,7 @@ type GitCloneConfig struct {
 
 // Default authorship information for any commits made to the cloned repository. If
 // provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` step can override this information.
+// `git-commit` or `git-tag` step can override this information.
 type GitCloneConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`
@@ -206,7 +206,8 @@ type GitCommitConfigAuthor struct {
 	Email string `json:"email"`
 	// The name of the author.
 	Name string `json:"name"`
-	// The GPG signing key for the author.
+	// The GPG signing key for the author. If provided 'email' and 'name' must match the ones in
+	// the uid of the associated GPG key.
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
@@ -260,10 +261,11 @@ type GitPushConfig struct {
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
 	// will overwrite any commits that exist on the remote branch but not in your local branch.
+	// Mutually exclusive with 'tag'.
 	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
-	// with 'targetBranch'. If neither of these is provided, the target branch will be the
-	// currently checked out branch.
+	// with 'targetBranch' and 'tag'. If neither of these is provided, the target branch will be
+	// the currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
 	// This step implements its own internal retry logic for cases where a push is determined to
 	// have failed due to the remote branch having commits that that are not present locally.
@@ -277,9 +279,41 @@ type GitPushConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
-	// neither of these is provided, the target branch will be the currently checked out branch.
+	// A tag to push to the remote repository. Mutually exclusive with
+	// 'generateTargetBranch=true', 'targetBranch', and 'force=true'.
+	Tag string `json:"tag,omitempty"`
+	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
+	// 'tag'. If none of these are provided, the target branch will be the currently checked out
+	// branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+type GitTagConfig struct {
+	// The annotation message for the tag.
+	Message string `json:"message,omitempty"`
+	// The path to a working directory of a local repository.
+	Path string `json:"path"`
+	// The tag to create in the repository.
+	Tag string `json:"tag"`
+	// Optional tagger information for the tag. If provided, this takes precedence over both
+	// system-level defaults and any optional, default authorship information configured in the
+	// `git-clone` step.
+	Tagger *Tagger `json:"tagger,omitempty"`
+}
+
+// Optional tagger information for the tag. If provided, this takes precedence over both
+// system-level defaults and any optional, default authorship information configured in the
+// `git-clone` step.
+type Tagger struct {
+	// The email of the tagger. If unspecified, defaults to the repo-level configuration
+	// specified when the repo was cloned. Can also be configured at the system level.
+	Email string `json:"email,omitempty"`
+	// The name of the tagger. If unspecified, defaults to the repo-level configuration
+	// specified when the repo was cloned. Can also be configured at the system level.
+	Name string `json:"name,omitempty"`
+	// The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided
+	// and must match the 'email' and 'name' in the uid of the associated GPG key.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitWaitForPRConfig struct {

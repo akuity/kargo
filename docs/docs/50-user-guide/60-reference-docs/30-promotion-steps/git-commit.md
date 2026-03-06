@@ -113,3 +113,40 @@ steps:
       name: Kargo
       email: kargo@example.com
 ```
+
+### Create A Signed Commit
+
+In this example, the `git-commit` step creates a signed commit using the
+provided `author.signingKey` by sourcing it from an existing secret in the same 
+namespace using the [`secret()`](../40-expressions.md#secretname) expression 
+function.
+
+:::note
+
+Author signing information may have been configured at the system level by a 
+Kargo admin. If a system-level configuration exists, the example shown below 
+would override it.
+
+:::
+
+
+```yaml
+steps:
+# Update Kustomize manifests, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: ${{ outputs['update-image'].commitMessage }}
+    author:
+      name: Kargo
+      email: kargo@example.com
+      signingKey: ${{ secret('my-gpg-secret').privateKey }}
+```
+
+:::note
+
+If `author.signingKey` is provided but `author.name` and `author.email` do not
+match the email and name in the uid of the associated GPG key, commit tag will 
+not get signed.
+
+:::

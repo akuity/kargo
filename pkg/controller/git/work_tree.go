@@ -42,6 +42,8 @@ type WorkTree interface {
 	// CreateOrphanedBranch creates a new branch that shares no commit history
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
+	// CreateTag creates a new tag with the specified name.
+	CreateTag(name string, opts *TagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -302,6 +304,65 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 		)
 	}
 	return w.Clean()
+}
+
+// TagOptions represents options for creating a new git tag.
+type TagOptions struct {
+	// Tagger is the tagger of the tag. If nil, the default tagger already
+	// configured in the git repository will be used.
+	Tagger *User
+	// Message is the message with which the tag will be annotated. If empty,
+	// a default message will be used.
+	Message string
+}
+
+func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
+	if opts == nil {
+		opts = &TagOptions{}
+	}
+
+	var homeDir string
+	// This signing config is specific to this tag, so we will override
+	// repository-level signing config by creating a temporary home
+	// directory, setting the tag configuration "globally" within it, and
+	// then ensuring the git tag command uses that home directory.
+	if opts.Tagger != nil {
+		var err error
+		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+			return fmt.Errorf(
+				"error creating virtual home directory %q for tag command: %w",
+				homeDir, err,
+			)
+		}
+		defer func() {
+			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+				logging.LoggerFromContext(context.TODO()).
+					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+			}
+		}()
+		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+			return fmt.Errorf(
+				"error setting up author information for tag command: %w", err,
+			)
+		}
+	}
+
+	msg := "Created by Kargo"
+	if opts.Message != "" {
+		msg = opts.Message
+	}
+
+	// we use -s because if we get here then the key should have successfully
+	// been configured
+	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
+	if homeDir != "" {
+		// Override the home directory set by w.buildGitCommand().
+		w.setCmdHome(cmd, homeDir)
+	}
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error creating signed tag %q", err)
+	}
+	return nil
 }
 
 func (w *workTree) CurrentBranch() (string, error) {
@@ -586,12 +647,19 @@ type PushOptions struct {
 	// Force indicates whether the push should be forced.
 	Force bool
 	// TargetBranch specifies the branch to push to. If empty, the current branch
-	// will be pushed to a remote branch by the same name.
+	// TargetBranch specifies a remote branch to push to. If empty, the remote
+	// branch's name will be assumed to be the same as the branch checked out
+	// locally. Whether this field is empty or non-empty, if Tag is non-empty,
+	// it takes precedence and the tag will be pushed -- the branch will not.
 	TargetBranch string
 	// PullRebase indicates whether to pull and rebase before pushing. This can
 	// be useful when pushing changes to a remote branch that has been updated
 	// in the time since the local branch was last pulled.
 	PullRebase bool
+	// Tag specifies a tag to push to the remote repository. If this field and
+	// TargetBranch are both non-empty, this field takes precedence and the tag
+	// will be pushed -- the branch will not.
+	Tag string
 }
 
 // https://regex101.com/r/f7kTjs/1
@@ -603,6 +671,16 @@ func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
+
+	args := []string{"push", "origin"}
+	if opts.Tag != "" {
+		args = append(args, "tag", opts.Tag)
+		if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+			return fmt.Errorf("error pushing tag: %w", err)
+		}
+		return nil
+	}
+
 	targetBranch := opts.TargetBranch
 	if targetBranch == "" {
 		var err error
@@ -610,6 +688,8 @@ func (w *workTree) Push(opts *PushOptions) error {
 			return err
 		}
 	}
+
+	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
 	if opts.PullRebase {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
@@ -630,10 +710,11 @@ func (w *workTree) Push(opts *PushOptions) error {
 			}
 		}
 	}
-	args := []string{"push", "origin", fmt.Sprintf("HEAD:%s", targetBranch)}
+
 	if opts.Force {
 		args = append(args, "--force")
 	}
+
 	if res, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
 		if nonFastForwardRegex.MatchString(string(res)) {
 			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)

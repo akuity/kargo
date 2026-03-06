@@ -190,6 +190,14 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
+			// Enable signing for tags as well.
+			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
+			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error configuring tag gpg signing: %w", err)
+			}
+
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
