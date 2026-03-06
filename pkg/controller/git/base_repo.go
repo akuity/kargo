@@ -1,7 +1,6 @@
 package git
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -203,22 +202,8 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
-			out, err := libExec.Exec(cmd)
-			if err != nil {
-				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
-			}
-
-			keyID, err := parseImportedKeyID(string(out))
-			if err != nil {
-				return fmt.Errorf("error parsing key ID from gpg --import output: %w", err)
-			}
-
-			// Set the newly imported  key ID in the git config as the signing key.
-			cmd = b.buildGitCommand("config", "--global", "user.signingkey", keyID)
-			cmd.Dir = homeDir
-			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error designating signing key: %w", err)
+				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
 			}
 		}
 
@@ -424,41 +409,4 @@ func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {
 	} else {
 		cmd.Env = append(cmd.Env, fmt.Sprintf("HOME=%s", homeDir))
 	}
-}
-
-// parseImportedKeyID extracts the primary key ID from the output of gpg import.
-//
-// example input:
-//
-// gpg: directory '/tmp/.gnupg' created
-// gpg: /tmp/.gnupg/trustdb.
-// gpg: trustdb created
-// gpg: key FCD26DC67084B456:
-// public key "FirstLast <user@kargo.io>" imported
-// gpg: key FCD26DC67084B456: secret key imported
-// gpg: Total number processed: 1
-// gpg: imported: 1
-// gpg: secret keys read: 1 gpg: secret keys imported: 1
-func parseImportedKeyID(output string) (string, error) {
-	scanner := bufio.NewScanner(strings.NewReader(output))
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Look for: gpg: key <KEYID>:
-		if strings.Contains(line, "gpg: key ") {
-			parts := strings.Split(line, "key ")
-			if len(parts) < 2 {
-				continue
-			}
-			rest := parts[1]
-			keyParts := strings.Split(rest, ":")
-			if len(keyParts) > 0 {
-				return strings.TrimSpace(keyParts[0]), nil
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", fmt.Errorf("error scanning gpg output: %w", err)
-	}
-	return "", errors.New("no key id found in gpg import output")
 }
