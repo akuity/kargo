@@ -31,29 +31,29 @@ func init() {
 }
 
 // setFreightAlias is an implementation of the promotion.StepRunner interface
-// that updates alias on Freight resources.
-type setFreightAlias struct {
+// that updates aliases of Freight resources.
+type freightAliasSetter struct {
 	kargoClient  client.Client
 	schemaLoader gojsonschema.JSONLoader
 }
 
 // convert validates the configuration against a JSON schema and converts it
 // into a builtin.SetFreightAliasConfig struct.
-func (s *setFreightAlias) convert(cfg promotion.Config) (builtin.SetFreightAliasConfig, error) {
+func (s *freightAliasSetter) convert(cfg promotion.Config) (builtin.SetFreightAliasConfig, error) {
 	return validateAndConvert[builtin.SetFreightAliasConfig](s.schemaLoader, cfg, stepKindSetFreightAlias)
 }
 
 // newSetFreightAlias returns an implementation of the promotion.StepRunner
 // interface that updates alias on Freight resources.
 func newSetFreightAlias(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
-	return &setFreightAlias{
+	return &freightAliasSetter{
 		kargoClient:  caps.KargoClient,
 		schemaLoader: getConfigSchemaLoader(stepKindSetFreightAlias),
 	}
 }
 
 // Run implements the promotion.StepRunner interface.
-func (s *setFreightAlias) Run(
+func (s *freightAliasSetter) Run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 ) (promotion.StepResult, error) {
@@ -67,14 +67,11 @@ func (s *setFreightAlias) Run(
 	return s.run(ctx, stepCtx, cfg)
 }
 
-func (s *setFreightAlias) run(
+func (s *freightAliasSetter) run(
 	ctx context.Context,
 	stepCtx *promotion.StepContext,
 	cfg builtin.SetFreightAliasConfig,
 ) (promotion.StepResult, error) {
-	// Use the immutable name to avoid
-	// resolving the wrong Freight if an alias
-	// changes concurrently.
 	freight, err := api.GetFreight(
 		ctx,
 		s.kargoClient,
@@ -95,8 +92,7 @@ func (s *setFreightAlias) run(
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
-				// nolint
-				Err: fmt.Errorf("Freight %q not found in project %q", cfg.Name, stepCtx.Project),
+				Err: fmt.Errorf("Freight %q not found in project %q", cfg.Name, stepCtx.Project), //nolint:revive
 			}
 	}
 

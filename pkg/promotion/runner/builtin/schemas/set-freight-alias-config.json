@@ -7,12 +7,12 @@
   "properties": {
     "name": {
       "type": "string",
-      "description": "The immutable name of the Freight resource to update. This must be the Freight's name (its stable identifier), not an alias.",
+      "description": "The name of the Freight resource to update.",
       "minLength": 1
     },
     "alias": {
       "type": "string",
-      "description": "The new human-readable alias to assign to the Freight. Aliases must be unique within the project.",
+      "description": "The new alias to assign to the Freight. Aliases must be unique within the project.",
       "minLength": 1
     }
   }

@@ -18,10 +18,10 @@ through the `Stage`s of a pipeline.
 
 ## Configuration
 
-| Name          | Type     | Required | Description                                                 |
-|---------------|----------|----------|-------------------------------------------------------------|
-| `freightName` | `string` | Y | The name of a `Freight` resource to update. |
-| `newAlias`    | `string` | Y | The desired new alias to set on the `Freight`.                |
+| Name    | Type     | Required | Description                                                 |
+|---------|----------|----------|-------------------------------------------------------------|
+| `name`  | `string` | Y | The name of a `Freight` resource to update. |
+| `alias` | `string` | Y | The desired new alias to set on the `Freight`.                |
 
 :::note
 
@@ -32,12 +32,24 @@ in use by another `Freight` resource in the project, this step will fail.
 
 ## Examples
 
-### Common Usage
+When a `Freight` resource references only a single artifact, such as a
+container image, its alias can be updated to reflect that artifact's version.
+This makes it easy to identify the `Freight` resource at a glance as it progresses
+through a pipeline.
+
+:::caution
+
+This pattern is only safe when the `Freight` resource contains a single artifact. If the
+`Freight` resource references multiple artifacts (e.g., several images or Git commits),
+different `Freight` resources could easily produce the same alias, causing
+conflicts that fail the promotion step.
+
+:::
 
 ```yaml
 steps:
 - uses: set-freight-alias
   config:
-    freightName: ${{ ctx.targetFreight.name }}
-    newAlias: ${{ imageFrom('some/repo').Tag }}
+    name: ${{ ctx.targetFreight.name }}
+    alias: ${{ imageFrom('some/repo').Tag }}
 ```

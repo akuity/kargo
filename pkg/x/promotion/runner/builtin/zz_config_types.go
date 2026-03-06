@@ -542,11 +542,9 @@ type OCIDownloadConfig struct {
 }
 
 type SetFreightAliasConfig struct {
-	// The new human-readable alias to assign to the Freight. Aliases must be unique within the
-	// project.
+	// The new alias to assign to the Freight. Aliases must be unique within the project.
 	Alias string `json:"alias"`
-	// The immutable name of the Freight resource to update. This must be the Freight's name
-	// (its stable identifier), not an alias.
+	// The name of the Freight resource to update.
 	Name string `json:"name"`
 }
 
