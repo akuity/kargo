@@ -157,12 +157,17 @@ type githubVerifiedPusherConfig struct {
 // interface that pushes local commits to a GitHub repository as verified
 // (signed) commits using the GitHub REST API.
 type githubVerifiedPusher struct {
-	schemaLoader gojsonschema.JSONLoader
-	credsDB      credentials.Database
-	cfg          githubVerifiedPusherConfig
-	gitUser      git.User
-	branchMus    map[string]*sync.Mutex
-	masterMu     sync.Mutex
+	schemaLoader      gojsonschema.JSONLoader
+	credsDB           credentials.Database
+	cfg               githubVerifiedPusherConfig
+	gitUser           git.User
+	branchMus         map[string]*sync.Mutex
+	masterMu          sync.Mutex
+	loadWorkTreeFn    func(string, *git.LoadWorkTreeOptions) (git.WorkTree, error)
+	newGitHubClientFn func(
+		repoURL, token string,
+		insecureSkipTLSVerify bool,
+	) (string, string, githubVerifiedPushClient, error)
 }
 
 // newGitHubVerifiedPusher returns an implementation of the
@@ -172,13 +177,16 @@ func newGitHubVerifiedPusher(
 	caps promotion.StepRunnerCapabilities,
 	cfg githubVerifiedPusherConfig,
 ) promotion.StepRunner {
-	return &githubVerifiedPusher{
+	g := &githubVerifiedPusher{
 		credsDB:      caps.CredsDB,
 		schemaLoader: getConfigSchemaLoader(stepKindGitHubVerifiedPush),
 		cfg:          cfg,
 		gitUser:      gitUserFromEnv(),
 		branchMus:    map[string]*sync.Mutex{},
 	}
+	g.loadWorkTreeFn = git.LoadWorkTree
+	g.newGitHubClientFn = g.newGitHubClient
+	return g
 }
 
 // Run implements the promotion.StepRunner interface.
@@ -223,7 +231,7 @@ func (g *githubVerifiedPusher) run(
 			)
 	}
 	loadOpts := &git.LoadWorkTreeOptions{}
-	workTree, err := git.LoadWorkTree(path, loadOpts)
+	workTree, err := g.loadWorkTreeFn(path, loadOpts)
 	if err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusErrored,
@@ -250,7 +258,7 @@ func (g *githubVerifiedPusher) run(
 			SSHPrivateKey: creds.SSHPrivateKey,
 		}
 	}
-	if workTree, err = git.LoadWorkTree(path, loadOpts); err != nil {
+	if workTree, err = g.loadWorkTreeFn(path, loadOpts); err != nil {
 		return promotion.StepResult{
 				Status: kargoapi.PromotionStepStatusErrored,
 			}, fmt.Errorf(
@@ -331,7 +339,7 @@ func (g *githubVerifiedPusher) run(
 	}
 
 	// Create the GitHub client.
-	owner, repo, ghClient, err := g.newGitHubClient(
+	owner, repo, ghClient, err := g.newGitHubClientFn(
 		workTree.URL(), token, cfg.InsecureSkipTLSVerify,
 	)
 	if err != nil {

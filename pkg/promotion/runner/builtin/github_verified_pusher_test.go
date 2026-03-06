@@ -3,6 +3,7 @@ package builtin
 import (
 	"context"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/google/go-github/v76/github"
@@ -12,7 +13,9 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/promotion"
+	builtinx "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
 // mockWorkTree is a minimal mock of git.WorkTree for testing.
@@ -24,6 +27,9 @@ type mockWorkTree struct {
 	commitSignatureStatusesFn func(
 		ids []string,
 	) (map[string]git.CommitSignatureInfo, error)
+	currentBranchFn func() (string, error)
+	lastCommitIDFn  func() (string, error)
+	pushFn          func(*git.PushOptions) error
 }
 
 func (m *mockWorkTree) URL() string     { return m.url }
@@ -34,6 +40,18 @@ func (m *mockWorkTree) CommitSignatureStatuses(
 	ids []string,
 ) (map[string]git.CommitSignatureInfo, error) {
 	return m.commitSignatureStatusesFn(ids)
+}
+
+func (m *mockWorkTree) CurrentBranch() (string, error) {
+	return m.currentBranchFn()
+}
+
+func (m *mockWorkTree) LastCommitID() (string, error) {
+	return m.lastCommitIDFn()
+}
+
+func (m *mockWorkTree) Push(opts *git.PushOptions) error {
+	return m.pushFn(opts)
 }
 
 func Test_githubVerifiedPusher_convert(t *testing.T) {
@@ -1529,6 +1547,781 @@ func Test_appendCoAuthoredBy(t *testing.T) {
 			t.Parallel()
 			result := appendCoAuthoredBy(tc.message, tc.coName, tc.coEmail)
 			require.Equal(t, tc.expect, result)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_run(t *testing.T) {
+	t.Parallel()
+
+	// Helper to build a minimal githubVerifiedPusher with the pluggable
+	// fields wired. Tests override individual fields as needed.
+	newTestPusher := func() *githubVerifiedPusher {
+		return &githubVerifiedPusher{
+			cfg:       githubVerifiedPusherConfig{MaxRevisions: 10},
+			branchMus: map[string]*sync.Mutex{},
+		}
+	}
+
+	testCases := []struct {
+		name   string
+		pusher *githubVerifiedPusher
+		cfg    builtinx.GitHubVerifiedPushConfig
+		assert func(*testing.T, promotion.StepResult, error)
+	}{
+		{
+			name: "LoadWorkTree error on first call",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return nil, fmt.Errorf("bad worktree")
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error loading working tree",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "credentials fetch error",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return &mockWorkTree{
+						url: "https://github.com/owner/repo",
+					}, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return nil, fmt.Errorf("creds error")
+					},
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error getting credentials",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "no token",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return &mockWorkTree{
+						url: "https://github.com/owner/repo",
+					}, nil
+				}
+				g.credsDB = &credentials.FakeDB{}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.True(t, promotion.IsTerminal(err))
+				require.Contains(
+					t, err.Error(), "no credentials",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusFailed,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "LoadWorkTree error on second call (with creds)",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				callCount := 0
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					callCount++
+					if callCount == 1 {
+						return &mockWorkTree{
+							url: "https://github.com/owner/repo",
+						}, nil
+					}
+					return nil, fmt.Errorf("reload error")
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Username: "x",
+							Password: "token123",
+						}, nil
+					},
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error loading working tree",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "CurrentBranch error",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "", fmt.Errorf("branch error")
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error getting current branch",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "LastCommitID error",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "", fmt.Errorf("commit error")
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error getting local HEAD",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "push to staging ref error",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "abc123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return fmt.Errorf("push error")
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error pushing to staging ref",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "newGitHubClient error",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "abc123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "", "", nil,
+						fmt.Errorf("client error")
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{Path: "repo"},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error creating GitHub client",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "GetRef error (existing branch)",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "abc123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Reference, *github.Response, error) {
+								return nil, nil,
+									fmt.Errorf("ref error")
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:         "repo",
+				TargetBranch: "main",
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "error getting ref",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "GetRef error (generate target branch)",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "abc123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Reference, *github.Response, error) {
+								return nil, nil,
+									fmt.Errorf("source ref error")
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:                 "repo",
+				GenerateTargetBranch: true,
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(),
+					"error getting source branch ref",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusErrored,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "happy path: existing branch delegates to signAndUpdate",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "local123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+					commitSignatureStatusesFn: func(
+						_ []string,
+					) (map[string]git.CommitSignatureInfo, error) {
+						return nil, nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				treeSHA := "tree456"
+				newSHA := "signed789"
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Reference, *github.Response, error) {
+								return &github.Reference{
+									Object: &github.GitObject{
+										SHA: ptr.To("target000"),
+									},
+								}, nil, nil
+							},
+							compareCommitsFn: func(
+								_ context.Context,
+								_, _, _, _ string,
+								_ *github.ListOptions,
+							) (*github.CommitsComparison, *github.Response, error) {
+								return &github.CommitsComparison{
+									Status:       ptr.To("ahead"),
+									AheadBy:      ptr.To(1),
+									TotalCommits: ptr.To(1),
+									Commits: []*github.RepositoryCommit{{
+										SHA: ptr.To("orig111"),
+										Commit: &github.Commit{
+											Message: ptr.To("test commit"),
+											Tree:    &github.Tree{SHA: &treeSHA},
+											Author: &github.CommitAuthor{
+												Name:  ptr.To("Test"),
+												Email: ptr.To("test@test.com"),
+											},
+										},
+									}},
+								}, nil, nil
+							},
+							createCommitFn: func(
+								_ context.Context,
+								_, _ string,
+								_ github.Commit,
+								_ *github.CreateCommitOptions,
+							) (*github.Commit, *github.Response, error) {
+								return &github.Commit{
+									SHA: &newSHA,
+								}, nil, nil
+							},
+							updateRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+								_ github.UpdateRef,
+							) (*github.Reference, *github.Response, error) {
+								return &github.Reference{}, nil, nil
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:         "repo",
+				TargetBranch: "main",
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded,
+					result.Status,
+				)
+				assert.Equal(
+					t, "signed789", result.Output[stateKeyCommit],
+				)
+				assert.Equal(
+					t, "main", result.Output[stateKeyBranch],
+				)
+			},
+		},
+		{
+			name: "happy path: generateTargetBranch",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "local123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+					commitSignatureStatusesFn: func(
+						_ []string,
+					) (map[string]git.CommitSignatureInfo, error) {
+						return nil, nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				treeSHA := "tree456"
+				newSHA := "signed789"
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, ref string,
+							) (*github.Reference, *github.Response, error) {
+								// For generateTargetBranch, GetRef
+								// is called on the source branch.
+								assert.Equal(
+									t, "heads/main", ref,
+								)
+								return &github.Reference{
+									Object: &github.GitObject{
+										SHA: ptr.To("target000"),
+									},
+								}, nil, nil
+							},
+							compareCommitsFn: func(
+								_ context.Context,
+								_, _, _, _ string,
+								_ *github.ListOptions,
+							) (*github.CommitsComparison, *github.Response, error) {
+								return &github.CommitsComparison{
+									Status:       ptr.To("ahead"),
+									AheadBy:      ptr.To(1),
+									TotalCommits: ptr.To(1),
+									Commits: []*github.RepositoryCommit{{
+										SHA: ptr.To("orig111"),
+										Commit: &github.Commit{
+											Message: ptr.To("test"),
+											Tree:    &github.Tree{SHA: &treeSHA},
+											Author: &github.CommitAuthor{
+												Name:  ptr.To("Test"),
+												Email: ptr.To("t@t.com"),
+											},
+										},
+									}},
+								}, nil, nil
+							},
+							createCommitFn: func(
+								_ context.Context,
+								_, _ string,
+								_ github.Commit,
+								_ *github.CreateCommitOptions,
+							) (*github.Commit, *github.Response, error) {
+								return &github.Commit{
+									SHA: &newSHA,
+								}, nil, nil
+							},
+							createRefFn: func(
+								_ context.Context,
+								_, _ string,
+								ref github.CreateRef,
+							) (*github.Reference, *github.Response, error) {
+								assert.Contains(
+									t,
+									ref.Ref,
+									"kargo/promotion/",
+								)
+								return &github.Reference{}, nil, nil
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:                 "repo",
+				GenerateTargetBranch: true,
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded,
+					result.Status,
+				)
+				assert.Equal(
+					t, "signed789", result.Output[stateKeyCommit],
+				)
+				assert.Contains(
+					t,
+					result.Output[stateKeyBranch],
+					"kargo/promotion/",
+				)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result, err := tc.pusher.run(
+				context.Background(),
+				&promotion.StepContext{
+					WorkDir:   t.TempDir(),
+					Project:   "test-project",
+					Promotion: "test-promo-123",
+				},
+				tc.cfg,
+			)
+			tc.assert(t, result, err)
 		})
 	}
 }
