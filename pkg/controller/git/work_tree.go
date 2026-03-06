@@ -48,6 +48,8 @@ type WorkTree interface {
 	DeleteBranch(branch string) error
 	// Dir returns an absolute path to the working tree.
 	Dir() string
+	// Fetch fetches updates from the remote repository.
+	Fetch() error
 	// HasDiffs returns a bool indicating whether the working tree currently
 	// contains any differences from what's already at the head of the current
 	// branch.
@@ -323,6 +325,22 @@ func (w *workTree) DeleteBranch(branch string) error {
 		branch,
 	)); err != nil {
 		return fmt.Errorf("error deleting branch %q for repo %q: %w", branch, w.accessURL, err)
+	}
+	return nil
+}
+
+func (w *workTree) Fetch() error {
+	// ensure the git config is configured to fetch all branches from the remote, not just the default branch.
+	if _, err := libExec.Exec(w.buildGitCommand(
+		"config",
+		"remote.origin.fetch",
+		"+refs/heads/*:refs/remotes/origin/*",
+	),
+	); err != nil {
+		return fmt.Errorf("error prepping git config to fetch all branches for repo %q: %w", w.originalURL, err)
+	}
+	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin")); err != nil {
+		return fmt.Errorf("error fetching updates from remote for repo %q: %w", w.originalURL, err)
 	}
 	return nil
 }

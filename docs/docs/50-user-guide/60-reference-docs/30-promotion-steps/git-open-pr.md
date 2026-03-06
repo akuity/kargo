@@ -102,3 +102,33 @@ steps:
     labels: ["infra", "needs-review"]
 # Wait for the PR to be merged or closed...
 ```
+
+### Skipped
+
+The following example conditionally runs the 
+[`git-wait-for-pr` step](git-wait-for-pr.md) based on whether or not the 
+`git-open-pr` step was skipped. If there are no changes between the 
+`sourceBranch` and `targetBranch`, and the `targetBranch` already exists, the 
+`git-open-pr` step will be skipped. The 
+[`status`](../40-expressions.md#statusstepalias) expression function can be used 
+by subsequent steps to determine if a preceding step was skipped.
+
+```yaml
+- uses: git-push
+  as: push
+  config:
+    path: ./out
+    generateTargetBranch: true
+  - uses: git-open-pr
+    as: open-pr
+    config:
+      repoURL: https://github.com/example/repo.git
+      sourceBranch: ${{ outputs.push.branch }}
+      targetBranch: stage/${{ ctx.stage }}
+  - if: ${{ status('open-pr') != 'Skipped' }}
+    uses: git-wait-for-pr
+    as: wait-for-pr
+    config:
+      repoURL: https://github.com/example/repo.git
+      prNumber: ${{ outputs['open-pr'].pr.id }}
+```

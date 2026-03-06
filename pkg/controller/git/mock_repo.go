@@ -16,6 +16,7 @@ type MockRepo struct {
 	CurrentBranchFn           func() (string, error)
 	DeleteBranchFn            func(branch string) error
 	DirFn                     func() string
+	FetchFn                   func() error
 	HasDiffsFn                func() (bool, error)
 	HomeDirFn                 func() string
 	GetDiffPathsForCommitIDFn func(commitID string) ([]string, error)
@@ -85,6 +86,10 @@ func (m *MockRepo) DeleteBranch(branch string) error {
 
 func (m *MockRepo) Dir() string {
 	return m.DirFn()
+}
+
+func (m *MockRepo) Fetch() error {
+	return m.FetchFn()
 }
 
 func (m *MockRepo) HasDiffs() (bool, error) {
