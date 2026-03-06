@@ -9,12 +9,12 @@ description: Updates the alias of a Freight resource.
 
 When a `Warehouse` produces a new `Freight` resource, it computes a SHA-1 hash
 from a canonical representation of the artifacts referenced by that resource.
-This becomes the value of the `metadata.name` field — a unique "fingerprint" of
-the collection of artifacts. While every `Freight` resource is also automatically
-assigned a human-friendly alias, users may sometimes wish to override that alias
-with one of their own choosing. This can make it easier to identify a
-particularly important (or problematic) `Freight` resource as it progresses
-through the `Stage`s of a pipeline.
+This unique "fingerprint" for that collection of artifacts becomes the value of
+the `metadata.name`. Because this is not a very human-friendly name, every
+`Freight` resource is also automatically assigned a human-friendly alias. Users
+may sometimes wish to update aliases at various points in their pipelines. This
+can make it easier to identify a particularly important (or problematic)
+`Freight` resource as it progresses through the `Stage`s of a pipeline.
 
 ## Configuration
 
