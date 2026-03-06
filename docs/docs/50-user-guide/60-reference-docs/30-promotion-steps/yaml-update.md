@@ -27,38 +27,48 @@ followed by a [`helm-template` step](helm-template.md).
 
 ## Writing Keys
 
-1. **Nested keys:**
+**Nested keys:**
+
 ```yaml
 image:
   tag: v1.0.0
 ```
+
 Update key: `image.tag`
 
-2. **Keys with literal dots:**
+**Keys with literal dots:**
 
 ```yaml
 example.com/version: v1.0.0
 ```
+
 Update key: `example\.com/version`
 
-3. **Sequences/arrays:**
+**Sequences/arrays:**
+
 ```yaml
 containers:
   - name: my-app
     image: my-app:v1.0
 ```
+
 Update key: `containers.0.image`
 
-4. **Combination of literal dots and nested maps:**
+**Combination of literal dots and nested maps:**
+
 ```yaml
 configs:
   example.com/feature:
     enabled: false
 ```
 
+Update key: `configs.example\.com/version.enabled`
+
 :::note
+
 Use `\\` to represent a literal backslash in keys. For example, `path\\to.file`
 results in the path `["path\to", "file"]`.
+
 :::
 
 ## Examples

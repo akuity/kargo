@@ -171,9 +171,9 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 //   - \x → x (any other escaped char becomes itself)
 //
 // Examples:
-//   - "image.tag"              → ["image", "tag"]
-//   - "example\.com/version"   → ["example.com/version"]
-//   - "path\\to.file"          → ["path\to", "file"]
+//   - `image.tag`              → [`image`, `tag`]
+//   - `example\.com/version`   → [`example.com/version`]
+//   - `path\\to.file`          → [`path\to", `file`]
 func splitKeyPath(key string) []string {
 	var parts []string
 	var current strings.Builder
