@@ -311,9 +311,9 @@ type TagOptions struct {
 	// Tagger is the tagger of the tag. If nil, the default tagger already
 	// configured in the git repository will be used.
 	Tagger *User
-	// SigningMsg is the message with which the tag will be annotated. If empty,
+	// Message is the message with which the tag will be annotated. If empty,
 	// a default message will be used.
-	SigningMsg string
+	Message string
 }
 
 func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
@@ -353,14 +353,14 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		)
 	}
 
-	signingMsg := "Signed by Kargo"
-	if opts.SigningMsg != "" {
-		signingMsg = opts.SigningMsg
+	msg := "Created by Kargo"
+	if opts.Message != "" {
+		msg = opts.Message
 	}
 
 	// we use -s because if we get here then the key should have successfully
 	// been configured
-	cmd := w.buildGitCommand("tag", "-a", tag, "-m", signingMsg)
+	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
 	if homeDir != "" {
 		// Override the home directory set by w.buildGitCommand().
 		w.setCmdHome(cmd, homeDir)

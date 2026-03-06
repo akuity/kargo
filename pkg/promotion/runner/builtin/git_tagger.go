@@ -81,7 +81,7 @@ func (g *gitTagTagger) run(
 				Email:      cfg.Tagger.Email,
 				SigningKey: cfg.Tagger.SigningKey,
 			},
-			SigningMsg: cfg.Tagger.SigningMessage,
+			Message: cfg.Message,
 		}
 	}
 	if err = workTree.CreateTag(cfg.Tag, tagOpts); err != nil {
