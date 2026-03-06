@@ -32,17 +32,16 @@ in use by another `Freight` resource in the project, this step will fail.
 
 ## Examples
 
-When a `Freight` resource references only a single artifact, such as a
-container image, its alias can be updated to reflect that artifact's version.
-This makes it easy to identify the `Freight` resource at a glance as it progresses
-through a pipeline.
+In this example, a `Freight` resource that references only a single container
+image and no other artifacts is updated to reflect the image's tag. This makes
+it easier to identify such resources and make inferences about their payload.
 
 :::caution
 
-This pattern is only safe when the `Freight` resource contains a single artifact. If the
-`Freight` resource references multiple artifacts (e.g., several images or Git commits),
-different `Freight` resources could easily produce the same alias, causing
-conflicts that fail the promotion step.
+This example is safe only because the `Freight` resource contains only a single
+artifact. If that were not the case, contention over a single alias would arise
+when two or more Freight resources referenced the same version of the container
+image.
 
 :::
 

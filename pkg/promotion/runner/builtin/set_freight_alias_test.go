@@ -174,7 +174,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      testFreight,
 						Namespace: testProject,
@@ -199,7 +199,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 				Project: testProject,
 			}
 
-			res, err := step.run(context.Background(), stepCtx, tt.cfg)
+			res, err := step.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, res, tt.client, err)
 		})
 	}
