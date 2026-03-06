@@ -1,5 +1,5 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faStar } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Empty, Flex, Pagination } from 'antd';
 import { useEffect, useState } from 'react';
@@ -25,6 +25,7 @@ export const ProjectsList = () => {
     'starred-projects-view',
     false
   );
+  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', false);
 
   const [starred, toggleStar] = useStarProjects();
 
@@ -32,7 +33,8 @@ export const ProjectsList = () => {
     pageSize: pageSize,
     page: page - 1,
     filter,
-    uid: starredProjectsView ? starred : []
+    uid: starredProjectsView ? starred : [],
+    mine: myProjectsView || undefined
   });
 
   useEffect(() => {
@@ -62,10 +64,22 @@ export const ProjectsList = () => {
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
           <Button
             className='ml-auto'
+            type={myProjectsView ? 'primary' : 'default'}
+            icon={<FontAwesomeIcon icon={faUser} />}
+            onClick={() => {
+              setMyProjectsView(!myProjectsView);
+              setPage(1);
+            }}
+          >
+            My projects
+          </Button>
+          <Button
+            className='ml-2'
+            type={starredProjectsView ? 'primary' : 'default'}
             icon={<FontAwesomeIcon icon={faStar} />}
             onClick={() => setStarredProjectsView(!starredProjectsView)}
           >
-            Show {starredProjectsView ? 'all' : 'only starred'} projects
+            Starred projects
           </Button>
         </div>
         <Empty />
@@ -79,10 +93,22 @@ export const ProjectsList = () => {
         <ProjectListFilter onChange={handleFilterChange} init={filter} />
         <Button
           className='ml-auto'
+          type={myProjectsView ? 'primary' : 'default'}
+          icon={<FontAwesomeIcon icon={faUser} />}
+          onClick={() => {
+            setMyProjectsView(!myProjectsView);
+            setPage(1);
+          }}
+        >
+          My projects
+        </Button>
+        <Button
+          className='ml-2'
+          type={starredProjectsView ? 'primary' : 'default'}
           icon={<FontAwesomeIcon icon={faStar} />}
           onClick={() => setStarredProjectsView(!starredProjectsView)}
         >
-          Show {starredProjectsView ? 'all' : 'only starred'} projects
+          Starred projects
         </Button>
       </div>
       <div className={styles.list}>
