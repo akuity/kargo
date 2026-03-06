@@ -20,7 +20,7 @@ RUN NODE_ENV='production' VERSION=${VERSION} pnpm run build
 ####################################################################################################
 # back-end-builder
 ####################################################################################################
-FROM --platform=$BUILDPLATFORM golang:1.25.5-trixie AS back-end-builder
+FROM --platform=$BUILDPLATFORM golang:1.26.0-trixie AS back-end-builder
 
 ARG TARGETOS
 ARG TARGETARCH
@@ -62,7 +62,7 @@ WORKDIR /kargo/bin
 ####################################################################################################
 # `tools` stage allows us to take the leverage of the parallel build.
 # For example, this stage can be cached and re-used when we have to rebuild code base.
-FROM curlimages/curl:8.17.0 AS tools
+FROM curlimages/curl:8.18.0 AS tools
 
 ARG TARGETOS
 ARG TARGETARCH

@@ -9,7 +9,12 @@
         "send-message",
         "tf-apply",
         "tf-output",
-        "tf-plan"
+        "tf-plan",
+        "snow-create",
+        "snow-update",
+        "snow-delete",
+        "snow-query-for-records",
+        "snow-wait-for-condition"
     ],
     "pro": [
         "jira",
@@ -20,6 +25,11 @@
         "send-message",
         "tf-apply",
         "tf-output",
-        "tf-plan"
+        "tf-plan",
+        "snow-create",
+        "snow-update",
+        "snow-delete",
+        "snow-query-for-records",
+        "snow-wait-for-condition"
     ]
 }

@@ -9,6 +9,11 @@ description: Waits for a specified open pull request to be merged or closed.
 closed. This step commonly follows a [`git-open-pr` step](git-open-pr.md)
 and is commonly followed by an `argocd-update` step.
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
@@ -23,6 +28,11 @@ and is commonly followed by an `argocd-update` step.
 | Name | Type | Description |
 |------|------|-------------|
 | `commit` | `string` | The ID (SHA) of the new commit at the head of the target branch after merge. Typically, a subsequent [`argocd-update` step](argocd-update.md) will reference this output to learn the ID of the commit that an applicable Argo CD `ApplicationSource` should be observably synced to under healthy conditions. |
+| `pr` | `object` | An object containing details about the pull request being monitored. |
+| `pr.id` | `number` | The numeric identifier of the pull request. |
+| `pr.url` | `string` | The URL of the pull request. |
+| `pr.open` | `boolean` | Whether the pull request is still open. |
+| `pr.merged` | `boolean` | Whether the pull request has been merged. |
 
 ## Examples
 

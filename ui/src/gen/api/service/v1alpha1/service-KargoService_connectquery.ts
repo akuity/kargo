@@ -254,67 +254,82 @@ export const getWarehouse = KargoService.method.getWarehouse;
 export const deleteWarehouse = KargoService.method.deleteWarehouse;
 
 /**
- * CreateCredentials creates new credentials for accessing external resources.
+ * CreateRepoCredentials creates new credentials for accessing external repositories.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateRepoCredentials
  */
-export const createCredentials = KargoService.method.createCredentials;
+export const createRepoCredentials = KargoService.method.createRepoCredentials;
 
 /**
- * DeleteCredentials removes credentials from the system.
+ * DeleteRepoCredentials removes repository credentials from the system.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteRepoCredentials
  */
-export const deleteCredentials = KargoService.method.deleteCredentials;
+export const deleteRepoCredentials = KargoService.method.deleteRepoCredentials;
 
 /**
- * GetCredentials retrieves details of specific credentials.
+ * GetRepoCredentials retrieves details of specific repository credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetRepoCredentials
  */
-export const getCredentials = KargoService.method.getCredentials;
+export const getRepoCredentials = KargoService.method.getRepoCredentials;
 
 /**
- * ListCredentials retrieves all credentials within a project.
+ * ListRepoCredentials retrieves all repository credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListRepoCredentials
  */
-export const listCredentials = KargoService.method.listCredentials;
+export const listRepoCredentials = KargoService.method.listRepoCredentials;
 
 /**
- * UpdateCredentials modifies existing credentials.
+ * UpdateRepoCredentials modifies existing repository credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateCredentials
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateRepoCredentials
  */
-export const updateCredentials = KargoService.method.updateCredentials;
+export const updateRepoCredentials = KargoService.method.updateRepoCredentials;
 
 /**
- * ListProjectSecrets retrieves all secrets within a project.
+ * ListGenericCredentials retrieves all generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListProjectSecrets
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListGenericCredentials
  */
-export const listProjectSecrets = KargoService.method.listProjectSecrets;
+export const listGenericCredentials = KargoService.method.listGenericCredentials;
 
 /**
- * CreateProjectSecret creates a new secret within a project.
+ * CreateGenericCredentials creates new generic credentials within a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateGenericCredentials
  */
-export const createProjectSecret = KargoService.method.createProjectSecret;
+export const createGenericCredentials = KargoService.method.createGenericCredentials;
 
 /**
- * UpdateProjectSecret modifies an existing project secret.
+ * UpdateGenericCredentials modifies existing generic credentials.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateGenericCredentials
  */
-export const updateProjectSecret = KargoService.method.updateProjectSecret;
+export const updateGenericCredentials = KargoService.method.updateGenericCredentials;
 
 /**
- * DeleteProjectSecret removes a secret from a project.
+ * DeleteGenericCredentials removes generic credentials from a project.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteProjectSecret
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteGenericCredentials
  */
-export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
+export const deleteGenericCredentials = KargoService.method.deleteGenericCredentials;
+
+/**
+ * CreateConfigMap creates a new project-level, system-level, or shared
+ * ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateConfigMap
+ */
+export const createConfigMap = KargoService.method.createConfigMap;
+
+/**
+ * DeleteConfigMap deletes a project-level, system-level, or shared ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteConfigMap
+ */
+export const deleteConfigMap = KargoService.method.deleteConfigMap;
 
 /**
  * ListConfigMaps retrieves all ConfigMaps within a project.
@@ -324,11 +339,19 @@ export const deleteProjectSecret = KargoService.method.deleteProjectSecret;
 export const listConfigMaps = KargoService.method.listConfigMaps;
 
 /**
- * GetConfigMap retrieves details of a specific ConfigMap.
+ * GetConfigMap retrieves details of a specific project-level, system-level,
+ * or shared ConfigMap.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetConfigMap
  */
 export const getConfigMap = KargoService.method.getConfigMap;
+
+/**
+ * UpdateConfigMap updates a project-level, system-level, or shared ConfigMap.
+ *
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateConfigMap
+ */
+export const updateConfigMap = KargoService.method.updateConfigMap;
 
 /**
  * ListAnalysisTemplates retrieves all AnalysisTemplates within a project.
@@ -439,9 +462,9 @@ export const deleteRole = KargoService.method.deleteRole;
 export const getRole = KargoService.method.getRole;
 
 /**
- * Grant assigns permissions to a Kargo Role; or binds a Kargo ServiceAccount
- * or users having specific OIDC claims to a Kargo Role by updating its
- * underlying Kubernetes resources.
+ * Grant assigns permissions to a Kargo Role virtual resource or binds users
+ * having specific OIDC claims to a Kargo Role virtual resource by updating
+ * its underlying Kubernetes resources.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Grant
  */
@@ -456,8 +479,8 @@ export const grant = KargoService.method.grant;
 export const listRoles = KargoService.method.listRoles;
 
 /**
- * Revoke removes permissions from a Kargo Role; or unbinds a Kargo
- * ServiceAccount or users having specific OIDC claims from a Kargo Role by
+ * Revoke removes permissions from a Kargo Role virtual resource or unbinds
+ * users having specific OIDC claims from a Kargo Role virtual resource by
  * updating its underlying Kubernetes resources.
  *
  * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.Revoke
@@ -473,89 +496,33 @@ export const revoke = KargoService.method.revoke;
 export const updateRole = KargoService.method.updateRole;
 
 /**
- * CreateServiceAccount creates a new Kargo ServiceAccount.
+ * CreateAPIToken generates and returns a new bearer token associated with a
+ * Kargo Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateAPIToken
  */
-export const createServiceAccount = KargoService.method.createServiceAccount;
+export const createAPIToken = KargoService.method.createAPIToken;
 
 /**
- * DeleteServiceAccount removes a Kargo ServiceAccount.
+ * DeleteToken deletes a bearer token associated with a Kargo Role virtual
+ * resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteAPIToken
  */
-export const deleteServiceAccount = KargoService.method.deleteServiceAccount;
+export const deleteAPIToken = KargoService.method.deleteAPIToken;
 
 /**
- * GetServiceAccount retrieves details of a specific Kargo ServiceAccount.
+ * GetAPIToken retrieves details of a specific bearer token associated with a
+ * Kargo Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccount
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetAPIToken
  */
-export const getServiceAccount = KargoService.method.getServiceAccount;
+export const getAPIToken = KargoService.method.getAPIToken;
 
 /**
- * ListServiceAccounts retrieves details of all Kargo ServiceAccounts.
+ * ListAPITokens lists bearer tokens associated with with a specified Kargo
+ * Role virtual resource.
  *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccounts
+ * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListAPITokens
  */
-export const listServiceAccounts = KargoService.method.listServiceAccounts;
-
-/**
- * CreateServiceAccountToken generates and returns a new bearer token
- * associated with a Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateServiceAccountToken
- */
-export const createServiceAccountToken = KargoService.method.createServiceAccountToken;
-
-/**
- * DeleteServiceAccountToken deletes a bearer token associated with a
- * Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteServiceAccountToken
- */
-export const deleteServiceAccountToken = KargoService.method.deleteServiceAccountToken;
-
-/**
- * GetServiceAccountToken retrieves details of a specific bearer token
- * associated with a Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.GetServiceAccountToken
- */
-export const getServiceAccountToken = KargoService.method.getServiceAccountToken;
-
-/**
- * ListServiceAccountTokens lists bearer tokens associated with
- * with a specified Kargo ServiceAccount.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListServiceAccountTokens
- */
-export const listServiceAccountTokens = KargoService.method.listServiceAccountTokens;
-
-/**
- * ListClusterSecrets retrieves all cluster-scoped secrets.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.ListClusterSecrets
- */
-export const listClusterSecrets = KargoService.method.listClusterSecrets;
-
-/**
- * CreateClusterSecret creates a new cluster-scoped secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.CreateClusterSecret
- */
-export const createClusterSecret = KargoService.method.createClusterSecret;
-
-/**
- * UpdateClusterSecret modifies an existing cluster-scoped secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.UpdateClusterSecret
- */
-export const updateClusterSecret = KargoService.method.updateClusterSecret;
-
-/**
- * DeleteClusterSecret removes a cluster-scoped secret.
- *
- * @generated from rpc akuity.io.kargo.service.v1alpha1.KargoService.DeleteClusterSecret
- */
-export const deleteClusterSecret = KargoService.method.deleteClusterSecret;
+export const listAPITokens = KargoService.method.listAPITokens;

@@ -14,6 +14,7 @@ import { useGetFreightCreation } from '@ui/features/project/pipelines/freight/us
 import {
   Chart,
   FreightReference,
+  ArtifactReference as GenericArtifactReference,
   GitCommit,
   Image,
   Stage
@@ -109,8 +110,10 @@ export const StageFreight = (props: { stage: Stage }) => {
   const noOfGitCommits = selectedFreight?.commits?.length || 0;
   const noOfHelmReleases = selectedFreight?.charts?.length || 0;
   const noOfContainerImages = selectedFreight?.images?.length || 0;
+  const noOfGenericArtifacts = selectedFreight?.artifacts?.length || 0;
 
-  const totalArtifacts = noOfContainerImages + noOfGitCommits + noOfHelmReleases;
+  const totalArtifacts =
+    noOfContainerImages + noOfGitCommits + noOfHelmReleases + noOfGenericArtifacts;
 
   return (
     <>
@@ -177,12 +180,22 @@ export const StageFreight = (props: { stage: Stage }) => {
   );
 };
 
-const Artifact = (props: { artifact: string | GitCommit | Chart | Image }) => {
+const Artifact = (props: {
+  artifact: string | GitCommit | Chart | Image | GenericArtifactReference;
+}) => {
   if (typeof props.artifact === 'string') {
     return (
       <Typography.Text type='secondary' className='text-xs'>
         Empty Freight
       </Typography.Text>
+    );
+  }
+
+  if (props.artifact.$typeName === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
+    return (
+      <Tag bordered={false} color='geekblue'>
+        {props.artifact.version}
+      </Tag>
     );
   }
 

@@ -2,19 +2,18 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -22,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type getWarehousesOptions struct {
@@ -119,46 +119,57 @@ func (o *getWarehousesOptions) validate() error {
 
 // run gets the warehouses from the server and prints them to the console.
 func (o *getWarehousesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListWarehousesResponse]
-		if resp, err = kargoSvcCli.ListWarehouses(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.ListWarehousesRequest{
-					Project: o.Project,
-				},
-			),
+		var res *core.ListWarehousesOK
+		if res, err = apiClient.Core.ListWarehouses(
+			core.NewListWarehousesParams().WithProject(o.Project),
+			nil,
 		); err != nil {
 			return fmt.Errorf("list warehouses: %w", err)
 		}
-		return PrintObjects(resp.Msg.GetWarehouses(), o.PrintFlags, o.IOStreams, o.NoHeaders)
+		var warehousesJSON []byte
+		if warehousesJSON, err = json.Marshal(res.Payload); err != nil {
+			return err
+		}
+		whList := struct {
+			Items []*kargoapi.Warehouse `json:"items"`
+		}{}
+		if err = json.Unmarshal(warehousesJSON, &whList); err != nil {
+			return err
+		}
+		return PrintObjects(whList.Items, o.PrintFlags, o.IOStreams, o.NoHeaders)
 	}
 
-	res := make([]*kargoapi.Warehouse, 0, len(o.Names))
+	warehouses := make([]*kargoapi.Warehouse, 0, len(o.Names))
 	errs := make([]error, 0, len(o.Names))
 	for _, name := range o.Names {
-		var resp *connect.Response[v1alpha1.GetWarehouseResponse]
-		if resp, err = kargoSvcCli.GetWarehouse(
-			ctx,
-			connect.NewRequest(
-				&v1alpha1.GetWarehouseRequest{
-					Project: o.Project,
-					Name:    name,
-				},
-			),
+		var res *core.GetWarehouseOK
+		if res, err = apiClient.Core.GetWarehouse(
+			core.NewGetWarehouseParams().WithProject(o.Project).WithWarehouse(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		res = append(res, resp.Msg.GetWarehouse())
+		var warehouseJSON []byte
+		if warehouseJSON, err = json.Marshal(res.Payload); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		var warehouse *kargoapi.Warehouse
+		if err = json.Unmarshal(warehouseJSON, &warehouse); err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		warehouses = append(warehouses, warehouse)
 	}
 
-	if err = PrintObjects(res, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+	if err = PrintObjects(warehouses, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
 		return fmt.Errorf("print warehouses: %w", err)
 	}
 	return errors.Join(errs...)
@@ -185,4 +196,15 @@ func newWarehouseTable(list *metav1.List) *metav1.Table {
 		},
 		Rows: rows,
 	}
+}
+
+// custom unmarshaling is not applied when deserializing a Warehouse from a
+// protobuf message, so this helper can be used to compensate for that.
+func repairInboundWarehouse(w *kargoapi.Warehouse) error {
+	type specAlias kargoapi.WarehouseSpec
+	specJSON, err := json.Marshal(specAlias(w.Spec))
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(specJSON, &w.Spec)
 }

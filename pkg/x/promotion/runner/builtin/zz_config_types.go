@@ -178,6 +178,10 @@ type Checkout struct {
 	Create bool `json:"create,omitempty"`
 	// The path where the repository should be checked out.
 	Path string `json:"path"`
+	// Directory paths for sparse checkout. Only the specified directories (and their contents)
+	// will be checked out. Paths must be relative to the repository root (e.g., 'src/app',
+	// 'configs/prod'). Glob patterns are not supported.
+	Sparse []string `json:"sparse,omitempty"`
 	// The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are
 	// specified, the default branch is checked out.
 	Tag string `json:"tag,omitempty"`
@@ -300,6 +304,9 @@ type HelmTemplateConfig struct {
 	BuildDependencies bool `json:"buildDependencies,omitempty"`
 	// Whether to disable hooks in the rendered manifests.
 	DisableHooks bool `json:"disableHooks,omitempty"`
+	// Whether to skip value files that do not exist instead of returning an error. Useful for
+	// optional stage-specific overlays.
+	IgnoreMissingValueFiles bool `json:"ignoreMissingValueFiles,omitempty"`
 	// Whether to include CRDs in the rendered manifests.
 	IncludeCRDs bool `json:"includeCRDs,omitempty"`
 	// KubeVersion allows for passing a specific Kubernetes version to use when rendering the

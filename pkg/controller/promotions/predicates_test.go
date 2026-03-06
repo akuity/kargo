@@ -3,7 +3,6 @@ package promotions
 import (
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
@@ -91,7 +90,7 @@ func TestArgoCDAppOperationCompleted_Update(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			p := ArgoCDAppOperationCompleted[*argocd.Application]{
-				logger: logging.Wrap(logr.Discard()),
+				logger: logging.NewDiscardLoggerOrDie(),
 			}
 
 			require.Equal(t, testCase.want, p.Update(testCase.e))

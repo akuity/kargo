@@ -135,7 +135,7 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error starting cluster: %w", err)
 	}
 
-	srv := external.NewServer(serverCfg, cluster.GetClient())
+	srv := external.NewServer(serverCfg, cluster.GetClient(), cluster.GetAPIReader())
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
 		return fmt.Errorf("error creating listener: %w", err)

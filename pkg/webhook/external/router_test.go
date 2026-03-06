@@ -171,27 +171,10 @@ func TestServer_route(t *testing.T) {
 			},
 		},
 		{
-			name: "cluster secrets namespace not specified",
-			server: &server{
-				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-					&kargoapi.ClusterConfig{
-						ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
-					},
-				).WithIndex(
-					&kargoapi.ProjectConfig{},
-					indexer.ProjectConfigsByWebhookReceiverPathsField,
-					indexer.ProjectConfigsByWebhookReceiverPaths,
-				).Build(),
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusInternalServerError, rr.Result().StatusCode)
-			},
-		},
-		{
 			name: "success with ClusterConfig",
 			server: &server{
 				cfg: ServerConfig{
-					ClusterSecretsNamespace: "fake-namespace",
+					SystemResourcesNamespace: "fake-namespace",
 				},
 				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 					&kargoapi.ClusterConfig{
@@ -237,6 +220,9 @@ func TestServer_route(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			rr := httptest.NewRecorder()
+			// succinct way of setting the apiReader to the same fake client
+			// since the fake client doesn't use the cache at all.
+			testCase.server.apiReader = testCase.server.client
 			testCase.server.route(
 				rr,
 				httptest.NewRequest(http.MethodPost, testURL, nil),

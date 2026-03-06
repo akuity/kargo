@@ -2,10 +2,14 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -77,7 +81,7 @@ func TestListClusterPromotionTasks(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			cfg := config.ServerConfigFromEnv()
 			if testCase.rolloutsDisabled {
@@ -93,7 +97,7 @@ func TestListClusterPromotionTasks(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
@@ -113,4 +117,47 @@ func TestListClusterPromotionTasks(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_listClusterPromotionTasks(t *testing.T) {
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/shared/cluster-promotion-tasks",
+		[]restTestCase{
+			{
+				name: "no ClusterPromotionTasks exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+					list := &kargoapi.ClusterPromotionTaskList{}
+					err := json.Unmarshal(w.Body.Bytes(), list)
+					require.NoError(t, err)
+					require.Empty(t, list.Items)
+				},
+			},
+			{
+				name: "lists ClusterPromotionTasks",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					&kargoapi.ClusterPromotionTask{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "task-1",
+						},
+					},
+					&kargoapi.ClusterPromotionTask{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "task-2",
+						},
+					},
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the ClusterPromotionTasks in the response
+					tasks := &kargoapi.ClusterPromotionTaskList{}
+					err := json.Unmarshal(w.Body.Bytes(), tasks)
+					require.NoError(t, err)
+					require.Len(t, tasks.Items, 2)
+				},
+			},
+		},
+	)
 }

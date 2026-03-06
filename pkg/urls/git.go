@@ -20,7 +20,7 @@ var scpSyntaxRegex = regexp.MustCompile(`^((?:[\w-]+@)?[\w-]+(?:\.[\w-]+)*)(?::(
 // normalized will be returned as-is.
 func NormalizeGit(repo string) string {
 	origRepo := repo
-	repo = strings.ToLower(repo)
+	repo = SanitizeURL(strings.ToLower(repo))
 
 	// HTTP/S URLs
 	if strings.HasPrefix(repo, "http://") || strings.HasPrefix(repo, "https://") {
@@ -53,7 +53,6 @@ func NormalizeGit(repo string) string {
 		repoURL.Path = strings.TrimSuffix(repoURL.Path, ".git")
 		return repoURL.String()
 	}
-
 	// URLS of the form [user@]host.xz[:path/to/repo[.git][/]]
 	matches := scpSyntaxRegex.FindStringSubmatch(repo)
 	if len(matches) != 2 && len(matches) != 3 {

@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
@@ -35,4 +37,32 @@ func (s *server) DeleteProject(
 		return nil, fmt.Errorf("delete project: %w", err)
 	}
 	return connect.NewResponse(&svcv1alpha1.DeleteProjectResponse{}), nil
+}
+
+// @id DeleteProject
+// @Summary Delete a Project
+// @Description Delete a Project resource and its associated namespace.
+// @Tags Core, Cluster-Scoped Resource
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Success 204 "Deleted successfully"
+// @Router /v1beta1/projects/{project} [delete]
+func (s *server) deleteProject(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	name := c.Param("project")
+
+	if err := s.client.Delete(
+		ctx,
+		&kargoapi.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: name,
+			},
+		},
+	); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

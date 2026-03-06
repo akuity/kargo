@@ -6,19 +6,32 @@ import {
   getGitCommitURL,
   getImageSource
 } from '@ui/features/freight-timeline/open-container-initiative-utils';
-import { Chart, GitCommit, Image } from '@ui/gen/api/v1alpha1/generated_pb';
+import {
+  Chart,
+  ArtifactReference as GenericArtifactReference,
+  GitCommit,
+  Image
+} from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { ArtifactIcon } from './artifact-icon';
 import { humanComprehendableArtifact } from './artifact-parts-utils';
 import { shortVersion } from './short-version-utils';
 
 type FreightArtifactProps = {
-  artifact: GitCommit | Chart | Image;
+  artifact: GitCommit | Chart | Image | GenericArtifactReference;
   expand?: boolean;
 };
 
 export const FreightArtifact = (props: FreightArtifactProps) => {
   const artifactType = props.artifact?.$typeName;
+
+  if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.ArtifactReference') {
+    return (
+      <Tag color='geekblue' bordered={false}>
+        {shortVersion(props.artifact.version)}
+      </Tag>
+    );
+  }
 
   let Expand: ReactNode;
 
@@ -33,14 +46,16 @@ export const FreightArtifact = (props: FreightArtifactProps) => {
   if (artifactType === 'github.com.akuity.kargo.api.v1alpha1.GitCommit') {
     const url = getGitCommitURL(props.artifact.repoURL, props.artifact.id);
 
-    // prioritize semver
-    const id = props.artifact.tag || props.artifact.id;
+    // prioritize semver; use shortVersion for tags, 7-char slice for raw commit hashes
+    const displayId = props.artifact.tag
+      ? shortVersion(props.artifact.tag)
+      : props.artifact.id.slice(0, 7);
 
     const TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue' key={props.artifact.id}>
         <ArtifactIcon artifactType={artifactType} className='mr-1' />
 
-        {id.slice(0, 7)}
+        {displayId}
 
         {Expand}
       </Tag>

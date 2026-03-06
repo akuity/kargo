@@ -969,7 +969,7 @@ func TestWarehousesByRepoURL(t *testing.T) {
 			name: "simple",
 			warehouse: &kargoapi.Warehouse{
 				Spec: kargoapi.WarehouseSpec{
-					Subscriptions: []kargoapi.RepoSubscription{
+					InternalSubscriptions: []kargoapi.RepoSubscription{
 						{
 							Git: &kargoapi.GitSubscription{
 								RepoURL: "https://github.com/username/repo",

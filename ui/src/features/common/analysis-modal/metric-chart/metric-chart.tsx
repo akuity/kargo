@@ -65,6 +65,7 @@ type TooltipContentProps = TooltipProps<ValueType, NameType> & {
 const TooltipContent = ({
   active,
   conditionKeys,
+  // @ts-expect-error doesn't change anything, but TODO(Marvin9) why was it here ununsed on the first place
   payload,
   valueFormatter
 }: TooltipContentProps) => {
@@ -90,7 +91,7 @@ const TooltipContent = ({
   return (
     <div className={styles['metric-chart-tooltip']}>
       <Text className='ml-4' type='secondary' style={{ fontSize: 12 }}>
-        {moment(data.startedAt).format('LTS')}
+        {moment(timestampDate(data.startedAt)).format('LTS')}
       </Text>
       <div className={styles['metric-chart-tooltip-status']}>
         <StatusIndicator size='small' status={data.phase} />

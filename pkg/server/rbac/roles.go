@@ -6,16 +6,28 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 )
+
+type RolesDatabaseConfig struct {
+	KargoNamespace string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
+}
+
+func RolesDatabaseConfigFromEnv() RolesDatabaseConfig {
+	cfg := RolesDatabaseConfig{}
+	envconfig.MustProcess("", &cfg)
+	return cfg
+}
 
 // RolesDatabase is an interface for the Kargo Roles store.
 type RolesDatabase interface {
@@ -30,13 +42,19 @@ type RolesDatabase interface {
 	// Get returns a Kargo Role representation of an underlying ServiceAccount
 	// and any Roles it is associated with. It will return an error if no
 	// underlying ServiceAccount exists.
-	Get(ctx context.Context, project, name string) (*rbacapi.Role, error)
+	Get(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+		name string,
+	) (*rbacapi.Role, error)
 	// GetAsResources returns the ServiceAccount and any Roles and RoleBindings
 	// underlying a Kargo Role. It will return an error if no underlying
 	// ServiceAccount exists. It is valid for the Roles and/or RoleBindings to be
 	// missing, in which case they will be returned as nil.
 	GetAsResources(
 		ctx context.Context,
+		systemLevel bool,
 		project string,
 		name string,
 	) (*corev1.ServiceAccount, []rbacv1.Role, []rbacv1.RoleBinding, error)
@@ -50,16 +68,6 @@ type RolesDatabase interface {
 		name string,
 		resourceDetails *rbacapi.ResourceDetails,
 	) (*rbacapi.Role, error)
-	// GrantRoleToServiceAccounts amends the RoleBinding underlying a Kargo Role
-	// to bind it to the specified Kargo ServiceAccount. It will return an error
-	// if the Kargo Role has no underlying Kubernetes ServiceAccount or any
-	// underlying resources are not Kargo-manageable.
-	GrantRoleToServiceAccounts(
-		ctx context.Context,
-		project string,
-		roleName string,
-		saRefs []rbacapi.ServiceAccountReference,
-	) (*rbacapi.Role, error)
 	// GrantRoleToUsers amends claim annotations of the ServiceAccount underlying
 	// a Kargo Role. It will return an error if no underlying ServiceAccount
 	// exists or any underlying resources are not Kargo-manageable.
@@ -71,9 +79,17 @@ type RolesDatabase interface {
 	) (*rbacapi.Role, error)
 	// List returns Kargo Role representations of underlying ServiceAccounts and
 	// andy Roles and RoleBindings associated with them.
-	List(ctx context.Context, project string) ([]*rbacapi.Role, error)
+	List(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+	) ([]*rbacapi.Role, error)
 	// ListNames returns names of Kargo Roles..
-	ListNames(ctx context.Context, project string) ([]string, error)
+	ListNames(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+	) ([]string, error)
 	// RevokePermissionFromRole removes select rules from the Role underlying a
 	// Kargo Role. It will return an error if no underlying ServiceAccount exists
 	// or any underlying resources are not Kargo-manageable.
@@ -82,16 +98,6 @@ type RolesDatabase interface {
 		project string,
 		name string,
 		resourceDetails *rbacapi.ResourceDetails,
-	) (*rbacapi.Role, error)
-	// RevokeRoleFromServiceAccounts amends the RoleBinding underlying a Kargo
-	// Role to unbind it from the specified Kargo ServiceAccount. It will return
-	// an error if the Kargo Role has no underlying Kubernetes ServiceAccount or
-	// any underlying resources are not Kargo-manageable. Kargo-manageable.
-	RevokeRoleFromServiceAccounts(
-		ctx context.Context,
-		project string,
-		roleName string,
-		saRefs []rbacapi.ServiceAccountReference,
 	) (*rbacapi.Role, error)
 	// RevokeRoleFromUsers removes select claims from claim annotations of the
 	// ServiceAccount underlying a Kargo Role. It will return an error if no
@@ -108,6 +114,37 @@ type RolesDatabase interface {
 	// exists or any underlying resources are not Kargo-manageable. It will create
 	// underlying Role and RoleBinding resources if they do not exist.
 	Update(context.Context, *rbacapi.Role) (*rbacapi.Role, error)
+	// CreateAPIToken generates and returns a new bearer token associated with a
+	// Kargo Role in the form of a Kubernetes Secret.
+	CreateAPIToken(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+		roleName string,
+		tokenName string,
+	) (*corev1.Secret, error)
+	// DeleteAPIToken deletes a bearer token associated with a Kargo Role.
+	DeleteAPIToken(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+		name string,
+	) error
+	// GetAPIToken returns a bearer token associated with a Kargo Role.
+	GetAPIToken(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+		name string,
+	) (*corev1.Secret, error)
+	// ListAPITokens lists all bearer tokens associated with a specified Kargo
+	// Role.
+	ListAPITokens(
+		ctx context.Context,
+		systemLevel bool,
+		project string,
+		roleName string,
+	) ([]corev1.Secret, error)
 }
 
 // rolesDatabase is an implementation of the RolesDatabase interface
@@ -116,18 +153,25 @@ type RolesDatabase interface {
 // trios.
 type rolesDatabase struct {
 	client client.Client
+	cfg    RolesDatabaseConfig
 }
 
 // NewKubernetesRolesDatabase returns an implementation of the RolesDatabase
 // interface that utilizes a Kubernetes controller runtime client to store and
 // retrieve Kargo Roles stored Kubernetes in the form of
 // ServiceAccount/Role/RoleBinding trios.
-func NewKubernetesRolesDatabase(c client.Client) RolesDatabase {
-	return &rolesDatabase{client: c}
+func NewKubernetesRolesDatabase(
+	c client.Client,
+	cfg RolesDatabaseConfig,
+) RolesDatabase {
+	return &rolesDatabase{
+		client: c,
+		cfg:    cfg,
+	}
 }
 
 // CreateRole implements the RolesDatabase interface.
-func (r *rolesDatabase) Create(
+func (c *rolesDatabase) Create(
 	ctx context.Context,
 	kargoRole *rbacapi.Role,
 ) (*rbacapi.Role, error) {
@@ -138,7 +182,7 @@ func (r *rolesDatabase) Create(
 
 	// Check if the ServiceAccount we would create already exists
 	sa := &corev1.ServiceAccount{}
-	if err := r.client.Get(ctx, objKey, sa); client.IgnoreNotFound(err) != nil {
+	if err := c.client.Get(ctx, objKey, sa); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
 			"error getting ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
@@ -154,7 +198,7 @@ func (r *rolesDatabase) Create(
 
 	// Check if the Role we would create already exists
 	role := &rbacv1.Role{}
-	if err := r.client.Get(ctx, objKey, role); client.IgnoreNotFound(err) != nil {
+	if err := c.client.Get(ctx, objKey, role); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
 			"error getting Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
@@ -170,7 +214,7 @@ func (r *rolesDatabase) Create(
 
 	// Check if the RoleBinding we would create already exists
 	rb := &rbacv1.RoleBinding{}
-	if err := r.client.Get(ctx, objKey, rb); client.IgnoreNotFound(err) != nil {
+	if err := c.client.Get(ctx, objKey, rb); client.IgnoreNotFound(err) != nil {
 		return nil, fmt.Errorf(
 			"error getting RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
@@ -200,20 +244,20 @@ func (r *rolesDatabase) Create(
 		sa.Annotations[kargoapi.AnnotationKeyDescription] = description
 	}
 
-	if err = r.client.Create(ctx, sa); err != nil {
+	if err = c.client.Create(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error creating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
-	if err := r.client.Create(ctx, rb); err != nil {
+	if err := c.client.Create(ctx, rb); err != nil {
 		return nil, fmt.Errorf(
 			"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
 	}
 
 	// Note: The Role's rules are already normalized
-	if err := r.client.Create(ctx, role); err != nil {
+	if err := c.client.Create(ctx, role); err != nil {
 		return nil, fmt.Errorf(
 			"error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
@@ -223,12 +267,12 @@ func (r *rolesDatabase) Create(
 }
 
 // DeleteRole implements the RolesDatabase interface.
-func (r *rolesDatabase) Delete(
+func (c *rolesDatabase) Delete(
 	ctx context.Context,
 	project string,
 	name string,
 ) error {
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		return err
 	}
@@ -242,7 +286,7 @@ func (r *rolesDatabase) Delete(
 	// Proceed with deletion
 
 	if role != nil {
-		if err := r.client.Delete(ctx, role); err != nil {
+		if err := c.client.Delete(ctx, role); err != nil {
 			return fmt.Errorf(
 				"error deleting Role %q in namespace %q: %w", role.Name, role.Namespace, err,
 			)
@@ -250,7 +294,7 @@ func (r *rolesDatabase) Delete(
 	}
 
 	if rb != nil {
-		if err := r.client.Delete(ctx, rb); err != nil {
+		if err := c.client.Delete(ctx, rb); err != nil {
 			return fmt.Errorf(
 				"error deleting RoleBinding %q in namespace %q: %w", rb.Name, rb.Namespace, err,
 			)
@@ -258,7 +302,7 @@ func (r *rolesDatabase) Delete(
 	}
 
 	// If we got to here, sa cannot have been nil
-	if err := r.client.Delete(ctx, sa); err != nil {
+	if err := c.client.Delete(ctx, sa); err != nil {
 		return fmt.Errorf(
 			"error deleting ServiceAccount %q in namespace %q: %w", sa.Name, sa.Namespace, err,
 		)
@@ -268,12 +312,13 @@ func (r *rolesDatabase) Delete(
 }
 
 // Get implements the RolesDatabase interface.
-func (r *rolesDatabase) Get(
+func (c *rolesDatabase) Get(
 	ctx context.Context,
+	systemLevel bool,
 	project string,
 	name string,
 ) (*rbacapi.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, systemLevel, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -286,28 +331,38 @@ func (r *rolesDatabase) Get(
 }
 
 // GetAsResources implements the RolesDatabase interface.
-func (r *rolesDatabase) GetAsResources(
+func (c *rolesDatabase) GetAsResources(
 	ctx context.Context,
+	systemLevel bool,
 	project string,
 	name string,
 ) (*corev1.ServiceAccount, []rbacv1.Role, []rbacv1.RoleBinding, error) {
-	objKey := client.ObjectKey{
-		Namespace: project,
-		Name:      name,
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
 	}
+	objKey := client.ObjectKey{Namespace: namespace, Name: name}
 
 	sa := &corev1.ServiceAccount{}
-	if err := r.client.Get(ctx, objKey, sa); err != nil {
+	if err := c.client.Get(ctx, objKey, sa); err != nil {
 		return nil, nil, nil, fmt.Errorf(
-			"error getting ServiceAccount %q in namespace %q: %w", name, project, err,
+			"error getting ServiceAccount %q in namespace %q: %w", name, namespace, err,
 		)
 	}
+	// System level roles must be labeled as such
+	if systemLevel {
+		if sa.Labels[rbacapi.LabelKeySystemRole] != rbacapi.LabelValueTrue {
+			return nil, nil, nil, apierrors.NewNotFound(
+				rbacapi.GroupVersion.WithResource("Role").GroupResource(), name,
+			)
+		}
+	}
 
-	// Find all RoleBindings in the project namespace
+	// Find all RoleBindings in the namespace
 	rbList := &rbacv1.RoleBindingList{}
-	if err := r.client.List(ctx, rbList, client.InNamespace(project)); err != nil {
+	if err := c.client.List(ctx, rbList, client.InNamespace(namespace)); err != nil {
 		return nil, nil, nil, fmt.Errorf(
-			"error listing RoleBindings in namespace %q: %w", project, err,
+			"error listing RoleBindings in namespace %q: %w", namespace, err,
 		)
 	}
 	// Narrow the list to just the RoleBindings that reference the ServiceAccount
@@ -316,7 +371,7 @@ func (r *rolesDatabase) GetAsResources(
 		rb := &rbList.Items[i]
 		for _, subject := range rb.Subjects {
 			if subject.Kind == rbacv1.ServiceAccountKind &&
-				subject.Namespace == project &&
+				subject.Namespace == namespace &&
 				subject.Name == name {
 				rbs = append(rbs, *rb)
 				break
@@ -332,15 +387,13 @@ func (r *rolesDatabase) GetAsResources(
 	roles := make([]rbacv1.Role, 0, len(rbs))
 	for _, rb := range rbs {
 		role := &rbacv1.Role{}
-		if err := r.client.Get(
-			ctx, client.ObjectKey{
-				Namespace: project,
-				Name:      rb.RoleRef.Name,
-			},
+		if err := c.client.Get(
+			ctx, client.ObjectKey{Namespace: namespace, Name: rb.RoleRef.Name},
 			role,
 		); err != nil {
 			return nil, nil, nil, fmt.Errorf(
-				"error getting Role %q in namespace %q: %w", rb.RoleRef.Name, project, err,
+				"error getting Role %q in namespace %q: %w",
+				rb.RoleRef.Name, namespace, err,
 			)
 		}
 		roles = append(roles, *role)
@@ -350,13 +403,13 @@ func (r *rolesDatabase) GetAsResources(
 }
 
 // GrantPermissionsToRole implements the RolesDatabase interface.
-func (r *rolesDatabase) GrantPermissionsToRole(
+func (c *rolesDatabase) GrantPermissionsToRole(
 	ctx context.Context,
 	project string,
 	name string,
 	resourceDetails *rbacapi.ResourceDetails,
 ) (*rbacapi.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -401,16 +454,16 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	}
 
 	if role == nil {
-		if err = r.client.Create(ctx, newRole); err != nil {
+		if err = c.client.Create(ctx, newRole); err != nil {
 			return nil, fmt.Errorf("error creating Role %q in namespace %q: %w", name, project, err)
 		}
-	} else if err = r.client.Update(ctx, newRole); err != nil {
+	} else if err = c.client.Update(ctx, newRole); err != nil {
 		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", name, project, err)
 	}
 
 	if rb == nil {
-		rb = buildNewRoleBinding(project, name, nil)
-		if err = r.client.Create(ctx, rb); err != nil {
+		rb = buildNewRoleBinding(project, name)
+		if err = c.client.Create(ctx, rb); err != nil {
 			return nil, fmt.Errorf("error creating RoleBinding %q in namespace %q: %w", name, project, err)
 		}
 	}
@@ -418,84 +471,14 @@ func (r *rolesDatabase) GrantPermissionsToRole(
 	return ResourcesToRole(sa, []rbacv1.Role{*newRole}, []rbacv1.RoleBinding{*rb})
 }
 
-// GrantRoleToServiceAccounts implements the RolesDatabase interface.
-func (r *rolesDatabase) GrantRoleToServiceAccounts(
-	ctx context.Context,
-	project string,
-	roleName string,
-	saRefs []rbacapi.ServiceAccountReference,
-) (*rbacapi.Role, error) {
-	roleSA, roles, rbs, err := r.GetAsResources(ctx, project, roleName)
-	if err != nil {
-		return nil, err
-	}
-	// This will return an error if these resources are not manageable for any
-	// reason.
-	_, rb, err := manageableResources(*roleSA, roles, rbs)
-	if err != nil {
-		return nil, err
-	}
-	if rb == nil {
-		rb = buildNewRoleBinding(project, roleName, nil)
-		if err = r.client.Create(ctx, rb); err != nil {
-			return nil, fmt.Errorf(
-				"error creating RoleBinding %q in namespace %q: %w",
-				rb.Name, rb.Namespace, err,
-			)
-		}
-	}
-	for _, saRef := range saRefs {
-		sa := &corev1.ServiceAccount{}
-		if err = r.client.Get(
-			ctx,
-			client.ObjectKey{
-				Namespace: saRef.Namespace,
-				Name:      saRef.Name,
-			},
-			sa,
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error getting ServiceAccount %q in namespace %q: %w",
-				saRef.Name, saRef.Namespace, err,
-			)
-		}
-		if !isKargoServiceAccount(sa) {
-			return nil, apierrors.NewBadRequest(
-				fmt.Sprintf(
-					"ServiceAccount %q in namespace %q is not a Kargo ServiceAccount",
-					saRef.Name, saRef.Namespace,
-				),
-			)
-		}
-		if !isKargoManaged(sa) {
-			return nil, apierrors.NewBadRequest(
-				fmt.Sprintf(
-					"ServiceAccount %q in namespace %q is not annotated as Kargo-managed",
-					saRef.Name, saRef.Namespace,
-				),
-			)
-		}
-	}
-	for _, saRef := range saRefs {
-		addServiceAccountToRoleBinding(rb, saRef)
-		if err = r.client.Update(ctx, rb); err != nil {
-			return nil, fmt.Errorf(
-				"error updating RoleBinding %q in namespace %q: %w",
-				roleName, project, err,
-			)
-		}
-	}
-	return ResourcesToRole(roleSA, roles, []rbacv1.RoleBinding{*rb})
-}
-
 // GrantRoleToUsers implements the RolesDatabase interface.
-func (r *rolesDatabase) GrantRoleToUsers(
+func (c *rolesDatabase) GrantRoleToUsers(
 	ctx context.Context,
 	project string,
 	name string,
 	claims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -508,7 +491,7 @@ func (r *rolesDatabase) GrantRoleToUsers(
 	if err = amendClaimAnnotations(sa, claimListToMap(claims)); err != nil {
 		return nil, fmt.Errorf("error amending claim annotations: %w", err)
 	}
-	if err = r.client.Update(ctx, sa); err != nil {
+	if err = c.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
 
@@ -519,33 +502,53 @@ func (r *rolesDatabase) GrantRoleToUsers(
 }
 
 // List implements the RolesDatabase interface.
-func (r *rolesDatabase) List(
+func (c *rolesDatabase) List(
 	ctx context.Context,
+	systemLevel bool,
 	project string,
 ) ([]*rbacapi.Role, error) {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	listOpts := []client.ListOption{client.InNamespace(namespace)}
+	if systemLevel {
+		listOpts = append(
+			listOpts,
+			client.MatchingLabels{rbacapi.LabelKeySystemRole: rbacapi.LabelValueTrue},
+		)
+	}
+
 	saList := &corev1.ServiceAccountList{}
-	if err := r.client.List(
-		ctx,
-		saList,
-		client.InNamespace(project),
-	); err != nil {
-		return nil, fmt.Errorf("error listing ServiceAccounts in namespace %q: %w", project, err)
+	if err := c.client.List(ctx, saList, listOpts...); err != nil {
+		return nil, fmt.Errorf(
+			"error listing ServiceAccounts in namespace %q: %w", namespace, err,
+		)
 	}
 
 	kargoRoles := make([]*rbacapi.Role, 0, len(saList.Items))
 	for i := range saList.Items {
-		sa, roles, rbs, err := r.GetAsResources(ctx, project, saList.Items[i].Name)
+		sa, roles, rbs, err := c.GetAsResources(
+			ctx,
+			systemLevel,
+			namespace,
+			saList.Items[i].Name,
+		)
+
 		if err != nil {
 			return nil, fmt.Errorf(
 				"error getting underlying resources for Kargo Role %q from namespace %q: %w",
-				saList.Items[i].Name, project, err,
+				saList.Items[i].Name, namespace, err,
 			)
 		}
 		// Note: The underlying resources we found may not be manageable, but we
 		// can still return a Kargo Role that summarizes them.
 		kargoRole, err := ResourcesToRole(sa, roles, rbs)
 		if err != nil {
-			return nil, fmt.Errorf("error converting underlying resources to Kargo Role %q: %w", sa.Name, err)
+			return nil, fmt.Errorf(
+				"error converting underlying resources to Kargo Role %q: %w",
+				sa.Name, err,
+			)
 		}
 		kargoRoles = append(kargoRoles, kargoRole)
 	}
@@ -558,34 +561,45 @@ func (r *rolesDatabase) List(
 	return kargoRoles, nil
 }
 
-func (r *rolesDatabase) ListNames(ctx context.Context, project string) ([]string, error) {
+func (c *rolesDatabase) ListNames(
+	ctx context.Context,
+	systemLevel bool,
+	project string,
+) ([]string, error) {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	listOpts := []client.ListOption{client.InNamespace(namespace)}
+	if systemLevel {
+		listOpts = append(
+			listOpts,
+			client.MatchingLabels{rbacapi.LabelKeySystemRole: rbacapi.LabelValueTrue},
+		)
+	}
+
 	saList := &corev1.ServiceAccountList{}
-	if err := r.client.List(
-		ctx,
-		saList,
-		client.InNamespace(project),
-	); err != nil {
-		return nil, fmt.Errorf("error listing ServiceAccounts in namespace %q: %w", project, err)
+	if err := c.client.List(ctx, saList, listOpts...); err != nil {
+		return nil, fmt.Errorf(
+			"error listing ServiceAccounts in namespace %q: %w", namespace, err,
+		)
 	}
 	names := make([]string, 0, len(saList.Items))
 	for _, sa := range saList.Items {
-		// Skip ServiceAccounts that are Kargo Service Accounts.
-		if sa.Labels[rbacapi.LabelKeyServiceAccount] != rbacapi.LabelValueTrue {
-			names = append(names, sa.Name)
-		}
+		names = append(names, sa.Name)
 	}
 	slices.Sort(names)
 	return names, nil
 }
 
 // RevokePermissionFromRole implements the RolesDatabase interface.
-func (r *rolesDatabase) RevokePermissionsFromRole(
+func (c *rolesDatabase) RevokePermissionsFromRole(
 	ctx context.Context,
 	project string,
 	name string,
 	resourceDetails *rbacapi.ResourceDetails,
 ) (*rbacapi.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -626,8 +640,12 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 
 	filteredRules := make([]rbacv1.PolicyRule, 0, len(role.Rules))
 	for _, rule := range role.Rules {
+		ruleResourceName := ""
+		if len(rule.ResourceNames) > 0 {
+			ruleResourceName = rule.ResourceNames[0]
+		}
 		if rule.APIGroups[0] != group || rule.Resources[0] != resourceDetails.ResourceType ||
-			(resourceDetails.ResourceName != "" && rule.ResourceNames[0] != resourceDetails.ResourceName) {
+			(resourceDetails.ResourceName != "" && ruleResourceName != resourceDetails.ResourceName) {
 			filteredRules = append(filteredRules, rule)
 			continue
 		}
@@ -640,54 +658,22 @@ func (r *rolesDatabase) RevokePermissionsFromRole(
 	}
 	role.Rules = filteredRules
 
-	if err = r.client.Update(ctx, role); err != nil {
+	if err = c.client.Update(ctx, role); err != nil {
 		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", name, project, err)
 	}
 
 	return ResourcesToRole(sa, []rbacv1.Role{*role}, rbs)
 }
 
-// RevokeRoleFromServiceAccounts implements the RolesDatabase interface.
-func (r *rolesDatabase) RevokeRoleFromServiceAccounts(
-	ctx context.Context,
-	project string,
-	roleName string,
-	saRefs []rbacapi.ServiceAccountReference,
-) (*rbacapi.Role, error) {
-	roleSA, roles, rbs, err := r.GetAsResources(ctx, project, roleName)
-	if err != nil {
-		return nil, err
-	}
-	// This will return an error if these resources are not manageable for any
-	// reason.
-	_, rb, err := manageableResources(*roleSA, roles, rbs)
-	if err != nil {
-		return nil, err
-	}
-	if rb != nil {
-		for _, saRef := range saRefs {
-			dropServiceAccountFromRoleBinding(rb, saRef)
-			if err = r.client.Update(ctx, rb); err != nil {
-				return nil, fmt.Errorf(
-					"error updating RoleBinding %q in namespace %q: %w",
-					roleName, project, err,
-				)
-			}
-		}
-		return ResourcesToRole(roleSA, roles, []rbacv1.RoleBinding{*rb})
-	}
-	return ResourcesToRole(roleSA, roles, nil)
-}
-
 // RevokeRoleFromUsers implements the RolesDatabase interface.
-func (r *rolesDatabase) RevokeRoleFromUsers(
+func (c *rolesDatabase) RevokeRoleFromUsers(
 	ctx context.Context,
 	project string,
 	name string,
 	claims []rbacapi.Claim,
 ) (*rbacapi.Role, error) {
 	// Make sure at least part of the ServiceAccount/Role/RoleBinding trio exists
-	sa, roles, rbs, err := r.GetAsResources(ctx, project, name)
+	sa, roles, rbs, err := c.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		return nil, err
 	}
@@ -702,7 +688,7 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 		return nil, fmt.Errorf("error dropping from claim annotations: %w", err)
 	}
 
-	if err = r.client.Update(ctx, sa); err != nil {
+	if err = c.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf("error updating ServiceAccount %q in namespace %q: %w", name, project, err)
 	}
 
@@ -713,11 +699,16 @@ func (r *rolesDatabase) RevokeRoleFromUsers(
 }
 
 // Update implements the RolesDatabase interface.
-func (r *rolesDatabase) Update(
+func (c *rolesDatabase) Update(
 	ctx context.Context,
 	kargoRole *rbacapi.Role,
 ) (*rbacapi.Role, error) {
-	sa, roles, rbs, err := r.GetAsResources(ctx, kargoRole.Namespace, kargoRole.Name)
+	sa, roles, rbs, err := c.GetAsResources(
+		ctx,
+		false,
+		kargoRole.Namespace,
+		kargoRole.Name,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -741,7 +732,7 @@ func (r *rolesDatabase) Update(
 		delete(sa.Annotations, kargoapi.AnnotationKeyDescription)
 	}
 
-	if err = r.client.Update(ctx, sa); err != nil {
+	if err = c.client.Update(ctx, sa); err != nil {
 		return nil, fmt.Errorf(
 			"error updating ServiceAccount %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 		)
@@ -758,20 +749,16 @@ func (r *rolesDatabase) Update(
 		return nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 	if role == nil {
-		if err := r.client.Create(ctx, newRole); err != nil {
+		if err := c.client.Create(ctx, newRole); err != nil {
 			return nil, fmt.Errorf("error creating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err)
 		}
-	} else if err := r.client.Update(ctx, newRole); err != nil {
+	} else if err := c.client.Update(ctx, newRole); err != nil {
 		return nil, fmt.Errorf("error updating Role %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err)
 	}
 
 	if rb == nil {
-		rb = buildNewRoleBinding(
-			kargoRole.Namespace,
-			kargoRole.Name,
-			kargoRole.ServiceAccounts,
-		)
-		if err := r.client.Create(ctx, rb); err != nil {
+		rb = buildNewRoleBinding(kargoRole.Namespace, kargoRole.Name)
+		if err := c.client.Create(ctx, rb); err != nil {
 			return nil, fmt.Errorf(
 				"error creating RoleBinding %q in namespace %q: %w", kargoRole.Name, kargoRole.Namespace, err,
 			)
@@ -828,25 +815,6 @@ func ResourcesToRole(
 		return strings.Compare(lhs.Name, rhs.Name)
 	})
 
-	kargoRole.ServiceAccounts = []rbacapi.ServiceAccountReference{}
-	for _, rb := range rbs {
-		for _, subject := range rb.Subjects {
-			// Exclude the SA that is an integral part of the Kargo Role.
-			if subject.Kind == rbacv1.ServiceAccountKind &&
-				(subject.Namespace != sa.Namespace || subject.Name != sa.Name) {
-				kargoRole.ServiceAccounts = append(
-					kargoRole.ServiceAccounts,
-					rbacapi.ServiceAccountReference{
-						Namespace: subject.Namespace,
-						Name:      subject.Name,
-					},
-				)
-			}
-		}
-	}
-	sortServiceAccountRefs(kargoRole.ServiceAccounts)
-	kargoRole.ServiceAccounts = compactServiceAccountRefs(kargoRole.ServiceAccounts)
-
 	kargoRole.Rules = []rbacv1.PolicyRule{}
 	for _, role := range roles {
 		kargoRole.Rules = append(kargoRole.Rules, role.Rules...)
@@ -885,11 +853,7 @@ func RoleToResources(
 		return nil, nil, nil, fmt.Errorf("error normalizing RBAC policy rules: %w", err)
 	}
 
-	rb := buildNewRoleBinding(
-		kargoRole.Namespace,
-		kargoRole.Name,
-		kargoRole.ServiceAccounts,
-	)
+	rb := buildNewRoleBinding(kargoRole.Namespace, kargoRole.Name)
 
 	return sa, role, rb, nil
 }
@@ -966,12 +930,8 @@ func buildNewRole(namespace, name string) *rbacv1.Role {
 	}
 }
 
-func buildNewRoleBinding(
-	namespace string,
-	roleName string,
-	saList []rbacapi.ServiceAccountReference,
-) *rbacv1.RoleBinding {
-	rb := &rbacv1.RoleBinding{
+func buildNewRoleBinding(namespace string, roleName string) *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      roleName,
@@ -984,55 +944,16 @@ func buildNewRoleBinding(
 			Kind:     "Role",
 			Name:     roleName,
 		},
-	}
-	rb.Subjects = make([]rbacv1.Subject, 0, len(saList)+1)
-	rb.Subjects = append(rb.Subjects, rbacv1.Subject{
-		Kind:      rbacv1.ServiceAccountKind,
-		Namespace: namespace,
-		Name:      roleName,
-	})
-	sortServiceAccountRefs(saList)
-	for _, saRef := range saList {
-		rb.Subjects = append(rb.Subjects, rbacv1.Subject{
+		Subjects: []rbacv1.Subject{{
 			Kind:      rbacv1.ServiceAccountKind,
-			Namespace: saRef.Namespace,
-			Name:      saRef.Name,
-		})
+			Namespace: namespace,
+			Name:      roleName,
+		}},
 	}
-	return rb
 }
 
 func isKargoManaged(obj metav1.Object) bool {
 	return obj.GetAnnotations()[rbacapi.AnnotationKeyManaged] == rbacapi.AnnotationValueTrue
-}
-
-func addServiceAccountToRoleBinding(
-	rb *rbacv1.RoleBinding,
-	saRef rbacapi.ServiceAccountReference,
-) {
-	for _, subject := range rb.Subjects {
-		if subject.Kind == rbacv1.ServiceAccountKind &&
-			subject.Namespace == saRef.Namespace &&
-			subject.Name == saRef.Name {
-			return // Already exists, nothing to do
-		}
-	}
-	rb.Subjects = append(rb.Subjects, rbacv1.Subject{
-		Kind:      rbacv1.ServiceAccountKind,
-		Namespace: saRef.Namespace,
-		Name:      saRef.Name,
-	})
-}
-
-func dropServiceAccountFromRoleBinding(
-	rb *rbacv1.RoleBinding,
-	saRef rbacapi.ServiceAccountReference,
-) {
-	rb.Subjects = slices.DeleteFunc(rb.Subjects, func(subject rbacv1.Subject) bool {
-		return subject.Kind == rbacv1.ServiceAccountKind &&
-			subject.Namespace == saRef.Namespace &&
-			subject.Name == saRef.Name
-	})
 }
 
 func manageableResources(
@@ -1091,20 +1012,301 @@ func manageableResources(
 	return role, rb, nil
 }
 
-func sortServiceAccountRefs(refs []rbacapi.ServiceAccountReference) {
-	slices.SortFunc(refs, func(a, b rbacapi.ServiceAccountReference) int {
-		comparison := strings.Compare(a.Namespace, b.Namespace)
-		if comparison != 0 {
-			return comparison
-		}
-		return strings.Compare(a.Name, b.Name)
-	})
+// CreateAPIToken implements RolesDatabase.
+func (c *rolesDatabase) CreateAPIToken(
+	ctx context.Context,
+	systemLevel bool,
+	project string,
+	roleName string,
+	tokenName string,
+) (*corev1.Secret, error) {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	sa, _, _, err := c.GetAsResources(ctx, systemLevel, project, roleName)
+	if err != nil {
+		return nil, err
+	}
+	if systemLevel && sa.Labels[rbacapi.LabelKeySystemRole] != rbacapi.LabelValueTrue {
+		return nil, apierrors.NewBadRequest(
+			fmt.Sprintf(
+				"ServiceAccount %q in namespace %q is not labeled as a system-level Kargo role",
+				roleName, namespace,
+			),
+		)
+	}
+	tokenSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: namespace,
+			Name:      tokenName,
+			Labels: map[string]string{
+				rbacapi.LabelKeyAPIToken: rbacapi.LabelValueTrue,
+			},
+			Annotations: map[string]string{
+				"kubernetes.io/service-account.name": roleName,
+				rbacapi.AnnotationKeyManaged:         rbacapi.AnnotationValueTrue,
+			},
+			// Make sure deleting the ServiceAccount cascades to associated tokens.
+			OwnerReferences: []metav1.OwnerReference{{
+				APIVersion: "v1",
+				Kind:       "ServiceAccount",
+				Name:       roleName,
+				UID:        sa.UID,
+			}},
+		},
+		Type: corev1.SecretTypeServiceAccountToken,
+	}
+	fmt.Println(tokenSecret.OwnerReferences)
+	if err = c.client.Create(ctx, tokenSecret); err != nil {
+		return nil, fmt.Errorf(
+			"error creating token Secret %q for ServiceAccount %q in namespace %q: %w",
+			tokenName, roleName, namespace, err,
+		)
+	}
+
+	// Retrieve Secret -- this is necessary to actually get the token. We wrap
+	// this in a retry because token data is created asynchronously and we don't
+	// want to prematurely return the Secret without its data.
+	tokenSecret, err = c.waitForTokenData(
+		ctx,
+		namespace,
+		tokenName,
+		5, // Up to five attempts
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return tokenSecret, nil
 }
 
-func compactServiceAccountRefs(
-	refs []rbacapi.ServiceAccountReference,
-) []rbacapi.ServiceAccountReference {
-	return slices.CompactFunc(refs, func(a, b rbacapi.ServiceAccountReference) bool {
-		return a.Namespace == b.Namespace && a.Name == b.Name
-	})
+// waitForTokenData retrieves a token Secret with retry logic. It retries when:
+//
+//  1. The Secret exists but token data hasn't been populated yet
+//  2. Transient errors occur (timeouts, rate limits, server errors, conflicts)
+//
+// It does NOT retry on permanent errors like NotFound, BadRequest, Forbidden,
+// etc.
+func (c *rolesDatabase) waitForTokenData(
+	ctx context.Context,
+	namespace string,
+	tokenName string,
+	maxAttempts int,
+) (*corev1.Secret, error) {
+	var tokenSecret *corev1.Secret
+	backoff := retry.DefaultBackoff
+	backoff.Steps = maxAttempts
+
+	if err := retry.OnError(
+		backoff,
+		func(innerErr error) bool {
+			if innerErr == nil {
+				return false // Stop retrying if no error
+			}
+			// Retry on transient errors
+			_, isTokenNotPopulatedErr := innerErr.(*errTokenNotPopulated)
+			return isTokenNotPopulatedErr ||
+				apierrors.IsServerTimeout(innerErr) ||
+				apierrors.IsTimeout(innerErr) ||
+				apierrors.IsTooManyRequests(innerErr) ||
+				apierrors.IsServiceUnavailable(innerErr) ||
+				apierrors.IsInternalError(innerErr) ||
+				apierrors.IsConflict(innerErr)
+		},
+		func() error {
+			tokenSecret = &corev1.Secret{}
+			if innerErr := c.client.Get(
+				ctx,
+				client.ObjectKey{
+					Namespace: namespace,
+					Name:      tokenName,
+				},
+				tokenSecret,
+			); innerErr != nil {
+				return innerErr
+			}
+			if _, gotToken := tokenSecret.Data["token"]; !gotToken {
+				return &errTokenNotPopulated{}
+			}
+			return nil
+		},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error while waiting for token Secret %q in namespace %q to be "+
+				"populated: %w",
+			tokenName, namespace, err,
+		)
+	}
+
+	return tokenSecret, nil
+}
+
+// DeleteAPIToken implements RolesDatabase.
+func (c *rolesDatabase) DeleteAPIToken(
+	ctx context.Context,
+	systemLevel bool,
+	project string,
+	name string,
+) error {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	tokenSecret := &corev1.Secret{}
+	if err := c.client.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		},
+		tokenSecret,
+	); err != nil {
+		return fmt.Errorf(
+			"error getting token Secret %q in namespace %q: %w", name, namespace, err,
+		)
+	}
+	if tokenSecret.Type != corev1.SecretTypeServiceAccountToken {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is not a service account "+
+					"token",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	if _, ok := tokenSecret.Annotations["kubernetes.io/service-account.name"]; !ok {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is missing the service account "+
+					"annotation",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	if !isKargoAPIToken(tokenSecret) {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is not labeled as a Kargo "+
+					"API token",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	if !isKargoManaged(tokenSecret) {
+		return apierrors.NewConflict(
+			corev1.SchemeGroupVersion.WithResource("secrets").GroupResource(),
+			name,
+			fmt.Errorf( // nolint: staticcheck
+				"Kubernetes Secret %q in namespace %q is not annotated as Kargo-managed",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	if err := c.client.Delete(ctx, tokenSecret); err != nil {
+		return fmt.Errorf(
+			"error deleting token Secret %q in namespace %q: %w",
+			tokenSecret.Name, tokenSecret.Namespace, err,
+		)
+	}
+	return nil
+}
+
+// GetAPIToken implements RolesDatabase.
+func (c *rolesDatabase) GetAPIToken(
+	ctx context.Context,
+	systemLevel bool,
+	project string,
+	name string,
+) (*corev1.Secret, error) {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	tokenSecret := &corev1.Secret{}
+	if err := c.client.Get(
+		ctx,
+		client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		},
+		tokenSecret,
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error getting token Secret %q in namespace %q: %w", name, namespace, err,
+		)
+	}
+	if !isKargoAPIToken(tokenSecret) {
+		return nil, apierrors.NewBadRequest(
+			fmt.Sprintf(
+				"Kubernetes Secret %q in namespace %q is not labeled as a Kargo "+
+					"API token",
+				tokenSecret.Name, tokenSecret.Namespace,
+			),
+		)
+	}
+	redactTokenData(tokenSecret)
+	return tokenSecret, nil
+}
+
+// ListAPITokens implements RolesDatabase.
+func (c *rolesDatabase) ListAPITokens(
+	ctx context.Context,
+	systemLevel bool,
+	project string,
+	roleName string,
+) ([]corev1.Secret, error) {
+	namespace := project
+	if systemLevel {
+		namespace = c.cfg.KargoNamespace
+	}
+	if roleName != "" {
+		if _, err := c.Get(ctx, systemLevel, project, roleName); err != nil {
+			return nil, err
+		}
+	}
+	tokenSecretList := &corev1.SecretList{}
+	if err := c.client.List(
+		ctx,
+		tokenSecretList,
+		client.InNamespace(namespace),
+		client.MatchingLabels{rbacapi.LabelKeyAPIToken: rbacapi.LabelValueTrue},
+	); err != nil {
+		return nil, fmt.Errorf(
+			"error listing token Secrets for ServiceAccount %q in namespace %q: %w",
+			roleName, namespace, err,
+		)
+	}
+	var tokenSecrets []corev1.Secret
+	for _, tokenSecret := range tokenSecretList.Items {
+		if isKargoAPIToken(&tokenSecret) &&
+			(roleName == "" || tokenSecret.Annotations["kubernetes.io/service-account.name"] == roleName) {
+			redactTokenData(&tokenSecret)
+			tokenSecrets = append(tokenSecrets, tokenSecret)
+		}
+	}
+	return tokenSecrets, nil
+}
+
+func isKargoAPIToken(secret *corev1.Secret) bool {
+	return secret.Type == corev1.SecretTypeServiceAccountToken &&
+		secret.Labels[rbacapi.LabelKeyAPIToken] == rbacapi.LabelValueTrue
+}
+
+func redactTokenData(tokenSecret *corev1.Secret) {
+	if _, ok := tokenSecret.Data["token"]; ok {
+		tokenSecret.Data["token"] = []byte("*** REDACTED ***")
+	}
+}
+
+type errTokenNotPopulated struct{}
+
+func (e *errTokenNotPopulated) Error() string {
+	return "did not find token data"
 }

@@ -8,7 +8,7 @@ import { useMemo } from 'react';
 import { TruncateMiddle } from '../common/truncate-middle';
 
 export const FreightContentItem = (props: {
-  icon: IconDefinition;
+  icon?: IconDefinition;
   overlay?: React.ReactNode;
   title?: string;
   href?: string;
@@ -60,7 +60,13 @@ export const FreightContentItem = (props: {
       title={title}
     >
       <Flex align='center' gap={8}>
-        <FontAwesomeIcon icon={icon} style={{ fontSize: '14px' }} className={classNames('px-1')} />
+        {!!icon && (
+          <FontAwesomeIcon
+            icon={icon}
+            style={{ fontSize: '14px' }}
+            className={classNames('px-1')}
+          />
+        )}
         {props.artifactSource && (
           <Link
             href={props.artifactSource}

@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 )
@@ -56,4 +58,31 @@ func (s *server) DeleteFreight(
 	}
 
 	return connect.NewResponse(&svcv1alpha1.DeleteFreightResponse{}), nil
+}
+
+// @id DeleteFreight
+// @Summary Delete a Freight resource
+// @Description Delete a Freight resource from a project's namespace by name or
+// @Description alias.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Param project path string true "Project name"
+// @Param freight-name-or-alias path string true "Freight name or alias"
+// @Success 204 "Deleted successfully"
+// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias} [delete]
+func (s *server) deleteFreight(c *gin.Context) {
+	project := c.Param("project")
+	nameOrAlias := c.Param("freight-name-or-alias")
+
+	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
+	if freight == nil {
+		return
+	}
+
+	if err := s.client.Delete(c.Request.Context(), freight); err != nil {
+		_ = c.Error(err)
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }

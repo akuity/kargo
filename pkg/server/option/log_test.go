@@ -8,9 +8,10 @@ import (
 
 	"connectrpc.com/connect"
 	grpchealth "connectrpc.com/grpchealth"
-	"github.com/bombsimon/logrusr/v4"
-	testlog "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/akuity/kargo/pkg/logging"
@@ -33,11 +34,11 @@ func TestUnaryServerLogging(t *testing.T) {
 	}
 	for name, testSet := range testSets {
 		t.Run(name, func(t *testing.T) {
-			// TODO: This is an odd spot where we're using logrus directly until we
-			// figure out how to do the equivalent thing (assert that a message WAS
-			// logged) with logr.
-			logrusLogger, hook := testlog.NewNullLogger()
-			logger := logging.Wrap(logrusr.New(logrusLogger))
+			// Use zap's observer to capture log entries. This is how we can verify
+			// that our logging interceptor actually logs something.
+			core, logs := observer.New(zapcore.InfoLevel)
+			zapLogger := zap.New(core)
+			logger := logging.Wrap(zapLogger)
 
 			opt := connect.WithInterceptors(
 				newLogInterceptor(logger, testSet.ignorableMethods))
@@ -59,19 +60,27 @@ func TestUnaryServerLogging(t *testing.T) {
 					&grpc_health_v1.HealthCheckRequest{}))
 			require.NoError(t, err)
 
+			allLogs := logs.All()
 			if testSet.logExpected {
-				entry := hook.LastEntry()
-				require.NotNil(t, entry)
+				require.NotEmpty(t, allLogs)
+				entry := allLogs[len(allLogs)-1]
 				for _, field := range []string{
 					"connect.service",
 					"connect.method",
 					"connect.start_time",
 					"connect.duration",
 				} {
-					require.Contains(t, entry.Data, field)
+					found := false
+					for _, f := range entry.Context {
+						if f.Key == field {
+							found = true
+							break
+						}
+					}
+					require.True(t, found, "expected field %q in log entry", field)
 				}
 			} else {
-				require.Nil(t, hook.LastEntry())
+				require.Empty(t, allLogs)
 			}
 		})
 	}

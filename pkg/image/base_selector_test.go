@@ -48,15 +48,16 @@ func TestNewBaseSelector(t *testing.T) {
 						os:   "linux",
 						arch: "amd64",
 					},
-					s.platform,
+					s.platformConstraint,
 				)
 				require.NotNil(t, s.repoClient)
+				require.True(t, s.repoClient.cacheByTag)
 			},
 		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newBaseSelector(testCase.sub, nil)
+			s, err := newBaseSelector(testCase.sub, nil, true)
 			testCase.assertions(t, s, err)
 		})
 	}

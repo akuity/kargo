@@ -15,15 +15,15 @@ type StandardConfig struct {
 
 type ServerConfig struct {
 	StandardConfig
-	TLSConfig               *TLSConfig
-	BaseURL                 string
-	ClusterSecretsNamespace string
+	TLSConfig                *TLSConfig
+	BaseURL                  string
+	SystemResourcesNamespace string
 }
 
 func ServerConfigFromEnv() ServerConfig {
 	cfg := ServerConfig{
-		BaseURL:                 os.GetEnv("EXTERNAL_WEBHOOK_SERVER_BASE_URL", ""),
-		ClusterSecretsNamespace: os.GetEnv("CLUSTER_SECRETS_NAMESPACE", ""),
+		BaseURL:                  os.GetEnv("EXTERNAL_WEBHOOK_SERVER_BASE_URL", ""),
+		SystemResourcesNamespace: os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", "kargo-system-resources"),
 	}
 	if cfg.BaseURL == "" {
 		panic("EXTERNAL_WEBHOOK_SERVER_BASE_URL must be set")

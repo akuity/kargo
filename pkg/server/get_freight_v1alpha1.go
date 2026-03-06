@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"connectrpc.com/connect"
+	"github.com/gin-gonic/gin"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -98,4 +100,27 @@ func (s *server) GetFreight(
 	return connect.NewResponse(&svcv1alpha1.GetFreightResponse{
 		Result: &svcv1alpha1.GetFreightResponse_Freight{Freight: f},
 	}), nil
+}
+
+// @id GetFreight
+// @Summary Retrieve a Freight resource
+// @Description Retrieve a Freight resource from a project's namespace by name
+// @Description or alias.
+// @Tags Core, Project-Level
+// @Security BearerAuth
+// @Produce json
+// @Param project path string true "Project name"
+// @Param freight-name-or-alias path string true "Freight name or alias"
+// @Success 200 {object} object "Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)"
+// @Router /v1beta1/projects/{project}/freight/{freight-name-or-alias} [get]
+func (s *server) getFreight(c *gin.Context) {
+	project := c.Param("project")
+	nameOrAlias := c.Param("freight-name-or-alias")
+
+	freight := s.getFreightByNameOrAliasForGin(c, project, nameOrAlias)
+	if freight == nil {
+		return
+	}
+
+	c.JSON(http.StatusOK, freight)
 }

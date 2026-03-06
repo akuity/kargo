@@ -2,6 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -18,6 +21,7 @@ import (
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/server/config"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
 	"github.com/akuity/kargo/pkg/server/validation"
 )
@@ -299,7 +303,7 @@ func TestGetFreight(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 
-			ctx := context.Background()
+			ctx := t.Context()
 
 			client, err := kubernetes.NewClient(
 				ctx,
@@ -310,7 +314,7 @@ func TestGetFreight(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						scheme *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						c := fake.NewClientBuilder().WithScheme(scheme).WithInterceptorFuncs(testCase.interceptor)
 						if len(testCase.objects) > 0 {
 							c.WithObjects(testCase.objects...)
@@ -329,4 +333,74 @@ func TestGetFreight(t *testing.T) {
 			testCase.assertions(t, res, err)
 		})
 	}
+}
+
+func Test_server_getFreight(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testFreight := &kargoapi.Freight{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-freight",
+			Labels: map[string]string{
+				kargoapi.LabelKeyAlias: "fake-alias",
+			},
+		},
+		Alias: "fake-alias",
+	}
+	testRESTEndpoint(
+		t, &config.ServerConfig{},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/freight/"+testFreight.Name,
+		[]restTestCase{
+			{
+				name: "Project does not exist",
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name:          "Freight does not exist",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "gets Freight by name",
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testFreight,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the Freight in the response
+					freight := &kargoapi.Freight{}
+					err := json.Unmarshal(w.Body.Bytes(), freight)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, freight.Namespace)
+					require.Equal(t, testFreight.Name, freight.Name)
+				},
+			},
+			{
+				name: "gets Freight by alias",
+				url:  "/v1beta1/projects/" + testProject.Name + "/freight/" + testFreight.Alias,
+				clientBuilder: fake.NewClientBuilder().WithObjects(
+					testProject,
+					testFreight,
+				),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Examine the Freight in the response
+					freight := &kargoapi.Freight{}
+					err := json.Unmarshal(w.Body.Bytes(), freight)
+					require.NoError(t, err)
+					require.Equal(t, testProject.Name, freight.Namespace)
+					require.Equal(t, testFreight.Alias, freight.Alias)
+				},
+			},
+		},
+	)
 }

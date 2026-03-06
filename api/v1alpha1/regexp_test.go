@@ -5,7 +5,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
+	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -21,23 +21,6 @@ func ValidateResourceExpression(t *testing.T, marker string, testCases map[strin
 	expression, err := findExpression(marker)
 	require.NoError(t, err)
 	testingPkg.ValidateRegularExpression(t, expression, testCases)
-}
-
-func TestBranchPattern(t *testing.T) {
-	testCases := map[string]bool{
-		"":             false,
-		"foo/bar":      true,
-		"foo.bar":      true,
-		"release-0.58": true,
-		"/foo":         false,
-		"foo/":         false,
-		"foo//bar":     true,
-		".foo":         false,
-		"foo.":         false,
-		"foo..bar":     true,
-	}
-
-	ValidateResourceExpression(t, "Branch", testCases)
 }
 
 func TestDigestPattern(t *testing.T) {
@@ -79,106 +62,6 @@ func TestDurationPattern(t *testing.T) {
 	}
 
 	ValidateResourceExpression(t, "Duration", testCases)
-}
-
-func TestHelmRepoURLPattern(t *testing.T) {
-	testCases := map[string]bool{}
-
-	ValidateResourceExpression(t, "HelmRepoURL", testCases)
-}
-
-func TestGitRepoURLPattern(t *testing.T) {
-	testCases := map[string]bool{
-		"":             false,
-		":":            false,
-		"/etc/passwd":  false,
-		"//etc/passwd": false,
-		"https:":       false,
-
-		"https://not a url":                      false,
-		"http://github.com/example/repo?foo=bar": true,
-		"ssh://not a url":                        false,
-		"ssh://github.com/example/repo?foo=bar":  true,
-		"not even remotely a url":                false,
-		// URLs of the form http[s]://[proxy-user:proxy-pass@]host.xz[:port][/path/to/repo[.git][/]]
-		"https://github.com":          false,
-		"https://github.com/":         true, //?
-		"https://foo:bar@github.com":  false,
-		"https://foo:bar@github.com/": true, //?
-		// Variable features of the following URLs:
-		//   1000. Outbound proxy or not
-		//   0100. Port number or not
-		//   0010. .git suffix or not
-		//   0001. Trailing slash or not
-		"https://github.com/example/repo":                  true,
-		"https://github.com/example/repo/":                 true,
-		"https://github.com/example/repo.git":              true,
-		"https://github.com/example/repo.git/":             true,
-		"https://localhost:8443/example/repo":              true,
-		"https://localhost:8443/example/repo/":             true,
-		"https://localhost:8443/example/repo.git":          true,
-		"https://localhost:8443/example/repo.git/":         true,
-		"https://foo:bar@github.com/example/repo":          true,
-		"https://foo:bar@github.com/example/repo/":         true,
-		"https://foo:bar@github.com/example/repo.git":      true,
-		"https://foo:bar@github.com/example/repo.git/":     true,
-		"https://foo:bar@localhost:8443/example/repo":      true,
-		"https://foo:bar@localhost:8443/example/repo/":     true,
-		"https://foo:bar@localhost:8443/example/repo.git":  true,
-		"https://foo:bar@localhost:8443/example/repo.git/": true,
-		// URLS of the form ssh://[user@]host.xz[:port][/path/to/repo[.git][/]]
-		"ssh://git.example.com":      false,
-		"ssh://git.example.com/":     true, //?
-		"ssh://git@git.example.com":  false,
-		"ssh://git@git.example.com/": true, //?
-		// Variable features of the following URLs:
-		//   1000. Username or not
-		//   0100. Port number or not
-		//   0010. .git suffix or not
-		//   0001. Trailing slash or not
-		"ssh://github.com/example/repo":              true,
-		"ssh://github.com/example/repo/":             true,
-		"ssh://github.com/example/repo.git":          true,
-		"ssh://github.com/example/repo.git/":         true,
-		"ssh://localhost:2222/example/repo":          true,
-		"ssh://localhost:2222/example/repo/":         true,
-		"ssh://localhost:2222/example/repo.git":      true,
-		"ssh://localhost:2222/example/repo.git/":     true,
-		"ssh://git@github.com/example/repo":          true,
-		"ssh://git@github.com/example/repo/":         true,
-		"ssh://git@github.com/example/repo.git":      true,
-		"ssh://git@github.com/example/repo.git/":     true,
-		"ssh://git@localhost:2222/example/repo":      true,
-		"ssh://git@localhost:2222/example/repo/":     true,
-		"ssh://git@localhost:2222/example/repo.git":  true,
-		"ssh://git@localhost:2222/example/repo.git/": true,
-		// SCP-style URLs of the form [user@]host.xz[:path/to/repo[.git][/]]
-		"git.example.com":     false,
-		"git@git.example.com": false,
-		// Variable features of the following URLs:
-		//   100. Username or not
-		//   010. .git suffix or not
-		//   001. Trailing slash or not
-		"github.com:example/repo":          false, //?
-		"github.com:example/repo/":         false, //?
-		"github.com:example/repo.git":      false, //?
-		"github.com:example/repo.git/":     false, //?
-		"git@github.com:example/repo":      true,
-		"git@github.com:example/repo/":     true,
-		"git@github.com:example/repo.git":  true,
-		"git@github.com:example/repo.git/": true,
-	}
-
-	ValidateResourceExpression(t, "GitRepoURLPattern", testCases)
-}
-
-func TestImageRepoURLPattern(t *testing.T) {
-	testCases := map[string]bool{
-		"":  false,
-		".": false,
-	}
-
-	ValidateResourceExpression(t, "ImageRepoURL", testCases)
 }
 
 func TestKubernetesNamePattern(t *testing.T) {
@@ -240,10 +123,8 @@ var patternRE = regexp.MustCompile("// ?\\+kubebuilder:validation:Pattern=`(.*)`
 func findExpression(marker string) (*regexp.Regexp, error) {
 	fset := token.NewFileSet()
 
-	// Find all types file in the current directory
-	pkgs, err := parser.ParseDir(fset, "./", func(fi fs.FileInfo) bool {
-		return strings.HasSuffix(fi.Name(), "_types.go")
-	}, parser.ParseComments)
+	// Find all types files in the current directory
+	entries, err := os.ReadDir("./")
 	if err != nil {
 		return nil, err
 	}
@@ -253,34 +134,39 @@ func findExpression(marker string) (*regexp.Regexp, error) {
 
 	firstLocation := ""
 
-	for _, pkg := range pkgs {
-		for _, f := range pkg.Files {
-			cmap := ast.NewCommentMap(fset, f, f.Comments)
-			for _, list := range cmap.Comments() {
-				foundDirective := false
-				commentLocation := ""
-				foundExpression := ""
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), "_types.go") {
+			continue
+		}
+		f, err := parser.ParseFile(fset, entry.Name(), nil, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+		cmap := ast.NewCommentMap(fset, f, f.Comments)
+		for _, list := range cmap.Comments() {
+			foundDirective := false
+			commentLocation := ""
+			foundExpression := ""
 
-				for _, comment := range list.List {
-					if markerRE.MatchString(comment.Text) {
-						foundDirective = true
-						commentLocation = fset.Position(comment.Pos()).String()
-					}
-					if patterns := patternRE.FindStringSubmatch(comment.Text); len(patterns) > 1 {
-						foundExpression = patterns[1]
-					}
+			for _, comment := range list.List {
+				if markerRE.MatchString(comment.Text) {
+					foundDirective = true
+					commentLocation = fset.Position(comment.Pos()).String()
 				}
+				if patterns := patternRE.FindStringSubmatch(comment.Text); len(patterns) > 1 {
+					foundExpression = patterns[1]
+				}
+			}
 
-				if foundDirective {
-					if previouslyFoundExpression == "" {
-						previouslyFoundExpression = foundExpression
-						firstLocation = commentLocation
-					} else if foundExpression == "" {
-						return nil, fmt.Errorf("marker at %s had no regular expression", commentLocation)
-					} else if previouslyFoundExpression != foundExpression {
-						return nil, fmt.Errorf("regexps marked %s are not in sync: %s and %s, %q and %q",
-							marker, firstLocation, commentLocation, previouslyFoundExpression, foundExpression)
-					}
+			if foundDirective {
+				if previouslyFoundExpression == "" {
+					previouslyFoundExpression = foundExpression
+					firstLocation = commentLocation
+				} else if foundExpression == "" {
+					return nil, fmt.Errorf("marker at %s had no regular expression", commentLocation)
+				} else if previouslyFoundExpression != foundExpression {
+					return nil, fmt.Errorf("regexps marked %s are not in sync: %s and %s, %q and %q",
+						marker, firstLocation, commentLocation, previouslyFoundExpression, foundExpression)
 				}
 			}
 		}

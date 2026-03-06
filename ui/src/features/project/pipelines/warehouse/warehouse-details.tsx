@@ -13,6 +13,7 @@ import { useMemo } from 'react';
 import { generatePath, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { paths } from '@ui/config/paths';
+import { WarehouseExpanded } from '@ui/extend/types';
 import { AssembleFreight } from '@ui/features/assemble-freight/assemble-freight';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import {
@@ -20,7 +21,7 @@ import {
   getWarehouse
 } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
 import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { Freight, Warehouse } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { RepoSubscriptions } from './repo-subscriptions';
@@ -31,7 +32,7 @@ export const WarehouseDetails = ({
   warehouse,
   refetchFreight
 }: {
-  warehouse: Warehouse;
+  warehouse: WarehouseExpanded;
   refetchFreight: () => void;
 }) => {
   const { name: projectName, warehouseName, tab } = useParams();

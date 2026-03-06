@@ -150,6 +150,9 @@ func TestFreight_MarshalAnnotationsTo(t *testing.T) {
 				Commits:    []kargoapi.GitCommit{{ID: "abc123", Tag: "v1.0.0"}},
 				Images:     []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v1.0.0"}},
 				Charts:     []kargoapi.Chart{{Name: "my-chart", Version: "1.0.0"}},
+				Artifacts: []kargoapi.ArtifactReference{
+					{ArtifactType: "my-type", SubscriptionName: "my-sub", Version: "v1.0.0"},
+				},
 			},
 			expected: map[string]string{
 				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
@@ -159,6 +162,7 @@ func TestFreight_MarshalAnnotationsTo(t *testing.T) {
 				kargoapi.AnnotationKeyEventFreightCommits:    `[{"id":"abc123","tag":"v1.0.0"}]`,
 				kargoapi.AnnotationKeyEventFreightImages:     `[{"repoURL":"example.com/app","tag":"v1.0.0"}]`,
 				kargoapi.AnnotationKeyEventFreightCharts:     `[{"name":"my-chart","version":"1.0.0"}]`,
+				kargoapi.AnnotationKeyEventFreightArtifacts:  `[{"artifactType":"my-type","subscriptionName":"my-sub","version":"v1.0.0"}]`, // nolint: lll
 			},
 		},
 		"minimal freight": {
@@ -181,6 +185,7 @@ func TestFreight_MarshalAnnotationsTo(t *testing.T) {
 				Commits:    []kargoapi.GitCommit{},
 				Images:     []kargoapi.Image{},
 				Charts:     []kargoapi.Chart{},
+				Artifacts:  []kargoapi.ArtifactReference{},
 			},
 			expected: map[string]string{
 				kargoapi.AnnotationKeyEventFreightName:       "test-freight",
@@ -340,6 +345,7 @@ func TestUnmarshalFreightAnnotations(t *testing.T) {
 				kargoapi.AnnotationKeyEventFreightCommits:    `[{"id":"abc123","tag":"v1.0.0"}]`,
 				kargoapi.AnnotationKeyEventFreightImages:     `[{"repoURL":"example.com/app","tag":"v1.0.0"}]`,
 				kargoapi.AnnotationKeyEventFreightCharts:     `[{"name":"my-chart","version":"1.0.0"}]`,
+				kargoapi.AnnotationKeyEventFreightArtifacts:  `[{"artifactType":"my-type","subscriptionName":"my-sub","version":"v1.0.0"}]`, // nolint: lll
 			},
 			expected: Freight{
 				Name:       "test-freight",
@@ -349,6 +355,9 @@ func TestUnmarshalFreightAnnotations(t *testing.T) {
 				Commits:    []kargoapi.GitCommit{{ID: "abc123", Tag: "v1.0.0"}},
 				Images:     []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v1.0.0"}},
 				Charts:     []kargoapi.Chart{{Name: "my-chart", Version: "1.0.0"}},
+				Artifacts: []kargoapi.ArtifactReference{
+					{ArtifactType: "my-type", SubscriptionName: "my-sub", Version: "v1.0.0"},
+				},
 			},
 		},
 		"minimal annotations": {
@@ -547,6 +556,9 @@ func TestNewFreight(t *testing.T) {
 				Commits: []kargoapi.GitCommit{{ID: "abc123", Tag: "v1.0.0"}},
 				Images:  []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v1.0.0"}},
 				Charts:  []kargoapi.Chart{{Name: "my-chart", Version: "1.0.0"}},
+				Artifacts: []kargoapi.ArtifactReference{
+					{ArtifactType: "my-type", SubscriptionName: "my-sub", Version: "v1.0.0"},
+				},
 			},
 			stageName: "test-stage",
 			expected: Freight{
@@ -557,6 +569,9 @@ func TestNewFreight(t *testing.T) {
 				Commits:    []kargoapi.GitCommit{{ID: "abc123", Tag: "v1.0.0"}},
 				Images:     []kargoapi.Image{{RepoURL: "example.com/app", Tag: "v1.0.0"}},
 				Charts:     []kargoapi.Chart{{Name: "my-chart", Version: "1.0.0"}},
+				Artifacts: []kargoapi.ArtifactReference{
+					{ArtifactType: "my-type", SubscriptionName: "my-sub", Version: "v1.0.0"},
+				},
 			},
 		},
 		"minimal freight": {

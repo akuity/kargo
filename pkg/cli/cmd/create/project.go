@@ -2,18 +2,17 @@ package create
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 	sigyaml "sigs.k8s.io/yaml"
 
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
@@ -21,6 +20,7 @@ import (
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type createProjectOptions struct {
@@ -90,7 +90,7 @@ func (o *createProjectOptions) validate() error {
 
 // run creates a project using the provided options.
 func (o *createProjectOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -109,21 +109,30 @@ func (o *createProjectOptions) run(ctx context.Context) error {
 		return fmt.Errorf("marshal project: %w", err)
 	}
 
-	resp, err := kargoSvcCli.CreateResource(
-		ctx,
-		connect.NewRequest(
-			&kargosvcapi.CreateResourceRequest{
-				Manifest: projectBytes,
-			},
-		),
+	res, err := apiClient.Resources.CreateResource(
+		resources.NewCreateResourceParams().
+			WithManifest(string(projectBytes)),
+		nil,
 	)
 	if err != nil {
 		return fmt.Errorf("create resource: %w", err)
 	}
 
+	if len(res.Payload.Results) == 0 || res.Payload.Results[0].Error != "" {
+		if len(res.Payload.Results) > 0 {
+			return errors.New(res.Payload.Results[0].Error)
+		}
+		return errors.New("no results returned")
+	}
+
+	// Convert map to JSON then unmarshal to Project
+	manifestJSON, err := json.Marshal(res.Payload.Results[0].CreatedResourceManifest)
+	if err != nil {
+		return fmt.Errorf("marshal created manifest: %w", err)
+	}
+
 	project = &kargoapi.Project{}
-	projectBytes = resp.Msg.GetResults()[0].GetCreatedResourceManifest()
-	if err = sigyaml.Unmarshal(projectBytes, project); err != nil {
+	if err = json.Unmarshal(manifestJSON, project); err != nil {
 		return fmt.Errorf("unmarshal project: %w", err)
 	}
 

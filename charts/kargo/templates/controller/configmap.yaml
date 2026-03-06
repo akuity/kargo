@@ -13,7 +13,7 @@ data:
   {{- end }}
   LOG_LEVEL: {{ quote .Values.controller.logLevel }}
   LOG_FORMAT: {{ quote .Values.controller.logFormat }}
-  CLUSTER_SECRETS_NAMESPACE: {{ .Values.global.clusterSecretsNamespace }}
+  SYSTEM_RESOURCES_NAMESPACE: {{ quote .Values.global.systemResources.namespace }}
   {{- if or (not .Values.controller.shardName) .Values.controller.isDefault }}
   IS_DEFAULT_CONTROLLER: "true"
   {{- end }}
@@ -23,7 +23,7 @@ data:
   {{- if .Values.kubeconfigSecrets.kargo }}
   KUBECONFIG: /etc/kargo/kubeconfigs/kubeconfig.yaml
   {{- end }}
-  GLOBAL_CREDENTIALS_NAMESPACES: {{ quote (join "," .Values.controller.globalCredentials.namespaces) }}
+  SHARED_RESOURCES_NAMESPACE: {{ quote .Values.global.sharedResources.namespace }}
   ALLOW_CREDENTIALS_OVER_HTTP: {{ quote .Values.controller.allowCredentialsOverHTTP }}
   GITCLIENT_NAME: {{ quote .Values.controller.gitClient.name }}
   GITCLIENT_EMAIL: {{ quote .Values.controller.gitClient.email }}
@@ -31,6 +31,9 @@ data:
   {{- if .Values.controller.gitClient.signingKeySecret.name }}
   GITCLIENT_SIGNING_KEY_PATH: /etc/kargo/git/signingKey
   {{- end }}
+  CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
+  MAX_IMAGE_CACHE_ENTRIES: {{ quote .Values.controller.images.cache.maxEntries }}
+  IMAGE_REGISTRY_RATE_LIMIT: {{ quote .Values.controller.images.registries.rateLimit }}
   ARGOCD_INTEGRATION_ENABLED: {{ quote .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.controller.argocd.integrationEnabled }}
   {{- if .Values.kubeconfigSecrets.argocd }}

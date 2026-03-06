@@ -6,20 +6,19 @@ import (
 	"fmt"
 	"slices"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type deleteRoleOptions struct {
@@ -106,7 +105,7 @@ func (o *deleteRoleOptions) validate() error {
 
 // run removes the role(s) from the project based on the options.
 func (o *deleteRoleOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
@@ -118,12 +117,11 @@ func (o *deleteRoleOptions) run(ctx context.Context) error {
 
 	var errs []error
 	for _, name := range o.Names {
-		if _, err := kargoSvcCli.DeleteRole(
-			ctx,
-			connect.NewRequest(&v1alpha1.DeleteRoleRequest{
-				Project: o.Project,
-				Name:    name,
-			}),
+		if _, err := apiClient.Rbac.DeleteProjectRole(
+			rbac.NewDeleteProjectRoleParams().
+				WithProject(o.Project).
+				WithRole(name),
+			nil,
 		); err != nil {
 			errs = append(errs, err)
 			continue

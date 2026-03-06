@@ -2,23 +2,24 @@ package revoke
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/models"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type revokeOptions struct {
@@ -28,13 +29,12 @@ type revokeOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
-	Project         string
-	Role            string
-	Claims          []string
-	ServiceAccounts []string
-	ResourceType    string
-	ResourceName    string
-	Verbs           []string
+	Project      string
+	Role         string
+	Claims       []string
+	ResourceType string
+	ResourceName string
+	Verbs        []string
 }
 
 func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra.Command {
@@ -46,7 +46,6 @@ func NewCommand(cfg config.CLIConfig, streams genericiooptions.IOStreams) *cobra
 
 	cmd := &cobra.Command{
 		Use: `revoke [--project=project] --role=role [--claim=name=value]... \
-		[--service-account=service-account]... 
 		[--verb=verb --resource-type=resource-type [--resource-name=resource-name]]`,
 		Short: "Revoke a role from a user or revoke permissions from a role",
 		Args:  option.NoArgs,
@@ -62,10 +61,6 @@ kargo revoke --project=my-project --role=my-role \
 # Revoke my-role from users with specific claims
 kargo revoke --project=my-project --role=my-role \
   --claim=email=alice@example.com --claim=groups=admins,power-users
-
-# Grant my-role from the ServiceAccount my-service-account
-kargo revoke --project=my-project --role=my-role \
-  --service-account=my-service-account
 `),
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			if err := cmdOpts.validate(); err != nil {
@@ -95,7 +90,6 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	)
 	option.Role(cmd.Flags(), &o.Role, "The role to manage.")
 	option.Claims(cmd.Flags(), &o.Claims, "A OIDC claim name and value.")
-	option.ServiceAccounts(cmd.Flags(), &o.ServiceAccounts, "A Kargo ServiceAccount name.")
 
 	option.ResourceType(cmd.Flags(), &o.ResourceType, "A type of resource to revoke permissions for.")
 	option.ResourceName(cmd.Flags(), &o.ResourceName, "The name of a resource to revoke permissions for.")
@@ -106,21 +100,13 @@ func (o *revokeOptions) addFlags(cmd *cobra.Command) {
 	}
 
 	// If none of these are specified, we're not revoking anything.
-	cmd.MarkFlagsOneRequired(
-		option.ClaimFlag,
-		option.ServiceAccountFlag,
-		option.ResourceTypeFlag,
-	)
+	cmd.MarkFlagsOneRequired(option.ClaimFlag, option.ResourceTypeFlag)
 
-	// You can't revoke a role from users and/or ServiceAccounts and revoke
-	// permissions from a role at the same time.
+	// You can't revoke a role from users and revoke permissions from a role at
+	// the same time.
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.VerbFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceTypeFlag)
 	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ResourceNameFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ClaimFlag, option.ServiceAccountFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.VerbFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceTypeFlag)
-	cmd.MarkFlagsMutuallyExclusive(option.ServiceAccountFlag, option.ResourceNameFlag)
 
 	cmd.MarkFlagsRequiredTogether(option.ResourceTypeFlag, option.VerbFlag)
 }
@@ -148,53 +134,58 @@ func (o *revokeOptions) validate() error {
 
 // run revokes a role from users or revokes permissions from a role.
 func (o *revokeOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	req := &svcv1alpha1.RevokeRequest{
-		Project: o.Project,
-		Role:    o.Role,
+	req := &models.RevokeRequest{
+		Role: o.Role,
 	}
 	if o.ResourceType != "" {
-		req.Request = &svcv1alpha1.RevokeRequest_ResourceDetails{
-			ResourceDetails: &rbacapi.ResourceDetails{
-				ResourceType: o.ResourceType,
-				ResourceName: o.ResourceName,
-				Verbs:        o.Verbs,
-			},
-		}
-	} else if len(o.ServiceAccounts) > 0 {
-		saRefs := make([]*rbacapi.ServiceAccountReference, len(o.ServiceAccounts))
-		for i, saName := range o.ServiceAccounts {
-			saRefs[i] = &rbacapi.ServiceAccountReference{
-				Namespace: o.Project,
-				Name:      saName,
-			}
-		}
-		req.Request = &svcv1alpha1.RevokeRequest_ServiceAccounts{
-			ServiceAccounts: &svcv1alpha1.ServiceAccountReferences{
-				ServiceAccounts: saRefs,
-			},
+		req.ResourceDetails = &models.ResourceDetails{
+			ResourceType: o.ResourceType,
+			ResourceName: o.ResourceName,
+			Verbs:        o.Verbs,
 		}
 	} else {
-		claims := svcv1alpha1.Claims{}
+		claims := make([]*models.Claim, 0, len(o.Claims))
 		for _, claimFlagValue := range o.Claims {
 			claimFlagNameAndValue := strings.Split(claimFlagValue, "=")
-			claims.Claims = append(claims.Claims, &rbacapi.Claim{
+			claims = append(claims, &models.Claim{
 				Name:   claimFlagNameAndValue[0],
 				Values: []string{claimFlagNameAndValue[1]},
 			})
 		}
-		req.Request = &svcv1alpha1.RevokeRequest_UserClaims{
-			UserClaims: &claims,
+		req.UserClaims = &models.UserClaims{
+			Claims: claims,
 		}
 	}
 
-	resp, err := kargoSvcCli.Revoke(ctx, connect.NewRequest(req))
+	_, err = apiClient.Rbac.Revoke(
+		rbac.NewRevokeParams().WithProject(o.Project).WithBody(req),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("revoke: %w", err)
+	}
+
+	// Get the updated role after revocation
+	res, err := apiClient.Rbac.GetProjectRole(
+		rbac.NewGetProjectRoleParams().WithProject(o.Project).WithRole(o.Role),
+		nil,
+	)
+	if err != nil {
+		return fmt.Errorf("get role: %w", err)
+	}
+
+	roleJSON, err := json.Marshal(res.Payload)
+	if err != nil {
+		return fmt.Errorf("marshal role: %w", err)
+	}
+	var role *rbacapi.Role
+	if err = json.Unmarshal(roleJSON, &role); err != nil {
+		return fmt.Errorf("unmarshal role: %w", err)
 	}
 
 	printer, err := o.ToPrinter()
@@ -202,5 +193,5 @@ func (o *revokeOptions) run(ctx context.Context) error {
 		return fmt.Errorf("new printer: %w", err)
 	}
 
-	return printer.PrintObj(resp.Msg.Role, o.Out)
+	return printer.PrintObj(role, o.Out)
 }

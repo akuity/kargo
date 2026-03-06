@@ -3,7 +3,6 @@ package git
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
@@ -77,19 +76,8 @@ func Clone(
 	if cloneOpts == nil {
 		cloneOpts = &CloneOptions{}
 	}
-	homeDir, err := os.MkdirTemp(cloneOpts.BaseDir, "repo-")
-	if err != nil {
-		return nil,
-			fmt.Errorf("error creating home directory for repo %q: %w", repoURL, err)
-	}
-	if homeDir, err = filepath.EvalSymlinks(homeDir); err != nil {
-		return nil,
-			fmt.Errorf("error resolving symlinks in path %s: %w", homeDir, err)
-	}
 	baseRepo := &baseRepo{
 		creds:       clientOpts.Credentials,
-		dir:         filepath.Join(homeDir, "repo"),
-		homeDir:     homeDir,
 		originalURL: repoURL,
 		accessURL:   repoURL,
 	}
@@ -99,16 +87,19 @@ func Clone(
 			baseRepo: baseRepo,
 		},
 	}
-	if err = r.setupClient(homeDir, clientOpts); err != nil {
+	if err := r.setupDirs(cloneOpts.BaseDir); err != nil {
 		return nil, err
 	}
-	if err = r.clone(cloneOpts); err != nil {
+	if err := r.setupClient(clientOpts); err != nil {
 		return nil, err
 	}
-	if err = r.saveDirs(); err != nil {
+	if err := r.clone(cloneOpts); err != nil {
 		return nil, err
 	}
-	if err = r.saveOriginalURL(); err != nil {
+	if err := r.saveDirs(); err != nil {
+		return nil, err
+	}
+	if err := r.saveOriginalURL(); err != nil {
 		return nil, err
 	}
 	return r, nil
@@ -128,6 +119,12 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
+	// NOTE(hidde): Temporarily disabled until we figure out why this can result
+	// in "could not fetch <commit> from promisor remote" errors.
+	//
+	// if opts.Filter != "" {
+	//  	args = append(args, "--filter", opts.Filter)
+	// }
 	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()

@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -66,7 +65,7 @@ func Test_retryDecider(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			r := &recorder{
-				logger: logging.Wrap(logr.Discard()),
+				logger: logging.NewDiscardLoggerOrDie(),
 			}
 			require.Equal(t, tc.shouldRetry, r.newRetryDecider(&corev1.Event{})(tc.input))
 		})

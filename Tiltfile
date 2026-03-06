@@ -3,6 +3,24 @@ allow_k8s_contexts('orbstack')
 
 load('ext://namespace', 'namespace_create')
 
+# Install cluster-level prerequisites. These use local_resource (not k8s_yaml)
+# so that tilt down will NOT remove them.
+local_resource(
+  'ensure-cert-manager',
+  'helm status cert-manager -n cert-manager > /dev/null 2>&1 || make hack-install-cert-manager',
+  labels = ['prereqs'],
+)
+local_resource(
+  'ensure-argocd',
+  'helm status argocd -n argocd > /dev/null 2>&1 || make hack-install-argocd',
+  labels = ['prereqs'],
+)
+local_resource(
+  'ensure-argo-rollouts',
+  'helm status argo-rollouts -n argo-rollouts > /dev/null 2>&1 || make hack-install-argo-rollouts',
+  labels = ['prereqs'],
+)
+
 local_resource(
   'back-end-compile',
   'CGO_ENABLED=0 GOOS=linux GOARCH=$(go env GOARCH) go build -o bin/controlplane/kargo ./cmd/controlplane',
@@ -47,7 +65,9 @@ k8s_resource(
   new_name = 'namespaces',
   objects = [
     'kargo:namespace',
-    'kargo-cluster-secrets:namespace'
+    'kargo-cluster-secrets:namespace',
+    'kargo-shared-resources:namespace',
+    'kargo-system-resources:namespace'
   ],
   labels = ['kargo']
 )
@@ -68,9 +88,6 @@ k8s_yaml(
 # of the UI, so we're breaking it out into its own separate deployment here.
 k8s_yaml('hack/tilt/ui.yaml')
 
-# Setup a namespace and controller permissions for shared credentials.
-k8s_yaml('hack/tilt/shared-creds.yaml')
-
 k8s_resource(
   new_name = 'common',
   labels = ['kargo'],
@@ -80,30 +97,32 @@ k8s_resource(
     'kargo-admin:role',
     'kargo-admin:rolebinding',
     'kargo-admin:serviceaccount',
+    'kargo-cluster-secrets-admin:role',
+    'kargo-cluster-secrets-admin:rolebinding',
+    'kargo-cluster-secrets-reader:role',
+    'kargo-cluster-secrets-reader:rolebinding',
     'kargo-project-admin:clusterrole',
     'kargo-project-creator:clusterrole',
     'kargo-project-creator:clusterrolebinding',
     'kargo-project-creator:serviceaccount',
     'kargo-project-secrets-reader:clusterrole',
+    'kargo-selfsigned-cert-issuer:issuer',
+    'kargo-shared-resources-admin:role',
+    'kargo-shared-resources-admin:rolebinding',
+    'kargo-shared-resources-reader:role',
+    'kargo-shared-resources-reader:rolebinding',
+    'kargo-system-resources-reader:role',
+    'kargo-system-resources-admin:role',
+    'kargo-system-resources-reader:rolebinding',
+    'kargo-system-resources-admin:rolebinding',
     'kargo-user:clusterrole',
     'kargo-user:clusterrolebinding',
     'kargo-user:serviceaccount',
     'kargo-viewer:clusterrole',
     'kargo-viewer:serviceaccount',
-    'kargo-viewer:clusterrolebinding',
-    'kargo-selfsigned-cert-issuer:issuer'
-  ]
-)
-
-k8s_resource(
-  new_name = 'cluster-secrets',
-  labels = ['kargo'],
-  objects = [
-    'kargo-cluster-secrets-admin:role',
-    'kargo-cluster-secrets-admin:rolebinding',
-    'kargo-cluster-secrets-reader:role',
-    'kargo-cluster-secrets-reader:rolebinding'
-  ]
+    'kargo-viewer:clusterrolebinding'
+  ],
+  resource_deps = ['ensure-cert-manager']
 )
 
 k8s_resource(
@@ -117,6 +136,8 @@ k8s_resource(
     'kargo-api:clusterrole',
     'kargo-api:clusterrolebinding',
     'kargo-api:configmap',
+    'kargo-api:role',
+    'kargo-api:rolebinding',
     'kargo-api:secret',
     'kargo-api:serviceaccount',
     'kargo-api-rollouts:clusterrole',
@@ -139,8 +160,6 @@ k8s_resource(
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
-    'kargo-controller-read-secrets:rolebinding',
-    'kargo-shared-credentials:namespace'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )
@@ -153,7 +172,8 @@ k8s_resource(
     'kargo-dex-server:certificate',
     'kargo-dex-server:secret',
     'kargo-dex-server:serviceaccount'
-  ]
+  ],
+  resource_deps = ['ensure-cert-manager']
 )
 
 k8s_resource(
@@ -224,7 +244,7 @@ k8s_resource(
     'kargo-webhooks-server-ns-controller:clusterrole',
     'kargo-webhooks-server-ns-controller:clusterrolebinding'
   ],
-  resource_deps=['back-end-compile']
+  resource_deps=['back-end-compile', 'ensure-cert-manager']
 )
 
 k8s_resource(

@@ -113,6 +113,33 @@ fields:
   characters only and could be mistaken for a semver string containing the
   major version number only.
 
+- `cacheByTag`: Set to `true` to enable more aggressive caching of image
+  metadata using tags as keys. This can significantly reduce the number of API
+  calls to the registry and improve performance.
+
+  The default is `false`.
+
+  :::warning[Use with caution!]
+
+  This setting is safest if your tags are known to be "immutable" (i.e., tag
+  always references the same image and is never updated to point to a different
+  image).
+
+  This setting does NOT apply to the `Digest` selection strategy, which assumes
+  the one tag it subscribes to is a mutable one.
+
+  :::
+
+  :::warning
+
+  Operators may also choose from a number of policies regarding the caching of
+  image metadata using tags as keys. Some of these policies (`Forbid` and
+  `Force`) can override an individual container image subscription's choice to
+  cache metadata by tag or not. See
+  [common configurations](../../40-operator-guide/20-advanced-installation/30-common-configurations.md) for further details.
+
+  :::
+
 #### Image Selection Strategies
 
 For subscriptions to container image repositories, the `imageSelectionStrategy`
@@ -231,6 +258,35 @@ strategies are:
         allowTagsRegexes:
         - ^nightly
   ```
+
+  :::tip
+
+  If your tags are known to be **immutable** (i.e., a tag always references the
+  same image and is never updated to point to a different image), you can use
+  the `cacheByTag` field to enable more aggressive caching of image metadata by
+  tag. This can significantly reduce the number of API calls to the registry and
+  improve performance.
+
+  ```yaml
+  spec:
+    subscriptions:
+    - image:
+        repoURL: public.ecr.aws/nginx/nginx
+        imageSelectionStrategy: NewestBuild
+        cacheByTag: true
+        allowTagsRegexes:
+        - ^nightly
+  ```
+
+  :::
+
+  :::warning[Use with caution!]
+
+  Only enable `cacheByTag` if you are certain that all relevant tags are
+  **immutable**. Using this with mutable tags (like `latest`) can cause Kargo
+  to select stale images indefinitely.
+
+  :::
 
 ### Git Repository Subscriptions
 
@@ -708,7 +764,7 @@ Helm chart repository subscriptions can be defined using the following fields:
 Frequently, `Warehouse`s require access to private repositories, in which case
 appropriate credentials must be made available in some form. The many available
 authentication options are covered in detail on the
-[Managing Credentials](../50-security/30-managing-credentials.md) page.
+[Managing Secrets](../50-security/30-managing-secrets.md) page.
 
 ## Automatic Freight Creation
 
@@ -739,13 +795,15 @@ spec:
       repoURL: ghcr.io/example/backend
   freightCreationCriteria:
     expression: |
-      imageFrom('ghcr.io/example/frontend.git').Tag == imageFrom('ghcr.io/example/backend.git').Tag
+      imageFrom('ghcr.io/example/frontend').Tag == imageFrom('ghcr.io/example/backend').Tag
 ```
 
 For more information on `Freight Creation Criteria` refer to the
 [Expression Language Reference](../60-reference-docs/40-expressions.md).
 
 ## Performance Considerations
+
+### Polling Frequency
 
 `Warehouse` resources periodically poll the repositories to which they subscribe
 in an attempt to discover new artifact revisions. By default, and under nominal
@@ -813,6 +871,44 @@ be accompanied by the undesired side effect of increasing the average time
 required for `Warehouse`s to notice new artifacts (of any kind; not just
 container images). _This can be overcome by configuring repositories to alert
 Kargo to the presence of new artifacts via webhooks._
+
+### Caching Image Metadata by Tag
+
+When using image selection strategies that require fetching image metadata
+(such as [`NewestBuild`](#newest-build) or when using
+[`platform`](#platform-constraint) constraints), a significant bottleneck can be
+the number of API calls required to the container image registry.
+
+If your image tags are **guaranteed to be immutable** (i.e., a tag always
+references the exact same image and is never updated to point to a different
+image), you can enable the [`cacheByTag`](#cacheByTag) option on individual
+image subscriptions:
+
+```yaml
+spec:
+  subscriptions:
+  - image:
+      repoURL: ghcr.io/example/myapp
+      imageSelectionStrategy: NewestBuild
+      cacheByTag: true
+      allowTagsRegexes:
+      - ^v\d+\.\d+\.\d+$
+```
+
+This enables significantly more aggressive caching of image metadata, which can
+reduce API calls and improve performance by orders of magnitude in repositories
+with large numbers of tags.
+
+:::warning[Use with caution!]
+
+Only enable this option if your tags are known to be **immutable**
+(i.e., a tag always references the same image and is never updated to point
+to a different image).
+
+This setting does not apply to the `Digest` selection strategy, which always
+assumes tags are mutable.
+
+:::
 
 ## Triggering Artifact Discovery Using Webhooks
 

@@ -61,11 +61,6 @@ func (in *Role) DeepCopyInto(out *Role) {
 			(*in)[i].DeepCopyInto(&(*out)[i])
 		}
 	}
-	if in.ServiceAccounts != nil {
-		in, out := &in.ServiceAccounts, &out.ServiceAccounts
-		*out = make([]ServiceAccountReference, len(*in))
-		copy(*out, *in)
-	}
 	if in.Rules != nil {
 		in, out := &in.Rules, &out.Rules
 		*out = make([]v1.PolicyRule, len(*in))

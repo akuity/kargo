@@ -27,7 +27,7 @@ import (
 
 type ReconcilerConfig struct {
 	ExternalWebhookServerBaseURL string `envconfig:"EXTERNAL_WEBHOOK_SERVER_BASE_URL" required:"true"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
+	SystemResourcesNamespace     string `envconfig:"SYSTEM_RESOURCES_NAMESPACE"`
 }
 
 func ReconcilerConfigFromEnv() ReconcilerConfig {
@@ -234,11 +234,11 @@ func (r *reconciler) syncWebhookReceivers(
 		0,
 		len(clusterCfg.Spec.WebhookReceivers),
 	)
-	if len(clusterCfg.Spec.WebhookReceivers) > 0 && r.cfg.ClusterSecretsNamespace == "" {
+	if len(clusterCfg.Spec.WebhookReceivers) > 0 && r.cfg.SystemResourcesNamespace == "" {
 		err := errors.New(
 			"no namespace is designated for storing Secrets referenced by " +
 				"cluster-level resources; please ensure environment variable " +
-				`"CLUSTER_SECRETS_NAMESPACE" is set`,
+				`"SYSTEM_RESOURCES_NAMESPACE" is set`,
 		)
 		conditions.Set(status, &metav1.Condition{
 			Type:               kargoapi.ConditionTypeReady,
@@ -253,9 +253,10 @@ func (r *reconciler) syncWebhookReceivers(
 		receiver, err := external.NewReceiver(
 			ctx,
 			r.client,
+			r.client, // cluster scoped secrets can be cached so we can use the regular client as the api reader
 			r.cfg.ExternalWebhookServerBaseURL,
-			"",                            // No Project name for cluster-level receivers
-			r.cfg.ClusterSecretsNamespace, // Secret namespace is one designated for cluster-level Secrets
+			"",                             // No Project name for cluster-level receivers
+			r.cfg.SystemResourcesNamespace, // Secret namespace is one designated for cluster-level Secrets
 			receiverCfg,
 		)
 		if err != nil {

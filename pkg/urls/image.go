@@ -16,9 +16,11 @@ import (
 // canonical representation of a repository URL is needed. Any URL that cannot
 // be normalized will be returned as-is.
 func NormalizeImage(repoURL string) string {
+	ogRepoURL := repoURL
+	repoURL = SanitizeURL(strings.ToLower(repoURL))
 	parsed, err := name.ParseReference(repoURL, name.WeakValidation)
 	if err != nil {
-		return repoURL
+		return ogRepoURL
 	}
 	reg := parsed.Context().Registry.Name()
 	repo := parsed.Context().RepositoryStr()

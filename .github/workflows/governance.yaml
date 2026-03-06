@@ -9,6 +9,9 @@ on:
   issue_comment:
     types: [ created ]
 
+permissions:
+  contents: read
+
 jobs:
   governance:
     permissions:
@@ -18,6 +21,11 @@ jobs:
     name: Governance
     runs-on: ubuntu-latest
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@a90bcbc6539c36a85cdfeb73f7e2f433735f215b # v2.15.0
+      with:
+        egress-policy: audit
+
     - uses: BirthdayResearch/oss-governance-bot@3abd2d1fd2376ba9990fbc795e7a4c54254e9c61 # v4.0.0
       with:
         config-path: .github/governance.yml

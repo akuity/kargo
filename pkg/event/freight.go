@@ -12,13 +12,14 @@ import (
 
 // Freight is a struct that contains common fields for freight-related events.
 type Freight struct {
-	Name       string               `json:"name"`
-	StageName  string               `json:"stageName"`
-	CreateTime time.Time            `json:"createTime"`
-	Alias      *string              `json:"alias,omitempty"`
-	Commits    []kargoapi.GitCommit `json:"commits,omitempty"`
-	Images     []kargoapi.Image     `json:"images,omitempty"`
-	Charts     []kargoapi.Chart     `json:"charts,omitempty"`
+	Name       string                       `json:"name"`
+	StageName  string                       `json:"stageName"`
+	CreateTime time.Time                    `json:"createTime"`
+	Alias      *string                      `json:"alias,omitempty"`
+	Commits    []kargoapi.GitCommit         `json:"commits,omitempty"`
+	Images     []kargoapi.Image             `json:"images,omitempty"`
+	Charts     []kargoapi.Chart             `json:"charts,omitempty"`
+	Artifacts  []kargoapi.ArtifactReference `json:"artifacts,omitempty"`
 }
 
 func (f Freight) GetName() string {
@@ -321,6 +322,11 @@ func (f *Freight) MarshalAnnotationsTo(annotations map[string]string) {
 			annotations[kargoapi.AnnotationKeyEventFreightCharts] = string(data)
 		}
 	}
+	if len(f.Artifacts) > 0 {
+		if data, err := json.Marshal(f.Artifacts); err == nil {
+			annotations[kargoapi.AnnotationKeyEventFreightArtifacts] = string(data)
+		}
+	}
 }
 
 func (f *FreightVerificationSucceeded) MarshalAnnotations() map[string]string {
@@ -419,6 +425,13 @@ func UnmarshalFreightAnnotations(annotations map[string]string) (Freight, error)
 			return evt, fmt.Errorf("failed to unmarshal freight charts: %w", err)
 		}
 		evt.Charts = cs
+	}
+	if artifacts, ok := annotations[kargoapi.AnnotationKeyEventFreightArtifacts]; ok {
+		var ars []kargoapi.ArtifactReference
+		if err := json.Unmarshal([]byte(artifacts), &ars); err != nil {
+			return evt, fmt.Errorf("failed to unmarshal freight artifacts: %w", err)
+		}
+		evt.Artifacts = ars
 	}
 	return evt, nil
 }
@@ -627,6 +640,9 @@ func newFreight(freight *kargoapi.Freight, stageName string) Freight {
 	}
 	if len(freight.Charts) > 0 {
 		evt.Charts = freight.Charts
+	}
+	if len(freight.Artifacts) > 0 {
+		evt.Artifacts = freight.Artifacts
 	}
 	return evt
 }

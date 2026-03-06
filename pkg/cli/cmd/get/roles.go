@@ -2,13 +2,13 @@ package get
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 	"time"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/duration"
@@ -16,13 +16,13 @@ import (
 	"k8s.io/cli-runtime/pkg/genericiooptions"
 
 	rbacapi "github.com/akuity/kargo/api/rbac/v1alpha1"
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/rbac"
 )
 
 type getRolesOptions struct {
@@ -34,6 +34,7 @@ type getRolesOptions struct {
 	Config        config.CLIConfig
 	ClientOptions client.Options
 
+	SystemLevel           bool
 	Project               string
 	Names                 []string
 	AsKubernetesResources bool
@@ -72,6 +73,12 @@ kargo get roles
 # Get a the dev role in the default project
 kargo config set-project my-project
 kargo get role dev
+
+# List all system-level roles
+kargo get roles --system
+
+# Get the kargo-admin system-level role
+kargo get role --system kargo-admin
 `),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cmdOpts.complete(args)
@@ -102,6 +109,12 @@ func (o *getRolesOptions) addFlags(cmd *cobra.Command) {
 		cmd.Flags(), &o.Project, o.Config.Project,
 		"The project for which to list roles. If not set, the default project will be used.",
 	)
+	option.System(
+		cmd.Flags(), &o.SystemLevel, false,
+		"Whether to list system-level roles instead of project-level roles",
+	)
+	// project and system flags are mutually exclusive
+	cmd.MarkFlagsMutuallyExclusive(option.ProjectFlag, option.SystemFlag)
 
 	option.AsKubernetesResources(
 		cmd.Flags(), &o.AsKubernetesResources,
@@ -117,82 +130,105 @@ func (o *getRolesOptions) complete(args []string) {
 // validate performs validation of the options. If the options are invalid, an
 // error is returned.
 func (o *getRolesOptions) validate() error {
-	// While the flags are marked as required, a user could still provide an empty
-	// string. This is a check to ensure that the flags are not empty.
-	if o.Project == "" {
-		return fmt.Errorf("%s is required", option.ProjectFlag)
+	if o.Project == "" && !o.SystemLevel {
+		return fmt.Errorf(
+			"either %s or %s is required", option.ProjectFlag, option.SystemFlag,
+		)
 	}
 	return nil
 }
 
 // run gets the the roles from the server and prints them to the console.
 func (o *getRolesOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
+	// Note: The REST API does not currently support the AsKubernetesResources flag
+	// If this flag is set, return an error indicating it's not supported
+	if o.AsKubernetesResources {
+		return fmt.Errorf("--as-k8s-resources flag is not supported with REST API")
+	}
+
 	var kargoRoleRes []*rbacapi.Role
-	var resourcesRes []*rbacapi.RoleResources
 	var errs []error
 
 	if len(o.Names) == 0 {
-		var resp *connect.Response[v1alpha1.ListRolesResponse]
-		if resp, err = kargoSvcCli.ListRoles(
-			ctx,
-			connect.NewRequest(&v1alpha1.ListRolesRequest{
-				Project:     o.Project,
-				AsResources: o.AsKubernetesResources,
-			}),
-		); err != nil {
-			return fmt.Errorf("list roles: %w", err)
-		}
-		if o.AsKubernetesResources {
-			resourcesRes = make([]*rbacapi.RoleResources, len(resp.Msg.GetResources()))
-			for i, roleResources := range resp.Msg.GetResources() {
-				resourcesRes[i] = roleResources
+		var payload any
+		if o.SystemLevel {
+			var res *rbac.ListSystemRolesOK
+			if res, err = apiClient.Rbac.ListSystemRoles(
+				rbac.NewListSystemRolesParams(),
+				nil,
+			); err != nil {
+				return fmt.Errorf("list roles: %w", err)
 			}
+			payload = res.Payload
 		} else {
-			kargoRoleRes = resp.Msg.GetRoles()
+			var res *rbac.ListProjectRolesOK
+			if res, err = apiClient.Rbac.ListProjectRoles(
+				rbac.NewListProjectRolesParams().WithProject(o.Project),
+				nil,
+			); err != nil {
+				return fmt.Errorf("list roles: %w", err)
+			}
+			payload = res.Payload
+		}
+
+		var listJSON []byte
+		if listJSON, err = json.Marshal(payload); err != nil {
+			return err
+		}
+		if err = json.Unmarshal(listJSON, &kargoRoleRes); err != nil {
+			return err
 		}
 	} else {
 		errs = make([]error, 0, len(o.Names))
-		if o.AsKubernetesResources {
-			resourcesRes = make([]*rbacapi.RoleResources, 0, len(o.Names))
-		} else {
-			kargoRoleRes = make([]*rbacapi.Role, 0, len(o.Names))
-		}
+		kargoRoleRes = make([]*rbacapi.Role, 0, len(o.Names))
+
 		for _, name := range o.Names {
-			var resp *connect.Response[v1alpha1.GetRoleResponse]
-			if resp, err = kargoSvcCli.GetRole(
-				ctx,
-				connect.NewRequest(
-					&v1alpha1.GetRoleRequest{
-						Project:     o.Project,
-						Name:        name,
-						AsResources: o.AsKubernetesResources,
-					},
-				),
-			); err != nil {
+			var payload any
+			if o.SystemLevel {
+				var res *rbac.GetSystemRoleOK
+				if res, err = apiClient.Rbac.GetSystemRole(
+					rbac.NewGetSystemRoleParams().WithRole(name),
+					nil,
+				); err != nil {
+					errs = append(errs, err)
+					continue
+				}
+				payload = res.Payload
+			} else {
+				var res *rbac.GetProjectRoleOK
+				if res, err = apiClient.Rbac.GetProjectRole(
+					rbac.NewGetProjectRoleParams().
+						WithProject(o.Project).
+						WithRole(name),
+					nil,
+				); err != nil {
+					errs = append(errs, err)
+					continue
+				}
+				payload = res.Payload
+			}
+
+			var roleJSON []byte
+			if roleJSON, err = json.Marshal(payload); err != nil {
 				errs = append(errs, err)
 				continue
 			}
-			if o.AsKubernetesResources {
-				resourcesRes = append(resourcesRes, resp.Msg.GetResources())
-			} else {
-				kargoRoleRes = append(kargoRoleRes, resp.Msg.GetRole())
+			var role *rbacapi.Role
+			if err = json.Unmarshal(roleJSON, &role); err != nil {
+				errs = append(errs, err)
+				continue
 			}
+			kargoRoleRes = append(kargoRoleRes, role)
 		}
 	}
 
-	if o.AsKubernetesResources {
-		if err = PrintObjects(resourcesRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-			return fmt.Errorf("print resources: %w", err)
-		}
-	} else {
-		if err = PrintObjects(kargoRoleRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
-			return fmt.Errorf("print roles: %w", err)
-		}
+	if err = PrintObjects(kargoRoleRes, o.PrintFlags, o.IOStreams, o.NoHeaders); err != nil {
+		return fmt.Errorf("print roles: %w", err)
 	}
 
 	return errors.Join(errs...)

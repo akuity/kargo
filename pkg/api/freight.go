@@ -18,57 +18,78 @@ import (
 // GenerateFreightID deterministically calculates a piece of Freight's ID based
 // on its contents and returns it.
 func GenerateFreightID(f *kargoapi.Freight) string {
-	size := len(f.Commits) + len(f.Images) + len(f.Charts)
-	artifacts := make([]string, 0, size)
+	size := len(f.Commits) + len(f.Images) + len(f.Charts) + len(f.Artifacts)
+	hashParts := make([]string, 0, size)
 	for _, commit := range f.Commits {
-		if commit.Tag != "" {
-			// If we have a tag, incorporate it into the canonical representation of a
-			// commit used when calculating Freight ID. This is necessary because one
-			// commit could have multiple tags. Suppose we have already detected a
-			// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
-			// Later, that same commit is tagged as v1.0.0. If we don't incorporate
-			// the tag into the ID, we will never produce a new/distinct piece of
-			// Freight for the new tag.
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s:%s", urls.NormalizeGit(commit.RepoURL), commit.Tag, commit.ID),
-			)
-		} else {
-			artifacts = append(
-				artifacts,
-				fmt.Sprintf("%s:%s", urls.NormalizeGit(commit.RepoURL), commit.ID),
-			)
-		}
+		hashParts = append(hashParts, commitHashPart(commit))
 	}
 	for _, image := range f.Images {
-		artifacts = append(
-			artifacts,
-			// Note: This isn't the usual image representation using EITHER :<tag> OR @<digest>.
-			// It is possible to have found an image with a tag that is already known, but with a
-			// new digest -- as in the case of "mutable" tags like "latest". It is equally possible to
-			// have found an image with a digest that is already known, but has been re-tagged.
-			// To cover both cases, we incorporate BOTH tag and digest into the canonical
-			// representation of an image used when calculating Freight ID.
-			fmt.Sprintf("%s:%s@%s", image.RepoURL, image.Tag, image.Digest),
-		)
+		hashParts = append(hashParts, imageHashPart(image))
 	}
 	for _, chart := range f.Charts {
-		artifacts = append(
-			artifacts,
-			fmt.Sprintf(
-				"%s:%s",
-				// path.Join accounts for the possibility that chart.Name is empty
-				path.Join(urls.NormalizeChart(chart.RepoURL), chart.Name),
-				chart.Version,
-			),
-		)
+		hashParts = append(hashParts, chartHashPart(chart))
 	}
-	slices.Sort(artifacts)
+	for _, artifact := range f.Artifacts {
+		hashParts = append(hashParts, artifactHashPart(artifact))
+	}
+	slices.Sort(hashParts)
 	return fmt.Sprintf(
 		"%x",
 		sha1.Sum([]byte( // nolint:gosec
-			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(artifacts, "|")),
+			fmt.Sprintf("%s:%s", f.Origin.String(), strings.Join(hashParts, "|")),
 		)),
+	)
+}
+
+// chartHashPart returns a string that uniquely identifies a specific version of
+// a specific Helm chart.
+func chartHashPart(chart kargoapi.Chart) string {
+	return fmt.Sprintf(
+		"%s:%s",
+		// path.Join accounts for the possibility that chart.Name is empty
+		path.Join(urls.NormalizeChart(chart.RepoURL), chart.Name),
+		chart.Version,
+	)
+}
+
+// commitHashPart returns a string that uniquely identifies a specific commit
+// from a specific Git repository.
+func commitHashPart(commit kargoapi.GitCommit) string {
+	if commit.Tag != "" {
+		// If we have a tag, incorporate it into the canonical representation of a
+		// commit used when calculating Freight ID. This is necessary because one
+		// commit could have multiple tags. Suppose we have already detected a
+		// commit with a tag v1.0.0-rc.1 and produced the corresponding Freight.
+		// Later, that same commit is tagged as v1.0.0. If we don't incorporate
+		// the tag into the ID, we will never produce a new/distinct piece of
+		// Freight for the new tag.
+		return fmt.Sprintf(
+			"%s:%s:%s",
+			urls.NormalizeGit(commit.RepoURL), commit.Tag, commit.ID,
+		)
+	}
+	return fmt.Sprintf("%s:%s", urls.NormalizeGit(commit.RepoURL), commit.ID)
+}
+
+// imageHashPart returns a string that uniquely identifies a specific revision\
+// of a container image from a specific container image repository.
+func imageHashPart(img kargoapi.Image) string {
+	// Note: This isn't the usual image representation using EITHER :<tag> OR
+	// @<digest>. It is possible to have found an image with a tag that is already
+	// known, but with a new digest -- as in the case of "mutable" tags like
+	// "latest". It is equally possible to have found an image with a digest that
+	// is already known, but has been re-tagged. To cover both cases, we
+	// incorporate BOTH tag and digest into the canonical representation of an
+	// image used when calculating Freight ID.
+	return fmt.Sprintf("%s:%s@%s", img.RepoURL, img.Tag, img.Digest)
+}
+
+// artifactHashPart returns a string that uniquely identifies a specific
+// revision of an artifact.
+func artifactHashPart(ref kargoapi.ArtifactReference) string {
+	return fmt.Sprintf(
+		"%s:%s:%s",
+		ref.ArtifactType, ref.SubscriptionName, ref.Version,
 	)
 }
 

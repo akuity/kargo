@@ -88,7 +88,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"serviceAccount", req.Name,
-		"serviceAccount.namespace", req.Namespace,
+		corev1.ServiceAccountNameKey, req.Namespace,
 	)
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling ServiceAccount")

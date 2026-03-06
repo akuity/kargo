@@ -5,16 +5,14 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
-	"github.com/akuity/kargo/api/service/v1alpha1/svcv1alpha1connect"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/watch"
 	"github.com/akuity/kargo/pkg/server"
 )
 
@@ -53,37 +51,41 @@ kargo refresh clusterconfig --wait
 
 func waitForClusterConfig(
 	ctx context.Context,
-	kargoSvcCli svcv1alpha1connect.KargoServiceClient,
+	watchClient *watch.Client,
 ) error {
-	res, err := kargoSvcCli.WatchClusterConfig(ctx, connect.NewRequest(&v1alpha1.WatchClusterConfigRequest{}))
-	if err != nil {
-		return fmt.Errorf("watch clusterconfig: %w", err)
-	}
-	defer func() {
-		if conn, connErr := res.Conn(); connErr == nil {
-			_ = conn.CloseRequest()
-		}
-	}()
+	eventCh, errCh := watchClient.WatchClusterConfig(ctx)
 	for {
-		if !res.Receive() {
-			if err = res.Err(); err != nil {
+		select {
+		case event, ok := <-eventCh:
+			if !ok {
+				select {
+				case err := <-errCh:
+					if err != nil {
+						return fmt.Errorf("watch clusterconfig: %w", err)
+					}
+				default:
+				}
+				return errors.New("unexpected end of watch stream")
+			}
+			if event.Object == nil {
+				return errors.New("unexpected response")
+			}
+			token, ok := api.RefreshAnnotationValue(event.Object.GetAnnotations())
+			if !ok {
+				return fmt.Errorf(
+					"ClusterConfig %q has no %q annotation",
+					event.Object.Name, kargoapi.AnnotationKeyRefresh,
+				)
+			}
+			if event.Object.Status.LastHandledRefresh == token {
+				return nil
+			}
+		case err := <-errCh:
+			if err != nil {
 				return fmt.Errorf("watch clusterconfig: %w", err)
 			}
-			return errors.New("unexpected end of watch stream")
-		}
-		msg := res.Msg()
-		if msg == nil || msg.ClusterConfig == nil {
-			return errors.New("unexpected response")
-		}
-		token, ok := api.RefreshAnnotationValue(msg.ClusterConfig.GetAnnotations())
-		if !ok {
-			return fmt.Errorf(
-				"ClusterConfig %q has no %q annotation",
-				msg.ClusterConfig.Name, kargoapi.AnnotationKeyRefresh,
-			)
-		}
-		if msg.ClusterConfig.Status.LastHandledRefresh == token {
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }

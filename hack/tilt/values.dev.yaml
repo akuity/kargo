@@ -15,7 +15,9 @@ api:
   rollouts:
     logs:
       enabled: true
-      urlTemplate: https://tinyurl.com/mrxabed8
+      # This is Pride and Prejudice. It's an adequate volume of text to validate
+      # that log streaming via SSE truly works as intended.
+      urlTemplate: https://www.gutenberg.org/files/1342/1342-0.txt
   oidc:
     enabled: true
     dex:
@@ -33,9 +35,9 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
-  globalCredentials:
-    namespaces:
-    - kargo-shared-credentials
+  images:
+    cache:
+      cacheByTagPolicy: Force
 crds:
   install: true
 externalWebhooksServer:

@@ -1,4 +1,4 @@
-import { Freight } from '@ui/gen/api/v1alpha1/generated_pb';
+import { Freight, ArtifactReference } from '@ui/gen/api/v1alpha1/generated_pb';
 
 export type TableSource =
   | {
@@ -21,7 +21,10 @@ export type TableSource =
       type: 'helm';
       repoURL: string;
       version: string;
-    };
+    }
+  | ({
+      type: 'other';
+    } & ArtifactReference);
 
 export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
   const images: TableSource[] =
@@ -49,5 +52,10 @@ export const flattenFreightOrigin = (freight: Freight): TableSource[] => {
     version: chart?.version
   }));
 
-  return [...images, ...git, ...helm];
+  const other: TableSource[] = freight?.artifacts?.map((otherArtifact) => ({
+    type: 'other',
+    ...otherArtifact
+  }));
+
+  return [...images, ...git, ...helm, ...other];
 };

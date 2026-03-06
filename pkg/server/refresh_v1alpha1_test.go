@@ -37,7 +37,7 @@ func TestRefreshResource(t *testing.T) {
 	}
 
 	testSets := map[string]struct {
-		kClient    client.Client
+		kClient    client.WithWatch
 		req        *svcv1alpha1.RefreshResourceRequest
 		assertions func(*connect.Response[svcv1alpha1.RefreshResourceResponse], error)
 	}{
@@ -311,7 +311,7 @@ func TestRefreshResource(t *testing.T) {
 						_ context.Context,
 						_ *rest.Config,
 						_ *runtime.Scheme,
-					) (client.Client, error) {
+					) (client.WithWatch, error) {
 						return ts.kClient, nil
 					},
 				},

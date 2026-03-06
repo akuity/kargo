@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -18,7 +19,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -357,7 +357,7 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 	testCases := []struct {
 		name       string
 		run        *rolloutsapi.AnalysisRun
-		client     client.Client
+		client     client.WithWatch
 		assertions func(t *testing.T, stage *kargoapi.Stage, err error)
 	}{
 		{
@@ -555,21 +555,22 @@ func TestServer_getStageFromAnalysisRun(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			cl, err := kubernetes.NewClient(
-				context.Background(),
+				t.Context(),
 				nil,
 				kubernetes.ClientOptions{
 					SkipAuthorization: true,
-					NewInternalClient: func(context.Context, *rest.Config, *runtime.Scheme) (client.Client, error) {
+					NewInternalClient: func(
+						context.Context,
+						*rest.Config,
+						*runtime.Scheme,
+					) (client.WithWatch, error) {
 						return testCase.client, nil
-					},
-					NewInternalDynamicClient: func(*rest.Config) (dynamic.Interface, error) {
-						return nil, nil
 					},
 				},
 			)
 			require.NoError(t, err)
 			s := &server{client: cl}
-			stage, err := s.getStageFromAnalysisRun(context.Background(), testCase.run)
+			stage, err := s.getStageFromAnalysisRun(t.Context(), testCase.run)
 			testCase.assertions(t, stage, err)
 		})
 	}
@@ -636,7 +637,7 @@ func TestServer_buildRequest(t *testing.T) {
 				},
 			}
 			req, err := s.buildRequest(
-				context.Background(),
+				t.Context(),
 				&kargoapi.Stage{
 					ObjectMeta: metav1.ObjectMeta{Namespace: testNamespace},
 				},
@@ -681,7 +682,7 @@ func Test_streamLogs(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			// Time out in case something doesn't work as expected
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
 
 			// Encode input bytes
@@ -719,4 +720,152 @@ func Test_streamLogs(t *testing.T) {
 			require.Equal(t, string(testBytes), reassembled)
 		})
 	}
+}
+
+func Test_server_getAnalysisRunLogs(t *testing.T) {
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	const runName = "fake-analysisrun"
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/"+runName+"/logs",
+		[]restTestCase{
+			{
+				name:          "Rollouts integration disabled",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig:  &config.ServerConfig{RolloutsIntegrationEnabled: false},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name:          "log streaming not configured",
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "",
+					AnalysisRunLogHTTPHeaders:  nil,
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotImplemented, w.Code)
+				},
+			},
+			{
+				name: "Project does not exist",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+			{
+				name: "AnalysisRun does not exist",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					AnalysisRunLogURLTemplate:  "http://example.com",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					// The error from rollouts.GetAnalysisRun gets wrapped, so we get 500
+					require.Equal(t, http.StatusNotFound, w.Code)
+				},
+			},
+		},
+	)
+}
+
+func Test_server_getAnalysisRunLogs_success(t *testing.T) {
+	// Create a test HTTP server that will serve the log content
+	testLogContent := "log line 1\nlog line 2\nlog line 3\n"
+	logServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(testLogContent))
+	}))
+	defer logServer.Close()
+
+	testProject := &kargoapi.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "fake-project"},
+	}
+	testStage := &kargoapi.Stage{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "fake-stage",
+			Namespace: testProject.Name,
+		},
+	}
+	testRun := &rolloutsapi.AnalysisRun{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject.Name,
+			Name:      "fake-analysisrun",
+			Annotations: map[string]string{
+				kargoapi.AnnotationKeyStage: testStage.Name,
+			},
+		},
+		Spec: rolloutsapi.AnalysisRunSpec{
+			Metrics: []rolloutsapi.Metric{{
+				Name: "test-metric",
+				Provider: rolloutsapi.MetricProvider{
+					Job: &rolloutsapi.JobMetric{
+						Spec: batchv1.JobSpec{
+							Template: corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{{Name: "test-container"}},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		Status: rolloutsapi.AnalysisRunStatus{
+			MetricResults: []rolloutsapi.MetricResult{{
+				Name: "test-metric",
+				Measurements: []rolloutsapi.Measurement{{
+					Metadata: map[string]string{
+						"job-namespace": testProject.Name,
+						"job-name":      "test-job",
+					},
+				}},
+			}},
+		},
+	}
+
+	testRESTEndpoint(
+		t, &config.ServerConfig{RolloutsIntegrationEnabled: true},
+		http.MethodGet, "/v1beta1/projects/"+testProject.Name+"/analysis-runs/"+testRun.Name+"/logs",
+		[]restTestCase{
+			{
+				name: "streams logs successfully",
+				serverConfig: &config.ServerConfig{
+					RolloutsIntegrationEnabled: true,
+					// Use a template that just returns the log server URL
+					// The template needs to be valid expression syntax
+					AnalysisRunLogURLTemplate: "${{ \"" + logServer.URL + "\" }}",
+				},
+				clientBuilder: fake.NewClientBuilder().WithObjects(testProject, testStage, testRun),
+				assertions: func(t *testing.T, w *httptest.ResponseRecorder, _ client.Client) {
+					if w.Code != http.StatusOK {
+						t.Logf("Response body: %s", w.Body.String())
+					}
+					require.Equal(t, http.StatusOK, w.Code)
+
+					// Verify SSE headers
+					require.Equal(t, "text/event-stream", w.Header().Get("Content-Type"))
+					require.Equal(t, "no-cache", w.Header().Get("Cache-Control"))
+					require.Equal(t, "keep-alive", w.Header().Get("Connection"))
+
+					// The response body should contain the log content wrapped in SSE format
+					body := w.Body.String()
+					require.Contains(t, body, "data:")
+					// Each line should be in an SSE data event
+					require.Contains(t, body, "log line 1")
+					require.Contains(t, body, "log line 2")
+					require.Contains(t, body, "log line 3")
+				},
+			},
+		},
+	)
 }

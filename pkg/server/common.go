@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -17,8 +18,11 @@ import (
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/api"
+	libhttp "github.com/akuity/kargo/pkg/http"
 	"github.com/akuity/kargo/pkg/server/user"
 )
+
+const trueStr = "true"
 
 var (
 	projectGVK = schema.GroupVersionKind{
@@ -33,9 +37,20 @@ var (
 		Kind:    "Secret",
 	}
 
-	errSecretManagementDisabled = fmt.Errorf("secret management is not enabled")
+	errSecretManagementDisabled = libhttp.ErrorStr(
+		"secret management is not enabled",
+		http.StatusNotImplemented,
+	)
 
-	errClusterSecretNamespaceNotDefined = fmt.Errorf("cluster secret namespace is not defined")
+	errArgoRolloutsIntegrationDisabled = libhttp.ErrorStr(
+		"Argo Rollouts integration is not enabled",
+		http.StatusNotImplemented,
+	)
+
+	errEmptySecret = libhttp.ErrorStr(
+		"cannot have empty secret",
+		http.StatusBadRequest,
+	)
 )
 
 // splitYAML splits YAML bytes into unstructured objects. It separates Project
@@ -45,6 +60,18 @@ var (
 func splitYAML(
 	yamlData []byte,
 ) ([]unstructured.Unstructured, []unstructured.Unstructured, error) {
+	trimmed := bytes.TrimSpace(yamlData)
+
+	// If input is empty or whitespace-only, return empty results
+	if len(trimmed) == 0 {
+		return nil, nil, nil
+	}
+
+	// If input starts with '[', it's a JSON array - handle separately
+	if trimmed[0] == '[' {
+		return splitJSONArray(trimmed)
+	}
+
 	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(yamlData), 4096)
 	var projects, otherResources []unstructured.Unstructured
 	for {
@@ -62,6 +89,30 @@ func splitYAML(
 		resource := unstructured.Unstructured{}
 		if err := yaml.Unmarshal(ext.Raw, &resource); err != nil {
 			return nil, nil, fmt.Errorf("error unmarshaling manifest: %w", err)
+		}
+		if resource.GroupVersionKind() == projectGVK {
+			projects = append(projects, resource)
+		} else {
+			otherResources = append(otherResources, resource)
+		}
+	}
+	return projects, otherResources, nil
+}
+
+// splitJSONArray handles JSON array input, splitting it into individual resources.
+func splitJSONArray(
+	data []byte,
+) ([]unstructured.Unstructured, []unstructured.Unstructured, error) {
+	var rawObjects []json.RawMessage
+	if err := json.Unmarshal(data, &rawObjects); err != nil {
+		return nil, nil, fmt.Errorf("error decoding JSON array: %w", err)
+	}
+
+	var projects, otherResources []unstructured.Unstructured
+	for _, raw := range rawObjects {
+		resource := unstructured.Unstructured{}
+		if err := json.Unmarshal(raw, &resource.Object); err != nil {
+			return nil, nil, fmt.Errorf("error unmarshaling JSON object: %w", err)
 		}
 		if resource.GroupVersionKind() == projectGVK {
 			projects = append(projects, resource)

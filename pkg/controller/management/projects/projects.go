@@ -45,7 +45,6 @@ type ReconcilerConfig struct {
 	ManageControllerRoleBindings bool   `envconfig:"MANAGE_CONTROLLER_ROLE_BINDINGS" default:"true"`
 	KargoNamespace               string `envconfig:"KARGO_NAMESPACE" default:"kargo"`
 	MaxConcurrentReconciles      int    `envconfig:"MAX_CONCURRENT_PROJECT_RECONCILES" default:"4"`
-	ClusterSecretsNamespace      string `envconfig:"CLUSTER_SECRETS_NAMESPACE"`
 
 	ManageExtendedPermissions bool `envconfig:"MANAGE_EXTENDED_PERMISSIONS" default:"false"`
 
@@ -113,6 +112,12 @@ type reconciler struct {
 		context.Context,
 		client.Object,
 		...client.CreateOption,
+	) error
+
+	deleteNamespaceFn func(
+		context.Context,
+		client.Object,
+		...client.DeleteOption,
 	) error
 
 	patchOwnerReferencesFn func(
@@ -248,6 +253,7 @@ func newReconciler(kubeClient client.Client, cfg ReconcilerConfig) *reconciler {
 	r.patchProjectStatusFn = r.patchProjectStatus
 	r.getNamespaceFn = r.client.Get
 	r.createNamespaceFn = r.client.Create
+	r.deleteNamespaceFn = r.client.Delete
 	r.patchOwnerReferencesFn = api.PatchOwnerReferences
 	r.ensureFinalizerFn = api.EnsureFinalizer
 	r.removeFinalizerFn = api.RemoveFinalizer
@@ -433,30 +439,16 @@ func (r *reconciler) cleanupProject(ctx context.Context, project *kargoapi.Proje
 		return fmt.Errorf("error getting namespace %q: %w", project.Name, err)
 	}
 
-	if shouldKeepNamespace(project, ns) {
-		logger.Debug("keeping namespace due to keep-namespace annotation")
-
-		// Remove only this Project's OwnerReference from the Namespace
-		var newOwnerRefs []metav1.OwnerReference
-		for _, ref := range ns.OwnerReferences {
-			if ref.UID != project.UID {
-				newOwnerRefs = append(newOwnerRefs, ref)
-			}
-		}
-
-		// Only update owner references if we actually found and removed one
-		if len(newOwnerRefs) < len(ns.OwnerReferences) {
-			ns.OwnerReferences = newOwnerRefs
-			if err = r.patchOwnerReferencesFn(ctx, r.client, ns); err != nil {
-				return fmt.Errorf("failed to patch namespace %q owner references: %w", ns.Name, err)
-			}
-			logger.Debug("removed project owner reference from namespace")
-		}
-	}
-
 	// Remove finalizer from namespace
 	if err = r.removeFinalizerFn(ctx, r.client, ns); err != nil {
 		return fmt.Errorf("failed to remove finalizer from namespace %q: %w", ns.Name, err)
+	}
+
+	if !shouldKeepNamespace(project, ns) {
+		logger.Debug("keep-namespace annotation absent; deleting namespace")
+		if err = r.deleteNamespaceFn(ctx, ns); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("error deleting namespace %q: %w", ns.Name, err)
+		}
 	}
 
 	// Remove finalizer from Project
@@ -804,7 +796,7 @@ func (r *reconciler) ensureControllerPermissions(
 		roleBindingName := getRoleBindingName(sa.Name)
 		saLogger := logger.WithValues(
 			"serviceAccount", sa.Name,
-			"serviceAccount.namespace", sa.Namespace,
+			corev1.ServiceAccountNameKey, sa.Namespace,
 			"roleBinding", roleBindingName,
 		)
 

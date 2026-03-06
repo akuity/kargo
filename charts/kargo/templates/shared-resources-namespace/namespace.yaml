@@ -1,0 +1,8 @@
+{{- if .Values.global.sharedResources.createNamespace }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.global.sharedResources.namespace }}
+  labels:
+    {{- include "kargo.labels" . | nindent 4 }}
+{{- end }}

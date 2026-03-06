@@ -445,9 +445,9 @@ For more information, refer to the
 
 :::
 
-## Resource Management
+## Warehouse Performance
 
-### Tuning Warehouse Reconciliation Intervals
+### Tuning Reconciliation Intervals
 
 If your cluster contains many `Warehouse` resources, which periodically poll
 artifact repositories, or if developers have
@@ -507,6 +507,71 @@ For a list of resource kinds that can be configured, refer to the
 
 :::
 
+### Image Metadata Caching
+
+Kargo can cache container image metadata more aggressively using image tags as
+keys (instead of digests). This can significantly improve performance by
+reducing API calls to container image registries, but is safest to do when
+images are known to use "immutable" tags (i.e. existing tags are never
+overwritten).
+
+Operators may select one of four policies regarding caching image metadata by
+tag:
+
+- `Forbid`: Container image subscriptions may not cache image metadata by tag.
+  This is silently enforced. Subscriptions that opt into caching image metadata
+  by tag will be treated as if they had not.
+
+- `Allow` Individual container image subscriptions may choose whether to cache
+  image metadata by tag. This option leaves the decision in the hands of
+  developers.
+
+  :::info
+
+  For purposes of backwards compatibility, `Allow` is the default policy.
+
+  :::
+
+- `Require`: Container image subscriptions MUST explicitly opt into caching
+  image metadata by tag or their artifact discovery processes will fail.
+  Requiring explicit opt-in is tantamount to soliciting acknowledgement from
+  developers that caching image metadata by tag is in effect. This is intended
+  to minimize the possibility of surprise at any stale results from an image
+  discovery process. This option sacrifices some small degree of usability for
+  safety.
+
+- `Force`: Caching image metadata is silently enforced. Subscriptions that to
+  not opt into caching image metadata by tag will be treated as if they had.
+
+  :::info
+
+  This is the recommended policy in an immutable-tags-only environment.
+
+  :::
+
+Example configuration to allow (but not require) individual container image
+subscriptions to cache image metadata by tag:
+
+```yaml
+controller:
+  images:
+    cache:
+      cacheByTagPolicy: Allow
+```
+
+Example configuration to silently enforce caching image metadata by tag:
+
+```yaml
+controller:
+  images:
+    cache:
+      cacheByTagPolicy: Force
+```
+
+For more information on how to use this feature, see the
+[Performance Considerations](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#caching-image-metadata-by-tag)
+section of the user guide.
+
 ## Garbage Collection
 
 Kargo includes a garbage collector that automatically removes old `Freight` and
@@ -544,26 +609,52 @@ garbageCollector:
 
 ### Retention Settings
 
-The garbage collector offers a number of settings to control the retention of
-`Freight` and `Promotion` resources. The following settings are available:
+The garbage collector offers settings to control the retention of `Promotion` and
+`Freight` resources.
+
+#### Promotion Retention
+
+For each `Stage`, the garbage collector identifies the oldest `Promotion` that
+is still in a non-terminal phase (i.e., not `Succeeded` or `Failed`). It then
+retains up to `maxRetainedPromotions` that are _older_ than this non-terminal
+`Promotion`. Any `Promotion` resources beyond this retention limit are eligible
+for deletion, but will only be deleted if they have reached the
+`minPromotionDeletionAge`. This means the actual number of retained `Promotion`
+resources may exceed `maxRetainedPromotions` if some would-be-deleted
+`Promotion` resources have not yet reached the minimum age. If all `Promotion`
+resources for a `Stage` are in a terminal phase, the garbage collector simply
+retains the most recent `maxRetainedPromotions` and considers the rest for
+deletion (subject to the minimum age criterion).
+
+#### Freight Retention
+
+For each `Warehouse`, the garbage collector identifies the oldest `Freight` that
+is still in use by any `Stage`. It then retains up to `maxRetainedFreight` that
+are _older_ than this in-use `Freight`. Any `Freight` resources beyond this
+retention limit are eligible for deletion, but will only be deleted if they have
+reached the `minFreightDeletionAge`. This means the actual number of retained
+`Freight` resources may exceed `maxRetainedFreight` if some would-be-deleted
+`Freight` resources have not yet reached the minimum age. If no `Freight` from a
+`Warehouse` is currently in use, the garbage collector simply retains the most
+recent `maxRetainedFreight` and considers the rest for deletion (subject to the
+minimum age criterion).
 
 ```yaml
 garbageCollector:
-  # The minimum age a Promotion resource must be before it can be deleted.
-  # This is a duration string (e.g. 336h for 14 days).
+  # The minimum age a Promotion must be before considered eligible for garbage
+  # collection. This is a duration string (e.g. 336h for 14 days).
   minPromotionDeletionAge: 336h
-  # The number of Promotion resources for each Stage to retain that are older
-  # than the minimum deletion age. I.e., if a Stage has 30 Promotions older
-  # than minPromotionDeletionAge, only the 20 most recent will be retained.
+  # The ideal maximum number of Promotions OLDER than the oldest Promotion in a
+  # non-terminal phase (for each Stage) that may be spared by the garbage
+  # collector.
   maxRetainedPromotions: 20
-  
-  # The minimum age a Freight resource must be before it can be deleted.
-  # This is a duration string (e.g. 336h for 14 days).
+
+  # The minimum age Freight must be before considered eligible for garbage
+  # collection. This is a duration string (e.g. 336h for 14 days).
   minFreightDeletionAge: 336h
-  # The number of Freight resources for each Warehouse to retain that are older
-  # than the minimum deletion age. I.e., if a Warehouse has 20 Freight older
-  # than minFreightDeletionAge, only the 20 most recent will be retained.
-  maxRetainedFreight: 10
+  # The ideal maximum number of Freight OLDER than the oldest still in use
+  # (from each Warehouse) that may be spared by the garbage collector.
+  maxRetainedFreight: 20
 ```
 
 :::note

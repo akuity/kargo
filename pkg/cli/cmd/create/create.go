@@ -2,23 +2,22 @@ package create
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
 	"k8s.io/cli-runtime/pkg/genericiooptions"
-	sigyaml "sigs.k8s.io/yaml"
 
-	kargosvcapi "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/io"
 	"github.com/akuity/kargo/pkg/cli/kubernetes"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/resources"
 )
 
 type createOptions struct {
@@ -66,11 +65,12 @@ kargo create project my-project
 	io.SetIOStreams(cmd, cmdOpts.IOStreams)
 
 	// Register subcommands.
-	cmd.AddCommand(newCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newConfigMapCommand(cfg, streams))
+	cmd.AddCommand(newGenericCredentialsCommand(cfg, streams))
+	cmd.AddCommand(newRepoCredentialsCommand(cfg, streams))
 	cmd.AddCommand(newProjectCommand(cfg, streams))
 	cmd.AddCommand(newRoleCommand(cfg, streams))
-	cmd.AddCommand(newServiceAccountCommand(cfg, streams))
-	cmd.AddCommand(newServiceAccountTokenCommand(cfg, streams))
+	cmd.AddCommand(newTokenCommand(cfg, streams))
 
 	return cmd
 }
@@ -118,37 +118,42 @@ func (o *createOptions) run(ctx context.Context) error {
 		return fmt.Errorf("create printer: %w", err)
 	}
 
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	resp, err := kargoSvcCli.CreateResource(ctx, connect.NewRequest(&kargosvcapi.CreateResourceRequest{
-		Manifest: manifest,
-	}))
+	res, err := apiClient.Resources.CreateResource(
+		resources.NewCreateResourceParams().
+			WithManifest(string(manifest)),
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("create resource: %w", err)
 	}
 
-	resCap := len(resp.Msg.GetResults())
-	successRes := make([]*kargosvcapi.CreateResourceResult_CreatedResourceManifest, 0, resCap)
-	createErrs := make([]error, 0, resCap)
-	for _, r := range resp.Msg.GetResults() {
-		switch typedRes := r.GetResult().(type) {
-		case *kargosvcapi.CreateResourceResult_CreatedResourceManifest:
-			successRes = append(successRes, typedRes)
-		case *kargosvcapi.CreateResourceResult_Error:
-			createErrs = append(createErrs, errors.New(typedRes.Error))
-		}
-	}
-	for _, r := range successRes {
-		var obj unstructured.Unstructured
-		if err := sigyaml.Unmarshal(r.CreatedResourceManifest, &obj); err != nil {
-			_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
-				fmt.Errorf("unmarshal created manifest: %w", err))
+	createErrs := make([]error, 0, len(res.Payload.Results))
+	for _, r := range res.Payload.Results {
+		if r.Error != "" {
+			createErrs = append(createErrs, errors.New(r.Error))
 			continue
 		}
-		_ = printer.PrintObj(&obj, o.Out)
+		if len(r.CreatedResourceManifest) > 0 {
+			// Convert map to JSON then to YAML for unmarshaling
+			manifestJSON, err := json.Marshal(r.CreatedResourceManifest)
+			if err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("marshal created manifest: %w", err))
+				continue
+			}
+			var obj unstructured.Unstructured
+			if err := json.Unmarshal(manifestJSON, &obj); err != nil {
+				_, _ = fmt.Fprintf(o.ErrOut, "Error: %s",
+					fmt.Errorf("unmarshal created manifest: %w", err))
+				continue
+			}
+			_ = printer.PrintObj(&obj, o.Out)
+		}
 	}
 	return errors.Join(createErrs...)
 }

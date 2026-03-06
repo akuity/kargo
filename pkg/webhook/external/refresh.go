@@ -193,7 +193,7 @@ func shouldRefresh(
 	qualifiers ...string,
 ) (bool, error) {
 	var shouldRefresh bool
-	for _, s := range wh.Spec.Subscriptions {
+	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
 			selector, err := commit.NewSelector(ctx, *s.Git, nil)

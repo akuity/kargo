@@ -83,6 +83,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		return fmt.Errorf("error getting Kubernetes client REST config: %w", err)
 	}
 	kubernetes.ConfigureQPSBurst(ctx, restCfg, o.QPS, o.Burst)
+	serverCfg.RestConfig = restCfg
 
 	kubeClientOptions := kubernetes.ClientOptions{}
 	if serverCfg.OIDCConfig != nil {
@@ -132,10 +133,9 @@ func (o *apiOptions) run(ctx context.Context) error {
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
-		rbac.NewKubernetesRolesDatabase(kubeClient),
-		rbac.NewKubernetesServiceAccountsDatabase(
+		rbac.NewKubernetesRolesDatabase(
 			kubeClient,
-			rbac.ServiceAccountDatabaseConfigFromEnv(),
+			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		k8sevent.NewEventSender(
 			event.NewRecorder(

@@ -5,14 +5,13 @@ import (
 	"errors"
 	"fmt"
 
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	v1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	"github.com/akuity/kargo/pkg/cli/client"
 	"github.com/akuity/kargo/pkg/cli/config"
 	"github.com/akuity/kargo/pkg/cli/option"
 	"github.com/akuity/kargo/pkg/cli/templates"
+	"github.com/akuity/kargo/pkg/client/generated/core"
 )
 
 type approvalOptions struct {
@@ -107,21 +106,23 @@ func (o *approvalOptions) validate() error {
 
 // run performs the approval of a freight based on the options.
 func (o *approvalOptions) run(ctx context.Context) error {
-	kargoSvcCli, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
+	apiClient, err := client.GetClientFromConfig(ctx, o.Config, o.ClientOptions)
 	if err != nil {
 		return fmt.Errorf("get client from config: %w", err)
 	}
 
-	if _, err = kargoSvcCli.ApproveFreight(
-		ctx,
-		connect.NewRequest(
-			&v1alpha1.ApproveFreightRequest{
-				Project: o.Project,
-				Name:    o.FreightName,
-				Alias:   o.FreightAlias,
-				Stage:   o.Stage,
-			},
-		),
+	// Use freight name if provided, otherwise use alias
+	freightNameOrAlias := o.FreightName
+	if freightNameOrAlias == "" {
+		freightNameOrAlias = o.FreightAlias
+	}
+
+	if _, err = apiClient.Core.ApproveFreight(
+		core.NewApproveFreightParams().
+			WithProject(o.Project).
+			WithFreightNameOrAlias(freightNameOrAlias).
+			WithStage(o.Stage),
+		nil,
 	); err != nil {
 		return fmt.Errorf("approve freight: %w", err)
 	}

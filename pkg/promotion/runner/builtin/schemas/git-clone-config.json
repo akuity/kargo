@@ -73,6 +73,15 @@
           "tag": {
             "type": "string",
             "description": "The tag to checkout. Mutually exclusive with 'branch' and 'commit'. If none of these are specified, the default branch is checked out."
+          },
+          "sparse": {
+            "type": "array",
+            "description": "Directory paths for sparse checkout. Only the specified directories (and their contents) will be checked out. Paths must be relative to the repository root (e.g., 'src/app', 'configs/prod'). Glob patterns are not supported.",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
           }
         },
         "oneOf": [

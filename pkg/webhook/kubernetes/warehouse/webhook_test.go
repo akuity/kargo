@@ -6,28 +6,84 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
-	"github.com/akuity/kargo/pkg/urls"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/subscription"
 )
+
+// testRegistry is a subscriber registry for use in tests.
+var testRegistry = subscription.MustNewSubscriberRegistry()
+
+func init() {
+	// Populate the test registry with a mock subscriber registration whose
+	// predicate matches all subscriptions and whose mock subscriber always
+	// returns one predictable validation error.
+	testRegistry.MustRegister(subscription.SubscriberRegistration{
+		Predicate: func(context.Context, kargoapi.RepoSubscription) (bool, error) {
+			// Match all subscriptions for testing purposes
+			return true, nil
+		},
+		Value: func(context.Context, credentials.Database) (subscription.Subscriber, error) {
+			const testDiscoveryLimit = 42
+			return &subscription.MockSubscriber{
+				ApplySubscriptionDefaultsFn: func(_ context.Context, sub *kargoapi.RepoSubscription) error {
+					// Make a predictable change to all types of subscriptions
+					switch {
+					case sub.Chart != nil:
+						sub.Chart.DiscoveryLimit = testDiscoveryLimit
+					case sub.Git != nil:
+						sub.Git.DiscoveryLimit = testDiscoveryLimit
+					case sub.Image != nil:
+						sub.Image.DiscoveryLimit = testDiscoveryLimit
+					case sub.Subscription != nil:
+						// Although discovery limit is integral to generic subscriptions, we
+						// don't want to modify it here and expect to see that applied in
+						// our tests because it will interfere with testing that common
+						// elements of generic subscriptions are defaulted properly. So,
+						// even though this is a nonsensical thing to do, we'll make a
+						// predictable change to the name field instead, because it will
+						// give us a way to verify that subscriber-specific defaulting logic
+						// works for generic subscriptions.
+						sub.Subscription.Name = "fake"
+					}
+					return nil
+				},
+				ValidateSubscriptionFn: func(
+					_ context.Context,
+					f *field.Path,
+					sub kargoapi.RepoSubscription,
+				) field.ErrorList {
+					// Always return a predictable validation error
+					return field.ErrorList{{
+						Type:     field.ErrorTypeInvalid,
+						Field:    f.String(),
+						BadValue: sub,
+						Detail:   "mock validation error",
+					}}
+				},
+			}, nil
+		},
+	})
+}
 
 func TestNewWebhook(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
-	w := newWebhook(kubeClient)
-	// Assert that all overridable behaviors were initialized to a default:
-	require.NotNil(t, w.validateProjectFn)
-	require.NotNil(t, w.validateSpecFn)
+	w := newWebhook(kubeClient, subscription.DefaultSubscriberRegistry)
+	require.Same(t, kubeClient, w.client)
+	require.Same(t, subscription.DefaultSubscriberRegistry, w.subscriberRegistry)
 }
 
 func Test_webhook_Default(t *testing.T) {
 	const testShardName = "fake-shard"
 
-	w := &webhook{}
+	w := &webhook{subscriberRegistry: testRegistry}
 
 	t.Run("shard stays default when not specified at all", func(t *testing.T) {
 		warehouse := &kargoapi.Warehouse{}
@@ -63,73 +119,128 @@ func Test_webhook_Default(t *testing.T) {
 		_, ok := warehouse.Labels[kargoapi.LabelKeyShard]
 		require.False(t, ok)
 	})
+
+	t.Run("defaulting is delegated to subscribers", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			Spec: kargoapi.WarehouseSpec{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
+					// The one mock subscriber in the test registry will apply
+					// predicated changes to each of these subscriptions.
+					{Git: &kargoapi.GitSubscription{}},
+					{Image: &kargoapi.ImageSubscription{}},
+					{Chart: &kargoapi.ChartSubscription{}},
+					{Subscription: &kargoapi.Subscription{SubscriptionType: "fake"}},
+				},
+			},
+		}
+		err := w.Default(context.Background(), warehouse)
+		require.NoError(t, err)
+		const testDiscoveryLimit int64 = 42
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[0].Git.DiscoveryLimit)
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[1].Image.DiscoveryLimit)
+		require.Equal(t, testDiscoveryLimit, warehouse.Spec.InternalSubscriptions[2].Chart.DiscoveryLimit)
+		require.Equal(t, "fake", warehouse.Spec.InternalSubscriptions[3].Subscription.Name)
+	})
+
+	t.Run("common elements of generic subscriptions are defaulted", func(t *testing.T) {
+		warehouse := &kargoapi.Warehouse{
+			Spec: kargoapi.WarehouseSpec{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
+					{Subscription: &kargoapi.Subscription{SubscriptionType: "fake"}},
+				},
+			},
+		}
+		err := w.Default(context.Background(), warehouse)
+		require.NoError(t, err)
+		require.Equal(
+			t,
+			defaultDiscoveryLimit,
+			warehouse.Spec.InternalSubscriptions[0].Subscription.DiscoveryLimit,
+		)
+	})
 }
 
 func Test_webhook_ValidateCreate(t *testing.T) {
+	const testProject = "fake-project"
+
+	testScheme := runtime.NewScheme()
+	err := corev1.AddToScheme(testScheme)
+	require.NoError(t, err)
+	err = kargoapi.AddToScheme(testScheme)
+	require.NoError(t, err)
+
 	testCases := []struct {
 		name       string
 		webhook    *webhook
+		warehouse  *kargoapi.Warehouse
 		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating project",
 			webhook: &webhook{
-				validateProjectFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return errors.New("something went wrong")
-				},
+				client: fake.NewClientBuilder().WithScheme(testScheme).Build(),
 			},
+			warehouse: &kargoapi.Warehouse{},
 			assertions: func(t *testing.T, err error) {
 				require.Error(t, err)
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(
 					t,
-					metav1.StatusReasonInternalError,
+					metav1.StatusReasonNotFound,
 					statusErr.ErrStatus.Reason,
 				)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
 			},
 		},
 		{
 			name: "error validating warehouse",
 			webhook: &webhook{
-				validateProjectFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return nil
-				},
-				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
-					return field.ErrorList{
-						field.Invalid(field.NewPath(""), "", "something went wrong"),
-					}
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{RepoURL: "bogus"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"spec.subscriptions[0].git.repoURL",
+				)
 			},
 		},
 		{
 			name: "success",
 			webhook: &webhook{
-				validateProjectFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return nil
-				},
-				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
-					return nil
-				},
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -138,9 +249,10 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			_, err := testCase.webhook.ValidateCreate(
 				context.Background(),
-				&kargoapi.Warehouse{},
+				testCase.warehouse,
 			)
 			testCase.assertions(t, err)
 		})
@@ -148,33 +260,69 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 }
 
 func Test_webhook_ValidateUpdate(t *testing.T) {
+	const testProject = "fake-project"
+
+	testScheme := runtime.NewScheme()
+	err := corev1.AddToScheme(testScheme)
+	require.NoError(t, err)
+	err = kargoapi.AddToScheme(testScheme)
+	require.NoError(t, err)
+
 	testCases := []struct {
 		name       string
 		webhook    *webhook
+		warehouse  *kargoapi.Warehouse
 		assertions func(*testing.T, error)
 	}{
 		{
 			name: "error validating warehouse",
 			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
-					return field.ErrorList{
-						field.Invalid(field.NewPath(""), "", "something went wrong"),
-					}
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{RepoURL: "bogus"},
+					}},
 				},
 			},
 			assertions: func(t *testing.T, err error) {
 				var statusErr *apierrors.StatusError
 				require.True(t, errors.As(err, &statusErr))
 				require.Equal(t, metav1.StatusReasonInvalid, statusErr.ErrStatus.Reason)
-				require.Contains(t, statusErr.ErrStatus.Message, "something went wrong")
+				require.Contains(
+					t,
+					statusErr.ErrStatus.Message,
+					"spec.subscriptions[0].git.repoURL",
+				)
 			},
 		},
 		{
 			name: "success",
 			webhook: &webhook{
-				validateSpecFn: func(*field.Path, *kargoapi.WarehouseSpec) field.ErrorList {
-					return nil
-				},
+				client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+					&corev1.Namespace{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: testProject,
+							Labels: map[string]string{
+								kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
+							},
+						},
+					},
+				).Build(),
+			},
+			warehouse: &kargoapi.Warehouse{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testProject},
 			},
 			assertions: func(t *testing.T, err error) {
 				require.NoError(t, err)
@@ -183,10 +331,11 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
+			testCase.webhook.subscriberRegistry = subscription.DefaultSubscriberRegistry
 			_, err := testCase.webhook.ValidateUpdate(
 				context.Background(),
 				nil,
-				&kargoapi.Warehouse{},
+				testCase.warehouse,
 			)
 			testCase.assertions(t, err)
 		})
@@ -212,611 +361,80 @@ func TestValidateSpec(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid",
+			name: "validation is delegated to subscribers",
 			spec: kargoapi.WarehouseSpec{
-				Subscriptions: []kargoapi.RepoSubscription{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
+					// The one mock subscriber in the test registry will return
+					// predictable errors for all of these subscriptions.
+					{Git: &kargoapi.GitSubscription{}},
+					{Image: &kargoapi.ImageSubscription{}},
+					{Chart: &kargoapi.ChartSubscription{}},
+					{Subscription: &kargoapi.Subscription{
+						SubscriptionType: "fake",
+						Name:             "fake-sub",
+						DiscoveryLimit:   20,
+					}},
+				},
+			},
+			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
+				require.True(t, len(errs) >= 4)
+				var fields = make([]string, len(errs))
+				for i, err := range errs {
+					fields[i] = err.Field
+				}
+				// Note that we're not at all interested in testing specific validation
+				// logic here; that is the responsibility of an individual subscriber's
+				// unit tests. ALL we want to verify here is that, for all three
+				// original subscription types and generic subscription, validation is
+				// delegated to corresponding subscribers and checking for these
+				// predictable errors from the one mock subscriber in the test registry
+				// accomplishes that.
+				require.Contains(t, fields, "spec.subscriptions[0].git")
+				require.Contains(t, fields, "spec.subscriptions[1].image")
+				require.Contains(t, fields, "spec.subscriptions[2].chart")
+				require.Contains(t, fields, "spec.subscriptions[3].fake")
+			},
+		},
+		{
+			name: "common elements of generic subscriptions are validated",
+			spec: kargoapi.WarehouseSpec{
+				InternalSubscriptions: []kargoapi.RepoSubscription{
 					{
-						Git: &kargoapi.GitSubscription{
-							RepoURL: "bogus",
-						},
-						Image: &kargoapi.ImageSubscription{
-							Constraint: "constraint",
-							Platform:   "bogus",
-						},
-						Chart: &kargoapi.ChartSubscription{
-							SemverConstraint: "bogus",
+						Subscription: &kargoapi.Subscription{
+							// Name is empty and discovery limit is zero
+							SubscriptionType: "fake",
 						},
 					},
 					{
-						Git: &kargoapi.GitSubscription{
-							RepoURL: "bogus",
+						Subscription: &kargoapi.Subscription{
+							SubscriptionType: "fake",
+							DiscoveryLimit:   1000, // Too high
 						},
 					},
 				},
 			},
-			assertions: func(t *testing.T, spec *kargoapi.WarehouseSpec, errs field.ErrorList) {
-				// We really want to see that all underlying errors have been bubbled up
-				// to this level and been aggregated.
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0].image.constraint",
-							BadValue: "constraint",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0].image.platform",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0].chart.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[0]",
-							BadValue: spec.Subscriptions[0],
-							Detail: "exactly one of spec.subscriptions[0].git, " +
-								"spec.subscriptions[0].image, or spec.subscriptions[0].chart " +
-								"must be non-empty",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "spec.subscriptions[1].git",
-							BadValue: "bogus",
-							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-		{
-			name: "valid",
-			spec: kargoapi.WarehouseSpec{
-				// Nil subs are caught by declarative validation, so for the purposes of
-				// this test, leaving that completely undefined should surface no
-				// errors.
-			},
 			assertions: func(t *testing.T, _ *kargoapi.WarehouseSpec, errs field.ErrorList) {
-				require.Nil(t, errs)
+				require.True(t, len(errs) >= 3)
+				var fields = make([]string, len(errs))
+				for i, err := range errs {
+					fields[i] = err.Field
+				}
+				require.Contains(t, fields, "spec.subscriptions[0].fake.name")
+				require.Contains(t, fields, "spec.subscriptions[0].fake.discoveryLimit")
+				require.Contains(t, fields, "spec.subscriptions[1].fake.discoveryLimit")
 			},
 		},
 	}
-	w := &webhook{}
+	w := &webhook{subscriberRegistry: testRegistry}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
 				&testCase.spec,
 				w.validateSpec(
+					t.Context(),
 					field.NewPath("spec"),
 					&testCase.spec,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateSubs(t *testing.T) {
-	testCases := []struct {
-		name       string
-		subs       []kargoapi.RepoSubscription
-		assertions func(*testing.T, []kargoapi.RepoSubscription, field.ErrorList)
-	}{
-		{
-			name: "empty",
-			assertions: func(t *testing.T, _ []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-		{
-			name: "invalid subscriptions",
-			subs: []kargoapi.RepoSubscription{
-				{
-					Git: &kargoapi.GitSubscription{
-						RepoURL: "bogus",
-					},
-					Image: &kargoapi.ImageSubscription{
-						Constraint: "bogus",
-						Platform:   "bogus",
-					},
-					Chart: &kargoapi.ChartSubscription{
-						SemverConstraint: "bogus",
-					},
-				},
-				{
-					Git: &kargoapi.GitSubscription{
-						RepoURL: "bogus",
-					},
-				},
-			},
-			assertions: func(t *testing.T, subs []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0].image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0].image.platform",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0].chart.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[0]",
-							BadValue: subs[0],
-							Detail: "exactly one of subs[0].git, subs[0].image, or " +
-								"subs[0].chart must be non-empty",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "subs[1].git",
-							BadValue: "bogus",
-							Detail:   "subscription for Git repository already exists at \"subs[0].git\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-		{
-			name: "valid",
-			subs: []kargoapi.RepoSubscription{
-				{
-					Image: &kargoapi.ImageSubscription{
-						RepoURL: "example/repo",
-						// No constraints
-					},
-				},
-				{
-					Image: &kargoapi.ImageSubscription{
-						RepoURL:    "example/another-repo",
-						Constraint: "^v1.0.0",
-					},
-				},
-				{
-					Image: &kargoapi.ImageSubscription{
-						RepoURL:    "example/yet-another-repo",
-						Constraint: "^v1.0.0",
-					},
-				},
-				{
-					Image: &kargoapi.ImageSubscription{
-						RepoURL:                "example/still-another-repo",
-						ImageSelectionStrategy: kargoapi.ImageSelectionStrategyDigest,
-						Constraint:             "latest",
-					},
-				},
-			},
-			assertions: func(t *testing.T, _ []kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.subs,
-				w.validateSubs(field.NewPath("subs"), testCase.subs),
-			)
-		})
-	}
-}
-
-func TestValidateSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.RepoSubscription
-		seen       uniqueSubSet
-		assertions func(*testing.T, kargoapi.RepoSubscription, field.ErrorList)
-	}{
-		{
-			name: "invalid subscription",
-			sub: kargoapi.RepoSubscription{
-				Git: &kargoapi.GitSubscription{
-					RepoURL: "bogus",
-				},
-				Image: &kargoapi.ImageSubscription{
-					Constraint: "bogus",
-					Platform:   "bogus",
-				},
-				Chart: &kargoapi.ChartSubscription{
-					SemverConstraint: "bogus",
-				},
-			},
-			seen: uniqueSubSet{
-				subscriptionKey{
-					kind: "git",
-					id:   urls.NormalizeGit("bogus"),
-				}: field.NewPath("spec.subscriptions[0].git"),
-			},
-			assertions: func(t *testing.T, sub kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.git",
-							BadValue: "bogus",
-							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.image.platform",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub.chart.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "sub",
-							BadValue: sub,
-							Detail:   "exactly one of sub.git, sub.image, or sub.chart must be non-empty",
-						},
-					},
-					errs,
-				)
-			},
-		},
-		{
-			name: "valid",
-			sub: kargoapi.RepoSubscription{
-				Image: &kargoapi.ImageSubscription{},
-			},
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, _ kargoapi.RepoSubscription, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				testCase.sub,
-				w.validateSub(field.NewPath("sub"), testCase.sub, testCase.seen),
-			)
-		})
-	}
-}
-
-func TestValidateGitSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.GitSubscription
-		seen       uniqueSubSet
-		assertions func(*testing.T, field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.GitSubscription{
-				RepoURL:          "bogus",
-				SemverConstraint: "bogus",
-			},
-			seen: uniqueSubSet{
-				subscriptionKey{
-					kind: "git",
-					id:   urls.NormalizeGit("bogus"),
-				}: field.NewPath("spec.subscriptions[0].git"),
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "git.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "git",
-							BadValue: "bogus",
-							Detail:   "subscription for Git repository already exists at \"spec.subscriptions[0].git\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				w.validateGitSub(
-					field.NewPath("git"),
-					testCase.sub,
-					testCase.seen,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateImageSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ImageSubscription
-		seen       uniqueSubSet
-		assertions func(*testing.T, field.ErrorList)
-	}{
-		{
-			name: "invalid",
-			sub: kargoapi.ImageSubscription{
-				RepoURL:    "bogus",
-				Constraint: "bogus",
-				Platform:   "bogus",
-			},
-			seen: uniqueSubSet{
-				subscriptionKey{
-					kind: "image",
-					id:   "bogus",
-				}: field.NewPath("spec.subscriptions[0].image"),
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image.constraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image.platform",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "image",
-							BadValue: "bogus",
-							Detail:   "subscription for image repository already exists at \"spec.subscriptions[0].image\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				w.validateImageSub(
-					field.NewPath("image"),
-					testCase.sub,
-					testCase.seen,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateChartSub(t *testing.T) {
-	testCases := []struct {
-		name       string
-		sub        kargoapi.ChartSubscription
-		seen       uniqueSubSet
-		assertions func(*testing.T, field.ErrorList)
-	}{
-		{
-			name: "invalid semverConstraint and oci repoURL with name",
-			sub: kargoapi.ChartSubscription{
-				RepoURL:          "oci://fake-url",
-				Name:             "should-not-be-here",
-				SemverConstraint: "bogus",
-			},
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart.semverConstraint",
-							BadValue: "bogus",
-						},
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart.name",
-							BadValue: "should-not-be-here",
-							Detail:   "must be empty if repoURL starts with oci://",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "https repoURL without name",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "https://fake-url",
-			},
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart.name",
-							BadValue: "",
-							Detail:   "must be non-empty if repoURL starts with http:// or https://",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "duplicate HTTP/S chart",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "https://fake-url",
-				Name:    "bogus",
-			},
-			seen: uniqueSubSet{
-				subscriptionKey{
-					kind: "chart",
-					id:   "https://fake-url:bogus",
-				}: field.NewPath("spec.subscriptions[0].chart"),
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart",
-							BadValue: "https://fake-url",
-							Detail:   "subscription for chart \"bogus\" already exists at \"spec.subscriptions[0].chart\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "duplicate OCI chart",
-			sub: kargoapi.ChartSubscription{
-				RepoURL: "oci://fake-url",
-			},
-			seen: uniqueSubSet{
-				subscriptionKey{
-					kind: "chart",
-					id:   "fake-url",
-				}: field.NewPath("spec.subscriptions[0].chart"),
-			},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Equal(
-					t,
-					field.ErrorList{
-						{
-							Type:     field.ErrorTypeInvalid,
-							Field:    "chart",
-							BadValue: "oci://fake-url",
-							Detail:   "subscription for chart already exists at \"spec.subscriptions[0].chart\"",
-						},
-					},
-					errs,
-				)
-			},
-		},
-
-		{
-			name: "valid",
-			sub:  kargoapi.ChartSubscription{},
-			seen: uniqueSubSet{},
-			assertions: func(t *testing.T, errs field.ErrorList) {
-				require.Nil(t, errs)
-			},
-		},
-	}
-	w := &webhook{}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				w.validateChartSub(
-					field.NewPath("chart"),
-					testCase.sub,
-					testCase.seen,
-				),
-			)
-		})
-	}
-}
-
-func TestValidateSemverConstraint(t *testing.T) {
-	testCases := []struct {
-		name             string
-		semverConstraint string
-		assertions       func(*testing.T, error)
-	}{
-		{
-			name: "empty string",
-			assertions: func(t *testing.T, err error) {
-				require.Nil(t, err)
-			},
-		},
-
-		{
-			name:             "invalid",
-			semverConstraint: "bogus",
-			assertions: func(t *testing.T, err error) {
-				require.NotNil(t, err)
-				require.Equal(
-					t,
-					&field.Error{
-						Type:     field.ErrorTypeInvalid,
-						Field:    "semverConstraint",
-						BadValue: "bogus",
-					},
-					err,
-				)
-			},
-		},
-
-		{
-			name:             "valid",
-			semverConstraint: "^1.0.0",
-			assertions: func(t *testing.T, err error) {
-				require.Nil(t, err)
-			},
-		},
-	}
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			testCase.assertions(
-				t,
-				validateSemverConstraint(
-					field.NewPath("semverConstraint"),
-					testCase.semverConstraint,
 				),
 			)
 		})

@@ -17,10 +17,23 @@ image:
 
 ## @section Global Parameters
 global:
-  ## @param global.clusterSecretsNamespace Indicates a namespace where Secrets associated with cluster-scoped resources can be located.
+  ## @param global.clusterSecretsNamespace **Deprecated in favor of `systemResources.namespace`.** Designates a namespace to contain Secrets associated with cluster-scoped resources. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put Secrets that you want to share across all Projects. This namespace is strictly for Secrets that must be referenced by cluster-scoped resources. **Again, this is deprecated in favor of `systemResources.namespace`.** The name of the setting _and_ its default value are both changing to better reflect the intent to use the namespace not only for Secrets, but for _all_ types of namespaced resources that lack a cluster-scoped analog. Kargo versions >= v1.9.0 and < v1.12.0 will automatically sync Secrets from the namespace specified by `clusterSecretsNamespace` to the namespace specified by `clusterSecretsNamespace` (if they are different). That migration utility will be removed from v1.12.0, by which time operators who GitOps their ClusterConfig will need to have updated their manifests accordingly. Upgrades to v1.12.0 will FAIL if `clusterSecretsNamespace` remains defined.
   clusterSecretsNamespace: kargo-cluster-secrets
-  ## @param global.createClusterSecretsNamespace Indicates whether the `clusterSecretsNamespace` should be managed by the chart.
+  ## @param global.createClusterSecretsNamespace **Deprecated, as it is directly related to `clusterSecretsNamespace`, which also is deprecated. See docs for `clusterSecretsNamespace` for more details.** Indicates whether the namespace specified by `clusterSecretsNamespace` should be created when installing the chart.
   createClusterSecretsNamespace: true
+
+  systemResources:
+    ## @param global.systemResources.namespace Designates a namespace to contain resources associated with cluster-scoped resources and for which no cluster-scoped analog exists. For example, ClusterConfig is a cluster-scoped resource. Cluster-scoped webhook receivers, defined as part of that resource, each must reference a Secret, however, no such thing as a cluster-scoped Secret exists within Kubernetes. To work around that, all Secrets referenced by a ClusterConfig resource must be located in a designated namespace. NOTE: The namespace designated for this purpose is NOT the place to put resources that you want to share across all Projects. This namespace is strictly for namespaced resources that must be referenced by other, cluster-scoped resources.
+    namespace: kargo-system-resources
+    ## @param global.systemResources.createNamespace Indicates whether the namespace specified by `global.systemResources.namespace` should be created when installing the chart.
+    createNamespace: true
+  
+  sharedResources:
+    ## @param global.sharedResources.namespace designates a namespace where shared resources can be located.
+    namespace: kargo-shared-resources
+    ## @param global.sharedResources.createNamespace Indicates whether the namespace specified by `global.sharedResources.namespace` should be created when installing the chart.
+    createNamespace: true
+  
   ## @param global.labels Labels to add to all resources.
   labels: {}
   ## @param global.annotations Annotations to add to all resources.
@@ -239,7 +252,7 @@ api:
         ## @param api.oidc.dex.image.repository Image repository of Dex
         repository: ghcr.io/dexidp/dex
         ## @param api.oidc.dex.image.tag Image tag for Dex.
-        tag: v2.37.0
+        tag: v2.44.0
         ## @param api.oidc.dex.image.pullPolicy Image pull policy for Dex.
         pullPolicy: IfNotPresent
         ## @param api.oidc.dex.image.pullSecrets List of imagePullSecrets.
@@ -479,9 +492,9 @@ controller:
   ## @param controller.shardName [nullable] When running multiple controllers backed by a single underlying control plane, specifying a shard name will cause this controller to operate **only** on resources with a matching shard name. Leaving this field undefined will designate this controller as the default controller that is responsible for resources that are not assigned to a specific shard **regardless** of the value of `controller.isDefault` (as that was the behavior prior to the introduction of `controller.isDefault`). If this field is defined, this controller will not be considered the default **unless, additionally** `controller.isDefault` is `true`. i.e. A controller is effectively considered the default if `or (not controller.shardName) controller.isDefault`. If this field is defined **and** `controller.isDefault` is true, this controller will operate **both** on resources explicitly assigned to it **as well as** those not assigned to a specific shard.
   # shardName:
 
-  ## All settings relating to shared credentials (used across multiple kargo projects)
+  ## **Deprecated in favor of `global.sharedResources`.**. All settings relating to shared credentials (used across multiple kargo projects).
   globalCredentials:
-    ## @param controller.globalCredentials.namespaces List of namespaces to look for shared credentials. Note that as of v1.0.0, the Kargo controller does not have cluster-wide access to Secrets. The controller receives read-only permission for Secrets on a per-Project basis as Projects are created. If you designate some namespaces as homes for "global" credentials, you will need to manually grant the controller permission to read Secrets in those namespaces.
+    ## @param controller.globalCredentials.namespaces **Deprecated in favor of `global.sharedResources.namespace`.** List of namespaces to look for shared credentials. Note that as of v1.0.0, the Kargo controller does not have cluster-wide access to Secrets. The controller receives read-only permission for Secrets on a per-Project basis as Projects are created. If you designate some namespaces as homes for "global" credentials, you will need to manually grant the controller permission to read Secrets in those namespaces.
     namespaces: []
 
   ## @param controller.allowCredentialsOverHTTP Specifies whether the controller should allow credentials (for Git repositories, etc.) to be retrieved and used for operations over HTTP. This is generally discouraged, as it can expose sensitive information. When set to `false`, the controller will only allow credentials to be used over HTTPS (or other secure protocols).
@@ -517,6 +530,16 @@ controller:
       name: ""
       ## @param controller.gitClient.signingKeySecret.type Specifies the type of the signing key. The currently supported and default option is `gpg`.
       type: ""
+
+  images:
+    registries:
+      ## @param controller.images.registries.rateLimit defines the rate limit in requests-per-second (on a per registry basis) that will be voluntarily enforced client-side for all interactions with container image registries. The default limit is very low, but tune this setting with great caution. Turning it up is not a guarantee of improved Warehouse performance. When registries begin enforcing rate limits because the client is not, the resulting errors may degrade performance worse than voluntarily observing a more conservative rate limit.
+      rateLimit: 20
+    cache:
+      ## @param controller.images.cache.cacheByTagPolicy establishes a policy regarding the caching of container image metadata using tags as keys in order to realize a performance boost. Doing so is safest when it is known that image tags are immutable (never overwritten). Permissible values are: "Forbid" (no caching by tag; silently enforced), "Allow" (subscriptions MAY opt-in to caching by tag), "Require" (subscriptions MUST opt-in to caching by tag; effectively this is developer acknowledgement of the cache by tag behavior), "Force" (caching by tag is silently enforced).
+      cacheByTagPolicy: Allow
+      ## @param controller.images.cache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
+      maxEntries: 100000
 
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.

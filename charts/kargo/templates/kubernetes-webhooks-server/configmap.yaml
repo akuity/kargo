@@ -19,4 +19,5 @@ data:
   {{- else }}
   CONTROLPLANE_USER_REGEX: {{ include "kargo.controlplane.defaultUserRegex" . }}
   {{- end }}
+  CACHE_BY_TAG_POLICY: {{ quote .Values.controller.images.cache.cacheByTagPolicy }}
 {{- end }}
