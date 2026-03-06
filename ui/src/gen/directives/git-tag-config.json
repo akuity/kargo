@@ -3,16 +3,6 @@
  "title": "GitTagConfig",
  "type": "object",
  "properties": {
-  "path": {
-   "type": "string",
-   "description": "The path to a working directory of a local repository.",
-   "minLength": 1
-  },
-  "tag": {
-   "type": "string",
-   "description": "The tag to create in the repository.",
-   "minLength": 1
-  },
   "tagger": {
    "type": "object",
    "description": "Optional tagger information for the tag. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
@@ -30,13 +20,24 @@
     },
     "signingKey": {
      "type": "string",
-     "description": "The GPG signing key for the tagger."
-    },
-    "signingMessage": {
-     "type": "string",
-     "description": "The message to include when signing the tag."
+     "description": "The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided and must match the 'email' and 'name' in the uid of the associated GPG key."
     }
    }
+  },
+  "message": {
+   "type": "string",
+   "description": "The annotation message for the tag.",
+   "minLength": 1
+  },
+  "tag": {
+   "type": "string",
+   "description": "The tag to create in the repository.",
+   "minLength": 1
+  },
+  "path": {
+   "type": "string",
+   "description": "The path to a working directory of a local repository.",
+   "minLength": 1
   }
  }
 }

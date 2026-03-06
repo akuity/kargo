@@ -206,7 +206,8 @@ type GitCommitConfigAuthor struct {
 	Email string `json:"email"`
 	// The name of the author.
 	Name string `json:"name"`
-	// The GPG signing key for the author.
+	// The GPG signing key for the author. If provided 'email' and 'name' must match the ones in
+	// the uid of the associated GPG key.
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
@@ -288,6 +289,8 @@ type GitPushConfig struct {
 }
 
 type GitTagConfig struct {
+	// The annotation message for the tag.
+	Message string `json:"message,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The tag to create in the repository.
@@ -308,10 +311,9 @@ type Tagger struct {
 	// The name of the tagger. If unspecified, defaults to the repo-level configuration
 	// specified when the repo was cloned. Can also be configured at the system level.
 	Name string `json:"name,omitempty"`
-	// The GPG signing key for the tagger.
-	SigningKey string `json:"signingKey"`
-	// The message to include when signing the tag.
-	SigningMessage string `json:"signingMessage"`
+	// The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided
+	// and must match the 'email' and 'name' in the uid of the associated GPG key.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitWaitForPRConfig struct {
