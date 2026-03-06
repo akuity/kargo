@@ -107,6 +107,50 @@ characters:
 			},
 		},
 		{
+			name: "escaped dots in keys",
+			inBytes: []byte(`
+example.com/version: v1.0.0
+image:
+  tag: v1.0.0
+configs:
+  example.com/feature: false
+containers:
+  - name: my-app
+    image: my-app:v1.0
+`),
+			updates: []Update{
+				{
+					Key:   `example\.com/version`,
+					Value: `v2.0.0`,
+				},
+				{
+					Key:   `image.tag`,
+					Value: `v2.0.0`,
+				},
+				{
+					Key:   `configs.example\.com/feature`,
+					Value: true,
+				},
+				{
+					Key:   `containers.0.image`,
+					Value: `my-app:v2.0.0`,
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte(`
+example.com/version: v2.0.0
+image:
+  tag: v2.0.0
+configs:
+  example.com/feature: true
+containers:
+  - name: my-app
+    image: my-app:v2.0.0
+`), bytes)
+			},
+		},
+		{
 			name: "really long lines still work",
 			// nolint:lll
 			inBytes: []byte(`
@@ -198,4 +242,100 @@ characters:
 			testCase.assertions(t, line, col, err)
 		})
 	}
+}
+
+func TestSplitKeyPath(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected []string
+	}{
+		{
+			input:    `image.tag`,
+			expected: []string{`image`, `tag`},
+		},
+		{
+			input:    `example\.com/version`,
+			expected: []string{`example.com/version`},
+		},
+		{
+			input:    `configs.example\.com/feature`,
+			expected: []string{`configs`, `example.com/feature`},
+		},
+		{
+			input:    `containers.0.image`,
+			expected: []string{`containers`, `0`, `image`},
+		},
+		{
+			input:    `foo\\bar`,
+			expected: []string{`foo\bar`},
+		},
+		{
+			input:    `foo\\.bar`,
+			expected: []string{`foo\`, `bar`},
+		},
+		{
+			input:    `foo\`,
+			expected: []string{`foo\`},
+		},
+		{
+			input:    `foo\.\.bar`,
+			expected: []string{`foo..bar`},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			got := splitKeyPath(tc.input)
+			require.Equal(t, tc.expected, got)
+		})
+	}
+}
+
+func TestSetValuesInBytesWithEscapedDotNested(t *testing.T) {
+	yamlBytes := []byte(`
+configs:
+  example.com/feature:
+    enabled: false
+`)
+
+	updates := []Update{
+		{
+			Key:   "configs.example\\.com/feature.enabled",
+			Value: true,
+		},
+	}
+
+	expected := []byte(`
+configs:
+  example.com/feature:
+    enabled: true
+`)
+
+	out, err := SetValuesInBytes(yamlBytes, updates)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
+}
+
+func TestSequenceAndLiteralDotTogether(t *testing.T) {
+	yamlBytes := []byte(`
+services:
+  - example.com/label: old-value
+    name: my-service
+`)
+
+	updates := []Update{
+		{
+			Key:   `services.0.example\.com/label`,
+			Value: "new-value",
+		},
+	}
+
+	expected := []byte(`
+services:
+  - example.com/label: new-value
+    name: my-service
+`)
+
+	out, err := SetValuesInBytes(yamlBytes, updates)
+	require.NoError(t, err)
+	require.Equal(t, expected, out)
 }
