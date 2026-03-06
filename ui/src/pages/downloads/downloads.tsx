@@ -1,6 +1,6 @@
 import { faCodeCommit, faExternalLink } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Select, Spin } from 'antd';
+import { Select, Spin, Typography } from 'antd';
 import { useState } from 'react';
 
 import { PageTitle } from '@ui/features/common';
@@ -33,15 +33,20 @@ export const Downloads = () => {
         <FontAwesomeIcon icon={faCodeCommit} className='mr-2' />
         {effectiveRelease ? majorMinorVersion(effectiveRelease.version) : 'Latest version'}
       </div>
-      <a
+      <Typography.Link
         href={GITHUB_RELEASES_URL}
         target='_blank'
-        rel='noreferrer'
-        className='mb-4 flex text-xs items-center text-blue-500 uppercase'
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          marginBottom: 16,
+          fontSize: 12,
+          textTransform: 'uppercase'
+        }}
       >
-        <FontAwesomeIcon icon={faExternalLink} className='mr-2' />
+        <FontAwesomeIcon icon={faExternalLink} style={{ marginRight: 8 }} />
         View all releases
-      </a>
+      </Typography.Link>
       <div className='mb-6'>
         {isLoading ? (
           <Spin size='small' />
