@@ -321,6 +321,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		opts = &TagOptions{}
 	}
 
+	// If no tagger is specified we just create a lightweight tag ( no annotation, unsigned ).
 	if opts.Tagger == nil {
 		if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
 			return fmt.Errorf("error creating tag %q", err)
