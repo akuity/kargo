@@ -34,6 +34,7 @@ const (
 	PromotionsByTerminalField        = "terminal"
 
 	RunningPromotionsByArgoCDApplicationsField = "applications"
+	RunningPromotionsByPullRequestField        = "pullRequests"
 
 	StagesByAnalysisRunField    = "analysisRun"
 	StagesByFreightField        = "freight"
@@ -294,6 +295,185 @@ func RunningPromotionsByArgoCDApplications(
 					}
 				}
 			}
+		}
+		return res
+	}
+}
+
+// RunningPromotionsByPullRequest returns a client.IndexerFunc that indexes
+// running Promotions by the pull requests they are waiting on via
+// git-wait-for-pr steps. Index keys have the form
+// "{normalizedRepoURL}:{prNumber}".
+func RunningPromotionsByPullRequest(
+	ctx context.Context,
+	cl client.Client,
+) client.IndexerFunc {
+	logger := logging.LoggerFromContext(ctx)
+
+	return func(obj client.Object) []string {
+		promo, ok := obj.(*kargoapi.Promotion)
+		if !ok {
+			return nil
+		}
+
+		if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
+			// We are only interested in running Promotions.
+			return nil
+		}
+
+		// Get the Stage for the Promotion. We need this to build the context
+		// for the Promotion step. Unlike the ArgoCD indexer, we fall back to
+		// a nil Stage rather than returning nil, because repoURL and prNumber
+		// expressions rarely reference Stage-specific data.
+		stage := &kargoapi.Stage{}
+		if err := cl.Get(ctx, client.ObjectKey{
+			Name:      promo.Spec.Stage,
+			Namespace: promo.Namespace,
+		}, stage); err != nil {
+			logger.Info(
+				"failed to get Stage for Promotion; proceeding without Stage context",
+				"promo", promo.Name,
+				"namespace", promo.Namespace,
+				"stage", promo.Spec.Stage,
+				"error", err,
+			)
+			stage = nil
+		}
+
+		// Build just enough context to extract the relevant config from the
+		// git-wait-for-pr promotion step.
+		promoCtx := promotion.NewContext(promo, stage)
+
+		var res []string
+		for i, step := range promo.Spec.Steps {
+			if int64(i) > promo.Status.CurrentStep {
+				// We are only interested in steps that have already been executed
+				// or are about to be.
+				break
+			}
+			if step.Uses != "git-wait-for-pr" || step.Config == nil {
+				continue
+			}
+
+			dirStep := promotion.Step{
+				Kind:   step.Uses,
+				Alias:  step.As,
+				Vars:   step.Vars,
+				Config: step.Config.Raw,
+			}
+
+			evaluator := promotion.NewStepEvaluator(cl, nil)
+
+			// As step-level variables are allowed to reference outputs, we
+			// need to provide the state.
+			vars, err := evaluator.Vars(ctx, promoCtx, dirStep)
+			if err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to extract relevant config from Promotion step %d:"+
+							" ignoring any pull requests from this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+
+			// Unpack the raw config into a map. We're not unpacking it into a
+			// struct because:
+			// 1. We don't want to evaluate expressions throughout the entire
+			//    config because we may not have all context required to do so
+			//    available. We will only evaluate expressions in specific fields.
+			// 2. If there are expressions in the config, some fields that may
+			//    not be strings in the struct may be strings in the unevaluated
+			//    config and this could lead to unmarshaling errors.
+			cfgMap := map[string]any{}
+			if err = json.Unmarshal(step.Config.Raw, &cfgMap); err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to extract relevant config from Promotion step %d:"+
+							" ignoring any pull requests from this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+
+			env := evaluator.BuildExprEnv(
+				promoCtx,
+				promotion.ExprEnvWithOutputs(promoCtx.State),
+				promotion.ExprEnvWithTaskOutputs(dirStep.Alias, promoCtx.State),
+				promotion.ExprEnvWithVars(vars),
+			)
+
+			repoURLTemplate, ok := cfgMap["repoURL"].(string)
+			if !ok {
+				continue
+			}
+			repoURLVal, err := expressions.EvaluateTemplate(repoURLTemplate, env)
+			if err != nil {
+				logger.Error(
+					err,
+					fmt.Sprintf(
+						"failed to evaluate repoURL in Promotion step %d:"+
+							" ignoring this step",
+						i,
+					),
+					"promo", promo.Name,
+					"namespace", promo.Namespace,
+				)
+				continue
+			}
+			repoURL, ok := repoURLVal.(string)
+			if !ok {
+				continue
+			}
+
+			var prNumber int64
+			switch v := cfgMap["prNumber"].(type) {
+			case float64:
+				prNumber = int64(v)
+			case string:
+				prNumVal, evalErr := expressions.EvaluateTemplate(v, env)
+				if evalErr != nil {
+					logger.Error(
+						evalErr,
+						fmt.Sprintf(
+							"failed to evaluate prNumber in Promotion step %d:"+
+								" ignoring this step",
+							i,
+						),
+						"promo", promo.Name,
+						"namespace", promo.Namespace,
+					)
+					continue
+				}
+				switch n := prNumVal.(type) {
+				case float64:
+					prNumber = int64(n)
+				case int:
+					prNumber = int64(n)
+				case int64:
+					prNumber = n
+				default:
+					continue
+				}
+			default:
+				continue
+			}
+
+			if prNumber <= 0 {
+				continue
+			}
+
+			res = append(res,
+				fmt.Sprintf("%s:%d", urls.NormalizeGit(repoURL), prNumber),
+			)
 		}
 		return res
 	}

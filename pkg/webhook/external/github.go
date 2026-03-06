@@ -25,9 +25,10 @@ const (
 	// has been registered directly at the repository-level. i.e. When the webhook
 	// has not been registered indirectly via a GitHub App that's been installed
 	// into the repository.
-	githubEventTypePackage = "package"
-	githubEventTypePing    = "ping"
-	githubEventTypePush    = "push"
+	githubEventTypePackage     = "package"
+	githubEventTypePing        = "ping"
+	githubEventTypePullRequest = "pull_request"
+	githubEventTypePush        = "push"
 	// githubEventTypeRegistryPackage corresponds to a package push event when the
 	// webhook has been registered indirectly via a GitHub App that's been
 	// installed into the repository. i.e. When the webhook has not been
@@ -103,6 +104,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		switch eventType {
 		case githubEventTypePackage,
 			githubEventTypePing,
+			githubEventTypePullRequest,
 			githubEventTypePush,
 			githubEventTypeRegistryPackage:
 		default:
@@ -207,6 +209,21 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 					"msg": "ping event received, webhook is configured correctly",
 				},
 			)
+			return
+
+		case *gh.PullRequestEvent:
+			if e.GetAction() != "closed" {
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			prNumber := e.GetNumber()
+			repoURLs = []string{
+				urls.NormalizeGit(e.GetRepo().GetCloneURL()),
+				urls.NormalizeGit(e.GetRepo().GetSSHURL()),
+			}
+			logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			refreshPromotions(ctx, w, g.client, g.project, repoURLs, prNumber)
 			return
 
 		case *gh.PushEvent:

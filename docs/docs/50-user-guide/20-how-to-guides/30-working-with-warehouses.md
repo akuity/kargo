@@ -1112,7 +1112,11 @@ contains structured information (usually JSON) the sender wishes to share about
 some event. Invariably, among this information, is the URL of the repository
 from which the event originated.
 
-A webhook receiver's only job is to extract a repository URL from the webhook
-request's payload, query for all `Warehouse` resources within the Project having
-subscriptions to that repository, and request each to execute their discovery
-process.
+A webhook receiver extracts a repository URL from the request payload and
+queries for all `Warehouse` resources within the Project having subscriptions to
+that repository, requesting each to execute their discovery process. For
+providers that support pull request events (such as GitHub), the receiver also
+refreshes any running `Promotion` that is waiting on the affected pull request
+via a
+[`git-wait-for-pr`](../60-reference-docs/30-promotion-steps/git-wait-for-pr.md)
+step.
