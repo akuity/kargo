@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,50 +26,55 @@ func (s *server) DeleteResource(
 	}
 	resources := append(otherResources, projects...)
 	res := make([]*svcv1alpha1.DeleteResourceResult, 0, len(resources))
+	errs := []error{}
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		res = append(res, s.deleteResourceProto(ctx, &resource))
+		deleteResult, deleteErr := s.deleteResourceProto(ctx, &resource)
+		res = append(res, deleteResult)
+		errs = append(errs, deleteErr)
 	}
+	err = errors.Join(errs...)
 	return &connect.Response[svcv1alpha1.DeleteResourceResponse]{
 		Msg: &svcv1alpha1.DeleteResourceResponse{
 			Results: res,
 		},
-	}, nil
+	}, err
 }
 
 func (s *server) deleteResourceProto(
 	ctx context.Context,
 	obj *unstructured.Unstructured,
-) *svcv1alpha1.DeleteResourceResult {
+) (*svcv1alpha1.DeleteResourceResult, error) {
 	if obj.GroupVersionKind() == secretGVK && !s.cfg.SecretManagementEnabled {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{
 				Error: errSecretManagementDisabled.Error(),
 			},
-		}
+		}, errSecretManagementDisabled
 	}
 
-	if err := s.client.Delete(ctx, obj); err != nil {
+	deleteResult, err := s.deleteResource(ctx, obj)
+	if err != nil {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{
 				Error: fmt.Errorf("delete resource: %w", err).Error(),
 			},
-		}
+		}, err
 	}
 
-	deletedManifest, err := sigyaml.Marshal(obj)
+	deletedManifest, err := sigyaml.Marshal(deleteResult.DeletedResourceManifest)
 	if err != nil {
 		return &svcv1alpha1.DeleteResourceResult{
 			Result: &svcv1alpha1.DeleteResourceResult_Error{
 				Error: fmt.Errorf("marshal deleted manifest: %w", err).Error(),
 			},
-		}
+		}, err
 	}
 	return &svcv1alpha1.DeleteResourceResult{
 		Result: &svcv1alpha1.DeleteResourceResult_DeletedResourceManifest{
 			DeletedResourceManifest: deletedManifest,
 		},
-	}
+	}, nil
 }
 
 type deleteResourceResponse struct {
