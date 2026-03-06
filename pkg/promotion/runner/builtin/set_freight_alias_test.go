@@ -85,7 +85,7 @@ func Test_setFreightAlias_convert(t *testing.T) {
 	}
 
 	r := newSetFreightAlias(promotion.StepRunnerCapabilities{})
-	runner, ok := r.(*setFreightAlias)
+	runner, ok := r.(*freightAliasSetter)
 	require.True(t, ok)
 
 	runValidationTests(t, runner.convert, tests)
@@ -191,7 +191,7 @@ func Test_setFreightAlias_run(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			step := &setFreightAlias{
+			step := &freightAliasSetter{
 				kargoClient: tt.client,
 			}
 
