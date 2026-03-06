@@ -14,10 +14,10 @@ referencing the current `HEAD` of a checked-out branch.
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The tag to create. |
+| `message` | `string` | N | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `tagger.name` | `string` | N | The tagger's name. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `tagger.email` | `string` | N | The tagger's email address. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
-| `tagger.signingKey` | `string` | Y | The GPG signing key for the tagger. |
-| `tagger.signingMessage` | `string` | Y | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
+| `tagger.signingKey` | `string` | N | The GPG signing key for the tagger. If provided `tagger.name` and `tagger.email` must also be provided and must match the email and name in the uid of the associated GPG key. |
 
 ## Output
 
@@ -74,7 +74,8 @@ steps:
 ### Creating A Signed Tag
 
 In this example, the `git-tag` step creates a signed tag using the provided 
-tagger signing information.
+`tagger.signingKey` by sourcing it from an existing secret in the same namespace
+using the [`secret()`](../40-expressions.md#secretname) expression function.
 
 :::note
 
@@ -90,9 +91,17 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
+    message: legitness
     tagger:
       name: yourname
       email: your@inbox.com
       signingKey: ${{ secret('my-gpg-secret').privateKey }}
-      signingMessage: legitness
 ```
+
+:::note
+
+If `tagger.signingKey` is provided but `tagger.name` and `tagger.email` do not
+match the email and name in the uid of the associated GPG key, the tag will not
+get signed.
+
+:::
