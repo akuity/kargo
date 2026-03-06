@@ -321,36 +321,30 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		opts = &TagOptions{}
 	}
 
-	// If no tagger is specified we just create a lightweight tag ( no annotation, unsigned ).
-	if opts.Tagger == nil {
-		if _, err := libExec.Exec(w.buildGitCommand("tag", tag)); err != nil {
-			return fmt.Errorf("error creating tag %q", err)
-		}
-		return nil
-	}
-
 	var homeDir string
 	// This signing config is specific to this tag, so we will override
 	// repository-level signing config by creating a temporary home
 	// directory, setting the tag configuration "globally" within it, and
 	// then ensuring the git tag command uses that home directory.
-	var err error
-	if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
-		return fmt.Errorf(
-			"error creating virtual home directory %q for tag command: %w",
-			homeDir, err,
-		)
-	}
-	defer func() {
-		if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-			logging.LoggerFromContext(context.TODO()).
-				Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+	if opts.Tagger != nil {
+		var err error
+		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+			return fmt.Errorf(
+				"error creating virtual home directory %q for tag command: %w",
+				homeDir, err,
+			)
 		}
-	}()
-	if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
-		return fmt.Errorf(
-			"error setting up author information for tag command: %w", err,
-		)
+		defer func() {
+			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+				logging.LoggerFromContext(context.TODO()).
+					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+			}
+		}()
+		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+			return fmt.Errorf(
+				"error setting up author information for tag command: %w", err,
+			)
+		}
 	}
 
 	msg := "Created by Kargo"
