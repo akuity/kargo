@@ -133,10 +133,14 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
+	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
+	// yet if called during clone. homeDir is safe since we're only writing
+	// "global" git config for a synthetic user.
 	cmd.Dir = homeDir
+	// Override HOME set by buildGitCommand(). The caller may provide a
+	// different homeDir to set up ephemeral config for a per-commit author
+	// identity.
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user name: %w", err)
 	}
@@ -146,10 +150,9 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
+	// See justification for both of these overrides above.
 	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user email: %w", err)
 	}
@@ -179,11 +182,10 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 		}
 
 		if author.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
-			// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-			// repository's path, but if this method was called as part of the cloning
-			// process, that path may not exist yet.
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
@@ -197,10 +199,9 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 			}
 
 			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			// Override the cmd.Dir that's set by b.buildCommand(). It's normally the
-			// repository's path, but if this method was called as part of the cloning
-			// process, that path may not exist yet.
+			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
 			}
