@@ -1,0 +1,187 @@
+<svg viewBox="0 0 1000 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font-family: -apple-system, sans-serif; font-size: 32px; font-weight: 700; fill: #111827; }
+      .subtitle { font-family: -apple-system, sans-serif; font-size: 16px; fill: #6B7280; }
+      .section-title { font-family: -apple-system, sans-serif; font-size: 20px; font-weight: 600; fill: #111827; }
+      .box-label { font-family: -apple-system, sans-serif; font-size: 15px; font-weight: 600; }
+      .box-desc { font-family: -apple-system, sans-serif; font-size: 13px; }
+      .step-text { font-family: -apple-system, sans-serif; font-size: 14px; fill: #1F2937; }
+      .badge { font-family: -apple-system, sans-serif; font-size: 12px; font-weight: 600; fill: white; }
+      
+      .pipeline-box { rx: 12; stroke-width: 2.5; }
+      .ci { fill: #3B82F6; stroke: #2563EB; }
+      .registry { fill: #8B5CF6; stroke: #7C3AED; }
+      .gap { fill: none; stroke: #EF4444; stroke-width: 3; stroke-dasharray: 8,6; }
+      .kargo { fill: #10B981; stroke: #059669; }
+      .git { fill: #F59E0B; stroke: #D97706; }
+      .argocd { fill: #06B6D4; stroke: #0891B2; }
+      .cluster { fill: #6366F1; stroke: #4F46E5; }
+      
+      .flow-arrow { stroke: #374151; stroke-width: 2.5; fill: none; }
+      .problem-arrow { stroke: #EF4444; stroke-width: 3; fill: none; stroke-dasharray: 6,4; }
+      .highlight-arrow { stroke: #10B981; stroke-width: 3; fill: none; }
+    </style>
+    
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#374151"/>
+    </marker>
+    <marker id="problem-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#EF4444"/>
+    </marker>
+    <marker id="highlight-arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#10B981"/>
+    </marker>
+    
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Main Pipeline Flow -->
+  <g id="pipeline">
+    
+    <!-- CI/CD Build -->
+    <rect class="pipeline-box ci" x="50" y="40" width="110" height="100"/>
+    <text class="box-label" x="105" y="75" text-anchor="middle" fill="white">Your CI</text>
+    <text class="box-desc" x="105" y="95" text-anchor="middle" fill="white">Jenkins</text>
+    <text class="box-desc" x="105" y="112" text-anchor="middle" fill="white">GitHub Actions</text>
+    <text class="box-desc" x="105" y="129" text-anchor="middle" fill="white">GitLab CI</text>
+    
+    <!-- Arrow 1: CI pushes to Registry -->
+    <path class="flow-arrow" d="M 160 90 L 220 90" marker-end="url(#arrow)"/>
+    <text class="box-desc" x="190" y="65" text-anchor="middle" fill="#374151" font-weight="600">pushes</text>
+    <text class="box-desc" x="190" y="79" text-anchor="middle" fill="#374151" font-weight="600">image to</text>
+    
+    <!-- Container Registry -->
+    <rect class="pipeline-box registry" x="220" y="40" width="130" height="100"/>
+    <text class="box-label" x="285" y="70" text-anchor="middle" fill="white">Registry</text>
+    <text class="box-desc" x="285" y="92" text-anchor="middle" fill="white">myapp:v1.0.0</text>
+    <text class="box-desc" x="285" y="109" text-anchor="middle" fill="white">myapp:v1.0.1</text>
+    <text class="box-desc" x="285" y="126" text-anchor="middle" fill="white">myapp:v1.0.2 ✨</text>
+    
+    <!-- THE GAP - Highlighted with dashed box (shifted right) -->
+    <rect class="pipeline-box gap" x="380" y="30" width="160" height="120" filter="url(#glow)"/>
+    <text class="section-title" x="460" y="65" text-anchor="middle" fill="#DC2626">THE GAP</text>
+    <text class="box-desc" x="460" y="88" text-anchor="middle" fill="#DC2626" font-weight="600">Who updates</text>
+    <text class="box-desc" x="460" y="105" text-anchor="middle" fill="#DC2626" font-weight="600">Git when new</text>
+    <text class="box-desc" x="460" y="122" text-anchor="middle" fill="#DC2626" font-weight="600">images arrive?</text>
+    
+    <!-- Problem arrow (dashed) -->
+    <path class="problem-arrow" d="M 350 90 L 380 90" marker-end="url(#problem-arrow)"/>
+    
+    <!-- Git Repo (shifted right) -->
+    <rect class="pipeline-box git" x="560" y="40" width="110" height="100"/>
+    <text class="box-label" x="615" y="70" text-anchor="middle" fill="white">Git Repo</text>
+    <text class="box-desc" x="615" y="92" text-anchor="middle" fill="white">deploy.yaml:</text>
+    <text class="box-desc" x="615" y="112" text-anchor="middle" fill="white" font-family="monospace" font-size="11">image: myapp:</text>
+    <text class="box-desc" x="615" y="128" text-anchor="middle" fill="white" font-family="monospace" font-size="11">  v1.0.0</text>
+    
+    <!-- Arrow 3: Argo CD reads from Git (reduced by 10px) -->
+    <path class="flow-arrow" d="M 670 90 L 720 90" marker-end="url(#arrow)"/>
+    <text class="box-desc" x="695" y="65" text-anchor="middle" fill="#374151" font-weight="600">read</text>
+    <text class="box-desc" x="695" y="79" text-anchor="middle" fill="#374151" font-weight="600">by</text>
+    
+    <!-- Argo CD (shifted right) -->
+    <rect class="pipeline-box argocd" x="720" y="40" width="90" height="100"/>
+    <text class="box-label" x="765" y="75" text-anchor="middle" fill="white">Argo CD</text>
+    <text class="box-desc" x="765" y="95" text-anchor="middle" fill="white">GitOps</text>
+    <text class="box-desc" x="765" y="112" text-anchor="middle" fill="white">Controller</text>
+    
+    <!-- Arrow 4: Argo CD applies to Cluster (reduced by 10px) -->
+    <path class="flow-arrow" d="M 810 90 L 860 90" marker-end="url(#arrow)"/>
+    <text class="box-desc" x="835" y="65" text-anchor="middle" fill="#374151" font-weight="600">applies</text>
+    <text class="box-desc" x="835" y="79" text-anchor="middle" fill="#374151" font-weight="600">to</text>
+    
+    <!-- Cluster -->
+    <rect class="pipeline-box cluster" x="860" y="40" width="60" height="100"/>
+    <text class="box-label" x="890" y="85" text-anchor="middle" fill="white" font-size="13">K8s</text>
+    <text class="box-label" x="890" y="102" text-anchor="middle" fill="white" font-size="13">Cluster</text>
+    
+  </g>
+  
+  <!-- The Solution: Kargo fills the gap -->
+  <g id="solution" transform="translate(0, 180)">
+    
+    <!-- Background highlight -->
+    <rect fill="#F0FDF4" x="30" y="-10" width="940" height="240" rx="12" stroke="#10B981" stroke-width="2" opacity="0.3"/>
+    
+    <!-- "The Solution" badge -->
+    <circle fill="#10B981" cx="80" cy="10" r="18"/>
+    <text class="badge" x="80" y="15" text-anchor="middle">✓</text>
+    <text class="section-title" x="110" y="18" fill="#059669">The Solution: Kargo Fills The Gap</text>
+    
+    <!-- Same boxes but with Kargo in the middle - vertically centered -->
+    
+    <!-- Registry (smaller, reference) -->
+    <rect class="pipeline-box registry" x="50" y="60" width="120" height="80" opacity="0.6"/>
+    <text class="box-label" x="110" y="90" text-anchor="middle" fill="white" font-size="13">Registry</text>
+    <text class="box-desc" x="110" y="110" text-anchor="middle" fill="white" font-size="11">New images</text>
+    <text class="box-desc" x="110" y="125" text-anchor="middle" fill="white" font-size="11">published here</text>
+    
+    <!-- Arrow to Kargo: Kargo watches Registry -->
+    <path class="highlight-arrow" d="M 170 100 L 230 100" marker-end="url(#highlight-arrow)"/>
+    <text class="box-desc" x="200" y="71" text-anchor="middle" fill="#059669" font-weight="600">watched</text>
+    <text class="box-desc" x="200" y="85" text-anchor="middle" fill="#059669" font-weight="600">by</text>
+    
+    <!-- KARGO - The Star of the Show (wider, centered) -->
+    <g filter="url(#glow)">
+      <rect class="pipeline-box kargo" x="230" y="50" width="340" height="100"/>
+      <text class="box-label" x="400" y="80" text-anchor="middle" fill="white" font-size="20">KARGO</text>
+      <line x1="240" y1="95" x2="560" y2="95" stroke="white" stroke-width="1" opacity="0.4"/>
+      <text class="box-desc" x="400" y="112" text-anchor="middle" fill="white">✓ Discovers new versions</text>
+      <text class="box-desc" x="400" y="128" text-anchor="middle" fill="white">✓ Orchestrates promotions</text>
+      <text class="box-desc" x="400" y="144" text-anchor="middle" fill="white">✓ Commits to Git</text>
+    </g>
+    
+    <!-- Arrow from Kargo to Git: Kargo writes to Git -->
+    <path class="highlight-arrow" d="M 570 100 L 630 100" marker-end="url(#highlight-arrow)"/>
+    <text class="box-desc" x="600" y="71" text-anchor="middle" fill="#059669" font-weight="600">commits</text>
+    <text class="box-desc" x="600" y="85" text-anchor="middle" fill="#059669" font-weight="600">to</text>
+    
+    <!-- Git (smaller, reference) -->
+    <rect class="pipeline-box git" x="630" y="60" width="120" height="80" opacity="0.6"/>
+    <text class="box-label" x="690" y="90" text-anchor="middle" fill="white" font-size="13">Git Repo</text>
+    <text class="box-desc" x="690" y="110" text-anchor="middle" fill="white" font-size="11">Manifests</text>
+    <text class="box-desc" x="690" y="125" text-anchor="middle" fill="white" font-size="11">updated here</text>
+    
+    <!-- Arrow to Argo CD: Argo CD reads from Git -->
+    <path class="flow-arrow" d="M 750 100 L 810 100" marker-end="url(#arrow)"/>
+    <text class="box-desc" x="780" y="85" text-anchor="middle" fill="#374151" font-weight="600">read by</text>
+    
+    <!-- Argo CD (smaller, reference) -->
+    <rect class="pipeline-box argocd" x="810" y="60" width="120" height="80" opacity="0.6"/>
+    <text class="box-label" x="870" y="90" text-anchor="middle" fill="white" font-size="13">Argo CD</text>
+    <text class="box-desc" x="870" y="110" text-anchor="middle" fill="white" font-size="11">Syncs to</text>
+    <text class="box-desc" x="870" y="125" text-anchor="middle" fill="white" font-size="11">cluster</text>
+    
+    <!-- Environments visualization -->
+    <g transform="translate(300, 170)">
+      <text class="box-desc" x="100" y="0" text-anchor="middle" fill="#374151" font-weight="600" font-style="italic">Promotes through environments:</text>
+      
+      <!-- Dev -->
+      <rect fill="#E5E7EB" x="0" y="10" width="40" height="35" rx="4" stroke="#374151" stroke-width="1.5"/>
+      <text class="step-text" x="20" y="32" text-anchor="middle" fill="#111827" font-weight="600">Dev</text>
+      
+      <!-- Arrow -->
+      <path stroke="#374151" stroke-width="2" d="M 40 27 L 70 27" marker-end="url(#arrow)"/>
+      
+      <!-- Staging -->
+      <rect fill="#E5E7EB" x="70" y="10" width="60" height="35" rx="4" stroke="#374151" stroke-width="1.5"/>
+      <text class="step-text" x="100" y="32" text-anchor="middle" fill="#111827" font-weight="600">Staging</text>
+      
+      <!-- Arrow -->
+      <path stroke="#374151" stroke-width="2" d="M 130 27 L 160 27" marker-end="url(#arrow)"/>
+      
+      <!-- Prod -->
+      <rect fill="#E5E7EB" x="160" y="10" width="40" height="35" rx="4" stroke="#374151" stroke-width="1.5"/>
+      <text class="step-text" x="180" y="32" text-anchor="middle" fill="#111827" font-weight="600">Prod</text>
+    </g>
+    
+  </g>
+  
+</svg>
