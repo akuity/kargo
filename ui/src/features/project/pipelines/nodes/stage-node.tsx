@@ -8,7 +8,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
+import { Button, Card, Dropdown, Flex, message, Space, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
@@ -155,31 +155,35 @@ export const StageNode = (props: { stage: Stage }) => {
                 icon: <img src='/argo-logo.svg' alt='ArgoCD' style={{ width: '18px' }} />
               }}
             />
-            <Dropdown
-              trigger={['click']}
-              overlayClassName='w-fit'
-              menu={{
-                items: dropdownItems
-              }}
-            >
+            <Tooltip title='Promote'>
+              <Dropdown
+                trigger={['click']}
+                overlayClassName='w-fit'
+                menu={{
+                  items: dropdownItems
+                }}
+              >
+                <Button
+                  size='small'
+                  loading={queryFreightMutation.isPending}
+                  icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
+                />
+              </Dropdown>
+            </Tooltip>
+            <Tooltip title='Stage Details'>
               <Button
+                icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
                 size='small'
-                loading={queryFreightMutation.isPending}
-                icon={<FontAwesomeIcon icon={faTruckArrowRight} size='sm' />}
+                onClick={() =>
+                  navigate(
+                    generatePath(paths.stage, {
+                      name: props.stage?.metadata?.namespace,
+                      stageName: props.stage?.metadata?.name
+                    })
+                  )
+                }
               />
-            </Dropdown>
-            <Button
-              icon={<FontAwesomeIcon icon={faBarsStaggered} className='mt-1' />}
-              size='small'
-              onClick={() =>
-                navigate(
-                  generatePath(paths.stage, {
-                    name: props.stage?.metadata?.namespace,
-                    stageName: props.stage?.metadata?.name
-                  })
-                )
-              }
-            />
+            </Tooltip>
           </Space>
         }
         className={classNames(

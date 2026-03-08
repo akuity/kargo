@@ -71,18 +71,20 @@ export const WarehouseNode = (props: { warehouse: WarehouseExpanded }) => {
 
             {warehouseState.hasError && <Badge status='error' />}
           </Flex>
-          <Button
-            icon={<FontAwesomeIcon icon={faBarsStaggered} />}
-            size='small'
-            onClick={() =>
-              navigate(
-                generatePath(paths.warehouse, {
-                  name: props.warehouse?.metadata?.namespace,
-                  warehouseName: props.warehouse?.metadata?.name
-                })
-              )
-            }
-          />
+          <Tooltip title='Warehouse Details'>
+            <Button
+              icon={<FontAwesomeIcon icon={faBarsStaggered} />}
+              size='small'
+              onClick={() =>
+                navigate(
+                  generatePath(paths.warehouse, {
+                    name: props.warehouse?.metadata?.namespace,
+                    warehouseName: props.warehouse?.metadata?.name
+                  })
+                )
+              }
+            />
+          </Tooltip>
         </Flex>
       }
       className={styles['warehouse-node-size']}
