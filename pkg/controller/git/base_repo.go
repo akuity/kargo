@@ -122,15 +122,18 @@ type User struct {
 	// signing key. When set, setupAuthor marks the key with the
 	// corresponding ownertrust level after import.
 	SigningKeyTrustLevel SigningKeyTrustLevel
+	// gpgFingerprint is the fingerprint of the imported GPG signing key.
+	// It is set by setupAuthor after a successful key import.
+	gpgFingerprint string
 }
 
 // setupAuthor configures the git CLI with a default commit author.
 // Optionally, the author can have an associated signing key. When using GPG
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
-// executed by this method. Returns the GPG key fingerprint if a signing key
-// was imported, or an empty string otherwise.
-func (b *baseRepo) setupAuthor(homeDir string, author *User) (string, error) {
+// executed by this method. Returns the fully resolved User (with
+// gpgFingerprint set when a signing key was imported).
+func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
 	if author == nil {
 		author = &User{}
 	}
@@ -149,7 +152,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (string, error) {
 	// identity.
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return "", fmt.Errorf("error configuring git user name: %w", err)
+		return nil, fmt.Errorf("error configuring git user name: %w", err)
 	}
 
 	if author.Email == "" {
@@ -161,7 +164,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (string, error) {
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return "", fmt.Errorf("error configuring git user email: %w", err)
+		return nil, fmt.Errorf("error configuring git user email: %w", err)
 	}
 
 	// For now, since only GPG signing is supported, we will assume GPG if the
@@ -175,20 +178,21 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (string, error) {
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return "", fmt.Errorf(
+				return nil, fmt.Errorf(
 					"error configuring commit gpg signing: %w", err,
 				)
 			}
 
 			fingerprint, err := b.importGPGSigningKey(homeDir, author)
 			if err != nil {
-				return "", err
+				return nil, err
 			}
-			return fingerprint, nil
+			author.gpgFingerprint = fingerprint
+			return author, nil
 		}
 	}
 
-	return "", nil
+	return author, nil
 }
 
 // importGPGSigningKey imports a GPG signing key into the keyring rooted at

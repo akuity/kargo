@@ -152,9 +152,8 @@ func (g *gitCloner) run(
 			Email:      cfg.Author.Email,
 			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
-		if repoUser.SigningKey != "" {
-			repoUser.SigningKeyTrustLevel = git.SigningKeyTrustLevelUltimate
-		}
+		// SigningKeyTrustLevel is intentionally left at the default
+		// (unknown). Only the system-level signing key is trusted.
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
 	}

@@ -311,7 +311,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				require.Error(t, err)
 				require.True(t, promotion.IsTerminal(err))
 				require.Contains(
-					t, err.Error(), "use force to overwrite",
+					t, err.Error(), "target branch may have diverged",
 				)
 				require.Equal(
 					t,
@@ -812,7 +812,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				require.Error(t, err)
 				require.True(t, promotion.IsTerminal(err))
 				require.Contains(
-					t, err.Error(), "use force to overwrite",
+					t, err.Error(), "target branch may have diverged",
 				)
 				require.Equal(
 					t,

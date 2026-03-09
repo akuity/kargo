@@ -39,6 +39,8 @@ const (
 )
 
 func init() {
+	var once sync.Once
+	var pusher promotion.StepRunner
 	cfg := githubVerifiedPusherConfig{}
 	envconfig.MustProcess("", &cfg)
 	promotion.DefaultStepRunnerRegistry.MustRegister(
@@ -49,10 +51,17 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
+			// This factory function closes over a single instance of
+			// githubVerifiedPusher so that its mutexes are shared across
+			// all executions of this step runner, which is necessary to
+			// ensure proper locking behavior.
 			Value: func(
 				caps promotion.StepRunnerCapabilities,
 			) promotion.StepRunner {
-				return newGitHubVerifiedPusher(caps, cfg)
+				once.Do(func() {
+					pusher = newGitHubVerifiedPusher(caps, cfg)
+				})
+				return pusher
 			},
 		},
 	)
@@ -276,7 +285,7 @@ func (g *githubVerifiedPusher) run(
 			}, &promotion.TerminalError{
 				Err: fmt.Errorf(
 					"no credentials found for %s;"+
-					" a GitHub App installation token or personal access token is required",
+						" a GitHub App installation token or personal access token is required",
 					workTree.URL(),
 				),
 			}
@@ -464,8 +473,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 					Err: fmt.Errorf(
 						"cannot sign revision range %s..%s: "+
 							"comparison status is %q "+
-							"(target branch may have diverged; "+
-							"use force to overwrite)",
+							"(target branch may have diverged)",
 						targetHead, localHead, status,
 					),
 				}
