@@ -231,7 +231,7 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     container:
-      image: &golangImage golang:1.26.0-trixie
+      image: &golangImage golang:1.26.1-trixie
     strategy:
       matrix:
         os: [linux, darwin, windows]
