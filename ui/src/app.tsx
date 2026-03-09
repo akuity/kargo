@@ -20,7 +20,7 @@ import { MainLayout } from './features/common/layout/main-layout';
 import { Events } from './features/project/events/events';
 import { ProjectSettings } from './features/project/settings/project-settings';
 import { AnalysisRunLogsPage } from './pages/analysis-run-logs';
-import { Downloads } from './pages/downloads';
+import { Downloads } from './pages/downloads/downloads';
 import { Login } from './pages/login/login';
 import { Projects } from './pages/projects';
 import { Settings } from './pages/settings';
