@@ -352,8 +352,7 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 		msg = opts.Message
 	}
 
-	// we use -s because if we get here then the key should have successfully
-	// been configured
+
 	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
 	if homeDir != "" {
 		// Override the home directory set by w.buildGitCommand().
