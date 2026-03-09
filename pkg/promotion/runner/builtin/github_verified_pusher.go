@@ -275,7 +275,8 @@ func (g *githubVerifiedPusher) run(
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{
 				Err: fmt.Errorf(
-					"no credentials (GitHub App installation token) found for %s",
+					"no credentials found for %s;"+
+					" a GitHub App installation token or personal access token is required",
 					workTree.URL(),
 				),
 			}
