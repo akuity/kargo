@@ -203,7 +203,7 @@ func TestMatchesPathsFilters(t *testing.T) {
 			excludeSelectors, err := GetPathSelectors(testCase.excludePaths)
 			require.NoError(t, err)
 
-			matchFound := MatchesPathFilters(includeSelectors, excludeSelectors, testCase.diffs)
+			matchFound := MatchesPathsFilters(includeSelectors, excludeSelectors, testCase.diffs)
 			testCase.assertions(t, matchFound)
 		})
 	}

@@ -72,17 +72,16 @@ func getResult(total, successes, failures int) string {
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are
-// refreshed. Note: Callers are responsible for normalizing the provided
-// repository URLs.
-// The filePaths parameter can optionally contain file paths that were changed,
-// which will be used to filter warehouses based on their includePaths/excludePaths.
+// refreshed. When changedFiles is non-empty, only Warehouses whose
+// includePaths/excludePaths filters match the changed files are refreshed.
+// Note: Callers are responsible for normalizing the provided repository URLs.
 func refreshWarehouses(
 	ctx context.Context,
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
 	repoURLs []string,
-	filePaths []string,
+	changedFiles []string,
 	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -131,8 +130,8 @@ func refreshWarehouses(
 				continue
 			}
 
-			if len(qualifiers) > 0 || len(filePaths) > 0 {
-				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, filePaths, qualifiers...)
+			if len(qualifiers) > 0 {
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -193,10 +192,9 @@ func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,
 	repoURL string,
-	filePaths []string,
+	changedFiles []string,
 	qualifiers ...string,
 ) (bool, error) {
-	logger := logging.LoggerFromContext(ctx)
 	var shouldRefresh bool
 	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
@@ -207,35 +205,29 @@ func shouldRefresh(
 					s.Git.RepoURL, err,
 				)
 			}
-			// Check if the ref matches
-			if len(qualifiers) > 0 && !slices.ContainsFunc(qualifiers, selector.MatchesRef) {
-				logger.Debug(
-					"skipping warehouse refresh: ref doesn't match",
-					"warehouse", wh.Name,
-					"namespace", wh.Namespace,
-				)
-				continue
-			}
-			// If file paths are provided, check if any match the warehouse's path filters
-			if len(filePaths) > 0 && (len(s.Git.IncludePaths) > 0 || len(s.Git.ExcludePaths) > 0) {
-				if !matchesPathFilters(s.Git.IncludePaths, s.Git.ExcludePaths, filePaths) {
-					logger.Debug(
-						"skipping warehouse refresh: file paths don't match path filters",
-						"warehouse", wh.Name,
-						"namespace", wh.Namespace,
-						"includePaths", s.Git.IncludePaths,
-						"excludePaths", s.Git.ExcludePaths,
+			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
+			if shouldRefresh && len(changedFiles) > 0 &&
+				(len(s.Git.IncludePaths) > 0 || len(s.Git.ExcludePaths) > 0) {
+				includeMatcher, iErr := commit.GetPathSelectors(s.Git.IncludePaths)
+				if iErr != nil {
+					return false, fmt.Errorf(
+						"error parsing include path selectors for Git subscription %q: %w",
+						s.Git.RepoURL, iErr,
 					)
-					continue
 				}
+				excludeMatcher, eErr := commit.GetPathSelectors(s.Git.ExcludePaths)
+				if eErr != nil {
+					return false, fmt.Errorf(
+						"error parsing exclude path selectors for Git subscription %q: %w",
+						s.Git.RepoURL, eErr,
+					)
+				}
+				shouldRefresh = commit.MatchesPathsFilters(
+					includeMatcher,
+					excludeMatcher,
+					changedFiles,
+				)
 			}
-			logger.Info(
-				"warehouse matches filters, will refresh",
-				"warehouse", wh.Name,
-				"namespace", wh.Namespace,
-				"includePaths", s.Git.IncludePaths,
-			)
-			shouldRefresh = true
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {
@@ -258,33 +250,4 @@ func shouldRefresh(
 		}
 	}
 	return false, nil
-}
-
-// matchesPathFilters checks if any of the changed file paths match the given
-// includePaths and excludePaths patterns. It returns true if at least one file
-// path is included (matches includePaths or includePaths is empty) and not
-// excluded (doesn't match excludePaths).
-func matchesPathFilters(
-	includePaths []string,
-	excludePaths []string,
-	changedPaths []string,
-) bool {
-	if len(changedPaths) == 0 {
-		return true // No paths to filter, allow refresh
-	}
-
-	includeMatcher, err := commit.GetPathSelectors(includePaths)
-	if err != nil {
-		// If there's an error parsing include patterns, be conservative and allow refresh
-		return true
-	}
-
-	excludeMatcher, err := commit.GetPathSelectors(excludePaths)
-	if err != nil {
-		// If there's an error parsing exclude patterns, be conservative and allow refresh
-		return true
-	}
-
-	// Use the existing path matching logic from the commit package
-	return commit.MatchesPathFilters(includeMatcher, excludeMatcher, changedPaths)
 }

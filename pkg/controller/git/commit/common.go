@@ -6,9 +6,10 @@ import (
 	"github.com/akuity/kargo/pkg/pattern"
 )
 
-// GetPathSelectors converts a slice of path pattern strings into a pattern.Matcher
-// that can match file paths against those patterns. Returns nil if no selectors
-// are provided.
+// GetPathSelectors parses a slice of path selector strings into a
+// pattern.Matcher that can match file paths against include/exclude rules.
+// Returns nil if selectors is empty. Each selector can use glob:, regex:, or
+// regexp: prefixes, or defaults to base directory matching.
 func GetPathSelectors(
 	selectors []string,
 ) (pattern.Matcher, error) {
@@ -26,10 +27,10 @@ func GetPathSelectors(
 	return matchers, nil
 }
 
-// MatchesPathFilters checks if any of the provided paths match the include/exclude
-// filters. Returns true if at least one path is included (matches include pattern
-// or include is nil) and not excluded (doesn't match exclude pattern).
-func MatchesPathFilters(
+// MatchesPathsFilters returns true if any path in diffs passes both the
+// include and exclude filters. If include is nil, all paths are implicitly
+// included. If exclude is nil, no paths are excluded.
+func MatchesPathsFilters(
 	include pattern.Matcher,
 	exclude pattern.Matcher,
 	diffs []string,

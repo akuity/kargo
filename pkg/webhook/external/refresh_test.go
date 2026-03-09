@@ -211,7 +211,7 @@ func TestRefreshWarehouses(t *testing.T) {
 				tt.client,
 				tt.project,
 				testRepoURLs,
-				nil, // filePaths
+				nil,
 			)
 			tt.assertions(t, w)
 		})
@@ -220,11 +220,12 @@ func TestRefreshWarehouses(t *testing.T) {
 
 func TestShouldRefresh(t *testing.T) {
 	testCases := []struct {
-		name       string
-		wh         kargoapi.Warehouse
-		qualifiers []string
-		repoURL    string
-		expect     bool
+		name         string
+		wh           kargoapi.Warehouse
+		qualifiers   []string
+		repoURL      string
+		changedFiles []string
+		expect       bool
 	}{
 		{
 			name: "Git subscription with matching qualifier",
@@ -259,6 +260,139 @@ func TestShouldRefresh(t *testing.T) {
 			repoURL:    "https://github.com/username/repo",
 			qualifiers: []string{"release"},
 			expect:     false,
+		},
+		{
+			name: "Git subscription with matching ref and matching includePaths",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/foo"},
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"apps/foo/values.yaml"},
+			expect:       true,
+		},
+		{
+			name: "Git subscription with matching ref but non-matching includePaths",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/foo"},
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"apps/bar/values.yaml"},
+			expect:       false,
+		},
+		{
+			name: "Git subscription with matching ref and excluded path",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							ExcludePaths:            []string{"docs"},
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"docs/README.md"},
+			expect:       false,
+		},
+		{
+			name: "Git subscription with matching ref and no path filters -- always refreshes",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"anything/file.txt"},
+			expect:       true,
+		},
+		{
+			name: "Git subscription with matching ref and path filters but no changed files -- filtering skipped, refreshes",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/foo"},
+						},
+					}},
+				},
+			},
+			repoURL:    "https://github.com/username/repo",
+			qualifiers: []string{"refs/heads/main"},
+			expect:     true,
+		},
+		{
+			name: "Git subscription with include and exclude paths -- include wins then exclude filters",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/"},
+							ExcludePaths:            []string{"apps/ignored"},
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"apps/ignored/config.yaml"},
+			expect:       false,
+		},
+		{
+			name: "Git subscription with include and exclude -- non-excluded file matches",
+			wh: kargoapi.Warehouse{
+				Spec: kargoapi.WarehouseSpec{
+					InternalSubscriptions: []kargoapi.RepoSubscription{{
+						Git: &kargoapi.GitSubscription{
+							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+							RepoURL:                 "https://github.com/username/repo",
+							Branch:                  "main",
+							IncludePaths:            []string{"apps/"},
+							ExcludePaths:            []string{"apps/ignored"},
+						},
+					}},
+				},
+			},
+			repoURL:      "https://github.com/username/repo",
+			qualifiers:   []string{"refs/heads/main"},
+			changedFiles: []string{"apps/important/config.yaml"},
+			expect:       true,
 		},
 		{
 			name: "Image subscription with matching qualifier",
@@ -341,150 +475,7 @@ func TestShouldRefresh(t *testing.T) {
 				t.Context(),
 				tc.wh,
 				tc.repoURL,
-				nil, // filePaths
-				tc.qualifiers...,
-			)
-			require.NoError(t, err)
-			require.Equal(t, tc.expect, result)
-		})
-	}
-}
-
-func TestShouldRefreshWithPathFilters(t *testing.T) {
-	testCases := []struct {
-		name       string
-		wh         kargoapi.Warehouse
-		qualifiers []string
-		repoURL    string
-		filePaths  []string
-		expect     bool
-	}{
-		{
-			name: "Git subscription with matching path",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-							IncludePaths:            []string{"apps/project-a"},
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/main"},
-			filePaths:  []string{"apps/project-a/deployment.yaml"},
-			expect:     true,
-		},
-		{
-			name: "Git subscription with non-matching path",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-							IncludePaths:            []string{"apps/project-a"},
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/main"},
-			filePaths:  []string{"apps/project-b/deployment.yaml"},
-			expect:     false,
-		},
-		{
-			name: "Git subscription with excluded path",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-							IncludePaths:            []string{"apps/project-a"},
-							ExcludePaths:            []string{"apps/project-a/.kargo"},
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/main"},
-			filePaths:  []string{"apps/project-a/.kargo/metadata.yaml"},
-			expect:     false,
-		},
-		{
-			name: "Git subscription with multiple paths - one matches",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-							IncludePaths:            []string{"apps/project-a"},
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/main"},
-			filePaths: []string{
-				"apps/project-b/deployment.yaml",
-				"apps/project-a/config.yaml",
-				"README.md",
-			},
-			expect: true,
-		},
-		{
-			name: "Git subscription with no path filters - accepts all",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/main"},
-			filePaths:  []string{"any/path/deployment.yaml"},
-			expect:     true,
-		},
-		{
-			name: "Git subscription path matches but ref doesn't",
-			wh: kargoapi.Warehouse{
-				Spec: kargoapi.WarehouseSpec{
-					InternalSubscriptions: []kargoapi.RepoSubscription{{
-						Git: &kargoapi.GitSubscription{
-							CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
-							RepoURL:                 "https://github.com/username/repo",
-							Branch:                  "main",
-							IncludePaths:            []string{"apps/project-a"},
-						},
-					}},
-				},
-			},
-			repoURL:    "https://github.com/username/repo",
-			qualifiers: []string{"refs/heads/feature"},
-			filePaths:  []string{"apps/project-a/deployment.yaml"},
-			expect:     false,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			result, err := shouldRefresh(
-				t.Context(),
-				tc.wh,
-				tc.repoURL,
-				tc.filePaths,
+				tc.changedFiles,
 				tc.qualifiers...,
 			)
 			require.NoError(t, err)

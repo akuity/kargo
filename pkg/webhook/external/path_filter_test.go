@@ -4,9 +4,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/controller/git/commit"
 )
 
-func TestMatchesPathFilters(t *testing.T) {
+func TestMatchesPathsFilters(t *testing.T) {
 	testCases := []struct {
 		name         string
 		includePaths []string
@@ -15,11 +17,11 @@ func TestMatchesPathFilters(t *testing.T) {
 		expected     bool
 	}{
 		{
-			name:         "no paths provided - allows refresh",
+			name:         "no changed paths provided - no match",
 			includePaths: []string{"apps/project-a"},
 			excludePaths: nil,
 			changedPaths: []string{},
-			expected:     true, // No paths to filter, allow refresh
+			expected:     false,
 		},
 		{
 			name:         "path matches includePaths",
@@ -138,10 +140,30 @@ func TestMatchesPathFilters(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := matchesPathFilters(tc.includePaths, tc.excludePaths, tc.changedPaths)
+			result := testMatchesPathsFilters(
+				tc.includePaths,
+				tc.excludePaths,
+				tc.changedPaths,
+			)
 			require.Equal(t, tc.expected, result,
 				"includePaths: %v, excludePaths: %v, changedPaths: %v",
 				tc.includePaths, tc.excludePaths, tc.changedPaths)
 		})
 	}
+}
+
+func testMatchesPathsFilters(
+	includePaths []string,
+	excludePaths []string,
+	changedPaths []string,
+) bool {
+	includeMatcher, err := commit.GetPathSelectors(includePaths)
+	if err != nil {
+		return true
+	}
+	excludeMatcher, err := commit.GetPathSelectors(excludePaths)
+	if err != nil {
+		return true
+	}
+	return commit.MatchesPathsFilters(includeMatcher, excludeMatcher, changedPaths)
 }

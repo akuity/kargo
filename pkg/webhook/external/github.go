@@ -147,6 +147,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var qualifiers []string
 		var repoURLs []string
+		var changedFiles []string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -216,25 +217,8 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			ref := e.GetRef()
 			qualifiers = []string{ref}
-
-			// Extract file paths from the push event for path-based filtering
-			var filePaths []string
-			if headCommit := e.GetHeadCommit(); headCommit != nil {
-				filePaths = append(filePaths, headCommit.Added...)
-				filePaths = append(filePaths, headCommit.Modified...)
-				filePaths = append(filePaths, headCommit.Removed...)
-			}
-			// If we have file paths, include them in logging
-			logCtx := []any{"ref", ref}
-			if len(filePaths) > 0 {
-				logCtx = append(logCtx, "fileCount", len(filePaths))
-			}
-			logger = logger.WithValues(logCtx...)
-			logger.Info("processing push event with file paths")
-			ctx = logging.ContextWithLogger(ctx, logger)
-
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, filePaths, qualifiers...)
-			return
+			logger = logger.WithValues("ref", ref)
+			changedFiles = collectGitHubChangedFiles(e)
 
 		case *gh.RegistryPackageEvent:
 			action := e.GetAction()
@@ -288,6 +272,31 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, qualifiers...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, qualifiers...)
 	})
+}
+
+func collectGitHubChangedFiles(e *gh.PushEvent) []string {
+	// Commits is deprecated for the Events API, but is still populated in
+	// webhook payloads. We need it to collect changed files from all commits
+	// in the push, not just the head commit.
+	var diffs []commitDiff
+	for _, c := range e.Commits { //nolint:staticcheck
+		if c == nil {
+			continue
+		}
+		diffs = append(diffs, commitDiff{
+			Added:    c.Added,
+			Modified: c.Modified,
+			Removed:  c.Removed,
+		})
+	}
+	if hc := e.HeadCommit; hc != nil {
+		diffs = append(diffs, commitDiff{
+			Added:    hc.Added,
+			Modified: hc.Modified,
+			Removed:  hc.Removed,
+		})
+	}
+	return collectChangedFiles(diffs)
 }

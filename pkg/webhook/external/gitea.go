@@ -130,6 +130,12 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			Repo struct {
 				URL string `json:"clone_url"`
 			} `json:"repository"`
+			Commits []struct {
+				Added    []string `json:"added"`
+				Modified []string `json:"modified"`
+				Removed  []string `json:"removed"`
+			} `json:"commits"`
+			TotalCommits int `json:"total_commits"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
@@ -139,14 +145,33 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		// Normalize the repo name
 		repoURLs := []string{urls.NormalizeGit(payload.Repo.URL)}
+
+		var changedFiles []string
+		if payload.TotalCommits > len(payload.Commits) {
+			logger.Info(
+				"push event commits were truncated by Gitea; "+
+					"skipping path filtering for this event",
+				"totalCommits", payload.TotalCommits,
+				"receivedCommits", len(payload.Commits),
+			)
+		} else {
+			diffs := make([]commitDiff, len(payload.Commits))
+			for i, c := range payload.Commits {
+				diffs[i] = commitDiff{
+					Added:    c.Added,
+					Modified: c.Modified,
+					Removed:  c.Removed,
+				}
+			}
+			changedFiles = collectChangedFiles(diffs)
+		}
 
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
 			"ref", payload.Ref,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, payload.Ref)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, payload.Ref)
 	})
 }

@@ -707,6 +707,19 @@ Paths may _also_ be specified using glob patterns (by prefixing the string with
 
 :::
 
+:::info
+
+These path filters are also respected by
+[webhook receivers](#triggering-artifact-discovery-using-webhooks). When a
+webhook receiver processes a `push` event from a supported provider (GitHub,
+GitLab, or Gitea), it extracts the list of changed files from the event payload
+and only refreshes Warehouses whose path filters match those files. Warehouses
+without path filters configured, or events from providers that do not include
+file change information in their payloads, will continue to be refreshed
+unconditionally.
+
+:::
+
 ### Helm Chart Repository Subscriptions
 
 Helm chart repository subscriptions can be defined using the following fields:
@@ -1112,7 +1125,13 @@ contains structured information (usually JSON) the sender wishes to share about
 some event. Invariably, among this information, is the URL of the repository
 from which the event originated.
 
-A webhook receiver's only job is to extract a repository URL from the webhook
-request's payload, query for all `Warehouse` resources within the Project having
-subscriptions to that repository, and request each to execute their discovery
-process.
+A webhook receiver extracts a repository URL from the webhook request's payload,
+queries for all `Warehouse` resources within the Project having subscriptions to
+that repository, and requests each to execute their discovery process.
+
+For Git `push` events from providers that include file change information in
+their payloads (GitHub, GitLab, and Gitea), the receiver additionally extracts
+the list of changed files and evaluates each matching Warehouse's
+[`includePaths` and `excludePaths`](#git-subscription-path-filtering) filters.
+Only Warehouses with path filters that match the changed files are refreshed.
+Warehouses without path filters configured are always refreshed.

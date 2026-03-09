@@ -231,10 +231,17 @@ contains structured information (usually JSON) the sender wishes to share about
 some event. Invariably, among this information, is the URL of the repository
 from which the event originated.
 
-A webhook receiver's only job is to extract a repository URL from the webhook
-request's payload, query for all `Warehouse` resources across all Projects
-having subscriptions to that repository, and request each to execute their
-artifact discovery process.
+A webhook receiver extracts a repository URL from the webhook request's payload,
+queries for all `Warehouse` resources across all Projects having subscriptions
+to that repository, and requests each to execute their artifact discovery
+process.
+
+For Git `push` events from providers that include file change information in
+their payloads (GitHub, GitLab, and Gitea), the receiver additionally extracts
+the list of changed files and evaluates each matching Warehouse's
+`includePaths` and `excludePaths` filters. Only Warehouses with path filters
+that match the changed files are refreshed. Warehouses without path filters
+configured are always refreshed.
 
 ## Cluster Message Channels
 

@@ -166,7 +166,7 @@ func (n *newestFromBranchSelector) selectCommits(
 						err,
 					)
 				}
-				if !MatchesPathFilters(n.includePaths, n.excludePaths, diffPaths) {
+				if !MatchesPathsFilters(n.includePaths, n.excludePaths, diffPaths) {
 					continue
 				}
 			}
