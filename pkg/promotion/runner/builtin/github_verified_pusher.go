@@ -3,16 +3,21 @@ package builtin
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-github/v76/github"
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
@@ -37,6 +42,29 @@ const (
 	compareStatusBehind    = "behind"
 	compareStatusIdentical = "identical"
 )
+
+// errRefUpdateConflict is returned when UpdateRef fails because the target
+// branch has advanced since we last read it (HTTP 422). This signals the
+// retry loop to rebase and retry.
+var errRefUpdateConflict = errors.New("ref update conflict")
+
+// isRetryableError returns true for errors that should trigger a retry:
+// ref update conflicts from the GitHub API or non-fast-forward rejections
+// from git push.
+func isRetryableError(err error) bool {
+	return errors.Is(err, errRefUpdateConflict) || git.IsNonFastForward(err)
+}
+
+// isGitHubHTTPStatus returns true if err is a *github.ErrorResponse with
+// the given HTTP status code.
+func isGitHubHTTPStatus(err error, statusCode int) bool {
+	var ghErr *github.ErrorResponse
+	if errors.As(err, &ghErr) {
+		return ghErr.Response != nil &&
+			ghErr.Response.StatusCode == statusCode
+	}
+	return false
+}
 
 func init() {
 	var once sync.Once
@@ -317,36 +345,9 @@ func (g *githubVerifiedPusher) run(
 		targetBranch = currentBranch
 	}
 
-	// Get the local HEAD SHA — this is what we'll push to the staging ref.
-	localHead, err := workTree.LastCommitID()
-	if err != nil {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusErrored,
-		}, fmt.Errorf("error getting local HEAD: %w", err)
-	}
-
-	// Push local commits to a non-branch staging ref. This gets all objects
-	// onto GitHub without creating a visible branch.
 	stagingRef := fmt.Sprintf(
 		"%s/%s", stagingRefPrefix, stepCtx.Promotion,
 	)
-	logger.Debug(
-		"pushing to staging ref",
-		"ref", stagingRef,
-		"localHead", localHead,
-	)
-
-	g.acquireBranchLock(workTree.URL(), targetBranch)
-	defer g.releaseBranchLock(workTree.URL(), targetBranch)
-
-	if err = workTree.Push(&git.PushOptions{
-		TargetBranch: stagingRef,
-		Force:        true,
-	}); err != nil {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusErrored,
-		}, fmt.Errorf("error pushing to staging ref %s: %w", stagingRef, err)
-	}
 
 	// Create the GitHub client.
 	owner, repo, ghClient, err := g.newGitHubClientFn(
@@ -358,56 +359,160 @@ func (g *githubVerifiedPusher) run(
 		}, fmt.Errorf("error creating GitHub client: %w", err)
 	}
 
-	// Clean up the staging ref regardless of outcome. This defer is only
-	// reached after the push to the staging ref has succeeded.
-	defer g.cleanupStagingRef(ctx, ghClient, owner, repo, stagingRef)
+	g.acquireBranchLock(workTree.URL(), targetBranch)
+	defer g.releaseBranchLock(workTree.URL(), targetBranch)
 
-	// Get the base SHA for comparison. For a new branch, use the source
-	// (current) branch HEAD; otherwise use the target branch HEAD.
-	var targetHead string
-	if createBranch {
-		sourceRef := "heads/" + currentBranch
-		ref, _, refErr := ghClient.GetRef(ctx, owner, repo, sourceRef)
-		if refErr != nil {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error getting source branch ref %s: %w",
-					sourceRef, refErr,
-				)
-		}
-		targetHead = ref.GetObject().GetSHA()
-	} else {
-		targetRef := "heads/" + targetBranch
-		ref, _, refErr := ghClient.GetRef(ctx, owner, repo, targetRef)
-		if refErr != nil {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error getting ref %s: %w", targetRef, refErr,
-				)
-		}
-		targetHead = ref.GetObject().GetSHA()
+	// Retry loop mirrors git-push: each attempt rebases onto the target
+	// branch, pushes to a staging ref, replays commits via the API, and
+	// updates the target branch ref. Retries are triggered when the ref
+	// update fails because the target branch advanced concurrently.
+	backoff := wait.Backoff{
+		Steps:    10,
+		Duration: time.Second,
+		Factor:   1.5,
+		Jitter:   0.5,
+		Cap:      30 * time.Second,
+	}
+	if cfg.MaxAttempts != nil {
+		backoff.Steps = int(*cfg.MaxAttempts)
 	}
 
-	logger.Debug(
-		"signing revision range",
-		"targetBranch", targetBranch,
-		"targetHead", targetHead,
-		"localHead", localHead,
+	var (
+		result        promotion.StepResult
+		stagingPushed bool
+		cleanupOwner  = owner
+		cleanupRepo   = repo
+		cleanupRef    = stagingRef
+		cleanupClient = ghClient
 	)
+	defer func() {
+		if stagingPushed {
+			g.cleanupStagingRef(
+				ctx, cleanupClient, cleanupOwner, cleanupRepo, cleanupRef,
+			)
+		}
+	}()
 
-	// Enumerate commits to sign using the Compare API.
-	result, err := g.signAndUpdate(
-		ctx, ghClient, owner, repo,
-		targetBranch, createBranch, force, targetHead, localHead,
-		workTree,
-	)
-	if err != nil {
+	if err = retry.OnError(
+		backoff,
+		isRetryableError,
+		func() error {
+			// 1. Rebase onto target branch (like git-push's PullRebase).
+			//    Skipped when force-pushing (matches git-push behavior)
+			//    and when creating a new branch (nothing to rebase onto).
+			if !force && !createBranch {
+				if rebaseErr := workTree.PullRebase(targetBranch); rebaseErr != nil {
+					return rebaseErr
+				}
+			}
+
+			// 2. Get localHead after potential rebase.
+			localHead, localErr := workTree.LastCommitID()
+			if localErr != nil {
+				return fmt.Errorf("error getting local HEAD: %w", localErr)
+			}
+
+			// 3. Push (rebased) commits to staging ref. This gets all
+			//    objects onto GitHub without creating a visible branch.
+			logger.Debug(
+				"pushing to staging ref",
+				"ref", stagingRef,
+				"localHead", localHead,
+			)
+			if pushErr := workTree.Push(&git.PushOptions{
+				TargetBranch: stagingRef,
+				Force:        true,
+			}); pushErr != nil {
+				return fmt.Errorf(
+					"error pushing to staging ref %s: %w",
+					stagingRef, pushErr,
+				)
+			}
+			stagingPushed = true
+
+			// 4. Read targetHead from GitHub API.
+			targetHead, refErr := g.getTargetHead(
+				ctx, ghClient, owner, repo,
+				currentBranch, targetBranch, createBranch,
+			)
+			if refErr != nil {
+				return refErr
+			}
+
+			logger.Debug(
+				"signing revision range",
+				"targetBranch", targetBranch,
+				"targetHead", targetHead,
+				"localHead", localHead,
+			)
+
+			// 5. Replay commits via API and update ref.
+			var signErr error
+			result, signErr = g.signAndUpdate(
+				ctx, ghClient, owner, repo,
+				targetBranch, createBranch, force,
+				targetHead, localHead, workTree,
+			)
+			return signErr
+		},
+	); err != nil {
+		if git.IsMergeConflict(err) {
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{Err: err}
+		}
+		// Errors from early in the retry closure (PullRebase,
+		// LastCommitID, staging push, getTargetHead) don't set
+		// result. Default to Errored.
+		if result.Status == "" {
+			result.Status = kargoapi.PromotionStepStatusErrored
+		}
 		return result, err
 	}
 
+	// Sync local branch to match remote after API replay. The replayed
+	// commits have new SHAs; without this the local working tree would
+	// have stale refs. Non-fatal if it fails — the push already succeeded.
+	if !createBranch {
+		if pullErr := workTree.ForcePull(targetBranch); pullErr != nil {
+			logger.Error(
+				pullErr,
+				"error syncing local branch after push (non-fatal)",
+				"branch", targetBranch,
+			)
+		}
+	}
+
 	return result, nil
+}
+
+// getTargetHead reads the current HEAD SHA of the target branch (or source
+// branch when creating a new branch) from the GitHub API.
+func (g *githubVerifiedPusher) getTargetHead(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, currentBranch, targetBranch string,
+	createBranch bool,
+) (string, error) {
+	if createBranch {
+		sourceRef := "heads/" + currentBranch
+		ref, _, err := client.GetRef(ctx, owner, repo, sourceRef)
+		if err != nil {
+			return "", fmt.Errorf(
+				"error getting source branch ref %s: %w",
+				sourceRef, err,
+			)
+		}
+		return ref.GetObject().GetSHA(), nil
+	}
+	targetRef := "heads/" + targetBranch
+	ref, _, err := client.GetRef(ctx, owner, repo, targetRef)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error getting ref %s: %w", targetRef, err,
+		)
+	}
+	return ref.GetObject().GetSHA(), nil
 }
 
 // signAndUpdate enumerates commits in the range targetHead..localHead,
@@ -635,6 +740,14 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			},
 		)
 		if err != nil {
+			if isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error updating ref %s to %s: %w",
+						targetRef, lastSignedSHA, errRefUpdateConflict,
+					)
+			}
 			return promotion.StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, fmt.Errorf(

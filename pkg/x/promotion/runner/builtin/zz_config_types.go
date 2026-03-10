@@ -342,6 +342,11 @@ type GitHubVerifiedPushConfig struct {
 	// Indicates whether to skip TLS verification when communicating with the GitHub API.
 	// Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// This step implements its own internal retry logic for cases where a push is determined to
+	// have failed due to the remote branch having commits that are not present locally. Each
+	// attempt, including the first, rebases prior to pushing. This field configures the maximum
+	// number of attempts. If not specified, the default is 10.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If

@@ -33,9 +33,27 @@ Under the hood it:
 
 Because commits are recreated through the API, the resulting remote commits have
 different SHAs than the original local commits — even when the content is
-identical. This means the local and remote branches will have diverged after this
-step completes. This is expected and does not affect subsequent promotions, since
-each promotion clones a fresh working tree.
+identical. This is expected and does not affect subsequent promotions, since each
+promotion clones a fresh working tree. After a successful push, the step syncs
+the local branch to match the remote, so subsequent steps see the correct state.
+
+Like [`git-push`](git-push.md), this step implements internal retry logic. If
+the target branch advances between reading its HEAD and updating the ref (e.g.,
+due to a concurrent promotion), the step rebases local commits onto the updated
+remote branch and retries. Any merge conflict requiring manual resolution
+immediately halts further attempts.
+
+:::info
+
+This step's internal retry logic is helpful in scenarios when concurrent
+Promotions to multiple Stages may all write to the same branch of the same
+repository.
+
+Because conflicts requiring manual resolution will halt further attempts, it is
+recommended to design your Promotion processes such that Promotions to multiple
+Stages that write to the same branch do not write to the same files.
+
+:::
 
 :::info
 
@@ -80,6 +98,7 @@ GitHub commit.
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true`. If neither of these is provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. A value of `true` is mutually exclusive with `targetBranch`. This is useful when a subsequent step will open a pull request. |
 | `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
+| `maxAttempts` | `integer` | N | Maximum number of push attempts. When multiple promotions target the same branch concurrently, the remote branch may advance between reading its HEAD and updating the ref, causing a conflict. This step automatically retries by rebasing local commits onto the updated remote branch. If a rebase encounters a merge conflict, the error is treated as terminal and no further attempts are made. Default is `10`. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification when communicating with the GitHub API. Default is `false`. Intended for GitHub Enterprise instances with self-signed certificates. |
 
 ## Output
