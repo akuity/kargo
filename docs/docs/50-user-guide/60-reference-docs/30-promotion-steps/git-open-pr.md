@@ -32,12 +32,26 @@ system to access the git repos.
 | `description` | `string` | N | The description for the pull request. |
 | `labels` | `[]string` | N | Labels to add to the pull request. |
 
-::: warning
+### v1.10
+
+:::warning
 
 Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in 
 `v1.12`.
 
 :::
+
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `repoURL` | `string` | Y | The URL of a remote Git repository. |
+| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
+| `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
+| `sourceBranch` | `string` | Y | Specifies the source branch for the pull request. |
+| `targetBranch` | `string` | N | The branch to which the changes should be merged. |
+| `createTargetBranch` | `boolean` | N |**Deprecated**. Is a no-op if set. Will be removed in a future release. |
+| `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
+| `description` | `string` | N | The description for the pull request. |
+| `labels` | `[]string` | N | Labels to add to the pull request. |
 
 ## Output
 
@@ -61,23 +75,54 @@ This is a common pattern when implementing GitOps-based promotion workflows,
 where changes are first pushed to an intermediate branch and then merged into
 a stage-specific branch through a pull request.
 
+:::note
+
+The `git-open-pr` step will fail if the `targetBranch` doesn't exist. This 
+example includes additional preceding steps to better demonstrate when and how 
+the remote/target branch is created in the [`git-clone step`](git-clone.md).
+
+:::
+
 ```yaml
+vars:
+  - name: gitRepo
+    value: https://github.com/example/repo.git
+  - name: targetBranch
+    value: stage/${{ ctx.stage }}
+  - name: outPath
+    value: ./out
+  - name: usePR
 steps:
 # Clone, prepare the contents of ./out, commit, etc...
-- uses: git-push
-  as: push
-  config:
-    path: ./out
-    generateTargetBranch: true
-- uses: git-open-pr
-  as: open-pr
-  config:
-    repoURL: https://github.com/example/repo.git
-    createTargetBranch: true
-    sourceBranch: ${{ outputs.push.branch }}
-    targetBranch: stage/${{ ctx.stage }}
+  - uses: git-clone
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      checkout:
+      - branch: ${{ vars.targetBranch }}
+        create: true # Create the remote/target branch
+        path: ${{ vars.outPath }}
+  - uses: git-clear
+    config:
+      path: ${{ vars.outPath }}
+  - uses: git-commit
+    config:
+      path: ${{ vars.outPath }}
+      message: "my commit message"
+  - uses: git-push
+    as: push
+    config:
+      path: ${{ vars.outPath }}
+      generateTargetBranch: ${{ vars.usePR }}
+  - uses: git-open-pr
+    as: open-pr
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      sourceBranch: ${{ outputs.push.branch }}
+      targetBranch: ${{ vars.targetBranch }}
 # Wait for the PR to be merged or closed...
 ```
+
+
 
 ### Custom Title and Labels
 
