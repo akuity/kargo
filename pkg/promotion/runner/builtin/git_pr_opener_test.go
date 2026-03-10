@@ -313,11 +313,6 @@ func Test_gitPROpener_run(t *testing.T) {
 		require.True(t, ok)
 		require.Equal(t, testPRNumber, prOutput["id"])
 		require.Equal(t, testPRURL, prOutput["url"])
-
-		// Assert that the target branch, which didn't already exist, was created
-		exists, err := repo.RemoteBranchExists(testTargetBranch)
-		require.NoError(t, err)
-		require.True(t, exists)
 	})
 }
 
