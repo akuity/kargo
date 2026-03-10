@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"net/http/httptest"
@@ -85,7 +84,7 @@ func Test_gitPusher_convert(t *testing.T) {
 			},
 		},
 		{
-			name: "generateTargetBranch not specified and targetBranch not specified",
+			name: "generateTargetBranch, targetBranch, and tag not specified",
 			config: promotion.Config{ // Should be completely valid
 				"path": "/fake/path",
 			},
@@ -138,6 +137,28 @@ func Test_gitPusher_convert(t *testing.T) {
 			config: promotion.Config{ // Should be completely valid
 				"path":  "/fake/path",
 				"force": false,
+			},
+		},
+		{
+			name: "tag and generateTargetBranch both specified",
+			config: promotion.Config{
+				"path":                 "/fake/path",
+				"generateTargetBranch": true,
+				"tag":                  "v1.0.0",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema",
+			},
+		},
+		{
+			name: "tag and targetBranch both specified",
+			config: promotion.Config{
+				"path":         "/fake/path",
+				"targetBranch": "fake-branch",
+				"tag":          "v1.0.0",
+			},
+			expectedProblems: []string{
+				"(root): Must validate one and only one schema",
 			},
 		},
 	}
@@ -202,6 +223,9 @@ func Test_gitPusher_run(t *testing.T) {
 	err = workTree.AddAllAndCommit("Initial commit", nil)
 	require.NoError(t, err)
 
+	// Tag the commit so we can also test pushing tags later.
+	require.NoError(t, workTree.CreateTag("v1.0.0", "hello", nil))
+
 	// Set up a fake git provider
 	// Cannot register multiple providers with the same name, so this takes
 	// care of that problem
@@ -229,7 +253,6 @@ func Test_gitPusher_run(t *testing.T) {
 	)
 
 	// Now we can proceed to test gitPusher...
-
 	r := newGitPusher(promotion.StepRunnerCapabilities{
 		CredsDB: &credentials.FakeDB{},
 	})
@@ -237,30 +260,57 @@ func Test_gitPusher_run(t *testing.T) {
 	require.True(t, ok)
 	require.NotNil(t, runner.branchMus)
 
-	res, err := runner.run(
-		context.Background(),
-		&promotion.StepContext{
-			Project:   "fake-project",
-			Stage:     "fake-stage",
-			Promotion: "fake-promotion",
-			WorkDir:   workDir,
-		},
-		builtin.GitPushConfig{
-			Path:                 "master",
-			GenerateTargetBranch: true,
-			Provider:             ptr.To(builtin.Provider(fakeGitProviderName)),
-		},
-	)
-	require.NoError(t, err)
-	branchName, ok := res.Output[stateKeyBranch]
-	require.True(t, ok)
-	require.Equal(t, "kargo/promotion/fake-promotion", branchName)
-	expectedCommit, err := workTree.LastCommitID()
-	require.NoError(t, err)
-	actualCommit, ok := res.Output[stateKeyCommit]
-	require.True(t, ok)
-	require.Equal(t, expectedCommit, actualCommit)
-	expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
-	actualCommitURL := res.Output[stateKeyCommitURL]
-	require.Equal(t, expectedCommitURL, actualCommitURL)
+	t.Run("push commit to generated branch", func(t *testing.T) {
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				Promotion: "fake-promotion",
+				WorkDir:   workDir,
+			},
+			builtin.GitPushConfig{
+				Path:                 "master",
+				GenerateTargetBranch: true,
+				Provider:             ptr.To(builtin.Provider(fakeGitProviderName)),
+			},
+		)
+		require.NoError(t, err)
+		branchName, ok := res.Output[stateKeyBranch]
+		require.True(t, ok)
+		require.Equal(t, "kargo/promotion/fake-promotion", branchName)
+		expectedCommit, err := workTree.LastCommitID()
+		require.NoError(t, err)
+		actualCommit, ok := res.Output[stateKeyCommit]
+		require.True(t, ok)
+		require.Equal(t, expectedCommit, actualCommit)
+		expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+		actualCommitURL := res.Output[stateKeyCommitURL]
+		require.Equal(t, expectedCommitURL, actualCommitURL)
+	})
+	t.Run("push tag", func(t *testing.T) {
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project:   "fake-project",
+				Stage:     "fake-stage",
+				Promotion: "fake-promotion",
+				WorkDir:   workDir,
+			},
+			builtin.GitPushConfig{
+				Path: "master",
+				Tag:  "v1.0.0",
+			},
+		)
+		require.NoError(t, err)
+		require.NoError(t, workTree.Checkout("v1.0.0"))
+		expectedCommit, err := workTree.LastCommitID()
+		require.NoError(t, err)
+		actualCommit, ok := res.Output[stateKeyCommit]
+		require.True(t, ok)
+		require.Equal(t, expectedCommit, actualCommit)
+		expectedCommitURL := fmt.Sprintf("%s/commit/%s", testRepoURL, expectedCommit)
+		actualCommitURL := res.Output[stateKeyCommitURL]
+		require.Equal(t, expectedCommitURL, actualCommitURL)
+	})
 }

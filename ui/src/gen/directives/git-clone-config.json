@@ -19,7 +19,7 @@
   },
   "author": {
    "type": "object",
-   "description": "Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` step can override this information.",
+   "description": "Default authorship information for any commits made to the cloned repository. If provided, this overrides any system-level defaults. Note: Configuration of the `git-commit` and `git-tag` steps can override this information.",
    "additionalProperties": false,
    "properties": {
     "email": {
