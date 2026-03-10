@@ -1,4 +1,5 @@
 import { formatDistance } from 'date-fns';
+import gitUrlParse from 'git-url-parse';
 
 const ociPrefix = 'org.opencontainers.image';
 
@@ -29,26 +30,19 @@ export const getImageSource = (annotation: Annotation) => {
 };
 
 export const getGitCommitURL = (url: string, revision: string) => {
-  let baseUrl;
+  try {
+    const { resource, owner, name } = gitUrlParse(url);
+    const baseUrl = `https://${resource}/${owner}/${name}`;
 
-  if (url.includes('github.com')) {
-    baseUrl = url
-      .replace(/^git@github.com:/, 'https://github.com/')
-      .replace(/^https?:\/\/github.com\//, 'https://github.com/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/commit/${revision}`;
-  } else if (url.includes('gitlab.com')) {
-    baseUrl = url
-      .replace(/^git@gitlab.com:/, 'https://gitlab.com/')
-      .replace(/^https?:\/\/gitlab.com\//, 'https://gitlab.com/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/-/commit/${revision}`;
-  } else if (url.includes('bitbucket.org')) {
-    baseUrl = url
-      .replace(/^git@bitbucket.org:/, 'https://bitbucket.org/')
-      .replace(/^https?:\/\/bitbucket.org\//, 'https://bitbucket.org/')
-      .replace(/\.git$/, '');
-    return `${baseUrl}/commits/${revision}`;
+    if (resource.includes('github')) {
+      return `${baseUrl}/commit/${revision}`;
+    } else if (resource.includes('gitlab')) {
+      return `${baseUrl}/-/commit/${revision}`;
+    } else if (resource.includes('bitbucket')) {
+      return `${baseUrl}/commits/${revision}`;
+    }
+  } catch {
+    // fall through to return original url
   }
 
   return url;

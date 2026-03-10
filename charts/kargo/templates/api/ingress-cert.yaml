@@ -11,6 +11,7 @@ spec:
   dnsNames:
   - {{ quote .Values.api.host }}
   issuerRef:
+    group: cert-manager.io
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
   secretName: {{ .Values.api.ingress.tls.secretName }}

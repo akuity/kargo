@@ -11,6 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30  # Don't wait 6 hours to cancel workflow if it hangs.
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+      with:
+        egress-policy: audit
+
     - uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f # v10.2.0
       with:
         stale-issue-label: 'stale'

@@ -33,6 +33,8 @@ const (
 )
 
 func init() {
+	var once sync.Once
+	var pusher promotion.StepRunner
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindGitPush,
@@ -41,7 +43,15 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Value: newGitPusher,
+			// This factory function closes over a single instance of gitPushPusher
+			// so that that its mutexes are shared across all executions of this step
+			// runner, which is necessary to ensure proper locking behavior.
+			Value: func(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+				once.Do(func() {
+					pusher = newGitPusher(caps)
+				})
+				return pusher
+			},
 		},
 	)
 }

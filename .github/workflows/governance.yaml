@@ -21,6 +21,11 @@ jobs:
     name: Governance
     runs-on: ubuntu-latest
     steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@58077d3c7e43986b6b15fba718e8ea69e387dfcc # v2.15.1
+      with:
+        egress-policy: audit
+
     - uses: BirthdayResearch/oss-governance-bot@3abd2d1fd2376ba9990fbc795e7a4c54254e9c61 # v4.0.0
       with:
         config-path: .github/governance.yml
