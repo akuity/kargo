@@ -754,6 +754,67 @@ func Test_rolesDatabase_List(t *testing.T) {
 			kargoRoles,
 		)
 	})
+
+	t.Run("with a non-kargo-managed cluster role", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			plainServiceAccount(map[string]string{
+				rbacapi.AnnotationKeyOIDCClaim("sub"):    "foo-sub,bar-sub",
+				rbacapi.AnnotationKeyOIDCClaim("email"):  "foo-email,bar-email",
+				rbacapi.AnnotationKeyOIDCClaim("groups"): "foo-group,bar-group",
+			}),
+			clusterRole([]rbacv1.PolicyRule{
+				{ // This rule has groups and types that we don't recognize. Let's
+					// make sure we don't choke on them. This could happen with cluster
+					// roles that aren't Kargo-managed.
+					APIGroups: []string{"fake-group-1", "fake-group-2"},
+					Resources: []string{"fake-type-1", "fake-type-2"},
+					Verbs:     []string{"get", "list"},
+				},
+				{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"stages", "promotions"},
+					Verbs:     []string{"list", "get"},
+				},
+			}),
+			plainRoleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		kargoRoles, err := db.List(t.Context(), false, testProject)
+		require.NoError(t, err)
+		// Do not factor creation timestamp into the comparison
+		now := metav1.NewTime(time.Now())
+		for _, kargoRole := range kargoRoles {
+			kargoRole.CreationTimestamp = now
+		}
+		require.Equal(
+			t,
+			[]*rbacapi.Role{{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace:         testProject,
+					Name:              testKargoRoleName,
+					CreationTimestamp: now,
+				},
+				KargoManaged: false,
+				Claims: []rbacapi.Claim{
+					{
+						Name:   "email",
+						Values: []string{"bar-email", "foo-email"},
+					},
+					{
+						Name:   "groups",
+						Values: []string{"bar-group", "foo-group"},
+					},
+					{
+						Name:   "sub",
+						Values: []string{"bar-sub", "foo-sub"},
+					},
+				},
+				// The RoleBinding to ClusterRole fake-kargo-role should have been ignored
+				Rules: []rbacv1.PolicyRule{},
+			}},
+			kargoRoles,
+		)
+	})
 }
 
 func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
@@ -1313,6 +1374,17 @@ func plainRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
 	}
 }
 
+func clusterRole(rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
+	role := &rbacv1.ClusterRole{
+		ObjectMeta: plainObjectMeta(nil),
+		Rules:      rules,
+	}
+	role.SetLabels(map[string]string{
+		rbacapi.LabelKeySystemRole: rbacapi.LabelValueTrue,
+	})
+	return role
+}
+
 func managedRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
 	return &rbacv1.Role{
 		ObjectMeta: managedObjectMeta(nil),
@@ -1331,6 +1403,22 @@ func plainRoleBinding() *rbacv1.RoleBinding {
 		RoleRef: rbacv1.RoleRef{
 			APIGroup: rbacv1.GroupName,
 			Kind:     "Role",
+			Name:     testKargoRoleName,
+		},
+	}
+}
+
+func plainRoleBindingToClusterRole() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: plainObjectMeta(nil),
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Namespace: testProject,
+			Name:      testKargoRoleName,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
 			Name:     testKargoRoleName,
 		},
 	}

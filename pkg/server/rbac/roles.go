@@ -369,6 +369,10 @@ func (c *rolesDatabase) GetAsResources(
 	rbs := make([]rbacv1.RoleBinding, 0, len(rbList.Items))
 	for i := range rbList.Items {
 		rb := &rbList.Items[i]
+		if rb.RoleRef.Kind != "Role" {
+			// Ignore RoleBindings that don't reference a Role.
+			continue
+		}
 		for _, subject := range rb.Subjects {
 			if subject.Kind == rbacv1.ServiceAccountKind &&
 				subject.Namespace == namespace &&
