@@ -80,7 +80,7 @@ using the [`secret()`](../40-expressions.md#secretname) expression function.
 :::note
 
 Tagger signing information may have been configured at the system level by a 
-Kargo admin. If a system-level configuration exists, the example shown below 
+Kargo admin. If system-level configuration exists, the example shown below 
 would override it.
 
 :::
@@ -91,17 +91,16 @@ steps:
   config:
     path: ./out
     tag: v1.0.0
-    message: legitness
+    message: My example tag
     tagger:
-      name: yourname
-      email: your@inbox.com
+      name: Me
+      email: me@example.com
       signingKey: ${{ secret('my-gpg-secret').privateKey }}
 ```
 
 :::note
 
-If `tagger.signingKey` is provided but `tagger.name` and `tagger.email` do not
-match the email and name in the uid of the associated GPG key, the tag will not
-get signed.
+If `tagger.signingKey` is provided, but `tagger.name` and `tagger.email` do not
+match the key's UID, tagging will fail.
 
 :::

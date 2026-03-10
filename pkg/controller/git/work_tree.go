@@ -311,12 +311,9 @@ type TagOptions struct {
 	// Tagger is the tagger of the tag. If nil, the default tagger already
 	// configured in the git repository will be used.
 	Tagger *User
-	// Message is the message with which the tag will be annotated. If empty,
-	// a default message will be used.
-	Message string
 }
 
-func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
+func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 	if opts == nil {
 		opts = &TagOptions{}
 	}
@@ -345,11 +342,6 @@ func (w *workTree) CreateTag(tag string, opts *TagOptions) error {
 				"error setting up author information for tag command: %w", err,
 			)
 		}
-	}
-
-	msg := "Created by Kargo"
-	if opts.Message != "" {
-		msg = opts.Message
 	}
 
 	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)

@@ -124,7 +124,7 @@ function.
 :::note
 
 Author signing information may have been configured at the system level by a 
-Kargo admin. If a system-level configuration exists, the example shown below 
+Kargo admin. If system-level configuration exists, the example shown below 
 would override it.
 
 :::
@@ -138,15 +138,14 @@ steps:
     path: ./out
     message: ${{ outputs['update-image'].commitMessage }}
     author:
-      name: Kargo
-      email: kargo@example.com
+      name: Me
+      email: me@example.com
       signingKey: ${{ secret('my-gpg-secret').privateKey }}
 ```
 
 :::note
 
-If `author.signingKey` is provided but `author.name` and `author.email` do not
-match the email and name in the uid of the associated GPG key, commit tag will 
-not get signed.
+If `author.signingKey` is provided, but `author.name` and `author.email` do not
+match the key's UID, the commit will fail.
 
 :::

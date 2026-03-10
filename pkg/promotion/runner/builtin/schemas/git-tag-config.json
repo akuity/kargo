@@ -22,7 +22,23 @@
           "type": "string",
           "description": "The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided and must match the 'email' and 'name' in the uid of the associated GPG key." 
         }
-      }
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The email of the tagger.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the tagger.",
+          "minLength": 1
+        },
+        "signingKey": {
+          "type": "string",
+          "description": "The GPG signing key for the tagger. If provided, 'email' and 'name' must match the key's UID." 
+        }
+      },
+      "required": ["name", "email"]
     },
     "message": {
       "type": "string",
@@ -40,5 +56,5 @@
       "minLength": 1
     }
   },
-  "required": ["path", "tag"]
+  "required": ["path", "tag", "message"]
 }

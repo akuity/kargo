@@ -182,7 +182,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 		}
 
 		if author.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
