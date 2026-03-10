@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Pagination } from 'antd';
+import { Button, Empty, Flex, Pagination, Space } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
@@ -60,11 +60,46 @@ export const ProjectsList = () => {
   if (isEmpty) {
     return (
       <>
-        <div className='flex items-center mb-20'>
+        <Flex align='center' className='mb-20' gap={8}>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
+          <Space className='ml-auto'>
+            <Button
+              variant='outlined'
+              color={myProjectsView ? 'primary' : 'default'}
+              icon={<FontAwesomeIcon icon={faUser} />}
+              onClick={() => {
+                setMyProjectsView(!myProjectsView);
+                setPage(1);
+              }}
+            >
+              My Projects
+            </Button>
+            <Button
+              variant='outlined'
+              color={starredProjectsView ? 'primary' : 'default'}
+              icon={<FontAwesomeIcon icon={faStar} />}
+              onClick={() => {
+                setStarredProjectsView(!starredProjectsView);
+                setPage(1);
+              }}
+            >
+              Starred Projects
+            </Button>
+          </Space>
+        </Flex>
+        <Empty />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Flex align='center' className='mb-6' gap={8}>
+        <ProjectListFilter onChange={handleFilterChange} init={filter} />
+        <Space className='ml-auto'>
           <Button
-            className='ml-auto'
-            type={myProjectsView ? 'primary' : 'default'}
+            variant='outlined'
+            color={myProjectsView ? 'primary' : 'default'}
             icon={<FontAwesomeIcon icon={faUser} />}
             onClick={() => {
               setMyProjectsView(!myProjectsView);
@@ -74,43 +109,18 @@ export const ProjectsList = () => {
             My Projects
           </Button>
           <Button
-            className='ml-2'
-            type={starredProjectsView ? 'primary' : 'default'}
+            variant='outlined'
+            color={starredProjectsView ? 'primary' : 'default'}
             icon={<FontAwesomeIcon icon={faStar} />}
-            onClick={() => setStarredProjectsView(!starredProjectsView)}
+            onClick={() => {
+              setStarredProjectsView(!starredProjectsView);
+              setPage(1);
+            }}
           >
             Starred Projects
           </Button>
-        </div>
-        <Empty />
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className='mb-6 flex items-center'>
-        <ProjectListFilter onChange={handleFilterChange} init={filter} />
-        <Button
-          className='ml-auto'
-          type={myProjectsView ? 'primary' : 'default'}
-          icon={<FontAwesomeIcon icon={faUser} />}
-          onClick={() => {
-            setMyProjectsView(!myProjectsView);
-            setPage(1);
-          }}
-        >
-          My Projects
-        </Button>
-        <Button
-          className='ml-2'
-          type={starredProjectsView ? 'primary' : 'default'}
-          icon={<FontAwesomeIcon icon={faStar} />}
-          onClick={() => setStarredProjectsView(!starredProjectsView)}
-        >
-          Starred Projects
-        </Button>
-      </div>
+        </Space>
+      </Flex>
       <div className={styles.list}>
         {data.projects.map((proj) => (
           <ProjectItem

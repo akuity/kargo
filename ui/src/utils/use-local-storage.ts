@@ -13,7 +13,7 @@ export const useLocalStorage = <T>(key: string, initialValue?: T) => {
   const setStoredValue: typeof _setStoredValue = (storedValue) => {
     _setStoredValue(storedValue);
 
-    if (!storedValue) {
+    if (storedValue === undefined || storedValue === null) {
       window.localStorage.removeItem(key);
       return;
     }
