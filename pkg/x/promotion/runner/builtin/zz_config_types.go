@@ -228,8 +228,7 @@ type GitMergePRConfig struct {
 }
 
 type GitOpenPRConfig struct {
-	// Indicates whether a new, empty orphan branch should be created and pushed to the remote
-	// if the target branch does not already exist there. Default is false.
+	// Deprecated. Is a no-op if set. Will be removed in a future release.
 	CreateTargetBranch bool `json:"createTargetBranch,omitempty"`
 	// The description of the pull request. Kargo generates a description based on the commit
 	// messages if it is not explicitly specified.
