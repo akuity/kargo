@@ -920,15 +920,7 @@ func (g *githubVerifiedPusher) verifyCommitSignatures(
 func (g *githubVerifiedPusher) isSystemAuthor(
 	name, email string,
 ) bool {
-	sysName := g.gitUser.Name
-	if sysName == "" {
-		sysName = git.DefaultUsername
-	}
-	sysEmail := g.gitUser.Email
-	if sysEmail == "" {
-		sysEmail = git.DefaultEmail
-	}
-	return name == sysName && email == sysEmail
+	return name == g.gitUser.Name && email == g.gitUser.Email
 }
 
 // appendCoAuthoredBy appends a Co-authored-by trailer to a commit message,

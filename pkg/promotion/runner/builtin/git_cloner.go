@@ -63,9 +63,17 @@ func gitUserFromEnv() git.User {
 		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
 	}{}
 	envconfig.MustProcess("", &cfg)
+	name := cfg.Name
+	if name == "" {
+		name = git.DefaultUsername
+	}
+	email := cfg.Email
+	if email == "" {
+		email = git.DefaultEmail
+	}
 	u := git.User{
-		Name:           cfg.Name,
-		Email:          cfg.Email,
+		Name:           name,
+		Email:          email,
 		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
 		SigningKeyPath: cfg.SigningKeyPath,
 	}

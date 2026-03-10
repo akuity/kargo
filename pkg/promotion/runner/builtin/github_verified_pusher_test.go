@@ -1080,6 +1080,10 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			g := &githubVerifiedPusher{
 				cfg: githubVerifiedPusherConfig{MaxRevisions: 10},
+				gitUser: git.User{
+					Name:  git.DefaultUsername,
+					Email: git.DefaultEmail,
+				},
 			}
 			targetBranch := tc.targetBranch
 			if targetBranch == "" {
@@ -1556,13 +1560,21 @@ func Test_githubVerifiedPusher_isSystemAuthor(t *testing.T) {
 		expect  bool
 	}{
 		{
-			name:   "matches default identity when gitUser is empty",
+			name: "matches default identity",
+			gitUser: git.User{
+				Name:  git.DefaultUsername,
+				Email: git.DefaultEmail,
+			},
 			author: "Kargo",
 			email:  "no-reply@kargo.io",
 			expect: true,
 		},
 		{
-			name:   "does not match custom author against defaults",
+			name: "does not match custom author against defaults",
+			gitUser: git.User{
+				Name:  git.DefaultUsername,
+				Email: git.DefaultEmail,
+			},
 			author: "Alice",
 			email:  "alice@example.com",
 			expect: false,
