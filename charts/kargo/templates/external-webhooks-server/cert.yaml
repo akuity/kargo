@@ -11,6 +11,7 @@ spec:
   dnsNames:
   - {{ quote .Values.externalWebhooksServer.host }}
   issuerRef:
+    group: cert-manager.io
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
   secretName:  {{ .Values.externalWebhooksServer.tls.secretName }}

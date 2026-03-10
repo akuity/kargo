@@ -8,6 +8,7 @@ spec:
   dnsNames:
   - kargo-webhooks-server.{{ .Release.Namespace }}.svc
   issuerRef:
+    group: cert-manager.io
     kind: Issuer
     name: kargo-selfsigned-cert-issuer
   secretName: {{ .Values.webhooksServer.tls.secretName }}
