@@ -296,8 +296,7 @@ func Test_gitPROpener_run(t *testing.T) {
 				WorkDir: workDir,
 			},
 			builtin.GitOpenPRConfig{
-				RepoURL: testRepoURL,
-				// We get slightly better coverage by using this option
+				RepoURL:            testRepoURL,
 				SourceBranch:       testSourceBranch,
 				TargetBranch:       testTargetBranch,
 				CreateTargetBranch: true,
