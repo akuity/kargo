@@ -182,7 +182,6 @@ func (g *gitPROpener) run(
 	// we're free to create a new one.
 
 	// Get the title from the commit message of the head of the source branch
-	// BEFORE we move on to checking the existence of the target branch.
 	commitMsg, err := repo.CommitMessage(sourceBranch)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, fmt.Errorf(
