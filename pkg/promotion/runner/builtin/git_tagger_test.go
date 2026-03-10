@@ -22,7 +22,8 @@ func Test_gitTagger_convert(t *testing.T) {
 		{
 			name: "path not specified",
 			config: promotion.Config{
-				"tag": "v1.0.0",
+				"tag":     "v1.0.0",
+				"message": "hello",
 			},
 			expectedProblems: []string{
 				"(root): path is required",
@@ -31,8 +32,9 @@ func Test_gitTagger_convert(t *testing.T) {
 		{
 			name: "path is empty string",
 			config: promotion.Config{
-				"path": "",
-				"tag":  "v1.0.0",
+				"path":    "",
+				"tag":     "v1.0.0",
+				"message": "hello",
 			},
 			expectedProblems: []string{
 				"path: String length must be greater than or equal to 1",
@@ -41,7 +43,8 @@ func Test_gitTagger_convert(t *testing.T) {
 		{
 			name: "tag not specified",
 			config: promotion.Config{
-				"path": "/tmp/foo",
+				"path":    "/tmp/foo",
+				"message": "hello",
 			},
 			expectedProblems: []string{
 				"(root): tag is required",
@@ -50,18 +53,40 @@ func Test_gitTagger_convert(t *testing.T) {
 		{
 			name: "tag is empty string",
 			config: promotion.Config{
-				"path": "/tmp/foo",
-				"tag":  "",
+				"path":    "/tmp/foo",
+				"tag":     "",
+				"message": "hello",
 			},
 			expectedProblems: []string{
 				"tag: String length must be greater than or equal to 1",
 			},
 		},
 		{
-			name: "valid config",
+			name: "message not specified",
 			config: promotion.Config{
 				"path": "/tmp/foo",
-				"tag":  "v1.0.0",
+			},
+			expectedProblems: []string{
+				"(root): message is required",
+			},
+		},
+		{
+			name: "message is empty string",
+			config: promotion.Config{
+				"path":    "/tmp/foo",
+				"tag":     "v1.0.0",
+				"message": "",
+			},
+			expectedProblems: []string{
+				"message: String length must be greater than or equal to 1",
+			},
+		},
+		{
+			name: "valid config",
+			config: promotion.Config{
+				"path":    "/tmp/foo",
+				"tag":     "v1.0.0",
+				"message": "hello",
 			},
 		},
 	}
