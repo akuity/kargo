@@ -685,6 +685,9 @@ message ListProjectsRequest {
   optional string filter = 3;
   // ui store starred projects uids, so it needs to filter it when looking at starred projects
   repeated string uid = 4;
+  // When true, filter results to only projects where the authenticated user
+  // has been mapped to a ServiceAccount in the project's namespace.
+  optional bool mine = 5;
 }
 
 // ListProjectsResponse contains the list of projects and pagination information.
