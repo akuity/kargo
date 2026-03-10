@@ -43,7 +43,7 @@ type WorkTree interface {
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
 	// CreateTag creates a new tag with the specified name.
-	CreateTag(name string, opts *TagOptions) error
+	CreateTag(name, msg string, opts *TagOptions) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch

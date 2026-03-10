@@ -81,10 +81,9 @@ func (g *gitTagTagger) run(
 				Email:      cfg.Tagger.Email,
 				SigningKey: cfg.Tagger.SigningKey,
 			},
-			Message: cfg.Message,
 		}
 	}
-	if err = workTree.CreateTag(cfg.Tag, tagOpts); err != nil {
+	if err = workTree.CreateTag(cfg.Tag, cfg.Message, tagOpts); err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
 			fmt.Errorf("error creating tag %s: %w", cfg.Tag, err)
 	}
