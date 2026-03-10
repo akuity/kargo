@@ -180,6 +180,50 @@ characters:
 				)
 			},
 		},
+		{
+			name: "escaped dot in nested key",
+			inBytes: []byte(`
+configs:
+  example.com/feature:
+    enabled: false
+`),
+			updates: []Update{
+				{
+					Key:   `configs.example\.com/feature.enabled`,
+					Value: true,
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte(`
+configs:
+  example.com/feature:
+    enabled: true
+`), bytes)
+			},
+		},
+		{
+			name: "escaped dot in key with sequence index",
+			inBytes: []byte(`
+services:
+  - example.com/label: old-value
+    name: my-service
+`),
+			updates: []Update{
+				{
+					Key:   `services.0.example\.com/label`,
+					Value: "new-value",
+				},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte(`
+services:
+  - example.com/label: new-value
+    name: my-service
+`), bytes)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -288,54 +332,4 @@ func TestSplitKeyPath(t *testing.T) {
 			require.Equal(t, tc.expected, got)
 		})
 	}
-}
-
-func TestSetValuesInBytesWithEscapedDotNested(t *testing.T) {
-	yamlBytes := []byte(`
-configs:
-  example.com/feature:
-    enabled: false
-`)
-
-	updates := []Update{
-		{
-			Key:   "configs.example\\.com/feature.enabled",
-			Value: true,
-		},
-	}
-
-	expected := []byte(`
-configs:
-  example.com/feature:
-    enabled: true
-`)
-
-	out, err := SetValuesInBytes(yamlBytes, updates)
-	require.NoError(t, err)
-	require.Equal(t, expected, out)
-}
-
-func TestSequenceAndLiteralDotTogether(t *testing.T) {
-	yamlBytes := []byte(`
-services:
-  - example.com/label: old-value
-    name: my-service
-`)
-
-	updates := []Update{
-		{
-			Key:   `services.0.example\.com/label`,
-			Value: "new-value",
-		},
-	}
-
-	expected := []byte(`
-services:
-  - example.com/label: new-value
-    name: my-service
-`)
-
-	out, err := SetValuesInBytes(yamlBytes, updates)
-	require.NoError(t, err)
-	require.Equal(t, expected, out)
 }
