@@ -14,7 +14,7 @@ referencing the current `HEAD` of a checked-out branch.
 |--------|----------|----------|-----------------------------------------------------------------------------|
 | `path` | `string` | Y        | Path to a working directory of a local repository. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `tag`  | `string` | Y        | The tag to create. |
-| `message` | `string` | N | The message to annotate the tag with. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
+| `message` | `string` | Y | The message with which to annotate the tag. |
 | `tagger.name` | `string` | N | The tagger's name. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `tagger.email` | `string` | N | The tagger's email address. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level. |
 | `tagger.signingKey` | `string` | N | The GPG signing key for the tagger. If provided `tagger.name` and `tagger.email` must also be provided and must match the email and name in the uid of the associated GPG key. |
