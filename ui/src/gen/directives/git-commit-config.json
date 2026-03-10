@@ -21,7 +21,7 @@
     },
     "signingKey": {
      "type": "string",
-     "description": "The GPG signing key for the author. If provided 'email' and 'name' must match the ones in the uid of the associated GPG key."
+     "description": "The GPG signing key for the author. If provided, 'email' and 'name' must match the key's UID."
     }
    }
   },

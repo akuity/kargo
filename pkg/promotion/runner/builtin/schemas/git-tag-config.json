@@ -10,21 +10,6 @@
       "properties": {
         "email": {
           "type": "string",
-          "description": "The email of the tagger. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level.",
-          "format": "email"
-        },
-        "name": {
-          "type": "string",
-          "description": "The name of the tagger. If unspecified, defaults to the repo-level configuration specified when the repo was cloned. Can also be configured at the system level.",
-          "minLength": 1
-        },
-        "signingKey": {
-          "type": "string",
-          "description": "The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided and must match the 'email' and 'name' in the uid of the associated GPG key." 
-        }
-      "properties": {
-        "email": {
-          "type": "string",
           "description": "The email of the tagger.",
           "format": "email"
         },

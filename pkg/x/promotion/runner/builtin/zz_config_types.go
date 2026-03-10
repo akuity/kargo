@@ -137,7 +137,7 @@ type GitClearConfig struct {
 type GitCloneConfig struct {
 	// Default authorship information for any commits made to the cloned repository. If
 	// provided, this overrides any system-level defaults. Note: Configuration of the
-	// `git-commit` or `git-tag` step can override this information.
+	// `git-commit` and `git-tag` steps can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
@@ -153,7 +153,7 @@ type GitCloneConfig struct {
 
 // Default authorship information for any commits made to the cloned repository. If
 // provided, this overrides any system-level defaults. Note: Configuration of the
-// `git-commit` or `git-tag` step can override this information.
+// `git-commit` and `git-tag` steps can override this information.
 type GitCloneConfigAuthor struct {
 	// The email of the author.
 	Email string `json:"email"`
@@ -206,8 +206,8 @@ type GitCommitConfigAuthor struct {
 	Email string `json:"email"`
 	// The name of the author.
 	Name string `json:"name"`
-	// The GPG signing key for the author. If provided 'email' and 'name' must match the ones in
-	// the uid of the associated GPG key.
+	// The GPG signing key for the author. If provided, 'email' and 'name' must match the key's
+	// UID.
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
@@ -264,7 +264,7 @@ type GitPushConfig struct {
 	// Mutually exclusive with 'tag'.
 	Force bool `json:"force,omitempty"`
 	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
-	// with 'targetBranch' and 'tag'. If neither of these is provided, the target branch will be
+	// with 'targetBranch' and 'tag'. If none of these are provided, the target branch will be
 	// the currently checked out branch.
 	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
 	// This step implements its own internal retry logic for cases where a push is determined to
@@ -280,7 +280,9 @@ type GitPushConfig struct {
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
 	// A tag to push to the remote repository. Mutually exclusive with
-	// 'generateTargetBranch=true', 'targetBranch', and 'force=true'.
+	// 'generateTargetBranch=true' and 'targetBranch'. If none of these are provided, the target
+	// branch will be the currently checked out branch. 'tag' is also mutually exclusive with
+	// 'force=true'.
 	Tag string `json:"tag,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and
 	// 'tag'. If none of these are provided, the target branch will be the currently checked out
@@ -290,7 +292,7 @@ type GitPushConfig struct {
 
 type GitTagConfig struct {
 	// The annotation message for the tag.
-	Message string `json:"message,omitempty"`
+	Message string `json:"message"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
 	// The tag to create in the repository.
@@ -305,14 +307,12 @@ type GitTagConfig struct {
 // system-level defaults and any optional, default authorship information configured in the
 // `git-clone` step.
 type Tagger struct {
-	// The email of the tagger. If unspecified, defaults to the repo-level configuration
-	// specified when the repo was cloned. Can also be configured at the system level.
-	Email string `json:"email,omitempty"`
-	// The name of the tagger. If unspecified, defaults to the repo-level configuration
-	// specified when the repo was cloned. Can also be configured at the system level.
-	Name string `json:"name,omitempty"`
-	// The GPG signing key for the tagger. If provided 'email' and 'name' must also be provided
-	// and must match the 'email' and 'name' in the uid of the associated GPG key.
+	// The email of the tagger.
+	Email string `json:"email"`
+	// The name of the tagger.
+	Name string `json:"name"`
+	// The GPG signing key for the tagger. If provided, 'email' and 'name' must match the key's
+	// UID.
 	SigningKey string `json:"signingKey,omitempty"`
 }
 
