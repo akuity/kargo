@@ -77,9 +77,6 @@ func gitUserFromEnv() git.User {
 		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
 		SigningKeyPath: cfg.SigningKeyPath,
 	}
-	if cfg.SigningKeyPath != "" {
-		u.SigningKeyTrustLevel = git.SigningKeyTrustLevelUltimate
-	}
 	return u
 }
 
@@ -160,8 +157,6 @@ func (g *gitCloner) run(
 			Email:      cfg.Author.Email,
 			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
-		// SigningKeyTrustLevel is intentionally left at the default
-		// (unknown). Only the system-level signing key is trusted.
 	} else {
 		repoUser = g.gitUser // Default to the system-level gitUser
 	}

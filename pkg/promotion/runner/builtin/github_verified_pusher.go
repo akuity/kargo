@@ -543,16 +543,6 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			}
 	}
 
-	// Verify GPG signatures on local commits before replaying them. This
-	// is an integrity check — commits with bad or revoked signatures are
-	// rejected. It does not gate signing decisions; all commits are
-	// App-signed by the replay loop below.
-	if sigErr := g.verifyCommitSignatures(ctx, workTree, commits); sigErr != nil {
-		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusFailed,
-		}, sigErr
-	}
-
 	// Replay each revision via the API. All commits are created without
 	// explicit Author/Committer so the GitHub App signs them (producing
 	// the "Verified" badge). When the original author differs from the
@@ -833,86 +823,6 @@ func buildCommitURL(repoURL, sha string) string {
 		return ""
 	}
 	return fmt.Sprintf("https://%s%s/commit/%s", host, u.Path, sha)
-}
-
-// verifyCommitSignatures is an integrity check that detects tampered or
-// revoked GPG signatures on local commits before they are replayed via the
-// GitHub API. It does not gate signing decisions — all commits are App-signed
-// regardless of their GPG status.
-//
-// When the controller is configured with a signing key
-// (GITCLIENT_SIGNING_KEY_PATH), this method uses the WorkTree's GPG keyring
-// to check signatures. Commits with bad signatures ("B") or revoked keys
-// ("R") cause a terminal error. All other statuses pass through.
-//
-// When no signing key is configured, this is a no-op.
-func (g *githubVerifiedPusher) verifyCommitSignatures(
-	ctx context.Context,
-	workTree git.WorkTree,
-	commits []*github.RepositoryCommit,
-) error {
-	if g.gitUser.SigningKeyPath == "" {
-		return nil
-	}
-
-	logger := logging.LoggerFromContext(ctx)
-
-	// Collect non-empty SHAs. RepositoryCommit.SHA is a *string that could
-	// deserialize to nil from a malformed API response; skip defensively.
-	var shas []string
-	for _, rc := range commits {
-		if sha := rc.GetSHA(); sha != "" {
-			shas = append(shas, sha)
-		} else {
-			logger.Debug("skipping commit with empty SHA")
-		}
-	}
-	if len(shas) == 0 {
-		return nil
-	}
-
-	logger.Debug(
-		"verifying commit signatures",
-		"signingKeyPath", g.gitUser.SigningKeyPath,
-		"numCommits", len(shas),
-	)
-
-	// Single batch call to get signature info for all commits.
-	statuses, err := workTree.CommitSignatureStatuses(shas)
-	if err != nil {
-		return fmt.Errorf(
-			"error checking commit signatures: %w", err,
-		)
-	}
-
-	for _, sha := range shas {
-		info := statuses[sha]
-		switch info.Status {
-		case "B":
-			return &promotion.TerminalError{
-				Err: fmt.Errorf(
-					"commit %s has a bad GPG signature", sha,
-				),
-			}
-		case "R":
-			return &promotion.TerminalError{
-				Err: fmt.Errorf(
-					"commit %s was signed with a revoked key", sha,
-				),
-			}
-		default:
-			logger.Debug(
-				"commit signature status",
-				"commit", sha,
-				"status", info.Status,
-				"keyID", info.KeyID,
-				"signer", info.Signer,
-			)
-		}
-	}
-
-	logger.Debug("all commit signatures verified")
-	return nil
 }
 
 // isSystemAuthor reports whether the given name and email match the

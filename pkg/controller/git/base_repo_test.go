@@ -18,16 +18,14 @@ func TestSetupAuthor(t *testing.T) {
 		// the repo directory hasn't been created yet.
 		createRepoDir bool
 		author        *User
-		assert        func(*testing.T, string, string, *User, error)
+		assert        func(*testing.T, string, string, error)
 	}{
 		{
 			name:          "nil author uses defaults",
 			createRepoDir: true,
 			author:        nil,
-			assert: func(t *testing.T, homeDir, _ string, author *User, err error) {
+			assert: func(t *testing.T, homeDir, _ string, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, author)
-				require.Empty(t, author.gpgFingerprint)
 				assertGitConfig(t, homeDir, "user.name", DefaultUsername)
 				assertGitConfig(t, homeDir, "user.email", DefaultEmail)
 			},
@@ -39,10 +37,8 @@ func TestSetupAuthor(t *testing.T) {
 				Name:  "Test User",
 				Email: "test@example.com",
 			},
-			assert: func(t *testing.T, homeDir, _ string, author *User, err error) {
+			assert: func(t *testing.T, homeDir, _ string, err error) {
 				require.NoError(t, err)
-				require.NotNil(t, author)
-				require.Empty(t, author.gpgFingerprint)
 				assertGitConfig(t, homeDir, "user.name", "Test User")
 				assertGitConfig(t, homeDir, "user.email", "test@example.com")
 			},
@@ -57,7 +53,7 @@ func TestSetupAuthor(t *testing.T) {
 				Name:  "Per-Commit Author",
 				Email: "per-commit@example.com",
 			},
-			assert: func(t *testing.T, homeDir, repoHomeDir string, _ *User, err error) {
+			assert: func(t *testing.T, homeDir, repoHomeDir string, err error) {
 				require.NoError(t, err)
 				assertGitConfig(t, homeDir, "user.name", "Per-Commit Author")
 				assertNoGitConfig(t, repoHomeDir)
@@ -69,7 +65,7 @@ func TestSetupAuthor(t *testing.T) {
 			name:          "succeeds when repo dir does not exist",
 			createRepoDir: false,
 			author:        nil,
-			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
+			assert: func(t *testing.T, homeDir, _ string, err error) {
 				require.NoError(t, err)
 				assertGitConfig(t, homeDir, "user.name", DefaultUsername)
 			},
@@ -82,7 +78,7 @@ func TestSetupAuthor(t *testing.T) {
 				Email:          "test@example.com",
 				SigningKeyPath: "/nonexistent/key.asc",
 			},
-			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
+			assert: func(t *testing.T, homeDir, _ string, err error) {
 				// git config succeeds but gpg --import fails because the
 				// key file doesn't exist. This exercises the setCmdHome
 				// calls in the signing path.
@@ -98,7 +94,7 @@ func TestSetupAuthor(t *testing.T) {
 				Email:      "test@example.com",
 				SigningKey: "not-a-real-key",
 			},
-			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
+			assert: func(t *testing.T, homeDir, _ string, err error) {
 				// The key file is written and git config succeeds but gpg
 				// --import fails because the key content is invalid.
 				require.ErrorContains(t, err, "error importing gpg key")
@@ -124,8 +120,8 @@ func TestSetupAuthor(t *testing.T) {
 				homeDir: repoHomeDir,
 			}
 
-			author, err := b.setupAuthor(homeDir, tc.author)
-			tc.assert(t, homeDir, repoHomeDir, author, err)
+			err := b.setupAuthor(homeDir, tc.author)
+			tc.assert(t, homeDir, repoHomeDir, err)
 		})
 	}
 }

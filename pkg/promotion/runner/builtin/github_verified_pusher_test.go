@@ -21,12 +21,9 @@ import (
 // mockWorkTree is a minimal mock of git.WorkTree for testing.
 type mockWorkTree struct {
 	git.WorkTree
-	url                       string
-	dir                       string
-	homeDir                   string
-	commitSignatureStatusesFn func(
-		ids []string,
-	) (map[string]git.CommitSignatureInfo, error)
+	url             string
+	dir             string
+	homeDir         string
 	currentBranchFn func() (string, error)
 	lastCommitIDFn  func() (string, error)
 	pushFn          func(*git.PushOptions) error
@@ -35,12 +32,6 @@ type mockWorkTree struct {
 func (m *mockWorkTree) URL() string     { return m.url }
 func (m *mockWorkTree) Dir() string     { return m.dir }
 func (m *mockWorkTree) HomeDir() string { return m.homeDir }
-
-func (m *mockWorkTree) CommitSignatureStatuses(
-	ids []string,
-) (map[string]git.CommitSignatureInfo, error) {
-	return m.commitSignatureStatusesFn(ids)
-}
 
 func (m *mockWorkTree) CurrentBranch() (string, error) {
 	return m.currentBranchFn()
@@ -1269,287 +1260,6 @@ func Test_githubVerifiedPusher_cleanupStagingRef(t *testing.T) {
 	}
 }
 
-func Test_githubVerifiedPusher_verifyCommitSignatures(t *testing.T) {
-	testCases := []struct {
-		name     string
-		gitUser  git.User
-		workTree *mockWorkTree
-		commits  []*github.RepositoryCommit
-		assert   func(*testing.T, error)
-	}{
-		{
-			name:     "no-op when no signing key is configured",
-			workTree: &mockWorkTree{},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "CommitSignatureStatuses error",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return nil, fmt.Errorf("git command failed")
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "git command failed")
-			},
-		},
-		{
-			name:    "accepts unsigned commits",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					ids []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					result := make(map[string]git.CommitSignatureInfo)
-					for _, id := range ids {
-						result[id] = git.CommitSignatureInfo{Status: "N"}
-					}
-					return result, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-				{SHA: ptr.To("def456")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "accepts good signatures",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "G", KeyID: "ABCD1234", Signer: "Kargo"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "accepts untrusted signatures",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "U", KeyID: "ABCD1234", Signer: "Author"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "rejects commits with bad signatures",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "B"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.Error(t, err)
-				assert.IsType(t, &promotion.TerminalError{}, err)
-				assert.ErrorContains(t, err, "bad GPG signature")
-			},
-		},
-		{
-			name:    "accepts commits signed by unknown key",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "E", KeyID: "UNKNOWN1", Signer: "Other"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "accepts commits with expired signature",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "X", KeyID: "ABCD1234"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "accepts commits with expired key",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "Y", KeyID: "ABCD1234"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "rejects commits with revoked key",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"abc123": {Status: "R"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("abc123")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.Error(t, err)
-				assert.IsType(t, &promotion.TerminalError{}, err)
-				assert.ErrorContains(t, err, "revoked key")
-			},
-		},
-		{
-			name:    "skips commits with empty SHA",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					ids []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					require.Equal(t, []string{"def456"}, ids)
-					return map[string]git.CommitSignatureInfo{
-						"def456": {Status: "G", KeyID: "ABCD1234", Signer: "Kargo"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("")},
-				{SHA: ptr.To("def456")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "mixed statuses pass when none are bad or revoked",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"signed1":   {Status: "G", KeyID: "ABCD1234", Signer: "Kargo"},
-						"unsigned1": {Status: "N"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("signed1")},
-				{SHA: ptr.To("unsigned1")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name:    "stops at first bad signature",
-			gitUser: git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{
-				commitSignatureStatusesFn: func(
-					_ []string,
-				) (map[string]git.CommitSignatureInfo, error) {
-					return map[string]git.CommitSignatureInfo{
-						"bad1":  {Status: "B"},
-						"good1": {Status: "G"},
-					}, nil
-				},
-			},
-			commits: []*github.RepositoryCommit{
-				{SHA: ptr.To("bad1")},
-				{SHA: ptr.To("good1")},
-			},
-			assert: func(t *testing.T, err error) {
-				require.Error(t, err)
-				assert.IsType(t, &promotion.TerminalError{}, err)
-			},
-		},
-		{
-			name:     "no-op for empty commit list",
-			gitUser:  git.User{SigningKeyPath: "/some/key"},
-			workTree: &mockWorkTree{},
-			commits:  []*github.RepositoryCommit{},
-			assert: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			g := &githubVerifiedPusher{gitUser: tc.gitUser}
-			err := g.verifyCommitSignatures(
-				context.Background(),
-				tc.workTree,
-				tc.commits,
-			)
-			tc.assert(t, err)
-		})
-	}
-}
-
 func Test_githubVerifiedPusher_isSystemAuthor(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
@@ -2181,11 +1891,6 @@ func Test_githubVerifiedPusher_run(t *testing.T) {
 					pushFn: func(_ *git.PushOptions) error {
 						return nil
 					},
-					commitSignatureStatusesFn: func(
-						_ []string,
-					) (map[string]git.CommitSignatureInfo, error) {
-						return nil, nil
-					},
 				}
 				g.loadWorkTreeFn = func(
 					_ string, _ *git.LoadWorkTreeOptions,
@@ -2304,11 +2009,6 @@ func Test_githubVerifiedPusher_run(t *testing.T) {
 					},
 					pushFn: func(_ *git.PushOptions) error {
 						return nil
-					},
-					commitSignatureStatusesFn: func(
-						_ []string,
-					) (map[string]git.CommitSignatureInfo, error) {
-						return nil, nil
 					},
 				}
 				g.loadWorkTreeFn = func(

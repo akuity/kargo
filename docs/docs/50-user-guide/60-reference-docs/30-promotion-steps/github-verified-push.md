@@ -72,16 +72,6 @@ GitHub commit.
 
 :::
 
-### Integrity Checking
-
-When the Kargo controller is configured with a
-[GPG signing key](../../../40-operator-guide/20-advanced-installation/30-common-configurations.md#signing-commits),
-this step verifies GPG signatures on local commits before replaying them.
-This is an integrity check — it does not affect which commits receive the
-"Verified" badge. Commits with bad or revoked GPG signatures cause the step
-to fail with a terminal error. All other signature statuses (including
-unsigned commits) pass through without error.
-
 ## Configuration
 
 | Name | Type | Required | Description |

@@ -1,7 +1,6 @@
 package git
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -86,7 +85,7 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 		opts = &ClientOptions{}
 	}
 
-	if _, err := b.setupAuthor(b.homeDir, opts.User); err != nil {
+	if err := b.setupAuthor(b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
@@ -122,22 +121,14 @@ type User struct {
 	// SigningKeyPath is an optional path referencing a signing key for
 	// signing git objects. Ignored if SigningKey is provided.
 	SigningKeyPath string
-	// SigningKeyTrustLevel is the GPG trust level to assign to the imported
-	// signing key. When set, setupAuthor marks the key with the
-	// corresponding ownertrust level after import.
-	SigningKeyTrustLevel SigningKeyTrustLevel
-	// gpgFingerprint is the fingerprint of the imported GPG signing key.
-	// It is set by setupAuthor after a successful key import.
-	gpgFingerprint string
 }
 
 // setupAuthor configures the git CLI with a default commit author.
 // Optionally, the author can have an associated signing key. When using GPG
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
-// executed by this method. Returns the fully resolved User (with
-// gpgFingerprint set when a signing key was imported).
-func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
+// executed by this method.
+func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	if author == nil {
 		author = &User{}
 	}
@@ -156,7 +147,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
 	// identity.
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return nil, fmt.Errorf("error configuring git user name: %w", err)
+		return fmt.Errorf("error configuring git user name: %w", err)
 	}
 
 	if author.Email == "" {
@@ -168,7 +159,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return nil, fmt.Errorf("error configuring git user email: %w", err)
+		return fmt.Errorf("error configuring git user email: %w", err)
 	}
 
 	// For now, since only GPG signing is supported, we will assume GPG if the
@@ -182,7 +173,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return nil, fmt.Errorf(
+				return fmt.Errorf(
 					"error configuring commit gpg signing: %w", err,
 				)
 			}
@@ -194,30 +185,27 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) (*User, error) {
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return nil, fmt.Errorf(
+				return fmt.Errorf(
 					"error configuring tag gpg signing: %w", err,
 				)
 			}
 
-			fingerprint, err := b.importGPGSigningKey(homeDir, author)
-			if err != nil {
-				return nil, err
+			if err := b.importGPGSigningKey(homeDir, author); err != nil {
+				return err
 			}
-			author.gpgFingerprint = fingerprint
-			return author, nil
 		}
 	}
 
-	return author, nil
+	return nil
 }
 
 // importGPGSigningKey imports a GPG signing key into the keyring rooted at
 // homeDir. If author.SigningKey (raw content) is set, it is written to a
-// temporary file for import. Returns the key fingerprint.
+// temporary file for import.
 func (b *baseRepo) importGPGSigningKey(
 	homeDir string,
 	author *User,
-) (string, error) {
+) error {
 	keyPath := author.SigningKeyPath
 	if author.SigningKey != "" {
 		keyPath = filepath.Join(homeDir, "signing-key.asc")
@@ -226,7 +214,7 @@ func (b *baseRepo) importGPGSigningKey(
 			[]byte(author.SigningKey),
 			0600,
 		); err != nil {
-			return "", fmt.Errorf(
+			return fmt.Errorf(
 				"error writing signing key to %q: %w", keyPath, err,
 			)
 		}
@@ -242,7 +230,7 @@ func (b *baseRepo) importGPGSigningKey(
 	}
 
 	if keyPath == "" {
-		return "", nil
+		return nil
 	}
 
 	cmd := b.buildCommand(
@@ -255,7 +243,7 @@ func (b *baseRepo) importGPGSigningKey(
 	b.setCmdHome(cmd, homeDir)
 	res, err := libExec.Exec(cmd)
 	if err != nil {
-		return "", fmt.Errorf(
+		return fmt.Errorf(
 			"error importing gpg key %q: %w", keyPath, err,
 		)
 	}
@@ -266,79 +254,7 @@ func (b *baseRepo) importGPGSigningKey(
 		"imported GPG signing key",
 		"path", keyPath,
 		"fingerprint", fingerprint,
-		"trustLevel", string(author.SigningKeyTrustLevel),
 	)
-
-	if trustLevel := gpgOwntrustLevel(author.SigningKeyTrustLevel); trustLevel != "" && fingerprint != "" {
-		cmd = b.buildCommand("gpg", "--import-ownertrust")
-		cmd.Dir = homeDir
-		b.setCmdHome(cmd, homeDir)
-		cmd.Stdin = strings.NewReader(
-			fingerprint + ":" + trustLevel + ":\n",
-		)
-		if _, err = libExec.Exec(cmd); err != nil {
-			return "", fmt.Errorf(
-				"error setting ownertrust for key %s: %w",
-				fingerprint, err,
-			)
-		}
-	}
-
-	return fingerprint, nil
-}
-
-// importGPGPublicKey exports a public key identified by fingerprint from
-// srcHome's GPG keyring and imports it into dstHome's keyring with the
-// specified trust level.
-func (b *baseRepo) importGPGPublicKey(
-	srcHome, dstHome, fingerprint string,
-	trustLevel SigningKeyTrustLevel,
-) error {
-	// Export the public key from the source keyring.
-	exportCmd := b.buildCommand(
-		"gpg", "--export", "--armor", fingerprint,
-	)
-	exportCmd.Dir = srcHome
-	b.setCmdHome(exportCmd, srcHome)
-	pubKey, err := libExec.Exec(exportCmd)
-	if err != nil {
-		return fmt.Errorf(
-			"error exporting public key %s: %w", fingerprint, err,
-		)
-	}
-	if len(pubKey) == 0 {
-		return fmt.Errorf(
-			"no public key data exported for fingerprint %s", fingerprint,
-		)
-	}
-
-	// Import the public key into the destination keyring.
-	importCmd := b.buildCommand("gpg", "--import")
-	importCmd.Dir = dstHome
-	b.setCmdHome(importCmd, dstHome)
-	importCmd.Stdin = bytes.NewReader(pubKey)
-	if _, err = libExec.Exec(importCmd); err != nil {
-		return fmt.Errorf(
-			"error importing public key %s into keyring: %w",
-			fingerprint, err,
-		)
-	}
-
-	// Set ownertrust in the destination keyring.
-	if tl := gpgOwntrustLevel(trustLevel); tl != "" {
-		trustCmd := b.buildCommand("gpg", "--import-ownertrust")
-		trustCmd.Dir = dstHome
-		b.setCmdHome(trustCmd, dstHome)
-		trustCmd.Stdin = strings.NewReader(
-			fingerprint + ":" + tl + ":\n",
-		)
-		if _, err = libExec.Exec(trustCmd); err != nil {
-			return fmt.Errorf(
-				"error setting ownertrust for key %s: %w",
-				fingerprint, err,
-			)
-		}
-	}
 
 	return nil
 }
