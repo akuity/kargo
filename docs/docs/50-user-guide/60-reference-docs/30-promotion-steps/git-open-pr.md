@@ -71,48 +71,31 @@ the remote/target branch is created in the [`git-clone step`](git-clone.md).
 
 :::
 
+The following example demonstrates a common use case for `git-open-pr`. It
+follows a [`git-push` step](git-push.md) that has pushed changes to a remote
+repository to a branch with a generated name. The `git-open-pr` step then
+opens a pull request to merge the changes from the source branch which was
+created by the `git-push` step into the `stage/${{ ctx.stage }}` branch.
+
+This is a common pattern when implementing GitOps-based promotion workflows,
+where changes are first pushed to an intermediate branch and then merged into
+a stage-specific branch through a pull request.
+
 ```yaml
-vars:
-  - name: gitRepo
-    value: https://github.com/example/repo.git
-  - name: targetBranch
-    value: stage/${{ ctx.stage }}
-  - name: outPath
-    value: ./out
-  - name: usePR
 steps:
 # Clone, prepare the contents of ./out, commit, etc...
-  - uses: git-clone
-    config:
-      repoURL: ${{ vars.gitRepo }}
-      checkout:
-      - branch: ${{ vars.targetBranch }}
-        create: true # Create the remote/target branch
-        path: ${{ vars.outPath }}
-  - uses: git-clear
-    config:
-      path: ${{ vars.outPath }}
-  - uses: git-commit
-    config:
-      path: ${{ vars.outPath }}
-      message: "my commit message"
-  - uses: git-push
-    as: push
-    config:
-      path: ${{ vars.outPath }}
-      generateTargetBranch: ${{ vars.usePR }}
-  - uses: git-open-pr
-    as: open-pr
-    config:
-      repoURL: ${{ vars.gitRepo }}
-      sourceBranch: ${{ outputs.push.branch }}
-      targetBranch: ${{ vars.targetBranch }}
-  - if: ${{ status('open-pr') != 'Skipped' }}
-    uses: git-wait-for-pr
-    as: wait-for-pr
-    config:
-      repoURL: ${{ vars.gitRepo }}
-      prNumber: ${{ outputs['open-pr'].pr.id }}
+- uses: git-push
+  as: push
+  config:
+    path: ./out
+    generateTargetBranch: true
+- uses: git-open-pr
+  as: open-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    sourceBranch: ${{ outputs.push.branch }}
+    targetBranch: stage/${{ ctx.stage }}
+# Wait for the PR to be merged or closed...
 ```
 
 ### Custom Title and Labels
@@ -157,8 +140,7 @@ steps:
 The following example conditionally runs the 
 [`git-wait-for-pr` step](git-wait-for-pr.md) based on whether or not the 
 `git-open-pr` step was skipped. If there are no changes between the 
-`sourceBranch` and `targetBranch`, and the `targetBranch` already exists, the 
-`git-open-pr` step will be skipped. The 
+`sourceBranch` and `targetBranch`, the `git-open-pr` step will be skipped. The 
 [`status`](../40-expressions.md#statusstepalias) expression function can be used 
 by subsequent steps to determine if a preceding step was skipped.
 
