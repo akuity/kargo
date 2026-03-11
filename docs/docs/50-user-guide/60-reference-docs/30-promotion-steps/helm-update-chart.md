@@ -186,9 +186,9 @@ steps:
   config:
     path: ./src/charts/my-chart
     charts:
-    - repository: ${{ chartReg }}
+    - repository: ${{ vars.chartReg }}
       name: some-chart
-      version: ${{ chartFrom(chartReg + "/some-chart").Version }}
+      version: ${{ chartFrom(vars.chartReg + "/some-chart").Version }}
 # Render manifests to ./out, commit, push, etc...
 ```
 
