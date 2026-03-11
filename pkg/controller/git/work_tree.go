@@ -431,7 +431,10 @@ func (w *workTree) IsRebasing() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseMerge := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(rebaseMerge) {
+		rebaseMerge = filepath.Join(w.dir, rebaseMerge)
+	}
 	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -441,7 +444,10 @@ func (w *workTree) IsRebasing() (bool, error) {
 	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseApply := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(rebaseApply) {
+		rebaseApply = filepath.Join(w.dir, rebaseApply)
+	}
 	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -682,9 +688,6 @@ func (w *workTree) PullRebase(branch string) error {
 		// amount of retries will fix. If we find that a rebase is in
 		// progress, this is what has happened.
 		if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
-			// Abort the in-progress rebase so the working tree is not
-			// left in a broken state for subsequent retry attempts.
-			_, _ = libExec.Exec(w.buildGitCommand("rebase", "--abort"))
 			return ErrMergeConflict
 		}
 		return fmt.Errorf("error pulling and rebasing branch: %w", err)
