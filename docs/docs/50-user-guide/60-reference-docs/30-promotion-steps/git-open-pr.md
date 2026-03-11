@@ -41,28 +41,6 @@ Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in
 
 :::
 
-| Name | Type | Required | Description |
-|------|------|----------|-------------|
-| `repoURL` | `string` | Y | The URL of a remote Git repository. |
-| `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
-| `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
-| `sourceBranch` | `string` | Y | Specifies the source branch for the pull request. |
-| `targetBranch` | `string` | N | The branch to which the changes should be merged. |
-| `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release. |
-| `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
-| `description` | `string` | N | The description for the pull request. |
-| `labels` | `[]string` | N | Labels to add to the pull request. |
-| `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release. |
-| `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
-| `description` | `string` | N | The description for the pull request. |
-| `labels` | `[]string` | N | Labels to add to the pull request. |
-
-:::warning
-
-Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in 
-`v1.12`.
-
-:::
 ## Output
 
 | Name | Type | Description |
