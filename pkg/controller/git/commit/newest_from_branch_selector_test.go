@@ -47,7 +47,7 @@ func TestNewNewestFromBranchSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newNewestFromBranchSelector(testCase.sub, nil)
+			s, err := newNewestFromBranchSelector(testCase.sub, nil, nil)
 			testCase.assertions(t, s, err)
 		})
 	}

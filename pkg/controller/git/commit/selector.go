@@ -20,10 +20,13 @@ type Selector interface {
 
 // NewSelector returns some implementation of the Selector interface that
 // selects commits from a Git repository based on the provided subscription.
+// If a RepoCache is provided, the selector will use it to avoid redundant
+// clones of the same repository.
 func NewSelector(
 	ctx context.Context,
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
+	repoCache *git.RepoCache,
 ) (Selector, error) {
 	// Pick an appropriate Selector implementation based on the subscription
 	// provided.
@@ -32,5 +35,5 @@ func NewSelector(
 		return nil, fmt.Errorf("error getting selector factory")
 	}
 	factory := reg.Value
-	return factory(sub, creds)
+	return factory(sub, creds, repoCache)
 }

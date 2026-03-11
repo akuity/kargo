@@ -33,6 +33,7 @@ type baseSelector struct {
 func newBaseSelector(
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
+	repoCache *git.RepoCache,
 ) (*baseSelector, error) {
 	s := &baseSelector{
 		repoURL:               sub.RepoURL,
@@ -40,6 +41,15 @@ func newBaseSelector(
 		insecureSkipTLSVerify: sub.InsecureSkipTLSVerify,
 		discoveryLimit:        int(sub.DiscoveryLimit),
 		gitCloneFn:            git.Clone,
+	}
+	if repoCache != nil {
+		s.gitCloneFn = func(
+			repoURL string,
+			clientOpts *git.ClientOptions,
+			cloneOpts *git.CloneOptions,
+		) (git.Repo, error) {
+			return repoCache.GetWorkTree(repoURL, clientOpts, cloneOpts)
+		}
 	}
 	var err error
 	if sub.ExpressionFilter != "" {

@@ -41,7 +41,7 @@ func TestNewLexicalSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newLexicalSelector(testCase.sub, nil)
+			s, err := newLexicalSelector(testCase.sub, nil, nil)
 			testCase.assertions(t, s, err)
 		})
 	}

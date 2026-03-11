@@ -49,7 +49,7 @@ func TestNewSemverSelectorTest(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newSemverSelector(testCase.sub, nil)
+			s, err := newSemverSelector(testCase.sub, nil, nil)
 			testCase.assertions(t, s, err)
 		})
 	}

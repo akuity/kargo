@@ -22,6 +22,7 @@ type (
 	selectorFactory = func(
 		kargoapi.GitSubscription,
 		*git.RepoCredentials,
+		*git.RepoCache,
 	) (Selector, error)
 
 	// selectorRegistration associates a selectorPredicate with a selectorFactory.

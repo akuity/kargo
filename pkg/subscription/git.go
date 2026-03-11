@@ -33,6 +33,7 @@ func init() {
 // commits from a Git repository.
 type gitSubscriber struct {
 	credentialsDB credentials.Database
+	repoCache     *git.RepoCache
 }
 
 // newGitSubscriber returns an implementation of the Subscriber interface that
@@ -42,6 +43,30 @@ func newGitSubscriber(
 	credentialsDB credentials.Database,
 ) (Subscriber, error) {
 	return &gitSubscriber{credentialsDB: credentialsDB}, nil
+}
+
+// NewGitSubscriberFactoryWithCache returns a SubscriberFactory that creates
+// git subscribers with a shared repo cache. This allows multiple warehouse
+// reconciliations subscribing to the same git repo to share a single bare
+// clone instead of each performing an independent full clone.
+func NewGitSubscriberFactoryWithCache(repoCache *git.RepoCache) SubscriberFactory {
+	return func(_ context.Context, credentialsDB credentials.Database) (Subscriber, error) {
+		return &gitSubscriber{
+			credentialsDB: credentialsDB,
+			repoCache:     repoCache,
+		}, nil
+	}
+}
+
+// GitSubscriberRegistrationWithCache returns a SubscriberRegistration for git
+// subscribers that use the provided repo cache.
+func GitSubscriberRegistrationWithCache(repoCache *git.RepoCache) SubscriberRegistration {
+	return SubscriberRegistration{
+		Predicate: func(_ context.Context, sub kargoapi.RepoSubscription) (bool, error) {
+			return sub.Git != nil, nil
+		},
+		Value: NewGitSubscriberFactoryWithCache(repoCache),
+	}
 }
 
 var (
@@ -208,7 +233,7 @@ func (g *gitSubscriber) DiscoverArtifacts(
 		logger.Debug("found no credentials for git repo")
 	}
 
-	selector, err := commit.NewSelector(ctx, *gitSub, repoCreds)
+	selector, err := commit.NewSelector(ctx, *gitSub, repoCreds, g.repoCache)
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error obtaining selector for commits from git repo %q: %w",
