@@ -2,68 +2,19 @@ package git
 
 import (
 	"fmt"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/akuity/kargo/pkg/types"
 )
 
 func TestBareRepo(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	// This will be something to opt into because on some OSes, this will lead
-	// to keychain-related prompts.
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
-		},
-	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
-
-	setupRep, err := Clone(
-		testRepoURL,
-		&ClientOptions{
-			Credentials: &testRepoCreds,
-		},
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, setupRep)
-	defer setupRep.Close()
-	err = os.WriteFile(fmt.Sprintf("%s/%s", setupRep.Dir(), "test.txt"), []byte("foo"), 0600)
-	require.NoError(t, err)
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
-	require.NoError(t, err)
-	err = setupRep.Push(nil)
-	require.NoError(t, err)
-	err = setupRep.Close()
-	require.NoError(t, err)
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t, initialMainCommit)
+	defer testServer.Close()
 
 	rep, err := CloneBare(
 		testRepoURL,
@@ -322,61 +273,29 @@ func Test_bareRepo_filterNonBarePaths(t *testing.T) {
 }
 
 func TestBareRepo_SparseCheckout(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		func(t *testing.T, repo WorkTree) {
+			// Create directory structure: dir1/, dir2/, dir3/
+			for _, dir := range []string{"dir1", "dir2", "dir3"} {
+				dirPath := filepath.Join(repo.Dir(), dir)
+				require.NoError(t, os.MkdirAll(dirPath, 0755))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(dirPath, "file.txt"),
+					[]byte(fmt.Sprintf("content in %s", dir)),
+					0600,
+				))
+			}
+			err := repo.AddAllAndCommit(
+				fmt.Sprintf("add directories %s", uuid.NewString()),
+				nil,
+			)
+			require.NoError(t, err)
+			err = repo.Push(nil)
+			require.NoError(t, err)
 		},
 	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
-
-	// Create a repo with multiple directories
-	setupRep, err := Clone(
-		testRepoURL,
-		&ClientOptions{
-			Credentials: &testRepoCreds,
-		},
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, setupRep)
-
-	// Create directory structure: dir1/, dir2/, dir3/
-	for _, dir := range []string{"dir1", "dir2", "dir3"} {
-		dirPath := filepath.Join(setupRep.Dir(), dir)
-		require.NoError(t, os.MkdirAll(dirPath, 0755))
-		require.NoError(t, os.WriteFile(
-			filepath.Join(dirPath, "file.txt"),
-			[]byte(fmt.Sprintf("content in %s", dir)),
-			0600,
-		))
-	}
-
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("add directories %s", uuid.NewString()), nil)
-	require.NoError(t, err)
-	err = setupRep.Push(nil)
-	require.NoError(t, err)
-	err = setupRep.Close()
-	require.NoError(t, err)
+	defer testServer.Close()
 
 	// Clone as bare repo
 	rep, err := CloneBare(
@@ -527,61 +446,31 @@ func Test_validateSparsePatterns(t *testing.T) {
 }
 
 func TestBareRepo_WithFilter(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
+		t,
+		func(t *testing.T, repo WorkTree) {
+			// Create directory structure
+			for _, dir := range []string{"dir1", "dir2"} {
+				dirPath := filepath.Join(repo.Dir(), dir)
+				require.NoError(t, os.MkdirAll(dirPath, 0755))
+				require.NoError(t, os.WriteFile(
+					filepath.Join(dirPath, "file.txt"),
+					[]byte(fmt.Sprintf("content in %s", dir)),
+					0600,
+				))
+			}
+			err := repo.AddAllAndCommit(
+				fmt.Sprintf("add directories %s", uuid.NewString()),
+				nil,
+			)
+			require.NoError(t, err)
+			err = repo.Push(nil)
+			require.NoError(t, err)
+			err = repo.Close()
+			require.NoError(t, err)
 		},
 	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
-
-	// Create a repo with content
-	setupRep, err := Clone(
-		testRepoURL,
-		&ClientOptions{
-			Credentials: &testRepoCreds,
-		},
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, setupRep)
-
-	// Create directory structure
-	for _, dir := range []string{"dir1", "dir2"} {
-		dirPath := filepath.Join(setupRep.Dir(), dir)
-		require.NoError(t, os.MkdirAll(dirPath, 0755))
-		require.NoError(t, os.WriteFile(
-			filepath.Join(dirPath, "file.txt"),
-			[]byte(fmt.Sprintf("content in %s", dir)),
-			0600,
-		))
-	}
-
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("add directories %s", uuid.NewString()), nil)
-	require.NoError(t, err)
-	err = setupRep.Push(nil)
-	require.NoError(t, err)
-	err = setupRep.Close()
-	require.NoError(t, err)
+	defer testServer.Close()
 
 	rep, err := CloneBare(
 		testRepoURL,
