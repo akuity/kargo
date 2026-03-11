@@ -51,13 +51,15 @@ var errRefUpdateConflict = errors.New("ref update conflict")
 // isRetryableError returns true for errors that should trigger a retry:
 // ref update conflicts from the GitHub API or non-fast-forward rejections
 // from git push.
-func isRetryableError(err error) bool {
+func (g *githubVerifiedPusher) isRetryableError(err error) bool {
 	return errors.Is(err, errRefUpdateConflict) || git.IsNonFastForward(err)
 }
 
 // isGitHubHTTPStatus returns true if err is a *github.ErrorResponse with
 // the given HTTP status code.
-func isGitHubHTTPStatus(err error, statusCode int) bool {
+func (g *githubVerifiedPusher) isGitHubHTTPStatus(
+	err error, statusCode int,
+) bool {
 	var ghErr *github.ErrorResponse
 	if errors.As(err, &ghErr) {
 		return ghErr.Response != nil &&
@@ -395,7 +397,7 @@ func (g *githubVerifiedPusher) run(
 
 	if err = retry.OnError(
 		backoff,
-		isRetryableError,
+		g.isRetryableError,
 		func() error {
 			// 1. Rebase onto target branch (like git-push's PullRebase).
 			//    Skipped when force-pushing (matches git-push behavior)
@@ -677,7 +679,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			name, email := author.GetName(), author.GetEmail()
 			if name != "" && email != "" &&
 				!g.isSystemAuthor(name, email) {
-				message = appendCoAuthoredBy(message, name, email)
+				message = g.appendCoAuthoredBy(message, name, email)
 				commit.Message = &message
 				coAuthored = true
 			}
@@ -740,7 +742,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 			},
 		)
 		if err != nil {
-			if isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
+			if g.isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
 				return promotion.StepResult{
 						Status: kargoapi.PromotionStepStatusErrored,
 					}, fmt.Errorf(
@@ -762,7 +764,7 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		)
 	}
 
-	commitURL := buildCommitURL(workTree.URL(), lastSignedSHA)
+	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
 
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
@@ -807,7 +809,7 @@ func (g *githubVerifiedPusher) forceUpdateRef(
 		"ref", targetRef,
 		"sha", sha,
 	)
-	commitURL := buildCommitURL(workTree.URL(), sha)
+	commitURL := g.buildCommitURL(workTree.URL(), sha)
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
@@ -864,7 +866,7 @@ func (g *githubVerifiedPusher) releaseBranchLock(repoURL, branch string) {
 
 // parseGitHubRepoURL extracts the scheme, host, owner, and repo name from a
 // Git repository URL.
-func parseGitHubRepoURL(
+func (g *githubVerifiedPusher) parseGitHubRepoURL(
 	repoURL string,
 ) (scheme, host, owner, repo string, err error) {
 	u, err := url.Parse(urls.NormalizeGit(repoURL))
@@ -894,7 +896,7 @@ func (g *githubVerifiedPusher) newGitHubClient(
 	repoURL, token string,
 	insecureSkipTLSVerify bool,
 ) (string, string, githubVerifiedPushClient, error) {
-	scheme, host, owner, repo, err := parseGitHubRepoURL(repoURL)
+	scheme, host, owner, repo, err := g.parseGitHubRepoURL(repoURL)
 	if err != nil {
 		return "", "", nil, err
 	}
@@ -926,8 +928,8 @@ func (g *githubVerifiedPusher) newGitHubClient(
 
 // buildCommitURL constructs a human-readable commit URL from a repository URL
 // and commit SHA.
-func buildCommitURL(repoURL, sha string) string {
-	_, host, _, _, err := parseGitHubRepoURL(repoURL)
+func (g *githubVerifiedPusher) buildCommitURL(repoURL, sha string) string {
+	_, host, _, _, err := g.parseGitHubRepoURL(repoURL)
 	if err != nil {
 		return ""
 	}
@@ -948,7 +950,9 @@ func (g *githubVerifiedPusher) isSystemAuthor(
 
 // appendCoAuthoredBy appends a Co-authored-by trailer to a commit message,
 // adding a blank separator line before the trailer if needed.
-func appendCoAuthoredBy(message, name, email string) string {
+func (g *githubVerifiedPusher) appendCoAuthoredBy(
+	message, name, email string,
+) string {
 	trailer := fmt.Sprintf("Co-authored-by: %s <%s>", name, email)
 	if strings.HasSuffix(message, "\n\n") {
 		return message + trailer

@@ -1199,7 +1199,8 @@ func Test_parseGitHubRepoURL(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, host, owner, repo, err := parseGitHubRepoURL(tc.repoURL)
+			g := &githubVerifiedPusher{}
+			_, host, owner, repo, err := g.parseGitHubRepoURL(tc.repoURL)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
@@ -1240,7 +1241,8 @@ func Test_buildCommitURL(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			result := buildCommitURL(tc.repoURL, tc.sha)
+			g := &githubVerifiedPusher{}
+			result := g.buildCommitURL(tc.repoURL, tc.sha)
 			require.Equal(t, tc.expected, result)
 		})
 	}
@@ -1395,7 +1397,8 @@ func Test_appendCoAuthoredBy(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			result := appendCoAuthoredBy(tc.message, tc.coName, tc.coEmail)
+			g := &githubVerifiedPusher{}
+			result := g.appendCoAuthoredBy(tc.message, tc.coName, tc.coEmail)
 			require.Equal(t, tc.expect, result)
 		})
 	}
@@ -2636,8 +2639,9 @@ func Test_isGitHubHTTPStatus(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			g := &githubVerifiedPusher{}
 			assert.Equal(
-				t, tc.expect, isGitHubHTTPStatus(tc.err, tc.code),
+				t, tc.expect, g.isGitHubHTTPStatus(tc.err, tc.code),
 			)
 		})
 	}
@@ -2683,8 +2687,9 @@ func Test_isRetryableError(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
+			g := &githubVerifiedPusher{}
 			assert.Equal(
-				t, tc.expect, isRetryableError(tc.err),
+				t, tc.expect, g.isRetryableError(tc.err),
 			)
 		})
 	}
