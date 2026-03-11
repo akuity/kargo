@@ -115,8 +115,6 @@ steps:
       prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
-
-
 ### Custom Title and Labels
 
 The following example demonstrates how to specify a custom title and labels for
