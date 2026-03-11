@@ -55,6 +55,20 @@ func Test_ociPusher_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid config with non-standard port",
+			config: promotion.Config{
+				"imageRef": "an.internal.registry.com:5050/myrepo/myimage:latest",
+				"destRef":  "an.internal.registry.com:5050/myrepo/myimage:newtag",
+			},
+		},
+		{
+			name: "valid config with OCI protocol and non-standard port",
+			config: promotion.Config{
+				"imageRef": "oci://registry.example.com:5050/chart:1.0.0",
+				"destRef":  "oci://registry.example.com:5050/chart:2.0.0",
+			},
+		},
+		{
 			name: "valid config with all optional fields",
 			config: promotion.Config{
 				"imageRef":              "registry.example.com/image:tag",
