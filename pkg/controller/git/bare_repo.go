@@ -114,6 +114,9 @@ func CloneBare(
 	if err := b.saveOriginalURL(); err != nil {
 		return nil, err
 	}
+	if err := b.setupFetch(); err != nil {
+		return nil, err
+	}
 	return b, nil
 }
 

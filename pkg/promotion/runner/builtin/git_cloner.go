@@ -219,6 +219,7 @@ func (g *gitCloner) run(
 				fmt.Errorf("error resolving HEAD for worktree at %s: %w", path, err)
 		}
 	}
+	
 	// Note: We do NOT defer repo.Close() because we want to keep the repository
 	// around on the FS for subsequent promotion steps to use. The Engine will
 	// handle all work dir cleanup.

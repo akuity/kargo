@@ -102,6 +102,9 @@ func Clone(
 	if err := r.saveOriginalURL(); err != nil {
 		return nil, err
 	}
+	if err := r.setupFetch(); err != nil {
+		return nil, err
+	}
 	return r, nil
 }
 

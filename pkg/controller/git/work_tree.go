@@ -346,11 +346,9 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 	args := []string{"fetch", "origin"}
 	if opts.Branch != "" {
 		args = append(args, opts.Branch)
-	} else {
-		args = append(args, "+refs/heads/*:refs/remotes/origin/*")
 	}
 	if opts.Depth > 0 {
-		args = append(args, "--depth", fmt.Sprint(opts.Depth))
+		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
 	}
 	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
 		return fmt.Errorf(
