@@ -113,7 +113,7 @@ type createConfigMapRequest struct {
 // @Produce json
 // @Param project path string true "Project name"
 // @Param body body createConfigMapRequest true "ConfigMap"
-// @Success 201 {object} object "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
+// @Success 201 {object} corev1.ConfigMap "ConfigMap resource (k8s.io/api/core/v1.ConfigMap)"
 // @Router /v1beta1/projects/{project}/configmaps [post]
 func (s *server) createProjectConfigMap(c *gin.Context) {
 	ctx := c.Request.Context()

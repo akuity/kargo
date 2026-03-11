@@ -24,7 +24,6 @@ import type {
 import type {
   ApproveFreightParams,
   CreateConfigMapRequestBody,
-  CreateProjectConfigMap201,
   CreateSharedConfigMap201,
   CreateSystemConfigMap201,
   GetClusterPromotionTask200,
@@ -63,7 +62,8 @@ import type {
   UpdateConfigMapRequestBody,
   UpdateProjectConfigMap200,
   UpdateSharedConfigMap200,
-  UpdateSystemConfigMap200
+  UpdateSystemConfigMap200,
+  V1ConfigMap
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -872,7 +872,7 @@ Kubernetes ConfigMap resource.
  * @summary Create a project-level ConfigMap
  */
 export type createProjectConfigMapResponse201 = {
-  data: CreateProjectConfigMap201;
+  data: V1ConfigMap;
   status: 201;
 };
 

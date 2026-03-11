@@ -6,4 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type CreateProjectConfigMap201 = { [key: string]: unknown };
+export interface V1FieldsV1 {
+  [key: string]: unknown;
+}
