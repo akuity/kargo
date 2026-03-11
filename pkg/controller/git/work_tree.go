@@ -132,9 +132,6 @@ func LoadWorkTree(path string, opts *LoadWorkTreeOptions) (WorkTree, error) {
 	if err = w.setupAuth(w.homeDir); err != nil {
 		return nil, fmt.Errorf("error configuring the credentials: %w", err)
 	}
-	if err := w.setupFetch(); err != nil {
-		return nil, fmt.Errorf("error configuring fetch settings: %w", err)
-	}
 	br, err := LoadBareRepo(repoPath, &LoadBareRepoOptions{
 		Credentials: opts.Credentials,
 	})
@@ -349,6 +346,8 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 	args := []string{"fetch", "origin"}
 	if opts.Branch != "" {
 		args = append(args, opts.Branch)
+	} else {
+		args = append(args, "+refs/heads/*:refs/remotes/origin/*")
 	}
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))

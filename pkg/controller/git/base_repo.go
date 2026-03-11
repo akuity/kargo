@@ -102,19 +102,6 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 	return nil
 }
 
-func (b *baseRepo) setupFetch() error {
-	// ensure the git config is configured to fetch all branches from the remote, not just the default branch.
-	if _, err := libExec.Exec(b.buildGitCommand(
-		"config",
-		"remote.origin.fetch",
-		"+refs/heads/*:refs/remotes/origin/*",
-	),
-	); err != nil {
-		return fmt.Errorf("error configuring remote.origin.fetch: %w", err)
-	}
-	return nil
-}
-
 // User represents the user contributing to a git repository.
 type User struct {
 	// Name is the user's full name.
