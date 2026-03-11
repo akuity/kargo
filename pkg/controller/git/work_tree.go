@@ -345,7 +345,11 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 	}
 	args := []string{"fetch", "origin"}
 	if opts.Branch != "" {
-		args = append(args, opts.Branch)
+		args = append(args,
+			fmt.Sprintf("+refs/heads/%s:refs/remotes/origin/%s",
+				opts.Branch, opts.Branch,
+			),
+		)
 	} else {
 		args = append(args, "+refs/heads/*:refs/remotes/origin/*")
 	}
