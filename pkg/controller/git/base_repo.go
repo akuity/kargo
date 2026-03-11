@@ -205,6 +205,13 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
 			}
+
+			// Set ultimate trust on the imported key so that commits signed
+			// by this key are considered trusted during signature
+			// verification (e.g. when deciding whether a rebase is safe).
+			if err := b.setUltimateTrust(homeDir, author.SigningKeyPath); err != nil {
+				return fmt.Errorf("error setting trust on gpg key: %w", err)
+			}
 		}
 
 	}
@@ -401,6 +408,49 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 
 func (b *baseRepo) URL() string {
 	return b.originalURL
+}
+
+// setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
+// signatures made by this key are considered fully trusted during verification.
+func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
+	// Get the fingerprint of the key using --with-colons output format.
+	// The fingerprint line starts with "fpr" and the fingerprint is in field 10.
+	cmd := b.buildCommand(
+		"gpg",
+		"--with-colons",
+		"--fingerprint",
+		"--import-options", "show-only",
+		"--import",
+		keyPath,
+	)
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	res, err := libExec.Exec(cmd)
+	if err != nil {
+		return fmt.Errorf("error getting fingerprint of gpg key: %w", err)
+	}
+	var fingerprint string
+	for _, line := range strings.Split(string(res), "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) >= 10 && fields[0] == "fpr" {
+			fingerprint = fields[9]
+			break
+		}
+	}
+	if fingerprint == "" {
+		return fmt.Errorf("could not determine fingerprint of gpg key %q", keyPath)
+	}
+	// Import owner trust: level 6 = ultimate trust.
+	cmd = b.buildCommand(
+		"gpg", "--import-ownertrust",
+	)
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:6:\n", fingerprint))
+	if _, err = libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error setting ultimate trust on gpg key: %w", err)
+	}
+	return nil
 }
 
 func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {

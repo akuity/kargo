@@ -644,8 +644,16 @@ type PushOptions struct {
 	TargetBranch string
 	// PullRebase indicates whether to pull and rebase before pushing. This can
 	// be useful when pushing changes to a remote branch that has been updated
-	// in the time since the local branch was last pulled.
+	// in the time since the local branch was last pulled. If rebasing would
+	// result in Kargo re-signing commits it doesn't, itself, trust or replacing
+	// signed commits with unsigned commits, a merge will be performed instead of
+	// a rebase.
 	PullRebase bool
+	// Committer is the identity used as the committer for merge commits or
+	// replacement commits created when integrating remote changes before
+	// pushing. If nil, the default author already configured in the git
+	// repository will be used.
+	Committer *User
 	// Tag specifies a tag to push to the remote repository. If this field and
 	// TargetBranch are both non-empty, this field takes precedence and the tag
 	// will be pushed -- the branch will not.
@@ -685,18 +693,10 @@ func (w *workTree) Push(opts *PushOptions) error {
 		if err != nil {
 			return err
 		}
-		// We only want to pull and rebase if the remote branch exists.
+		// We only want to pull and rebase/merge if the remote branch exists.
 		if exists {
-			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
-				// The error we're most concerned with is a merge conflict requiring
-				// manual resolution, because it's an error that no amount of retries
-				// will fix. If we find that a rebase is in progress, this is what
-				// has happened.
-				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
-					return ErrMergeConflict
-				}
-				// If we get to here, the error isn't a merge conflict.
-				return fmt.Errorf("error pulling and rebasing branch: %w", err)
+			if err = w.pullBeforePush(targetBranch, opts.Committer); err != nil {
+				return err
 			}
 		}
 	}
