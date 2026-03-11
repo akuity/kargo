@@ -67,7 +67,7 @@ func (s *server) ListAnalysisTemplates(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)"
+// @Success 200 {object} rolloutsapi.AnalysisTemplateList "AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)"
 // @Router /v1beta1/projects/{project}/analysis-templates [get]
 func (s *server) listAnalysisTemplates(c *gin.Context) {
 	if !s.cfg.RolloutsIntegrationEnabled {
