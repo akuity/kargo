@@ -9,8 +9,10 @@ import { paths } from '@ui/config/paths';
 import { useAuthContext } from '@ui/features/auth/context/use-auth-context';
 import { claimsMapping, isJWTDirty } from '@ui/features/auth/jwt-utils';
 import { PageTitle } from '@ui/features/common';
+import { useDocumentTitle } from '@ui/features/common/document-title/use-document-title';
 
 export const User = () => {
+  useDocumentTitle(['User']);
   const { JWTInfo } = useAuthContext();
 
   if (isJWTDirty(JWTInfo)) {
