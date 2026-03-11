@@ -14,6 +14,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/random"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/google/go-containerregistry/pkg/v1/types"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -66,7 +67,9 @@ func Test_ociPusher_validate(t *testing.T) {
 		},
 	}
 
-	r := newOCIPusher(promotion.StepRunnerCapabilities{})
+	r := newOCIPusher(promotion.StepRunnerCapabilities{}, ociPusherConfig{
+		MaxArtifactSize: int64(1 << 30),
+	})
 	runner, ok := r.(*ociPusher)
 	require.True(t, ok)
 
@@ -339,7 +342,7 @@ func Test_ociPusher_run(t *testing.T) {
 			runner := &ociPusher{
 				credsDB:         &credentials.FakeDB{},
 				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: defaultMaxOCIPushArtifactSize,
+				maxArtifactSize: int64(1 << 30),
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -360,7 +363,7 @@ func Test_ociPusher_push_unsupportedMediaType(t *testing.T) {
 		},
 	}
 
-	runner := &ociPusher{maxArtifactSize: defaultMaxOCIPushArtifactSize}
+	runner := &ociPusher{maxArtifactSize: int64(1 << 30)}
 	srcRef, err := name.ParseReference("localhost:5000/src:tag")
 	require.NoError(t, err)
 	dstRef, err := name.ParseReference("localhost:5000/test:tag")
@@ -404,7 +407,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 			runner := &ociPusher{
 				credsDB:         tt.credsDB,
 				schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-				maxArtifactSize: defaultMaxOCIPushArtifactSize,
+				maxArtifactSize: int64(1 << 30),
 			}
 
 			stepCtx := &promotion.StepContext{
@@ -440,7 +443,7 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: defaultMaxOCIPushArtifactSize,
+		maxArtifactSize: int64(1 << 30),
 	}
 
 	// Push without specifying annotations.
@@ -514,7 +517,8 @@ func Test_parseAnnotationScopes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			scopes := parseAnnotationScopes(tt.annotations)
+			p := &ociPusher{}
+			scopes := p.parseAnnotationScopes(tt.annotations)
 			assert.Equal(t, tt.wantIndex, scopes.index)
 			assert.Equal(t, tt.wantManifest, scopes.manifest)
 		})
@@ -536,7 +540,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: defaultMaxOCIPushArtifactSize,
+		maxArtifactSize: int64(1 << 30),
 	}
 
 	// Push with mixed scoped annotations. "index:" should be ignored for images.
@@ -584,7 +588,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	runner := &ociPusher{
 		credsDB:         &credentials.FakeDB{},
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: defaultMaxOCIPushArtifactSize,
+		maxArtifactSize: int64(1 << 30),
 	}
 
 	result, err := runner.run(context.Background(), &promotion.StepContext{
@@ -612,7 +616,8 @@ func Test_imageSize(t *testing.T) {
 	img, err := random.Image(256, 3)
 	require.NoError(t, err)
 
-	sz, err := imageSize(img)
+	p := &ociPusher{}
+	sz, err := p.imageSize(img)
 	require.NoError(t, err)
 	assert.Greater(t, sz, int64(0))
 
@@ -631,7 +636,8 @@ func Test_indexSize(t *testing.T) {
 	idx, err := random.Index(256, 2, 3) // 3 platform images, 2 layers each
 	require.NoError(t, err)
 
-	sz, err := indexSize(idx)
+	p := &ociPusher{}
+	sz, err := p.indexSize(idx)
 	require.NoError(t, err)
 	assert.Greater(t, sz, int64(0))
 
@@ -642,7 +648,7 @@ func Test_indexSize(t *testing.T) {
 	for _, desc := range im.Manifests {
 		child, imgErr := idx.Image(desc.Digest)
 		require.NoError(t, imgErr)
-		childSz, szErr := imageSize(child)
+		childSz, szErr := p.imageSize(child)
 		require.NoError(t, szErr)
 		expected += childSz
 	}
@@ -771,7 +777,7 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	assert.Equal(t, string(kargoapi.PromotionStepStatusSucceeded), string(result.Status))
 }
 
-func Test_maxArtifactSizeFromEnv(t *testing.T) {
+func Test_ociPusherConfig(t *testing.T) {
 	tests := []struct {
 		name     string
 		envValue string // empty means unset
@@ -804,7 +810,9 @@ func Test_maxArtifactSizeFromEnv(t *testing.T) {
 			if tt.envValue != "" {
 				t.Setenv("MAX_OCI_PUSH_ARTIFACT_SIZE", tt.envValue)
 			}
-			assert.Equal(t, tt.expected, maxArtifactSizeFromEnv())
+			cfg := ociPusherConfig{}
+			envconfig.MustProcess("", &cfg)
+			assert.Equal(t, tt.expected, cfg.MaxArtifactSize)
 		})
 	}
 }

@@ -40,11 +40,13 @@ transfer occurs in that case.
 
 ## Examples
 
-### Retagging an Image After Verification
+### Retagging an Image with a Release Version
 
-In this example, a verified image is retagged with a semver release tag in the
-same repository. The digest reference ensures the exact verified artifact is
-tagged.
+In this example, a dedicated "release" Stage sits downstream from a testing
+Stage. When verified Freight is promoted into this Stage, its single step retags
+the image with a semver release version in the same repository. Because the
+source and destination are in the same repository, this is a lightweight
+metadata operation with no blob transfer.
 
 ```yaml
 steps:

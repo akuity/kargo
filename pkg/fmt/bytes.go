@@ -2,8 +2,9 @@ package fmt
 
 import "fmt"
 
-// FormatBytes formats a byte count using the largest appropriate binary unit.
-func FormatBytes(b int64) string {
+// FormatByteCount formats a byte count using the largest appropriate IEC
+// binary unit (KiB, MiB, GiB).
+func FormatByteCount(b int64) string {
 	switch {
 	case b >= 1<<30:
 		return fmt.Sprintf("%.1f GiB", float64(b)/(1<<30))

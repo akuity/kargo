@@ -3,34 +3,33 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/credentials"
 	libfmt "github.com/akuity/kargo/pkg/fmt"
-	libmutate "github.com/akuity/kargo/pkg/image/mutate"
-	libos "github.com/akuity/kargo/pkg/os"
+	"github.com/akuity/kargo/pkg/image/mutate"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/types"
 	builtin "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
-const (
-	stepKindOCIPush = "oci-push"
+const stepKindOCIPush = "oci-push"
 
-	// defaultMaxOCIPushArtifactSize is the default maximum total compressed
-	// size (config + layers) allowed for an OCI artifact pushed by the
-	// oci-push step. Override with the MAX_OCI_PUSH_ARTIFACT_SIZE env var.
-	defaultMaxOCIPushArtifactSize int64 = 1 << 30 // 1 GiB
-)
+// ociPusherConfig holds environment-based configuration for the oci-push step
+// runner. A value of -1 for MaxArtifactSize disables the size limit entirely.
+type ociPusherConfig struct {
+	MaxArtifactSize int64 `envconfig:"MAX_OCI_PUSH_ARTIFACT_SIZE" default:"1073741824"` // 1 GiB
+}
 
 func init() {
+	cfg := ociPusherConfig{}
+	envconfig.MustProcess("", &cfg)
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindOCIPush,
@@ -39,7 +38,11 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Value: newOCIPusher,
+			Value: func(
+				caps promotion.StepRunnerCapabilities,
+			) promotion.StepRunner {
+				return newOCIPusher(caps, cfg)
+			},
 		},
 	)
 }
@@ -53,23 +56,17 @@ type ociPusher struct {
 	maxArtifactSize int64 // maximum compressed artifact size in bytes
 }
 
-// maxArtifactSizeFromEnv reads the MAX_OCI_PUSH_ARTIFACT_SIZE environment
-// variable and returns the configured limit in bytes. When unset the default
-// 1 GiB limit is used. A value of -1 disables the limit entirely.
-func maxArtifactSizeFromEnv() int64 {
-	return int64(types.MustParseInt(
-		libos.GetEnv("MAX_OCI_PUSH_ARTIFACT_SIZE", strconv.FormatInt(defaultMaxOCIPushArtifactSize, 10)),
-	))
-}
-
 // newOCIPusher returns an implementation of the promotion.StepRunner interface
 // that pushes OCI artifacts to a registry. It uses the provided credentials
 // database to authenticate with source and destination registries.
-func newOCIPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+func newOCIPusher(
+	caps promotion.StepRunnerCapabilities,
+	cfg ociPusherConfig,
+) promotion.StepRunner {
 	return &ociPusher{
 		credsDB:         caps.CredsDB,
 		schemaLoader:    getConfigSchemaLoader(stepKindOCIPush),
-		maxArtifactSize: maxArtifactSizeFromEnv(),
+		maxArtifactSize: cfg.MaxArtifactSize,
 	}
 }
 
@@ -167,7 +164,7 @@ type annotationScopes struct {
 // parseAnnotationScopes splits annotation keys by their scope prefix.
 // Keys prefixed with "index:" are routed to the index manifest, keys prefixed
 // with "manifest:" or unprefixed are routed to image manifests.
-func parseAnnotationScopes(annotations map[string]string) annotationScopes {
+func (p *ociPusher) parseAnnotationScopes(annotations map[string]string) annotationScopes {
 	scopes := annotationScopes{
 		index:    make(map[string]string),
 		manifest: make(map[string]string),
@@ -187,7 +184,7 @@ func parseAnnotationScopes(annotations map[string]string) annotationScopes {
 
 // imageSize returns the total compressed size of an image (config + layers)
 // using only manifest metadata — no blob downloads are performed.
-func imageSize(img v1.Image) (int64, error) {
+func (p *ociPusher) imageSize(img v1.Image) (int64, error) {
 	m, err := img.Manifest()
 	if err != nil {
 		return 0, err
@@ -203,7 +200,7 @@ func imageSize(img v1.Image) (int64, error) {
 // indexSize returns the total compressed size across all child images of an
 // image index. Each child manifest is fetched to read its layer sizes, but no
 // blobs are downloaded.
-func indexSize(idx v1.ImageIndex) (int64, error) {
+func (p *ociPusher) indexSize(idx v1.ImageIndex) (int64, error) {
 	im, err := idx.IndexManifest()
 	if err != nil {
 		return 0, err
@@ -214,7 +211,7 @@ func indexSize(idx v1.ImageIndex) (int64, error) {
 		if err != nil {
 			return 0, fmt.Errorf("failed to resolve child image %s: %w", desc.Digest, err)
 		}
-		sz, err := imageSize(img)
+		sz, err := p.imageSize(img)
 		if err != nil {
 			return 0, fmt.Errorf("failed to compute size of child image %s: %w", desc.Digest, err)
 		}
@@ -226,20 +223,20 @@ func indexSize(idx v1.ImageIndex) (int64, error) {
 // artifactSize returns the total compressed size of an OCI artifact (config +
 // layers) from its descriptor metadata. For image indexes, this includes the
 // sum across all child images. No blobs are downloaded.
-func artifactSize(desc *remote.Descriptor) (int64, error) {
+func (p *ociPusher) artifactSize(desc *remote.Descriptor) (int64, error) {
 	switch {
 	case desc.MediaType.IsImage():
 		img, err := desc.Image()
 		if err != nil {
 			return 0, fmt.Errorf("failed to resolve source image: %w", err)
 		}
-		return imageSize(img)
+		return p.imageSize(img)
 	case desc.MediaType.IsIndex():
 		idx, err := desc.ImageIndex()
 		if err != nil {
 			return 0, fmt.Errorf("failed to resolve source image index: %w", err)
 		}
-		return indexSize(idx)
+		return p.indexSize(idx)
 	default:
 		return 0, &promotion.TerminalError{
 			Err: fmt.Errorf("unsupported media type %q", desc.MediaType),
@@ -264,7 +261,7 @@ func (p *ociPusher) push(
 				Err: fmt.Errorf("cross-repository push is disabled"),
 			}
 		}
-		sz, err := artifactSize(desc)
+		sz, err := p.artifactSize(desc)
 		if err != nil {
 			return v1.Hash{}, err
 		}
@@ -272,13 +269,13 @@ func (p *ociPusher) push(
 			return v1.Hash{}, &promotion.TerminalError{
 				Err: fmt.Errorf(
 					"compressed artifact size %s exceeds maximum allowed size of %s",
-					libfmt.FormatBytes(sz), libfmt.FormatBytes(p.maxArtifactSize),
+					libfmt.FormatByteCount(sz), libfmt.FormatByteCount(p.maxArtifactSize),
 				),
 			}
 		}
 	}
 
-	scopes := parseAnnotationScopes(annotations)
+	scopes := p.parseAnnotationScopes(annotations)
 
 	switch {
 	case desc.MediaType.IsImage():
@@ -286,7 +283,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image: %w", err)
 		}
-		annotated, err := libmutate.Annotations(img, nil, scopes.manifest)
+		annotated, err := mutate.Annotations(img, nil, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate image: %w", err)
 		}
@@ -301,7 +298,7 @@ func (p *ociPusher) push(
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to resolve source image index: %w", err)
 		}
-		annotated, err := libmutate.Annotations(idx, scopes.index, scopes.manifest)
+		annotated, err := mutate.Annotations(idx, scopes.index, scopes.manifest)
 		if err != nil {
 			return v1.Hash{}, fmt.Errorf("failed to annotate index: %w", err)
 		}
