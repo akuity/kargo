@@ -204,7 +204,13 @@ func (g *gitPROpener) run(
 	}
 
 	// Ensure we have the latest commits from the remote before checking for diffs.
-	if err = repo.Fetch(); err != nil {
+	err = repo.Fetch(
+		&git.FetchOptions{
+			Branch: cfg.TargetBranch,
+			Depth:  1,
+		},
+	)
+	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored}, err
 	}
 

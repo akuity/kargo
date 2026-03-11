@@ -49,7 +49,7 @@ type WorkTree interface {
 	// Dir returns an absolute path to the working tree.
 	Dir() string
 	// Fetch fetches updates from the remote repository.
-	Fetch() error
+	Fetch(opts *FetchOptions) error
 	// HasDiffs returns a bool indicating whether the working tree currently
 	// contains any differences from what's already at the head of the current
 	// branch.
@@ -329,18 +329,33 @@ func (w *workTree) DeleteBranch(branch string) error {
 	return nil
 }
 
-func (w *workTree) Fetch() error {
-	// ensure the git config is configured to fetch all branches from the remote, not just the default branch.
-	if _, err := libExec.Exec(w.buildGitCommand(
-		"config",
-		"remote.origin.fetch",
-		"+refs/heads/*:refs/remotes/origin/*",
-	),
-	); err != nil {
-		return fmt.Errorf("error prepping git config to fetch all branches for repo %q: %w", w.originalURL, err)
+// FetchOptions represents options for fetching from a remote git repository.
+type FetchOptions struct {
+	// Branch optionally specifies a single branch to fetch. If empty, all
+	// branches are fetched.
+	Branch string
+	// Depth optionally limits fetching to the specified number of commits. A
+	// value of 0 (the default) indicates no depth limit.
+	Depth uint
+}
+
+func (w *workTree) Fetch(opts *FetchOptions) error {
+	if opts == nil {
+		opts = &FetchOptions{}
 	}
-	if _, err := libExec.Exec(w.buildGitCommand("fetch", "origin")); err != nil {
-		return fmt.Errorf("error fetching updates from remote for repo %q: %w", w.originalURL, err)
+	args := []string{"fetch", "origin"}
+	if opts.Branch != "" {
+		args = append(args, opts.Branch)
+	} else {
+		args = append(args, "+refs/heads/*:refs/remotes/origin/*")
+	}
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprint(opts.Depth))
+	}
+	if _, err := libExec.Exec(w.buildGitCommand(args...)); err != nil {
+		return fmt.Errorf(
+			"error fetching from repo %q: %w", w.originalURL, err,
+		)
 	}
 	return nil
 }
