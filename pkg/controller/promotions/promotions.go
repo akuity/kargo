@@ -61,6 +61,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	kargoClient    client.Client
 	promoEngine    promotion.Engine
+	apiReader      client.Reader
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 
 	cfg ReconcilerConfig
@@ -116,6 +117,7 @@ func SetupReconcilerWithManager(
 
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
+		kargoMgr.GetAPIReader(),
 		k8sevent.NewEventSender(
 			libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		),
@@ -188,12 +190,14 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
+	apiReader client.Reader,
 	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient: kargoClient,
+		apiReader:   apiReader,
 		promoEngine: promoEngine,
 		sender:      sender,
 		cfg:         cfg,
@@ -221,11 +225,15 @@ func (r *reconciler) Reconcile(
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
 
-	// Find the Promotion
-	promo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
-	if err != nil {
-		return ctrl.Result{}, err
+	// Use direct API read to ensure we see the latest status.
+	// This avoids a race condition where the cache hasn't yet reflected
+	// a recently-patched status, causing promotions to error out if the informer cache is stale.
+
+	promo := &kargoapi.Promotion{}
+	if err := r.apiReader.Get(ctx, req.NamespacedName, promo); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
+
 	if promo == nil || promo.Status.Phase.IsTerminal() {
 		// Ignore if not found or already finished. Promo might be nil if the
 		// Promotion was deleted after the current reconciliation request was issued.
