@@ -6,4 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export type GetStage200 = { [key: string]: unknown };
+export interface V1JSON {
+  [key: string]: unknown;
+}

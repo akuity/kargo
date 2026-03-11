@@ -34,9 +34,9 @@ import type {
   GetPromotion200,
   GetPromotionTask200,
   GetSharedConfigMap200,
-  GetStage200,
   GetSystemConfigMap200,
   GetWarehouse200,
+  GithubComAkuityKargoApiV1alpha1Stage,
   ListClusterPromotionTasks200,
   ListImages200,
   ListProjectConfigMaps200,
@@ -3037,7 +3037,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
  * @summary Retrieve a Stage
  */
 export type getStageResponse200 = {
-  data: GetStage200;
+  data: GithubComAkuityKargoApiV1alpha1Stage;
   status: 200;
 };
 
