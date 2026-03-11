@@ -19,6 +19,7 @@ referenced by the Freight being promoted. This step is commonly followed by a
 | `charts` | `[]object` | N | The details of dependency (subchart) updates to be applied to the chart's `Chart.yaml` file. When left unspecified, charts will be updated according to the SemVer ranges declared in the `Chart.yaml` file. |
 | `charts[].repository` | `string` | Y | The URL of the Helm chart repository in the `dependencies` entry whose `version` field is to be updated. Must _exactly_ match the `repository` field of that entry. |
 | `charts[].name` | `string` | Y | The name of the chart in in the `dependencies` entry whose `version` field is to be updated. Must exactly match the `name` field of that entry. |
+| `charts[].alias` | `string` | N | Optional. The `alias` of the dependency in `Chart.yaml`. When specified, only the dependency with this alias is matched (e.g. when the same chart is listed multiple times with different aliases). When omitted, matching is by repository and name only. |
 | `charts[].version` | `string` | Y | The version to which the dependency should be updated. |
 
 ## Output
