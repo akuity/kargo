@@ -129,7 +129,12 @@ steps:
       repoURL: ${{ vars.gitRepo }}
       sourceBranch: ${{ outputs.push.branch }}
       targetBranch: ${{ vars.targetBranch }}
-# Wait for the PR to be merged or closed...
+  - if: ${{ status('open-pr') != 'Skipped' }}
+    uses: git-wait-for-pr
+    as: wait-for-pr
+    config:
+      repoURL: ${{ vars.gitRepo }}
+      prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 
@@ -156,13 +161,19 @@ steps:
     path: ./out
     generateTargetBranch: true
 - uses: git-open-pr
+  as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
     sourceBranch: ${{ outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
     title: Deploy to ${{ ctx.stage }}
     labels: ["infra", "needs-review"]
-# Wait for the PR to be merged or closed...
+- if: ${{ status('open-pr') != 'Skipped' }}
+  uses: git-wait-for-pr
+  as: wait-for-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
 
 ### Skipped
