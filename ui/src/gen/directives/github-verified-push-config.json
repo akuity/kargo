@@ -8,6 +8,12 @@
    "type": "boolean",
    "description": "Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive with 'targetBranch'. If neither of these is provided, the target branch will be the currently checked out branch."
   },
+  "maxAttempts": {
+   "type": "integer",
+   "description": "This step implements its own internal retry logic for cases where a push is determined to have failed due to the remote branch having commits that are not present locally. Each attempt, including the first, rebases prior to pushing. This field configures the maximum number of attempts. If not specified, the default is 10.",
+   "minimum": 1,
+   "maximum": 2147483647
+  },
   "insecureSkipTLSVerify": {
    "type": "boolean",
    "description": "Indicates whether to skip TLS verification when communicating with the GitHub API. Default is false."
