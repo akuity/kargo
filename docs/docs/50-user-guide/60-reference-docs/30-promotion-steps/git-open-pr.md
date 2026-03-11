@@ -52,7 +52,17 @@ Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
 | `labels` | `[]string` | N | Labels to add to the pull request. |
+| `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release. |
+| `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
+| `description` | `string` | N | The description for the pull request. |
+| `labels` | `[]string` | N | Labels to add to the pull request. |
 
+:::warning
+
+Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in 
+`v1.12`.
+
+:::
 ## Output
 
 | Name | Type | Description |
