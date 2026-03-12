@@ -20,6 +20,28 @@
       "description": "The path to a working directory of a local repository.",
       "minLength": 1
     },
+    "committer": {
+      "type": "object",
+      "description": "Optional committer information for merge commits or replacement commits created when integrating remote changes before pushing. If provided, this takes precedence over both system-level defaults and any optional, default authorship information configured in the `git-clone` step.",
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The email of the committer.",
+          "format": "email"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the committer.",
+          "minLength": 1
+        },
+        "signingKey": {
+          "type": "string",
+          "description": "A GPG signing key for the committer. If provided, 'email' and 'name' must match the key's UID."
+        }
+      },
+      "required": ["name", "email"]
+    },
     "targetBranch": {
       "type": "string",
       "description": "The target branch to push to. Mutually exclusive with 'generateTargetBranch=true' and 'tag'. If none of these are provided, the target branch will be the currently checked out branch."

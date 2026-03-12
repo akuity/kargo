@@ -147,6 +147,13 @@ func (g *gitPushPusher) run(
 		// Allow force push if explicitly requested in config
 		Force: cfg.Force,
 	}
+	if cfg.Committer != nil {
+		pushOpts.Committer = &git.User{
+			Name:       cfg.Committer.Name,
+			Email:      cfg.Committer.Email,
+			SigningKey: cfg.Committer.SigningKey,
+		}
+	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
 		// TargetBranch and GenerateTargetBranch are mutually exclusive, so we're
