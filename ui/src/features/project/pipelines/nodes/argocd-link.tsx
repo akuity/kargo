@@ -57,7 +57,8 @@ export const ArgoCDLink = ({
           generatePath(paths.projectArgoCDExtension, {
             name: projectName,
             namespace: link.namespace,
-            appName: link.name
+            appName: link.name,
+            stage: stage.metadata?.name
           })
         );
       } else {

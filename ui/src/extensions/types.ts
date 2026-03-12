@@ -63,9 +63,15 @@ export type ProjectSettingsExtension = {
   path: string;
 };
 
+export type ArgoCDExtensionComponentProps = {
+  stageName: string;
+  namespace: string;
+  appName: string;
+};
+
 export type ArgoCDExtension = {
   type: 'argocdExtension';
-  component: () => React.ReactNode;
+  component: (props: ArgoCDExtensionComponentProps) => React.ReactNode;
 };
 
 export type Extension =

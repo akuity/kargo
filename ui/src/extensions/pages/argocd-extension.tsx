@@ -9,12 +9,12 @@ import { useExtensionsContext } from '../extensions-context';
 import { useIsAnyExtensionLoaded } from '../utils';
 
 export const ArgoCDExtension = () => {
-  const { appName } = useParams();
+  const { appName, stageName, namespace } = useParams();
   const projectBreadcrumbs = useProjectBreadcrumbs();
   const { argoCDExtension } = useExtensionsContext();
   const isAnyExenstionLoaded = useIsAnyExtensionLoaded();
 
-  if (!isAnyExenstionLoaded) {
+  if (!isAnyExenstionLoaded || !appName || !stageName || !namespace) {
     return <Navigate to='/' replace />;
   }
 
@@ -26,7 +26,11 @@ export const ArgoCDExtension = () => {
           items={[...projectBreadcrumbs, { title: 'ArgoCD' }, { title: appName }]}
         />
       </BaseHeader>
-      {argoCDExtension ? <argoCDExtension.component /> : <LoadingState />}
+      {argoCDExtension ? (
+        <argoCDExtension.component stageName={stageName} namespace={namespace} appName={appName} />
+      ) : (
+        <LoadingState />
+      )}
     </>
   );
 };
