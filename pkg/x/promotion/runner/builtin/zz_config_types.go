@@ -581,6 +581,22 @@ type OCIDownloadConfig struct {
 	OutPath string `json:"outPath"`
 }
 
+type OCIPushConfig struct {
+	// Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or
+	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
+	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
+	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as imageRef with the
+	// new tag.
+	DestRef string `json:"destRef"`
+	// ImageRef is the source OCI artifact reference with tag or digest (e.g.
+	// 'registry/repo:tag' or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.
+	ImageRef string `json:"imageRef"`
+	// Whether to skip TLS verification when communicating with registries. Defaults to false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+}
+
 type SetFreightAliasConfig struct {
 	// The new alias to assign to the Freight. Aliases must be unique within the project.
 	Alias string `json:"alias"`
