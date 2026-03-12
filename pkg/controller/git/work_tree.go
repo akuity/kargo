@@ -215,10 +215,10 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 
 	var homeDir string
 	if opts.Author != nil {
-		// This author information is specific to this commit, so we will override
-		// repository-level author information by creating a temporary home
-		// directory, configuring the author information "globally" within it, and
-		// then ensuring the git commit command uses that home directory.
+		// This author + committer is specific to this commit, so we will override
+		// repository-level user information by creating a temporary home directory,
+		// configuring the user information "globally" within it, and then ensuring
+		// the git commit command uses that home directory.
 		var err error
 		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
 			return fmt.Errorf(
@@ -232,9 +232,9 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		if err = w.setupUser(homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
-				"error setting up author information for commit command: %w", err,
+				"error setting up author + committer information for commit command: %w", err,
 			)
 		}
 	}
@@ -319,10 +319,10 @@ func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 	}
 
 	var homeDir string
-	// This signing config is specific to this tag, so we will override
-	// repository-level signing config by creating a temporary home
-	// directory, setting the tag configuration "globally" within it, and
-	// then ensuring the git tag command uses that home directory.
+	// This tagger is specific to this tag, so we will override repository-level
+	// user information by creating a temporary home directory, configuring the
+	// user information "globally" within it, and then ensuring the git tag
+	// command uses that home directory.
 	if opts.Tagger != nil {
 		var err error
 		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
@@ -337,7 +337,7 @@ func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+		if err = w.setupUser(homeDir, opts.Tagger); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for tag command: %w", err,
 			)

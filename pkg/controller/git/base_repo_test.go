@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestSetupAuthor(t *testing.T) {
+func TestSetupUser(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -120,7 +120,7 @@ func TestSetupAuthor(t *testing.T) {
 				homeDir: repoHomeDir,
 			}
 
-			err := b.setupAuthor(homeDir, tc.author)
+			err := b.setupUser(homeDir, tc.author)
 			tc.assert(t, homeDir, repoHomeDir, err)
 		})
 	}

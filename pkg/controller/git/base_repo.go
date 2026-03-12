@@ -80,7 +80,7 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupAuthor(b.homeDir, opts.User); err != nil {
+	if err := b.setupUser(b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
@@ -118,38 +118,37 @@ type User struct {
 	SigningKeyPath string
 }
 
-// setupAuthor configures the git CLI with a default commit author.
-// Optionally, the author can have an associated signing key. When using GPG
+// setupUser configures the git CLI with a default user.
+// Optionally, the user can have an associated signing key. When using GPG
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
 // executed by this method.
-func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
-	if author == nil {
-		author = &User{}
+func (b *baseRepo) setupUser(homeDir string, user *User) error {
+	if user == nil {
+		user = &User{}
 	}
 
-	if author.Name == "" {
-		author.Name = defaultUsername
+	if user.Name == "" {
+		user.Name = defaultUsername
 	}
 
-	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
+	cmd := b.buildGitCommand("config", "--global", "user.name", user.Name)
 	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
 	// yet if called during clone. homeDir is safe since we're only writing
 	// "global" git config for a synthetic user.
 	cmd.Dir = homeDir
-	// Override HOME set by buildGitCommand(). The caller may provide a
-	// different homeDir to set up ephemeral config for a per-commit author
-	// identity.
+	// Override HOME set by buildGitCommand(). The caller may provide a different
+	// homeDir to set up ephemeral config for a per-command user identity.
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user name: %w", err)
 	}
 
-	if author.Email == "" {
-		author.Email = defaultEmail
+	if user.Email == "" {
+		user.Email = defaultEmail
 	}
 
-	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
+	cmd = b.buildGitCommand("config", "--global", "user.email", user.Email)
 	// See justification for both of these overrides above.
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
@@ -159,29 +158,29 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 
 	// For now, since only GPG signing is supported, we will assume GPG if the
 	// signing key type is not specified.
-	if author.SigningKeyType == SigningKeyTypeGPG || author.SigningKeyType == "" {
+	if user.SigningKeyType == SigningKeyTypeGPG || user.SigningKeyType == "" {
 
-		if author.SigningKey != "" {
-			author.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
+		if user.SigningKey != "" {
+			user.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
 			if err := os.WriteFile(
-				author.SigningKeyPath,
-				[]byte(author.SigningKey),
+				user.SigningKeyPath,
+				[]byte(user.SigningKey),
 				0600,
 			); err != nil {
-				return fmt.Errorf("error writing signing key to %q: %w", author.SigningKeyPath, err)
+				return fmt.Errorf("error writing signing key to %q: %w", user.SigningKeyPath, err)
 			}
 			defer func() {
-				if err := os.Remove(author.SigningKeyPath); err != nil {
+				if err := os.Remove(user.SigningKeyPath); err != nil {
 					logging.LoggerFromContext(context.TODO()).Error(
 						err,
 						"error removing file",
-						"file", author.SigningKeyPath,
+						"file", user.SigningKeyPath,
 					)
 				}
 			}()
 		}
 
-		if author.SigningKeyPath != "" {
+		if user.SigningKeyPath != "" {
 			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
@@ -198,18 +197,18 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 				return fmt.Errorf("error configuring tag gpg signing: %w", err)
 			}
 
-			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
+			cmd = b.buildCommand("gpg", "--import", user.SigningKeyPath)
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+				return fmt.Errorf("error importing gpg key %q: %w", user.SigningKeyPath, err)
 			}
 
 			// Set ultimate trust on the imported key so that commits signed
 			// by this key are considered trusted during signature
 			// verification (e.g. when deciding whether a rebase is safe).
-			if err := b.setUltimateTrust(homeDir, author.SigningKeyPath); err != nil {
+			if err := b.setUltimateTrust(homeDir, user.SigningKeyPath); err != nil {
 				return fmt.Errorf("error setting trust on gpg key: %w", err)
 			}
 		}

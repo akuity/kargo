@@ -34,13 +34,32 @@ func (w *workTree) pullBeforePush(
 	targetBranch string,
 	committer *User,
 ) error {
-	homeDir, cleanup, err := w.setupCommitter(committer)
-	if err != nil {
-		return fmt.Errorf(
-			"error setting up committer: %w", err,
-		)
+	var homeDir string
+	if committer != nil {
+		// This committer is specific to any commits made during rebasing or
+		// merging, so we will override repository-level user information by
+		// creating a temporary home directory, configuring the user information
+		// "globally" within it, and then ensuring git commits use that home
+		// directory.
+		var err error
+		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
+			return fmt.Errorf(
+				"error creating virtual home directory %q for rebase/merge commands: %w",
+				homeDir, err,
+			)
+		}
+		defer func() {
+			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
+				logging.LoggerFromContext(context.TODO()).
+					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
+			}
+		}()
+		if err = w.setupUser(homeDir, committer); err != nil {
+			return fmt.Errorf(
+				"error setting up committer information for rebase/merge commands: %w", err,
+			)
+		}
 	}
-	defer cleanup()
 
 	safe, err := w.canSafelyRebase(targetBranch, homeDir)
 	if err != nil {
@@ -109,44 +128,6 @@ func (w *workTree) pullMerge(
 		return fmt.Errorf("error pulling and merging branch: %w", err)
 	}
 	return nil
-}
-
-// setupCommitter creates a temporary home directory with the committer's author
-// and signing configuration. It returns the home directory path (empty if
-// committer is nil), a cleanup function that must be called when done, and any
-// error. The pattern mirrors how Commit and CreateTag handle per-operation
-// author overrides.
-func (w *workTree) setupCommitter(
-	committer *User,
-) (string, func(), error) {
-	noop := func() {}
-	if committer == nil {
-		return "", noop, nil
-	}
-	homeDir, err := os.MkdirTemp(w.homeDir, "")
-	if err != nil {
-		return "", noop, fmt.Errorf(
-			"error creating virtual home directory for pull command: %w",
-			err,
-		)
-	}
-	cleanup := func() {
-		if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-			logging.LoggerFromContext(context.TODO()).
-				Error(
-					cleanErr,
-					"error removing virtual home directory",
-					"path", homeDir,
-				)
-		}
-	}
-	if err = w.setupAuthor(homeDir, committer); err != nil {
-		cleanup()
-		return "", noop, fmt.Errorf(
-			"error setting up committer for pull command: %w", err,
-		)
-	}
-	return homeDir, cleanup, nil
 }
 
 // canSafelyRebase determines whether it is safe to rebase the local commits
