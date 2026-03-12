@@ -413,8 +413,7 @@ func (b *baseRepo) URL() string {
 // setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
 // signatures made by this key are considered fully trusted during verification.
 func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
-	// Get the fingerprint of the key using --with-colons output format.
-	// The fingerprint line starts with "fpr" and the fingerprint is in field 10.
+	// Get the fingerprint of the key.
 	cmd := b.buildCommand(
 		"gpg",
 		"--with-colons",
@@ -429,6 +428,12 @@ func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
 	if err != nil {
 		return fmt.Errorf("error getting fingerprint of gpg key: %w", err)
 	}
+	// Sample response:
+	//
+	// sec:u:2048:1:C984DEC578866F8A:1773322865:::u:::escarESCA::::::23::0:
+	// fpr:::::::::27CDB28C1429C96E91CBAE09C984DEC578866F8A:
+	// grp:::::::::2E518991B28783A8A4D06373B4FCBA74D53F397D:
+	// uid:u::::1773322865::F2E723F89EE13F7007A48DDACDB395768100ABC3::Test User <test@example.com>::::::::::0:
 	var fingerprint string
 	for _, line := range strings.Split(string(res), "\n") {
 		fields := strings.Split(line, ":")
@@ -441,9 +446,7 @@ func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
 		return fmt.Errorf("could not determine fingerprint of gpg key %q", keyPath)
 	}
 	// Import owner trust: level 6 = ultimate trust.
-	cmd = b.buildCommand(
-		"gpg", "--import-ownertrust",
-	)
+	cmd = b.buildCommand("gpg", "--import-ownertrust")
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
 	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:6:\n", fingerprint))
