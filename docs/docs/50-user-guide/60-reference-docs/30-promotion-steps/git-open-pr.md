@@ -27,7 +27,7 @@ system to access the git repos.
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `sourceBranch` | `string` | Y | Specifies the source branch for the pull request. |
 | `targetBranch` | `string` | N | The branch to which the changes should be merged. |
-| `createTargetBranch` | `boolean` | N | Indicates whether a new, empty orphaned branch should be created and pushed to the remote if the target branch does not already exist there. Default is `false`. |
+| `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release.|
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
 | `labels` | `[]string` | N | Labels to add to the pull request. |
@@ -54,6 +54,12 @@ This is a common pattern when implementing GitOps-based promotion workflows,
 where changes are first pushed to an intermediate branch and then merged into
 a stage-specific branch through a pull request.
 
+:::note
+
+The `git-open-pr` step will fail if the `targetBranch` doesn't exist.
+
+:::
+
 ```yaml
 steps:
 # Clone, prepare the contents of ./out, commit, etc...
@@ -66,7 +72,6 @@ steps:
   as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
-    createTargetBranch: true
     sourceBranch: ${{ outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
 # Wait for the PR to be merged or closed...
@@ -94,11 +99,46 @@ steps:
     path: ./out
     generateTargetBranch: true
 - uses: git-open-pr
+  as: open-pr
   config:
     repoURL: https://github.com/example/repo.git
     sourceBranch: ${{ outputs.push.branch }}
     targetBranch: stage/${{ ctx.stage }}
     title: Deploy to ${{ ctx.stage }}
     labels: ["infra", "needs-review"]
-# Wait for the PR to be merged or closed...
+- if: ${{ status('open-pr') != 'Skipped' }}
+  uses: git-wait-for-pr
+  as: wait-for-pr
+  config:
+    repoURL: https://github.com/example/repo.git
+    prNumber: ${{ outputs['open-pr'].pr.id }}
+```
+
+### Skipped
+
+The following example conditionally runs the 
+[`git-wait-for-pr` step](git-wait-for-pr.md) based on whether or not the 
+`git-open-pr` step was skipped. If there are no changes between the 
+`sourceBranch` and `targetBranch`, the `git-open-pr` step will be skipped. The 
+[`status`](../40-expressions.md#statusstepalias) expression function can be used 
+by subsequent steps to determine if a preceding step was skipped.
+
+```yaml
+- uses: git-push
+  as: push
+  config:
+    path: ./out
+    generateTargetBranch: true
+  - uses: git-open-pr
+    as: open-pr
+    config:
+      repoURL: https://github.com/example/repo.git
+      sourceBranch: ${{ outputs.push.branch }}
+      targetBranch: stage/${{ ctx.stage }}
+  - if: ${{ status('open-pr') != 'Skipped' }}
+    uses: git-wait-for-pr
+    as: wait-for-pr
+    config:
+      repoURL: https://github.com/example/repo.git
+      prNumber: ${{ outputs['open-pr'].pr.id }}
 ```
