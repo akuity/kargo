@@ -885,6 +885,9 @@ webhooksServer:
   ## @param webhooksServer.replicas The number of webhooks server pods.
   replicas: 1
 
+  ## @param webhooksServer.port The port on which the webhooks server listens. This must match the targetPort of the webhooks server Service.
+  port: 9443
+
   ## @param webhooksServer.logLevel The log level for the webhooks server. Valid options are ERROR, INFO, DEBUG, and TRACE (case insensitive). Note that INFO level messages are written during startup regardless of the selected level.
   logLevel: INFO
   ## @param webhooksServer.logFormat The format of logs from the webhooks server. Valid options are CONSOLE or JSON (case insensitive).

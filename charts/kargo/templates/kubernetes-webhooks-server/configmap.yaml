@@ -9,6 +9,7 @@ metadata:
     {{- include "kargo.kubernetesWebhooksServer.labels" . | nindent 4 }}
 data:
   KARGO_NAMESPACE: {{ .Release.Namespace }}
+  WEBHOOK_SERVER_PORT: {{ quote .Values.webhooksServer.port }}
   LOG_LEVEL: {{ quote .Values.webhooksServer.logLevel }}
   LOG_FORMAT: {{ quote .Values.webhooksServer.logFormat }}
   {{- if .Values.kubeconfigSecrets.kargo }}
