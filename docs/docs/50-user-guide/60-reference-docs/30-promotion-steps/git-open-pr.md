@@ -32,15 +32,6 @@ system to access the git repos.
 | `description` | `string` | N | The description for the pull request. |
 | `labels` | `[]string` | N | Labels to add to the pull request. |
 
-### v1.10
-
-:::warning
-
-Starting with `v1.10`, `createTargetBranch` is a no-op and will be removed in 
-`v1.12`.
-
-:::
-
 ## Output
 
 | Name | Type | Description |
