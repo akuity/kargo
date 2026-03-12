@@ -1,0 +1,70 @@
+---
+id: list-project-events
+title: "List project-level Kubernetes Events"
+description: "List Kubernetes Events from a project's namespace. Returns a"
+sidebar_label: "List project-level Kubernetes Events"
+hide_title: true
+hide_table_of_contents: true
+api: eJy1VE1T2zAQ/SsaXQozISY9dXKjNNNhwgwM0BPNYWM2scCRxEo2TT3+7921ZQJJ6a0cwmq1H09v37rRDxhyMj4aZ/VUX5oQ1bxaIlmMGNSsRhuDWpHbKFCe3CPm8VNQFjYYPOQ4VjcYK7JBwU+7n9hVIwyuIo7UI+08Ekiri4fU7Lov2ffhCA/EpSNS0NP7Zg9dCu66c6wRn4dYsN25+NRHsIPwuTKE3CdShSMd8gI3oKeNjlsvoSGSsWvdtgsJDt7ZgEHuP5+eyr/3rQ/fo46evoSxcRl4k+WOMKsn49ewY4aQOxv5KMXA+9Lk3dOzxyAVm0NEbtlhb+WPAWNekYnbjoevCIR0VvFbp/cLgRxhLRTpV+YSOSeXWGOpOYJpLJzwvMbYMSvJmlEuMcIkS1SFrElWm+FQKyDVwwgqKiVNS9MB061A79l6i2yftP5ORfeEVgGHcPnEwlhdLSMYmy5rA+rq4tt5dj0/n6lV6V7Ui4mF2jLVyjxIXtyK/mo+0HgYfoHAx934BYYj87trwe5ELE9ojlstrBq7cgJUZgO5zIad71HfzG7v1Nn1hVo5UnOgtZNKJpZSqjvLLfuEoj6lnkDpC5hoLuZdiBvoJpxQdbJJJJ+UMp7DFdN7KJqdev73UiaSIv6KmS95JvKKbupNEs29TqIRGSXZsDndbVtSDkuk4OdLRtMsIeAPKttW3M8VkkiZzRrIwFLYlAU3QWyW6QrKgP9g4egmbfSx2vsO/PUBw+jtViYFZSUnNp9YCLvvRLvg0KQigdPfnuU5+vgm72B927f79X12x7GQVmCnOSk2Ggyp/ldM+5rtIchvO/ogpWl6RTO1Q3x/9WHG66L00ULRgr8yfwB8YxEO
+sidebar_class_name: "get api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"List project-level Kubernetes Events"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/v1beta1/projects/{project}/events"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+List Kubernetes Events from a project's namespace. Returns a
+Kubernetes EventList resource.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./list-project-events.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./list-project-events.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./list-project-events.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

@@ -1,0 +1,71 @@
+---
+id: patch-system-config-map
+title: "Patch a system-level ConfigMap"
+description: "Patch a system-level ConfigMap. Merges provided data"
+sidebar_label: "Patch a system-level ConfigMap"
+hide_title: true
+hide_table_of_contents: true
+api: eJzVVU1T2zAQ/SsancpMiEtPndwgZVqGMs3wcQIOG3sTCxxLleSA6/F/765kxyEJTK+9ZOTVfj69t2lkhi61ynilSzmRM/BpLkC42nlcHRe4xkJMdblQyyswY3GFdolOGKvXKsNMZODhoXxRPhf4qpxX5TLYxuLOobC40mu8xNoJr0WGBXoUzmCqFioVz2QfP5TX6CtbkkeOojIUTGkvqznakrzdUJyyOV3ZFMdyJLVBC9zzRdZ3fRNa3riTkwELK0pinZzcNzuTDnlLciJvxVYDPqdzME1kGnxWIZnF35WySOW8rXAkXZrjCuSkkb427Oy8pell2z5GZ3T+TGc1e1Aej6XnIxhTqDS0njw57qTZSkW40mBeoeMvBjLEZJniAChmb+53Co96g54/YerZ8GbkAwHDA/G1Ivw+TAzWQk0T7lVqd2ttwWv4cfYADMWd0aWLs3z5/DmM/E6S/u3Fp+evbqx0AkYlqbaYrE/GG7cjKvPPWO+NwEM4TCurfB0Ic4Zg0Z5WRInJ/SO/q4clc4kas0yZ71iiJSbHBsgQOXj8k2UjyZ/Yl+ss8iqAEPg1kdT1HD2cJFFnyYZoLmk251ZyP3bd87eyBYdKbqTv84bHiQhud7sLZLwjET5jKYBcCKEOmbH4Nfegyu5yrUD8uvg2TWaX03OxKPSLCOquCX5Bkqc4X/f6t+NeNzkCfQ7K4Ta0VX9CCTkQyCgiW2AQP8j1IJPzV1iZArdov0epjo5vWXvfmx9bbmWhe71B6g8luT6/uRWnswux0FZcgl1q7k55Li3DN9+SjWGPIesTKEwOJywEo51fQWBSN+nHG1PuaXDDz/9m13Zv5/HVJ6YgqjAQgYxNx+d72fGZGRumiULsOE0fk2GVEntzQpGjmmYODu9s0bZsJjJYVh4d12AVzPlReHErx2fS0QIKhx9A+um6WzJHYm+/Hxyj52VZ85NDUfEXHQmvN/u/ZXp1JOeW4v00Fj6+5SxD/N7eaUd9xGmaovEf+m6vjdnp7fQHec+7P5KVzjjIwgvLgH5DszogEZZAsDWygHJZwZJ9Y1JWHHSrYdAi9zTqDzzWQTh2tRwn4V+e62BI00Slt+3GP169G7FZINGbX+eRuv4LASn+hQ==
+sidebar_class_name: "patch api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Patch a system-level ConfigMap"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/v1beta1/system/configmaps/{configmap}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Patch a system-level ConfigMap. Merges provided data
+with existing data. Use removeKeys to delete specific keys.
+Returns the updated Kubernetes ConfigMap resource.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./patch-system-config-map.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./patch-system-config-map.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./patch-system-config-map.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

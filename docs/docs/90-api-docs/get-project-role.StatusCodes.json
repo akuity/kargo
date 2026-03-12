@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"Role resource (k8s.io/api/rbac/v1.Role) or its underlying Kubernetes resources","content":{"application/json":{"schema":{"type":"object"}}}}}}

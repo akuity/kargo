@@ -273,6 +273,9 @@ codegen-ui:
 .PHONY: codegen-docs
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
+	npm install --prefix docs docusaurus-plugin-openapi-docs 
+	npm install --prefix docs docusaurus-theme-openapi-docs
+	npm run --prefix docs gen-api-docs
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################

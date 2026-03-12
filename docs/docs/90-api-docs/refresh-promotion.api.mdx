@@ -1,0 +1,71 @@
+---
+id: refresh-promotion
+title: "Refresh a Promotion"
+description: "Refresh a Promotion resource in a project's namespace."
+sidebar_label: "Refresh a Promotion"
+hide_title: true
+hide_table_of_contents: true
+api: eJzNVE1v2zAM/SuCLtuArG52zK3Leig6oEHTndoeGIeptTqWS8nuPMP/faSkxG2QFUNPu9gUxY9H8lG9XqPLydTe2ErP9DVuCF2hQC3Ibq1oFStsQzkqU7G+JvsTc//BqQq26GrI8eSuSn6melBYPTXYoFO+wNF3Y4kPua1yUxoIcVedMt7dVbklNqtttRZ3NvFkyxLpRE+0rZGC9cV6RLeHxgY1EMPwSE7PbvuDahYRa0DKtkZ0NfiC5aDiU7RgBeFTYwg5jacGJ9rlBW5Bz3rtu1pMnSfGp4dhciRNatWbifaY/z3VvRhLaxw6uf9yeiq/1+mXTZ6jc4JMO8wbMr4LzfiKQEhnDeOY3d5LMA8P0ic9tyQ4U38+f8cWS8333MnCSqdr63zorvjqrJ2u0MM0S+1yWZ+kIdsXFpVRHjKKo9ICidrdeBoqJZwWLDuoS6k+lvcS8GGV8U55+4hMQzbByps8cONEXa08MDvjZWtAXV18m2eLy/m52pT2WT0bX6iOmajMWvx8Jzxu+RBYFuZVIPBxnJjAsGR+Q5pamg3U5hK70GxTbawAFcoCk2jWs/Jgn86XN+pscRH4fwn0YCWS8aWECme5ZZ20KLq0UyjrAqaag8kYtlBJkoTqyILqg6QREJf5H+5zaqLHXz6rS56ZVBlY0Sey3epENqFfohuLs3FTR8Yl/YvFiqRjdhVCYA7W9ytw+IPKYRA1l0KyHCy2QAZWMgh5N4wTmam/gdLhGx39eJ2295M6eF6O1rZjTdXJkKFs5MTiI3NofH7Cm/JOCK+fnveBSB0c7ocXb8DiannDRpDWceS/uE12gnTvaPzD/YnJ5CvVHnXp+7hdPKudfbz6q8d+aaO1CTUMwx8mCGDd
+sidebar_class_name: "post api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Refresh a Promotion"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/v1beta1/projects/{project}/promotions/{promotion}/refresh"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Refresh a Promotion resource in a project's namespace.
+Refreshing enqueues the resource for reconciliation by its
+corresponding controller.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./refresh-promotion.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./refresh-promotion.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./refresh-promotion.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

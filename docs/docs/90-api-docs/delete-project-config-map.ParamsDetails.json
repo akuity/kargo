@@ -1,0 +1,1 @@
+{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"ConfigMap name","in":"path","name":"configmap","required":true,"schema":{"type":"string"}}]}

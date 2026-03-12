@@ -1,0 +1,1 @@
+{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"AnalysisTemplate name","in":"path","name":"analysis-template","required":true,"schema":{"type":"string"}}]}

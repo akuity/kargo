@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"properties":{"results":{"items":{"properties":{"deletedResourceManifest":{"additionalProperties":{},"type":"object"},"error":{"type":"string"}},"type":"object"},"type":"array"}},"type":"object"}}}}}}

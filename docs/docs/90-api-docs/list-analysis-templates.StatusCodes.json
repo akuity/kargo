@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)","content":{"application/json":{"schema":{"type":"object"}}}}}}

@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"properties":{"idToken":{"type":"string"}},"type":"object"}}}}}}

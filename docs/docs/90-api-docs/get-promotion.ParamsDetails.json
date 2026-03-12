@@ -1,0 +1,1 @@
+{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"Promotion name","in":"path","name":"promotion","required":true,"schema":{"type":"string"}}]}

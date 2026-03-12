@@ -1,0 +1,73 @@
+---
+id: create-system-api-token
+title: "Create a system-level API token"
+description: "Create a system-level API token associated with a system-level"
+sidebar_label: "Create a system-level API token"
+hide_title: true
+hide_table_of_contents: true
+api: eJztVU1zGjEM/Ssen5IZYEtPHW5pmkOGziQD9JTkIBYBThZ7a2tJtjv890r2LhCSpv0BvbD+kCw96T3R6AWG3JuSjLN6pC89AqECFepAuOkXuMVCXdxeK3JPaBWE4HLDJgv1bGh9Ynhvx+BXTk1cgWprPFVQKI/BVT7HgZogVd4GdhpXc/QWCYOaYu6R7m1nxvYlr9GSsStFa0yRB2pKzqMypALmlceiHqhZd3tvTVDWETuTN7iFeUwAon/KSTDAktCrXDAyXIUvOZakDLsDey4gF1xL5zcD3dOuRB/trhf7wkwjWH5qJlHZqAQPG8bhgx7dNSfFjGWwfM+GRg5KoDWv49FIe77mncefleHoekS+wp4O+Ro3oEeNproUu8CQ7Ervdg/JGAN9dYtaLHJniSslSyjLwuQx4ewxSPzm6KnSCxwyGGSXEngboNeduPkj5sQnfPQaUwf8ddY7OQilsyEF+PxpKJ/XrqnTez6os6cvYWBcBqXJcu5tth0Oks05B/hnaG9SlqQjRwzVsStfETz6i4qLP7p7kDISrKRhejKHnGNxcxdCOCgC71KT+9+F0ZqNub9rJxwoXaDYc3lIc7pzJBhmSQGZtDNkjXx2gqkfmSkPBvTbjiGVL8RXSxZdklPBkgp3nOpp/dJdJ0Q2kZRTWQbqZk5gbHspzL+5/naZ3Y4vr9SycM9JrTUXXpkIlWrFnNjyxg86eq4ReHsgqKThvPkVQ+g9ORjbGOtIF+nG5EDJqxfYlAUeKLanlkRYuo6yLDRevuHW5Go6izplCSbVSlBD8qLeq5jPpJrJZTuEolzDUCJIezZgj6L/ZZrpkwSO9PR/EB4GYdt2whfKyoJZJsWOPG5aLdzpVgtC9lgGmRCiB/6O2jl3JAnm/lq0xI5NM4eAP3yx28kxU8mLaHm5BW8k/TRYTZA1q3DJIsUPGnc2aSfTuTqev++C6AhtayEVFJXsePnE9G7n8+6B7VphSCLp6jKF68/kgYPrm0G163UeF7mU+EPb41FzezOdsfG8nfMbt4j/GPAsheXfmKaL8OPciGeNLsCuKliJbXpTRArtNDnIV1LqdQtB9W4hTuWfgMivwHrXpWnScOBmdvbp6o8e+5mTrKUvD5z1b5BX/FE=
+sidebar_class_name: "post api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Create a system-level API token"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"post"}
+  path={"/v1beta1/system/roles/{role}/api-tokens"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Create a system-level API token associated with a system-level
+Kargo Role virtual resource. Returns a Kubernetes Secret
+resource representing the token. Store it securely. The token
+is not retrievable via the Kargo API after creation except in
+a redacted form.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./create-system-api-token.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./create-system-api-token.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./create-system-api-token.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

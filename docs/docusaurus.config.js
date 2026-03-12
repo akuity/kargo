@@ -74,9 +74,25 @@ const config = {
         anonymizeIP: true,
       },
     ],
-    'docusaurus-plugin-sass'
+    'docusaurus-plugin-sass',
+    [
+      'docusaurus-plugin-openapi-docs',
+      {
+        id: "api",
+        docsPluginId: "classic",
+        config: {
+          petstore: {
+            specPath: "../swagger.yaml",
+            outputDir: "docs/90-api-docs",
+            sidebarOptions: {
+              groupPathsBy: "tag",
+            },
+          },
+        },
+      },
+    ],
   ],
-
+  themes: ["docusaurus-theme-openapi-docs"],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

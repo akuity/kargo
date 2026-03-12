@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"ClusterConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterConfig)","content":{"application/json":{"schema":{"type":"object"}}}}}}

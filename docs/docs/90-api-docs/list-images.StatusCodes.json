@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"additionalProperties":{"properties":{"tags":{"additionalProperties":{"properties":{"stages":{"additionalProperties":{"format":"int32","type":"integer"},"type":"object"}},"type":"object"},"type":"object"}},"type":"object"},"type":"object"}}}}}}

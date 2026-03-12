@@ -1,0 +1,71 @@
+---
+id: patch-project-config-map
+title: "Patch a project-level ConfigMap"
+description: "Patch a ConfigMap in a project's namespace. Merges provided data"
+sidebar_label: "Patch a project-level ConfigMap"
+hide_title: true
+hide_table_of_contents: true
+api: eJzVVcFu2zAM/RVBl21AGq87Dbm1WbEVXbGg605tD4zNxGodS5PktJnhfx8p2XHqpEWx2y6GTJHi49MjVcsMXWqV8UqXciJn4NNcgJjqcqGWl2CEKunXWH2PqX/nRAkrdAZSHItLtEt0vLdWGWYiAw+35aPyucAn5bwql8E2Fr8cCosrvcYL3DjhtciwQI/CGUzVQqXigezj2/IKfWVL8shRVIaC6diLao62JG+3g8qi05UlFHIktUELjP886yqYRbxbf/IyYAm6R+vk5KYelh39Q3Xkq9hmwOe0Dib6ix5ksPi7UhYpl7cVjqRLc1yBnNTSbwy7Om+pdNk0o2GaHv/LidLgswqY357qLjqj86c627AHneOx9LwEYwqVBoqSe8dI6p2jqDIi0Ct0/McXFmKyTHEAFLNn+4PEo86g54EeMjwr+UBALwTeVh5Xrx4M1sKGyRxmaoa5dug1LII9AkNyZ3TpYi2fPn4MJb9wSKcx8f7hsxsrnYBRSaotJuvj8dbtA6V5M9d7JXARDtPKKr8JujxFsGhPKpLE5OaO79XDkiVLwCxL5iuWaKljIgAytNo9+o5rLCQFkMpznUVhBRaCwCaSYM/Rw3HSatkldbtqkq3qyLhdN5LB2XXXM5Ut+BjJqDrQP7m2SOcu9CGrcY86/wFpnpAL0dXSNBY/5h5ozMTNtQLx4/zLNJldTM/EotCPIoyUDd2FoDlDcX7TDR077pooR6Dfvo0YhrbqT0ghezUZRcoLcuLbuep75uwJVqbAnR7Y01erzecSvunMdw1DWeiu+SD1hw65Ovt5LU5m52KhrbgAu9SMTnlOLcM/75KNaY8h62MoTA7H3BVGO7+CIKu20m5kt3d5VLAOxO7oG3TkVq3/5bRvL9Ljk09MQbphVoIy61boN7IVOku/lTotJ/0I79XO9n7ikq5z4pePqOs5OPxli6ZhM8nEcoPScg1WwZyvi58R5XhN3baAwuErXL+/amfRBzF4bQ5W1Om13LAUoKj4j5ZE3c5rFJ6Yf4Gw9xL9A4iet4a133YgsxL3pzHx0TWf0sfvTUguIkacpCka/6rv7nybnVxPv5H3vH3yVjrjIAuP3KP0DWB1YCJMqGCrZQHlsoIl+8ZDeRxAO7f6QcGYRt2CyzpIx3DQxEr4y3UdDKnrOIaaZusft16M2E636M23c0eo/wL6BF/Z
+sidebar_class_name: "patch api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Patch a project-level ConfigMap"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"patch"}
+  path={"/v1beta1/projects/{project}/configmaps/{configmap}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Patch a ConfigMap in a project's namespace. Merges provided data
+with existing data. Use removeKeys to delete specific keys.
+Returns the updated Kubernetes ConfigMap resource.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./patch-project-config-map.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./patch-project-config-map.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./patch-project-config-map.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

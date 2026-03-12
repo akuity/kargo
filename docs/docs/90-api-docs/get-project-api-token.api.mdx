@@ -1,0 +1,70 @@
+---
+id: get-project-api-token
+title: "Retrieve a project-level API token"
+description: "Retrieve a project-level API token by name. Returns a heavily"
+sidebar_label: "Retrieve a project-level API token"
+hide_title: true
+hide_table_of_contents: true
+api: eJy9VMFS2zAQ/RWNTjATYtJTJzdKGSaTzsAAPVEOsrOJRYwlVrKp6/G/d1dWYjDQdjg0B0darXbfvn2rVq7AZait16aUc3kFHjXUIJSwaO4h80cFbQtxcrkQ3myhFGkjSvUAU0G+FZaOXHNQtS6aHyXCSmUeVmJZpYAleHDiGjIELxCcqTCDqZxIYwEVZ1ysKOc5+Ms+FyW54RzkYhVSEg/o5Py2HaGM7gEH+Wq2WeVzWgcT7XoPMiA8VppwybnHCibSZTk8KDlvpW8suzqquNzIrpuM0ww1v59IWe0j5H/PdMfOzprSgePzT8fH/Pcy+4g3cbD97KbaJJQxyQxCUs+mvc8hJc9M6aH0HEZZW+gs8JvcO47VvsZi0sBPxz+CClmF2jeB6y+gEPCkojLnt3cM1qsNt0FepSqjXKdUJOXSqnC0i804+sY6keRNbcsNN3YDPnSSA0mCm4JXsyS2xiVtXHVc0lFgkYw7QjvJsLDeKaDCgqNIxrODe81V9RQ+Bz1msj+LrVTkwuB7gqbiIvVKl/Gw1kpcLL6eJpfL0zOxLsyTeNI+Fw21QOhQtG94Mmra4HQnCdI/bQdRMAyD+ldIQebIOZW2hIaVRtfWhoFy22hiaEnG0SieXd+EsVsbFEuFG8ORtC84VNjzKdmYov5KPVOFzdVMUjBrnH9QofkR1d9nW44wtIOs/tPLEJny8NMntqDGcCmh9W0U0q2MQmJpRSnRcj5M/KAmtu8HlHSTEyccoW1T5eA7Fl3H5scKkKVPy1qhVilTzI+OdrwmKa9J6vAHcg6u4uwfitHb9GZBOz2UDbdPFRXvaLkldQxvV3iQPgLh1bv1ARB72ro78o0CZ1L645MsA+ufXXz16HTPX4LzsxtuTJzOYRw42GS34OhvghqPUw+Bv0zRm1fath+2rtv790fv3tjPcO+tQ+Vd9xvFiXD7
+sidebar_class_name: "get api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Retrieve a project-level API token"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"get"}
+  path={"/v1beta1/projects/{project}/api-tokens/{apitoken}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Retrieve a project-level API token by name. Returns a heavily
+redacted Kubernetes Secret resource.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./get-project-api-token.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./get-project-api-token.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./get-project-api-token.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

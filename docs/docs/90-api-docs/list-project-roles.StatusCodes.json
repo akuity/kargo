@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)","content":{"application/json":{"schema":{"type":"object"}}}}}}

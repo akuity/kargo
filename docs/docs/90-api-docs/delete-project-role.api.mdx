@@ -1,0 +1,71 @@
+---
+id: delete-project-role
+title: "Delete a project-level Kargo Role virtual resource"
+description: "Delete a project-level Kargo Role virtual resource by deleting"
+sidebar_label: "Delete a project-level Kargo Role virtual resource"
+hide_title: true
+hide_table_of_contents: true
+api: eJzVVEtv2zAM/iuCLtuAtFmGnXLrI4ciBVq03anLgbaZWqsiuZTszjP830daThsE6bD1totNUXx8/Eiq0wWGnEwVjXd6rs/RYkQFqiL/A/N4ZLFBq5ZAD17deIuqMRRrsIow+JpyVFmrCvEy7uG7iyWq2hVItuWzWtYZkuOIQd0iNSbHkzz3tYuTIdhEgSsG6dS4YgiwDRvUmvxGSbwRyoegHGwwVJDjsZ5oXyGBwL4oXoBfJ1OJyBYVEDtEpKDn991epaPpEJNtjegqiCXLg4pPyYIVhE+1IeQ8kWqc6JCXuAE973RsKzENkRi97vvJfpqBs7dzUEL69wlWYhwq7wIGuf/y+av8DnWxUKHOmcmwrq1tBZwOmNdkYjvwcYpASCc145nfryRyhAehSt9kkDOqkaKjS5kBzfdMZumF7aHhiWLx1tNmlmGE2XTkLEy7UeqnUiKf5ddrgUDNtiM1WXHWknsL7VZKT7XtAtwvMd2p6B/RKWATdNHkwzwcq6ssgnHjZWNAXV2cn02vl2cLtbb+WT2bWKqW50yZQvxiK0PW8IGOt30qEfj42imB4cn8GlKwemwMVGaJiVzj1l6A5t5F4LmZd6zcm4bF7Z06ub5Qa09pqSSSiVZCpSXjW9YJRcmlmYGtSphpDlb5EDfgJMmI6t/3Ve9hSniZhf9r+0f6I/6M08pyt4WfYZ66cSjv9TiUMqbjWLI431lrmUxRDVvIM1gyv+LYdRkE/Ea270X9VCPJyrDYABnIpF3yoJggMi/EGmzAPxD78WZc8E9q7905WMd2tlwrowC2lhOLjzxpr+/S8Ni8B8Lum/SO/ANb/arfeQ/OF5eLuwVbwLisr9shPpOtIKwdDL6/XSmTfKXKgy5dl3av71/s09WbHi8rnayl1lXf978B8ThsYA==
+sidebar_class_name: "delete api-method"
+info_path: 90-api-/kargo-api
+custom_edit_url: null
+---
+
+import MethodEndpoint from "@theme/ApiExplorer/MethodEndpoint";
+import ParamsDetails from "@theme/ParamsDetails";
+import RequestSchema from "@theme/RequestSchema";
+import StatusCodes from "@theme/StatusCodes";
+import OperationTabs from "@theme/OperationTabs";
+import TabItem from "@theme/TabItem";
+import Heading from "@theme/Heading";
+import Translate from "@docusaurus/Translate";
+
+<Heading
+  as={"h1"}
+  className={"openapi__heading"}
+  children={"Delete a project-level Kargo Role virtual resource"}
+>
+</Heading>
+
+<MethodEndpoint
+  method={"delete"}
+  path={"/v1beta1/projects/{project}/roles/{role}"}
+  context={"endpoint"}
+>
+  
+</MethodEndpoint>
+
+
+
+Delete a project-level Kargo Role virtual resource by deleting
+the underlying Kubernetes ServiceAccount, Role, and RoleBinding
+resources from the project's namespace.
+
+<Heading
+  id={"request"}
+  as={"h2"}
+  className={"openapi-tabs__heading"}
+>
+  <Translate id="theme.openapi.request.title">Request</Translate>
+</Heading>
+
+<ParamsDetails
+  {...require("./delete-project-role.ParamsDetails.json")}
+>
+  
+</ParamsDetails>
+
+<RequestSchema
+  {...require("./delete-project-role.RequestSchema.json")}
+>
+  
+</RequestSchema>
+
+<StatusCodes
+  {...require("./delete-project-role.StatusCodes.json")}
+>
+  
+</StatusCodes>
+
+
+      

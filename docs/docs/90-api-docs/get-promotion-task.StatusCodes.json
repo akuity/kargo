@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"PromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTask)","content":{"application/json":{"schema":{"type":"object"}}}}}}

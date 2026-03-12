@@ -1,0 +1,1 @@
+{"responses":{"200":{"description":"ProjectConfig custom resource (github.com/akuity/kargo/api/v1alpha1.ProjectConfig)","content":{"application/json":{"schema":{"type":"object"}}}}}}

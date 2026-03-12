@@ -1,0 +1,1 @@
+{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"Freight name or alias","in":"path","name":"freight-name-or-alias","required":true,"schema":{"type":"string"}},{"description":"New alias","in":"query","name":"newAlias","required":true,"schema":{"type":"string"}}]}
