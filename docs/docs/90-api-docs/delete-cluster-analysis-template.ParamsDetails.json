@@ -1,1 +1,0 @@
-{"parameters":[{"description":"ClusterAnalysisTemplate name","in":"path","name":"cluster-analysis-template","required":true,"schema":{"type":"string"}}]}

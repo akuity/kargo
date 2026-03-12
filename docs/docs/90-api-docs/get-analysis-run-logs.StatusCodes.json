@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"Log stream (SSE)","content":{"text/event-stream":{"schema":{"type":"string"}}}}}}

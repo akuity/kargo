@@ -1,1 +1,0 @@
-{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"Stage filter","in":"query","name":"stage","schema":{"type":"string"}}]}

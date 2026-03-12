@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"ClusterPromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTask)","content":{"application/json":{"schema":{"type":"object"}}}}}}

@@ -1,1 +1,0 @@
-{"responses":{"201":{"description":"Created successfully","content":{"application/json":{"schema":{"properties":{"results":{"items":{"properties":{"createdResourceManifest":{"additionalProperties":{},"type":"object"},"error":{"type":"string"}},"type":"object"},"type":"array"}},"type":"object"}}}}}}

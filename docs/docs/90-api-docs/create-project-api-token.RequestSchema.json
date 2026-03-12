@@ -1,1 +1,0 @@
-{"title":"Body","body":{"content":{"application/json":{"schema":{"properties":{"name":{"type":"string"}},"type":"object"}}},"description":"Token","required":true}}

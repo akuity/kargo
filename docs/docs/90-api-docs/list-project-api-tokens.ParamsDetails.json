@@ -1,1 +1,0 @@
-{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"Role name filter","in":"query","name":"role","schema":{"type":"string"}}]}

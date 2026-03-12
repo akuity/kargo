@@ -1,1 +1,0 @@
-{"parameters":[{"description":"Role name","in":"path","name":"role","required":true,"schema":{"type":"string"}}]}

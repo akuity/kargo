@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)","content":{"application/json":{"schema":{"type":"object"}}}}}}

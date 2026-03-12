@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"OK","content":{"application/json":{"schema":{"properties":{"adminAccountEnabled":{"type":"boolean"},"oidcConfig":{"properties":{"cliClientId":{"type":"string"},"clientId":{"type":"string"},"issuerUrl":{"type":"string"},"scopes":{"items":{"type":"string"},"type":"array"}},"type":"object"},"skipAuth":{"type":"boolean"}},"type":"object"}}}}}}

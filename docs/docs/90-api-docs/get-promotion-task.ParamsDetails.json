@@ -1,1 +1,0 @@
-{"parameters":[{"description":"Project name","in":"path","name":"project","required":true,"schema":{"type":"string"}},{"description":"PromotionTask name","in":"path","name":"promotion-task","required":true,"schema":{"type":"string"}}]}

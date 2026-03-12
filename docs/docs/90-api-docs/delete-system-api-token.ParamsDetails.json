@@ -1,1 +1,0 @@
-{"parameters":[{"description":"API token name","in":"path","name":"apitoken","required":true,"schema":{"type":"string"}}]}

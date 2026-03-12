@@ -230,12 +230,13 @@ codegen-openapi: install-swag install-go-swagger
 		--parseDependency \
 		--parseInternal \
 		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml .
-	mv /tmp/swagger-build/swagger.json .
+	pwd
+	mv /tmp/swagger-build/swagger.yaml ./docs/static/swagger.yaml
+	mv /tmp/swagger-build/swagger.json ./docs/static/swagger.json
 	rm -rf /tmp/swagger-build
 	mkdir -p pkg/client/generated
 	$(GO_SWAGGER_LINK) generate client \
-		-f swagger.json \
+		-f ./docs/static/swagger.json \
 		-t pkg \
 		--client-package client/generated \
 		--model-package client/generated/models \
@@ -275,7 +276,7 @@ codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
 	npm install --prefix docs docusaurus-plugin-openapi-docs 
 	npm install --prefix docs docusaurus-theme-openapi-docs
-	npm run --prefix docs gen-api-docs
+	npm install --prefix docs swagger-ui-react
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################

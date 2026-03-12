@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"Update results","content":{"application/json":{"schema":{"properties":{"results":{"items":{"properties":{"createdResourceManifest":{"additionalProperties":{},"type":"object"},"error":{"type":"string"},"updatedResourceManifest":{"additionalProperties":{},"type":"object"}},"type":"object"},"type":"array"}},"type":"object"}}}}}}

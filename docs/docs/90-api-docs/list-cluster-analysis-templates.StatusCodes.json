@@ -1,1 +1,0 @@
-{"responses":{"200":{"description":"ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)","content":{"application/json":{"schema":{"type":"object"}}}}}}

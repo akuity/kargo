@@ -1,1 +1,0 @@
-{"parameters":[{"description":"ClusterPromotionTask name","in":"path","name":"cluster-promotion-task","required":true,"schema":{"type":"string"}}]}

@@ -1,1 +1,0 @@
-{"title":"Body","body":{"content":{"application/json":{"schema":{"type":"object"}}},"description":"Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)","required":true}}
