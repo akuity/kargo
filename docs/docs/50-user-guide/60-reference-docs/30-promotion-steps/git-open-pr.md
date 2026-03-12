@@ -65,9 +65,7 @@ a stage-specific branch through a pull request.
 
 :::note
 
-The `git-open-pr` step will fail if the `targetBranch` doesn't exist. This 
-example includes additional preceding steps to better demonstrate when and how 
-the remote/target branch is created in the [`git-clone step`](git-clone.md).
+The `git-open-pr` step will fail if the `targetBranch` doesn't exist.
 
 :::
 
