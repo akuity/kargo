@@ -182,24 +182,12 @@ func (w *workTree) commitsToReplay(
 	targetBranch string,
 ) ([]string, error) {
 	remoteRef := fmt.Sprintf("origin/%s", targetBranch)
-	// Verify the remote tracking ref exists locally. In bare-clone-based
-	// work trees it may be absent even when the remote branch exists.
-	if _, err := libExec.Exec(w.buildGitCommand(
-		"rev-parse", "--verify", remoteRef,
-	)); err != nil {
-		// The ref doesn't exist locally. Fetch the specific branch and
-		// create the remote tracking ref explicitly.
-		if _, fetchErr := libExec.Exec(w.buildGitCommand(
-			"fetch", "origin",
-			fmt.Sprintf(
-				"+refs/heads/%s:refs/remotes/origin/%s",
-				targetBranch, targetBranch,
-			),
-		)); fetchErr != nil {
-			return nil, fmt.Errorf(
-				"error fetching remote branch %q: %w", targetBranch, fetchErr,
-			)
-		}
+	// Always fetch the target branch to ensure the remote tracking ref
+	// exists and has full, up-to-date history for the git log range below.
+	if err := w.Fetch(&FetchOptions{Branch: targetBranch}); err != nil {
+		return nil, fmt.Errorf(
+			"error fetching remote branch %q: %w", targetBranch, err,
+		)
 	}
 	res, err := libExec.Exec(w.buildGitCommand(
 		"log",
