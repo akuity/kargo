@@ -7,7 +7,7 @@
   "properties": {
     "createTargetBranch": {
       "type": "boolean",
-      "description": "Indicates whether a new, empty orphan branch should be created and pushed to the remote if the target branch does not already exist there. Default is false."
+      "description": "Deprecated. Is a no-op if set. Will be removed in a future release."
     },
     "insecureSkipTLSVerify" : {
       "type": "boolean",

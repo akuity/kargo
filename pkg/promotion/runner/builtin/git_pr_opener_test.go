@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/utils/ptr"
 
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/gitprovider"
@@ -219,42 +220,100 @@ func Test_gitPROpener_run(t *testing.T) {
 
 	// Now we can proceed to test gitPROpener...
 
-	r := newGitPROpener(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
+	t.Run("fail when remote target branch does not exist", func(t *testing.T) {
+		r := newGitPROpener(promotion.StepRunnerCapabilities{
+			CredsDB: &credentials.FakeDB{},
+		})
+		runner, ok := r.(*gitPROpener)
+		require.True(t, ok)
+
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				WorkDir: workDir,
+			},
+			builtin.GitOpenPRConfig{
+				RepoURL:      testRepoURL,
+				SourceBranch: testSourceBranch,
+				TargetBranch: testTargetBranch,
+				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+			},
+		)
+		require.Error(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+		require.ErrorContains(t, err, "target branch \"target\" does not exist")
 	})
-	runner, ok := r.(*gitPROpener)
-	require.True(t, ok)
 
-	res, err := runner.run(
-		context.Background(),
-		&promotion.StepContext{
-			Project: "fake-project",
-			Stage:   "fake-stage",
-			WorkDir: workDir,
-		},
-		builtin.GitOpenPRConfig{
-			RepoURL: testRepoURL,
-			// We get slightly better coverage by using this option
-			SourceBranch:       testSourceBranch,
-			TargetBranch:       testTargetBranch,
-			CreateTargetBranch: true,
-			Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
-			Title:              "kargo",
-			Description:        "kargo description",
-		},
-	)
-	require.NoError(t, err)
+	t.Run("skip when target branch exists but has no changes", func(t *testing.T) {
+		// push the target branch with no changes compared to the source branch
+		require.NoError(t, repo.CreateChildBranch(testTargetBranch))
+		require.NoError(t, repo.Push(nil))
 
-	// Validate the pr.ID and pr.URL fields
-	prOutput, ok := res.Output["pr"].(map[string]any)
-	require.True(t, ok)
-	require.Equal(t, testPRNumber, prOutput["id"])
-	require.Equal(t, testPRURL, prOutput["url"])
+		r := newGitPROpener(promotion.StepRunnerCapabilities{
+			CredsDB: &credentials.FakeDB{},
+		})
+		runner, ok := r.(*gitPROpener)
+		require.True(t, ok)
 
-	// Assert that the target branch, which didn't already exist, was created
-	exists, err := repo.RemoteBranchExists(testTargetBranch)
-	require.NoError(t, err)
-	require.True(t, exists)
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				WorkDir: workDir,
+			},
+			builtin.GitOpenPRConfig{
+				RepoURL:      testRepoURL,
+				SourceBranch: testSourceBranch,
+				TargetBranch: testTargetBranch,
+				Provider:     ptr.To(builtin.Provider(fakeGitProviderName)),
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSkipped, res.Status)
+	})
+
+	t.Run("successfully opens PR when target branch exists and has changes", func(t *testing.T) {
+		// ensure there is a change compared to the source branch by pushing a commit to the target branch
+		require.NoError(t, repo.Checkout(testTargetBranch))
+		require.NoError(t, os.WriteFile(fmt.Sprintf("%s/some-file.txt", repo.Dir()), []byte("some changes"), 0600))
+		require.NoError(t, repo.AddAllAndCommit("my commit msg", nil))
+		require.NoError(t, repo.Push(nil))
+
+		r := newGitPROpener(promotion.StepRunnerCapabilities{
+			CredsDB: &credentials.FakeDB{},
+		})
+		runner, ok := r.(*gitPROpener)
+		require.True(t, ok)
+
+		res, err := runner.run(
+			t.Context(),
+			&promotion.StepContext{
+				Project: "fake-project",
+				Stage:   "fake-stage",
+				WorkDir: workDir,
+			},
+			builtin.GitOpenPRConfig{
+				RepoURL:            testRepoURL,
+				SourceBranch:       testSourceBranch,
+				TargetBranch:       testTargetBranch,
+				CreateTargetBranch: true,
+				Provider:           ptr.To(builtin.Provider(fakeGitProviderName)),
+				Title:              "kargo",
+				Description:        "kargo description",
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
+
+		// Validate the pr.ID and pr.URL fields
+		prOutput, ok := res.Output["pr"].(map[string]any)
+		require.True(t, ok)
+		require.Equal(t, testPRNumber, prOutput["id"])
+		require.Equal(t, testPRURL, prOutput["url"])
+	})
 }
 
 func Test_gitPROpener_sortPullRequests(t *testing.T) {
