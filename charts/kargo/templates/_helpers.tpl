@@ -45,10 +45,24 @@ Generate base URL for a service.
 {{- end -}}
 
 {{/*
+Generate the base HOST for the API service.
+*/}}
+{{- define "kargo.api.baseHost" -}}
+{{- (tpl .Values.api.host .) -}}
+{{- end -}}
+
+{{/*
 Generate the base URL for the API service.
 */}}
 {{- define "kargo.api.baseURL" -}}
-{{- include "kargo.baseURL" (dict "service" .Values.api "host" .Values.api.host) -}}
+{{- include "kargo.baseURL" (dict "service" .Values.api "host" (include "kargo.api.baseHost" .)) -}}
+{{- end -}}
+
+{{/*
+Generate the base HOST for the external webhook server.
+*/}}
+{{- define "kargo.externalWebhooksServer.baseHost" -}}
+{{- (tpl .Values.externalWebhooksServer.host .) -}}
 {{- end -}}
 
 {{/*
@@ -60,7 +74,7 @@ Generate the base URL for the external webhook server.
 {{- if and (not $webhookService.ingress.enabled) $apiService.enabled $apiService.ingress.enabled -}}
 {{- printf "%s/webhooks" (include "kargo.api.baseURL" .) -}}
 {{- else -}}
-{{- include "kargo.baseURL" (dict "service" $webhookService "host" $webhookService.host) -}}
+{{- include "kargo.baseURL" (dict "service" $webhookService "host" (include "kargo.externalWebhooksServer.baseHost" .)) -}}
 {{- end -}}
 {{- end -}}
 
