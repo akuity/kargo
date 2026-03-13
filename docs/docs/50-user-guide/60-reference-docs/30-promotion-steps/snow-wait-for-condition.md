@@ -92,7 +92,7 @@ For `credentials.type: basic` the referenced `Secret` should contain the followi
 | `tableName`    | `string`  | Y        | Table name of the record type you want to wait on (e.g., `incident`, `problem`, `change_request`).                              |
 | `ticketId`     | `string`  | Y        | Ticket ID (`sys_id`) of the record you want to monitor.                                                                         |
 | `condition`    | `string`  | Y        | Condition to wait on before proceeding.                                                                                         |
-| `pollInterval` | `integer` | N        | Poll interval in seconds for checking record condition. Overrides the default controller reconciliation interval. Must be >= 1. Available in Kargo >= v1.10. |
+| `pollInterval` | `integer` | N        | Poll interval in seconds for checking record condition. Overrides the default controller reconciliation interval of 5 minutes when set. Must be >= 1. Available in Kargo >= v1.10. |
 
 ## Output
 
