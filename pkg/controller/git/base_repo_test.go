@@ -26,8 +26,8 @@ func TestSetupAuthor(t *testing.T) {
 			author:        nil,
 			assert: func(t *testing.T, homeDir, _ string, err error) {
 				require.NoError(t, err)
-				assertGitConfig(t, homeDir, "user.name", defaultUsername)
-				assertGitConfig(t, homeDir, "user.email", defaultEmail)
+				assertGitConfig(t, homeDir, "user.name", DefaultUsername)
+				assertGitConfig(t, homeDir, "user.email", DefaultEmail)
 			},
 		},
 		{
@@ -67,7 +67,7 @@ func TestSetupAuthor(t *testing.T) {
 			author:        nil,
 			assert: func(t *testing.T, homeDir, _ string, err error) {
 				require.NoError(t, err)
-				assertGitConfig(t, homeDir, "user.name", defaultUsername)
+				assertGitConfig(t, homeDir, "user.name", DefaultUsername)
 			},
 		},
 		{

@@ -63,12 +63,21 @@ func gitUserFromEnv() git.User {
 		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
 	}{}
 	envconfig.MustProcess("", &cfg)
-	return git.User{
-		Name:           cfg.Name,
-		Email:          cfg.Email,
+	name := cfg.Name
+	if name == "" {
+		name = git.DefaultUsername
+	}
+	email := cfg.Email
+	if email == "" {
+		email = git.DefaultEmail
+	}
+	u := git.User{
+		Name:           name,
+		Email:          email,
 		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
 		SigningKeyPath: cfg.SigningKeyPath,
 	}
+	return u
 }
 
 // newGitCloner returns an implementation of the promotion.StepRunner interface

@@ -27,7 +27,9 @@ type MockRepo struct {
 	ListTagsFn                func() ([]TagMetadata, error)
 	ListCommitsFn             func(limit, skip uint) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
+	PullRebaseFn              func(branch string) error
 	PushFn                    func(*PushOptions) error
+	ForcePullFn               func(branch string) error
 	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
 	RemoteBranchExistsFn      func(branch string) (bool, error)
 	ResetHardFn               func() error
@@ -135,8 +137,22 @@ func (m *MockRepo) CommitMessage(id string) (string, error) {
 	return m.CommitMessageFn(id)
 }
 
+func (m *MockRepo) PullRebase(branch string) error {
+	if m.PullRebaseFn == nil {
+		return nil
+	}
+	return m.PullRebaseFn(branch)
+}
+
 func (m *MockRepo) Push(opts *PushOptions) error {
 	return m.PushFn(opts)
+}
+
+func (m *MockRepo) ForcePull(branch string) error {
+	if m.ForcePullFn == nil {
+		return nil
+	}
+	return m.ForcePullFn(branch)
 }
 
 func (m *MockRepo) RefsHaveDiffs(

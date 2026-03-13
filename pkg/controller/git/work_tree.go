@@ -80,8 +80,17 @@ type WorkTree interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
+	// PullRebase fetches the latest state of the specified remote branch and
+	// rebases the current branch on top of it. If the remote branch does not
+	// exist, this is a no-op. Returns ErrMergeConflict if the rebase
+	// encounters conflicts requiring manual resolution.
+	PullRebase(branch string) error
 	// Push pushes from the local repository to the remote repository.
 	Push(*PushOptions) error
+	// ForcePull fetches the specified remote branch and resets the current
+	// branch to match it. This is useful after an out-of-band push (e.g. via
+	// an API) where local commit SHAs no longer match the remote.
+	ForcePull(branch string) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
 	RefsHaveDiffs(commit1 string, commit2 string) (bool, error)
 	// RemoteBranchExists returns a bool indicating if the specified branch exists
@@ -459,7 +468,10 @@ func (w *workTree) IsRebasing() (bool, error) {
 	if err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseMerge := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseMerge := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(rebaseMerge) {
+		rebaseMerge = filepath.Join(w.dir, rebaseMerge)
+	}
 	if _, err = os.Stat(rebaseMerge); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -469,7 +481,10 @@ func (w *workTree) IsRebasing() (bool, error) {
 	if res, err = libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-apply")); err != nil {
 		return false, fmt.Errorf("error determining rebase status: %w", err)
 	}
-	rebaseApply := filepath.Join(w.dir, strings.TrimSpace(string(res)))
+	rebaseApply := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(rebaseApply) {
+		rebaseApply = filepath.Join(w.dir, rebaseApply)
+	}
 	if _, err = os.Stat(rebaseApply); !os.IsNotExist(err) {
 		if err != nil {
 			return false, err
@@ -694,6 +709,29 @@ type PushOptions struct {
 // nolint: lll
 var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`)
 
+func (w *workTree) PullRebase(branch string) error {
+	exists, err := w.RemoteBranchExists(branch)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	if _, err = libExec.Exec(
+		w.buildGitCommand("pull", "--rebase", "origin", branch),
+	); err != nil {
+		// The error we're most concerned with is a merge conflict
+		// requiring manual resolution, because it's an error that no
+		// amount of retries will fix. If we find that a rebase is in
+		// progress, this is what has happened.
+		if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
+			return ErrMergeConflict
+		}
+		return fmt.Errorf("error pulling and rebasing branch: %w", err)
+	}
+	return nil
+}
+
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
@@ -718,23 +756,8 @@ func (w *workTree) Push(opts *PushOptions) error {
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
 	if opts.PullRebase {
-		exists, err := w.RemoteBranchExists(targetBranch)
-		if err != nil {
+		if err := w.PullRebase(targetBranch); err != nil {
 			return err
-		}
-		// We only want to pull and rebase if the remote branch exists.
-		if exists {
-			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
-				// The error we're most concerned with is a merge conflict requiring
-				// manual resolution, because it's an error that no amount of retries
-				// will fix. If we find that a rebase is in progress, this is what
-				// has happened.
-				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
-					return ErrMergeConflict
-				}
-				// If we get to here, the error isn't a merge conflict.
-				return fmt.Errorf("error pulling and rebasing branch: %w", err)
-			}
 		}
 	}
 
@@ -747,6 +770,20 @@ func (w *workTree) Push(opts *PushOptions) error {
 			return fmt.Errorf("error pushing branch: %w", ErrNonFastForward)
 		}
 		return fmt.Errorf("error pushing branch: %w", err)
+	}
+	return nil
+}
+
+func (w *workTree) ForcePull(branch string) error {
+	if _, err := libExec.Exec(
+		w.buildGitCommand("fetch", "origin", branch),
+	); err != nil {
+		return fmt.Errorf("error fetching branch %s: %w", branch, err)
+	}
+	if _, err := libExec.Exec(
+		w.buildGitCommand("reset", "--hard", "FETCH_HEAD"),
+	); err != nil {
+		return fmt.Errorf("error resetting to FETCH_HEAD: %w", err)
 	}
 	return nil
 }

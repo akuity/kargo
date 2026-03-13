@@ -1,0 +1,964 @@
+package builtin
+
+import (
+	"context"
+	"crypto/tls"
+	"errors"
+	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
+	securejoin "github.com/cyphar/filepath-securejoin"
+	"github.com/google/go-github/v76/github"
+	"github.com/hashicorp/go-cleanhttp"
+	"github.com/kelseyhightower/envconfig"
+	"github.com/xeipuuv/gojsonschema"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/util/retry"
+
+	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	"github.com/akuity/kargo/pkg/controller/git"
+	"github.com/akuity/kargo/pkg/credentials"
+	"github.com/akuity/kargo/pkg/logging"
+	"github.com/akuity/kargo/pkg/promotion"
+	"github.com/akuity/kargo/pkg/urls"
+	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
+)
+
+const (
+	stepKindGitHubVerifiedPush = "github-verified-push"
+
+	// stagingRefPrefix is the ref namespace used for staging refs. These are
+	// not under refs/heads/ so they do not appear as branches in GitHub's UI.
+	stagingRefPrefix = "refs/kargo/staging"
+
+	// compareStatusAhead is the GitHub Compare API status indicating that the
+	// base is behind the head (i.e. there are revisions to replay).
+	compareStatusAhead     = "ahead"
+	compareStatusDiverged  = "diverged"
+	compareStatusBehind    = "behind"
+	compareStatusIdentical = "identical"
+)
+
+// errRefUpdateConflict is returned when UpdateRef fails because the target
+// branch has advanced since we last read it (HTTP 422). This signals the
+// retry loop to rebase and retry.
+var errRefUpdateConflict = errors.New("ref update conflict")
+
+// isRetryableError returns true for errors that should trigger a retry:
+// ref update conflicts from the GitHub API or non-fast-forward rejections
+// from git push.
+func (g *githubVerifiedPusher) isRetryableError(err error) bool {
+	return errors.Is(err, errRefUpdateConflict) || git.IsNonFastForward(err)
+}
+
+// isGitHubHTTPStatus returns true if err is a *github.ErrorResponse with
+// the given HTTP status code.
+func (g *githubVerifiedPusher) isGitHubHTTPStatus(
+	err error, statusCode int,
+) bool {
+	var ghErr *github.ErrorResponse
+	if errors.As(err, &ghErr) {
+		return ghErr.Response != nil &&
+			ghErr.Response.StatusCode == statusCode
+	}
+	return false
+}
+
+func init() {
+	var once sync.Once
+	var pusher promotion.StepRunner
+	cfg := githubVerifiedPusherConfig{}
+	envconfig.MustProcess("", &cfg)
+	promotion.DefaultStepRunnerRegistry.MustRegister(
+		promotion.StepRunnerRegistration{
+			Name: stepKindGitHubVerifiedPush,
+			Metadata: promotion.StepRunnerMetadata{
+				RequiredCapabilities: []promotion.StepRunnerCapability{
+					promotion.StepCapabilityAccessCredentials,
+				},
+			},
+			// This factory function closes over a single instance of
+			// githubVerifiedPusher so that its mutexes are shared across
+			// all executions of this step runner, which is necessary to
+			// ensure proper locking behavior.
+			Value: func(
+				caps promotion.StepRunnerCapabilities,
+			) promotion.StepRunner {
+				once.Do(func() {
+					pusher = newGitHubVerifiedPusher(caps, cfg)
+				})
+				return pusher
+			},
+		},
+	)
+}
+
+// githubVerifiedPushClient is an interface for the GitHub API methods used by
+// the github-verified-push step. This enables unit testing with mocks.
+type githubVerifiedPushClient interface {
+	CompareCommits(
+		ctx context.Context,
+		owner, repo, base, head string,
+		opts *github.ListOptions,
+	) (*github.CommitsComparison, *github.Response, error)
+	CreateCommit(
+		ctx context.Context,
+		owner, repo string,
+		commit github.Commit,
+		opts *github.CreateCommitOptions,
+	) (*github.Commit, *github.Response, error)
+	GetRef(
+		ctx context.Context,
+		owner, repo, ref string,
+	) (*github.Reference, *github.Response, error)
+	CreateRef(
+		ctx context.Context,
+		owner, repo string,
+		ref github.CreateRef,
+	) (*github.Reference, *github.Response, error)
+	UpdateRef(
+		ctx context.Context,
+		owner, repo, ref string,
+		updateRef github.UpdateRef,
+	) (*github.Reference, *github.Response, error)
+	DeleteRef(
+		ctx context.Context,
+		owner, repo, ref string,
+	) (*github.Response, error)
+}
+
+// githubVerifiedPushClientWrapper wraps a *github.Client to implement
+// githubVerifiedPushClient.
+type githubVerifiedPushClientWrapper struct {
+	client *github.Client
+}
+
+func (w *githubVerifiedPushClientWrapper) CompareCommits(
+	ctx context.Context,
+	owner, repo, base, head string,
+	opts *github.ListOptions,
+) (*github.CommitsComparison, *github.Response, error) {
+	return w.client.Repositories.CompareCommits(
+		ctx, owner, repo, base, head, opts,
+	)
+}
+
+func (w *githubVerifiedPushClientWrapper) CreateCommit(
+	ctx context.Context,
+	owner, repo string,
+	commit github.Commit,
+	opts *github.CreateCommitOptions,
+) (*github.Commit, *github.Response, error) {
+	return w.client.Git.CreateCommit(ctx, owner, repo, commit, opts)
+}
+
+func (w *githubVerifiedPushClientWrapper) CreateRef(
+	ctx context.Context,
+	owner, repo string,
+	ref github.CreateRef,
+) (*github.Reference, *github.Response, error) {
+	return w.client.Git.CreateRef(ctx, owner, repo, ref)
+}
+
+func (w *githubVerifiedPushClientWrapper) GetRef(
+	ctx context.Context,
+	owner, repo, ref string,
+) (*github.Reference, *github.Response, error) {
+	return w.client.Git.GetRef(ctx, owner, repo, ref)
+}
+
+func (w *githubVerifiedPushClientWrapper) UpdateRef(
+	ctx context.Context,
+	owner, repo, ref string,
+	updateRef github.UpdateRef,
+) (*github.Reference, *github.Response, error) {
+	return w.client.Git.UpdateRef(ctx, owner, repo, ref, updateRef)
+}
+
+func (w *githubVerifiedPushClientWrapper) DeleteRef(
+	ctx context.Context,
+	owner, repo, ref string,
+) (*github.Response, error) {
+	return w.client.Git.DeleteRef(ctx, owner, repo, ref)
+}
+
+// githubVerifiedPusherConfig holds controller-level configuration for the
+// github-verified-push step, populated from environment variables.
+type githubVerifiedPusherConfig struct {
+	MaxRevisions int `envconfig:"GITHUB_VERIFIED_PUSH_MAX_REVISIONS" default:"10"`
+}
+
+// githubVerifiedPusher is an implementation of the promotion.StepRunner
+// interface that pushes local commits to a GitHub repository as verified
+// (signed) commits using the GitHub REST API.
+type githubVerifiedPusher struct {
+	schemaLoader      gojsonschema.JSONLoader
+	credsDB           credentials.Database
+	cfg               githubVerifiedPusherConfig
+	gitUser           git.User
+	branchMus         map[string]*sync.Mutex
+	masterMu          sync.Mutex
+	loadWorkTreeFn    func(string, *git.LoadWorkTreeOptions) (git.WorkTree, error)
+	newGitHubClientFn func(
+		repoURL, token string,
+		insecureSkipTLSVerify bool,
+	) (string, string, githubVerifiedPushClient, error)
+}
+
+// newGitHubVerifiedPusher returns an implementation of the
+// promotion.StepRunner interface that pushes local commits to a GitHub
+// repository as verified commits.
+func newGitHubVerifiedPusher(
+	caps promotion.StepRunnerCapabilities,
+	cfg githubVerifiedPusherConfig,
+) promotion.StepRunner {
+	g := &githubVerifiedPusher{
+		credsDB:      caps.CredsDB,
+		schemaLoader: getConfigSchemaLoader(stepKindGitHubVerifiedPush),
+		cfg:          cfg,
+		gitUser:      gitUserFromEnv(),
+		branchMus:    map[string]*sync.Mutex{},
+	}
+	g.loadWorkTreeFn = git.LoadWorkTree
+	g.newGitHubClientFn = g.newGitHubClient
+	return g
+}
+
+// Run implements the promotion.StepRunner interface.
+func (g *githubVerifiedPusher) Run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+) (promotion.StepResult, error) {
+	cfg, err := g.convert(stepCtx.Config)
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusFailed,
+		}, &promotion.TerminalError{Err: err}
+	}
+	return g.run(ctx, stepCtx, cfg)
+}
+
+// convert validates the configuration against a JSON schema and converts it
+// into a builtin.GitHubVerifiedPushConfig struct.
+func (g *githubVerifiedPusher) convert(
+	cfg promotion.Config,
+) (builtin.GitHubVerifiedPushConfig, error) {
+	return validateAndConvert[builtin.GitHubVerifiedPushConfig](
+		g.schemaLoader, cfg, stepKindGitHubVerifiedPush,
+	)
+}
+
+func (g *githubVerifiedPusher) run(
+	ctx context.Context,
+	stepCtx *promotion.StepContext,
+	cfg builtin.GitHubVerifiedPushConfig,
+) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	// Load the working tree to get the repository URL.
+	path, err := securejoin.SecureJoin(stepCtx.WorkDir, cfg.Path)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error joining path %s with work dir %s: %w",
+				cfg.Path, stepCtx.WorkDir, err,
+			)
+	}
+	loadOpts := &git.LoadWorkTreeOptions{}
+	workTree, err := g.loadWorkTreeFn(path, loadOpts)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error loading working tree from %s: %w", cfg.Path, err,
+			)
+	}
+
+	// Fetch credentials for the repository.
+	creds, err := g.credsDB.Get(
+		ctx, stepCtx.Project, credentials.TypeGit, workTree.URL(),
+	)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error getting credentials for %s: %w", workTree.URL(), err,
+			)
+	}
+	if creds != nil {
+		loadOpts.Credentials = &git.RepoCredentials{
+			Username:      creds.Username,
+			Password:      creds.Password,
+			SSHPrivateKey: creds.SSHPrivateKey,
+		}
+	}
+	if workTree, err = g.loadWorkTreeFn(path, loadOpts); err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error loading working tree from %s: %w", cfg.Path, err,
+			)
+	}
+
+	var token string
+	if creds != nil {
+		token = creds.Password
+	}
+	if token == "" {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"no credentials found for %s;"+
+						" a GitHub App installation token or personal access token is required",
+					workTree.URL(),
+				),
+			}
+	}
+
+	// Resolve the current and target branches.
+	currentBranch, err := workTree.CurrentBranch()
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf("error getting current branch: %w", err)
+	}
+	targetBranch := cfg.TargetBranch
+	createBranch := false
+	force := cfg.Force
+	if cfg.GenerateTargetBranch {
+		targetBranch = fmt.Sprintf(
+			"kargo/promotion/%s", stepCtx.Promotion,
+		)
+		createBranch = true
+		// Since the generated branch name incorporates the Promotion's
+		// name (which includes a UUID), the only practical reason for
+		// the branch to already exist is a promotion restart. Force
+		// pushing is safe and prevents failures under those
+		// circumstances. This matches the git-push step's behavior.
+		force = true
+	}
+	if targetBranch == "" {
+		targetBranch = currentBranch
+	}
+
+	stagingRef := fmt.Sprintf(
+		"%s/%s", stagingRefPrefix, stepCtx.Promotion,
+	)
+
+	// Create the GitHub client.
+	owner, repo, ghClient, err := g.newGitHubClientFn(
+		workTree.URL(), token, cfg.InsecureSkipTLSVerify,
+	)
+	if err != nil {
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, fmt.Errorf("error creating GitHub client: %w", err)
+	}
+
+	g.acquireBranchLock(workTree.URL(), targetBranch)
+	defer g.releaseBranchLock(workTree.URL(), targetBranch)
+
+	// Retry loop mirrors git-push: each attempt rebases onto the target
+	// branch, pushes to a staging ref, replays commits via the API, and
+	// updates the target branch ref. Retries are triggered when the ref
+	// update fails because the target branch advanced concurrently.
+	backoff := wait.Backoff{
+		Steps:    10,
+		Duration: time.Second,
+		Factor:   1.5,
+		Jitter:   0.5,
+		Cap:      30 * time.Second,
+	}
+	if cfg.MaxAttempts != nil {
+		backoff.Steps = int(*cfg.MaxAttempts)
+	}
+
+	var (
+		result        promotion.StepResult
+		stagingPushed bool
+		cleanupOwner  = owner
+		cleanupRepo   = repo
+		cleanupRef    = stagingRef
+		cleanupClient = ghClient
+	)
+	defer func() {
+		if stagingPushed {
+			g.cleanupStagingRef(
+				ctx, cleanupClient, cleanupOwner, cleanupRepo, cleanupRef,
+			)
+		}
+	}()
+
+	if err = retry.OnError(
+		backoff,
+		g.isRetryableError,
+		func() error {
+			// 1. Rebase onto target branch (like git-push's PullRebase).
+			//    Skipped when force-pushing (matches git-push behavior)
+			//    and when creating a new branch (nothing to rebase onto).
+			if !force && !createBranch {
+				if rebaseErr := workTree.PullRebase(targetBranch); rebaseErr != nil {
+					return rebaseErr
+				}
+			}
+
+			// 2. Get localHead after potential rebase.
+			localHead, localErr := workTree.LastCommitID()
+			if localErr != nil {
+				return fmt.Errorf("error getting local HEAD: %w", localErr)
+			}
+
+			// 3. Push (rebased) commits to staging ref. This gets all
+			//    objects onto GitHub without creating a visible branch.
+			logger.Debug(
+				"pushing to staging ref",
+				"ref", stagingRef,
+				"localHead", localHead,
+			)
+			if pushErr := workTree.Push(&git.PushOptions{
+				TargetBranch: stagingRef,
+				Force:        true,
+			}); pushErr != nil {
+				return fmt.Errorf(
+					"error pushing to staging ref %s: %w",
+					stagingRef, pushErr,
+				)
+			}
+			stagingPushed = true
+
+			// 4. Read targetHead from GitHub API.
+			targetHead, refErr := g.getTargetHead(
+				ctx, ghClient, owner, repo,
+				currentBranch, targetBranch, createBranch,
+			)
+			if refErr != nil {
+				return refErr
+			}
+
+			logger.Debug(
+				"signing revision range",
+				"targetBranch", targetBranch,
+				"targetHead", targetHead,
+				"localHead", localHead,
+			)
+
+			// 5. Replay commits via API and update ref.
+			var signErr error
+			result, signErr = g.signAndUpdate(
+				ctx, ghClient, owner, repo,
+				targetBranch, createBranch, force,
+				targetHead, localHead, workTree,
+			)
+			return signErr
+		},
+	); err != nil {
+		if git.IsMergeConflict(err) {
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{Err: err}
+		}
+		// Errors from early in the retry closure (PullRebase,
+		// LastCommitID, staging push, getTargetHead) don't set
+		// result. Default to Errored.
+		if result.Status == "" {
+			result.Status = kargoapi.PromotionStepStatusErrored
+		}
+		return result, err
+	}
+
+	// Sync local branch to match remote after API replay. The replayed
+	// commits have new SHAs; without this the local working tree would
+	// have stale refs. Non-fatal if it fails — the push already succeeded.
+	if !createBranch {
+		if pullErr := workTree.ForcePull(targetBranch); pullErr != nil {
+			logger.Error(
+				pullErr,
+				"error syncing local branch after push (non-fatal)",
+				"branch", targetBranch,
+			)
+		}
+	}
+
+	return result, nil
+}
+
+// getTargetHead reads the current HEAD SHA of the target branch (or source
+// branch when creating a new branch) from the GitHub API.
+func (g *githubVerifiedPusher) getTargetHead(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, currentBranch, targetBranch string,
+	createBranch bool,
+) (string, error) {
+	if createBranch {
+		sourceRef := "heads/" + currentBranch
+		ref, _, err := client.GetRef(ctx, owner, repo, sourceRef)
+		if err != nil {
+			return "", fmt.Errorf(
+				"error getting source branch ref %s: %w",
+				sourceRef, err,
+			)
+		}
+		return ref.GetObject().GetSHA(), nil
+	}
+	targetRef := "heads/" + targetBranch
+	ref, _, err := client.GetRef(ctx, owner, repo, targetRef)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error getting ref %s: %w", targetRef, err,
+		)
+	}
+	return ref.GetObject().GetSHA(), nil
+}
+
+// signAndUpdate enumerates commits in the range targetHead..localHead,
+// replays them as signed commits via the GitHub REST API, and updates the
+// target branch ref to point to the final signed commit. When createBranch
+// is true, a new branch is created instead of updating an existing one.
+// When force is true, diverged branches are accepted and the ref update
+// uses force semantics.
+func (g *githubVerifiedPusher) signAndUpdate(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, targetBranch string,
+	createBranch, force bool,
+	targetHead, localHead string,
+	workTree git.WorkTree,
+) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	comparison, _, err := client.CompareCommits(
+		ctx, owner, repo, targetHead, localHead, nil,
+	)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error comparing %s...%s: %w", targetHead, localHead, err,
+			)
+	}
+
+	status := comparison.GetStatus()
+	logger.Debug(
+		"compared revision range",
+		"targetHead", targetHead,
+		"localHead", localHead,
+		"status", status,
+		"aheadBy", comparison.GetAheadBy(),
+		"totalCommits", comparison.GetTotalCommits(),
+	)
+
+	// parentSHA is the parent for the first replayed commit.
+	parentSHA := targetHead
+
+	switch status {
+	case compareStatusAhead:
+		// Expected: target is behind local head.
+	case compareStatusIdentical:
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusSkipped,
+			Message: fmt.Sprintf(
+				"no revisions to sign: %s and %s are identical",
+				targetHead, localHead,
+			),
+			Output: map[string]any{
+				stateKeyCommit: targetHead,
+				stateKeyBranch: targetBranch,
+			},
+		}, nil
+	case compareStatusDiverged, compareStatusBehind:
+		if !force {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusFailed,
+				}, &promotion.TerminalError{
+					Err: fmt.Errorf(
+						"cannot sign revision range %s..%s: "+
+							"comparison status is %q "+
+							"(target branch may have diverged)",
+						targetHead, localHead, status,
+					),
+				}
+		}
+		// When force-pushing a diverged branch, start replay from the
+		// merge base so the remote branch ends up with the local
+		// history only, matching git push --force semantics.
+		if status == compareStatusDiverged {
+			mergeBase := comparison.GetMergeBaseCommit()
+			if mergeBase == nil {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"cannot determine merge base for %s..%s",
+						targetHead, localHead,
+					)
+			}
+			parentSHA = mergeBase.GetSHA()
+			logger.Debug(
+				"force push: using merge base as parent",
+				"mergeBase", parentSHA,
+			)
+		}
+	default:
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"cannot sign revision range %s..%s: "+
+						"comparison status is %q",
+					targetHead, localHead, status,
+				),
+			}
+	}
+
+	commits := comparison.Commits
+	if len(commits) == 0 {
+		if force && status == compareStatusBehind {
+			// Local is behind target — force-update the ref to the
+			// local HEAD without replaying any commits.
+			return g.forceUpdateRef(
+				ctx, client, owner, repo,
+				targetBranch, localHead, workTree,
+			)
+		}
+		return promotion.StepResult{
+			Status:  kargoapi.PromotionStepStatusSkipped,
+			Message: "no revisions to sign in range",
+			Output: map[string]any{
+				stateKeyCommit: targetHead,
+				stateKeyBranch: targetBranch,
+			},
+		}, nil
+	}
+
+	if len(commits) > g.cfg.MaxRevisions {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"revision range %s..%s contains %d revisions, "+
+						"which exceeds the maximum of %d "+
+						"(configurable via "+
+						"GITHUB_VERIFIED_PUSH_MAX_REVISIONS env var)",
+					targetHead, localHead, len(commits), g.cfg.MaxRevisions,
+				),
+			}
+	}
+
+	// Replay each revision via the API. All commits are created without
+	// explicit Author/Committer so the GitHub App signs them (producing
+	// the "Verified" badge). When the original author differs from the
+	// system identity, a Co-authored-by trailer credits them.
+	var lastSignedSHA string
+	for i, rc := range commits {
+		if rc.Commit == nil ||
+			rc.Commit.Tree == nil ||
+			rc.Commit.Tree.SHA == nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"revision %d in range has missing tree information", i,
+				)
+		}
+		message := rc.Commit.GetMessage()
+
+		commit := github.Commit{
+			Message: &message,
+			Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
+			Parents: []*github.Commit{{SHA: &parentSHA}},
+		}
+
+		// Credit non-system authors via Co-authored-by trailer.
+		coAuthored := false
+		if author := rc.Commit.GetAuthor(); author != nil {
+			name, email := author.GetName(), author.GetEmail()
+			if name != "" && email != "" &&
+				!g.isSystemAuthor(name, email) {
+				message = g.appendCoAuthoredBy(message, name, email)
+				commit.Message = &message
+				coAuthored = true
+			}
+		}
+
+		newCommit, _, createErr := client.CreateCommit(
+			ctx, owner, repo, commit, nil,
+		)
+		if createErr != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error creating revision %d/%d "+
+						"(original: %s): %w",
+					i+1, len(commits), rc.GetSHA(), createErr,
+				)
+		}
+		lastSignedSHA = newCommit.GetSHA()
+		parentSHA = lastSignedSHA
+		logger.Debug(
+			"created revision",
+			"index", i+1,
+			"total", len(commits),
+			"original", rc.GetSHA(),
+			"new", lastSignedSHA,
+			"coAuthored", coAuthored,
+		)
+	}
+
+	// Point the target branch at the final signed commit.
+	targetRef := "heads/" + targetBranch
+	if createBranch {
+		// Create a new branch ref.
+		_, _, err = client.CreateRef(
+			ctx, owner, repo,
+			github.CreateRef{
+				Ref: "refs/" + targetRef,
+				SHA: lastSignedSHA,
+			},
+		)
+		if err != nil {
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error creating ref %s at %s: %w",
+					targetRef, lastSignedSHA, err,
+				)
+		}
+		logger.Debug(
+			"created branch ref",
+			"ref", targetRef,
+			"sha", lastSignedSHA,
+		)
+	} else {
+		_, _, err = client.UpdateRef(
+			ctx, owner, repo, targetRef,
+			github.UpdateRef{
+				SHA:   lastSignedSHA,
+				Force: &force,
+			},
+		)
+		if err != nil {
+			if g.isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
+				return promotion.StepResult{
+						Status: kargoapi.PromotionStepStatusErrored,
+					}, fmt.Errorf(
+						"error updating ref %s to %s: %w",
+						targetRef, lastSignedSHA, errRefUpdateConflict,
+					)
+			}
+			return promotion.StepResult{
+					Status: kargoapi.PromotionStepStatusErrored,
+				}, fmt.Errorf(
+					"error updating ref %s to %s: %w",
+					targetRef, lastSignedSHA, err,
+				)
+		}
+		logger.Debug(
+			"updated branch ref",
+			"ref", targetRef,
+			"sha", lastSignedSHA,
+		)
+	}
+
+	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
+
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{
+			stateKeyCommit:    lastSignedSHA,
+			stateKeyCommitURL: commitURL,
+			stateKeyBranch:    targetBranch,
+		},
+	}, nil
+}
+
+// forceUpdateRef force-updates an existing branch ref without replaying any
+// commits. This handles the "behind" case when force is enabled: the local
+// HEAD has no new commits relative to the target, but we still want the
+// remote branch to point to the local HEAD.
+func (g *githubVerifiedPusher) forceUpdateRef(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, targetBranch, sha string,
+	workTree git.WorkTree,
+) (promotion.StepResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+	targetRef := "heads/" + targetBranch
+	force := true
+	_, _, err := client.UpdateRef(
+		ctx, owner, repo, targetRef,
+		github.UpdateRef{
+			SHA:   sha,
+			Force: &force,
+		},
+	)
+	if err != nil {
+		return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, fmt.Errorf(
+				"error force-updating ref %s to %s: %w",
+				targetRef, sha, err,
+			)
+	}
+	logger.Debug(
+		"force-updated branch ref",
+		"ref", targetRef,
+		"sha", sha,
+	)
+	commitURL := g.buildCommitURL(workTree.URL(), sha)
+	return promotion.StepResult{
+		Status: kargoapi.PromotionStepStatusSucceeded,
+		Output: map[string]any{
+			stateKeyCommit:    sha,
+			stateKeyCommitURL: commitURL,
+			stateKeyBranch:    targetBranch,
+		},
+	}, nil
+}
+
+// cleanupStagingRef deletes the staging ref from GitHub. Errors are logged
+// but do not cause the step to fail, since the target branch has already been
+// updated at this point.
+func (g *githubVerifiedPusher) cleanupStagingRef(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, stagingRef string,
+) {
+	logger := logging.LoggerFromContext(ctx)
+	// The API expects the ref without the "refs/" prefix.
+	ref := strings.TrimPrefix(stagingRef, "refs/")
+	if _, err := client.DeleteRef(ctx, owner, repo, ref); err != nil {
+		logger.Error(
+			err,
+			"error deleting staging ref (non-fatal)",
+			"ref", stagingRef,
+		)
+	} else {
+		logger.Debug("deleted staging ref", "ref", stagingRef)
+	}
+}
+
+// acquireBranchLock obtains a per-branch mutex to serialize concurrent
+// operations targeting the same branch.
+func (g *githubVerifiedPusher) acquireBranchLock(repoURL, branch string) {
+	key := fmt.Sprintf("%s:%s", repoURL, branch)
+	g.masterMu.Lock()
+	if _, exists := g.branchMus[key]; !exists {
+		g.branchMus[key] = &sync.Mutex{}
+	}
+	mu := g.branchMus[key]
+	g.masterMu.Unlock()
+	mu.Lock()
+}
+
+// releaseBranchLock releases the per-branch mutex.
+func (g *githubVerifiedPusher) releaseBranchLock(repoURL, branch string) {
+	key := fmt.Sprintf("%s:%s", repoURL, branch)
+	g.masterMu.Lock()
+	mu := g.branchMus[key]
+	g.masterMu.Unlock()
+	mu.Unlock()
+}
+
+// parseGitHubRepoURL extracts the scheme, host, owner, and repo name from a
+// Git repository URL.
+func (g *githubVerifiedPusher) parseGitHubRepoURL(
+	repoURL string,
+) (scheme, host, owner, repo string, err error) {
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
+	if err != nil {
+		return "", "", "", "",
+			fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
+	}
+	scheme = u.Scheme
+	if scheme != "https" && scheme != "http" {
+		scheme = "https"
+	}
+	host = u.Host
+	path := strings.TrimPrefix(u.Path, "/")
+	parts := strings.Split(path, "/")
+	if len(parts) != 2 {
+		return "", "", "", "", fmt.Errorf(
+			"could not extract repository owner and name from URL %q",
+			repoURL,
+		)
+	}
+	return scheme, host, parts[0], parts[1], nil
+}
+
+// newGitHubClient creates an authenticated GitHub API client for the given
+// repository.
+func (g *githubVerifiedPusher) newGitHubClient(
+	repoURL, token string,
+	insecureSkipTLSVerify bool,
+) (string, string, githubVerifiedPushClient, error) {
+	scheme, host, owner, repo, err := g.parseGitHubRepoURL(repoURL)
+	if err != nil {
+		return "", "", nil, err
+	}
+
+	httpClient := cleanhttp.DefaultClient()
+	if insecureSkipTLSVerify {
+		transport := cleanhttp.DefaultTransport()
+		transport.TLSClientConfig = &tls.Config{
+			InsecureSkipVerify: true, // nolint: gosec
+		}
+		httpClient.Transport = transport
+	}
+
+	client := github.NewClient(httpClient)
+	if host != "github.com" {
+		baseURL := fmt.Sprintf("%s://%s", scheme, host)
+		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
+		if err != nil {
+			return "", "", nil, fmt.Errorf(
+				"error configuring GitHub Enterprise URLs: %w", err,
+			)
+		}
+	}
+	client = client.WithAuthToken(token)
+
+	return owner, repo,
+		&githubVerifiedPushClientWrapper{client: client}, nil
+}
+
+// buildCommitURL constructs a human-readable commit URL from a repository URL
+// and commit SHA.
+func (g *githubVerifiedPusher) buildCommitURL(repoURL, sha string) string {
+	_, host, _, _, err := g.parseGitHubRepoURL(repoURL)
+	if err != nil {
+		return ""
+	}
+	u, err := url.Parse(urls.NormalizeGit(repoURL))
+	if err != nil {
+		return ""
+	}
+	return fmt.Sprintf("https://%s%s/commit/%s", host, u.Path, sha)
+}
+
+// isSystemAuthor reports whether the given name and email match the
+// controller's system identity (the default author for Kargo commits).
+func (g *githubVerifiedPusher) isSystemAuthor(
+	name, email string,
+) bool {
+	return name == g.gitUser.Name && email == g.gitUser.Email
+}
+
+// appendCoAuthoredBy appends a Co-authored-by trailer to a commit message,
+// adding a blank separator line before the trailer if needed.
+func (g *githubVerifiedPusher) appendCoAuthoredBy(
+	message, name, email string,
+) string {
+	trailer := fmt.Sprintf("Co-authored-by: %s <%s>", name, email)
+	if strings.HasSuffix(message, "\n\n") {
+		return message + trailer
+	}
+	if strings.HasSuffix(message, "\n") {
+		return message + "\n" + trailer
+	}
+	return message + "\n\n" + trailer
+}
