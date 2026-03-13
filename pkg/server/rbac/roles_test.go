@@ -53,7 +53,7 @@ func Test_rolesDatabase_Create(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
@@ -69,7 +69,7 @@ func Test_rolesDatabase_Create(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainRole(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
@@ -85,7 +85,7 @@ func Test_rolesDatabase_Create(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		role, err := db.Create(t.Context(), testKargoRole)
 		require.True(t, apierrors.IsAlreadyExists(err))
 		require.Nil(t, role)
@@ -122,7 +122,7 @@ func Test_rolesDatabase_Create(t *testing.T) {
 			},
 		}
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		role, err := db.Create(t.Context(), testKargoRole)
 		require.NoError(t, err)
 		require.NotNil(t, role)
@@ -183,7 +183,7 @@ func Test_rolesDatabase_Create(t *testing.T) {
 func Test_rolesDatabase_Delete(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 	})
@@ -192,9 +192,21 @@ func Test_rolesDatabase_Delete(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.True(t, apierrors.IsBadRequest(err))
+	})
+
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		err := db.Delete(t.Context(), testProject, testKargoRoleName)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
 	})
 
 	t.Run("success", func(t *testing.T) {
@@ -203,7 +215,7 @@ func Test_rolesDatabase_Delete(t *testing.T) {
 			managedRole(nil),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		err := db.Delete(t.Context(), testProject, testKargoRoleName)
 		require.NoError(t, err)
 		role := &rbacv1.Role{}
@@ -221,7 +233,7 @@ func Test_rolesDatabase_Delete(t *testing.T) {
 func Test_rolesDatabase_Get(t *testing.T) {
 	t.Run("ServiceAccount does not exist", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.Get(t.Context(), false, testProject, testKargoRoleName)
 		require.True(t, apierrors.IsNotFound(err))
 		require.Nil(t, kargoRole)
@@ -250,7 +262,7 @@ func Test_rolesDatabase_Get(t *testing.T) {
 			}),
 			plainRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.Get(t.Context(), false, testProject, testKargoRoleName)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
@@ -311,7 +323,7 @@ func Test_rolesDatabase_Get(t *testing.T) {
 			}}),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.Get(t.Context(), false, testProject, testKargoRoleName)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
@@ -361,8 +373,13 @@ func Test_rolesDatabase_Get(t *testing.T) {
 func Test_rolesDatabase_GetAsResources(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
-		_, _, _, err := db.GetAsResources(t.Context(), false, testProject, testKargoRoleName)
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, _, _, _, err := db.GetAsResources(
+			t.Context(),
+			false,
+			testProject,
+			testKargoRoleName,
+		)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
@@ -370,11 +387,17 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
-		sa, roles, rbs, err := db.GetAsResources(t.Context(), false, testProject, testKargoRoleName)
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		sa, roles, croles, rbs, err := db.GetAsResources(
+			t.Context(),
+			false,
+			testProject,
+			testKargoRoleName,
+		)
 		require.NoError(t, err)
 		require.NotNil(t, sa)
 		require.Nil(t, roles)
+		require.Nil(t, croles)
 		require.Nil(t, rbs)
 	})
 
@@ -383,30 +406,58 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 			plainServiceAccount(nil),
 			plainRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
-		_, _, _, err := db.GetAsResources(t.Context(), false, testProject, testKargoRoleName)
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, _, _, _, err := db.GetAsResources(
+			t.Context(),
+			false,
+			testProject,
+			testKargoRoleName,
+		)
 		require.True(t, apierrors.IsNotFound(err))
 	})
 
-	t.Run("success", func(t *testing.T) {
+	t.Run("ClusterRole not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			plainServiceAccount(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, _, _, _, err := db.GetAsResources(
+			t.Context(),
+			false,
+			testProject,
+			testKargoRoleName,
+		)
+		require.ErrorContains(t, err, "error getting ClusterRole")
+	})
+
+	t.Run("success", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithObjects(
 			plainServiceAccount(nil),
 			plainRole(nil),
 			plainRoleBinding(),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
-		sa, roles, rbs, err := db.GetAsResources(t.Context(), false, testProject, testKargoRoleName)
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		sa, roles, croles, rbs, err := db.GetAsResources(
+			t.Context(),
+			false,
+			testProject,
+			testKargoRoleName,
+		)
 		require.NoError(t, err)
 		require.NotNil(t, sa)
-		require.NotNil(t, roles)
-		require.NotNil(t, rbs)
+		require.Len(t, roles, 1)
+		require.Len(t, croles, 1)
+		require.Len(t, rbs, 2)
 	})
 }
 
 func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -423,7 +474,7 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -436,11 +487,31 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, err := db.GrantPermissionsToRole(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			&rbacapi.ResourceDetails{
+				ResourceType: "stages",
+				Verbs:        []string{"get", "list"},
+			},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -499,7 +570,7 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 			}}),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.GrantPermissionsToRole(
 			t.Context(),
 			testProject,
@@ -536,7 +607,7 @@ func Test_rolesDatabase_GrantPermissionToRole(t *testing.T) {
 func Test_rolesDatabase_GrantRoleToUsers(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.GrantRoleToUsers(
 			t.Context(),
 			testProject,
@@ -551,10 +622,8 @@ func Test_rolesDatabase_GrantRoleToUsers(t *testing.T) {
 	})
 
 	t.Run("resources aren't manageable", func(t *testing.T) {
-		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
-			plainServiceAccount(nil),
-		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		c := fake.NewClientBuilder().WithObjects(plainServiceAccount(nil)).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.GrantRoleToUsers(
 			t.Context(),
 			testProject,
@@ -569,6 +638,28 @@ func Test_rolesDatabase_GrantRoleToUsers(t *testing.T) {
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, err := db.GrantRoleToUsers(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.Claim{
+				{
+					Name:   "sub",
+					Values: []string{"fake-sub"},
+				},
+			},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
@@ -577,7 +668,7 @@ func Test_rolesDatabase_GrantRoleToUsers(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCClaim("groups"): "foo-group",
 			}),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.GrantRoleToUsers(
 			t.Context(),
 			testProject,
@@ -635,7 +726,7 @@ func Test_rolesDatabase_List(t *testing.T) {
 			}),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRoles, err := db.List(t.Context(), false, testProject)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
@@ -706,7 +797,7 @@ func Test_rolesDatabase_List(t *testing.T) {
 			}),
 			plainRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRoles, err := db.List(t.Context(), false, testProject)
 		require.NoError(t, err)
 		// Do not factor creation timestamp into the comparison
@@ -759,7 +850,7 @@ func Test_rolesDatabase_List(t *testing.T) {
 func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.RevokePermissionsFromRole(
 			t.Context(),
 			testProject,
@@ -776,7 +867,7 @@ func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.RevokePermissionsFromRole(
 			t.Context(),
 			testProject,
@@ -789,11 +880,31 @@ func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, err := db.RevokePermissionsFromRole(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			&rbacapi.ResourceDetails{
+				ResourceType: "stages",
+				Verbs:        []string{"get", "list"},
+			},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("success with no action required", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.RevokePermissionsFromRole(
 			t.Context(),
 			testProject,
@@ -817,7 +928,7 @@ func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 			}}),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.RevokePermissionsFromRole(
 			t.Context(),
 			testProject,
@@ -847,7 +958,7 @@ func Test_rolesDatabase_RevokePermissionsFromRole(t *testing.T) {
 func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.RevokeRoleFromUsers(
 			t.Context(),
 			testProject,
@@ -866,7 +977,7 @@ func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.RevokeRoleFromUsers(
 			t.Context(),
 			testProject,
@@ -881,6 +992,28 @@ func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, err := db.RevokeRoleFromUsers(
+			t.Context(),
+			testProject,
+			testKargoRoleName,
+			[]rbacapi.Claim{
+				{
+					Name:   "sub",
+					Values: []string{"fake-sub"},
+				},
+			},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("success", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(map[string]string{
@@ -889,7 +1022,7 @@ func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 				rbacapi.AnnotationKeyOIDCClaim("groups"): "bar-group,foo-group",
 			}),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.RevokeRoleFromUsers(
 			t.Context(),
 			testProject,
@@ -932,7 +1065,7 @@ func Test_rolesDatabase_RevokeRoleFromUsers(t *testing.T) {
 func Test_rolesDatabase_Update(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.Update(
 			t.Context(),
 			&rbacapi.Role{
@@ -949,7 +1082,7 @@ func Test_rolesDatabase_Update(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			plainServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		_, err := db.Update(
 			t.Context(),
 			&rbacapi.Role{
@@ -962,11 +1095,31 @@ func Test_rolesDatabase_Update(t *testing.T) {
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
+	t.Run("not manageable due to ClusterRoles", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			managedServiceAccount(nil),
+			clusterRole(nil),
+			roleBindingToClusterRole(),
+		).Build()
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
+		_, err := db.Update(
+			t.Context(),
+			&rbacapi.Role{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: testProject,
+					Name:      testKargoRoleName,
+				},
+			},
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("success with Role and RoleBinding creation", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			managedServiceAccount(nil),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.Update(
 			t.Context(),
 			&rbacapi.Role{
@@ -1066,7 +1219,7 @@ func Test_rolesDatabase_Update(t *testing.T) {
 			}}),
 			managedRoleBinding(),
 		).Build()
-		db := NewKubernetesRolesDatabase(c, RolesDatabaseConfig{})
+		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
 		kargoRole, err := db.Update(
 			t.Context(),
 			&rbacapi.Role{
@@ -1134,9 +1287,21 @@ func Test_rolesDatabase_Update(t *testing.T) {
 }
 
 func Test_manageableResources(t *testing.T) {
+	t.Run("bound to ClusterRoles", func(t *testing.T) {
+		_, _, err := manageableResources(
+			*managedServiceAccount(nil),
+			nil,
+			[]rbacv1.ClusterRole{*clusterRole(nil)},
+			nil,
+		)
+		require.True(t, apierrors.IsBadRequest(err))
+		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
+	})
+
 	t.Run("ServiceAccount is not annotated correctly", func(t *testing.T) {
 		_, _, err := manageableResources(
 			*plainServiceAccount(nil),
+			nil,
 			nil,
 			nil,
 		)
@@ -1148,6 +1313,7 @@ func Test_manageableResources(t *testing.T) {
 			*managedServiceAccount(nil),
 			[]rbacv1.Role{{}, {}},
 			nil,
+			nil,
 		)
 		require.True(t, apierrors.IsBadRequest(err))
 	})
@@ -1157,6 +1323,7 @@ func Test_manageableResources(t *testing.T) {
 			*managedServiceAccount(nil),
 			[]rbacv1.Role{*plainRole(nil)},
 			nil,
+			nil,
 		)
 		require.True(t, apierrors.IsBadRequest(err))
 	})
@@ -1165,6 +1332,7 @@ func Test_manageableResources(t *testing.T) {
 		_, _, err := manageableResources(
 			*managedServiceAccount(nil),
 			[]rbacv1.Role{*managedRole(nil)},
+			nil,
 			[]rbacv1.RoleBinding{{}, {}},
 		)
 		require.True(t, apierrors.IsBadRequest(err))
@@ -1174,6 +1342,7 @@ func Test_manageableResources(t *testing.T) {
 		_, _, err := manageableResources(
 			*managedServiceAccount(nil),
 			[]rbacv1.Role{*managedRole(nil)},
+			nil,
 			[]rbacv1.RoleBinding{*plainRoleBinding()},
 		)
 		require.True(t, apierrors.IsBadRequest(err))
@@ -1183,6 +1352,7 @@ func Test_manageableResources(t *testing.T) {
 		role, rb, err := manageableResources(
 			*managedServiceAccount(nil),
 			[]rbacv1.Role{*managedRole(nil)},
+			nil,
 			[]rbacv1.RoleBinding{*managedRoleBinding()},
 		)
 		require.NoError(t, err)
@@ -1298,86 +1468,12 @@ func Test_dropClaimAnnotations(t *testing.T) {
 	}
 }
 
-func plainServiceAccount(annotations map[string]string) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{ObjectMeta: plainObjectMeta(annotations)}
-}
-
-func managedServiceAccount(annotations map[string]string) *corev1.ServiceAccount {
-	return &corev1.ServiceAccount{ObjectMeta: managedObjectMeta(annotations)}
-}
-
-func plainRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
-	return &rbacv1.Role{
-		ObjectMeta: plainObjectMeta(nil),
-		Rules:      rules,
-	}
-}
-
-func managedRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
-	return &rbacv1.Role{
-		ObjectMeta: managedObjectMeta(nil),
-		Rules:      rules,
-	}
-}
-
-func plainRoleBinding() *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{
-		ObjectMeta: plainObjectMeta(nil),
-		Subjects: []rbacv1.Subject{{
-			Kind:      rbacv1.ServiceAccountKind,
-			Namespace: testProject,
-			Name:      testKargoRoleName,
-		}},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     testKargoRoleName,
-		},
-	}
-}
-
-func managedRoleBinding() *rbacv1.RoleBinding {
-	return &rbacv1.RoleBinding{
-		ObjectMeta: managedObjectMeta(nil),
-		Subjects: []rbacv1.Subject{{
-			Kind:      rbacv1.ServiceAccountKind,
-			Namespace: testProject,
-			Name:      testKargoRoleName,
-		}},
-		RoleRef: rbacv1.RoleRef{
-			APIGroup: rbacv1.GroupName,
-			Kind:     "Role",
-			Name:     testKargoRoleName,
-		},
-	}
-}
-
-func plainObjectMeta(annotations map[string]string) metav1.ObjectMeta {
-	return metav1.ObjectMeta{
-		Namespace:   testProject,
-		Name:        testKargoRoleName,
-		Annotations: annotations,
-	}
-}
-
-func managedObjectMeta(annotations map[string]string) metav1.ObjectMeta {
-	if annotations == nil {
-		annotations = map[string]string{}
-	}
-	annotations[rbacapi.AnnotationKeyManaged] = rbacapi.AnnotationValueTrue
-
-	return metav1.ObjectMeta{
-		Namespace:   testProject,
-		Name:        testKargoRoleName,
-		Annotations: annotations,
-	}
-}
-
 func TestResourcesToRole(t *testing.T) {
 	testCases := []struct {
 		name           string
 		sa             *corev1.ServiceAccount
 		roles          []rbacv1.Role
+		clusterRoles   []rbacv1.ClusterRole
 		roleBindings   []rbacv1.RoleBinding
 		expectedClaims []rbacapi.Claim
 		assertions     func(t *testing.T, role *rbacapi.Role, err error)
@@ -1496,28 +1592,34 @@ func TestResourcesToRole(t *testing.T) {
 			},
 		},
 		{
-			name: "policy rules",
+			name: "policy rules from Role and ClusterRole",
 			sa:   new(corev1.ServiceAccount),
 			roles: []rbacv1.Role{
 				*managedRole([]rbacv1.PolicyRule{{
 					APIGroups: []string{kargoapi.GroupVersion.Group},
-					Resources: []string{"stages", "promotions"},
-					Verbs:     []string{"list", "get"},
+					Resources: []string{"stages"},
+					Verbs:     []string{"get", "list"},
+				}}),
+			},
+			clusterRoles: []rbacv1.ClusterRole{
+				*clusterRole([]rbacv1.PolicyRule{{
+					APIGroups: []string{kargoapi.GroupVersion.Group},
+					Resources: []string{"warehouses"},
+					Verbs:     []string{"get", "list", "watch"},
 				}}),
 			},
 			assertions: func(t *testing.T, role *rbacapi.Role, err error) {
 				require.NoError(t, err)
 				require.Empty(t, role.Claims)
-				require.Len(t, role.Rules, 1)
-				require.Equal(t, []string{kargoapi.GroupVersion.Group}, role.Rules[0].APIGroups)
-				require.Equal(t, []string{"stages", "promotions"}, role.Rules[0].Resources)
-				require.Equal(t, []string{"list", "get"}, role.Rules[0].Verbs)
+				require.Len(t, role.Rules, 2)
+				require.Equal(t, []string{"stages"}, role.Rules[0].Resources)
+				require.Equal(t, []string{"warehouses"}, role.Rules[1].Resources)
 			},
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			role, err := ResourcesToRole(tc.sa, tc.roles, tc.roleBindings)
+			role, err := ResourcesToRole(tc.sa, tc.roles, tc.clusterRoles, tc.roleBindings)
 			tc.assertions(t, role, err)
 		})
 	}
@@ -1530,7 +1632,7 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		_, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		_, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			CreateAPIToken(t.Context(), false, testProject, testRoleName, testTokenName)
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
@@ -1550,7 +1652,7 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 				Name:      testTokenName,
 			}},
 		).Build()
-		_, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		_, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			CreateAPIToken(t.Context(), false, testProject, testRoleName, testTokenName)
 		require.Error(t, err)
 		require.True(t, apierrors.IsAlreadyExists(err))
@@ -1591,9 +1693,8 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 					}
 					return client.Get(ctx, key, obj, opts...)
 				},
-			}).
-			Build()
-		tokenSecret, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+			}).Build()
+		tokenSecret, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			CreateAPIToken(t.Context(), false, testProject, testRoleName, testTokenName)
 		require.NoError(t, err)
 		require.NotNil(t, tokenSecret)
@@ -1619,7 +1720,7 @@ func Test_rolesDatabase_CreateAPIToken(t *testing.T) {
 func Test_rolesDatabase_GetAPIToken(t *testing.T) {
 	t.Run("token Secret not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		_, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		_, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			GetAPIToken(t.Context(), false, testProject, "non-existent-token")
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
@@ -1635,7 +1736,7 @@ func Test_rolesDatabase_GetAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeOpaque,
 			},
 		).Build()
-		_, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		_, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			GetAPIToken(t.Context(), false, testProject, "regular-secret")
 		require.Error(t, err)
 		require.True(t, apierrors.IsBadRequest(err))
@@ -1663,7 +1764,7 @@ func Test_rolesDatabase_GetAPIToken(t *testing.T) {
 				},
 			},
 		).Build()
-		secret, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		secret, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			GetAPIToken(t.Context(), false, testProject, tokenName)
 		require.NoError(t, err)
 		require.NotNil(t, secret)
@@ -1691,7 +1792,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				},
 			}},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, "non-existent-token")
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
@@ -1719,7 +1820,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
 		require.True(t, apierrors.IsConflict(err))
@@ -1750,7 +1851,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.Error(t, err)
 		require.True(t, apierrors.IsConflict(err))
@@ -1782,7 +1883,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 				Type: corev1.SecretTypeServiceAccountToken,
 			},
 		).Build()
-		err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			DeleteAPIToken(t.Context(), false, testProject, tokenName)
 		require.NoError(t, err)
 		// Verify the token Secret was deleted
@@ -1803,7 +1904,7 @@ func Test_rolesDatabase_DeleteAPIToken(t *testing.T) {
 func Test_rolesDatabase_ListAPITokens(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
-		_, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		_, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			ListAPITokens(t.Context(), false, testProject, testRoleName)
 		require.Error(t, err)
 		require.True(t, apierrors.IsNotFound(err))
@@ -1819,14 +1920,14 @@ func Test_rolesDatabase_ListAPITokens(t *testing.T) {
 				},
 			}},
 		).Build()
-		tokens, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		tokens, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			ListAPITokens(t.Context(), false, testProject, testRoleName)
 		require.NoError(t, err)
 		require.Empty(t, tokens)
 	})
 
 	t.Run("with tokens for different ServiceAccounts", func(t *testing.T) {
-		c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		c := fake.NewClientBuilder().WithObjects(
 			&corev1.ServiceAccount{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: testProject,
@@ -1879,7 +1980,7 @@ func Test_rolesDatabase_ListAPITokens(t *testing.T) {
 				Data: map[string][]byte{"token": []byte("other-token-data")},
 			},
 		).Build()
-		tokens, err := NewKubernetesRolesDatabase(c, RolesDatabaseConfigFromEnv()).
+		tokens, err := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfigFromEnv()).
 			ListAPITokens(t.Context(), false, testProject, testRoleName)
 		require.NoError(t, err)
 		require.Len(t, tokens, 2)
@@ -2158,7 +2259,10 @@ func Test_rolesDatabase_waitForTokenData(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s := &rolesDatabase{client: testCase.client}
+			s := &rolesDatabase{
+				client:         testCase.client,
+				internalClient: testCase.client,
+			}
 			secret, err := s.waitForTokenData(
 				context.Background(),
 				testProject,
@@ -2167,5 +2271,108 @@ func Test_rolesDatabase_waitForTokenData(t *testing.T) {
 			)
 			testCase.assertions(t, secret, err)
 		})
+	}
+}
+
+func plainServiceAccount(annotations map[string]string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{ObjectMeta: plainObjectMeta(annotations)}
+}
+
+func managedServiceAccount(annotations map[string]string) *corev1.ServiceAccount {
+	return &corev1.ServiceAccount{ObjectMeta: managedObjectMeta(annotations)}
+}
+
+func plainRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: plainObjectMeta(nil),
+		Rules:      rules,
+	}
+}
+
+func managedRole(rules []rbacv1.PolicyRule) *rbacv1.Role {
+	return &rbacv1.Role{
+		ObjectMeta: managedObjectMeta(nil),
+		Rules:      rules,
+	}
+}
+
+func plainRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: plainObjectMeta(nil),
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Namespace: testProject,
+			Name:      testKargoRoleName,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     testKargoRoleName,
+		},
+	}
+}
+
+func managedRoleBinding() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: managedObjectMeta(nil),
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Namespace: testProject,
+			Name:      testKargoRoleName,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "Role",
+			Name:     testKargoRoleName,
+		},
+	}
+}
+
+const testClusterRoleName = "fake-cluster-role"
+
+func clusterRole(rules []rbacv1.PolicyRule) *rbacv1.ClusterRole {
+	return &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: testClusterRoleName},
+		Rules:      rules,
+	}
+}
+
+func roleBindingToClusterRole() *rbacv1.RoleBinding {
+	return &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: testProject,
+			Name:      testKargoRoleName + "-cluster",
+		},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Namespace: testProject,
+			Name:      testKargoRoleName,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			APIGroup: rbacv1.GroupName,
+			Kind:     "ClusterRole",
+			Name:     testClusterRoleName,
+		},
+	}
+}
+
+func plainObjectMeta(annotations map[string]string) metav1.ObjectMeta {
+	return metav1.ObjectMeta{
+		Namespace:   testProject,
+		Name:        testKargoRoleName,
+		Annotations: annotations,
+	}
+}
+
+func managedObjectMeta(annotations map[string]string) metav1.ObjectMeta {
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations[rbacapi.AnnotationKeyManaged] = rbacapi.AnnotationValueTrue
+
+	return metav1.ObjectMeta{
+		Namespace:   testProject,
+		Name:        testKargoRoleName,
+		Annotations: annotations,
 	}
 }

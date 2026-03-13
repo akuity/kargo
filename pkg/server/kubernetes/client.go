@@ -93,6 +93,8 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	return opts, nil
 }
 
+type AuthorizingClient struct{}
+
 // The Client interface combines the familiar controller-runtime WithWatch
 // interface with a helpful Authorized() method.
 type Client interface {
