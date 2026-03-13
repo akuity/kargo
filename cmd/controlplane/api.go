@@ -135,6 +135,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 		kubeClient,
 		rbac.NewKubernetesRolesDatabase(
 			kubeClient,
+			kubeClient.InternalClient(),
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		k8sevent.NewEventSender(

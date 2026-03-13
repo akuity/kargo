@@ -38,7 +38,7 @@ func (s *server) GetRole(
 		}
 	}
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, systemLevel, project, name)
+	sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(ctx, systemLevel, project, name)
 	if err != nil {
 		if systemLevel {
 			return nil, fmt.Errorf(
@@ -64,6 +64,7 @@ func (s *server) GetRole(
 			},
 			ServiceAccount: *sa,
 			Roles:          roles,
+			ClusterRoles:   croles,
 			RoleBindings:   rbs,
 		}
 		return connect.NewResponse(&svcv1alpha1.GetRoleResponse{
@@ -73,7 +74,7 @@ func (s *server) GetRole(
 		}), nil
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(sa, roles, croles, rbs)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func (s *server) getProjectRole(c *gin.Context) {
 	name := c.Param("role")
 	asResources := c.Query("as-resources") == trueStr
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, name)
+	sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -144,13 +145,14 @@ func (s *server) getProjectRole(c *gin.Context) {
 			},
 			ServiceAccount: *sa,
 			Roles:          roles,
+			ClusterRoles:   croles,
 			RoleBindings:   rbs,
 		}
 		c.JSON(http.StatusOK, resources)
 		return
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(sa, roles, croles, rbs)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -177,7 +179,7 @@ func (s *server) getSystemRole(c *gin.Context) {
 	name := c.Param("role")
 	asResources := c.Query("as-resources") == trueStr
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", name)
+	sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", name)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -198,13 +200,14 @@ func (s *server) getSystemRole(c *gin.Context) {
 			},
 			ServiceAccount: *sa,
 			Roles:          roles,
+			ClusterRoles:   croles,
 			RoleBindings:   rbs,
 		}
 		c.JSON(http.StatusOK, resources)
 		return
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(sa, roles, croles, rbs)
 	if err != nil {
 		_ = c.Error(err)
 		return

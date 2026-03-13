@@ -44,7 +44,7 @@ func (s *server) ListRoles(
 	if req.Msg.AsResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(
+			sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(
 				ctx,
 				systemLevel,
 				project,
@@ -69,6 +69,7 @@ func (s *server) ListRoles(
 				},
 				ServiceAccount: *sa,
 				Roles:          roles,
+				ClusterRoles:   croles,
 				RoleBindings:   rbs,
 			}
 		}
@@ -128,7 +129,7 @@ func (s *server) listProjectRoles(c *gin.Context) {
 	if asResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, kargoRoleName)
+			sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, kargoRoleName)
 			if err != nil {
 				_ = c.Error(err)
 				return
@@ -140,6 +141,7 @@ func (s *server) listProjectRoles(c *gin.Context) {
 				},
 				ServiceAccount: *sa,
 				Roles:          roles,
+				ClusterRoles:   croles,
 				RoleBindings:   rbs,
 			}
 		}
@@ -194,7 +196,7 @@ func (s *server) listSystemRoles(c *gin.Context) {
 	if asResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", kargoRoleName)
+			sa, roles, croles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", kargoRoleName)
 			if err != nil {
 				_ = c.Error(err)
 				return
@@ -206,6 +208,7 @@ func (s *server) listSystemRoles(c *gin.Context) {
 				},
 				ServiceAccount: *sa,
 				Roles:          roles,
+				ClusterRoles:   croles,
 				RoleBindings:   rbs,
 			}
 		}
