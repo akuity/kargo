@@ -21,7 +21,7 @@ type RoleResources struct {
 	metav1.ObjectMeta `json:"metadata,omitempty" protobuf:"bytes,1,opt,name=metadata"`
 	ServiceAccount    corev1.ServiceAccount `json:"serviceAccount,omitempty" protobuf:"bytes,2,opt,name=serviceAccount"`
 	Roles             []rbacv1.Role         `json:"roles,omitempty" protobuf:"bytes,3,rep,name=roles"`
-	ClusterRoles      []rbacv1.ClusterRole  `json:"clusterRoles,omitempty"`
+	ClusterRoles      []rbacv1.ClusterRole  `json:"clusterRoles,omitempty" protobuf:"bytes,5,rep,name=clusterRoles"`
 	RoleBindings      []rbacv1.RoleBinding  `json:"roleBindings,omitempty" protobuf:"bytes,4,rep,name=roleBindings"`
 }
 
