@@ -3,7 +3,10 @@ package azure
 import (
 	"testing"
 
+	adogit "github.com/microsoft/azure-devops-go-api/azuredevops/v7/git"
 	"github.com/stretchr/testify/require"
+
+	"github.com/akuity/kargo/pkg/gitprovider"
 )
 
 func TestParseRepoURL(t *testing.T) {
@@ -122,6 +125,37 @@ func TestGetCommitURL(t *testing.T) {
 			commitURL, err := prov.GetCommitURL(testCase.repoURL, testCase.sha)
 			require.NoError(t, err)
 			require.Equal(t, testCase.expectedCommitURL, commitURL)
+		})
+	}
+}
+
+func TestMapMergeMethod(t *testing.T) {
+	testCases := []struct {
+		mergeMethod      gitprovider.MergeMethod
+		expectedStrategy adogit.GitPullRequestMergeStrategy
+	}{
+		{
+			mergeMethod:      gitprovider.MergeMethodMerge,
+			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.NoFastForward,
+		},
+		{
+			mergeMethod:      gitprovider.MergeMethodSquash,
+			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.Squash,
+		},
+		{
+			mergeMethod:      gitprovider.MergeMethodRebase,
+			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.Rebase,
+		},
+		{
+			mergeMethod:      gitprovider.MergeMethod("unknown"),
+			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.NoFastForward,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(string(tt.mergeMethod), func(t *testing.T) {
+			actualStrategy := mapMergeMethod(tt.mergeMethod)
+			require.Equal(t, tt.expectedStrategy, actualStrategy)
 		})
 	}
 }
