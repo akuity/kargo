@@ -82,7 +82,7 @@ const config = {
         docsPluginId: "classic",
         config: {
           petstore: {
-            specPath: "../swagger.yaml",
+            specPath: "static/swagger.yaml",
             outputDir: "docs/90-api-docs",
             sidebarOptions: {
               groupPathsBy: "tag",
