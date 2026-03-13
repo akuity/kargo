@@ -109,6 +109,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'http',
         config: httpConfig as JSONSchema7
+      },
+      {
+        identifier: 'fail',
+        config: httpConfig as JSONSchema7
       }
     ]
   };
