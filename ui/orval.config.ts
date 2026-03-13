@@ -3,7 +3,7 @@ import { defineConfig } from 'orval';
 export default defineConfig({
   kargo: {
     input: {
-      target: '../swagger.json'
+      target: '../docs/static/swagger.json'
     },
     output: {
       mode: 'tags-split',

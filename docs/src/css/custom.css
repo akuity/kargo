@@ -103,3 +103,7 @@ main.landing-page {
   font-weight: normal;
   font-size: x-small;
 }
+
+.swagger-ui .info {
+  display: none;
+}
