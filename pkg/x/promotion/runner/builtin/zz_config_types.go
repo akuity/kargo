@@ -128,6 +128,11 @@ type DeleteConfig struct {
 	Strict bool `json:"strict,omitempty"`
 }
 
+type FailConfig struct {
+	// Optional failure message.
+	Message string `json:"message,omitempty"`
+}
+
 type GitClearConfig struct {
 	// Path to a working directory of a local repository from which to remove all files,
 	// excluding the .git/ directory.
