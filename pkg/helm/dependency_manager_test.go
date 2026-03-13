@@ -632,6 +632,40 @@ version: 1.0.0
 				assert.ErrorContains(t, err, `no dependency in Chart.yaml matches update`)
 			},
 		},
+		{
+			name: "match by alias when present",
+			chartFile: `name: test-chart
+version: 1.0.0
+dependencies:
+  - name: redis
+    repository: https://charts.bitnami.com/bitnami
+    version: 16.0.0
+    alias: redis-session
+  - name: redis
+    repository: https://charts.bitnami.com/bitnami
+    version: 17.0.0
+    alias: redis-cache
+  - name: redis
+    repository: https://charts.bitnami.com/bitnami
+    version: 12.0.0
+    alias: redis-sentinel
+`,
+			updates: []ChartDependency{
+				{Name: "redis", Repository: "https://charts.bitnami.com/bitnami", Version: "18.0.0", Alias: "redis-cache"},
+				{Name: "redis", Repository: "https://charts.bitnami.com/bitnami", Version: "13.0.0", Alias: "redis-sentinel"},
+			},
+			assertions: func(t *testing.T, chartPath string, err error) {
+				assert.NoError(t, err)
+
+				dependencies, err := GetChartDependencies(chartPath)
+				assert.NoError(t, err)
+				assert.Equal(t, []ChartDependency{
+					{Name: "redis", Repository: "https://charts.bitnami.com/bitnami", Version: "16.0.0", Alias: "redis-session"},
+					{Name: "redis", Repository: "https://charts.bitnami.com/bitnami", Version: "18.0.0", Alias: "redis-cache"},
+					{Name: "redis", Repository: "https://charts.bitnami.com/bitnami", Version: "13.0.0", Alias: "redis-sentinel"},
+				}, dependencies)
+			},
+		},
 	}
 
 	for _, tt := range tests {

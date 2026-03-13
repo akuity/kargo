@@ -349,7 +349,13 @@ func (em *EphemeralDependencyManager) processDependencyUpdates(
 	for _, update := range updates {
 		var found bool
 		for i, dep := range dependencies {
-			if dep.Name == update.Name && dep.Repository == update.Repository {
+			var matched bool
+			if update.Alias != "" {
+				matched = dep.Alias == update.Alias
+			} else {
+				matched = dep.Name == update.Name
+			}
+			if matched && dep.Repository == update.Repository {
 				found = true
 				// If the version is different, add the updated dependency
 				if dep.Version != update.Version {
@@ -363,8 +369,8 @@ func (em *EphemeralDependencyManager) processDependencyUpdates(
 		}
 		if !found {
 			return fmt.Errorf(
-				"no dependency in Chart.yaml matches update with repository %q and name %q",
-				update.Repository, update.Name,
+				"no dependency in Chart.yaml matches update with repository %q and name %q or alias %q",
+				update.Repository, update.Name, update.Alias,
 			)
 		}
 	}
