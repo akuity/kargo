@@ -72,14 +72,16 @@ func getResult(total, successes, failures int) string {
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are
-// refreshed. Note: Callers are responsible for normalizing the provided
-// repository URLs.
+// refreshed. When changedFiles is non-empty, only Warehouses whose
+// includePaths/excludePaths filters match the changed files are refreshed.
+// Note: Callers are responsible for normalizing the provided repository URLs.
 func refreshWarehouses(
 	ctx context.Context,
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
 	repoURLs []string,
+	changedFiles []string,
 	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -129,7 +131,7 @@ func refreshWarehouses(
 			}
 
 			if len(qualifiers) > 0 {
-				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -190,6 +192,7 @@ func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,
 	repoURL string,
+	changedFiles []string,
 	qualifiers ...string,
 ) (bool, error) {
 	var shouldRefresh bool
@@ -203,6 +206,28 @@ func shouldRefresh(
 				)
 			}
 			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
+			if shouldRefresh && len(changedFiles) > 0 &&
+				(len(s.Git.IncludePaths) > 0 || len(s.Git.ExcludePaths) > 0) {
+				includeMatcher, iErr := commit.GetPathSelectors(s.Git.IncludePaths)
+				if iErr != nil {
+					return false, fmt.Errorf(
+						"error parsing include path selectors for Git subscription %q: %w",
+						s.Git.RepoURL, iErr,
+					)
+				}
+				excludeMatcher, eErr := commit.GetPathSelectors(s.Git.ExcludePaths)
+				if eErr != nil {
+					return false, fmt.Errorf(
+						"error parsing exclude path selectors for Git subscription %q: %w",
+						s.Git.RepoURL, eErr,
+					)
+				}
+				shouldRefresh = commit.MatchesPathsFilters(
+					includeMatcher,
+					excludeMatcher,
+					changedFiles,
+				)
+			}
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {

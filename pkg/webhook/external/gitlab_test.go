@@ -36,6 +36,23 @@ const gitlabTagPushEventRequestBody = `
 	}
 }`
 
+const gitlabPushEventRequestBodyTruncated = `
+{
+	"ref": "refs/heads/main",
+	"repository":{
+		"git_http_url": "https://gitlab.com/example/repo.git",
+		"git_ssh_url": "git@gitlab.com:example/repo.git"
+	},
+	"commits": [
+		{
+			"added": ["apps/bar/values.yaml"],
+			"modified": [],
+			"removed": []
+		}
+	],
+	"total_commits_count": 25
+}`
+
 func TestGitLabHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
@@ -364,6 +381,47 @@ func TestGitLabHandler(t *testing.T) {
 				)
 			},
 		},
+		{
+			name:       "truncated commits — path filtering skipped, warehouse refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://gitlab.com/example/repo",
+								IncludePaths: []string{"glob:apps/foo/**"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabPushEventRequestBodyTruncated))
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bodyBuf,
+				)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypePush))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
+				)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
@@ -383,6 +441,68 @@ func TestGitLabHandler(t *testing.T) {
 			}).getHandler(requestBody)(w, testCase.req())
 
 			testCase.assertions(t, w)
+		})
+	}
+}
+
+func TestCollectGitLabChangedFiles(t *testing.T) {
+	testCases := []struct {
+		name     string
+		commits  []*gl.PushEventCommit
+		expected []string
+	}{
+		{
+			name:    "nil commits slice",
+			commits: nil,
+		},
+		{
+			name:    "empty commits",
+			commits: []*gl.PushEventCommit{},
+		},
+		{
+			name: "single commit with changes",
+			commits: []*gl.PushEventCommit{{
+				Added:    []string{"a.txt", "b.txt"},
+				Modified: []string{"c.txt"},
+				Removed:  []string{"d.txt"},
+			}},
+			expected: []string{"a.txt", "b.txt", "c.txt", "d.txt"},
+		},
+		{
+			name: "multiple commits with deduplication",
+			commits: []*gl.PushEventCommit{
+				{
+					Added:    []string{"a.txt", "b.txt"},
+					Modified: []string{"c.txt"},
+					Removed:  []string{"d.txt"},
+				},
+				{
+					Added:    []string{"b.txt", "e.txt"},
+					Modified: []string{"a.txt", "f.txt"},
+					Removed:  []string{"d.txt", "g.txt"},
+				},
+			},
+			expected: []string{"a.txt", "b.txt", "c.txt", "d.txt", "e.txt", "f.txt", "g.txt"},
+		},
+		{
+			name: "nil commit pointer in slice",
+			commits: []*gl.PushEventCommit{
+				nil,
+				{
+					Added:    []string{"a.txt"},
+					Modified: []string{"b.txt"},
+					Removed:  []string{"c.txt"},
+				},
+				nil,
+			},
+			expected: []string{"a.txt", "b.txt", "c.txt"},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			actual := collectGitLabChangedFiles(testCase.commits)
+			require.Equal(t, testCase.expected, actual)
 		})
 	}
 }

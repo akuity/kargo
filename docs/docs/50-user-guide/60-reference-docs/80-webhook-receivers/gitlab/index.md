@@ -5,8 +5,19 @@ sidebar_label: GitLab
 # GitLab Webhook Receiver
 
 The GitLab Webhook Receiver responds to `push` events originating from GitLab
-repositories by _refreshing_ all `Warehouse` resources subscribed to those
-repositories.
+repositories by _refreshing_ `Warehouse` resources subscribed to those
+repositories. When a Warehouse has `includePaths` or `excludePaths` configured,
+the receiver extracts the list of changed files from the push event and only
+refreshes the Warehouse if the changed files match those path filters.
+
+:::note
+
+GitLab limits the `commits` array in push webhook payloads to **20 commits**.
+If a push contains more than 20 commits, Kargo detects the truncation and
+skips path filtering for that event, refreshing all matching Warehouses
+unconditionally.
+
+:::
 
 :::info
 

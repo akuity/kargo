@@ -251,7 +251,7 @@ func (t *tagBasedSelector) filterTagsByDiffPaths(
 				err,
 			)
 		}
-		if matchesPathsFilters(t.includePaths, t.excludePaths, diffPaths) {
+		if MatchesPathsFilters(t.includePaths, t.excludePaths, diffPaths) {
 			filteredTags = append(filteredTags, tag)
 		}
 		if len(filteredTags) >= t.discoveryLimit {

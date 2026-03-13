@@ -39,6 +39,24 @@ func TestGithubHandler(t *testing.T) {
 			SSHURL: gh.Ptr("git@github.com:user/repo.git"),
 		},
 	}
+	validPushEventPathMismatch := &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+		HeadCommit: &gh.HeadCommit{
+			Modified: []string{"apps/bar/values.yaml"},
+		},
+	}
+	validPushEventPathMatch := &gh.PushEvent{
+		Ref: gh.Ptr("refs/heads/main"),
+		Repo: &gh.PushEventRepository{
+			CloneURL: gh.Ptr("https://github.com/example/repo"),
+		},
+		HeadCommit: &gh.HeadCommit{
+			Modified: []string{"apps/foo/values.yaml"},
+		},
+	}
 	validPackageEventImage := &gh.PackageEvent{
 		Action: gh.Ptr("published"),
 		Package: &gh.Package{
@@ -508,6 +526,90 @@ func TestGithubHandler(t *testing.T) {
 			},
 		},
 		{
+			name:       "warehouse not refreshed (push event, git, path mismatch)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								IncludePaths:            []string{"apps/foo"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEventPathMismatch)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "warehouse refreshed (push event, git, path match)",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                 "https://github.com/example/repo",
+								CommitSelectionStrategy: kargoapi.CommitSelectionStrategyNewestFromBranch,
+								Branch:                  "main",
+								IncludePaths:            []string{"apps/foo"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBytes, err := json.Marshal(validPushEventPathMatch)
+				require.NoError(t, err)
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBuffer(bodyBytes),
+				)
+				req.Header.Set(gh.EventTypeHeader, githubEventTypePush)
+				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name:       "warehouse refreshed (push event, git, https)",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
@@ -845,6 +947,97 @@ func TestGithubHandler(t *testing.T) {
 			}).getHandler(requestBody)(w, testCase.req().WithContext(ctx))
 
 			testCase.assertions(t, w)
+		})
+	}
+}
+
+func TestCollectGitHubChangedFiles(t *testing.T) {
+	testCases := []struct {
+		name     string
+		event    *gh.PushEvent
+		expected []string
+	}{
+		{
+			name:  "nil event commits",
+			event: &gh.PushEvent{},
+		},
+		{
+			name: "single commit with changes",
+			event: &gh.PushEvent{
+				Commits: []*gh.HeadCommit{{
+					Added:    []string{"apps/foo/added.yaml"},
+					Modified: []string{"apps/foo/modified.yaml"},
+					Removed:  []string{"apps/foo/removed.yaml"},
+				}},
+			},
+			expected: []string{
+				"apps/foo/added.yaml",
+				"apps/foo/modified.yaml",
+				"apps/foo/removed.yaml",
+			},
+		},
+		{
+			name: "multiple commits with deduplication",
+			event: &gh.PushEvent{
+				Commits: []*gh.HeadCommit{
+					{
+						Added:    []string{"apps/foo/new.yaml", "apps/foo/shared.yaml"},
+						Modified: []string{"apps/foo/updated.yaml"},
+					},
+					{
+						Added:    []string{"apps/foo/shared.yaml"},
+						Modified: []string{"apps/foo/updated.yaml", "apps/foo/another.yaml"},
+						Removed:  []string{"apps/foo/removed.yaml"},
+					},
+				},
+			},
+			expected: []string{
+				"apps/foo/new.yaml",
+				"apps/foo/shared.yaml",
+				"apps/foo/updated.yaml",
+				"apps/foo/another.yaml",
+				"apps/foo/removed.yaml",
+			},
+		},
+		{
+			name: "head commit-only data",
+			event: &gh.PushEvent{
+				HeadCommit: &gh.HeadCommit{
+					Added:    []string{"apps/foo/added.yaml"},
+					Modified: []string{"apps/foo/modified.yaml"},
+					Removed:  []string{"apps/foo/removed.yaml"},
+				},
+			},
+			expected: []string{
+				"apps/foo/added.yaml",
+				"apps/foo/modified.yaml",
+				"apps/foo/removed.yaml",
+			},
+		},
+		{
+			name: "both commits and head commit with overlap",
+			event: &gh.PushEvent{
+				Commits: []*gh.HeadCommit{{
+					Added:    []string{"apps/foo/added.yaml"},
+					Modified: []string{"apps/foo/modified.yaml"},
+				}},
+				HeadCommit: &gh.HeadCommit{
+					Modified: []string{"apps/foo/modified.yaml", "apps/foo/head-only.yaml"},
+					Removed:  []string{"apps/foo/removed.yaml"},
+				},
+			},
+			expected: []string{
+				"apps/foo/added.yaml",
+				"apps/foo/modified.yaml",
+				"apps/foo/head-only.yaml",
+				"apps/foo/removed.yaml",
+			},
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			require.Equal(t, testCase.expected, collectGitHubChangedFiles(testCase.event))
 		})
 	}
 }

@@ -125,12 +125,23 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 					urls.NormalizeGit(e.Repository.GitSSHURL),
 				}
 			}
+			var changedFiles []string
+			if e.TotalCommitsCount > int64(len(e.Commits)) {
+				logger.Info(
+					"push event commits were truncated by GitLab; "+
+						"skipping path filtering for this event",
+					"totalCommits", e.TotalCommitsCount,
+					"receivedCommits", len(e.Commits),
+				)
+			} else {
+				changedFiles = collectGitLabChangedFiles(e.Commits)
+			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,
 				"ref", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, e.Ref)
 		case *gl.TagEvent:
 			var repoURLs []string
 			if e.Repository != nil {
@@ -144,7 +155,22 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				"tag", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 		}
 	})
+}
+
+func collectGitLabChangedFiles(commits []*gl.PushEventCommit) []string {
+	var diffs []commitDiff
+	for _, c := range commits {
+		if c == nil {
+			continue
+		}
+		diffs = append(diffs, commitDiff{
+			Added:    c.Added,
+			Modified: c.Modified,
+			Removed:  c.Removed,
+		})
+	}
+	return collectChangedFiles(diffs)
 }
