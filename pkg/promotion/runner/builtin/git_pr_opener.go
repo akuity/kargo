@@ -42,6 +42,7 @@ func init() {
 // gitPROpener is an implementation of the promotion.StepRunner interface that
 // opens a pull request.
 type gitPROpener struct {
+	gitUser      git.User
 	schemaLoader gojsonschema.JSONLoader
 	credsDB      credentials.Database
 }
@@ -50,6 +51,7 @@ type gitPROpener struct {
 // that opens a pull request.
 func newGitPROpener(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &gitPROpener{
+		gitUser:      gitUserFromEnv(),
 		credsDB:      caps.CredsDB,
 		schemaLoader: getConfigSchemaLoader(stepKindGitOpenPR),
 	}
@@ -123,6 +125,7 @@ func (g *gitPROpener) run(
 	repo, err := git.Clone(
 		cfg.RepoURL,
 		&git.ClientOptions{
+			User:                  &g.gitUser,
 			Credentials:           repoCreds,
 			InsecureSkipTLSVerify: cfg.InsecureSkipTLSVerify,
 		},
