@@ -8,6 +8,9 @@
   }
 }
 
+/* To clean up: Only .heroContent is used now that the large Kargo logo */
+/* and hero sections have been removed in index.tsx. If these are no longer */
+/* neeeded in the future, we can remove unused .hero* styles. */
 .hero {
   padding: 3rem 0;
 }
@@ -415,5 +418,189 @@
   .cardFooter {
     background: var(--ifm-color-emphasis-200);
     border-top-color: var(--ifm-color-emphasis-300);
+  }
+}
+
+// Google Fonts import — add to top of file
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+// CSS custom properties scoped to your page wrapper,
+// or use :root if you want them globally
+.before-kargo {
+  --bg: #ffffff;
+  --surface: #f5f6fa;
+  --border: #dde1ee;
+  --border-bright: #c4c9de;
+  --text: #2c3152;
+  --text-dim: #7a82a8;
+  --text-bright: #111827;
+  --accent: #cc2a12;
+  --accent-dim: rgba(204, 42, 18, 0.10);
+  --accent-glow: rgba(204, 42, 18, 0.25);
+  --green: #0d7a4a;
+  --green-dim: rgba(13, 122, 74, 0.10);
+  --blue: #1a5fc9;
+  --blue-dim: rgba(26, 95, 201, 0.10);
+  --yellow: #a06400;
+  --yellow-dim: rgba(160, 100, 0, 0.10);
+  --purple: #6d3fcf;
+  --lane-w: 140px;
+  --lane-gap: 30px;
+}
+
+.legend {
+  display: flex;
+  justify-content: space-evenly;
+  width: 100%;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  color: var(--text-dim, #666);
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.diagramWrapper {
+  overflow-x: auto;
+  padding-bottom: 20px;
+}
+
+.diagram {
+  position: relative;
+  min-width: 860px;
+  width: 100%;
+}
+
+.seq-svg {
+  width: 100%;
+  display: block;
+}
+
+.eyebrow {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ifm-color-emphasis-600);
+  margin-bottom: 0.75rem;
+}
+
+.heroTitle {
+  font-size: 4rem;
+  font-weight: 800;
+}
+
+.zoomImage {
+  cursor: zoom-in;
+  transition: transform 0.2s ease;
+  border-radius: 8px;
+}
+
+.zoomImage:hover {
+  transform: scale(1.02);
+}
+
+/* Overlay */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.2s ease;
+}
+
+/* Expanded image */
+.modalImage {
+  max-width: 90%;
+  max-height: 90%;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: scaleIn 0.2s ease;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { transform: scale(0.95); }
+  to { transform: scale(1); }
+}
+
+.bulletList {
+  margin-top:'10px';
+}
+
+.whoKargoIsFor {
+  .wrapper {
+    padding: 4rem 1rem;
+  }
+
+  .heading {
+    text-align: center;
+    margin-bottom: 2.5rem;
+    font-size: 2rem;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: linear-gradient(135deg, #f5f7ff, #eef1ff);
+    border: 1px solid #e0e6ff;
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  }
+
+  .card h3 {
+    margin-bottom: 0.75rem;
+    color: #3b5bdb;
+    font-size: 1.1rem;
+  }
+
+  .card p {
+    margin: 0;
+    color: #444;
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
+}
+
+.audienceCard {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 0 0 8px 8px;
+  padding: 1rem 1.25rem;
+  background: var(--ifm-background-surface-color);
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--ifm-color-emphasis-700);
   }
 }
