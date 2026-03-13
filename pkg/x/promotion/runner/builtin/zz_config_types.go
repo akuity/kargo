@@ -256,6 +256,11 @@ type GitOpenPRConfig struct {
 }
 
 type GitPushConfig struct {
+	// Optional committer information for merge commits or replacement commits created when
+	// integrating remote changes before pushing. If provided, this takes precedence over both
+	// system-level defaults and any optional, default authorship information configured in the
+	// `git-clone` step.
+	Committer *Committer `json:"committer,omitempty"`
 	// Whether to force push to the target branch, overwriting any existing history. This is
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
@@ -287,6 +292,20 @@ type GitPushConfig struct {
 	// 'tag'. If none of these are provided, the target branch will be the currently checked out
 	// branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+// Optional committer information for merge commits or replacement commits created when
+// integrating remote changes before pushing. If provided, this takes precedence over both
+// system-level defaults and any optional, default authorship information configured in the
+// `git-clone` step.
+type Committer struct {
+	// The email of the committer.
+	Email string `json:"email"`
+	// The name of the committer.
+	Name string `json:"name"`
+	// A GPG signing key for the committer. If provided, 'email' and 'name' must match the key's
+	// UID.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitTagConfig struct {
