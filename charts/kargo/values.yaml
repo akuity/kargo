@@ -69,6 +69,8 @@ global:
   tolerations: []
   ## @param global.affinity Default affinity for all Kargo pods.
   affinity: {}
+  ## @param global.priorityClassName [nullable] Default priority class for all Kargo pods.
+  # priorityClassName:
   ## @param global.securityContext Default security context for all Kargo pods.
   securityContext: {}
 
@@ -343,6 +345,8 @@ api:
       tolerations: []
       ## @param api.oidc.dex.affinity Specifies pod affinity for the Dex server pods. Defaults to `global.affinity`.
       affinity: {}
+      ## @param api.oidc.dex.priorityClassName [nullable] Name of the priority class for the Dex server pods. Defaults to `global.priorityClassName`.
+      # priorityClassName:
       ## @param api.oidc.dex.annotations Annotations to add to the Dex server pods. Merges with `global.annotations`, allowing you to override or add to the global annotations.
       annotations: {}
       ## @param api.oidc.dex.securityContext Security context for Dex server pods. Defaults to `global.securityContext`.
@@ -426,6 +430,8 @@ api:
   tolerations: []
   ## @param api.affinity Specifies pod affinity for api pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param api.priorityClassName [nullable] Name of the priority class for api pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param api.securityContext Security context for api pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -620,6 +626,8 @@ controller:
   tolerations: []
   ## @param controller.affinity Specifies pod affinity for controller pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param controller.priorityClassName [nullable] Name of the priority class for controller pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param controller.securityContext Security context for controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -696,6 +704,8 @@ garbageCollector:
   tolerations: []
   ## @param garbageCollector.affinity Specifies pod affinity for the garbage collector pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param garbageCollector.priorityClassName [nullable] Name of the priority class for the garbage collector pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param garbageCollector.securityContext Security context for garbage collector pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -759,6 +769,8 @@ externalWebhooksServer:
   tolerations: []
   ## @param externalWebhooksServer.affinity Specifies pod affinity for external webhook server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param externalWebhooksServer.priorityClassName [nullable] Name of the priority class for external webhook server pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param externalWebhooksServer.securityContext Security context for external webhook server pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -874,6 +886,8 @@ managementController:
   tolerations: []
   ## @param managementController.affinity Specifies pod affinity for management controller pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param managementController.priorityClassName [nullable] Name of the priority class for management controller pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param managementController.securityContext Security context for management controller pods. Defaults to `global.securityContext`.
   securityContext: {}
 
@@ -937,6 +951,8 @@ webhooksServer:
   tolerations: []
   ## @param webhooksServer.affinity Specifies pod affinity for the webhooks server pods. Defaults to `global.affinity`.
   affinity: {}
+  ## @param webhooksServer.priorityClassName [nullable] Name of the priority class for the webhooks server pods. Defaults to `global.priorityClassName`.
+  # priorityClassName:
   ## @param webhooksServer.securityContext Security context for webhooks server pods. Defaults to `global.securityContext`.
   securityContext: {}
 

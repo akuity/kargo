@@ -32,6 +32,9 @@ spec:
       affinity:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      {{- with .Values.api.oidc.dex.priorityClassName | default .Values.global.priorityClassName }}
+      priorityClassName: {{ . }}
+      {{- end }}
       {{- with .Values.api.oidc.dex.image.pullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
