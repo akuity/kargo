@@ -8,6 +8,8 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 
 	_ "github.com/gogo/protobuf/gogoproto"
+
+	_ "time/tzdata"
 )
 
 func main() {
