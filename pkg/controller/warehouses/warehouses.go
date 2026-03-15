@@ -21,6 +21,7 @@ import (
 	"github.com/akuity/kargo/pkg/api"
 	"github.com/akuity/kargo/pkg/conditions"
 	"github.com/akuity/kargo/pkg/controller"
+	gitpkg "github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 	"github.com/akuity/kargo/pkg/expressions/function"
 	"github.com/akuity/kargo/pkg/kargo"
@@ -67,14 +68,21 @@ type reconciler struct {
 }
 
 // SetupReconcilerWithManager initializes a reconciler for Warehouse resources
-// and registers it with the provided Manager.
+// and registers it with the provided Manager. If a RepoCache is provided, git
+// subscribers will use it to avoid redundant clones of the same repository.
 func SetupReconcilerWithManager(
 	ctx context.Context,
 	mgr manager.Manager,
 	credentialsDB credentials.Database,
 	subscriberRegistry subscription.SubscriberRegistry,
 	cfg ReconcilerConfig,
+	repoCache *gitpkg.RepoCache,
 ) error {
+	// If a repo cache is provided, create a custom subscriber registry that
+	// uses the cache-aware git subscriber instead of the default one.
+	if repoCache != nil {
+		subscriberRegistry = subscription.NewSubscriberRegistryWithGitCache(repoCache)
+	}
 	if err := ctrl.NewControllerManagedBy(mgr).
 		For(&kargoapi.Warehouse{}).
 		WithEventFilter(controller.ResponsibleFor[client.Object]{

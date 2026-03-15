@@ -76,7 +76,7 @@ func TestNewBaseSelector(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			s, err := newBaseSelector(testCase.sub, testCase.creds)
+			s, err := newBaseSelector(testCase.sub, testCase.creds, nil)
 			testCase.assertions(t, s, err)
 		})
 	}

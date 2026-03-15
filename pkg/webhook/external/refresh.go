@@ -196,7 +196,7 @@ func shouldRefresh(
 	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
-			selector, err := commit.NewSelector(ctx, *s.Git, nil)
+			selector, err := commit.NewSelector(ctx, *s.Git, nil, nil)
 			if err != nil {
 				return false, fmt.Errorf("error creating commit selector for Git subscription %q: %w",
 					s.Git.RepoURL, err,

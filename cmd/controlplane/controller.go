@@ -466,6 +466,7 @@ func (o *controllerOptions) setupReconcilers(
 		credentialsDB,
 		subscription.DefaultSubscriberRegistry,
 		warehouses.ReconcilerConfigFromEnv(),
+		nil, // repoCache: opt-in, nil uses default git.Clone behavior
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

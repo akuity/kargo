@@ -5,6 +5,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/component"
+	gitpkg "github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
 )
 
@@ -45,3 +46,31 @@ func MustNewSubscriberRegistry(
 }
 
 var DefaultSubscriberRegistry = MustNewSubscriberRegistry()
+
+// NewSubscriberRegistryWithGitCache creates a new subscriber registry that
+// includes all the default subscriber types (git, image, chart) but uses
+// a cache-aware git subscriber backed by the provided RepoCache.
+func NewSubscriberRegistryWithGitCache(repoCache *gitpkg.RepoCache) SubscriberRegistry {
+	registry := MustNewSubscriberRegistry()
+
+	// Register cache-aware git subscriber
+	registry.MustRegister(GitSubscriberRegistrationWithCache(repoCache))
+
+	// Register image subscriber
+	registry.MustRegister(SubscriberRegistration{
+		Predicate: func(_ context.Context, sub kargoapi.RepoSubscription) (bool, error) {
+			return sub.Image != nil, nil
+		},
+		Value: newImageSubscriber,
+	})
+
+	// Register chart subscriber
+	registry.MustRegister(SubscriberRegistration{
+		Predicate: func(_ context.Context, sub kargoapi.RepoSubscription) (bool, error) {
+			return sub.Chart != nil, nil
+		},
+		Value: newChartSubscriber,
+	})
+
+	return registry
+}

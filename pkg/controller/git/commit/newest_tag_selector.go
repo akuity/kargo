@@ -29,8 +29,9 @@ type newestTagSelector struct {
 func newNewestTagSelector(
 	sub kargoapi.GitSubscription,
 	creds *git.RepoCredentials,
+	repoCache *git.RepoCache,
 ) (Selector, error) {
-	tagBased, err := newTagBasedSelector(sub, creds)
+	tagBased, err := newTagBasedSelector(sub, creds, repoCache)
 	if err != nil {
 		return nil, fmt.Errorf("error building tag based selector: %w", err)
 	}
