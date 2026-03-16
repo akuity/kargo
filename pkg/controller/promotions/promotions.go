@@ -62,6 +62,7 @@ func ReconcilerConfigFromEnv() ReconcilerConfig {
 type reconciler struct {
 	kargoClient    client.Client
 	promoEngine    promotion.Engine
+	fence          kubeclient.VersionWaiter
 	shardPredicate controller.ResponsibleFor[kargoapi.Promotion]
 
 	cfg ReconcilerConfig
@@ -117,8 +118,18 @@ func SetupReconcilerWithManager(
 		return fmt.Errorf("index running Promotions by Argo CD Applications: %w", err)
 	}
 
+	fence := kubeclient.NewVersionFence()
+	promoInformer, err := kargoMgr.GetCache().GetInformer(ctx, &kargoapi.Promotion{})
+	if err != nil {
+		return fmt.Errorf("error getting Promotion informer: %w", err)
+	}
+	if _, err = promoInformer.AddEventHandler(fence); err != nil {
+		return fmt.Errorf("error adding version fence event handler: %w", err)
+	}
+
 	reconciler := newReconciler(
 		kargoMgr.GetClient(),
+		fence,
 		k8sevent.NewEventSender(
 			libEvent.NewRecorder(ctx, kargoMgr.GetScheme(), kargoMgr.GetClient(), cfg.Name()),
 		),
@@ -198,12 +209,14 @@ func SetupReconcilerWithManager(
 
 func newReconciler(
 	kargoClient client.Client,
+	fence kubeclient.VersionWaiter,
 	sender event.Sender,
 	promoEngine promotion.Engine,
 	cfg ReconcilerConfig,
 ) *reconciler {
 	r := &reconciler{
 		kargoClient: kargoClient,
+		fence:       fence,
 		promoEngine: promoEngine,
 		sender:      sender,
 		cfg:         cfg,
@@ -289,7 +302,7 @@ func (r *reconciler) Reconcile(
 	// If the Promotion does not have a Phase, it must be new and (initially)
 	// pending. Mark it as such.
 	if promo.Status.Phase == "" {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		if err = r.patchStatusAndWait(ctx, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhasePending
 		}); err != nil {
 			return ctrl.Result{}, err
@@ -331,7 +344,7 @@ func (r *reconciler) Reconcile(
 	// Update promo status as Running to give visibility in UI. Also, a promo which
 	// has already entered Running status will be allowed to continue to reconcile.
 	if promo.Status.Phase != kargoapi.PromotionPhaseRunning {
-		if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+		if err = r.patchStatusAndWait(ctx, promo, func(status *kargoapi.PromotionStatus) {
 			status.Phase = kargoapi.PromotionPhaseRunning
 			status.StartedAt = &metav1.Time{Time: time.Now()}
 		}); err != nil {
@@ -394,7 +407,7 @@ func (r *reconciler) Reconcile(
 		newStatus.LastHandledRefresh = token
 	}
 
-	if err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+	if err = r.patchStatusAndWait(ctx, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	}); err != nil {
 		logger.Error(err, "error updating Promotion status")
@@ -406,7 +419,7 @@ func (r *reconciler) Reconcile(
 			// NB: This should be a rare occurrence, and is either due to the
 			// CustomResourceDefinition being out of sync with the controller
 			// version, or us inventing non-backwards-compatible changes.
-			err = kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+			err = r.patchStatusAndWait(ctx, promo, func(status *kargoapi.PromotionStatus) {
 				status.Phase = kargoapi.PromotionPhaseErrored
 				status.Message = fmt.Sprintf("error updating status: %v", err)
 			})
@@ -496,6 +509,28 @@ func (r *reconciler) Reconcile(
 		}, nil
 	}
 	return ctrl.Result{}, nil
+}
+
+// patchStatusAndWait patches the Promotion status and then waits for the
+// informer cache to observe the update. This prevents the next reconciliation
+// from acting on stale cached data.
+func (r *reconciler) patchStatusAndWait(
+	ctx context.Context,
+	promo *kargoapi.Promotion,
+	update func(*kargoapi.PromotionStatus),
+) error {
+	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, update); err != nil {
+		return err
+	}
+	if err := r.fence.WaitForVersion(
+		ctx, client.ObjectKeyFromObject(promo), promo.GetResourceVersion(), 5*time.Second,
+	); err != nil {
+		logging.LoggerFromContext(ctx).Debug(
+			"version fence: cache sync wait exceeded timeout",
+			"resourceVersion", promo.GetResourceVersion(),
+		)
+	}
+	return nil
 }
 
 func (r *reconciler) promote(
@@ -696,7 +731,7 @@ func (r *reconciler) terminatePromotion(
 	}
 	newStatus.FinishedAt = now
 
-	if err := kubeclient.PatchStatus(ctx, r.kargoClient, promo, func(status *kargoapi.PromotionStatus) {
+	if err := r.patchStatusAndWait(ctx, promo, func(status *kargoapi.PromotionStatus) {
 		*status = *newStatus
 	}); err != nil {
 		return err

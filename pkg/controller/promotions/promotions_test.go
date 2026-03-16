@@ -19,6 +19,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	k8sevent "github.com/akuity/kargo/pkg/event/kubernetes"
+	fakekubeclient "github.com/akuity/kargo/pkg/kubeclient/fake"
 	fakeevent "github.com/akuity/kargo/pkg/kubernetes/event/fake"
 	"github.com/akuity/kargo/pkg/promotion"
 )
@@ -32,6 +33,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
+		&fakekubeclient.VersionWaiter{},
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -55,6 +57,7 @@ func newFakeReconciler(
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	return newReconciler(
 		kargoClient,
+		&fakekubeclient.VersionWaiter{},
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -523,6 +526,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 
 			r := &reconciler{
 				kargoClient: c,
+				fence:       &fakekubeclient.VersionWaiter{},
 				sender:      k8sevent.NewEventSender(recorder),
 				cleanupWorkDirFn: func(context.Context, types.UID) {
 					// no-op for tests
@@ -657,6 +661,7 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 	cleanupCalled := false
 	r := &reconciler{
 		kargoClient: c,
+		fence:       &fakekubeclient.VersionWaiter{},
 		sender:      k8sevent.NewEventSender(recorder),
 		cleanupWorkDirFn: func(context.Context, types.UID) {
 			cleanupCalled = true
