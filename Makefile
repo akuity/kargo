@@ -273,11 +273,7 @@ codegen-ui:
 .PHONY: codegen-docs
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
-	pnpm add --dir docs docusaurus-plugin-openapi-docs 
-	pnpm add --dir docs docusaurus-theme-openapi-docs
-	pnpm add --dir docs swagger-ui-react
-	pnpm add --dir docs react-redux
-	pnpm add --dir docs @reduxjs/toolkit
+	pnpm install --dir docs --frozen-lockfile
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
