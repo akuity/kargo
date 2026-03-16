@@ -56,7 +56,7 @@ export const ArgoCDLink = ({
             name: projectName,
             namespace: link.namespace,
             appName: link.name,
-            stage: stage.metadata?.name
+            stageName: stage.metadata?.name
           })
         );
       } else {
