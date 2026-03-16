@@ -67,6 +67,7 @@ export type ArgoCDExtensionComponentProps = {
   stageName: string;
   namespace: string;
   appName: string;
+  argocdURL: string;
 };
 
 export type ArgoCDExtension = {
