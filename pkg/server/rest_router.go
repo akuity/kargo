@@ -15,6 +15,7 @@ import (
 // @title Kargo API
 // @version v1alpha1
 // @description REST API for Kargo
+// @host localhost:30081
 // @BasePath /
 // @securityDefinitions.apikey BearerAuth
 // @in header

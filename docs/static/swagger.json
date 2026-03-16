@@ -6,6 +6,7 @@
         "contact": {},
         "version": "v1alpha1"
     },
+    "host": "localhost:30081",
     "basePath": "/",
     "paths": {
         "/v1beta1/login": {
