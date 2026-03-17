@@ -10,7 +10,7 @@ import (
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
-func Test_workTree_pullBeforePush(t *testing.T) {
+func Test_workTree_integrateBeforePush(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,
 		initialMainCommit,
@@ -19,63 +19,137 @@ func Test_workTree_pullBeforePush(t *testing.T) {
 	)
 	defer testServer.Close()
 
-	t.Run("rebase is safe", func(t *testing.T) {
+	t.Run("AlwaysRebase: rebases unconditionally", func(t *testing.T) {
 		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
 		require.NoError(t, err)
 		defer repo.Close()
 
-		// Make the local main branch be divergent from the remote ahead branch.
-		err = os.WriteFile(
-			fmt.Sprintf("%s/local.txt", repo.Dir()),
-			[]byte("local"),
-			0o600,
-		)
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
 		require.NoError(t, err)
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		err = internalWorkTree(t, repo).pullBeforePush("ahead", nil)
+		// Enable signing so that RebaseOrMerge would fall back to merge, but
+		// AlwaysRebase should still rebase.
+		wt := internalWorkTree(t, repo)
+		enableFakeCommitSigning(t, wt, true)
+
+		err = wt.integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyAlwaysRebase,
+		)
 		require.NoError(t, err)
 
-		// All the local commits are unsigned and signing is not configured, so
-		// pullBeforePush() should have resolved the divergence between the local
-		// branch and the remote target branch using a rebase, which in this case,
-		// would cause no misrepresentation of trust. The rebase should not have
-		// created any merge commits, so the commit count should be:
+		// A rebase produces no merge commits:
 		// initial + remote + local = 3.
 		commits, err := repo.ListCommits(0, 0)
 		require.NoError(t, err)
 		require.Len(t, commits, 3)
 	})
 
-	t.Run("rebase is unsafe", func(t *testing.T) {
+	t.Run("RebaseOrMerge: rebases when safe", func(t *testing.T) {
 		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
 		require.NoError(t, err)
 		defer repo.Close()
 
-		// Make the local main branch be divergent from the remote ahead branch.
-		err = os.WriteFile(
-			fmt.Sprintf("%s/local.txt", repo.Dir()),
-			[]byte("local"),
-			0o600,
-		)
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
 		require.NoError(t, err)
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		// Make it look like commit signing is enabled.
+		err = internalWorkTree(t, repo).integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyRebaseOrMerge,
+		)
+		require.NoError(t, err)
+
+		// All local commits are unsigned and signing is not configured, so
+		// rebase is safe. No merge commits: initial + remote + local = 3.
+		commits, err := repo.ListCommits(0, 0)
+		require.NoError(t, err)
+		require.Len(t, commits, 3)
+	})
+
+	t.Run("RebaseOrMerge: merges when rebase is unsafe", func(t *testing.T) {
+		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local commit", nil)
+		require.NoError(t, err)
+
+		// Enable signing so that rebasing unsigned commits would be unsafe.
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.pullBeforePush("ahead", nil)
+		err = wt.integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyRebaseOrMerge,
+		)
 		require.NoError(t, err)
 
-		// All the local commits are unsigned and signing is configured, so
-		// pullBeforePush() should have decided that a rebase would be unsafe, as it
-		// would lend Kargo's signature to unverified commits. The divergence
-		// between the local branch and the remote target branch should have been
-		// resolved using a merge, which would create a merge commit on top of the
-		// local commits.
+		// Should have fallen back to merge.
+		msg, err := repo.CommitMessage("HEAD")
+		require.NoError(t, err)
+		require.Contains(t, msg, "Merge")
+	})
+
+	t.Run("RebaseOrFail: rebases when safe", func(t *testing.T) {
+		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local commit", nil)
+		require.NoError(t, err)
+
+		err = internalWorkTree(t, repo).integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyRebaseOrFail,
+		)
+		require.NoError(t, err)
+
+		// Rebase is safe (unsigned, signing not configured).
+		commits, err := repo.ListCommits(0, 0)
+		require.NoError(t, err)
+		require.Len(t, commits, 3)
+	})
+
+	t.Run("RebaseOrFail: fails when rebase is unsafe", func(t *testing.T) {
+		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local commit", nil)
+		require.NoError(t, err)
+
+		wt := internalWorkTree(t, repo)
+		enableFakeCommitSigning(t, wt, true)
+
+		err = wt.integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyRebaseOrFail,
+		)
+		require.ErrorIs(t, err, ErrRebaseUnsafe)
+	})
+
+	t.Run("AlwaysMerge: merges unconditionally", func(t *testing.T) {
+		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
+		require.NoError(t, err)
+		defer repo.Close()
+
+		err = os.WriteFile(fmt.Sprintf("%s/local.txt", repo.Dir()), []byte("local"), 0o600)
+		require.NoError(t, err)
+		err = repo.AddAllAndCommit("local commit", nil)
+		require.NoError(t, err)
+
+		err = internalWorkTree(t, repo).integrateBeforePush(
+			"ahead", nil, PushIntegrationPolicyAlwaysMerge,
+		)
+		require.NoError(t, err)
+
+		// Even though rebase would be safe (unsigned, no signing), the policy
+		// says always merge.
 		msg, err := repo.CommitMessage("HEAD")
 		require.NoError(t, err)
 		require.Contains(t, msg, "Merge")

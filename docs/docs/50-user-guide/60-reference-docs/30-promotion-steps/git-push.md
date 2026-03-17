@@ -16,20 +16,42 @@ are not present in the local branch, the step will integrate the remote changes
 and retry the push. Any merge conflict requiring manual resolution will
 immediately halt further attempts.
 
-When integrating remote changes, the step chooses between rebasing and merging
-based on the GPG signature status of the local commits that would be replayed:
+How remote changes are integrated is controlled by the system-level __push
+integration policy__, which is configured by a Kargo operator. The available
+policies are:
 
-- If all local commits are **signed by a trusted key** and signing is configured
-  for the committer, a **rebase** is performed. The replacement commits are
+- `AlwaysRebase` — Unconditionally rebase. Simplest, but may re-sign or strip
+  commit signatures.
+
+- `RebaseOrMerge` — Rebase when a signature-trust analysis determines it is
+  safe; merge otherwise. This preserves linear history when possible without
+  undermining trust.
+
+- `RebaseOrFail` — Rebase when the signature-trust analysis determines it is
+  safe; fail the step otherwise.
+
+- `AlwaysMerge` — Unconditionally create a merge commit. Most conservative.
+
+:::caution
+
+The current default policy is `AlwaysRebase`.
+
+Starting with v1.12.0, the default will change to `RebaseOrMerge`.
+
+:::
+
+When the policy evaluates rebase safety (`RebaseOrMerge` and `RebaseOrFail`),
+the decision is based on the GPG signature status of the local commits that
+would be replayed:
+
+- If all local commits are __signed by a trusted key__ and signing is configured
+  for the committer, a __rebase__ is performed. The replacement commits are
   re-signed by the committer.
 
-- If all local commits are **unsigned** and signing is _not_ configured, a
-  **rebase** is performed. The replacement commits remain unsigned.
+- If all local commits are __unsigned__ and signing is _not_ configured, a
+  __rebase__ is performed. The replacement commits remain unsigned.
 
-- In all other cases, a **merge** is used instead to preserve the original
-  commits and their signatures (or lack thereof). This avoids stripping valid
-  signatures, fabricating signatures on commits the committer did not author, or
-  vouching for commits signed by untrusted keys.
+- In all other cases, the policy's fallback behavior applies (merge or fail).
 
 A "trusted key" is one that has been imported into the committer's GPG keyring
 with ultimate trust. When a `committer` with a `signingKey` is specified in this
@@ -37,6 +59,13 @@ step's configuration, that key is the only trusted key. When `committer` is not
 specified, the trusted key (if any) is the one configured during the
 [`git-clone`](git-clone.md) step -- either from the `author` field or from
 system-level defaults set by a Kargo admin.
+
+:::info
+
+For more information on configuring the push integration policy, see the
+[operator guide](../../../40-operator-guide/20-advanced-installation/30-common-configurations.md#push-integration-policy).
+
+:::
 
 :::info
 

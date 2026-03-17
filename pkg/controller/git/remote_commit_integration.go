@@ -24,16 +24,19 @@ const (
 	signatureUntrusted
 )
 
-// pullBeforePush integrates remote changes before pushing. It first sets up
-// the committer (if provided), then checks whether a rebase is safe from a
-// signature-trust perspective. Setting up the committer first ensures its key
-// is in the GPG trust database before signature verification occurs. If safe,
-// it performs a pull --rebase (preserving linear history). If not, it falls
-// back to a merge-based pull to preserve existing commit signatures.
-func (w *workTree) pullBeforePush(
+// integrateBeforePush integrates remote changes before pushing.
+func (w *workTree) integrateBeforePush(
 	targetBranch string,
 	committer *User,
+	integrationPolicy PushIntegrationPolicy,
 ) error {
+	if integrationPolicy == "" {
+		integrationPolicy = PushIntegrationPolicyNone
+	}
+	if integrationPolicy == PushIntegrationPolicyNone {
+		return nil
+	}
+
 	var homeDir string
 	if committer != nil {
 		// This committer is specific to any commits made during rebasing or
@@ -61,21 +64,38 @@ func (w *workTree) pullBeforePush(
 		}
 	}
 
-	safe, err := w.canSafelyRebase(targetBranch, homeDir)
-	if err != nil {
-		return fmt.Errorf(
-			"error checking rebase safety: %w", err,
-		)
-	}
 	logger := logging.LoggerFromContext(context.TODO()).WithValues(
 		"remoteBranch", targetBranch,
+		"integrationPolicy", integrationPolicy,
 	)
-	if safe {
-		logger.Trace("integrating remote changes via rebase")
+
+	switch integrationPolicy {
+	case PushIntegrationPolicyAlwaysRebase:
+		logger.Trace("integrating remote changes via rebase (always)")
 		return w.pullRebase(targetBranch, homeDir)
+	case PushIntegrationPolicyAlwaysMerge:
+		logger.Trace("integrating remote changes via merge (always)")
+		return w.pullMerge(targetBranch, homeDir)
+	case PushIntegrationPolicyRebaseOrMerge, PushIntegrationPolicyRebaseOrFail:
+		safe, err := w.canSafelyRebase(targetBranch, homeDir)
+		if err != nil {
+			return fmt.Errorf("error checking rebase safety: %w", err)
+		}
+		if safe {
+			logger.Trace("integrating remote changes via rebase")
+			return w.pullRebase(targetBranch, homeDir)
+		}
+		if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
+			logger.Trace(
+				"rebase is unsafe and policy prohibits merge fallback",
+			)
+			return ErrRebaseUnsafe
+		}
+		logger.Trace("integrating remote changes via merge (rebase unsafe)")
+		return w.pullMerge(targetBranch, homeDir)
+	default:
+		return fmt.Errorf("unknown push integration policy: %q", integrationPolicy)
 	}
-	logger.Trace("integrating remote changes via merge")
-	return w.pullMerge(targetBranch, homeDir)
 }
 
 // pullRebase performs a git pull --rebase against the specified remote branch.

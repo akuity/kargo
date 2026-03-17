@@ -163,7 +163,7 @@ func Test_gitPusher_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitPusher(promotion.StepRunnerCapabilities{})
+	r := newGitPusher(promotion.StepRunnerCapabilities{}, "")
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 
@@ -253,9 +253,10 @@ func Test_gitPusher_run(t *testing.T) {
 	)
 
 	// Now we can proceed to test gitPusher...
-	r := newGitPusher(promotion.StepRunnerCapabilities{
-		CredsDB: &credentials.FakeDB{},
-	})
+	r := newGitPusher(
+		promotion.StepRunnerCapabilities{CredsDB: &credentials.FakeDB{}},
+		"",
+	)
 	runner, ok := r.(*gitPushPusher)
 	require.True(t, ok)
 	require.NotNil(t, runner.branchMus)

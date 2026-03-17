@@ -524,6 +524,8 @@ controller:
     name: "Kargo"
     ## @param controller.gitClient.email Specifies the email of the Kargo controller (used when authoring Git commits).
     email: "no-reply@kargo.io"
+    ## @param controller.gitClient.pushIntegrationPolicy Controls how remote changes are integrated before pushing. Options: AlwaysRebase (unconditionally rebase), RebaseOrMerge (rebase when safe, merge otherwise), RebaseOrFail (rebase when safe, fail otherwise), AlwaysMerge (unconditionally merge). The default will change from AlwaysRebase to RebaseOrMerge in v1.12.0.
+    pushIntegrationPolicy: "AlwaysRebase"
 
     signingKeySecret:
       ## @param controller.gitClient.signingKeySecret.name Specifies the name of an existing `Secret` which contains the Git user's signing key. The value should be accessible under `.data.signingKey` in the same namespace as Kargo. When the signing key is a GPG key, the GPG key's name and email address identity must match the values defined for `controller.gitClient.name` and `controller.gitClient.email`.

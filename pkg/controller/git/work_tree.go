@@ -679,13 +679,10 @@ type PushOptions struct {
 	// locally. Whether this field is empty or non-empty, if Tag is non-empty,
 	// it takes precedence and the tag will be pushed -- the branch will not.
 	TargetBranch string
-	// PullRebase indicates whether to pull and rebase before pushing. This can
-	// be useful when pushing changes to a remote branch that has been updated
-	// in the time since the local branch was last pulled. If rebasing would
-	// result in Kargo re-signing commits it doesn't, itself, trust or replacing
-	// signed commits with unsigned commits, a merge will be performed instead of
-	// a rebase.
-	PullRebase bool
+	// IntegrationPolicy controls how remote changes are integrated before
+	// pushing. If empty or set to PushIntegrationPolicyNone, no integration
+	// is performed.
+	IntegrationPolicy PushIntegrationPolicy
 	// Committer is the identity used as the committer for merge commits or
 	// replacement commits created when integrating remote changes before
 	// pushing. If nil, the default author already configured in the git
@@ -706,6 +703,9 @@ func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
 	}
+	if opts.IntegrationPolicy == "" {
+		opts.IntegrationPolicy = PushIntegrationPolicyNone
+	}
 
 	args := []string{"push", "origin"}
 	if opts.Tag != "" {
@@ -725,14 +725,17 @@ func (w *workTree) Push(opts *PushOptions) error {
 	}
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-	if opts.PullRebase {
+	if opts.IntegrationPolicy != PushIntegrationPolicyNone {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
 			return err
 		}
 		// We only want to pull and rebase/merge if the remote branch exists.
 		if exists {
-			if err = w.pullBeforePush(targetBranch, opts.Committer); err != nil {
+			if err = w.integrateBeforePush(
+				targetBranch,
+				opts.Committer, opts.IntegrationPolicy,
+			); err != nil {
 				return err
 			}
 		}
