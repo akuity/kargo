@@ -80,7 +80,8 @@ func (e *LocalStepExecutor) ExecuteStep(
 		result, err = runner.Run(ctx, &req.Context)
 	}()
 
-	if err != nil {
+	if err != nil && result.Status == kargoapi.PromotionStepStatusErrored {
+		// Add the prefix to technical errors only
 		err = fmt.Errorf("error running step %q: %w", req.Step.Alias, err)
 	}
 
