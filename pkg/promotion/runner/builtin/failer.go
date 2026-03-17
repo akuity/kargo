@@ -58,8 +58,8 @@ func (f *failer) run(
 		err = fmt.Errorf("failed with message: %s", cfg.Message)
 	}
 
-	return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-		err
+	return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+		&promotion.TerminalError{Err: err}
 }
 
 func (f *failer) convert(cfg promotion.Config) (builtin.FailConfig, error) {

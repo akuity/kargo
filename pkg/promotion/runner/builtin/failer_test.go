@@ -31,17 +31,6 @@ func Test_failer_convert(t *testing.T) {
 	runValidationTests(t, runner.convert, tests)
 }
 
-func Test_failer_run_without_message(t *testing.T) {
-	r := newFailer(promotion.StepRunnerCapabilities{})
-	runner, ok := r.(*failer)
-	require.True(t, ok)
-
-	res, err := runner.run(builtin.FailConfig{})
-
-	require.EqualError(t, err, "failed")
-	require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
-}
-
 func Test_failer_run(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -68,10 +57,10 @@ func Test_failer_run(t *testing.T) {
 
 			res, err := runner.run(tt.cfg)
 
+			var termErr *promotion.TerminalError
+			require.ErrorAs(t, err, &termErr)
 			require.EqualError(t, err, tt.expectedError)
-			require.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
-
+			require.Equal(t, kargoapi.PromotionStepStatusFailed, res.Status)
 		})
 	}
-
 }

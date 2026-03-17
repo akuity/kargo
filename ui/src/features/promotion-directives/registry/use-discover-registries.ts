@@ -12,6 +12,7 @@ import gitPushConfig from '@ui/gen/directives/git-push-config.json';
 import gitWaitForPR from '@ui/gen/directives/git-wait-for-pr-config.json';
 import helmTemplateConfig from '@ui/gen/directives/helm-template-config.json';
 import helmUpdateChartConfig from '@ui/gen/directives/helm-update-chart-config.json';
+import failConfig from '@ui/gen/directives/fail-config.json';
 import httpConfig from '@ui/gen/directives/http-config.json';
 import jsonParseConfig from '@ui/gen/directives/json-parse-config.json';
 import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
@@ -112,7 +113,7 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       },
       {
         identifier: 'fail',
-        config: httpConfig as JSONSchema7
+        config: failConfig as JSONSchema7
       }
     ]
   };
