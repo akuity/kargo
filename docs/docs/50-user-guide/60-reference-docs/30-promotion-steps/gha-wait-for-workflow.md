@@ -83,7 +83,7 @@ The referenced `Secret` should contain the following keys:
 | `runID`                 | `integer` | Y        | The workflow run ID to wait for. Can be a direct ID or a reference to freight metadata.   |
 | `expectedConclusion`    | `string`  | N        | The expected final conclusion status. If not provided, conclusion status is not validated. |
 | `insecureSkipTLSVerify` | `boolean` | N        | Skip TLS verification when communicating with the GitHub API (default: false).            |
-| `pollInterval`          | `integer` | N        | Poll interval in seconds for checking workflow status. Overrides the default controller reconciliation interval of 5 minutes when set. Must be >= 1. Available in Kargo >= v1.10. |
+| `pollInterval`          | `string`  | N        | Poll interval for checking workflow status, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`). Overrides the default controller reconciliation interval of 5 minutes when set. Available in Kargo >= v1.10. |
 
 ### v1.8 (Deprecated)
 
