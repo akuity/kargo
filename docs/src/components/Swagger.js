@@ -6,7 +6,7 @@ import 'swagger-ui-react/swagger-ui.css';
 
 const store = configureStore({ reducer: {} });
 
-export default function SwaggerDemo() {
+export default function Swagger() {
     return (
         <Provider store={store}>
             <SwaggerUI url="/swagger.yaml" />    
