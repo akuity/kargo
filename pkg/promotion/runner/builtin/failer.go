@@ -55,7 +55,7 @@ func (f *failer) run(
 ) (promotion.StepResult, error) {
 	err := fmt.Errorf("failed")
 	if cfg.Message != "" {
-		err = fmt.Errorf("failed with message: %s", cfg.Message)
+		err = fmt.Errorf("failed: %s", cfg.Message)
 	}
 
 	return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},

@@ -45,7 +45,7 @@ func Test_failer_run(t *testing.T) {
 		{
 			"with message",
 			builtin.FailConfig{Message: "test message"},
-			"failed with message: test message",
+			"failed: test message",
 		},
 	}
 
