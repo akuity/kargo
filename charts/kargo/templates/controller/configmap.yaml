@@ -53,4 +53,8 @@ data:
   {{- if .Values.controller.reconcilers.warehouses.minReconciliationInterval }}
   MIN_WAREHOUSE_RECONCILIATION_INTERVAL: {{ .Values.controller.reconcilers.warehouses.minReconciliationInterval | quote }}
   {{- end }}
+  {{- if .Values.controller.gitRepoCache.enabled }}
+  GIT_REPO_CACHE_ENABLED: "true"
+  GIT_REPO_CACHE_MAX_ENTRIES: {{ .Values.controller.gitRepoCache.maxEntries | default 100 | quote }}
+  {{- end }}
 {{- end }}

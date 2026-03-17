@@ -31,6 +31,7 @@ import (
 	healthCheckers "github.com/akuity/kargo/pkg/health/checker/builtin"
 	"github.com/akuity/kargo/pkg/indexer"
 	"github.com/akuity/kargo/pkg/logging"
+	gitpkg "github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/os"
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/server/kubernetes"
@@ -460,13 +461,20 @@ func (o *controllerOptions) setupReconcilers(
 		return fmt.Errorf("error setting up control flow Stages reconciler: %w", err)
 	}
 
+	var repoCache *gitpkg.RepoCache
+	if os.GetEnv("GIT_REPO_CACHE_ENABLED", "") == "true" {
+		repoCache = gitpkg.NewRepoCache(&gitpkg.RepoCacheOptions{
+			MaxEntries: os.GetEnvInt("GIT_REPO_CACHE_MAX_ENTRIES", gitpkg.DefaultMaxCacheEntries),
+		})
+	}
+
 	if err := warehouses.SetupReconcilerWithManager(
 		ctx,
 		kargoMgr,
 		credentialsDB,
 		subscription.DefaultSubscriberRegistry,
 		warehouses.ReconcilerConfigFromEnv(),
-		nil, // repoCache: opt-in, nil uses default git.Clone behavior
+		repoCache,
 	); err != nil {
 		return fmt.Errorf("error setting up Warehouses reconciler: %w", err)
 	}

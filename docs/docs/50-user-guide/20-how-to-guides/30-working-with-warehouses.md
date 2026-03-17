@@ -910,6 +910,39 @@ assumes tags are mutable.
 
 :::
 
+### Git Repository Caching for Monorepos
+
+In monorepo setups, it is common for many `Warehouse` resources to subscribe to
+the same Git repository, each watching a different set of paths using
+`includePaths` or `excludePaths`. By default, each `Warehouse` independently
+clones the full repository on every reconciliation cycle. When many `Warehouse`s
+subscribe to the same repository, this results in redundant `git clone`
+operations that can significantly increase reconciliation latency and risk
+exceeding Git hosting provider rate limits.
+
+For example, 57 `Warehouse` resources watching the same monorepo with
+`maxConcurrentReconciles: 16` would produce 4 batches of 16 full clones per
+reconciliation cycle — each fetching the complete history from the remote.
+
+Kargo offers an opt-in **shared Git repository cache** that eliminates this
+redundancy. When enabled by your operator, the controller maintains a pool of
+bare Git clones. The first `Warehouse` to access a repository triggers a
+full clone; all subsequent access to the same repository only fetches updated
+refs (typically completing in milliseconds). Each `Warehouse` receives an
+isolated worktree from the shared clone, so discovery logic works unchanged.
+
+:::info
+
+This feature requires no changes to your `Warehouse` resources. When the
+operator enables the Git repository cache, all Git-subscribed `Warehouse`s
+benefit automatically.
+
+For more information on enabling this feature, see the
+[Git Repository Caching](../../40-operator-guide/20-advanced-installation/30-common-configurations.md#git-repository-caching)
+section of the Operator's Guide.
+
+:::
+
 ## Triggering Artifact Discovery Using Webhooks
 
 Configuring Kargo to receive webhook payloads from popular Git hosting providers

@@ -519,6 +519,13 @@ controller:
       ## @param controller.reconcilers.warehouses.minReconciliationInterval optionally sets the minimum reconciliation interval for Warehouse resources. Accepts duration format (e.g., "5m", "1h", "30s"). If a Warehouse specifies an interval lower than this minimum, the minimum value will be enforced instead. If not set, no minimum is enforced.
       minReconciliationInterval: "5m0s"
 
+  ## Git Repository Cache
+  gitRepoCache:
+    ## @param controller.gitRepoCache.enabled enables a shared bare-clone cache for Git repositories, eliminating redundant clones when multiple Warehouses subscribe to the same repo.
+    enabled: false
+    ## @param controller.gitRepoCache.maxEntries maximum number of cached bare repositories. When exceeded, the least recently used entry is evicted. Actively used entries are never evicted.
+    maxEntries: 100
+
   gitClient:
     ## @param controller.gitClient.name Specifies the name of the Kargo controller (used when authoring Git commits).
     name: "Kargo"

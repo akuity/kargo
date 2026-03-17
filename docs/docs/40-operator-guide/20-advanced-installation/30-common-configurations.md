@@ -572,6 +572,64 @@ For more information on how to use this feature, see the
 [Performance Considerations](../../50-user-guide/20-how-to-guides/30-working-with-warehouses.md#caching-image-metadata-by-tag)
 section of the user guide.
 
+### Git Repository Caching
+
+When multiple `Warehouse` resources subscribe to the same Git repository (a
+common pattern in monorepo setups), each `Warehouse` independently clones the
+repository on every reconciliation cycle. For large repositories with many
+subscribers, this results in redundant network I/O and can significantly increase
+reconciliation latency.
+
+Kargo offers an opt-in **shared Git repository cache** that eliminates this
+redundancy. When enabled, the controller maintains a pool of bare Git clones
+keyed by repository URL. The first `Warehouse` to access a repository triggers a
+full `git clone --bare`; subsequent `Warehouse`s accessing the same repository
+only perform a `git fetch` to update refs (typically completing in milliseconds
+rather than seconds). Each `Warehouse` receives an independent
+[worktree](https://git-scm.com/docs/git-worktree) from the shared bare clone,
+so existing discovery logic works unchanged.
+
+:::info
+
+The cache is **credential-aware**: cache keys include a hash of the credentials
+used to access the repository. This means that different Kargo projects
+accessing the same repository URL with different credentials will each get
+separate cache entries, preventing cross-project credential leakage.
+
+:::
+
+To enable the Git repository cache:
+
+```yaml
+controller:
+  gitRepoCache:
+    enabled: true
+    maxEntries: 100
+```
+
+| Parameter | Description | Default |
+|---|---|---|
+| `controller.gitRepoCache.enabled` | Enable the shared Git repository cache. | `false` |
+| `controller.gitRepoCache.maxEntries` | Maximum number of cached bare repositories. When exceeded, the least recently used entry is evicted. Entries that are actively in use are never evicted. | `100` |
+
+:::note
+
+The cache is particularly beneficial for **monorepo** setups where many
+`Warehouse` resources subscribe to the same repository with different
+`includePaths` or `excludePaths` filters. In such cases, the cache can reduce
+Git operations from _N_ full clones per reconciliation cycle to one `git fetch`
++ _N_ local worktree creations.
+
+:::
+
+:::tip
+
+For best results, combine the Git repository cache with
+[webhook-triggered discovery](../35-cluster-configuration.md#triggering-artifact-discovery-using-webhooks)
+to minimize both the frequency and cost of Git operations.
+
+:::
+
 ## Garbage Collection
 
 Kargo includes a garbage collector that automatically removes old `Freight` and
