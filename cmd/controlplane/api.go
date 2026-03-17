@@ -130,6 +130,17 @@ func (o *apiOptions) run(ctx context.Context) error {
 		)
 	}
 
+	recorder, shutdown := event.NewRecorderWithShutdown(
+		ctx,
+		kubeClient.InternalClient().Scheme(),
+		kubeClient.InternalClient(),
+		"api",
+	)
+	sender := k8sevent.NewEventSenderWithShutdown(
+		recorder, shutdown,
+	)
+	defer sender.Shutdown()
+
 	srv := server.NewServer(
 		serverCfg,
 		kubeClient,
@@ -137,14 +148,7 @@ func (o *apiOptions) run(ctx context.Context) error {
 			kubeClient,
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
-		k8sevent.NewEventSender(
-			event.NewRecorder(
-				ctx,
-				kubeClient.InternalClient().Scheme(),
-				kubeClient.InternalClient(),
-				"api",
-			),
-		),
+		sender,
 	)
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%s", o.BindAddress, o.Port))
 	if err != nil {
