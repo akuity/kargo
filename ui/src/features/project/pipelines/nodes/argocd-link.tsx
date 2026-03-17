@@ -5,6 +5,7 @@ import React from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 import z from 'zod';
 
+import { ARGOCD_CONTEXT_KEY, SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { HealthStatusIcon } from '@ui/features/common/health-status/health-status-icon';
@@ -12,9 +13,6 @@ import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { decodeRawData } from '@ui/utils/decode-raw-data';
 
 import { useDictionaryContext } from '../context/dictionary-context';
-
-const ARGOCD_CONTEXT_KEY = 'kargo.akuity.io/argocd-context';
-const SHARD_LABEL_KEY = 'kargo.akuity.io/shard';
 
 type ArgoCDLinkProps = React.PropsWithChildren<{
   stage: Stage;
@@ -57,7 +55,8 @@ export const ArgoCDLink = ({
           generatePath(paths.projectArgoCDExtension, {
             name: projectName,
             namespace: link.namespace,
-            appName: link.name
+            appName: link.name,
+            stageName: stage.metadata?.name
           })
         );
       } else {
