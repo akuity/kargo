@@ -209,7 +209,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			assertions: func(t *testing.T, result Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Contains(t, result.Message, "an unrecoverable error occurred")
+				assert.Contains(t, result.Message, "something went wrong")
 				assert.Equal(t, int64(1), result.CurrentStep)
 
 				require.Len(t, result.StepExecutionMetadata, 2)
@@ -233,6 +233,39 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			},
 		},
 		{
+			name: "terminal error with failed status on step execution",
+			steps: []Step{
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "terminal-failed-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionPhaseFailed, result.Status)
+				// Failed + terminal: message is the raw error, no boilerplate prefix.
+				assert.Contains(t, result.Message, "something went wrong")
+				assert.NotContains(t, result.Message, "an unrecoverable error occurred")
+
+				require.Len(t, result.StepExecutionMetadata, 2)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusFailed, result.StepExecutionMetadata[1].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
+				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
+
+				// Verify first step output is preserved in state
+				assert.Equal(t, State{
+					"step1": map[string]any{
+						"key": "value",
+					},
+					"step2": map[string]any(nil),
+				}, result.State)
+			},
+		},
+		{
 			name: "non-terminal error on step execution; error threshold met",
 			steps: []Step{
 				{Kind: "success-step", Alias: "step1"},
@@ -241,7 +274,7 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 			assertions: func(t *testing.T, result Result, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionPhaseErrored, result.Status)
-				assert.Contains(t, result.Message, "met error threshold")
+				assert.Contains(t, result.Message, "something went wrong")
 				assert.Equal(t, int64(1), result.CurrentStep)
 
 				require.Len(t, result.StepExecutionMetadata, 2)
@@ -262,6 +295,31 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 					},
 					"step2": map[string]any(nil),
 				}, result.State)
+			},
+		},
+		{
+			name: "non-terminal failed status on step execution; error threshold met",
+			steps: []Step{
+				{Kind: "success-step", Alias: "step1"},
+				{Kind: "failed-non-terminal-step", Alias: "step2"},
+			},
+			assertions: func(t *testing.T, result Result, err error) {
+				require.NoError(t, err)
+				// Step returned Failed (not Errored); threshold preserves that status.
+				assert.Equal(t, kargoapi.PromotionPhaseFailed, result.Status)
+				assert.Contains(t, result.Message, "something went wrong")
+				assert.Equal(t, int64(1), result.CurrentStep)
+
+				require.Len(t, result.StepExecutionMetadata, 2)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, result.StepExecutionMetadata[0].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[0].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[0].FinishedAt)
+
+				assert.Equal(t, kargoapi.PromotionStepStatusFailed, result.StepExecutionMetadata[1].Status)
+				assert.NotNil(t, result.StepExecutionMetadata[1].StartedAt)
+				assert.NotNil(t, result.StepExecutionMetadata[1].FinishedAt)
+				assert.Contains(t, result.StepExecutionMetadata[1].Message, "something went wrong")
 			},
 		},
 		{
@@ -609,6 +667,28 @@ func TestLocalOrchestrator_ExecuteSteps(t *testing.T) {
 								Status: kargoapi.PromotionStepStatusErrored,
 							},
 							RunErr: &TerminalError{Err: errors.New("something went wrong")},
+						}
+					},
+				},
+				StepRunnerRegistration{
+					Name: "terminal-failed-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
+						return &MockStepRunner{
+							RunResult: StepResult{
+								Status: kargoapi.PromotionStepStatusFailed,
+							},
+							RunErr: &TerminalError{Err: errors.New("something went wrong")},
+						}
+					},
+				},
+				StepRunnerRegistration{
+					Name: "failed-non-terminal-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
+						return &MockStepRunner{
+							RunResult: StepResult{
+								Status: kargoapi.PromotionStepStatusFailed,
+							},
+							RunErr: errors.New("something went wrong"),
 						}
 					},
 				},

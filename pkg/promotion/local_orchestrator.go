@@ -275,8 +275,13 @@ func (o *LocalOrchestrator) determineStepCompletion(
 		// "skipped" is treated similarly to success.
 		meta.Finished()
 		return true
+	case meta.Status == kargoapi.PromotionStepStatusFailed && IsTerminal(err):
+		// Business-logic failure: step explicitly signaled failure with no
+		// retry. Use the error text directly without a boilerplate prefix.
+		meta.WithMessage(err.Error()).Finished()
+		return true
 	case IsTerminal(err):
-		// This is an unrecoverable error.
+		// Technical failure: unrecoverable error, step did not signal Failed.
 		meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
 			"an unrecoverable error occurred: %s", err,
 		).Finished()
@@ -288,7 +293,11 @@ func (o *LocalOrchestrator) determineStepCompletion(
 		errorThreshold := step.Retry.GetErrorThreshold(stepMeta.DefaultErrorThreshold)
 		if meta.ErrorCount >= errorThreshold {
 			// The error threshold has been met.
-			meta.WithStatus(kargoapi.PromotionStepStatusErrored).WithMessagef(
+			status := kargoapi.PromotionStepStatusErrored
+			if meta.Status == kargoapi.PromotionStepStatusFailed {
+				status = kargoapi.PromotionStepStatusFailed
+			}
+			meta.WithStatus(status).WithMessagef(
 				"step %q met error threshold of %d: %s", step.Alias, errorThreshold, meta.Message,
 			).Finished()
 			// Continue, because despite this failure, some steps' "if" conditions
