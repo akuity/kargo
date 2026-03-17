@@ -118,7 +118,41 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 				require.Equal(t, StepResult{
 					Status: kargoapi.PromotionStepStatusErrored,
 				}, result)
-				require.ErrorContains(t, err, "step execution failed")
+				require.EqualError(
+					t, err,
+					`error running step "": step execution failed`,
+				)
+			},
+		},
+		{
+			name: "step execution returns failed",
+			registry: MustNewStepRunnerRegistry(
+				StepRunnerRegistration{
+					Name: "test-step",
+					Value: func(_ StepRunnerCapabilities) StepRunner {
+						return &MockStepRunner{
+							RunResult: StepResult{
+								Status: kargoapi.PromotionStepStatusFailed,
+							},
+							RunErr: errors.New("deployment blocked by policy"),
+						}
+					},
+				},
+			),
+			request: StepExecutionRequest{
+				Context: StepContext{},
+				Step: Step{
+					Kind: "test-step",
+				},
+			},
+			assertions: func(t *testing.T, result StepResult, err error) {
+				require.Equal(t, StepResult{
+					Status: kargoapi.PromotionStepStatusFailed,
+				}, result)
+				require.EqualError(
+					t, err,
+					`step "": deployment blocked by policy`,
+				)
 			},
 		},
 		{
