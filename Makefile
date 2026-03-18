@@ -220,7 +220,7 @@ codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller c
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger
-	rm -f ./docs/static/swagger.yaml ./docs/static/swagger.json
+	rm -f swagger.yaml swagger.json
 	rm -rf pkg/client/generated
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
@@ -230,12 +230,12 @@ codegen-openapi: install-swag install-go-swagger
 		--parseDependency \
 		--parseInternal \
 		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml ./docs/static/swagger.yaml
-	mv /tmp/swagger-build/swagger.json ./docs/static/swagger.json
+	mv /tmp/swagger-build/swagger.yaml swagger.yaml
+	mv /tmp/swagger-build/swagger.json swagger.json
 	rm -rf /tmp/swagger-build
 	mkdir -p pkg/client/generated
 	$(GO_SWAGGER_LINK) generate client \
-		-f ./docs/static/swagger.json \
+		-f swagger.json \
 		-t pkg \
 		--client-package client/generated \
 		--model-package client/generated/models \
