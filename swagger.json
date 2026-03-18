@@ -6,7 +6,7 @@
         "contact": {},
         "version": "v1alpha1"
     },
-    "host": "\u003cyour-kargo-server-host\u003e",
+    "host": "localhost",
     "basePath": "/",
     "paths": {
         "/v1beta1/login": {

@@ -330,7 +330,7 @@ definitions:
         description: Version is a human-friendly version string.
         type: string
     type: object
-host: <your-kargo-server-host>
+host: localhost
 info:
   contact: {}
   description: REST API for Kargo
