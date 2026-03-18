@@ -19,6 +19,19 @@ import (
 const stepKindGitClone = "git-clone"
 
 func init() {
+	cfg := struct {
+		Name           string `envconfig:"GITCLIENT_NAME" default:"Kargo"`
+		Email          string `envconfig:"GITCLIENT_EMAIL" default:"no-reply@kargo.io"`
+		SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
+		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
+	}{}
+	envconfig.MustProcess("", &cfg)
+	defaultGitUser := git.User{
+		Name:           cfg.Name,
+		Email:          cfg.Email,
+		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
+		SigningKeyPath: cfg.SigningKeyPath,
+	}
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindGitClone,
@@ -27,7 +40,9 @@ func init() {
 					promotion.StepCapabilityAccessCredentials,
 				},
 			},
-			Value: newGitCloner,
+			Value: func(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+				return newGitCloner(caps, defaultGitUser)
+			},
 		},
 	)
 }
@@ -54,39 +69,16 @@ func filterForCheckouts(checkouts []builtin.Checkout) string {
 	return git.FilterBlobless
 }
 
-// gitUserFromEnv populates a git.User struct from environment variables.
-func gitUserFromEnv() git.User {
-	cfg := struct {
-		Name           string `envconfig:"GITCLIENT_NAME"`
-		Email          string `envconfig:"GITCLIENT_EMAIL"`
-		SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
-		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
-	}{}
-	envconfig.MustProcess("", &cfg)
-	name := cfg.Name
-	if name == "" {
-		name = git.DefaultUsername
-	}
-	email := cfg.Email
-	if email == "" {
-		email = git.DefaultEmail
-	}
-	u := git.User{
-		Name:           name,
-		Email:          email,
-		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
-		SigningKeyPath: cfg.SigningKeyPath,
-	}
-	return u
-}
-
 // newGitCloner returns an implementation of the promotion.StepRunner interface
 // that clones one or more refs from a remote Git repository to one or more
 // working directories.
-func newGitCloner(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+func newGitCloner(
+	caps promotion.StepRunnerCapabilities,
+	gitUser git.User,
+) promotion.StepRunner {
 	return &gitCloner{
 		credsDB:      caps.CredsDB,
-		gitUser:      gitUserFromEnv(),
+		gitUser:      gitUser,
 		schemaLoader: getConfigSchemaLoader(stepKindGitClone),
 	}
 }

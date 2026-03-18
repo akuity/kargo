@@ -15,12 +15,8 @@ import (
 )
 
 const (
-	// DefaultUsername is the default git user name used for commits when
-	// the GITCLIENT_NAME environment variable is not set.
-	DefaultUsername = "Kargo"
-	// DefaultEmail is the default git email used for commits when
-	// the GITCLIENT_EMAIL environment variable is not set.
-	DefaultEmail = "no-reply@kargo.io"
+	defaultUsername = "Kargo"
+	defaultEmail    = "no-reply@kargo.io"
 
 	repoDirConfigKey         = "kargo.repoDir"
 	repoHomeDirConfigKey     = "kargo.repoHomeDir"
@@ -133,7 +129,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	if author.Name == "" {
-		author.Name = DefaultUsername
+		author.Name = defaultUsername
 	}
 
 	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
@@ -150,7 +146,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	}
 
 	if author.Email == "" {
-		author.Email = DefaultEmail
+		author.Email = defaultEmail
 	}
 
 	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)

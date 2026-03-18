@@ -300,7 +300,7 @@ func Test_gitCloner_convert(t *testing.T) {
 		},
 	}
 
-	r := newGitCloner(promotion.StepRunnerCapabilities{})
+	r := newGitCloner(promotion.StepRunnerCapabilities{}, git.User{})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
@@ -340,7 +340,7 @@ func Test_gitCloner_run(t *testing.T) {
 
 	r := newGitCloner(promotion.StepRunnerCapabilities{
 		CredsDB: &credentials.FakeDB{},
-	})
+	}, git.User{})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 
@@ -447,7 +447,7 @@ func Test_gitCloner_run_with_submodules(t *testing.T) {
 	// Run git-cloner with recurseSubmodules = true
 	r := newGitCloner(promotion.StepRunnerCapabilities{
 		CredsDB: &credentials.FakeDB{},
-	})
+	}, git.User{})
 	runner, ok := r.(*gitCloner)
 	require.True(t, ok)
 

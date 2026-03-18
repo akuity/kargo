@@ -71,8 +71,19 @@ func (g *githubVerifiedPusher) isGitHubHTTPStatus(
 func init() {
 	var once sync.Once
 	var pusher promotion.StepRunner
-	cfg := githubVerifiedPusherConfig{}
-	envconfig.MustProcess("", &cfg)
+	envCfg := struct {
+		Name         string `envconfig:"GITCLIENT_NAME" default:"Kargo"`
+		Email        string `envconfig:"GITCLIENT_EMAIL" default:"no-reply@kargo.io"`
+		MaxRevisions int    `envconfig:"GITHUB_VERIFIED_PUSH_MAX_REVISIONS" default:"10"`
+	}{}
+	envconfig.MustProcess("", &envCfg)
+	cfg := githubVerifiedPusherConfig{
+		MaxRevisions: envCfg.MaxRevisions,
+	}
+	defaultGitUser := git.User{
+		Name:  envCfg.Name,
+		Email: envCfg.Email,
+	}
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
 			Name: stepKindGitHubVerifiedPush,
@@ -89,7 +100,7 @@ func init() {
 				caps promotion.StepRunnerCapabilities,
 			) promotion.StepRunner {
 				once.Do(func() {
-					pusher = newGitHubVerifiedPusher(caps, cfg)
+					pusher = newGitHubVerifiedPusher(caps, cfg, defaultGitUser)
 				})
 				return pusher
 			},
@@ -215,12 +226,13 @@ type githubVerifiedPusher struct {
 func newGitHubVerifiedPusher(
 	caps promotion.StepRunnerCapabilities,
 	cfg githubVerifiedPusherConfig,
+	gitUser git.User,
 ) promotion.StepRunner {
 	g := &githubVerifiedPusher{
 		credsDB:      caps.CredsDB,
 		schemaLoader: getConfigSchemaLoader(stepKindGitHubVerifiedPush),
 		cfg:          cfg,
-		gitUser:      gitUserFromEnv(),
+		gitUser:      gitUser,
 		branchMus:    map[string]*sync.Mutex{},
 	}
 	g.loadWorkTreeFn = git.LoadWorkTree

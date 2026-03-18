@@ -155,6 +155,7 @@ func Test_githubVerifiedPusher_convert(t *testing.T) {
 	r := newGitHubVerifiedPusher(
 		promotion.StepRunnerCapabilities{},
 		githubVerifiedPusherConfig{},
+		git.User{},
 	)
 	runner, ok := r.(*githubVerifiedPusher)
 	require.True(t, ok)
@@ -1093,8 +1094,8 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			g := &githubVerifiedPusher{
 				cfg: githubVerifiedPusherConfig{MaxRevisions: 10},
 				gitUser: git.User{
-					Name:  git.DefaultUsername,
-					Email: git.DefaultEmail,
+					Name:  "Kargo",
+					Email: "no-reply@kargo.io",
 				},
 			}
 			targetBranch := tc.targetBranch
@@ -1295,8 +1296,8 @@ func Test_githubVerifiedPusher_isSystemAuthor(t *testing.T) {
 		{
 			name: "matches default identity",
 			gitUser: git.User{
-				Name:  git.DefaultUsername,
-				Email: git.DefaultEmail,
+				Name:  "Kargo",
+				Email: "no-reply@kargo.io",
 			},
 			author: "Kargo",
 			email:  "no-reply@kargo.io",
@@ -1305,8 +1306,8 @@ func Test_githubVerifiedPusher_isSystemAuthor(t *testing.T) {
 		{
 			name: "does not match custom author against defaults",
 			gitUser: git.User{
-				Name:  git.DefaultUsername,
-				Email: git.DefaultEmail,
+				Name:  "Kargo",
+				Email: "no-reply@kargo.io",
 			},
 			author: "Alice",
 			email:  "alice@example.com",

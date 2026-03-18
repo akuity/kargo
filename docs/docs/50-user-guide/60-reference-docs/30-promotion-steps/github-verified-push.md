@@ -12,13 +12,18 @@ GitHub repository using the GitHub REST API. It is a drop-in replacement for
 [`git-push`](git-push.md) that replays commits through the API instead of using
 `git push`.
 
-This step exists because GitHub Apps have no associated GPG to sign their commits
-with in the standard way. If your Kargo installation authenticates to GitHub via a
-[GitHub App installation token](../../50-security/30-managing-secrets.md#github-app-authentication)
-and your branch protection rules require verified signatures, this step provides
-an alternative solution. Commits created through the API with an
-App token are automatically signed by GitHub and marked as "Verified" — without
-requiring GPG key management on the GitHub side.
+Many users prefer that Kargo authenticates to GitHub using a
+[GitHub App](../../50-security/30-managing-secrets.md#github-app-authentication)
+because it avoids coupling authentication to any one GitHub account. GitHub Apps,
+however, cannot be associated with a GPG signing key, so when branch protection
+rules require verified commits, the key used for signing must still be associated
+with a user account, which undermines the benefits of having used an App for
+authentication. As a better alternative to signing commits with a key associated
+with a user account (in the [`git-commit`](git-commit.md) step),
+`github-verified-push`, a drop-in replacement for the
+[`git-push`](git-push.md) step, replays local commits on a remote branch using
+the GitHub API, resulting in commits signed directly by GitHub's own key, with
+nothing Kargo depends upon having been associated with a user account.
 
 Under the hood it:
 
@@ -58,16 +63,11 @@ Stages that write to the same branch do not write to the same files.
 :::info
 
 This step requires Git credentials with write access to the target repository.
-Two authentication methods are supported:
-
-- **GitHub App installation token** (recommended) — Commits replayed through
-  the API are automatically signed by GitHub and marked as "Verified." The
-  GitHub App must have **Contents: read & write** permission. See
-  [GitHub App Authentication](../../50-security/30-managing-secrets.md#github-app-authentication)
-  for setup instructions.
-- **Personal access token (PAT)** — Commits are replayed successfully and
-  attributed to the PAT owner, but are **not** marked as "Verified." This
-  can be useful for testing.
+While it does not strictly require a GitHub App, it only delivers its primary
+benefit — the "Verified" badge on commits — when authenticating with one. The
+GitHub App must have **Contents: read & write** permission. See
+[GitHub App Authentication](../../50-security/30-managing-secrets.md#github-app-authentication)
+for setup instructions.
 
 :::
 
