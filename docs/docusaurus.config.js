@@ -76,20 +76,17 @@ const config = {
     ],
     'docusaurus-plugin-sass',
     [
-      'docusaurus-plugin-openapi-docs',
+      '@scalar/docusaurus',
       {
-        id: "api",
-        docsPluginId: "classic",
-        config: {
-          petstore: {
-            specPath: "static/swagger.yaml",
-            outputDir: "docs/90-api-docs",
-          },
+        label: 'API Reference',
+        route: '/api-docs',
+        showNavLink: true, // optional, default is true
+        configuration: {
+          url: '/swagger.json',
         },
-      },
+      }
     ],
   ],
-  themes: ["docusaurus-theme-openapi-docs"],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

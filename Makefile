@@ -273,7 +273,7 @@ codegen-ui:
 .PHONY: codegen-docs
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
-	pnpm install --dir docs --frozen-lockfile
+	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################
