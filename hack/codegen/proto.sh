@@ -122,7 +122,7 @@ function main() {
   { msg "Returning to the project root..."; } 2> /dev/null
   cd "${proj_dir}"
 
-    { msg "Generating API docs"; } 2> /dev/null
+{ msg "Generating API docs"; } 2> /dev/null
 
 # Protoc-gen-doc plugin is used to generate API documentation.
 # Kube and Kargo API definitions are consolidated into a single directory
@@ -156,7 +156,6 @@ protoc -I $temp_doc_dir \
   { msg "Cleaning up temporary API docs directory..."; } 2> /dev/null
 
   rm -rf $temp_doc_dir
-
 
   # Next, we'll use buf to generate Go and TypeScript bindings from the .proto
   # files.
