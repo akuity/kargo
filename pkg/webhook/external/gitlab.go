@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	gl "gitlab.com/gitlab-org/api/client-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -134,7 +135,9 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 					"receivedCommits", len(e.Commits),
 				)
 			} else {
-				changedFiles = collectGitLabChangedFiles(e.Commits)
+				changedFiles = collectPaths(e.Commits, func(c *gl.PushEventCommit) []string {
+					return slices.Concat(c.Added, c.Modified, c.Removed)
+				})
 			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,
@@ -158,19 +161,4 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 		}
 	})
-}
-
-func collectGitLabChangedFiles(commits []*gl.PushEventCommit) []string {
-	var diffs []commitDiff
-	for _, c := range commits {
-		if c == nil {
-			continue
-		}
-		diffs = append(diffs, commitDiff{
-			Added:    c.Added,
-			Modified: c.Modified,
-			Removed:  c.Removed,
-		})
-	}
-	return collectChangedFiles(diffs)
 }

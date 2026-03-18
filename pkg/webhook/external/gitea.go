@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,17 +126,19 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
+		type commit struct {
+			Added    []string `json:"added"`
+			Modified []string `json:"modified"`
+			Removed  []string `json:"removed"`
+		}
+
 		payload := struct {
 			Ref  string `json:"ref"`
 			Repo struct {
 				URL string `json:"clone_url"`
 			} `json:"repository"`
-			Commits []struct {
-				Added    []string `json:"added"`
-				Modified []string `json:"modified"`
-				Removed  []string `json:"removed"`
-			} `json:"commits"`
-			TotalCommits int `json:"total_commits"`
+			Commits      []commit `json:"commits"`
+			TotalCommits int      `json:"total_commits"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
@@ -156,15 +159,9 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 				"receivedCommits", len(payload.Commits),
 			)
 		} else {
-			diffs := make([]commitDiff, len(payload.Commits))
-			for i, c := range payload.Commits {
-				diffs[i] = commitDiff{
-					Added:    c.Added,
-					Modified: c.Modified,
-					Removed:  c.Removed,
-				}
-			}
-			changedFiles = collectChangedFiles(diffs)
+			changedFiles = collectPaths(payload.Commits, func(c commit) []string {
+				return slices.Concat(c.Added, c.Modified, c.Removed)
+			})
 		}
 
 		logger = logger.WithValues(

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	gh "github.com/google/go-github/v76/github"
@@ -218,8 +219,13 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			ref := e.GetRef()
 			qualifiers = []string{ref}
 			logger = logger.WithValues("ref", ref)
-			changedFiles = collectGitHubChangedFiles(e)
-
+			commits := e.Commits // nolint: staticcheck
+			if e.HeadCommit != nil {
+				commits = append(commits, e.HeadCommit)
+			}
+			changedFiles = collectPaths(commits, func(c *gh.HeadCommit) []string {
+				return slices.Concat(c.Added, c.Modified, c.Removed)
+			})
 		case *gh.RegistryPackageEvent:
 			action := e.GetAction()
 			switch action {
@@ -274,29 +280,4 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, qualifiers...)
 	})
-}
-
-func collectGitHubChangedFiles(e *gh.PushEvent) []string {
-	// Commits is deprecated for the Events API, but is still populated in
-	// webhook payloads. We need it to collect changed files from all commits
-	// in the push, not just the head commit.
-	var diffs []commitDiff
-	for _, c := range e.Commits { //nolint:staticcheck
-		if c == nil {
-			continue
-		}
-		diffs = append(diffs, commitDiff{
-			Added:    c.Added,
-			Modified: c.Modified,
-			Removed:  c.Removed,
-		})
-	}
-	if hc := e.HeadCommit; hc != nil {
-		diffs = append(diffs, commitDiff{
-			Added:    hc.Added,
-			Modified: hc.Modified,
-			Removed:  hc.Removed,
-		})
-	}
-	return collectChangedFiles(diffs)
 }
