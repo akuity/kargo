@@ -230,8 +230,8 @@ codegen-openapi: install-swag install-go-swagger
 		--parseDependency \
 		--parseInternal \
 		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml swagger.yaml
-	mv /tmp/swagger-build/swagger.json swagger.json
+	mv /tmp/swagger-build/swagger.yaml .
+	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
 	mkdir -p pkg/client/generated
 	$(GO_SWAGGER_LINK) generate client \
