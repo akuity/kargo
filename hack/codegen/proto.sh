@@ -122,7 +122,7 @@ function main() {
   { msg "Returning to the project root..."; } 2> /dev/null
   cd "${proj_dir}"
 
-{ msg "Generating API docs"; } 2> /dev/null
+  { msg "Generating API docs"; } 2> /dev/null
 
 # Protoc-gen-doc plugin is used to generate API documentation.
 # Kube and Kargo API definitions are consolidated into a single directory
