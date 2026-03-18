@@ -195,7 +195,6 @@ func shouldRefresh(
 	changedFiles []string,
 	qualifiers ...string,
 ) (bool, error) {
-	var shouldRefresh bool
 	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
@@ -205,28 +204,9 @@ func shouldRefresh(
 					s.Git.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
-			if shouldRefresh && len(changedFiles) > 0 &&
-				(len(s.Git.IncludePaths) > 0 || len(s.Git.ExcludePaths) > 0) {
-				includeMatcher, iErr := commit.GetPathSelectors(s.Git.IncludePaths)
-				if iErr != nil {
-					return false, fmt.Errorf(
-						"error parsing include path selectors for Git subscription %q: %w",
-						s.Git.RepoURL, iErr,
-					)
-				}
-				excludeMatcher, eErr := commit.GetPathSelectors(s.Git.ExcludePaths)
-				if eErr != nil {
-					return false, fmt.Errorf(
-						"error parsing exclude path selectors for Git subscription %q: %w",
-						s.Git.RepoURL, eErr,
-					)
-				}
-				shouldRefresh = commit.MatchesPathsFilters(
-					includeMatcher,
-					excludeMatcher,
-					changedFiles,
-				)
+			if slices.ContainsFunc(qualifiers, selector.MatchesRef) &&
+				(len(changedFiles) == 0 || selector.MatchesPaths(changedFiles)) {
+				return true, nil
 			}
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(ctx, *s.Image, nil)
@@ -235,7 +215,9 @@ func shouldRefresh(
 					s.Image.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesTag)
+			if slices.ContainsFunc(qualifiers, selector.MatchesTag) {
+				return true, nil
+			}
 		case s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL:
 			selector, err := chart.NewSelector(*s.Chart, nil)
 			if err != nil {
@@ -243,10 +225,9 @@ func shouldRefresh(
 					s.Chart.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesVersion)
-		}
-		if shouldRefresh {
-			return true, nil
+			if slices.ContainsFunc(qualifiers, selector.MatchesVersion) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
