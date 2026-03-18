@@ -10,8 +10,11 @@ The GitHub webhook receiver responds to `ping`, `push`, `package`, and
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
 
-The receiver responds to `push` events by _refreshing_ all `Warehouse` resources
-subscribed to the Git repositories from which those events originated.
+The receiver responds to `push` events by _refreshing_ `Warehouse` resources
+subscribed to the Git repositories from which those events originated. When a
+Warehouse has `includePaths` or `excludePaths` configured, the receiver extracts
+the list of changed files from the push event and only refreshes the Warehouse
+if the changed files match those path filters.
 
 The receiver responds to  `package` events by _refreshing_ all `Warehouse`
 resources subscribed to the GHCR repositories from which those events

@@ -5,8 +5,20 @@ sidebar_label: Gitea
 # The Gitea Webhook Receiver
 
 The Gitea webhook receiver responds to `push` events originating from Gitea
-repositories by _refreshing_ all `Warehouse` resources subscribed to those
-repositories.
+repositories by _refreshing_ `Warehouse` resources subscribed to those
+repositories. When a Warehouse has `includePaths` or `excludePaths` configured,
+the receiver extracts the list of changed files from the push event and only
+refreshes the Warehouse if the changed files match those path filters.
+
+:::note
+
+Gitea limits the `commits` array in push webhook payloads to a configurable
+number of commits (default: **5**, controlled by `UI.FEED_MAX_COMMIT_NUM` in
+Gitea's `app.ini`). If a push contains more commits than this limit, Kargo
+detects the truncation and skips path filtering for that event, refreshing all
+matching Warehouses unconditionally.
+
+:::
 
 :::info
 

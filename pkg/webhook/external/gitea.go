@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	gh "github.com/google/go-github/v76/github"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,11 +126,19 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
+		type commit struct {
+			Added    []string `json:"added"`
+			Modified []string `json:"modified"`
+			Removed  []string `json:"removed"`
+		}
+
 		payload := struct {
 			Ref  string `json:"ref"`
 			Repo struct {
 				URL string `json:"clone_url"`
 			} `json:"repository"`
+			Commits      []commit `json:"commits"`
+			TotalCommits int      `json:"total_commits"`
 		}{}
 		if err := json.Unmarshal(requestBody, &payload); err != nil {
 			xhttp.WriteErrorJSON(
@@ -139,14 +148,27 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 			return
 		}
 
-		// Normalize the repo name
 		repoURLs := []string{urls.NormalizeGit(payload.Repo.URL)}
+
+		var changedFiles []string
+		if payload.TotalCommits > len(payload.Commits) {
+			logger.Info(
+				"push event commits were truncated by Gitea; "+
+					"skipping path filtering for this event",
+				"totalCommits", payload.TotalCommits,
+				"receivedCommits", len(payload.Commits),
+			)
+		} else {
+			changedFiles = collectPaths(payload.Commits, func(c commit) []string {
+				return slices.Concat(c.Added, c.Modified, c.Removed)
+			})
+		}
 
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
 			"ref", payload.Ref,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, payload.Ref)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, payload.Ref)
 	})
 }
