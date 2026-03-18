@@ -1,15 +1,26 @@
+import BrowserOnly from '@docusaurus/core/lib/client/exports/BrowserOnly';
 import React from 'react';
-import { Provider } from 'react-redux';
-import { configureStore } from '@reduxjs/toolkit';
-import SwaggerUI from 'swagger-ui-react';
-import 'swagger-ui-react/swagger-ui.css';
 
-const store = configureStore({ reducer: {} });
+const ReadOnlyAuthPlugin = () => ({
+    wrapComponents: {
+        authorizeBtn: () => () => null,
+    },
+});
 
 export default function Swagger() {
     return (
-        <Provider store={store}>
-            <SwaggerUI url="/swagger.yaml" />    
-        </Provider>
+        <BrowserOnly>
+            {() => {
+                const SwaggerUI = require('swagger-ui-react').default;
+                require('swagger-ui-react/swagger-ui.css');
+                return (
+                    <SwaggerUI
+                        url="/swagger.yaml"
+                        supportedSubmitMethods={[]}
+                        plugins={[ReadOnlyAuthPlugin]}
+                    />
+                );
+            }}
+        </BrowserOnly>
     );
 }
