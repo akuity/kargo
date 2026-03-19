@@ -57,9 +57,7 @@ type V1SecurityContext struct {
 	// This requires the ProcMountType feature flag to be enabled.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	ProcMount struct {
-		V1ProcMountType
-	} `json:"procMount,omitempty"`
+	ProcMount string `json:"procMount,omitempty"`
 
 	// Whether this container has a read-only root filesystem.
 	// Default is false.
@@ -133,10 +131,6 @@ func (m *V1SecurityContext) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateProcMount(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateSeLinuxOptions(formats); err != nil {
 		res = append(res, err)
 	}
@@ -165,14 +159,6 @@ func (m *V1SecurityContext) validateAppArmorProfile(formats strfmt.Registry) err
 
 func (m *V1SecurityContext) validateCapabilities(formats strfmt.Registry) error {
 	if swag.IsZero(m.Capabilities) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1SecurityContext) validateProcMount(formats strfmt.Registry) error {
-	if swag.IsZero(m.ProcMount) { // not required
 		return nil
 	}
 
@@ -215,10 +201,6 @@ func (m *V1SecurityContext) ContextValidate(ctx context.Context, formats strfmt.
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateProcMount(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateSeLinuxOptions(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -243,11 +225,6 @@ func (m *V1SecurityContext) contextValidateAppArmorProfile(ctx context.Context, 
 }
 
 func (m *V1SecurityContext) contextValidateCapabilities(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1SecurityContext) contextValidateProcMount(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

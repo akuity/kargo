@@ -7,7 +7,6 @@
  */
 import type { V1AppArmorProfile } from './v1AppArmorProfile';
 import type { V1Capabilities } from './v1Capabilities';
-import type { V1ProcMountType } from './v1ProcMountType';
 import type { V1SELinuxOptions } from './v1SELinuxOptions';
 import type { V1SeccompProfile } from './v1SeccompProfile';
 import type { V1WindowsSecurityContextOptions } from './v1WindowsSecurityContextOptions';
@@ -44,7 +43,7 @@ readonly paths and masked paths.
 This requires the ProcMountType feature flag to be enabled.
 Note that this field cannot be set when spec.os.name is windows.
 +optional */
-  procMount?: V1ProcMountType;
+  procMount?: string;
   /** Whether this container has a read-only root filesystem.
 Default is false.
 Note that this field cannot be set when spec.os.name is windows.

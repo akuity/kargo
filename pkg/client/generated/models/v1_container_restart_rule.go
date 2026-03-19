@@ -22,9 +22,7 @@ type V1ContainerRestartRule struct {
 	// are satisfied. The only possible value is "Restart" to restart the
 	// container.
 	// +required
-	Action struct {
-		V1ContainerRestartRuleAction
-	} `json:"action,omitempty"`
+	Action string `json:"action,omitempty"`
 
 	// Represents the exit codes to check on container exits.
 	// +optional
@@ -38,10 +36,6 @@ type V1ContainerRestartRule struct {
 func (m *V1ContainerRestartRule) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateAction(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateExitCodes(formats); err != nil {
 		res = append(res, err)
 	}
@@ -49,14 +43,6 @@ func (m *V1ContainerRestartRule) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1ContainerRestartRule) validateAction(formats strfmt.Registry) error {
-	if swag.IsZero(m.Action) { // not required
-		return nil
-	}
-
 	return nil
 }
 
@@ -72,10 +58,6 @@ func (m *V1ContainerRestartRule) validateExitCodes(formats strfmt.Registry) erro
 func (m *V1ContainerRestartRule) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateAction(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateExitCodes(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -83,11 +65,6 @@ func (m *V1ContainerRestartRule) ContextValidate(ctx context.Context, formats st
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1ContainerRestartRule) contextValidateAction(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

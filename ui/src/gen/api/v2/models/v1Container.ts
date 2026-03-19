@@ -7,16 +7,13 @@
  */
 import type { V1EnvVar } from './v1EnvVar';
 import type { V1EnvFromSource } from './v1EnvFromSource';
-import type { V1PullPolicy } from './v1PullPolicy';
 import type { V1Lifecycle } from './v1Lifecycle';
 import type { V1Probe } from './v1Probe';
 import type { V1ContainerPort } from './v1ContainerPort';
 import type { V1ContainerResizePolicy } from './v1ContainerResizePolicy';
 import type { V1ResourceRequirements } from './v1ResourceRequirements';
-import type { V1ContainerRestartPolicy } from './v1ContainerRestartPolicy';
 import type { V1ContainerRestartRule } from './v1ContainerRestartRule';
 import type { V1SecurityContext } from './v1SecurityContext';
-import type { V1TerminationMessagePolicy } from './v1TerminationMessagePolicy';
 import type { V1VolumeDevice } from './v1VolumeDevice';
 import type { V1VolumeMount } from './v1VolumeMount';
 
@@ -72,7 +69,7 @@ Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
 Cannot be updated.
 More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
 +optional */
-  imagePullPolicy?: V1PullPolicy;
+  imagePullPolicy?: string;
   /** Actions that the management system should take in response to container lifecycle events.
 Cannot be updated.
 +optional */
@@ -134,7 +131,7 @@ init container is started, or after any startupProbe has successfully
 completed.
 +featureGate=SidecarContainers
 +optional */
-  restartPolicy?: V1ContainerRestartPolicy;
+  restartPolicy?: string;
   /** Represents a list of rules to be checked to determine if the
 container should be restarted on exit. The rules are evaluated in
 order. Once a rule matches a container exit condition, the remaining
@@ -195,7 +192,7 @@ The log output is limited to 2048 bytes or 80 lines, whichever is smaller.
 Defaults to File.
 Cannot be updated.
 +optional */
-  terminationMessagePolicy?: V1TerminationMessagePolicy;
+  terminationMessagePolicy?: string;
   /** Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.
 Default is false.
 +optional */

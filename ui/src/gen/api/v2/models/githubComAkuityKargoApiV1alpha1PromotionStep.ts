@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
+import type { GithubComAkuityKargoApiV1alpha1PromotionStepConfig } from './githubComAkuityKargoApiV1alpha1PromotionStepConfig';
 import type { GithubComAkuityKargoApiV1alpha1PromotionStepRetry } from './githubComAkuityKargoApiV1alpha1PromotionStepRetry';
 import type { GithubComAkuityKargoApiV1alpha1PromotionTaskReference } from './githubComAkuityKargoApiV1alpha1PromotionTaskReference';
 import type { GithubComAkuityKargoApiV1alpha1ExpressionVariable } from './githubComAkuityKargoApiV1alpha1ExpressionVariable';
@@ -17,7 +17,7 @@ export interface GithubComAkuityKargoApiV1alpha1PromotionStep {
 only by each PromotionStep's implementation. It is legal to utilize
 expressions in defining values at any level of this block.
 See https://docs.kargo.io/user-guide/reference-docs/expressions for details. */
-  config?: V1JSON;
+  config?: GithubComAkuityKargoApiV1alpha1PromotionStepConfig;
   /** ContinueOnError is a boolean value that, if set to true, will cause the
 Promotion to continue executing the next step even if this step fails. It
 also will not permit this failure to impact the overall status of the

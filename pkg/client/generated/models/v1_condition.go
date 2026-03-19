@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -56,9 +55,7 @@ type V1Condition struct {
 	// +required
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=True;False;Unknown
-	Status struct {
-		K8sIoApimachineryPkgApisMetaV1ConditionStatus
-	} `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
 
 	// type of condition in CamelCase or in foo.example.com/CamelCase.
 	// ---
@@ -74,42 +71,11 @@ type V1Condition struct {
 
 // Validate validates this v1 condition
 func (m *V1Condition) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateStatus(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1Condition) validateStatus(formats strfmt.Registry) error {
-	if swag.IsZero(m.Status) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 condition based on the context it is used
+// ContextValidate validates this v1 condition based on context it is used
 func (m *V1Condition) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateStatus(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1Condition) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

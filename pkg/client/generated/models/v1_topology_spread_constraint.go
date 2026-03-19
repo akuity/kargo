@@ -94,9 +94,7 @@ type V1TopologySpreadConstraint struct {
 	//
 	// If this value is nil, the behavior is equivalent to the Honor policy.
 	// +optional
-	NodeAffinityPolicy struct {
-		V1NodeInclusionPolicy
-	} `json:"nodeAffinityPolicy,omitempty"`
+	NodeAffinityPolicy string `json:"nodeAffinityPolicy,omitempty"`
 
 	// NodeTaintsPolicy indicates how we will treat node taints when calculating
 	// pod topology spread skew. Options are:
@@ -106,9 +104,7 @@ type V1TopologySpreadConstraint struct {
 	//
 	// If this value is nil, the behavior is equivalent to the Ignore policy.
 	// +optional
-	NodeTaintsPolicy struct {
-		V1NodeInclusionPolicy
-	} `json:"nodeTaintsPolicy,omitempty"`
+	NodeTaintsPolicy string `json:"nodeTaintsPolicy,omitempty"`
 
 	// TopologyKey is the key of node labels. Nodes that have a label with this key
 	// and identical values are considered to be in the same topology.
@@ -143,9 +139,7 @@ type V1TopologySpreadConstraint struct {
 	// MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
 	// won't make it *more* imbalanced.
 	// It's a required field.
-	WhenUnsatisfiable struct {
-		V1UnsatisfiableConstraintAction
-	} `json:"whenUnsatisfiable,omitempty"`
+	WhenUnsatisfiable string `json:"whenUnsatisfiable,omitempty"`
 }
 
 // Validate validates this v1 topology spread constraint
@@ -153,18 +147,6 @@ func (m *V1TopologySpreadConstraint) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateLabelSelector(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateNodeAffinityPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateNodeTaintsPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateWhenUnsatisfiable(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -182,47 +164,11 @@ func (m *V1TopologySpreadConstraint) validateLabelSelector(formats strfmt.Regist
 	return nil
 }
 
-func (m *V1TopologySpreadConstraint) validateNodeAffinityPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.NodeAffinityPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1TopologySpreadConstraint) validateNodeTaintsPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.NodeTaintsPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1TopologySpreadConstraint) validateWhenUnsatisfiable(formats strfmt.Registry) error {
-	if swag.IsZero(m.WhenUnsatisfiable) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 topology spread constraint based on the context it is used
 func (m *V1TopologySpreadConstraint) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateLabelSelector(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateNodeAffinityPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateNodeTaintsPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateWhenUnsatisfiable(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -233,21 +179,6 @@ func (m *V1TopologySpreadConstraint) ContextValidate(ctx context.Context, format
 }
 
 func (m *V1TopologySpreadConstraint) contextValidateLabelSelector(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1TopologySpreadConstraint) contextValidateNodeAffinityPolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1TopologySpreadConstraint) contextValidateNodeTaintsPolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1TopologySpreadConstraint) contextValidateWhenUnsatisfiable(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

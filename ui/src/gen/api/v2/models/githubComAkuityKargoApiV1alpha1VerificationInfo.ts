@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { GithubComAkuityKargoApiV1alpha1AnalysisRunReference } from './githubComAkuityKargoApiV1alpha1AnalysisRunReference';
-import type { GithubComAkuityKargoApiV1alpha1VerificationPhase } from './githubComAkuityKargoApiV1alpha1VerificationPhase';
 
 export interface GithubComAkuityKargoApiV1alpha1VerificationInfo {
   /** Actor is the name of the entity that initiated or aborted the
@@ -26,7 +25,7 @@ process is in its current phase. */
 this will be a reflection of the underlying AnalysisRun's phase, however,
 there are exceptions to this, such as in the case where an AnalysisRun
 cannot be launched successfully. */
-  phase?: GithubComAkuityKargoApiV1alpha1VerificationPhase;
+  phase?: string;
   /** StartTime is the time at which the Verification process was started. */
   startTime?: string;
 }

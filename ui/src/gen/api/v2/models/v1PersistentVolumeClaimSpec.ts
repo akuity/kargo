@@ -5,19 +5,17 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1PersistentVolumeAccessMode } from './v1PersistentVolumeAccessMode';
 import type { V1TypedLocalObjectReference } from './v1TypedLocalObjectReference';
 import type { V1TypedObjectReference } from './v1TypedObjectReference';
 import type { V1VolumeResourceRequirements } from './v1VolumeResourceRequirements';
 import type { V1LabelSelector } from './v1LabelSelector';
-import type { V1PersistentVolumeMode } from './v1PersistentVolumeMode';
 
 export interface V1PersistentVolumeClaimSpec {
   /** accessModes contains the desired access modes the volume should have.
 More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
 +optional
 +listType=atomic */
-  accessModes?: V1PersistentVolumeAccessMode[];
+  accessModes?: string[];
   /** dataSource field can be used to specify either:
 * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
 * An existing PVC (PersistentVolumeClaim)
@@ -83,7 +81,7 @@ More info: https://kubernetes.io/docs/concepts/storage/volume-attributes-classes
   /** volumeMode defines what type of volume is required by the claim.
 Value of Filesystem is implied when not included in claim spec.
 +optional */
-  volumeMode?: V1PersistentVolumeMode;
+  volumeMode?: string;
   /** volumeName is the binding reference to the PersistentVolume backing this claim.
 +optional */
   volumeName?: string;

@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1Protocol } from './v1Protocol';
 
 export interface V1ContainerPort {
   /** Number of port to expose on the pod's IP address.
@@ -29,5 +28,5 @@ referred to by services.
 Defaults to "TCP".
 +optional
 +default="TCP" */
-  protocol?: V1Protocol;
+  protocol?: string;
 }

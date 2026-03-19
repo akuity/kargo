@@ -8,8 +8,7 @@
 import type { GithubComAkuityKargoApiV1alpha1FreightReference } from './githubComAkuityKargoApiV1alpha1FreightReference';
 import type { GithubComAkuityKargoApiV1alpha1FreightCollection } from './githubComAkuityKargoApiV1alpha1FreightCollection';
 import type { GithubComAkuityKargoApiV1alpha1HealthCheckStep } from './githubComAkuityKargoApiV1alpha1HealthCheckStep';
-import type { GithubComAkuityKargoApiV1alpha1PromotionPhase } from './githubComAkuityKargoApiV1alpha1PromotionPhase';
-import type { V1JSON } from './v1json';
+import type { GithubComAkuityKargoApiV1alpha1PromotionStatusState } from './githubComAkuityKargoApiV1alpha1PromotionStatusState';
 import type { GithubComAkuityKargoApiV1alpha1StepExecutionMetadata } from './githubComAkuityKargoApiV1alpha1StepExecutionMetadata';
 
 export interface GithubComAkuityKargoApiV1alpha1PromotionStatus {
@@ -39,12 +38,12 @@ i.e. If the Phase field has a value of Failed, this field can be expected
 to explain why. */
   message?: string;
   /** Phase describes where the Promotion currently is in its lifecycle. */
-  phase?: GithubComAkuityKargoApiV1alpha1PromotionPhase;
+  phase?: string;
   /** StartedAt is the time when the promotion started. */
   startedAt?: string;
   /** State stores the state of the promotion process between reconciliation
 attempts. */
-  state?: V1JSON;
+  state?: GithubComAkuityKargoApiV1alpha1PromotionStatusState;
   /** StepExecutionMetadata tracks metadata pertaining to the execution
 of individual promotion steps. */
   stepExecutionMetadata?: GithubComAkuityKargoApiV1alpha1StepExecutionMetadata[];

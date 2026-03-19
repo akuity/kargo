@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -32,49 +31,16 @@ type V1SeccompProfile struct {
 	// RuntimeDefault - the container runtime default profile should be used.
 	// Unconfined - no profile should be applied.
 	// +unionDiscriminator
-	Type struct {
-		V1SeccompProfileType
-	} `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 // Validate validates this v1 seccomp profile
 func (m *V1SeccompProfile) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateType(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1SeccompProfile) validateType(formats strfmt.Registry) error {
-	if swag.IsZero(m.Type) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 seccomp profile based on the context it is used
+// ContextValidate validates this v1 seccomp profile based on context it is used
 func (m *V1SeccompProfile) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateType(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1SeccompProfile) contextValidateType(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

@@ -5,14 +5,13 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1NodeSelectorOperator } from './v1NodeSelectorOperator';
 
 export interface V1NodeSelectorRequirement {
   /** The label key that the selector applies to. */
   key?: string;
   /** Represents a key's relationship to a set of values.
 Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt. */
-  operator?: V1NodeSelectorOperator;
+  operator?: string;
   /** An array of string values. If the operator is In or NotIn,
 the values array must be non-empty. If the operator is Exists or DoesNotExist,
 the values array must be empty. If the operator is Gt or Lt, the values

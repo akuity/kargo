@@ -61,9 +61,7 @@ type V1PodSpec struct {
 	// To have DNS options set along with hostNetwork, you have to specify DNS policy
 	// explicitly to 'ClusterFirstWithHostNet'.
 	// +optional
-	DNSPolicy struct {
-		V1DNSPolicy
-	} `json:"dnsPolicy,omitempty"`
+	DNSPolicy string `json:"dnsPolicy,omitempty"`
 
 	// EnableServiceLinks indicates whether information about services should be injected into pod's
 	// environment variables, matching the syntax of Docker links.
@@ -242,9 +240,7 @@ type V1PodSpec struct {
 	// One of Never, PreemptLowerPriority.
 	// Defaults to PreemptLowerPriority if unset.
 	// +optional
-	PreemptionPolicy struct {
-		V1PreemptionPolicy
-	} `json:"preemptionPolicy,omitempty"`
+	PreemptionPolicy string `json:"preemptionPolicy,omitempty"`
 
 	// The priority value. Various system components use this field to find the
 	// priority of the pod. When Priority Admission Controller is enabled, it
@@ -311,9 +307,7 @@ type V1PodSpec struct {
 	// Default to Always.
 	// More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
 	// +optional
-	RestartPolicy struct {
-		V1RestartPolicy
-	} `json:"restartPolicy,omitempty"`
+	RestartPolicy string `json:"restartPolicy,omitempty"`
 
 	// RuntimeClassName refers to a RuntimeClass object in the node.k8s.io group, which should be used
 	// to run this pod.  If no RuntimeClass resource matches the named class, the pod will not be run.
@@ -434,10 +428,6 @@ func (m *V1PodSpec) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateDNSPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateEphemeralContainers(formats); err != nil {
 		res = append(res, err)
 	}
@@ -462,10 +452,6 @@ func (m *V1PodSpec) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validatePreemptionPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateReadinessGates(formats); err != nil {
 		res = append(res, err)
 	}
@@ -475,10 +461,6 @@ func (m *V1PodSpec) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateResources(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateRestartPolicy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -548,14 +530,6 @@ func (m *V1PodSpec) validateContainers(formats strfmt.Registry) error {
 
 func (m *V1PodSpec) validateDNSConfig(formats strfmt.Registry) error {
 	if swag.IsZero(m.DNSConfig) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1PodSpec) validateDNSPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.DNSPolicy) { // not required
 		return nil
 	}
 
@@ -698,14 +672,6 @@ func (m *V1PodSpec) validateOverhead(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1PodSpec) validatePreemptionPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.PreemptionPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 func (m *V1PodSpec) validateReadinessGates(formats strfmt.Registry) error {
 	if swag.IsZero(m.ReadinessGates) { // not required
 		return nil
@@ -768,14 +734,6 @@ func (m *V1PodSpec) validateResourceClaims(formats strfmt.Registry) error {
 
 func (m *V1PodSpec) validateResources(formats strfmt.Registry) error {
 	if swag.IsZero(m.Resources) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1PodSpec) validateRestartPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.RestartPolicy) { // not required
 		return nil
 	}
 
@@ -926,10 +884,6 @@ func (m *V1PodSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateDNSPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateEphemeralContainers(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -954,10 +908,6 @@ func (m *V1PodSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 		res = append(res, err)
 	}
 
-	if err := m.contextValidatePreemptionPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateReadinessGates(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -967,10 +917,6 @@ func (m *V1PodSpec) ContextValidate(ctx context.Context, formats strfmt.Registry
 	}
 
 	if err := m.contextValidateResources(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateRestartPolicy(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -1035,11 +981,6 @@ func (m *V1PodSpec) contextValidateContainers(ctx context.Context, formats strfm
 }
 
 func (m *V1PodSpec) contextValidateDNSConfig(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PodSpec) contextValidateDNSPolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }
@@ -1170,11 +1111,6 @@ func (m *V1PodSpec) contextValidateOverhead(ctx context.Context, formats strfmt.
 	return nil
 }
 
-func (m *V1PodSpec) contextValidatePreemptionPolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
 func (m *V1PodSpec) contextValidateReadinessGates(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.ReadinessGates); i++ {
@@ -1234,11 +1170,6 @@ func (m *V1PodSpec) contextValidateResourceClaims(ctx context.Context, formats s
 }
 
 func (m *V1PodSpec) contextValidateResources(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PodSpec) contextValidateRestartPolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

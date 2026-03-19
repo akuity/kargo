@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -27,9 +26,7 @@ type GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement struct {
 	// whether the selection requirement is satisfied.
 	//
 	// kubebuilder:validation:Enum=Equal;NotEqual;
-	Operator struct {
-		GithubComAkuityKargoAPIV1alpha1IndexSelectorOperator
-	} `json:"operator,omitempty"`
+	Operator string `json:"operator,omitempty"`
 
 	// Value can be a static string or an expression that will be evaluated.
 	//
@@ -39,42 +36,11 @@ type GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement struct {
 
 // Validate validates this github com akuity kargo api v1alpha1 index selector requirement
 func (m *GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateOperator(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 index selector requirement based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 index selector requirement based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateOperator(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1IndexSelectorRequirement) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

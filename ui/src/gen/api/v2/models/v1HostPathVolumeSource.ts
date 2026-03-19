@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1HostPathType } from './v1HostPathType';
 
 export interface V1HostPathVolumeSource {
   /** path of the directory on the host.
@@ -16,5 +15,5 @@ More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath */
 Defaults to ""
 More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
 +optional */
-  type?: V1HostPathType;
+  type?: string;
 }

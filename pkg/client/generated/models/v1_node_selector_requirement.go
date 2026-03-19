@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -23,9 +22,7 @@ type V1NodeSelectorRequirement struct {
 
 	// Represents a key's relationship to a set of values.
 	// Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
-	Operator struct {
-		V1NodeSelectorOperator
-	} `json:"operator,omitempty"`
+	Operator string `json:"operator,omitempty"`
 
 	// An array of string values. If the operator is In or NotIn,
 	// the values array must be non-empty. If the operator is Exists or DoesNotExist,
@@ -39,42 +36,11 @@ type V1NodeSelectorRequirement struct {
 
 // Validate validates this v1 node selector requirement
 func (m *V1NodeSelectorRequirement) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateOperator(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1NodeSelectorRequirement) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 node selector requirement based on the context it is used
+// ContextValidate validates this v1 node selector requirement based on context it is used
 func (m *V1NodeSelectorRequirement) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateOperator(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1NodeSelectorRequirement) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

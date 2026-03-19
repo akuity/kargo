@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -31,49 +30,16 @@ type V1AppArmorProfile struct {
 	//   RuntimeDefault - the container runtime's default profile.
 	//   Unconfined - no AppArmor enforcement.
 	// +unionDiscriminator
-	Type struct {
-		V1AppArmorProfileType
-	} `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 // Validate validates this v1 app armor profile
 func (m *V1AppArmorProfile) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateType(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1AppArmorProfile) validateType(formats strfmt.Registry) error {
-	if swag.IsZero(m.Type) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 app armor profile based on the context it is used
+// ContextValidate validates this v1 app armor profile based on context it is used
 func (m *V1AppArmorProfile) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateType(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1AppArmorProfile) contextValidateType(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

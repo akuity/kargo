@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
+import type { GithubComAkuityKargoApiV1alpha1ArtifactReferenceMetadata } from './githubComAkuityKargoApiV1alpha1ArtifactReferenceMetadata';
 
 export interface GithubComAkuityKargoApiV1alpha1ArtifactReference {
   /** ArtifactType specifies the type of artifact this is. Often, but not always,
@@ -21,7 +21,7 @@ well-known, top-level keys. Those aside, this metadata is only understood
 by a corresponding Subscriber implementation that created it.
 
 +optional */
-  metadata?: V1JSON;
+  metadata?: GithubComAkuityKargoApiV1alpha1ArtifactReferenceMetadata;
   /** SubscriptionName is the name of the Subscription that discovered this
 artifact.
 

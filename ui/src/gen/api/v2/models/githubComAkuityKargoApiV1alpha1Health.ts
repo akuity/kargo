@@ -5,18 +5,18 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
-import type { GithubComAkuityKargoApiV1alpha1HealthState } from './githubComAkuityKargoApiV1alpha1HealthState';
+import type { GithubComAkuityKargoApiV1alpha1HealthConfig } from './githubComAkuityKargoApiV1alpha1HealthConfig';
+import type { GithubComAkuityKargoApiV1alpha1HealthOutput } from './githubComAkuityKargoApiV1alpha1HealthOutput';
 
 export interface GithubComAkuityKargoApiV1alpha1Health {
   /** Config is the opaque configuration of all health checks performed on this
 Stage. */
-  config?: V1JSON;
+  config?: GithubComAkuityKargoApiV1alpha1HealthConfig;
   /** Issues clarifies why a Stage in any state other than Healthy is in that
 state. This field will always be the empty when a Stage is Healthy. */
   issues?: string[];
   /** Output is the opaque output of all health checks performed on this Stage. */
-  output?: V1JSON;
+  output?: GithubComAkuityKargoApiV1alpha1HealthOutput;
   /** Status describes the health of the Stage. */
-  status?: GithubComAkuityKargoApiV1alpha1HealthState;
+  status?: string;
 }

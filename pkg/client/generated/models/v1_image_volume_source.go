@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -24,9 +23,7 @@ type V1ImageVolumeSource struct {
 	// IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
 	// Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
 	// +optional
-	PullPolicy struct {
-		V1PullPolicy
-	} `json:"pullPolicy,omitempty"`
+	PullPolicy string `json:"pullPolicy,omitempty"`
 
 	// Required: Image or artifact reference to be used.
 	// Behaves in the same way as pod.spec.containers[*].image.
@@ -40,42 +37,11 @@ type V1ImageVolumeSource struct {
 
 // Validate validates this v1 image volume source
 func (m *V1ImageVolumeSource) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validatePullPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1ImageVolumeSource) validatePullPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.PullPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 image volume source based on the context it is used
+// ContextValidate validates this v1 image volume source based on context it is used
 func (m *V1ImageVolumeSource) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidatePullPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ImageVolumeSource) contextValidatePullPolicy(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

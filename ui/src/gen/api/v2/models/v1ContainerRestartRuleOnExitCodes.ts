@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1ContainerRestartRuleOnExitCodesOperator } from './v1ContainerRestartRuleOnExitCodesOperator';
 
 export interface V1ContainerRestartRuleOnExitCodes {
   /** Represents the relationship between the container exit code(s) and the
@@ -15,7 +14,7 @@ specified values. Possible values are:
 - NotIn: the requirement is satisfied if the container exit code is
   not in the set of specified values.
 +required */
-  operator?: V1ContainerRestartRuleOnExitCodesOperator;
+  operator?: string;
   /** Specifies the set of values to check for container exit codes.
 At most 255 elements are allowed.
 +optional

@@ -24,9 +24,7 @@ type GithubComAkuityKargoAPIV1alpha1GenericWebhookAction struct {
 	// only currently supported action.
 	//
 	// +kubebuilder:validation:Enum=Refresh;
-	Action struct {
-		GithubComAkuityKargoAPIV1alpha1GenericWebhookActionType
-	} `json:"action,omitempty"`
+	Action string `json:"action,omitempty"`
 
 	// Parameters contains additional, action-specific parameters. Values may be
 	// static or extracted from the request using expressions.
@@ -51,10 +49,6 @@ type GithubComAkuityKargoAPIV1alpha1GenericWebhookAction struct {
 func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateAction(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateTargetSelectionCriteria(formats); err != nil {
 		res = append(res, err)
 	}
@@ -62,14 +56,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) Validate(formats s
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) validateAction(formats strfmt.Registry) error {
-	if swag.IsZero(m.Action) { // not required
-		return nil
-	}
-
 	return nil
 }
 
@@ -107,10 +93,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) validateTargetSele
 func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateAction(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateTargetSelectionCriteria(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -118,11 +100,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) ContextValidate(ct
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookAction) contextValidateAction(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

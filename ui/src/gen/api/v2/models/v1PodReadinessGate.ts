@@ -5,9 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1PodConditionType } from './v1PodConditionType';
 
 export interface V1PodReadinessGate {
   /** ConditionType refers to a condition in the pod's condition list with matching type. */
-  conditionType?: V1PodConditionType;
+  conditionType?: string;
 }

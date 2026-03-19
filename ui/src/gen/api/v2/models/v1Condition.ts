@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { K8sIoApimachineryPkgApisMetaV1ConditionStatus } from './k8sIoApimachineryPkgApisMetaV1ConditionStatus';
 
 export interface V1Condition {
   /** lastTransitionTime is the last time the condition transitioned from one status to another.
@@ -42,7 +41,7 @@ This field may not be empty.
 +required
 +kubebuilder:validation:Required
 +kubebuilder:validation:Enum=True;False;Unknown */
-  status?: K8sIoApimachineryPkgApisMetaV1ConditionStatus;
+  status?: string;
   /** type of condition in CamelCase or in foo.example.com/CamelCase.
 ---
 Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be

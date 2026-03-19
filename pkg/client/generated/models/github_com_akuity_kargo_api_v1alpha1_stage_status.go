@@ -74,7 +74,7 @@ type GithubComAkuityKargoAPIV1alpha1StageStatus struct {
 	// Metadata is a map of arbitrary metadata associated with the Stage.
 	// This is useful for storing additional information about the Stage
 	// that can be shared across promotions, verifications, or other processes.
-	Metadata map[string]V1JSON `json:"metadata,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 
 	// ObservedGeneration represents the .metadata.generation that this Stage
 	// status was reconciled against.

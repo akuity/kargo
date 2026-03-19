@@ -73,9 +73,7 @@ type V1EphemeralContainer struct {
 	// Cannot be updated.
 	// More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
 	// +optional
-	ImagePullPolicy struct {
-		V1PullPolicy
-	} `json:"imagePullPolicy,omitempty"`
+	ImagePullPolicy string `json:"imagePullPolicy,omitempty"`
 
 	// Lifecycle is not allowed for ephemeral containers.
 	// +optional
@@ -126,9 +124,7 @@ type V1EphemeralContainer struct {
 	// You cannot set this field on ephemeral containers.
 	// +featureGate=SidecarContainers
 	// +optional
-	RestartPolicy struct {
-		V1ContainerRestartPolicy
-	} `json:"restartPolicy,omitempty"`
+	RestartPolicy string `json:"restartPolicy,omitempty"`
 
 	// Represents a list of rules to be checked to determine if the
 	// container should be restarted on exit. You cannot set this field on
@@ -194,9 +190,7 @@ type V1EphemeralContainer struct {
 	// Defaults to File.
 	// Cannot be updated.
 	// +optional
-	TerminationMessagePolicy struct {
-		V1TerminationMessagePolicy
-	} `json:"terminationMessagePolicy,omitempty"`
+	TerminationMessagePolicy string `json:"terminationMessagePolicy,omitempty"`
 
 	// Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.
 	// Default is false.
@@ -240,10 +234,6 @@ func (m *V1EphemeralContainer) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateImagePullPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateLifecycle(formats); err != nil {
 		res = append(res, err)
 	}
@@ -268,10 +258,6 @@ func (m *V1EphemeralContainer) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateRestartPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateRestartPolicyRules(formats); err != nil {
 		res = append(res, err)
 	}
@@ -281,10 +267,6 @@ func (m *V1EphemeralContainer) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateStartupProbe(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateTerminationMessagePolicy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -357,14 +339,6 @@ func (m *V1EphemeralContainer) validateEnvFrom(formats strfmt.Registry) error {
 			}
 		}
 
-	}
-
-	return nil
-}
-
-func (m *V1EphemeralContainer) validateImagePullPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.ImagePullPolicy) { // not required
-		return nil
 	}
 
 	return nil
@@ -462,14 +436,6 @@ func (m *V1EphemeralContainer) validateResources(formats strfmt.Registry) error 
 	return nil
 }
 
-func (m *V1EphemeralContainer) validateRestartPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.RestartPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 func (m *V1EphemeralContainer) validateRestartPolicyRules(formats strfmt.Registry) error {
 	if swag.IsZero(m.RestartPolicyRules) { // not required
 		return nil
@@ -510,14 +476,6 @@ func (m *V1EphemeralContainer) validateSecurityContext(formats strfmt.Registry) 
 
 func (m *V1EphemeralContainer) validateStartupProbe(formats strfmt.Registry) error {
 	if swag.IsZero(m.StartupProbe) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1EphemeralContainer) validateTerminationMessagePolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.TerminationMessagePolicy) { // not required
 		return nil
 	}
 
@@ -596,10 +554,6 @@ func (m *V1EphemeralContainer) ContextValidate(ctx context.Context, formats strf
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateImagePullPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateLifecycle(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -624,10 +578,6 @@ func (m *V1EphemeralContainer) ContextValidate(ctx context.Context, formats strf
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateRestartPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateRestartPolicyRules(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -637,10 +587,6 @@ func (m *V1EphemeralContainer) ContextValidate(ctx context.Context, formats strf
 	}
 
 	if err := m.contextValidateStartupProbe(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateTerminationMessagePolicy(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -712,11 +658,6 @@ func (m *V1EphemeralContainer) contextValidateEnvFrom(ctx context.Context, forma
 		}
 
 	}
-
-	return nil
-}
-
-func (m *V1EphemeralContainer) contextValidateImagePullPolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }
@@ -799,11 +740,6 @@ func (m *V1EphemeralContainer) contextValidateResources(ctx context.Context, for
 	return nil
 }
 
-func (m *V1EphemeralContainer) contextValidateRestartPolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
 func (m *V1EphemeralContainer) contextValidateRestartPolicyRules(ctx context.Context, formats strfmt.Registry) error {
 
 	for i := 0; i < len(m.RestartPolicyRules); i++ {
@@ -839,11 +775,6 @@ func (m *V1EphemeralContainer) contextValidateSecurityContext(ctx context.Contex
 }
 
 func (m *V1EphemeralContainer) contextValidateStartupProbe(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1EphemeralContainer) contextValidateTerminationMessagePolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

@@ -33,7 +33,7 @@ type V1ConfigMap struct {
 	// Using this field will require 1.10+ apiserver and
 	// kubelet.
 	// +optional
-	BinaryData map[string][]int32 `json:"binaryData,omitempty"`
+	BinaryData map[string]strfmt.Base64 `json:"binaryData,omitempty"`
 
 	// Data contains the configuration data.
 	// Each key must consist of alphanumeric characters, '-', '_' or '.'.

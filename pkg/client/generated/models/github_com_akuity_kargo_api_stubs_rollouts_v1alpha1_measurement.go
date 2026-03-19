@@ -7,9 +7,7 @@ package models
 
 import (
 	"context"
-	stderrors "errors"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -29,7 +27,7 @@ type GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement struct {
 	Metadata map[string]string `json:"metadata,omitempty"`
 
 	// phase
-	Phase GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisPhase `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 
 	// resume at
 	ResumeAt string `json:"resumeAt,omitempty"`
@@ -43,72 +41,11 @@ type GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement struct {
 
 // Validate validates this github com akuity kargo api stubs rollouts v1alpha1 measurement
 func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validatePhase(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement) validatePhase(formats strfmt.Registry) error {
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.Validate(formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api stubs rollouts v1alpha1 measurement based on the context it is used
+// ContextValidate validates this github com akuity kargo api stubs rollouts v1alpha1 measurement based on context it is used
 func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidatePhase(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1Measurement) contextValidatePhase(ctx context.Context, formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.ContextValidate(ctx, formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
-	}
-
 	return nil
 }
 

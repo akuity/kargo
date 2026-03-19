@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -19,9 +18,7 @@ import (
 type GithubComAkuityKargoAPIV1alpha1HealthCheckStep struct {
 
 	// Config is the configuration for the directive.
-	Config struct {
-		V1JSON
-	} `json:"config,omitempty"`
+	Config any `json:"config,omitempty"`
 
 	// Uses identifies a runner that can execute this step.
 	//
@@ -31,23 +28,6 @@ type GithubComAkuityKargoAPIV1alpha1HealthCheckStep struct {
 
 // Validate validates this github com akuity kargo api v1alpha1 health check step
 func (m *GithubComAkuityKargoAPIV1alpha1HealthCheckStep) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateConfig(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1HealthCheckStep) validateConfig(formats strfmt.Registry) error {
-	if swag.IsZero(m.Config) { // not required
-		return nil
-	}
-
 	return nil
 }
 

@@ -5,11 +5,12 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
 
 /**
  * Metadata is a map of arbitrary metadata associated with the Stage.
 This is useful for storing additional information about the Stage
 that can be shared across promotions, verifications, or other processes.
  */
-export type GithubComAkuityKargoApiV1alpha1StageStatusMetadata = { [key: string]: V1JSON };
+export type GithubComAkuityKargoApiV1alpha1StageStatusMetadata = {
+  [key: string]: { [key: string]: unknown };
+};

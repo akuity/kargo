@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -23,9 +22,7 @@ type GithubComAkuityKargoAPIV1alpha1VerifiedStage struct {
 	// Freight EXITS the Stage. If the Freight is currently in use by the Stage,
 	// the time elapsed since the Freight ENTERED the Stage is its current soak
 	// time, which may exceed the value of this field.
-	LongestSoak struct {
-		V1Duration
-	} `json:"longestSoak,omitempty"`
+	LongestSoak string `json:"longestSoak,omitempty"`
 
 	// VerifiedAt is the time at which the Freight was verified in the Stage.
 	VerifiedAt string `json:"verifiedAt,omitempty"`
@@ -33,42 +30,11 @@ type GithubComAkuityKargoAPIV1alpha1VerifiedStage struct {
 
 // Validate validates this github com akuity kargo api v1alpha1 verified stage
 func (m *GithubComAkuityKargoAPIV1alpha1VerifiedStage) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateLongestSoak(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1VerifiedStage) validateLongestSoak(formats strfmt.Registry) error {
-	if swag.IsZero(m.LongestSoak) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 verified stage based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 verified stage based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1VerifiedStage) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateLongestSoak(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1VerifiedStage) contextValidateLongestSoak(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

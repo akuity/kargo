@@ -45,9 +45,7 @@ type V1Lifecycle struct {
 	// If not specified, the default is defined by the container runtime in use.
 	// StopSignal can only be set for Pods with a non-empty .spec.os.name
 	// +optional
-	StopSignal struct {
-		V1Signal
-	} `json:"stopSignal,omitempty"`
+	StopSignal string `json:"stopSignal,omitempty"`
 }
 
 // Validate validates this v1 lifecycle
@@ -59,10 +57,6 @@ func (m *V1Lifecycle) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePreStop(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateStopSignal(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -88,14 +82,6 @@ func (m *V1Lifecycle) validatePreStop(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1Lifecycle) validateStopSignal(formats strfmt.Registry) error {
-	if swag.IsZero(m.StopSignal) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 lifecycle based on the context it is used
 func (m *V1Lifecycle) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -105,10 +91,6 @@ func (m *V1Lifecycle) ContextValidate(ctx context.Context, formats strfmt.Regist
 	}
 
 	if err := m.contextValidatePreStop(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateStopSignal(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -124,11 +106,6 @@ func (m *V1Lifecycle) contextValidatePostStart(ctx context.Context, formats strf
 }
 
 func (m *V1Lifecycle) contextValidatePreStop(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1Lifecycle) contextValidateStopSignal(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

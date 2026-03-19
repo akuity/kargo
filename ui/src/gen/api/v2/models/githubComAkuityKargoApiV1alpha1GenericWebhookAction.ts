@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { GithubComAkuityKargoApiV1alpha1GenericWebhookActionType } from './githubComAkuityKargoApiV1alpha1GenericWebhookActionType';
 import type { GithubComAkuityKargoApiV1alpha1GenericWebhookActionParameters } from './githubComAkuityKargoApiV1alpha1GenericWebhookActionParameters';
 import type { GithubComAkuityKargoApiV1alpha1GenericWebhookTargetSelectionCriteria } from './githubComAkuityKargoApiV1alpha1GenericWebhookTargetSelectionCriteria';
 
@@ -14,7 +13,7 @@ export interface GithubComAkuityKargoApiV1alpha1GenericWebhookAction {
 only currently supported action.
 
 +kubebuilder:validation:Enum=Refresh; */
-  action?: GithubComAkuityKargoApiV1alpha1GenericWebhookActionType;
+  action?: string;
   /** Parameters contains additional, action-specific parameters. Values may be
 static or extracted from the request using expressions.
 

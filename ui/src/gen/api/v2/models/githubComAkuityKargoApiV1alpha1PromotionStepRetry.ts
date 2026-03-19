@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1Duration } from './v1Duration';
 
 export interface GithubComAkuityKargoApiV1alpha1PromotionStepRetry {
   /** ErrorThreshold is the number of consecutive times the step must fail (for
@@ -42,5 +41,5 @@ default will be the system-wide default of 0.
 
 A value of 0 will cause the step to be retried indefinitely unless the
 ErrorThreshold is reached. */
-  timeout?: V1Duration;
+  timeout?: string;
 }

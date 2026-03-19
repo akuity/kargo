@@ -6,8 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { GithubComAkuityKargoApiV1alpha1AutoPromotionOptions } from './githubComAkuityKargoApiV1alpha1AutoPromotionOptions';
-import type { GithubComAkuityKargoApiV1alpha1FreightAvailabilityStrategy } from './githubComAkuityKargoApiV1alpha1FreightAvailabilityStrategy';
-import type { V1Duration } from './v1Duration';
 
 export interface GithubComAkuityKargoApiV1alpha1FreightSources {
   /** AutoPromotionOptions specifies options pertaining to auto-promotion. These
@@ -27,7 +25,7 @@ Accepted Values:
 - "": Treated the same as "OneOf".
 
 +kubebuilder:validation:Optional */
-  availabilityStrategy?: GithubComAkuityKargoApiV1alpha1FreightAvailabilityStrategy;
+  availabilityStrategy?: string;
   /** Direct indicates the requested Freight may be obtained directly from the
 Warehouse from which it originated. If this field's value is false, then
 the value of the Stages field must be non-empty. i.e. Between the two
@@ -45,7 +43,7 @@ requirement.
 +kubebuilder:validation:Type=string
 +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 +akuity:test-kubebuilder-pattern=Duration */
-  requiredSoakTime?: V1Duration;
+  requiredSoakTime?: string;
   /** Stages identifies other "upstream" Stages as potential sources of the
 requested Freight. If this field's value is empty, then the value of the
 Direct field must be true. i.e. Between the two fields, at least on source

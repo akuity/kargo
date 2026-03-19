@@ -48,9 +48,7 @@ type V1PodSecurityContext struct {
 	// Valid values are "OnRootMismatch" and "Always". If not specified, "Always" is used.
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +optional
-	FsGroupChangePolicy struct {
-		V1PodFSGroupChangePolicy
-	} `json:"fsGroupChangePolicy,omitempty"`
+	FsGroupChangePolicy string `json:"fsGroupChangePolicy,omitempty"`
 
 	// The GID to run the entrypoint of the container process.
 	// Uses runtime default if unset.
@@ -104,9 +102,7 @@ type V1PodSecurityContext struct {
 	// Note that this field cannot be set when spec.os.name is windows.
 	// +featureGate=SELinuxChangePolicy
 	// +optional
-	SeLinuxChangePolicy struct {
-		V1PodSELinuxChangePolicy
-	} `json:"seLinuxChangePolicy,omitempty"`
+	SeLinuxChangePolicy string `json:"seLinuxChangePolicy,omitempty"`
 
 	// The SELinux context to be applied to all containers.
 	// If unspecified, the container runtime will allocate a random SELinux context for each
@@ -147,9 +143,7 @@ type V1PodSecurityContext struct {
 	// TODO: update the default value to "Merge" when spec.os.name is not windows in v1.34
 	// +featureGate=SupplementalGroupsPolicy
 	// +optional
-	SupplementalGroupsPolicy struct {
-		V1SupplementalGroupsPolicy
-	} `json:"supplementalGroupsPolicy,omitempty"`
+	SupplementalGroupsPolicy string `json:"supplementalGroupsPolicy,omitempty"`
 
 	// Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported
 	// sysctls (by the container runtime) might fail to launch.
@@ -176,23 +170,11 @@ func (m *V1PodSecurityContext) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateFsGroupChangePolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateSeLinuxChangePolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateSeLinuxOptions(formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.validateSeccompProfile(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateSupplementalGroupsPolicy(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -218,22 +200,6 @@ func (m *V1PodSecurityContext) validateAppArmorProfile(formats strfmt.Registry) 
 	return nil
 }
 
-func (m *V1PodSecurityContext) validateFsGroupChangePolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.FsGroupChangePolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1PodSecurityContext) validateSeLinuxChangePolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.SeLinuxChangePolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 func (m *V1PodSecurityContext) validateSeLinuxOptions(formats strfmt.Registry) error {
 	if swag.IsZero(m.SeLinuxOptions) { // not required
 		return nil
@@ -244,14 +210,6 @@ func (m *V1PodSecurityContext) validateSeLinuxOptions(formats strfmt.Registry) e
 
 func (m *V1PodSecurityContext) validateSeccompProfile(formats strfmt.Registry) error {
 	if swag.IsZero(m.SeccompProfile) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1PodSecurityContext) validateSupplementalGroupsPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.SupplementalGroupsPolicy) { // not required
 		return nil
 	}
 
@@ -304,23 +262,11 @@ func (m *V1PodSecurityContext) ContextValidate(ctx context.Context, formats strf
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateFsGroupChangePolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateSeLinuxChangePolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateSeLinuxOptions(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
 	if err := m.contextValidateSeccompProfile(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateSupplementalGroupsPolicy(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -343,27 +289,12 @@ func (m *V1PodSecurityContext) contextValidateAppArmorProfile(ctx context.Contex
 	return nil
 }
 
-func (m *V1PodSecurityContext) contextValidateFsGroupChangePolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PodSecurityContext) contextValidateSeLinuxChangePolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
 func (m *V1PodSecurityContext) contextValidateSeLinuxOptions(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }
 
 func (m *V1PodSecurityContext) contextValidateSeccompProfile(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PodSecurityContext) contextValidateSupplementalGroupsPolicy(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

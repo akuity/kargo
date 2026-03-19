@@ -5,11 +5,12 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
 
 /**
  * Metadata is a map of arbitrary metadata associated with the Freight.
 This is useful for storing additional information about the Freight
 or Promotion that can be shared across steps or stages.
  */
-export type GithubComAkuityKargoApiV1alpha1FreightStatusMetadata = { [key: string]: V1JSON };
+export type GithubComAkuityKargoApiV1alpha1FreightStatusMetadata = {
+  [key: string]: { [key: string]: unknown };
+};

@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { GithubComAkuityKargoApiV1alpha1IndexSelectorOperator } from './githubComAkuityKargoApiV1alpha1IndexSelectorOperator';
 
 export interface GithubComAkuityKargoApiV1alpha1IndexSelectorRequirement {
   /** Key is the key of the index.
@@ -16,7 +15,7 @@ export interface GithubComAkuityKargoApiV1alpha1IndexSelectorRequirement {
 whether the selection requirement is satisfied.
 
 kubebuilder:validation:Enum=Equal;NotEqual; */
-  operator?: GithubComAkuityKargoApiV1alpha1IndexSelectorOperator;
+  operator?: string;
   /** Value can be a static string or an expression that will be evaluated.
 
 kubebuilder:validation:Required */

@@ -41,7 +41,7 @@ type GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricProvider struct {
 	NewRelic *GithubComAkuityKargoAPIStubsRolloutsV1alpha1NewRelicMetric `json:"newRelic,omitempty"`
 
 	// plugin
-	Plugin map[string][]int64 `json:"plugin,omitempty"`
+	Plugin map[string]strfmt.Base64 `json:"plugin,omitempty"`
 
 	// prometheus
 	Prometheus *GithubComAkuityKargoAPIStubsRolloutsV1alpha1PrometheusMetric `json:"prometheus,omitempty"`

@@ -5,14 +5,12 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1AzureDataDiskCachingMode } from './v1AzureDataDiskCachingMode';
-import type { V1AzureDataDiskKind } from './v1AzureDataDiskKind';
 
 export interface V1AzureDiskVolumeSource {
   /** cachingMode is the Host Caching mode: None, Read Only, Read Write.
 +optional
 +default=ref(AzureDataDiskCachingReadWrite) */
-  cachingMode?: V1AzureDataDiskCachingMode;
+  cachingMode?: string;
   /** diskName is the Name of the data disk in the blob storage */
   diskName?: string;
   /** diskURI is the URI of data disk in the blob storage */
@@ -25,7 +23,7 @@ Ex. "ext4", "xfs", "ntfs". Implicitly inferred to be "ext4" if unspecified.
   fsType?: string;
   /** kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
 +default=ref(AzureSharedBlobDisk) */
-  kind?: V1AzureDataDiskKind;
+  kind?: string;
   /** readOnly Defaults to false (read/write). ReadOnly here will force
 the ReadOnly setting in VolumeMounts.
 +optional

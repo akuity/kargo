@@ -6,11 +6,8 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1AppArmorProfile } from './v1AppArmorProfile';
-import type { V1PodFSGroupChangePolicy } from './v1PodFSGroupChangePolicy';
-import type { V1PodSELinuxChangePolicy } from './v1PodSELinuxChangePolicy';
 import type { V1SELinuxOptions } from './v1SELinuxOptions';
 import type { V1SeccompProfile } from './v1SeccompProfile';
-import type { V1SupplementalGroupsPolicy } from './v1SupplementalGroupsPolicy';
 import type { V1Sysctl } from './v1Sysctl';
 import type { V1WindowsSecurityContextOptions } from './v1WindowsSecurityContextOptions';
 
@@ -39,7 +36,7 @@ and emptydir.
 Valid values are "OnRootMismatch" and "Always". If not specified, "Always" is used.
 Note that this field cannot be set when spec.os.name is windows.
 +optional */
-  fsGroupChangePolicy?: V1PodFSGroupChangePolicy;
+  fsGroupChangePolicy?: string;
   /** The GID to run the entrypoint of the container process.
 Uses runtime default if unset.
 May also be set in SecurityContext.  If set in both SecurityContext and
@@ -89,7 +86,7 @@ All Pods that use the same volume should use the same seLinuxChangePolicy, other
 Note that this field cannot be set when spec.os.name is windows.
 +featureGate=SELinuxChangePolicy
 +optional */
-  seLinuxChangePolicy?: V1PodSELinuxChangePolicy;
+  seLinuxChangePolicy?: string;
   /** The SELinux context to be applied to all containers.
 If unspecified, the container runtime will allocate a random SELinux context for each
 container.  May also be set in SecurityContext.  If set in
@@ -122,7 +119,7 @@ Note that this field cannot be set when spec.os.name is windows.
 TODO: update the default value to "Merge" when spec.os.name is not windows in v1.34
 +featureGate=SupplementalGroupsPolicy
 +optional */
-  supplementalGroupsPolicy?: V1SupplementalGroupsPolicy;
+  supplementalGroupsPolicy?: string;
   /** Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported
 sysctls (by the container runtime) might fail to launch.
 Note that this field cannot be set when spec.os.name is windows.

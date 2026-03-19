@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -32,9 +31,7 @@ type GithubComAkuityKargoAPIV1alpha1ArtifactReference struct {
 	// by a corresponding Subscriber implementation that created it.
 	//
 	// +optional
-	Metadata struct {
-		V1JSON
-	} `json:"metadata,omitempty"`
+	Metadata any `json:"metadata,omitempty"`
 
 	// SubscriptionName is the name of the Subscription that discovered this
 	// artifact.
@@ -50,23 +47,6 @@ type GithubComAkuityKargoAPIV1alpha1ArtifactReference struct {
 
 // Validate validates this github com akuity kargo api v1alpha1 artifact reference
 func (m *GithubComAkuityKargoAPIV1alpha1ArtifactReference) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateMetadata(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1ArtifactReference) validateMetadata(formats strfmt.Registry) error {
-	if swag.IsZero(m.Metadata) { // not required
-		return nil
-	}
-
 	return nil
 }
 

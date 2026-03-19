@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -22,9 +21,7 @@ type GithubComAkuityKargoAPIV1alpha1FreightOrigin struct {
 	// present, this can only be "Warehouse".
 	//
 	// +kubebuilder:validation:Required
-	Kind struct {
-		GithubComAkuityKargoAPIV1alpha1FreightOriginKind
-	} `json:"kind,omitempty"`
+	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the resource of the kind indicated by the Kind field
 	// from which Freight may originate.
@@ -35,42 +32,11 @@ type GithubComAkuityKargoAPIV1alpha1FreightOrigin struct {
 
 // Validate validates this github com akuity kargo api v1alpha1 freight origin
 func (m *GithubComAkuityKargoAPIV1alpha1FreightOrigin) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateKind(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1FreightOrigin) validateKind(formats strfmt.Registry) error {
-	if swag.IsZero(m.Kind) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 freight origin based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 freight origin based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1FreightOrigin) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateKind(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1FreightOrigin) contextValidateKind(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

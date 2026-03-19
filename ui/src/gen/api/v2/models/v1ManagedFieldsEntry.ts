@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1FieldsV1 } from './v1FieldsV1';
-import type { V1ManagedFieldsOperationType } from './v1ManagedFieldsOperationType';
 
 export interface V1ManagedFieldsEntry {
   /** APIVersion defines the version of this resource that this field set
@@ -24,7 +23,7 @@ There is currently only one possible value: "FieldsV1" */
   manager?: string;
   /** Operation is the type of operation which lead to this ManagedFieldsEntry being created.
 The only valid values for this field are 'Apply' and 'Update'. */
-  operation?: V1ManagedFieldsOperationType;
+  operation?: string;
   /** Subresource is the name of the subresource used to update that object, or
 empty string if the object was updated through the main resource. The
 value of this field is used to distinguish between managers, even if they

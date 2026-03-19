@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1AppArmorProfileType } from './v1AppArmorProfileType';
 
 export interface V1AppArmorProfile {
   /** localhostProfile indicates a profile loaded on the node that should be used.
@@ -20,5 +19,5 @@ Valid options are:
   RuntimeDefault - the container runtime's default profile.
   Unconfined - no AppArmor enforcement.
 +unionDiscriminator */
-  type?: V1AppArmorProfileType;
+  type?: string;
 }

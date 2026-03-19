@@ -5,15 +5,13 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { K8sIoApiCoreV1ConditionStatus } from './k8sIoApiCoreV1ConditionStatus';
-import type { V1PodConditionType } from './v1PodConditionType';
 
 export interface V1PodFailurePolicyOnPodConditionsPattern {
   /** Specifies the required Pod condition status. To match a pod condition
 it is required that the specified status equals the pod condition status.
 Defaults to True. */
-  status?: K8sIoApiCoreV1ConditionStatus;
+  status?: string;
   /** Specifies the required Pod condition type. To match a pod condition
 it is required that specified type equals the pod condition type. */
-  type?: V1PodConditionType;
+  type?: string;
 }

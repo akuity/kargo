@@ -8,18 +8,15 @@
 import type { V1Affinity } from './v1Affinity';
 import type { V1Container } from './v1Container';
 import type { V1PodDNSConfig } from './v1PodDNSConfig';
-import type { V1DNSPolicy } from './v1DNSPolicy';
 import type { V1EphemeralContainer } from './v1EphemeralContainer';
 import type { V1HostAlias } from './v1HostAlias';
 import type { V1LocalObjectReference } from './v1LocalObjectReference';
 import type { V1PodSpecNodeSelector } from './v1PodSpecNodeSelector';
 import type { V1PodOS } from './v1PodOS';
 import type { V1ResourceList } from './v1ResourceList';
-import type { V1PreemptionPolicy } from './v1PreemptionPolicy';
 import type { V1PodReadinessGate } from './v1PodReadinessGate';
 import type { V1PodResourceClaim } from './v1PodResourceClaim';
 import type { V1ResourceRequirements } from './v1ResourceRequirements';
-import type { V1RestartPolicy } from './v1RestartPolicy';
 import type { V1PodSchedulingGate } from './v1PodSchedulingGate';
 import type { V1PodSecurityContext } from './v1PodSecurityContext';
 import type { V1Toleration } from './v1Toleration';
@@ -59,7 +56,7 @@ DNS parameters given in DNSConfig will be merged with the policy selected with D
 To have DNS options set along with hostNetwork, you have to specify DNS policy
 explicitly to 'ClusterFirstWithHostNet'.
 +optional */
-  dnsPolicy?: V1DNSPolicy;
+  dnsPolicy?: string;
   /** EnableServiceLinks indicates whether information about services should be injected into pod's
 environment variables, matching the syntax of Docker links.
 Optional: Defaults to true.
@@ -218,7 +215,7 @@ More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README
 One of Never, PreemptLowerPriority.
 Defaults to PreemptLowerPriority if unset.
 +optional */
-  preemptionPolicy?: V1PreemptionPolicy;
+  preemptionPolicy?: string;
   /** The priority value. Various system components use this field to find the
 priority of the pod. When Priority Admission Controller is enabled, it
 prevents users from setting this field. The admission controller populates
@@ -277,7 +274,7 @@ One of Always, OnFailure, Never. In some contexts, only a subset of those values
 Default to Always.
 More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
 +optional */
-  restartPolicy?: V1RestartPolicy;
+  restartPolicy?: string;
   /** RuntimeClassName refers to a RuntimeClass object in the node.k8s.io group, which should be used
 to run this pod.  If no RuntimeClass resource matches the named class, the pod will not be run.
 If unset or empty, the "legacy" RuntimeClass will be used, which is an implicit class with an

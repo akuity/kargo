@@ -8,7 +8,6 @@
 import type { V1SecretData } from './v1SecretData';
 import type { V1ObjectMeta } from './v1ObjectMeta';
 import type { V1SecretStringData } from './v1SecretStringData';
-import type { V1SecretType } from './v1SecretType';
 
 export interface V1Secret {
   /** APIVersion defines the versioned schema of this representation of an object.
@@ -50,5 +49,5 @@ The stringData field is never output when reading from the API.
   /** Used to facilitate programmatic handling of secret data.
 More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
 +optional */
-  type?: V1SecretType;
+  type?: string;
 }

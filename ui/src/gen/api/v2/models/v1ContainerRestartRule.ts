@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1ContainerRestartRuleAction } from './v1ContainerRestartRuleAction';
 import type { V1ContainerRestartRuleOnExitCodes } from './v1ContainerRestartRuleOnExitCodes';
 
 export interface V1ContainerRestartRule {
@@ -13,7 +12,7 @@ export interface V1ContainerRestartRule {
 are satisfied. The only possible value is "Restart" to restart the
 container.
 +required */
-  action?: V1ContainerRestartRuleAction;
+  action?: string;
   /** Represents the exit codes to check on container exits.
 +optional
 +oneOf=when */

@@ -5,14 +5,12 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1ResourceName } from './v1ResourceName';
-import type { V1ResourceResizeRestartPolicy } from './v1ResourceResizeRestartPolicy';
 
 export interface V1ContainerResizePolicy {
   /** Name of the resource to which this resource resize policy applies.
 Supported values: cpu, memory. */
-  resourceName?: V1ResourceName;
+  resourceName?: string;
   /** Restart policy to apply when specified resource is resized.
 If not specified, it defaults to NotRequired. */
-  restartPolicy?: V1ResourceResizeRestartPolicy;
+  restartPolicy?: string;
 }

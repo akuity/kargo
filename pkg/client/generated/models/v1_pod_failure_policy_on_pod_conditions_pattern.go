@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -21,76 +20,20 @@ type V1PodFailurePolicyOnPodConditionsPattern struct {
 	// Specifies the required Pod condition status. To match a pod condition
 	// it is required that the specified status equals the pod condition status.
 	// Defaults to True.
-	Status struct {
-		K8sIoAPICoreV1ConditionStatus
-	} `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
 
 	// Specifies the required Pod condition type. To match a pod condition
 	// it is required that specified type equals the pod condition type.
-	Type struct {
-		V1PodConditionType
-	} `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 // Validate validates this v1 pod failure policy on pod conditions pattern
 func (m *V1PodFailurePolicyOnPodConditionsPattern) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateStatus(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateType(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1PodFailurePolicyOnPodConditionsPattern) validateStatus(formats strfmt.Registry) error {
-	if swag.IsZero(m.Status) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1PodFailurePolicyOnPodConditionsPattern) validateType(formats strfmt.Registry) error {
-	if swag.IsZero(m.Type) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 pod failure policy on pod conditions pattern based on the context it is used
+// ContextValidate validates this v1 pod failure policy on pod conditions pattern based on context it is used
 func (m *V1PodFailurePolicyOnPodConditionsPattern) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateStatus(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateType(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1PodFailurePolicyOnPodConditionsPattern) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PodFailurePolicyOnPodConditionsPattern) contextValidateType(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

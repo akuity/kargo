@@ -7,7 +7,6 @@
  */
 import type { V1HTTPHeader } from './v1HTTPHeader';
 import type { IntstrIntOrString } from './intstrIntOrString';
-import type { V1URIScheme } from './v1URIScheme';
 
 export interface V1HTTPGetAction {
   /** Host name to connect to, defaults to the pod IP. You probably want to set
@@ -28,5 +27,5 @@ Name must be an IANA_SVC_NAME. */
   /** Scheme to use for connecting to the host.
 Defaults to HTTP.
 +optional */
-  scheme?: V1URIScheme;
+  scheme?: string;
 }

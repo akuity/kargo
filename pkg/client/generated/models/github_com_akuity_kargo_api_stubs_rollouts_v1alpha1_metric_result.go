@@ -51,7 +51,7 @@ type GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult struct {
 	Name string `json:"name,omitempty"`
 
 	// phase
-	Phase GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisPhase `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 
 	// successful
 	Successful int64 `json:"successful,omitempty"`
@@ -62,10 +62,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) Validate(form
 	var res []error
 
 	if err := m.validateMeasurements(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePhase(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -105,36 +101,11 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) validateMeasu
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) validatePhase(formats strfmt.Registry) error {
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.Validate(formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
-	}
-
-	return nil
-}
-
 // ContextValidate validate this github com akuity kargo api stubs rollouts v1alpha1 metric result based on the context it is used
 func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateMeasurements(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePhase(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -168,28 +139,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) contextValida
 			}
 		}
 
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult) contextValidatePhase(ctx context.Context, formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.ContextValidate(ctx, formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
 	}
 
 	return nil

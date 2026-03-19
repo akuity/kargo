@@ -38,9 +38,7 @@ type GithubComAkuityKargoAPIV1alpha1FreightSources struct {
 	// - "": Treated the same as "OneOf".
 	//
 	// +kubebuilder:validation:Optional
-	AvailabilityStrategy struct {
-		GithubComAkuityKargoAPIV1alpha1FreightAvailabilityStrategy
-	} `json:"availabilityStrategy,omitempty"`
+	AvailabilityStrategy string `json:"availabilityStrategy,omitempty"`
 
 	// Direct indicates the requested Freight may be obtained directly from the
 	// Warehouse from which it originated. If this field's value is false, then
@@ -60,9 +58,7 @@ type GithubComAkuityKargoAPIV1alpha1FreightSources struct {
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	// +akuity:test-kubebuilder-pattern=Duration
-	RequiredSoakTime struct {
-		V1Duration
-	} `json:"requiredSoakTime,omitempty"`
+	RequiredSoakTime string `json:"requiredSoakTime,omitempty"`
 
 	// Stages identifies other "upstream" Stages as potential sources of the
 	// requested Freight. If this field's value is empty, then the value of the
@@ -76,14 +72,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) Validate(formats strfmt.
 	var res []error
 
 	if err := m.validateAutoPromotionOptions(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateAvailabilityStrategy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateRequiredSoakTime(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -101,35 +89,11 @@ func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) validateAutoPromotionOpt
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) validateAvailabilityStrategy(formats strfmt.Registry) error {
-	if swag.IsZero(m.AvailabilityStrategy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) validateRequiredSoakTime(formats strfmt.Registry) error {
-	if swag.IsZero(m.RequiredSoakTime) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this github com akuity kargo api v1alpha1 freight sources based on the context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateAutoPromotionOptions(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateAvailabilityStrategy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateRequiredSoakTime(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -140,16 +104,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) ContextValidate(ctx cont
 }
 
 func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) contextValidateAutoPromotionOptions(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) contextValidateAvailabilityStrategy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1FreightSources) contextValidateRequiredSoakTime(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

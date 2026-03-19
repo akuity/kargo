@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1LifecycleHandler } from './v1LifecycleHandler';
-import type { V1Signal } from './v1Signal';
 
 export interface V1Lifecycle {
   /** PostStart is called immediately after a container is created. If the handler fails,
@@ -30,5 +29,5 @@ More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-ho
 If not specified, the default is defined by the container runtime in use.
 StopSignal can only be set for Pods with a non-empty .spec.os.name
 +optional */
-  stopSignal?: V1Signal;
+  stopSignal?: string;
 }

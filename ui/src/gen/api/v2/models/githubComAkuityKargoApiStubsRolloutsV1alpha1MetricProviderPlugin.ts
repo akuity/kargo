@@ -7,5 +7,5 @@
  */
 
 export type GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricProviderPlugin = {
-  [key: string]: number[];
+  [key: string]: string;
 };

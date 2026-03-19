@@ -6,9 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { GithubComAkuityKargoApiV1alpha1FreightCreationCriteria } from './githubComAkuityKargoApiV1alpha1FreightCreationCriteria';
-import type { GithubComAkuityKargoApiV1alpha1FreightCreationPolicy } from './githubComAkuityKargoApiV1alpha1FreightCreationPolicy';
-import type { V1Duration } from './v1Duration';
-import type { V1JSON } from './v1json';
+import type { GithubComAkuityKargoApiV1alpha1WarehouseSpecSubscriptionsItem } from './githubComAkuityKargoApiV1alpha1WarehouseSpecSubscriptionsItem';
 
 export interface GithubComAkuityKargoApiV1alpha1WarehouseSpec {
   /** FreightCreationCriteria defines criteria that must be satisfied for Freight
@@ -29,7 +27,7 @@ Accepted values:
 
 +kubebuilder:default=Automatic
 +kubebuilder:validation:Optional */
-  freightCreationPolicy?: GithubComAkuityKargoApiV1alpha1FreightCreationPolicy;
+  freightCreationPolicy?: string;
   /** Interval is the reconciliation interval for this Warehouse. On each
 reconciliation, the Warehouse will discover new artifacts and optionally
 produce new Freight. This field is optional. When left unspecified, the
@@ -39,7 +37,7 @@ field is implicitly treated as if its value were "5m0s".
 +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 +kubebuilder:default="5m0s"
 +akuity:test-kubebuilder-pattern=Duration */
-  interval?: V1Duration;
+  interval?: string;
   /** Shard is the name of the shard that this Warehouse belongs to. This is an
 optional field. If not specified, the Warehouse will belong to the default
 shard. A defaulting webhook will sync this field with the value of the
@@ -53,5 +51,5 @@ of the shard label. */
 produced by this Warehouse.
 
 +kubebuilder:validation:MinItems=1 */
-  subscriptions?: V1JSON[];
+  subscriptions?: GithubComAkuityKargoApiV1alpha1WarehouseSpecSubscriptionsItem[];
 }

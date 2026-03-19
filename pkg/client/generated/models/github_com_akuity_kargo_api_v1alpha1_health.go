@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -20,87 +19,26 @@ type GithubComAkuityKargoAPIV1alpha1Health struct {
 
 	// Config is the opaque configuration of all health checks performed on this
 	// Stage.
-	Config struct {
-		V1JSON
-	} `json:"config,omitempty"`
+	Config any `json:"config,omitempty"`
 
 	// Issues clarifies why a Stage in any state other than Healthy is in that
 	// state. This field will always be the empty when a Stage is Healthy.
 	Issues []string `json:"issues"`
 
 	// Output is the opaque output of all health checks performed on this Stage.
-	Output struct {
-		V1JSON
-	} `json:"output,omitempty"`
+	Output any `json:"output,omitempty"`
 
 	// Status describes the health of the Stage.
-	Status struct {
-		GithubComAkuityKargoAPIV1alpha1HealthState
-	} `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api v1alpha1 health
 func (m *GithubComAkuityKargoAPIV1alpha1Health) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateConfig(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateOutput(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateStatus(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1Health) validateConfig(formats strfmt.Registry) error {
-	if swag.IsZero(m.Config) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1Health) validateOutput(formats strfmt.Registry) error {
-	if swag.IsZero(m.Output) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1Health) validateStatus(formats strfmt.Registry) error {
-	if swag.IsZero(m.Status) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 health based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 health based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1Health) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateStatus(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1Health) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

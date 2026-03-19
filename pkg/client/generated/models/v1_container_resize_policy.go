@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -20,76 +19,20 @@ type V1ContainerResizePolicy struct {
 
 	// Name of the resource to which this resource resize policy applies.
 	// Supported values: cpu, memory.
-	ResourceName struct {
-		V1ResourceName
-	} `json:"resourceName,omitempty"`
+	ResourceName string `json:"resourceName,omitempty"`
 
 	// Restart policy to apply when specified resource is resized.
 	// If not specified, it defaults to NotRequired.
-	RestartPolicy struct {
-		V1ResourceResizeRestartPolicy
-	} `json:"restartPolicy,omitempty"`
+	RestartPolicy string `json:"restartPolicy,omitempty"`
 }
 
 // Validate validates this v1 container resize policy
 func (m *V1ContainerResizePolicy) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateResourceName(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateRestartPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1ContainerResizePolicy) validateResourceName(formats strfmt.Registry) error {
-	if swag.IsZero(m.ResourceName) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1ContainerResizePolicy) validateRestartPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.RestartPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 container resize policy based on the context it is used
+// ContextValidate validates this v1 container resize policy based on context it is used
 func (m *V1ContainerResizePolicy) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateResourceName(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateRestartPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ContainerResizePolicy) contextValidateResourceName(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1ContainerResizePolicy) contextValidateRestartPolicy(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

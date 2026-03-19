@@ -30,7 +30,7 @@ type GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus struct {
 	MetricResults []*GithubComAkuityKargoAPIStubsRolloutsV1alpha1MetricResult `json:"metricResults"`
 
 	// phase
-	Phase GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisPhase `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 
 	// run summary
 	RunSummary *GithubComAkuityKargoAPIStubsRolloutsV1alpha1RunSummary `json:"runSummary,omitempty"`
@@ -48,10 +48,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) Validate
 	}
 
 	if err := m.validateMetricResults(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePhase(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -118,27 +114,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) validate
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) validatePhase(formats strfmt.Registry) error {
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.Validate(formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
-	}
-
-	return nil
-}
-
 func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) validateRunSummary(formats strfmt.Registry) error {
 	if swag.IsZero(m.RunSummary) { // not required
 		return nil
@@ -171,10 +146,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) ContextV
 	}
 
 	if err := m.contextValidateMetricResults(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePhase(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -237,28 +208,6 @@ func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) contextV
 			}
 		}
 
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisRunStatus) contextValidatePhase(ctx context.Context, formats strfmt.Registry) error {
-
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	if err := m.Phase.ContextValidate(ctx, formats); err != nil {
-		ve := new(errors.Validation)
-		if stderrors.As(err, &ve) {
-			return ve.ValidateName("phase")
-		}
-		ce := new(errors.CompositeError)
-		if stderrors.As(err, &ce) {
-			return ce.ValidateName("phase")
-		}
-
-		return err
 	}
 
 	return nil

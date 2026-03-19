@@ -7,7 +7,6 @@
  */
 import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1Measurement } from './githubComAkuityKargoApiStubsRolloutsV1alpha1Measurement';
 import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResultMetadata } from './githubComAkuityKargoApiStubsRolloutsV1alpha1MetricResultMetadata';
-import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase } from './githubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase';
 
 export interface GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResult {
   consecutiveError?: number;
@@ -20,6 +19,6 @@ export interface GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResult {
   message?: string;
   metadata?: GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResultMetadata;
   name?: string;
-  phase?: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase;
+  phase?: string;
   successful?: number;
 }

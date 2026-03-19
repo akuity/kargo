@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -25,9 +24,7 @@ type V1ContainerRestartRuleOnExitCodes struct {
 	// - NotIn: the requirement is satisfied if the container exit code is
 	//   not in the set of specified values.
 	// +required
-	Operator struct {
-		V1ContainerRestartRuleOnExitCodesOperator
-	} `json:"operator,omitempty"`
+	Operator string `json:"operator,omitempty"`
 
 	// Specifies the set of values to check for container exit codes.
 	// At most 255 elements are allowed.
@@ -38,42 +35,11 @@ type V1ContainerRestartRuleOnExitCodes struct {
 
 // Validate validates this v1 container restart rule on exit codes
 func (m *V1ContainerRestartRuleOnExitCodes) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateOperator(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1ContainerRestartRuleOnExitCodes) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 container restart rule on exit codes based on the context it is used
+// ContextValidate validates this v1 container restart rule on exit codes based on context it is used
 func (m *V1ContainerRestartRuleOnExitCodes) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateOperator(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ContainerRestartRuleOnExitCodes) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

@@ -7,8 +7,6 @@ package models
 
 import (
 	"context"
-	stderrors "errors"
-	"strconv"
 
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
@@ -24,7 +22,7 @@ type V1PersistentVolumeClaimSpec struct {
 	// More info: https://kubernetes.io/docs/concepts/storage/persistent-volumes#access-modes-1
 	// +optional
 	// +listType=atomic
-	AccessModes []V1PersistentVolumeAccessMode `json:"accessModes"`
+	AccessModes []string `json:"accessModes"`
 
 	// dataSource field can be used to specify either:
 	// * An existing VolumeSnapshot object (snapshot.storage.k8s.io/VolumeSnapshot)
@@ -105,9 +103,7 @@ type V1PersistentVolumeClaimSpec struct {
 	// volumeMode defines what type of volume is required by the claim.
 	// Value of Filesystem is implied when not included in claim spec.
 	// +optional
-	VolumeMode struct {
-		V1PersistentVolumeMode
-	} `json:"volumeMode,omitempty"`
+	VolumeMode string `json:"volumeMode,omitempty"`
 
 	// volumeName is the binding reference to the PersistentVolume backing this claim.
 	// +optional
@@ -117,10 +113,6 @@ type V1PersistentVolumeClaimSpec struct {
 // Validate validates this v1 persistent volume claim spec
 func (m *V1PersistentVolumeClaimSpec) Validate(formats strfmt.Registry) error {
 	var res []error
-
-	if err := m.validateAccessModes(formats); err != nil {
-		res = append(res, err)
-	}
 
 	if err := m.validateDataSource(formats); err != nil {
 		res = append(res, err)
@@ -138,38 +130,9 @@ func (m *V1PersistentVolumeClaimSpec) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateVolumeMode(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1PersistentVolumeClaimSpec) validateAccessModes(formats strfmt.Registry) error {
-	if swag.IsZero(m.AccessModes) { // not required
-		return nil
-	}
-
-	for i := 0; i < len(m.AccessModes); i++ {
-
-		if err := m.AccessModes[i].Validate(formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("accessModes" + "." + strconv.Itoa(i))
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("accessModes" + "." + strconv.Itoa(i))
-			}
-
-			return err
-		}
-
-	}
-
 	return nil
 }
 
@@ -205,21 +168,9 @@ func (m *V1PersistentVolumeClaimSpec) validateSelector(formats strfmt.Registry) 
 	return nil
 }
 
-func (m *V1PersistentVolumeClaimSpec) validateVolumeMode(formats strfmt.Registry) error {
-	if swag.IsZero(m.VolumeMode) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 persistent volume claim spec based on the context it is used
 func (m *V1PersistentVolumeClaimSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
-
-	if err := m.contextValidateAccessModes(ctx, formats); err != nil {
-		res = append(res, err)
-	}
 
 	if err := m.contextValidateDataSource(ctx, formats); err != nil {
 		res = append(res, err)
@@ -237,39 +188,9 @@ func (m *V1PersistentVolumeClaimSpec) ContextValidate(ctx context.Context, forma
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateVolumeMode(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1PersistentVolumeClaimSpec) contextValidateAccessModes(ctx context.Context, formats strfmt.Registry) error {
-
-	for i := 0; i < len(m.AccessModes); i++ {
-
-		if swag.IsZero(m.AccessModes[i]) { // not required
-			return nil
-		}
-
-		if err := m.AccessModes[i].ContextValidate(ctx, formats); err != nil {
-			ve := new(errors.Validation)
-			if stderrors.As(err, &ve) {
-				return ve.ValidateName("accessModes" + "." + strconv.Itoa(i))
-			}
-			ce := new(errors.CompositeError)
-			if stderrors.As(err, &ce) {
-				return ce.ValidateName("accessModes" + "." + strconv.Itoa(i))
-			}
-
-			return err
-		}
-
-	}
-
 	return nil
 }
 
@@ -289,11 +210,6 @@ func (m *V1PersistentVolumeClaimSpec) contextValidateResources(ctx context.Conte
 }
 
 func (m *V1PersistentVolumeClaimSpec) contextValidateSelector(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1PersistentVolumeClaimSpec) contextValidateVolumeMode(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

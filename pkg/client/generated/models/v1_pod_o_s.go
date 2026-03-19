@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -22,49 +21,16 @@ type V1PodOS struct {
 	// Additional value may be defined in future and can be one of:
 	// https://github.com/opencontainers/runtime-spec/blob/master/config.md#platform-specific-configuration
 	// Clients should expect to handle additional values and treat unrecognized values in this field as os: null
-	Name struct {
-		V1OSName
-	} `json:"name,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // Validate validates this v1 pod o s
 func (m *V1PodOS) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateName(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1PodOS) validateName(formats strfmt.Registry) error {
-	if swag.IsZero(m.Name) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 pod o s based on the context it is used
+// ContextValidate validates this v1 pod o s based on context it is used
 func (m *V1PodOS) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateName(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1PodOS) contextValidateName(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

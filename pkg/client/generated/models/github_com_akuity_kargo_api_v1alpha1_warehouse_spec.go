@@ -39,9 +39,7 @@ type GithubComAkuityKargoAPIV1alpha1WarehouseSpec struct {
 	//
 	// +kubebuilder:default=Automatic
 	// +kubebuilder:validation:Optional
-	FreightCreationPolicy struct {
-		GithubComAkuityKargoAPIV1alpha1FreightCreationPolicy
-	} `json:"freightCreationPolicy,omitempty"`
+	FreightCreationPolicy string `json:"freightCreationPolicy,omitempty"`
 
 	// Interval is the reconciliation interval for this Warehouse. On each
 	// reconciliation, the Warehouse will discover new artifacts and optionally
@@ -52,9 +50,7 @@ type GithubComAkuityKargoAPIV1alpha1WarehouseSpec struct {
 	// +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
 	// +kubebuilder:default="5m0s"
 	// +akuity:test-kubebuilder-pattern=Duration
-	Interval struct {
-		V1Duration
-	} `json:"interval,omitempty"`
+	Interval string `json:"interval,omitempty"`
 
 	// Shard is the name of the shard that this Warehouse belongs to. This is an
 	// optional field. If not specified, the Warehouse will belong to the default
@@ -70,7 +66,7 @@ type GithubComAkuityKargoAPIV1alpha1WarehouseSpec struct {
 	// produced by this Warehouse.
 	//
 	// +kubebuilder:validation:MinItems=1
-	Subscriptions []V1JSON `json:"subscriptions"`
+	Subscriptions []any `json:"subscriptions"`
 }
 
 // Validate validates this github com akuity kargo api v1alpha1 warehouse spec
@@ -78,14 +74,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) Validate(formats strfmt.R
 	var res []error
 
 	if err := m.validateFreightCreationCriteria(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateFreightCreationPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateInterval(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -103,35 +91,11 @@ func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) validateFreightCreationCr
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) validateFreightCreationPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.FreightCreationPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) validateInterval(formats strfmt.Registry) error {
-	if swag.IsZero(m.Interval) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this github com akuity kargo api v1alpha1 warehouse spec based on the context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateFreightCreationCriteria(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateFreightCreationPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateInterval(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -142,16 +106,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) ContextValidate(ctx conte
 }
 
 func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) contextValidateFreightCreationCriteria(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) contextValidateFreightCreationPolicy(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1WarehouseSpec) contextValidateInterval(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

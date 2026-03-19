@@ -30,7 +30,7 @@ type V1Secret struct {
 	// base64 encoded string, representing the arbitrary (possibly non-string)
 	// data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
 	// +optional
-	Data map[string][]int32 `json:"data,omitempty"`
+	Data map[string]strfmt.Base64 `json:"data,omitempty"`
 
 	// Immutable, if set to true, ensures that data stored in the Secret cannot
 	// be updated (only object metadata can be modified).
@@ -65,9 +65,7 @@ type V1Secret struct {
 	// Used to facilitate programmatic handling of secret data.
 	// More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
 	// +optional
-	Type struct {
-		V1SecretType
-	} `json:"type,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 // Validate validates this v1 secret
@@ -75,10 +73,6 @@ func (m *V1Secret) Validate(formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.validateMetadata(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateType(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -96,23 +90,11 @@ func (m *V1Secret) validateMetadata(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1Secret) validateType(formats strfmt.Registry) error {
-	if swag.IsZero(m.Type) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 secret based on the context it is used
 func (m *V1Secret) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateMetadata(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateType(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -123,11 +105,6 @@ func (m *V1Secret) ContextValidate(ctx context.Context, formats strfmt.Registry)
 }
 
 func (m *V1Secret) contextValidateMetadata(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1Secret) contextValidateType(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

@@ -5,14 +5,12 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1TaintEffect } from './v1TaintEffect';
-import type { V1TolerationOperator } from './v1TolerationOperator';
 
 export interface V1Toleration {
   /** Effect indicates the taint effect to match. Empty means match all taint effects.
 When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
 +optional */
-  effect?: V1TaintEffect;
+  effect?: string;
   /** Key is the taint key that the toleration applies to. Empty means match all taint keys.
 If the key is empty, operator must be Exists; this combination means to match all values and all keys.
 +optional */
@@ -22,7 +20,7 @@ Valid operators are Exists and Equal. Defaults to Equal.
 Exists is equivalent to wildcard for value, so that a pod can
 tolerate all taints of a particular category.
 +optional */
-  operator?: V1TolerationOperator;
+  operator?: string;
   /** TolerationSeconds represents the period of time the toleration (which must be
 of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
 it is not set, which means tolerate the taint forever (do not evict). Zero and

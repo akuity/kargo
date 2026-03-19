@@ -16,4 +16,4 @@ Using this field will require 1.10+ apiserver and
 kubelet.
 +optional
  */
-export type V1ConfigMapBinaryData = { [key: string]: number[] };
+export type V1ConfigMapBinaryData = { [key: string]: string };

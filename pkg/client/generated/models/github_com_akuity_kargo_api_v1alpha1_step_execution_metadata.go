@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -42,49 +41,16 @@ type GithubComAkuityKargoAPIV1alpha1StepExecutionMetadata struct {
 	StartedAt string `json:"startedAt,omitempty"`
 
 	// Status is the high-level outcome of the step.
-	Status struct {
-		GithubComAkuityKargoAPIV1alpha1PromotionStepStatus
-	} `json:"status,omitempty"`
+	Status string `json:"status,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api v1alpha1 step execution metadata
 func (m *GithubComAkuityKargoAPIV1alpha1StepExecutionMetadata) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateStatus(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1StepExecutionMetadata) validateStatus(formats strfmt.Registry) error {
-	if swag.IsZero(m.Status) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 step execution metadata based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 step execution metadata based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1StepExecutionMetadata) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateStatus(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1StepExecutionMetadata) contextValidateStatus(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

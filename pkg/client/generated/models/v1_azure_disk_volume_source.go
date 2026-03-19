@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -21,9 +20,7 @@ type V1AzureDiskVolumeSource struct {
 	// cachingMode is the Host Caching mode: None, Read Only, Read Write.
 	// +optional
 	// +default=ref(AzureDataDiskCachingReadWrite)
-	CachingMode struct {
-		V1AzureDataDiskCachingMode
-	} `json:"cachingMode,omitempty"`
+	CachingMode string `json:"cachingMode,omitempty"`
 
 	// diskName is the Name of the data disk in the blob storage
 	DiskName string `json:"diskName,omitempty"`
@@ -40,9 +37,7 @@ type V1AzureDiskVolumeSource struct {
 
 	// kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
 	// +default=ref(AzureSharedBlobDisk)
-	Kind struct {
-		V1AzureDataDiskKind
-	} `json:"kind,omitempty"`
+	Kind string `json:"kind,omitempty"`
 
 	// readOnly Defaults to false (read/write). ReadOnly here will force
 	// the ReadOnly setting in VolumeMounts.
@@ -53,63 +48,11 @@ type V1AzureDiskVolumeSource struct {
 
 // Validate validates this v1 azure disk volume source
 func (m *V1AzureDiskVolumeSource) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateCachingMode(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateKind(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1AzureDiskVolumeSource) validateCachingMode(formats strfmt.Registry) error {
-	if swag.IsZero(m.CachingMode) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1AzureDiskVolumeSource) validateKind(formats strfmt.Registry) error {
-	if swag.IsZero(m.Kind) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 azure disk volume source based on the context it is used
+// ContextValidate validates this v1 azure disk volume source based on context it is used
 func (m *V1AzureDiskVolumeSource) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateCachingMode(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateKind(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1AzureDiskVolumeSource) contextValidateCachingMode(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1AzureDiskVolumeSource) contextValidateKind(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

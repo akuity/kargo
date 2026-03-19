@@ -32,7 +32,7 @@ type GithubComAkuityKargoAPIV1alpha1FreightStatus struct {
 	// Metadata is a map of arbitrary metadata associated with the Freight.
 	// This is useful for storing additional information about the Freight
 	// or Promotion that can be shared across steps or stages.
-	Metadata map[string]V1JSON `json:"metadata,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
 
 	// VerifiedIn describes the Stages in which this Freight has been verified
 	// through promotion and subsequent health checks.

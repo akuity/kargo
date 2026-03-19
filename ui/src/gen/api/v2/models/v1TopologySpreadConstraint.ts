@@ -6,8 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1LabelSelector } from './v1LabelSelector';
-import type { V1NodeInclusionPolicy } from './v1NodeInclusionPolicy';
-import type { V1UnsatisfiableConstraintAction } from './v1UnsatisfiableConstraintAction';
 
 export interface V1TopologySpreadConstraint {
   /** LabelSelector is used to find matching pods.
@@ -80,7 +78,7 @@ when calculating pod topology spread skew. Options are:
 
 If this value is nil, the behavior is equivalent to the Honor policy.
 +optional */
-  nodeAffinityPolicy?: V1NodeInclusionPolicy;
+  nodeAffinityPolicy?: string;
   /** NodeTaintsPolicy indicates how we will treat node taints when calculating
 pod topology spread skew. Options are:
 - Honor: nodes without taints, along with tainted nodes for which the incoming pod
@@ -89,7 +87,7 @@ has a toleration, are included.
 
 If this value is nil, the behavior is equivalent to the Ignore policy.
 +optional */
-  nodeTaintsPolicy?: V1NodeInclusionPolicy;
+  nodeTaintsPolicy?: string;
   /** TopologyKey is the key of node labels. Nodes that have a label with this key
 and identical values are considered to be in the same topology.
 We consider each <key, value> as a "bucket", and try to put balanced number
@@ -122,5 +120,5 @@ to zone2(zone3) to become 3/2/1(3/1/2) as ActualSkew(2-1) on zone2(zone3) satisf
 MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
 won't make it *more* imbalanced.
 It's a required field. */
-  whenUnsatisfiable?: V1UnsatisfiableConstraintAction;
+  whenUnsatisfiable?: string;
 }

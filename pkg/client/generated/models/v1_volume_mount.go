@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -29,9 +28,7 @@ type V1VolumeMount struct {
 	// When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
 	// (which defaults to None).
 	// +optional
-	MountPropagation struct {
-		V1MountPropagationMode
-	} `json:"mountPropagation,omitempty"`
+	MountPropagation string `json:"mountPropagation,omitempty"`
 
 	// This must match the Name of a Volume.
 	Name string `json:"name,omitempty"`
@@ -60,9 +57,7 @@ type V1VolumeMount struct {
 	//
 	// +featureGate=RecursiveReadOnlyMounts
 	// +optional
-	RecursiveReadOnly struct {
-		V1RecursiveReadOnlyMode
-	} `json:"recursiveReadOnly,omitempty"`
+	RecursiveReadOnly string `json:"recursiveReadOnly,omitempty"`
 
 	// Path within the volume from which the container's volume should be mounted.
 	// Defaults to "" (volume's root).
@@ -79,63 +74,11 @@ type V1VolumeMount struct {
 
 // Validate validates this v1 volume mount
 func (m *V1VolumeMount) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateMountPropagation(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateRecursiveReadOnly(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1VolumeMount) validateMountPropagation(formats strfmt.Registry) error {
-	if swag.IsZero(m.MountPropagation) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1VolumeMount) validateRecursiveReadOnly(formats strfmt.Registry) error {
-	if swag.IsZero(m.RecursiveReadOnly) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 volume mount based on the context it is used
+// ContextValidate validates this v1 volume mount based on context it is used
 func (m *V1VolumeMount) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateMountPropagation(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateRecursiveReadOnly(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1VolumeMount) contextValidateMountPropagation(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1VolumeMount) contextValidateRecursiveReadOnly(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

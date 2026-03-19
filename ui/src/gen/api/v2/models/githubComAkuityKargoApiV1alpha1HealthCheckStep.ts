@@ -5,11 +5,11 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1JSON } from './v1json';
+import type { GithubComAkuityKargoApiV1alpha1HealthCheckStepConfig } from './githubComAkuityKargoApiV1alpha1HealthCheckStepConfig';
 
 export interface GithubComAkuityKargoApiV1alpha1HealthCheckStep {
   /** Config is the configuration for the directive. */
-  config?: V1JSON;
+  config?: GithubComAkuityKargoApiV1alpha1HealthCheckStepConfig;
   /** Uses identifies a runner that can execute this step.
 
 +kubebuilder:validation:MinLength=1 */

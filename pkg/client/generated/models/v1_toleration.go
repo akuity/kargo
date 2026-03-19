@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -21,9 +20,7 @@ type V1Toleration struct {
 	// Effect indicates the taint effect to match. Empty means match all taint effects.
 	// When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
 	// +optional
-	Effect struct {
-		V1TaintEffect
-	} `json:"effect,omitempty"`
+	Effect string `json:"effect,omitempty"`
 
 	// Key is the taint key that the toleration applies to. Empty means match all taint keys.
 	// If the key is empty, operator must be Exists; this combination means to match all values and all keys.
@@ -35,9 +32,7 @@ type V1Toleration struct {
 	// Exists is equivalent to wildcard for value, so that a pod can
 	// tolerate all taints of a particular category.
 	// +optional
-	Operator struct {
-		V1TolerationOperator
-	} `json:"operator,omitempty"`
+	Operator string `json:"operator,omitempty"`
 
 	// TolerationSeconds represents the period of time the toleration (which must be
 	// of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
@@ -54,63 +49,11 @@ type V1Toleration struct {
 
 // Validate validates this v1 toleration
 func (m *V1Toleration) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateEffect(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateOperator(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1Toleration) validateEffect(formats strfmt.Registry) error {
-	if swag.IsZero(m.Effect) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *V1Toleration) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 toleration based on the context it is used
+// ContextValidate validates this v1 toleration based on context it is used
 func (m *V1Toleration) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateEffect(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateOperator(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1Toleration) contextValidateEffect(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1Toleration) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

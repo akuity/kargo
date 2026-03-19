@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { GithubComAkuityKargoApiV1alpha1PromotionStepStatus } from './githubComAkuityKargoApiV1alpha1PromotionStepStatus';
 
 export interface GithubComAkuityKargoApiV1alpha1StepExecutionMetadata {
   /** Alias is the alias of the step. */
@@ -26,5 +25,5 @@ completed. */
 began. */
   startedAt?: string;
   /** Status is the high-level outcome of the step. */
-  status?: GithubComAkuityKargoApiV1alpha1PromotionStepStatus;
+  status?: string;
 }

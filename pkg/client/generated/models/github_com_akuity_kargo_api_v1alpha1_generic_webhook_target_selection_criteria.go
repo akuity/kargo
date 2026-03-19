@@ -29,9 +29,7 @@ type GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria struct
 	// Kind is the kind of the target resource.
 	//
 	// +kubebuilder:validation:Enum=Warehouse;
-	Kind struct {
-		GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetKind
-	} `json:"kind,omitempty"`
+	Kind string `json:"kind,omitempty"`
 
 	// LabelSelector is a label selector to identify the target resources.
 	// If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
@@ -56,10 +54,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) V
 		res = append(res, err)
 	}
 
-	if err := m.validateKind(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateLabelSelector(formats); err != nil {
 		res = append(res, err)
 	}
@@ -72,14 +66,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) V
 
 func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) validateIndexSelector(formats strfmt.Registry) error {
 	if swag.IsZero(m.IndexSelector) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) validateKind(formats strfmt.Registry) error {
-	if swag.IsZero(m.Kind) { // not required
 		return nil
 	}
 
@@ -102,10 +88,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) C
 		res = append(res, err)
 	}
 
-	if err := m.contextValidateKind(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateLabelSelector(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -117,11 +99,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) C
 }
 
 func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) contextValidateIndexSelector(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1GenericWebhookTargetSelectionCriteria) contextValidateKind(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

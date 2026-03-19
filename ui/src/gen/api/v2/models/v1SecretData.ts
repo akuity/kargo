@@ -13,4 +13,4 @@ base64 encoded string, representing the arbitrary (possibly non-string)
 data value here. Described in https://tools.ietf.org/html/rfc4648#section-4
 +optional
  */
-export type V1SecretData = { [key: string]: number[] };
+export type V1SecretData = { [key: string]: string };

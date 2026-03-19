@@ -5,14 +5,13 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { GithubComAkuityKargoApiV1alpha1FreightOriginKind } from './githubComAkuityKargoApiV1alpha1FreightOriginKind';
 
 export interface GithubComAkuityKargoApiV1alpha1FreightOrigin {
   /** Kind is the kind of resource from which Freight may have originated. At
 present, this can only be "Warehouse".
 
 +kubebuilder:validation:Required */
-  kind?: GithubComAkuityKargoApiV1alpha1FreightOriginKind;
+  kind?: string;
   /** Name is the name of the resource of the kind indicated by the Kind field
 from which Freight may originate.
 

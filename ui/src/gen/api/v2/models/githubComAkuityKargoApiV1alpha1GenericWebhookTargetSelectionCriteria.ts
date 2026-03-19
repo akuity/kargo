@@ -6,7 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { GithubComAkuityKargoApiV1alpha1IndexSelector } from './githubComAkuityKargoApiV1alpha1IndexSelector';
-import type { GithubComAkuityKargoApiV1alpha1GenericWebhookTargetKind } from './githubComAkuityKargoApiV1alpha1GenericWebhookTargetKind';
 import type { V1LabelSelector } from './v1LabelSelector';
 
 export interface GithubComAkuityKargoApiV1alpha1GenericWebhookTargetSelectionCriteria {
@@ -18,7 +17,7 @@ If used with LabelSelector and/or Name, the results are the combined (logical AN
   /** Kind is the kind of the target resource.
 
 +kubebuilder:validation:Enum=Warehouse; */
-  kind?: GithubComAkuityKargoApiV1alpha1GenericWebhookTargetKind;
+  kind?: string;
   /** LabelSelector is a label selector to identify the target resources.
 If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.
 

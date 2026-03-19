@@ -5,10 +5,9 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { IntstrType } from './intstrType';
 
 export interface IntstrIntOrString {
   intVal?: number;
   strVal?: string;
-  type?: IntstrType;
+  type?: number;
 }

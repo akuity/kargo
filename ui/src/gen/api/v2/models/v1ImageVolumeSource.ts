@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1PullPolicy } from './v1PullPolicy';
 
 export interface V1ImageVolumeSource {
   /** Policy for pulling OCI objects. Possible values are:
@@ -14,7 +13,7 @@ Never: the kubelet never pulls the reference and only uses a local image or arti
 IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
 Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
 +optional */
-  pullPolicy?: V1PullPolicy;
+  pullPolicy?: string;
   /** Required: Image or artifact reference to be used.
 Behaves in the same way as pod.spec.containers[*].image.
 Pull secrets will be assembled in the same way as for the container image by looking up node credentials, SA image pull secrets, and pod spec image pull secrets.

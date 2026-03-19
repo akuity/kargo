@@ -7,13 +7,12 @@
  */
 import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1RunSummary } from './githubComAkuityKargoApiStubsRolloutsV1alpha1RunSummary';
 import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResult } from './githubComAkuityKargoApiStubsRolloutsV1alpha1MetricResult';
-import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase } from './githubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase';
 
 export interface GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisRunStatus {
   dryRunSummary?: GithubComAkuityKargoApiStubsRolloutsV1alpha1RunSummary;
   message?: string;
   metricResults?: GithubComAkuityKargoApiStubsRolloutsV1alpha1MetricResult[];
-  phase?: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase;
+  phase?: string;
   runSummary?: GithubComAkuityKargoApiStubsRolloutsV1alpha1RunSummary;
   startedAt?: string;
 }

@@ -39,9 +39,7 @@ type V1ManagedFieldsEntry struct {
 
 	// Operation is the type of operation which lead to this ManagedFieldsEntry being created.
 	// The only valid values for this field are 'Apply' and 'Update'.
-	Operation struct {
-		V1ManagedFieldsOperationType
-	} `json:"operation,omitempty"`
+	Operation string `json:"operation,omitempty"`
 
 	// Subresource is the name of the subresource used to update that object, or
 	// empty string if the object was updated through the main resource. The
@@ -69,10 +67,6 @@ func (m *V1ManagedFieldsEntry) Validate(formats strfmt.Registry) error {
 		res = append(res, err)
 	}
 
-	if err := m.validateOperation(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
@@ -87,30 +81,8 @@ func (m *V1ManagedFieldsEntry) validateFieldsV1(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1ManagedFieldsEntry) validateOperation(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operation) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 managed fields entry based on the context it is used
+// ContextValidate validates this v1 managed fields entry based on context it is used
 func (m *V1ManagedFieldsEntry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateOperation(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ManagedFieldsEntry) contextValidateOperation(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

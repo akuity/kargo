@@ -6,6 +6,6 @@
  * OpenAPI spec version: v1alpha1
  */
 
-export interface V1JSON {
+export type GithubComAkuityKargoApiV1alpha1WarehouseSpecSubscriptionsItem = {
   [key: string]: unknown;
-}
+};

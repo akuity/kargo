@@ -44,9 +44,7 @@ type V1HTTPGetAction struct {
 	// Scheme to use for connecting to the host.
 	// Defaults to HTTP.
 	// +optional
-	Scheme struct {
-		V1URIScheme
-	} `json:"scheme,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
 }
 
 // Validate validates this v1 HTTP get action
@@ -58,10 +56,6 @@ func (m *V1HTTPGetAction) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validatePort(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateScheme(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -109,14 +103,6 @@ func (m *V1HTTPGetAction) validatePort(formats strfmt.Registry) error {
 	return nil
 }
 
-func (m *V1HTTPGetAction) validateScheme(formats strfmt.Registry) error {
-	if swag.IsZero(m.Scheme) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this v1 HTTP get action based on the context it is used
 func (m *V1HTTPGetAction) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
@@ -126,10 +112,6 @@ func (m *V1HTTPGetAction) ContextValidate(ctx context.Context, formats strfmt.Re
 	}
 
 	if err := m.contextValidatePort(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidateScheme(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -169,11 +151,6 @@ func (m *V1HTTPGetAction) contextValidateHTTPHeaders(ctx context.Context, format
 }
 
 func (m *V1HTTPGetAction) contextValidatePort(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *V1HTTPGetAction) contextValidateScheme(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

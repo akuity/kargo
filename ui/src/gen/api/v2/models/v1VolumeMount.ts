@@ -5,8 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1MountPropagationMode } from './v1MountPropagationMode';
-import type { V1RecursiveReadOnlyMode } from './v1RecursiveReadOnlyMode';
 
 export interface V1VolumeMount {
   /** Path within the container at which the volume should be mounted.  Must
@@ -19,7 +17,7 @@ This field is beta in 1.10.
 When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
 (which defaults to None).
 +optional */
-  mountPropagation?: V1MountPropagationMode;
+  mountPropagation?: string;
   /** This must match the Name of a Volume. */
   name?: string;
   /** Mounted read-only if true, read-write otherwise (false or unspecified).
@@ -45,7 +43,7 @@ If this field is not specified, it is treated as an equivalent of Disabled.
 
 +featureGate=RecursiveReadOnlyMounts
 +optional */
-  recursiveReadOnly?: V1RecursiveReadOnlyMode;
+  recursiveReadOnly?: string;
   /** Path within the volume from which the container's volume should be mounted.
 Defaults to "" (volume's root).
 +optional */

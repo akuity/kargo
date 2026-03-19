@@ -23,9 +23,7 @@ type V1EmptyDirVolumeSource struct {
 	// Must be an empty string (default) or Memory.
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 	// +optional
-	Medium struct {
-		V1StorageMedium
-	} `json:"medium,omitempty"`
+	Medium string `json:"medium,omitempty"`
 
 	// sizeLimit is the total amount of local storage required for this EmptyDir volume.
 	// The size limit is also applicable for memory medium.
@@ -43,10 +41,6 @@ type V1EmptyDirVolumeSource struct {
 func (m *V1EmptyDirVolumeSource) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateMedium(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateSizeLimit(formats); err != nil {
 		res = append(res, err)
 	}
@@ -54,14 +48,6 @@ func (m *V1EmptyDirVolumeSource) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1EmptyDirVolumeSource) validateMedium(formats strfmt.Registry) error {
-	if swag.IsZero(m.Medium) { // not required
-		return nil
-	}
-
 	return nil
 }
 
@@ -77,10 +63,6 @@ func (m *V1EmptyDirVolumeSource) validateSizeLimit(formats strfmt.Registry) erro
 func (m *V1EmptyDirVolumeSource) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.contextValidateMedium(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.contextValidateSizeLimit(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -88,11 +70,6 @@ func (m *V1EmptyDirVolumeSource) ContextValidate(ctx context.Context, formats st
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *V1EmptyDirVolumeSource) contextValidateMedium(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

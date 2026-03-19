@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -53,49 +52,16 @@ type GithubComAkuityKargoAPIV1alpha1PromotionStepRetry struct {
 	//
 	// A value of 0 will cause the step to be retried indefinitely unless the
 	// ErrorThreshold is reached.
-	Timeout struct {
-		V1Duration
-	} `json:"timeout,omitempty"`
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api v1alpha1 promotion step retry
 func (m *GithubComAkuityKargoAPIV1alpha1PromotionStepRetry) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateTimeout(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStepRetry) validateTimeout(formats strfmt.Registry) error {
-	if swag.IsZero(m.Timeout) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 promotion step retry based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 promotion step retry based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1PromotionStepRetry) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateTimeout(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStepRetry) contextValidateTimeout(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

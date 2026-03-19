@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { V1SeccompProfileType } from './v1SeccompProfileType';
 
 export interface V1SeccompProfile {
   /** localhostProfile indicates a profile defined in a file on the node should be used.
@@ -21,5 +20,5 @@ Localhost - a profile defined in a file on the node should be used.
 RuntimeDefault - the container runtime default profile should be used.
 Unconfined - no profile should be applied.
 +unionDiscriminator */
-  type?: V1SeccompProfileType;
+  type?: string;
 }

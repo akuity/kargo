@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -19,49 +18,16 @@ import (
 type V1PodReadinessGate struct {
 
 	// ConditionType refers to a condition in the pod's condition list with matching type.
-	ConditionType struct {
-		V1PodConditionType
-	} `json:"conditionType,omitempty"`
+	ConditionType string `json:"conditionType,omitempty"`
 }
 
 // Validate validates this v1 pod readiness gate
 func (m *V1PodReadinessGate) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateConditionType(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1PodReadinessGate) validateConditionType(formats strfmt.Registry) error {
-	if swag.IsZero(m.ConditionType) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 pod readiness gate based on the context it is used
+// ContextValidate validates this v1 pod readiness gate based on context it is used
 func (m *V1PodReadinessGate) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateConditionType(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1PodReadinessGate) contextValidateConditionType(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

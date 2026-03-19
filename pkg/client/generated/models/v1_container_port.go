@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -43,49 +42,16 @@ type V1ContainerPort struct {
 	// Defaults to "TCP".
 	// +optional
 	// +default="TCP"
-	Protocol struct {
-		V1Protocol
-	} `json:"protocol,omitempty"`
+	Protocol string `json:"protocol,omitempty"`
 }
 
 // Validate validates this v1 container port
 func (m *V1ContainerPort) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateProtocol(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1ContainerPort) validateProtocol(formats strfmt.Registry) error {
-	if swag.IsZero(m.Protocol) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 container port based on the context it is used
+// ContextValidate validates this v1 container port based on context it is used
 func (m *V1ContainerPort) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateProtocol(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1ContainerPort) contextValidateProtocol(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

@@ -27,9 +27,7 @@ type GithubComAkuityKargoAPIV1alpha1PromotionStep struct {
 	// only by each PromotionStep's implementation. It is legal to utilize
 	// expressions in defining values at any level of this block.
 	// See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
-	Config struct {
-		V1JSON
-	} `json:"config,omitempty"`
+	Config any `json:"config,omitempty"`
 
 	// ContinueOnError is a boolean value that, if set to true, will cause the
 	// Promotion to continue executing the next step even if this step fails. It
@@ -70,10 +68,6 @@ type GithubComAkuityKargoAPIV1alpha1PromotionStep struct {
 func (m *GithubComAkuityKargoAPIV1alpha1PromotionStep) Validate(formats strfmt.Registry) error {
 	var res []error
 
-	if err := m.validateConfig(formats); err != nil {
-		res = append(res, err)
-	}
-
 	if err := m.validateRetry(formats); err != nil {
 		res = append(res, err)
 	}
@@ -89,14 +83,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1PromotionStep) Validate(formats strfmt.R
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStep) validateConfig(formats strfmt.Registry) error {
-	if swag.IsZero(m.Config) { // not required
-		return nil
-	}
-
 	return nil
 }
 

@@ -42,9 +42,7 @@ type GithubComAkuityKargoAPIV1alpha1VerificationInfo struct {
 	// this will be a reflection of the underlying AnalysisRun's phase, however,
 	// there are exceptions to this, such as in the case where an AnalysisRun
 	// cannot be launched successfully.
-	Phase struct {
-		GithubComAkuityKargoAPIV1alpha1VerificationPhase
-	} `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 
 	// StartTime is the time at which the Verification process was started.
 	StartTime string `json:"startTime,omitempty"`
@@ -55,10 +53,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) Validate(formats strfm
 	var res []error
 
 	if err := m.validateAnalysisRun(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePhase(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -76,23 +70,11 @@ func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) validateAnalysisRun(fo
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) validatePhase(formats strfmt.Registry) error {
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 // ContextValidate validate this github com akuity kargo api v1alpha1 verification info based on the context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
 	if err := m.contextValidateAnalysisRun(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePhase(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -103,11 +85,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) ContextValidate(ctx co
 }
 
 func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) contextValidateAnalysisRun(ctx context.Context, formats strfmt.Registry) error {
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1VerificationInfo) contextValidatePhase(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

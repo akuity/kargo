@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -23,9 +22,7 @@ type V1LabelSelectorRequirement struct {
 
 	// operator represents a key's relationship to a set of values.
 	// Valid operators are In, NotIn, Exists and DoesNotExist.
-	Operator struct {
-		V1LabelSelectorOperator
-	} `json:"operator,omitempty"`
+	Operator string `json:"operator,omitempty"`
 
 	// values is an array of string values. If the operator is In or NotIn,
 	// the values array must be non-empty. If the operator is Exists or DoesNotExist,
@@ -38,42 +35,11 @@ type V1LabelSelectorRequirement struct {
 
 // Validate validates this v1 label selector requirement
 func (m *V1LabelSelectorRequirement) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateOperator(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *V1LabelSelectorRequirement) validateOperator(formats strfmt.Registry) error {
-	if swag.IsZero(m.Operator) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this v1 label selector requirement based on the context it is used
+// ContextValidate validates this v1 label selector requirement based on context it is used
 func (m *V1LabelSelectorRequirement) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateOperator(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *V1LabelSelectorRequirement) contextValidateOperator(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 

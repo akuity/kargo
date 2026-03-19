@@ -57,18 +57,14 @@ type GithubComAkuityKargoAPIV1alpha1PromotionStatus struct {
 	Message string `json:"message,omitempty"`
 
 	// Phase describes where the Promotion currently is in its lifecycle.
-	Phase struct {
-		GithubComAkuityKargoAPIV1alpha1PromotionPhase
-	} `json:"phase,omitempty"`
+	Phase string `json:"phase,omitempty"`
 
 	// StartedAt is the time when the promotion started.
 	StartedAt string `json:"startedAt,omitempty"`
 
 	// State stores the state of the promotion process between reconciliation
 	// attempts.
-	State struct {
-		V1JSON
-	} `json:"state,omitempty"`
+	State any `json:"state,omitempty"`
 
 	// StepExecutionMetadata tracks metadata pertaining to the execution
 	// of individual promotion steps.
@@ -88,14 +84,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) Validate(formats strfmt
 	}
 
 	if err := m.validateHealthChecks(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validatePhase(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.validateState(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -155,22 +143,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) validateHealthChecks(fo
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) validatePhase(formats strfmt.Registry) error {
-	if swag.IsZero(m.Phase) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) validateState(formats strfmt.Registry) error {
-	if swag.IsZero(m.State) { // not required
-		return nil
-	}
-
-	return nil
-}
-
 func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) validateStepExecutionMetadata(formats strfmt.Registry) error {
 	if swag.IsZero(m.StepExecutionMetadata) { // not required
 		return nil
@@ -214,10 +186,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) ContextValidate(ctx con
 	}
 
 	if err := m.contextValidateHealthChecks(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if err := m.contextValidatePhase(ctx, formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -266,11 +234,6 @@ func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) contextValidateHealthCh
 		}
 
 	}
-
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1PromotionStatus) contextValidatePhase(ctx context.Context, formats strfmt.Registry) error {
 
 	return nil
 }

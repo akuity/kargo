@@ -6,13 +6,12 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1MeasurementMetadata } from './githubComAkuityKargoApiStubsRolloutsV1alpha1MeasurementMetadata';
-import type { GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase } from './githubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase';
 
 export interface GithubComAkuityKargoApiStubsRolloutsV1alpha1Measurement {
   finishedAt?: string;
   message?: string;
   metadata?: GithubComAkuityKargoApiStubsRolloutsV1alpha1MeasurementMetadata;
-  phase?: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisPhase;
+  phase?: string;
   resumeAt?: string;
   startedAt?: string;
   value?: string;

@@ -5,7 +5,6 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { GithubComAkuityKargoApiV1alpha1AutoPromotionSelectionPolicy } from './githubComAkuityKargoApiV1alpha1AutoPromotionSelectionPolicy';
 
 export interface GithubComAkuityKargoApiV1alpha1AutoPromotionOptions {
   /** SelectionPolicy specifies the rules for identifying new Freight that is
@@ -21,5 +20,5 @@ Accepted Values:
 - "MatchUpstream": Only the Freight currently used immediately upstream
   from this Stage is eligible for auto-promotion. This policy may only
   be applied when the Stage has exactly one upstream Stage. */
-  selectionPolicy?: GithubComAkuityKargoApiV1alpha1AutoPromotionSelectionPolicy;
+  selectionPolicy?: string;
 }

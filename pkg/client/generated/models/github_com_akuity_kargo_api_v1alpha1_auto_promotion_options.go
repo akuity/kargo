@@ -8,7 +8,6 @@ package models
 import (
 	"context"
 
-	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
 )
@@ -31,49 +30,16 @@ type GithubComAkuityKargoAPIV1alpha1AutoPromotionOptions struct {
 	// - "MatchUpstream": Only the Freight currently used immediately upstream
 	//   from this Stage is eligible for auto-promotion. This policy may only
 	//   be applied when the Stage has exactly one upstream Stage.
-	SelectionPolicy struct {
-		GithubComAkuityKargoAPIV1alpha1AutoPromotionSelectionPolicy
-	} `json:"selectionPolicy,omitempty"`
+	SelectionPolicy string `json:"selectionPolicy,omitempty"`
 }
 
 // Validate validates this github com akuity kargo api v1alpha1 auto promotion options
 func (m *GithubComAkuityKargoAPIV1alpha1AutoPromotionOptions) Validate(formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.validateSelectionPolicy(formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
 	return nil
 }
 
-func (m *GithubComAkuityKargoAPIV1alpha1AutoPromotionOptions) validateSelectionPolicy(formats strfmt.Registry) error {
-	if swag.IsZero(m.SelectionPolicy) { // not required
-		return nil
-	}
-
-	return nil
-}
-
-// ContextValidate validate this github com akuity kargo api v1alpha1 auto promotion options based on the context it is used
+// ContextValidate validates this github com akuity kargo api v1alpha1 auto promotion options based on context it is used
 func (m *GithubComAkuityKargoAPIV1alpha1AutoPromotionOptions) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
-	var res []error
-
-	if err := m.contextValidateSelectionPolicy(ctx, formats); err != nil {
-		res = append(res, err)
-	}
-
-	if len(res) > 0 {
-		return errors.CompositeValidationError(res...)
-	}
-	return nil
-}
-
-func (m *GithubComAkuityKargoAPIV1alpha1AutoPromotionOptions) contextValidateSelectionPolicy(ctx context.Context, formats strfmt.Registry) error {
-
 	return nil
 }
 
