@@ -110,7 +110,8 @@ func testRESTEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 
@@ -219,7 +220,8 @@ func testRESTWatchEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 

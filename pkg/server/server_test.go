@@ -40,6 +40,7 @@ func TestNewServer(t *testing.T) {
 		testClient,
 		rbac.NewKubernetesRolesDatabase(
 			testClient,
+			testClient,
 			rbac.RolesDatabaseConfigFromEnv(),
 		),
 		testSender,

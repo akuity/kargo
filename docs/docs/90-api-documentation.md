@@ -1681,6 +1681,7 @@ RawFormat specifies the format for raw resource representation.
 | metadata | k8s.io.apimachinery.pkg.apis.meta.v1.ObjectMeta |   |
 | serviceAccount | k8s.io.api.core.v1.ServiceAccount |   |
 | roles | k8s.io.api.rbac.v1.Role |   |
+| clusterRoles | k8s.io.api.rbac.v1.ClusterRole |   |
 | roleBindings | k8s.io.api.rbac.v1.RoleBinding |   |
 
 <a name="github-com-akuity-kargo-api-rbac-v1alpha1-ServiceAccountReference"></a>
