@@ -1,4 +1,4 @@
-# API Documentation
+# gRPC API Documentation (Deprecated)
 <a name="top"></a>
 
 <a name="api_service_v1alpha1_service-proto"></a>
