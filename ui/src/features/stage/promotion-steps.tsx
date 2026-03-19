@@ -4,7 +4,11 @@ import { useMemo } from 'react';
 import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { getPromotionDirectiveStepStatus } from '../common/promotion-directive-step-status/utils';
-import { PromotionStatusPhase, getPromotionStatusPhase } from '../common/promotion-status/utils';
+import {
+  getPromotionStatusPhase,
+  isPromotionPhaseTerminal,
+  PromotionStatusPhase
+} from '../common/promotion-status/utils';
 
 import { Step } from './promotion-step';
 import { getPromotionOutputsByStepAlias } from './utils/promotion';
@@ -21,6 +25,11 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
   const phase = getPromotionStatusPhase(props.promotion);
 
+  const shouldShowMessage =
+    isPromotionPhaseTerminal(phase) &&
+    phase !== PromotionStatusPhase.SUCCEEDED &&
+    !!props.promotion?.status?.message;
+
   return (
     <>
       <Collapse
@@ -34,14 +43,9 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
           });
         })}
       />
-      {!!props.promotion?.status?.message &&
-        (phase === PromotionStatusPhase.FAILED || phase === PromotionStatusPhase.ERRORED ? (
-          <Alert message={props.promotion?.status?.message} type='error' className='mt-4' />
-        ) : (
-          <div className='mt-4 rounded border border-gray-200 bg-gray-50 p-3 text-sm text-gray-600'>
-            {props.promotion.status.message}
-          </div>
-        ))}
+      {shouldShowMessage && (
+        <Alert message={props.promotion?.status?.message} type='error' className='mt-4' />
+      )}
     </>
   );
 };
