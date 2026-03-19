@@ -374,7 +374,7 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 	t.Run("ServiceAccount not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
-		_, _, _, _, err := db.GetAsResources(
+		_, err := db.GetAsResources(
 			t.Context(),
 			false,
 			testProject,
@@ -388,17 +388,17 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 			plainServiceAccount(nil),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
-		sa, roles, croles, rbs, err := db.GetAsResources(
+		resources, err := db.GetAsResources(
 			t.Context(),
 			false,
 			testProject,
 			testKargoRoleName,
 		)
 		require.NoError(t, err)
-		require.NotNil(t, sa)
-		require.Nil(t, roles)
-		require.Nil(t, croles)
-		require.Nil(t, rbs)
+		require.NotNil(t, resources.ServiceAccount)
+		require.Nil(t, resources.Roles)
+		require.Nil(t, resources.ClusterRoles)
+		require.Nil(t, resources.RoleBindings)
 	})
 
 	t.Run("Role not found", func(t *testing.T) {
@@ -407,7 +407,7 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 			plainRoleBinding(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
-		_, _, _, _, err := db.GetAsResources(
+		_, err := db.GetAsResources(
 			t.Context(),
 			false,
 			testProject,
@@ -422,7 +422,7 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 			roleBindingToClusterRole(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
-		_, _, _, _, err := db.GetAsResources(
+		_, err := db.GetAsResources(
 			t.Context(),
 			false,
 			testProject,
@@ -440,17 +440,17 @@ func Test_rolesDatabase_GetAsResources(t *testing.T) {
 			roleBindingToClusterRole(),
 		).Build()
 		db := NewKubernetesRolesDatabase(c, c, RolesDatabaseConfig{})
-		sa, roles, croles, rbs, err := db.GetAsResources(
+		resources, err := db.GetAsResources(
 			t.Context(),
 			false,
 			testProject,
 			testKargoRoleName,
 		)
 		require.NoError(t, err)
-		require.NotNil(t, sa)
-		require.Len(t, roles, 1)
-		require.Len(t, croles, 1)
-		require.Len(t, rbs, 2)
+		require.NotNil(t, resources.ServiceAccount)
+		require.Len(t, resources.Roles, 1)
+		require.Len(t, resources.ClusterRoles, 1)
+		require.Len(t, resources.RoleBindings, 2)
 	})
 }
 
@@ -1288,73 +1288,61 @@ func Test_rolesDatabase_Update(t *testing.T) {
 
 func Test_manageableResources(t *testing.T) {
 	t.Run("bound to ClusterRoles", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*managedServiceAccount(nil),
-			nil,
-			[]rbacv1.ClusterRole{*clusterRole(nil)},
-			nil,
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			ClusterRoles:   []rbacv1.ClusterRole{*clusterRole(nil)},
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 		require.ErrorContains(t, err, "bound to one or more ClusterRoles")
 	})
 
 	t.Run("ServiceAccount is not annotated correctly", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*plainServiceAccount(nil),
-			nil,
-			nil,
-			nil,
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: plainServiceAccount(nil),
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("multiple Roles", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*managedServiceAccount(nil),
-			[]rbacv1.Role{{}, {}},
-			nil,
-			nil,
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			Roles:          []rbacv1.Role{{}, {}},
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("single Role not annotated correctly", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*managedServiceAccount(nil),
-			[]rbacv1.Role{*plainRole(nil)},
-			nil,
-			nil,
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			Roles:          []rbacv1.Role{*plainRole(nil)},
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("multiple RoleBindings", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*managedServiceAccount(nil),
-			[]rbacv1.Role{*managedRole(nil)},
-			nil,
-			[]rbacv1.RoleBinding{{}, {}},
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			Roles:          []rbacv1.Role{*managedRole(nil)},
+			RoleBindings:   []rbacv1.RoleBinding{{}, {}},
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("single RoleBinding is not annotated correctly", func(t *testing.T) {
-		_, _, err := manageableResources(
-			*managedServiceAccount(nil),
-			[]rbacv1.Role{*managedRole(nil)},
-			nil,
-			[]rbacv1.RoleBinding{*plainRoleBinding()},
-		)
+		_, _, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			Roles:          []rbacv1.Role{*managedRole(nil)},
+			RoleBindings:   []rbacv1.RoleBinding{*plainRoleBinding()},
+		})
 		require.True(t, apierrors.IsBadRequest(err))
 	})
 
 	t.Run("success", func(t *testing.T) {
-		role, rb, err := manageableResources(
-			*managedServiceAccount(nil),
-			[]rbacv1.Role{*managedRole(nil)},
-			nil,
-			[]rbacv1.RoleBinding{*managedRoleBinding()},
-		)
+		role, rb, err := manageableResources(Resources{
+			ServiceAccount: managedServiceAccount(nil),
+			Roles:          []rbacv1.Role{*managedRole(nil)},
+			RoleBindings:   []rbacv1.RoleBinding{*managedRoleBinding()},
+		})
 		require.NoError(t, err)
 		require.NotNil(t, role)
 		require.NotNil(t, rb)
@@ -1619,7 +1607,12 @@ func TestResourcesToRole(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			role, err := ResourcesToRole(tc.sa, tc.roles, tc.clusterRoles, tc.roleBindings)
+			role, err := ResourcesToRole(Resources{
+				ServiceAccount: tc.sa,
+				Roles:          tc.roles,
+				ClusterRoles:   tc.clusterRoles,
+				RoleBindings:   tc.roleBindings,
+			})
 			tc.assertions(t, role, err)
 		})
 	}
