@@ -39,17 +39,6 @@ const config = {
           }) {
             const sidebarItems = await defaultSidebarItemsGenerator(args);
 
-            function filterItems(items) {
-              return items
-                .filter((item) => item.id !== 'api-documentation')
-                .map((item) => {
-                  if (item.type === 'category') {
-                    item.items = filterItems(item.items);
-                  }
-                  return item;
-                });
-            }
-
             function addBadges(items) {
               return items.map((item) => {
                 if (item.type === 'category') {
@@ -65,7 +54,9 @@ const config = {
               });
             }
 
-            return addBadges(filterItems(sidebarItems));
+            return addBadges(sidebarItems.filter(
+              (item) => /** @type {any} */ (item).id !== 'api-documentation')
+            );
           },
         },
         blog: false,
