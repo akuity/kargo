@@ -362,22 +362,6 @@ definitions:
           $ref: '#/definitions/v1.PolicyRule'
         type: array
     type: object
-  github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.AnalysisPhase:
-    enum:
-    - Pending
-    - Running
-    - Successful
-    - Failed
-    - Error
-    - Inconclusive
-    type: string
-    x-enum-varnames:
-    - AnalysisPhasePending
-    - AnalysisPhaseRunning
-    - AnalysisPhaseSuccessful
-    - AnalysisPhaseFailed
-    - AnalysisPhaseError
-    - AnalysisPhaseInconclusive
   github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.AnalysisRun:
     properties:
       apiVersion:
@@ -436,7 +420,7 @@ definitions:
           $ref: '#/definitions/github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.MetricResult'
         type: array
       phase:
-        $ref: '#/definitions/github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.AnalysisPhase'
+        type: string
       runSummary:
         $ref: '#/definitions/github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.RunSummary'
       startedAt:
@@ -727,7 +711,7 @@ definitions:
           type: string
         type: object
       phase:
-        $ref: '#/definitions/github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.AnalysisPhase'
+        type: string
       resumeAt:
         type: string
       startedAt:
@@ -825,7 +809,7 @@ definitions:
       name:
         type: string
       phase:
-        $ref: '#/definitions/github_com_akuity_kargo_api_stubs_rollouts_v1alpha1.AnalysisPhase'
+        type: string
       successful:
         type: integer
     type: object
@@ -1041,8 +1025,6 @@ definitions:
           +kubebuilder:validation:MinLength=1
         type: string
       metadata:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: |-
           Metadata is a JSON object containing a mostly opaque collection of artifact
           attributes. (It must be an object. It may not be a list or a scalar value.)
@@ -1051,6 +1033,7 @@ definitions:
           by a corresponding Subscriber implementation that created it.
 
           +optional
+        type: object
       subscriptionName:
         description: |-
           SubscriptionName is the name of the Subscription that discovered this
@@ -1118,8 +1101,6 @@ definitions:
   github_com_akuity_kargo_api_v1alpha1.AutoPromotionOptions:
     properties:
       selectionPolicy:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.AutoPromotionSelectionPolicy'
         description: |-
           SelectionPolicy specifies the rules for identifying new Freight that is
           eligible for auto-promotion to this Stage. This field is optional. When
@@ -1134,15 +1115,8 @@ definitions:
           - "MatchUpstream": Only the Freight currently used immediately upstream
             from this Stage is eligible for auto-promotion. This policy may only
             be applied when the Stage has exactly one upstream Stage.
+        type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.AutoPromotionSelectionPolicy:
-    enum:
-    - NewestFreight
-    - MatchUpstream
-    type: string
-    x-enum-varnames:
-    - AutoPromotionSelectionPolicyNewestFreight
-    - AutoPromotionSelectionPolicyMatchUpstream
   github_com_akuity_kargo_api_v1alpha1.AzureWebhookReceiverConfig:
     properties:
       secretRef:
@@ -1599,14 +1573,6 @@ definitions:
         - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.FreightStatus'
         description: Status describes the current status of this Freight.
     type: object
-  github_com_akuity_kargo_api_v1alpha1.FreightAvailabilityStrategy:
-    enum:
-    - All
-    - OneOf
-    type: string
-    x-enum-varnames:
-    - FreightAvailabilityStrategyAll
-    - FreightAvailabilityStrategyOneOf
   github_com_akuity_kargo_api_v1alpha1.FreightCollection:
     properties:
       id:
@@ -1637,24 +1603,15 @@ definitions:
           Freight to be created automatically from new artifacts following discovery.
         type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.FreightCreationPolicy:
-    enum:
-    - Automatic
-    - Manual
-    type: string
-    x-enum-varnames:
-    - FreightCreationPolicyAutomatic
-    - FreightCreationPolicyManual
   github_com_akuity_kargo_api_v1alpha1.FreightOrigin:
     properties:
       kind:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.FreightOriginKind'
         description: |-
           Kind is the kind of resource from which Freight may have originated. At
           present, this can only be "Warehouse".
 
           +kubebuilder:validation:Required
+        type: string
       name:
         description: |-
           Name is the name of the resource of the kind indicated by the Kind field
@@ -1663,12 +1620,6 @@ definitions:
           +kubebuilder:validation:Required
         type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.FreightOriginKind:
-    enum:
-    - Warehouse
-    type: string
-    x-enum-varnames:
-    - FreightOriginKindWarehouse
   github_com_akuity_kargo_api_v1alpha1.FreightReference:
     properties:
       artifacts:
@@ -1731,8 +1682,6 @@ definitions:
           settings have no effect if auto-promotion is not enabled for this Stage at
           the ProjectConfig level.
       availabilityStrategy:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.FreightAvailabilityStrategy'
         description: |-
           AvailabilityStrategy specifies the semantics for how requested Freight is
           made available to the Stage. This field is optional. When left unspecified,
@@ -1747,6 +1696,7 @@ definitions:
           - "": Treated the same as "OneOf".
 
           +kubebuilder:validation:Optional
+        type: string
       direct:
         description: |-
           Direct indicates the requested Freight may be obtained directly from the
@@ -1755,8 +1705,6 @@ definitions:
           fields, at least one source must be specified.
         type: boolean
       requiredSoakTime:
-        allOf:
-        - $ref: '#/definitions/v1.Duration'
         description: |-
           RequiredSoakTime specifies a minimum duration for which the requested
           Freight must have continuously occupied ("soaked in") in an upstream Stage
@@ -1770,6 +1718,7 @@ definitions:
           +kubebuilder:validation:Type=string
           +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
           +akuity:test-kubebuilder-pattern=Duration
+        type: string
       stages:
         description: |-
           Stages identifies other "upstream" Stages as potential sources of the
@@ -1799,7 +1748,7 @@ definitions:
         type: object
       metadata:
         additionalProperties:
-          $ref: '#/definitions/v1.JSON'
+          type: object
         description: |-
           Metadata is a map of arbitrary metadata associated with the Freight.
           This is useful for storing additional information about the Freight
@@ -1816,13 +1765,12 @@ definitions:
   github_com_akuity_kargo_api_v1alpha1.GenericWebhookAction:
     properties:
       action:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.GenericWebhookActionType'
         description: |-
           ActionType indicates the type of action to be performed. `Refresh` is the
           only currently supported action.
 
           +kubebuilder:validation:Enum=Refresh;
+        type: string
       parameters:
         additionalProperties:
           type: string
@@ -1849,12 +1797,6 @@ definitions:
           +optional
         type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.GenericWebhookActionType:
-    enum:
-    - Refresh
-    type: string
-    x-enum-varnames:
-    - GenericWebhookActionTypeRefresh
   github_com_akuity_kargo_api_v1alpha1.GenericWebhookReceiverConfig:
     properties:
       actions:
@@ -1883,12 +1825,6 @@ definitions:
 
           +kubebuilder:validation:Required
     type: object
-  github_com_akuity_kargo_api_v1alpha1.GenericWebhookTargetKind:
-    enum:
-    - Warehouse
-    type: string
-    x-enum-varnames:
-    - GenericWebhookTargetKindWarehouse
   github_com_akuity_kargo_api_v1alpha1.GenericWebhookTargetSelectionCriteria:
     properties:
       indexSelector:
@@ -1900,12 +1836,11 @@ definitions:
 
           +optional
       kind:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.GenericWebhookTargetKind'
         description: |-
           Kind is the kind of the target resource.
 
           +kubebuilder:validation:Enum=Warehouse;
+        type: string
       labelSelector:
         allOf:
         - $ref: '#/definitions/v1.LabelSelector'
@@ -2057,11 +1992,10 @@ definitions:
   github_com_akuity_kargo_api_v1alpha1.Health:
     properties:
       config:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: |-
           Config is the opaque configuration of all health checks performed on this
           Stage.
+        type: object
       issues:
         description: |-
           Issues clarifies why a Stage in any state other than Healthy is in that
@@ -2070,21 +2004,18 @@ definitions:
           type: string
         type: array
       output:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: Output is the opaque output of all health checks performed on
           this Stage.
+        type: object
       status:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.HealthState'
         description: Status describes the health of the Stage.
+        type: string
     type: object
   github_com_akuity_kargo_api_v1alpha1.HealthCheckStep:
     properties:
       config:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: Config is the configuration for the directive.
+        type: object
       uses:
         description: |-
           Uses identifies a runner that can execute this step.
@@ -2092,20 +2023,6 @@ definitions:
           +kubebuilder:validation:MinLength=1
         type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.HealthState:
-    enum:
-    - Healthy
-    - NotApplicable
-    - Progressing
-    - Unknown
-    - Unhealthy
-    type: string
-    x-enum-varnames:
-    - HealthStateHealthy
-    - HealthStateNotApplicable
-    - HealthStateProgressing
-    - HealthStateUnknown
-    - HealthStateUnhealthy
   github_com_akuity_kargo_api_v1alpha1.HealthStats:
     properties:
       healthy:
@@ -2172,14 +2089,6 @@ definitions:
           $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.IndexSelectorRequirement'
         type: array
     type: object
-  github_com_akuity_kargo_api_v1alpha1.IndexSelectorOperator:
-    enum:
-    - Equals
-    - NotEquals
-    type: string
-    x-enum-varnames:
-    - IndexSelectorOperatorEqual
-    - IndexSelectorOperatorNotEqual
   github_com_akuity_kargo_api_v1alpha1.IndexSelectorRequirement:
     properties:
       key:
@@ -2189,13 +2098,12 @@ definitions:
           +kubebuilder:validation:Enum=subscribedURLs;receiverPaths
         type: string
       operator:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.IndexSelectorOperator'
         description: |-
           Operator indicates the operation that should be used to evaluate
           whether the selection requirement is satisfied.
 
           kubebuilder:validation:Enum=Equal;NotEqual;
+        type: string
       value:
         description: |-
           Value can be a static string or an expression that will be evaluated.
@@ -2432,22 +2340,6 @@ definitions:
       metadata:
         $ref: '#/definitions/v1.ListMeta'
     type: object
-  github_com_akuity_kargo_api_v1alpha1.PromotionPhase:
-    enum:
-    - Pending
-    - Running
-    - Succeeded
-    - Failed
-    - Errored
-    - Aborted
-    type: string
-    x-enum-varnames:
-    - PromotionPhasePending
-    - PromotionPhaseRunning
-    - PromotionPhaseSucceeded
-    - PromotionPhaseFailed
-    - PromotionPhaseErrored
-    - PromotionPhaseAborted
   github_com_akuity_kargo_api_v1alpha1.PromotionPolicy:
     properties:
       autoPromotionEnabled:
@@ -2622,18 +2514,16 @@ definitions:
           to explain why.
         type: string
       phase:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.PromotionPhase'
         description: Phase describes where the Promotion currently is in its lifecycle.
+        type: string
       startedAt:
         description: StartedAt is the time when the promotion started.
         type: string
       state:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: |-
           State stores the state of the promotion process between reconciliation
           attempts.
+        type: object
       stepExecutionMetadata:
         description: |-
           StepExecutionMetadata tracks metadata pertaining to the execution
@@ -2648,13 +2538,12 @@ definitions:
         description: As is the alias this step can be referred to as.
         type: string
       config:
-        allOf:
-        - $ref: '#/definitions/v1.JSON'
         description: |-
           Config is opaque configuration for the PromotionStep that is understood
           only by each PromotionStep's implementation. It is legal to utilize
           expressions in defining values at any level of this block.
           See https://docs.kargo.io/user-guide/reference-docs/expressions for details.
+        type: object
       continueOnError:
         description: |-
           ContinueOnError is a boolean value that, if set to true, will cause the
@@ -2720,8 +2609,6 @@ definitions:
           further condition.
         type: integer
       timeout:
-        allOf:
-        - $ref: '#/definitions/v1.Duration'
         description: |-
           Timeout is the soft maximum interval in which a step that returns a Running
           status (which typically indicates it's waiting for something to happen)
@@ -2737,23 +2624,8 @@ definitions:
 
           A value of 0 will cause the step to be retried indefinitely unless the
           ErrorThreshold is reached.
+        type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.PromotionStepStatus:
-    enum:
-    - Running
-    - Succeeded
-    - Failed
-    - Errored
-    - Aborted
-    - Skipped
-    type: string
-    x-enum-varnames:
-    - PromotionStepStatusRunning
-    - PromotionStepStatusSucceeded
-    - PromotionStepStatusFailed
-    - PromotionStepStatusErrored
-    - PromotionStepStatusAborted
-    - PromotionStepStatusSkipped
   github_com_akuity_kargo_api_v1alpha1.PromotionTask:
     properties:
       apiVersion:
@@ -3083,7 +2955,7 @@ definitions:
         description: LastPromotion is a reference to the last completed promotion.
       metadata:
         additionalProperties:
-          $ref: '#/definitions/v1.JSON'
+          type: object
         description: |-
           Metadata is a map of arbitrary metadata associated with the Stage.
           This is useful for storing additional information about the Stage
@@ -3125,9 +2997,8 @@ definitions:
           began.
         type: string
       status:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.PromotionStepStatus'
         description: Status is the high-level outcome of the step.
+        type: string
     type: object
   github_com_akuity_kargo_api_v1alpha1.Verification:
     properties:
@@ -3176,46 +3047,26 @@ definitions:
           process is in its current phase.
         type: string
       phase:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.VerificationPhase'
         description: |-
           Phase describes the current phase of the Verification process. Generally,
           this will be a reflection of the underlying AnalysisRun's phase, however,
           there are exceptions to this, such as in the case where an AnalysisRun
           cannot be launched successfully.
+        type: string
       startTime:
         description: StartTime is the time at which the Verification process was started.
         type: string
     type: object
-  github_com_akuity_kargo_api_v1alpha1.VerificationPhase:
-    enum:
-    - Pending
-    - Running
-    - Successful
-    - Failed
-    - Error
-    - Aborted
-    - Inconclusive
-    type: string
-    x-enum-varnames:
-    - VerificationPhasePending
-    - VerificationPhaseRunning
-    - VerificationPhaseSuccessful
-    - VerificationPhaseFailed
-    - VerificationPhaseError
-    - VerificationPhaseAborted
-    - VerificationPhaseInconclusive
   github_com_akuity_kargo_api_v1alpha1.VerifiedStage:
     properties:
       longestSoak:
-        allOf:
-        - $ref: '#/definitions/v1.Duration'
         description: |-
           LongestCompletedSoak represents the longest definite time interval wherein
           the Freight was in CONTINUOUS use by the Stage. This value is updated as
           Freight EXITS the Stage. If the Freight is currently in use by the Stage,
           the time elapsed since the Freight ENTERED the Stage is its current soak
           time, which may exceed the value of this field.
+        type: string
       verifiedAt:
         description: VerifiedAt is the time at which the Freight was verified in the
           Stage.
@@ -3292,8 +3143,6 @@ definitions:
 
           +kubebuilder:validation:Optional
       freightCreationPolicy:
-        allOf:
-        - $ref: '#/definitions/github_com_akuity_kargo_api_v1alpha1.FreightCreationPolicy'
         description: |-
           FreightCreationPolicy describes how Freight is created by this Warehouse.
           This field is optional. When left unspecified, the field is implicitly
@@ -3307,9 +3156,8 @@ definitions:
 
           +kubebuilder:default=Automatic
           +kubebuilder:validation:Optional
+        type: string
       interval:
-        allOf:
-        - $ref: '#/definitions/v1.Duration'
         description: |-
           Interval is the reconciliation interval for this Warehouse. On each
           reconciliation, the Warehouse will discover new artifacts and optionally
@@ -3320,6 +3168,7 @@ definitions:
           +kubebuilder:validation:Pattern=`^([0-9]+(\.[0-9]+)?(s|m|h))+$`
           +kubebuilder:default="5m0s"
           +akuity:test-kubebuilder-pattern=Duration
+        type: string
       shard:
         description: |-
           Shard is the name of the shard that this Warehouse belongs to. This is an
@@ -3338,7 +3187,7 @@ definitions:
 
           +kubebuilder:validation:MinItems=1
         items:
-          $ref: '#/definitions/v1.JSON'
+          type: object
         type: array
     type: object
   github_com_akuity_kargo_api_v1alpha1.WarehouseStats:
@@ -3478,33 +3327,8 @@ definitions:
       strVal:
         type: string
       type:
-        $ref: '#/definitions/intstr.Type'
+        type: integer
     type: object
-  intstr.Type:
-    enum:
-    - 0
-    - 1
-    format: int64
-    type: integer
-    x-enum-comments:
-      Int: The IntOrString holds an int.
-      String: The IntOrString holds a string.
-    x-enum-descriptions:
-    - The IntOrString holds an int.
-    - The IntOrString holds a string.
-    x-enum-varnames:
-    - Int
-    - String
-  k8s_io_api_core_v1.ConditionStatus:
-    enum:
-    - "True"
-    - "False"
-    - Unknown
-    type: string
-    x-enum-varnames:
-    - ConditionTrue
-    - ConditionFalse
-    - ConditionUnknown
   k8s_io_api_core_v1.Event:
     properties:
       action:
@@ -3667,16 +3491,6 @@ definitions:
           +optional
         type: string
     type: object
-  k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus:
-    enum:
-    - "True"
-    - "False"
-    - Unknown
-    type: string
-    x-enum-varnames:
-    - ConditionTrue
-    - ConditionFalse
-    - ConditionUnknown
   resource.Quantity:
     properties:
       Format:
@@ -3761,8 +3575,6 @@ definitions:
           +optional
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/v1.AppArmorProfileType'
         description: |-
           type indicates which kind of AppArmor profile will be applied.
           Valid options are:
@@ -3770,46 +3582,16 @@ definitions:
             RuntimeDefault - the container runtime's default profile.
             Unconfined - no AppArmor enforcement.
           +unionDiscriminator
+        type: string
     type: object
-  v1.AppArmorProfileType:
-    enum:
-    - Unconfined
-    - RuntimeDefault
-    - Localhost
-    type: string
-    x-enum-varnames:
-    - AppArmorProfileTypeUnconfined
-    - AppArmorProfileTypeRuntimeDefault
-    - AppArmorProfileTypeLocalhost
-  v1.AzureDataDiskCachingMode:
-    enum:
-    - None
-    - ReadOnly
-    - ReadWrite
-    type: string
-    x-enum-varnames:
-    - AzureDataDiskCachingNone
-    - AzureDataDiskCachingReadOnly
-    - AzureDataDiskCachingReadWrite
-  v1.AzureDataDiskKind:
-    enum:
-    - Shared
-    - Dedicated
-    - Managed
-    type: string
-    x-enum-varnames:
-    - AzureSharedBlobDisk
-    - AzureDedicatedBlobDisk
-    - AzureManagedDisk
   v1.AzureDiskVolumeSource:
     properties:
       cachingMode:
-        allOf:
-        - $ref: '#/definitions/v1.AzureDataDiskCachingMode'
         description: |-
           cachingMode is the Host Caching mode: None, Read Only, Read Write.
           +optional
           +default=ref(AzureDataDiskCachingReadWrite)
+        type: string
       diskName:
         description: diskName is the Name of the data disk in the blob storage
         type: string
@@ -3825,11 +3607,10 @@ definitions:
           +default="ext4"
         type: string
       kind:
-        allOf:
-        - $ref: '#/definitions/v1.AzureDataDiskKind'
         description: |-
           kind expected values are Shared: multiple blob disks per storage account  Dedicated: single blob disk per storage account  Managed: azure managed data disk (only in managed availability set). defaults to shared
           +default=ref(AzureSharedBlobDisk)
+        type: string
       readOnly:
         description: |-
           readOnly Defaults to false (read/write). ReadOnly here will force
@@ -4070,13 +3851,12 @@ definitions:
           +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
         type: string
       status:
-        allOf:
-        - $ref: '#/definitions/k8s_io_apimachinery_pkg_apis_meta_v1.ConditionStatus'
         description: |-
           status of the condition, one of True, False, Unknown.
           +required
           +kubebuilder:validation:Required
           +kubebuilder:validation:Enum=True;False;Unknown
+        type: string
       type:
         description: |-
           type of condition in CamelCase or in foo.example.com/CamelCase.
@@ -4371,8 +4151,6 @@ definitions:
           +optional
         type: string
       imagePullPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PullPolicy'
         description: |-
           Image pull policy.
           One of Always, Never, IfNotPresent.
@@ -4380,6 +4158,7 @@ definitions:
           Cannot be updated.
           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
           +optional
+        type: string
       lifecycle:
         allOf:
         - $ref: '#/definitions/v1.Lifecycle'
@@ -4447,8 +4226,6 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           +optional
       restartPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.ContainerRestartPolicy'
         description: |-
           RestartPolicy defines the restart behavior of individual containers in a pod.
           This overrides the pod-level restart policy. When this field is not specified,
@@ -4467,6 +4244,7 @@ definitions:
           completed.
           +featureGate=SidecarContainers
           +optional
+        type: string
       restartPolicyRules:
         description: |-
           Represents a list of rules to be checked to determine if the
@@ -4536,8 +4314,6 @@ definitions:
           +optional
         type: string
       terminationMessagePolicy:
-        allOf:
-        - $ref: '#/definitions/v1.TerminationMessagePolicy'
         description: |-
           Indicate how the termination message should be populated. File will use the contents of
           terminationMessagePath to populate the container status message on both success and failure.
@@ -4547,6 +4323,7 @@ definitions:
           Defaults to File.
           Cannot be updated.
           +optional
+        type: string
       tty:
         description: |-
           Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.
@@ -4613,49 +4390,35 @@ definitions:
           +optional
         type: string
       protocol:
-        allOf:
-        - $ref: '#/definitions/v1.Protocol'
         description: |-
           Protocol for port. Must be UDP, TCP, or SCTP.
           Defaults to "TCP".
           +optional
           +default="TCP"
+        type: string
     type: object
   v1.ContainerResizePolicy:
     properties:
       resourceName:
-        allOf:
-        - $ref: '#/definitions/v1.ResourceName'
         description: |-
           Name of the resource to which this resource resize policy applies.
           Supported values: cpu, memory.
+        type: string
       restartPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.ResourceResizeRestartPolicy'
         description: |-
           Restart policy to apply when specified resource is resized.
           If not specified, it defaults to NotRequired.
+        type: string
     type: object
-  v1.ContainerRestartPolicy:
-    enum:
-    - Always
-    - Never
-    - OnFailure
-    type: string
-    x-enum-varnames:
-    - ContainerRestartPolicyAlways
-    - ContainerRestartPolicyNever
-    - ContainerRestartPolicyOnFailure
   v1.ContainerRestartRule:
     properties:
       action:
-        allOf:
-        - $ref: '#/definitions/v1.ContainerRestartRuleAction'
         description: |-
           Specifies the action taken on a container exit if the requirements
           are satisfied. The only possible value is "Restart" to restart the
           container.
           +required
+        type: string
       exitCodes:
         allOf:
         - $ref: '#/definitions/v1.ContainerRestartRuleOnExitCodes'
@@ -4664,17 +4427,9 @@ definitions:
           +optional
           +oneOf=when
     type: object
-  v1.ContainerRestartRuleAction:
-    enum:
-    - Restart
-    type: string
-    x-enum-varnames:
-    - ContainerRestartRuleActionRestart
   v1.ContainerRestartRuleOnExitCodes:
     properties:
       operator:
-        allOf:
-        - $ref: '#/definitions/v1.ContainerRestartRuleOnExitCodesOperator'
         description: |-
           Represents the relationship between the container exit code(s) and the
           specified values. Possible values are:
@@ -4683,6 +4438,7 @@ definitions:
           - NotIn: the requirement is satisfied if the container exit code is
             not in the set of specified values.
           +required
+        type: string
       values:
         description: |-
           Specifies the set of values to check for container exit codes.
@@ -4693,26 +4449,6 @@ definitions:
           type: integer
         type: array
     type: object
-  v1.ContainerRestartRuleOnExitCodesOperator:
-    enum:
-    - In
-    - NotIn
-    type: string
-    x-enum-varnames:
-    - ContainerRestartRuleOnExitCodesOpIn
-    - ContainerRestartRuleOnExitCodesOpNotIn
-  v1.DNSPolicy:
-    enum:
-    - ClusterFirstWithHostNet
-    - ClusterFirst
-    - Default
-    - None
-    type: string
-    x-enum-varnames:
-    - DNSClusterFirstWithHostNet
-    - DNSClusterFirst
-    - DNSDefault
-    - DNSNone
   v1.DownwardAPIProjection:
     properties:
       items:
@@ -4778,41 +4514,16 @@ definitions:
           $ref: '#/definitions/v1.DownwardAPIVolumeFile'
         type: array
     type: object
-  v1.Duration:
-    properties:
-      time.Duration:
-        enum:
-        - -9223372036854775808
-        - 9223372036854775807
-        - 1
-        - 1000
-        - 1000000
-        - 1000000000
-        - 60000000000
-        - 3600000000000
-        format: int64
-        type: integer
-        x-enum-varnames:
-        - minDuration
-        - maxDuration
-        - Nanosecond
-        - Microsecond
-        - Millisecond
-        - Second
-        - Minute
-        - Hour
-    type: object
   v1.EmptyDirVolumeSource:
     properties:
       medium:
-        allOf:
-        - $ref: '#/definitions/v1.StorageMedium'
         description: |-
           medium represents what type of storage medium should back this directory.
           The default is "" which means to use the node's default medium.
           Must be an empty string (default) or Memory.
           More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
           +optional
+        type: string
       sizeLimit:
         allOf:
         - $ref: '#/definitions/resource.Quantity'
@@ -4974,8 +4685,6 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/containers/images
         type: string
       imagePullPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PullPolicy'
         description: |-
           Image pull policy.
           One of Always, Never, IfNotPresent.
@@ -4983,6 +4692,7 @@ definitions:
           Cannot be updated.
           More info: https://kubernetes.io/docs/concepts/containers/images#updating-images
           +optional
+        type: string
       lifecycle:
         allOf:
         - $ref: '#/definitions/v1.Lifecycle'
@@ -5035,14 +4745,13 @@ definitions:
           already allocated to the pod.
           +optional
       restartPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.ContainerRestartPolicy'
         description: |-
           Restart policy for the container to manage the restart behavior of each
           container within a pod.
           You cannot set this field on ephemeral containers.
           +featureGate=SidecarContainers
           +optional
+        type: string
       restartPolicyRules:
         description: |-
           Represents a list of rules to be checked to determine if the
@@ -5107,8 +4816,6 @@ definitions:
           +optional
         type: string
       terminationMessagePolicy:
-        allOf:
-        - $ref: '#/definitions/v1.TerminationMessagePolicy'
         description: |-
           Indicate how the termination message should be populated. File will use the contents of
           terminationMessagePath to populate the container status message on both success and failure.
@@ -5118,6 +4825,7 @@ definitions:
           Defaults to File.
           Cannot be updated.
           +optional
+        type: string
       tty:
         description: |-
           Whether this container should allocate a TTY for itself, also requires 'stdin' to be true.
@@ -5451,12 +5159,11 @@ definitions:
           Number must be in the range 1 to 65535.
           Name must be an IANA_SVC_NAME.
       scheme:
-        allOf:
-        - $ref: '#/definitions/v1.URIScheme'
         description: |-
           Scheme to use for connecting to the host.
           Defaults to HTTP.
           +optional
+        type: string
     type: object
   v1.HTTPHeader:
     properties:
@@ -5484,26 +5191,6 @@ definitions:
           +required
         type: string
     type: object
-  v1.HostPathType:
-    enum:
-    - ""
-    - DirectoryOrCreate
-    - Directory
-    - FileOrCreate
-    - File
-    - Socket
-    - CharDevice
-    - BlockDevice
-    type: string
-    x-enum-varnames:
-    - HostPathUnset
-    - HostPathDirectoryOrCreate
-    - HostPathDirectory
-    - HostPathFileOrCreate
-    - HostPathFile
-    - HostPathSocket
-    - HostPathCharDev
-    - HostPathBlockDev
   v1.HostPathVolumeSource:
     properties:
       path:
@@ -5513,13 +5200,12 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/v1.HostPathType'
         description: |-
           type for HostPath Volume
           Defaults to ""
           More info: https://kubernetes.io/docs/concepts/storage/volumes#hostpath
           +optional
+        type: string
     type: object
   v1.ISCSIVolumeSource:
     properties:
@@ -5592,8 +5278,6 @@ definitions:
   v1.ImageVolumeSource:
     properties:
       pullPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PullPolicy'
         description: |-
           Policy for pulling OCI objects. Possible values are:
           Always: the kubelet always attempts to pull the reference. Container creation will fail If the pull fails.
@@ -5601,6 +5285,7 @@ definitions:
           IfNotPresent: the kubelet pulls if the reference isn't already present on disk. Container creation will fail if the reference isn't present and the pull fails.
           Defaults to Always if :latest tag is specified, or IfNotPresent otherwise.
           +optional
+        type: string
       reference:
         description: |-
           Required: Image or artifact reference to be used.
@@ -5611,8 +5296,6 @@ definitions:
           container images in workload controllers like Deployments and StatefulSets.
           +optional
         type: string
-    type: object
-  v1.JSON:
     type: object
   v1.JobSpec:
     properties:
@@ -5850,29 +5533,16 @@ definitions:
           +optional
         type: object
     type: object
-  v1.LabelSelectorOperator:
-    enum:
-    - In
-    - NotIn
-    - Exists
-    - DoesNotExist
-    type: string
-    x-enum-varnames:
-    - LabelSelectorOpIn
-    - LabelSelectorOpNotIn
-    - LabelSelectorOpExists
-    - LabelSelectorOpDoesNotExist
   v1.LabelSelectorRequirement:
     properties:
       key:
         description: key is the label key that the selector applies to.
         type: string
       operator:
-        allOf:
-        - $ref: '#/definitions/v1.LabelSelectorOperator'
         description: |-
           operator represents a key's relationship to a set of values.
           Valid operators are In, NotIn, Exists and DoesNotExist.
+        type: string
       values:
         description: |-
           values is an array of string values. If the operator is In or NotIn,
@@ -5911,13 +5581,12 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/containers/container-lifecycle-hooks/#container-hooks
           +optional
       stopSignal:
-        allOf:
-        - $ref: '#/definitions/v1.Signal'
         description: |-
           StopSignal defines which signal will be sent to a container when it is being stopped.
           If not specified, the default is defined by the container runtime in use.
           StopSignal can only be set for Pods with a non-empty .spec.os.name
           +optional
+        type: string
     type: object
   v1.LifecycleHandler:
     properties:
@@ -6029,11 +5698,10 @@ definitions:
         description: Manager is an identifier of the workflow managing these fields.
         type: string
       operation:
-        allOf:
-        - $ref: '#/definitions/v1.ManagedFieldsOperationType'
         description: |-
           Operation is the type of operation which lead to this ManagedFieldsEntry being created.
           The only valid values for this field are 'Apply' and 'Update'.
+        type: string
       subresource:
         description: |-
           Subresource is the name of the subresource used to update that object, or
@@ -6054,29 +5722,11 @@ definitions:
           +optional
         type: string
     type: object
-  v1.ManagedFieldsOperationType:
-    enum:
-    - Apply
-    - Update
-    type: string
-    x-enum-varnames:
-    - ManagedFieldsOperationApply
-    - ManagedFieldsOperationUpdate
   v1.MicroTime:
     properties:
       time.Time:
         type: string
     type: object
-  v1.MountPropagationMode:
-    enum:
-    - None
-    - HostToContainer
-    - Bidirectional
-    type: string
-    x-enum-varnames:
-    - MountPropagationNone
-    - MountPropagationHostToContainer
-    - MountPropagationBidirectional
   v1.NFSVolumeSource:
     properties:
       path:
@@ -6126,14 +5776,6 @@ definitions:
           may or may not try to eventually evict the pod from its node.
           +optional
     type: object
-  v1.NodeInclusionPolicy:
-    enum:
-    - Ignore
-    - Honor
-    type: string
-    x-enum-varnames:
-    - NodeInclusionPolicyIgnore
-    - NodeInclusionPolicyHonor
   v1.NodeSelector:
     properties:
       nodeSelectorTerms:
@@ -6144,33 +5786,16 @@ definitions:
           $ref: '#/definitions/v1.NodeSelectorTerm'
         type: array
     type: object
-  v1.NodeSelectorOperator:
-    enum:
-    - In
-    - NotIn
-    - Exists
-    - DoesNotExist
-    - Gt
-    - Lt
-    type: string
-    x-enum-varnames:
-    - NodeSelectorOpIn
-    - NodeSelectorOpNotIn
-    - NodeSelectorOpExists
-    - NodeSelectorOpDoesNotExist
-    - NodeSelectorOpGt
-    - NodeSelectorOpLt
   v1.NodeSelectorRequirement:
     properties:
       key:
         description: The label key that the selector applies to.
         type: string
       operator:
-        allOf:
-        - $ref: '#/definitions/v1.NodeSelectorOperator'
         description: |-
           Represents a key's relationship to a set of values.
           Valid operators are In, NotIn, Exists, DoesNotExist. Gt, and Lt.
+        type: string
       values:
         description: |-
           An array of string values. If the operator is In or NotIn,
@@ -6203,14 +5828,6 @@ definitions:
           $ref: '#/definitions/v1.NodeSelectorRequirement'
         type: array
     type: object
-  v1.OSName:
-    enum:
-    - linux
-    - windows
-    type: string
-    x-enum-varnames:
-    - Linux
-    - Windows
   v1.ObjectFieldSelector:
     properties:
       apiVersion:
@@ -6499,18 +6116,6 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names#uids
         type: string
     type: object
-  v1.PersistentVolumeAccessMode:
-    enum:
-    - ReadWriteOnce
-    - ReadOnlyMany
-    - ReadWriteMany
-    - ReadWriteOncePod
-    type: string
-    x-enum-varnames:
-    - ReadWriteOnce
-    - ReadOnlyMany
-    - ReadWriteMany
-    - ReadWriteOncePod
   v1.PersistentVolumeClaimSpec:
     properties:
       accessModes:
@@ -6520,7 +6125,7 @@ definitions:
           +optional
           +listType=atomic
         items:
-          $ref: '#/definitions/v1.PersistentVolumeAccessMode'
+          type: string
         type: array
       dataSource:
         allOf:
@@ -6601,12 +6206,11 @@ definitions:
           +optional
         type: string
       volumeMode:
-        allOf:
-        - $ref: '#/definitions/v1.PersistentVolumeMode'
         description: |-
           volumeMode defines what type of volume is required by the claim.
           Value of Filesystem is implied when not included in claim spec.
           +optional
+        type: string
       volumeName:
         description: |-
           volumeName is the binding reference to the PersistentVolume backing this claim.
@@ -6647,14 +6251,6 @@ definitions:
           +optional
         type: boolean
     type: object
-  v1.PersistentVolumeMode:
-    enum:
-    - Block
-    - Filesystem
-    type: string
-    x-enum-varnames:
-    - PersistentVolumeBlock
-    - PersistentVolumeFilesystem
   v1.PhotonPersistentDiskVolumeSource:
     properties:
       fsType:
@@ -6882,26 +6478,6 @@ definitions:
           +required
         type: string
     type: object
-  v1.PodConditionType:
-    enum:
-    - ContainersReady
-    - Initialized
-    - Ready
-    - PodScheduled
-    - DisruptionTarget
-    - PodReadyToStartContainers
-    - PodResizePending
-    - PodResizeInProgress
-    type: string
-    x-enum-varnames:
-    - ContainersReady
-    - PodInitialized
-    - PodReady
-    - PodScheduled
-    - DisruptionTarget
-    - PodReadyToStartContainers
-    - PodResizePending
-    - PodResizeInProgress
   v1.PodDNSConfig:
     properties:
       nameservers:
@@ -6949,14 +6525,6 @@ definitions:
           +optional
         type: string
     type: object
-  v1.PodFSGroupChangePolicy:
-    enum:
-    - OnRootMismatch
-    - Always
-    type: string
-    x-enum-varnames:
-    - FSGroupChangeOnRootMismatch
-    - FSGroupChangeAlways
   v1.PodFailurePolicy:
     properties:
       rules:
@@ -7032,18 +6600,16 @@ definitions:
   v1.PodFailurePolicyOnPodConditionsPattern:
     properties:
       status:
-        allOf:
-        - $ref: '#/definitions/k8s_io_api_core_v1.ConditionStatus'
         description: |-
           Specifies the required Pod condition status. To match a pod condition
           it is required that the specified status equals the pod condition status.
           Defaults to True.
+        type: string
       type:
-        allOf:
-        - $ref: '#/definitions/v1.PodConditionType'
         description: |-
           Specifies the required Pod condition type. To match a pod condition
           it is required that specified type equals the pod condition type.
+        type: string
     type: object
   v1.PodFailurePolicyRule:
     properties:
@@ -7084,21 +6650,19 @@ definitions:
   v1.PodOS:
     properties:
       name:
-        allOf:
-        - $ref: '#/definitions/v1.OSName'
         description: |-
           Name is the name of the operating system. The currently supported values are linux and windows.
           Additional value may be defined in future and can be one of:
           https://github.com/opencontainers/runtime-spec/blob/master/config.md#platform-specific-configuration
           Clients should expect to handle additional values and treat unrecognized values in this field as os: null
+        type: string
     type: object
   v1.PodReadinessGate:
     properties:
       conditionType:
-        allOf:
-        - $ref: '#/definitions/v1.PodConditionType'
         description: ConditionType refers to a condition in the pod's condition list
           with matching type.
+        type: string
     type: object
   v1.PodReplacementPolicy:
     enum:
@@ -7142,14 +6706,6 @@ definitions:
           be set.
         type: string
     type: object
-  v1.PodSELinuxChangePolicy:
-    enum:
-    - Recursive
-    - MountOption
-    type: string
-    x-enum-varnames:
-    - SELinuxChangePolicyRecursive
-    - SELinuxChangePolicyMountOption
   v1.PodSchedulingGate:
     properties:
       name:
@@ -7182,8 +6738,6 @@ definitions:
           +optional
         type: integer
       fsGroupChangePolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PodFSGroupChangePolicy'
         description: |-
           fsGroupChangePolicy defines behavior of changing ownership and permission of the volume
           before being exposed inside Pod. This field will only apply to
@@ -7193,6 +6747,7 @@ definitions:
           Valid values are "OnRootMismatch" and "Always". If not specified, "Always" is used.
           Note that this field cannot be set when spec.os.name is windows.
           +optional
+        type: string
       runAsGroup:
         description: |-
           The GID to run the entrypoint of the container process.
@@ -7224,8 +6779,6 @@ definitions:
           +optional
         type: integer
       seLinuxChangePolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PodSELinuxChangePolicy'
         description: |-
           seLinuxChangePolicy defines how the container's SELinux label is applied to all volumes used by the Pod.
           It has no effect on nodes that do not support SELinux or to volumes does not support SELinux.
@@ -7252,6 +6805,7 @@ definitions:
           Note that this field cannot be set when spec.os.name is windows.
           +featureGate=SELinuxChangePolicy
           +optional
+        type: string
       seLinuxOptions:
         allOf:
         - $ref: '#/definitions/v1.SELinuxOptions'
@@ -7287,8 +6841,6 @@ definitions:
           type: integer
         type: array
       supplementalGroupsPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.SupplementalGroupsPolicy'
         description: |-
           Defines how supplemental groups of the first container processes are calculated.
           Valid values are "Merge" and "Strict". If not specified, "Merge" is used.
@@ -7298,6 +6850,7 @@ definitions:
           TODO: update the default value to "Merge" when spec.os.name is not windows in v1.34
           +featureGate=SupplementalGroupsPolicy
           +optional
+        type: string
       sysctls:
         description: |-
           Sysctls hold a list of namespaced sysctls used for the pod. Pods with unsupported
@@ -7360,8 +6913,6 @@ definitions:
           configuration based on DNSPolicy.
           +optional
       dnsPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.DNSPolicy'
         description: |-
           Set DNS policy for the pod.
           Defaults to "ClusterFirst".
@@ -7370,6 +6921,7 @@ definitions:
           To have DNS options set along with hostNetwork, you have to specify DNS policy
           explicitly to 'ClusterFirstWithHostNet'.
           +optional
+        type: string
       enableServiceLinks:
         description: |-
           EnableServiceLinks indicates whether information about services should be injected into pod's
@@ -7567,13 +7119,12 @@ definitions:
           More info: https://git.k8s.io/enhancements/keps/sig-node/688-pod-overhead/README.md
           +optional
       preemptionPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.PreemptionPolicy'
         description: |-
           PreemptionPolicy is the Policy for preempting pods with lower priority.
           One of Never, PreemptLowerPriority.
           Defaults to PreemptLowerPriority if unset.
           +optional
+        type: string
       priority:
         description: |-
           The priority value. Various system components use this field to find the
@@ -7643,14 +7194,13 @@ definitions:
           +featureGate=PodLevelResources
           +optional
       restartPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.RestartPolicy'
         description: |-
           Restart policy for all containers within the pod.
           One of Always, OnFailure, Never. In some contexts, only a subset of those values may be permitted.
           Default to Always.
           More info: https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/#restart-policy
           +optional
+        type: string
       runtimeClassName:
         description: |-
           RuntimeClassName refers to a RuntimeClass object in the node.k8s.io group, which should be used
@@ -7854,14 +7404,6 @@ definitions:
         description: volumeID uniquely identifies a Portworx volume
         type: string
     type: object
-  v1.PreemptionPolicy:
-    enum:
-    - PreemptLowerPriority
-    - Never
-    type: string
-    x-enum-varnames:
-    - PreemptLowerPriority
-    - PreemptNever
   v1.PreferredSchedulingTerm:
     properties:
       preference:
@@ -7945,14 +7487,6 @@ definitions:
           +optional
         type: integer
     type: object
-  v1.ProcMountType:
-    enum:
-    - Default
-    - Unmasked
-    type: string
-    x-enum-varnames:
-    - DefaultProcMount
-    - UnmaskedProcMount
   v1.ProjectedVolumeSource:
     properties:
       defaultMode:
@@ -7975,26 +7509,6 @@ definitions:
           $ref: '#/definitions/v1.VolumeProjection'
         type: array
     type: object
-  v1.Protocol:
-    enum:
-    - TCP
-    - UDP
-    - SCTP
-    type: string
-    x-enum-varnames:
-    - ProtocolTCP
-    - ProtocolUDP
-    - ProtocolSCTP
-  v1.PullPolicy:
-    enum:
-    - Always
-    - Never
-    - IfNotPresent
-    type: string
-    x-enum-varnames:
-    - PullAlways
-    - PullNever
-    - PullIfNotPresent
   v1.QuobyteVolumeSource:
     properties:
       group:
@@ -8097,16 +7611,6 @@ definitions:
           +default="admin"
         type: string
     type: object
-  v1.RecursiveReadOnlyMode:
-    enum:
-    - Disabled
-    - IfPossible
-    - Enabled
-    type: string
-    x-enum-varnames:
-    - RecursiveReadOnlyDisabled
-    - RecursiveReadOnlyIfPossible
-    - RecursiveReadOnlyEnabled
   v1.ResourceFieldSelector:
     properties:
       containerName:
@@ -8128,50 +7632,6 @@ definitions:
     additionalProperties:
       $ref: '#/definitions/resource.Quantity'
     type: object
-  v1.ResourceName:
-    enum:
-    - cpu
-    - memory
-    - storage
-    - ephemeral-storage
-    - pods
-    - services
-    - replicationcontrollers
-    - resourcequotas
-    - secrets
-    - configmaps
-    - persistentvolumeclaims
-    - services.nodeports
-    - services.loadbalancers
-    - requests.cpu
-    - requests.memory
-    - requests.storage
-    - requests.ephemeral-storage
-    - limits.cpu
-    - limits.memory
-    - limits.ephemeral-storage
-    type: string
-    x-enum-varnames:
-    - ResourceCPU
-    - ResourceMemory
-    - ResourceStorage
-    - ResourceEphemeralStorage
-    - ResourcePods
-    - ResourceServices
-    - ResourceReplicationControllers
-    - ResourceQuotas
-    - ResourceSecrets
-    - ResourceConfigMaps
-    - ResourcePersistentVolumeClaims
-    - ResourceServicesNodePorts
-    - ResourceServicesLoadBalancers
-    - ResourceRequestsCPU
-    - ResourceRequestsMemory
-    - ResourceRequestsStorage
-    - ResourceRequestsEphemeralStorage
-    - ResourceLimitsCPU
-    - ResourceLimitsMemory
-    - ResourceLimitsEphemeralStorage
   v1.ResourceRequirements:
     properties:
       claims:
@@ -8208,24 +7668,6 @@ definitions:
           More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
           +optional
     type: object
-  v1.ResourceResizeRestartPolicy:
-    enum:
-    - NotRequired
-    - RestartContainer
-    type: string
-    x-enum-varnames:
-    - NotRequired
-    - RestartContainer
-  v1.RestartPolicy:
-    enum:
-    - Always
-    - OnFailure
-    - Never
-    type: string
-    x-enum-varnames:
-    - RestartPolicyAlways
-    - RestartPolicyOnFailure
-    - RestartPolicyNever
   v1.SELinuxOptions:
     properties:
       level:
@@ -8317,8 +7759,6 @@ definitions:
           +optional
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/v1.SeccompProfileType'
         description: |-
           type indicates which kind of seccomp profile will be applied.
           Valid options are:
@@ -8327,17 +7767,8 @@ definitions:
           RuntimeDefault - the container runtime default profile should be used.
           Unconfined - no profile should be applied.
           +unionDiscriminator
+        type: string
     type: object
-  v1.SeccompProfileType:
-    enum:
-    - Unconfined
-    - RuntimeDefault
-    - Localhost
-    type: string
-    x-enum-varnames:
-    - SeccompProfileTypeUnconfined
-    - SeccompProfileTypeRuntimeDefault
-    - SeccompProfileTypeLocalhost
   v1.Secret:
     properties:
       apiVersion:
@@ -8397,12 +7828,11 @@ definitions:
           +optional
         type: object
       type:
-        allOf:
-        - $ref: '#/definitions/v1.SecretType'
         description: |-
           Used to facilitate programmatic handling of secret data.
           More info: https://kubernetes.io/docs/concepts/configuration/secret/#secret-types
           +optional
+        type: string
     type: object
   v1.SecretEnvSource:
     properties:
@@ -8516,26 +7946,6 @@ definitions:
           +optional
         type: boolean
     type: object
-  v1.SecretType:
-    enum:
-    - Opaque
-    - kubernetes.io/service-account-token
-    - kubernetes.io/dockercfg
-    - kubernetes.io/dockerconfigjson
-    - kubernetes.io/basic-auth
-    - kubernetes.io/ssh-auth
-    - kubernetes.io/tls
-    - bootstrap.kubernetes.io/token
-    type: string
-    x-enum-varnames:
-    - SecretTypeOpaque
-    - SecretTypeServiceAccountToken
-    - SecretTypeDockercfg
-    - SecretTypeDockerConfigJson
-    - SecretTypeBasicAuth
-    - SecretTypeSSHAuth
-    - SecretTypeTLS
-    - SecretTypeBootstrapToken
   v1.SecretVolumeSource:
     properties:
       defaultMode:
@@ -8613,8 +8023,6 @@ definitions:
           +optional
         type: boolean
       procMount:
-        allOf:
-        - $ref: '#/definitions/v1.ProcMountType'
         description: |-
           procMount denotes the type of proc mount to use for the containers.
           The default value is Default which uses the container runtime defaults for
@@ -8622,6 +8030,7 @@ definitions:
           This requires the ProcMountType feature flag to be enabled.
           Note that this field cannot be set when spec.os.name is windows.
           +optional
+        type: string
       readOnlyRootFilesystem:
         description: |-
           Whether this container has a read-only root filesystem.
@@ -8712,170 +8121,12 @@ definitions:
           token into.
         type: string
     type: object
-  v1.Signal:
-    enum:
-    - SIGABRT
-    - SIGALRM
-    - SIGBUS
-    - SIGCHLD
-    - SIGCLD
-    - SIGCONT
-    - SIGFPE
-    - SIGHUP
-    - SIGILL
-    - SIGINT
-    - SIGIO
-    - SIGIOT
-    - SIGKILL
-    - SIGPIPE
-    - SIGPOLL
-    - SIGPROF
-    - SIGPWR
-    - SIGQUIT
-    - SIGSEGV
-    - SIGSTKFLT
-    - SIGSTOP
-    - SIGSYS
-    - SIGTERM
-    - SIGTRAP
-    - SIGTSTP
-    - SIGTTIN
-    - SIGTTOU
-    - SIGURG
-    - SIGUSR1
-    - SIGUSR2
-    - SIGVTALRM
-    - SIGWINCH
-    - SIGXCPU
-    - SIGXFSZ
-    - SIGRTMIN
-    - SIGRTMIN+1
-    - SIGRTMIN+2
-    - SIGRTMIN+3
-    - SIGRTMIN+4
-    - SIGRTMIN+5
-    - SIGRTMIN+6
-    - SIGRTMIN+7
-    - SIGRTMIN+8
-    - SIGRTMIN+9
-    - SIGRTMIN+10
-    - SIGRTMIN+11
-    - SIGRTMIN+12
-    - SIGRTMIN+13
-    - SIGRTMIN+14
-    - SIGRTMIN+15
-    - SIGRTMAX-14
-    - SIGRTMAX-13
-    - SIGRTMAX-12
-    - SIGRTMAX-11
-    - SIGRTMAX-10
-    - SIGRTMAX-9
-    - SIGRTMAX-8
-    - SIGRTMAX-7
-    - SIGRTMAX-6
-    - SIGRTMAX-5
-    - SIGRTMAX-4
-    - SIGRTMAX-3
-    - SIGRTMAX-2
-    - SIGRTMAX-1
-    - SIGRTMAX
-    type: string
-    x-enum-varnames:
-    - SIGABRT
-    - SIGALRM
-    - SIGBUS
-    - SIGCHLD
-    - SIGCLD
-    - SIGCONT
-    - SIGFPE
-    - SIGHUP
-    - SIGILL
-    - SIGINT
-    - SIGIO
-    - SIGIOT
-    - SIGKILL
-    - SIGPIPE
-    - SIGPOLL
-    - SIGPROF
-    - SIGPWR
-    - SIGQUIT
-    - SIGSEGV
-    - SIGSTKFLT
-    - SIGSTOP
-    - SIGSYS
-    - SIGTERM
-    - SIGTRAP
-    - SIGTSTP
-    - SIGTTIN
-    - SIGTTOU
-    - SIGURG
-    - SIGUSR1
-    - SIGUSR2
-    - SIGVTALRM
-    - SIGWINCH
-    - SIGXCPU
-    - SIGXFSZ
-    - SIGRTMIN
-    - SIGRTMINPLUS1
-    - SIGRTMINPLUS2
-    - SIGRTMINPLUS3
-    - SIGRTMINPLUS4
-    - SIGRTMINPLUS5
-    - SIGRTMINPLUS6
-    - SIGRTMINPLUS7
-    - SIGRTMINPLUS8
-    - SIGRTMINPLUS9
-    - SIGRTMINPLUS10
-    - SIGRTMINPLUS11
-    - SIGRTMINPLUS12
-    - SIGRTMINPLUS13
-    - SIGRTMINPLUS14
-    - SIGRTMINPLUS15
-    - SIGRTMAXMINUS14
-    - SIGRTMAXMINUS13
-    - SIGRTMAXMINUS12
-    - SIGRTMAXMINUS11
-    - SIGRTMAXMINUS10
-    - SIGRTMAXMINUS9
-    - SIGRTMAXMINUS8
-    - SIGRTMAXMINUS7
-    - SIGRTMAXMINUS6
-    - SIGRTMAXMINUS5
-    - SIGRTMAXMINUS4
-    - SIGRTMAXMINUS3
-    - SIGRTMAXMINUS2
-    - SIGRTMAXMINUS1
-    - SIGRTMAX
   v1.SleepAction:
     properties:
       seconds:
         description: Seconds is the number of seconds to sleep.
         type: integer
     type: object
-  v1.StorageMedium:
-    enum:
-    - ""
-    - Memory
-    - HugePages
-    - HugePages-
-    type: string
-    x-enum-comments:
-      StorageMediumDefault: use whatever the default is for the node, assume anything
-        we don't explicitly handle is this
-      StorageMediumHugePages: use hugepages
-      StorageMediumHugePagesPrefix: prefix for full medium notation HugePages-<size>
-      StorageMediumMemory: use memory (e.g. tmpfs on linux)
-    x-enum-descriptions:
-    - use whatever the default is for the node, assume anything we don't explicitly
-      handle is this
-    - use memory (e.g. tmpfs on linux)
-    - use hugepages
-    - prefix for full medium notation HugePages-<size>
-    x-enum-varnames:
-    - StorageMediumDefault
-    - StorageMediumMemory
-    - StorageMediumHugePages
-    - StorageMediumHugePagesPrefix
   v1.StorageOSVolumeSource:
     properties:
       fsType:
@@ -8963,14 +8214,6 @@ definitions:
           +optional
         type: string
     type: object
-  v1.SupplementalGroupsPolicy:
-    enum:
-    - Merge
-    - Strict
-    type: string
-    x-enum-varnames:
-    - SupplementalGroupsPolicyMerge
-    - SupplementalGroupsPolicyStrict
   v1.Sysctl:
     properties:
       name:
@@ -8995,33 +8238,14 @@ definitions:
           Number must be in the range 1 to 65535.
           Name must be an IANA_SVC_NAME.
     type: object
-  v1.TaintEffect:
-    enum:
-    - NoSchedule
-    - PreferNoSchedule
-    - NoExecute
-    type: string
-    x-enum-varnames:
-    - TaintEffectNoSchedule
-    - TaintEffectPreferNoSchedule
-    - TaintEffectNoExecute
-  v1.TerminationMessagePolicy:
-    enum:
-    - File
-    - FallbackToLogsOnError
-    type: string
-    x-enum-varnames:
-    - TerminationMessageReadFile
-    - TerminationMessageFallbackToLogsOnError
   v1.Toleration:
     properties:
       effect:
-        allOf:
-        - $ref: '#/definitions/v1.TaintEffect'
         description: |-
           Effect indicates the taint effect to match. Empty means match all taint effects.
           When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
           +optional
+        type: string
       key:
         description: |-
           Key is the taint key that the toleration applies to. Empty means match all taint keys.
@@ -9029,14 +8253,13 @@ definitions:
           +optional
         type: string
       operator:
-        allOf:
-        - $ref: '#/definitions/v1.TolerationOperator'
         description: |-
           Operator represents a key's relationship to the value.
           Valid operators are Exists and Equal. Defaults to Equal.
           Exists is equivalent to wildcard for value, so that a pod can
           tolerate all taints of a particular category.
           +optional
+        type: string
       tolerationSeconds:
         description: |-
           TolerationSeconds represents the period of time the toleration (which must be
@@ -9052,14 +8275,6 @@ definitions:
           +optional
         type: string
     type: object
-  v1.TolerationOperator:
-    enum:
-    - Exists
-    - Equal
-    type: string
-    x-enum-varnames:
-    - TolerationOpExists
-    - TolerationOpEqual
   v1.TopologySpreadConstraint:
     properties:
       labelSelector:
@@ -9137,8 +8352,6 @@ definitions:
           +optional
         type: integer
       nodeAffinityPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.NodeInclusionPolicy'
         description: |-
           NodeAffinityPolicy indicates how we will treat Pod's nodeAffinity/nodeSelector
           when calculating pod topology spread skew. Options are:
@@ -9147,9 +8360,8 @@ definitions:
 
           If this value is nil, the behavior is equivalent to the Honor policy.
           +optional
+        type: string
       nodeTaintsPolicy:
-        allOf:
-        - $ref: '#/definitions/v1.NodeInclusionPolicy'
         description: |-
           NodeTaintsPolicy indicates how we will treat node taints when calculating
           pod topology spread skew. Options are:
@@ -9159,6 +8371,7 @@ definitions:
 
           If this value is nil, the behavior is equivalent to the Ignore policy.
           +optional
+        type: string
       topologyKey:
         description: |-
           TopologyKey is the key of node labels. Nodes that have a label with this key
@@ -9173,8 +8386,6 @@ definitions:
           It's a required field.
         type: string
       whenUnsatisfiable:
-        allOf:
-        - $ref: '#/definitions/v1.UnsatisfiableConstraintAction'
         description: |-
           WhenUnsatisfiable indicates how to deal with a pod if it doesn't satisfy
           the spread constraint.
@@ -9197,6 +8408,7 @@ definitions:
           MaxSkew(1). In other words, the cluster can still be imbalanced, but scheduler
           won't make it *more* imbalanced.
           It's a required field.
+        type: string
     type: object
   v1.TypedLocalObjectReference:
     properties:
@@ -9238,22 +8450,6 @@ definitions:
           +optional
         type: string
     type: object
-  v1.URIScheme:
-    enum:
-    - HTTP
-    - HTTPS
-    type: string
-    x-enum-varnames:
-    - URISchemeHTTP
-    - URISchemeHTTPS
-  v1.UnsatisfiableConstraintAction:
-    enum:
-    - DoNotSchedule
-    - ScheduleAnyway
-    type: string
-    x-enum-varnames:
-    - DoNotSchedule
-    - ScheduleAnyway
   v1.Volume:
     properties:
       awsElasticBlockStore:
@@ -9544,8 +8740,6 @@ definitions:
           not contain ':'.
         type: string
       mountPropagation:
-        allOf:
-        - $ref: '#/definitions/v1.MountPropagationMode'
         description: |-
           mountPropagation determines how mounts are propagated from the host
           to container and the other way around.
@@ -9554,6 +8748,7 @@ definitions:
           When RecursiveReadOnly is set to IfPossible or to Enabled, MountPropagation must be None or unspecified
           (which defaults to None).
           +optional
+        type: string
       name:
         description: This must match the Name of a Volume.
         type: string
@@ -9564,8 +8759,6 @@ definitions:
           +optional
         type: boolean
       recursiveReadOnly:
-        allOf:
-        - $ref: '#/definitions/v1.RecursiveReadOnlyMode'
         description: |-
           RecursiveReadOnly specifies whether read-only mounts should be handled
           recursively.
@@ -9586,6 +8779,7 @@ definitions:
 
           +featureGate=RecursiveReadOnlyMounts
           +optional
+        type: string
       subPath:
         description: |-
           Path within the volume from which the container's volume should be mounted.
