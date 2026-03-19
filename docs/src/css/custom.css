@@ -103,9 +103,3 @@ main.landing-page {
   font-weight: normal;
   font-size: x-small;
 }
-
-.swagger-ui .authorization__btn {
-  pointer-events: none;
-  cursor: default;
-  opacity: 0.6;
-}

@@ -80,9 +80,15 @@ const config = {
       {
         label: 'API Reference',
         route: '/api-docs',
-        showNavLink: true, // optional, default is true
+        showNavLink: false, // Don't include in the top navbar
         configuration: {
           url: '/swagger.json',
+          servers: [{
+            url: '{baseUrl}',
+            variables: {
+              baseUrl: {default: 'https://kargo.example.com'}
+            }
+          }]
         },
       }
     ],
