@@ -423,7 +423,9 @@ func hashMetadata(h hash.Hash, lbls, annotations map[string]string) {
 	h.Write([]byte("annotations"))
 	annotationKeys := make([]string, 0, len(annotations))
 	for k := range annotations {
-		if k != kargoapi.AnnotationKeyReplicateTo && k != lastAppliedConfigAnnotation {
+		if k != kargoapi.AnnotationKeyReplicateTo &&
+			k != kargoapi.AnnotationKeyReplicatedAt &&
+			k != lastAppliedConfigAnnotation {
 			annotationKeys = append(annotationKeys, k)
 		}
 	}
