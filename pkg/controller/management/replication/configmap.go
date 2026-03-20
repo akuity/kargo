@@ -84,7 +84,9 @@ func computeConfigMapHash(cm *corev1.ConfigMap) string {
 	sort.Strings(dataKeys)
 	for _, k := range dataKeys {
 		h.Write([]byte(k))
+		h.Write([]byte{0})
 		h.Write([]byte(cm.Data[k]))
+		h.Write([]byte{0})
 	}
 	h.Write([]byte("binaryData"))
 	binaryDataKeys := make([]string, 0, len(cm.BinaryData))
@@ -94,7 +96,9 @@ func computeConfigMapHash(cm *corev1.ConfigMap) string {
 	sort.Strings(binaryDataKeys)
 	for _, k := range binaryDataKeys {
 		h.Write([]byte(k))
+		h.Write([]byte{0})
 		h.Write(cm.BinaryData[k])
+		h.Write([]byte{0})
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }

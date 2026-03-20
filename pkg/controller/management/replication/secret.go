@@ -92,7 +92,9 @@ func computeSecretHash(secret *corev1.Secret) string {
 	sort.Strings(dataKeys)
 	for _, k := range dataKeys {
 		h.Write([]byte(k))
+		h.Write([]byte{0})
 		h.Write(secret.Data[k])
+		h.Write([]byte{0})
 	}
 	return hex.EncodeToString(h.Sum(nil))[:16]
 }

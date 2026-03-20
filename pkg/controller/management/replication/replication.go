@@ -415,7 +415,9 @@ func hashMetadata(h hash.Hash, lbls, annotations map[string]string) {
 	sort.Strings(labelKeys)
 	for _, k := range labelKeys {
 		h.Write([]byte(k))
+		h.Write([]byte{0})
 		h.Write([]byte(lbls[k]))
+		h.Write([]byte{0})
 	}
 
 	h.Write([]byte("annotations"))
@@ -428,6 +430,8 @@ func hashMetadata(h hash.Hash, lbls, annotations map[string]string) {
 	sort.Strings(annotationKeys)
 	for _, k := range annotationKeys {
 		h.Write([]byte(k))
+		h.Write([]byte{0})
 		h.Write([]byte(annotations[k]))
+		h.Write([]byte{0})
 	}
 }
