@@ -387,15 +387,15 @@ func replicaLabels(src client.Object, sourceHash string) map[string]string {
 }
 
 // replicaAnnotations builds the annotation map for a replicated resource: all
-// source annotations except those that must not be propagated.
+// source annotations except those that must not be propagated, plus a
+// replicated-at timestamp.
 func replicaAnnotations(src client.Object) map[string]string {
-	var result map[string]string
+	result := map[string]string{
+		kargoapi.AnnotationKeyReplicatedAt: time.Now().UTC().Format(time.RFC3339),
+	}
 	for k, v := range src.GetAnnotations() {
 		if k == kargoapi.AnnotationKeyReplicateTo || k == lastAppliedConfigAnnotation {
 			continue
-		}
-		if result == nil {
-			result = make(map[string]string, len(src.GetAnnotations()))
 		}
 		result[k] = v
 	}

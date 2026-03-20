@@ -106,4 +106,8 @@ const (
 	// AnnotationKeyReplicateTo that causes a resource to be replicated to all
 	// Project namespaces.
 	AnnotationValueReplicateToAll = "*"
+
+	// AnnotationKeyReplicatedAt is set on replicated resources to record the
+	// UTC timestamp of the most recent replication.
+	AnnotationKeyReplicatedAt = "kargo.akuity.io/replicated-at"
 )
