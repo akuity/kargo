@@ -8,8 +8,6 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -210,23 +208,12 @@ func (r *reconciler) Reconcile(
 
 	sourceHash := r.adapter.computeHash(srcObj)
 
-	// List replicated resources that are out of date (SHA does not match
-	// sourceHash). Up-to-date replicas are excluded to avoid unnecessary
-	// network transfer; syncToProjectNamespace handles the AlreadyExists case
-	// gracefully when existing is nil.
-	replicatedFromReq, err := labels.NewRequirement(
-		kargoapi.LabelKeyReplicatedFrom, selection.Equals, []string{srcObj.GetName()})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error building replicated-from label requirement: %w", err)
-	}
-	shaOutOfDateReq, err := labels.NewRequirement(
-		kargoapi.LabelKeyReplicatedSHA, selection.NotIn, []string{sourceHash})
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("error building replicated-sha label requirement: %w", err)
-	}
+	// List all existing replicas of this source resource so we can skip
+	// namespaces that are already up to date without issuing unnecessary
+	// Create calls.
 	existingList := r.adapter.newList()
-	if err = r.apiReader.List(ctx, existingList, client.MatchingLabelsSelector{
-		Selector: labels.NewSelector().Add(*replicatedFromReq, *shaOutOfDateReq),
+	if err := r.apiReader.List(ctx, existingList, client.MatchingLabels{
+		kargoapi.LabelKeyReplicatedFrom: srcObj.GetName(),
 	}); err != nil {
 		return ctrl.Result{}, fmt.Errorf("error listing replicated resources: %w", err)
 	}
@@ -247,9 +234,8 @@ func (r *reconciler) Reconcile(
 }
 
 // syncToProjectNamespace ensures the source resource is replicated correctly
-// into the given project namespace. existing is the current out-of-date
-// replicated resource in that namespace, or nil if the replica is up to date
-// or does not exist.
+// into the given project namespace. existing is the current replicated
+// resource in that namespace, or nil if no replica exists yet.
 func (r *reconciler) syncToProjectNamespace(
 	ctx context.Context,
 	src client.Object,
@@ -260,8 +246,7 @@ func (r *reconciler) syncToProjectNamespace(
 	logger := logging.LoggerFromContext(ctx).WithValues("namespace", namespace)
 
 	if existing == nil {
-		// Either no replica exists yet, or it already has the current SHA
-		// (filtered out by the List). Try to create; handle AlreadyExists.
+		// No replica exists yet — create one.
 		destObj := r.adapter.newObject()
 		destObj.SetName(src.GetName())
 		destObj.SetNamespace(namespace)
@@ -282,14 +267,7 @@ func (r *reconciler) syncToProjectNamespace(
 		return nil
 	}
 
-	// Replica exists and is out of date — check we own it.
-	if _, hasLabel := existing.GetLabels()[kargoapi.LabelKeyReplicatedFrom]; !hasLabel {
-		logger.Debug("resource exists but has no replicated-from label (conflict); skipping")
-		return nil
-	}
-
-	// This technically shouldn't happen because we filtered the List to only
-	// include out-of-date replicas, but check defensively before updating.
+	// Replica already up to date — nothing to do.
 	if existing.GetLabels()[kargoapi.LabelKeyReplicatedSHA] == sourceHash {
 		logger.Debug("replicated resource is already up to date; skipping")
 		return nil
