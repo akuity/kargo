@@ -342,13 +342,18 @@ type GitHubVerifiedPushConfig struct {
 	// Indicates whether to skip TLS verification when communicating with the GitHub API.
 	// Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
-	// This step implements its own internal retry logic for cases where a push is determined to
-	// have failed due to the remote branch having commits that are not present locally. Each
-	// attempt, including the first, rebases prior to pushing. This field configures the maximum
-	// number of attempts. If not specified, the default is 10.
+	// Maximum number of push attempts. Relevant when pullPolicy is 'Merge' or 'Rebase': if the
+	// remote branch advances between reading its HEAD and updating the ref, the step retries by
+	// reconciling and replaying again. Merge conflicts halt further attempts. For 'FFOnly', no
+	// retries are attempted. Default is 10 for Merge/Rebase, 1 for FFOnly.
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
+	// Controls how local commits are reconciled with the remote target branch when it has
+	// advanced. 'Merge' (default) creates a merge commit preserving remote history. 'Rebase'
+	// rebases local commits onto the remote branch. 'FFOnly' permits only fast-forward updates
+	// and errors if the remote has advanced.
+	PullPolicy *PullPolicy `json:"pullPolicy,omitempty"`
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
@@ -701,6 +706,18 @@ const (
 	Gitea     Provider = "gitea"
 	Github    Provider = "github"
 	Gitlab    Provider = "gitlab"
+)
+
+// Controls how local commits are reconciled with the remote target branch when it has
+// advanced. 'Merge' (default) creates a merge commit preserving remote history. 'Rebase'
+// rebases local commits onto the remote branch. 'FFOnly' permits only fast-forward updates
+// and errors if the remote has advanced.
+type PullPolicy string
+
+const (
+	FFOnly PullPolicy = "FFOnly"
+	Merge  PullPolicy = "Merge"
+	Rebase PullPolicy = "Rebase"
 )
 
 // OutLayout to use for the rendered manifest. This can be either 'helm' or 'flat'. The

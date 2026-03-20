@@ -2,17 +2,15 @@ package github
 
 import (
 	"context"
-	"crypto/tls"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/google/go-github/v76/github"
-	"github.com/hashicorp/go-cleanhttp"
 	"k8s.io/utils/ptr"
 
+	kargogithub "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/gitprovider"
-	"github.com/akuity/kargo/pkg/urls"
 )
 
 const ProviderName = "github"
@@ -104,32 +102,11 @@ func NewProvider(
 		opts = &gitprovider.Options{}
 	}
 
-	scheme, host, owner, repo, err := parseRepoURL(repoURL)
+	client, owner, repo, err := kargogithub.NewClient(
+		repoURL, opts.Token, opts.InsecureSkipTLSVerify,
+	)
 	if err != nil {
 		return nil, err
-	}
-
-	httpClient := cleanhttp.DefaultClient()
-	if opts.InsecureSkipTLSVerify {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // nolint: gosec
-		}
-		httpClient.Transport = transport
-	}
-
-	client := github.NewClient(httpClient)
-
-	if host != "github.com" {
-		baseURL := fmt.Sprintf("%s://%s", scheme, host)
-		// This function call will automatically add correct paths to the base URL
-		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
-		if err != nil {
-			return nil, err
-		}
-	}
-	if opts.Token != "" {
-		client = client.WithAuthToken(opts.Token)
 	}
 
 	return &provider{
@@ -354,15 +331,12 @@ func (p *provider) GetCommitURL(
 	repoURL string,
 	sha string,
 ) (string, error) {
-	normalizedURL := urls.NormalizeGit(repoURL)
-
-	parsedURL, err := url.Parse(normalizedURL)
-	if err != nil {
-		return "", fmt.Errorf("error processing repository URL: %s: %s", repoURL, err)
+	commitURL := kargogithub.BuildCommitURL(repoURL, sha)
+	if commitURL == "" {
+		return "", fmt.Errorf(
+			"error building commit URL for repository %q", repoURL,
+		)
 	}
-
-	commitURL := fmt.Sprintf("https://%s%s/commit/%s", parsedURL.Host, parsedURL.Path, sha)
-
 	return commitURL, nil
 }
 
@@ -380,28 +354,4 @@ func convertGithubPR(ghPR github.PullRequest) gitprovider.PullRequest {
 		pr.CreatedAt = &ghPR.CreatedAt.Time
 	}
 	return pr
-}
-
-func parseRepoURL(repoURL string) (string, string, string, string, error) {
-	u, err := url.Parse(urls.NormalizeGit(repoURL))
-	if err != nil {
-		return "", "", "", "", fmt.Errorf(
-			"error parsing github repository URL %q: %w", u, err,
-		)
-	}
-
-	scheme := u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
-	}
-
-	path := strings.TrimPrefix(u.Path, "/")
-	parts := strings.Split(path, "/")
-	if len(parts) != 2 {
-		return "", "", "", "", fmt.Errorf(
-			"could not extract repository owner and name from URL %q", u,
-		)
-	}
-
-	return scheme, u.Host, parts[0], parts[1], nil
 }

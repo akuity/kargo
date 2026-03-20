@@ -16,9 +16,12 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargogithub "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/promotion"
 	builtinx "github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+func policyPtr(p builtinx.PullPolicy) *builtinx.PullPolicy { return &p }
 
 // mockWorkTree is a minimal mock of git.WorkTree for testing.
 type mockWorkTree struct {
@@ -28,6 +31,7 @@ type mockWorkTree struct {
 	homeDir         string
 	currentBranchFn func() (string, error)
 	lastCommitIDFn  func() (string, error)
+	pullMergeFn     func(string) error
 	pullRebaseFn    func(string) error
 	pushFn          func(*git.PushOptions) error
 	forcePullFn     func(string) error
@@ -43,6 +47,13 @@ func (m *mockWorkTree) CurrentBranch() (string, error) {
 
 func (m *mockWorkTree) LastCommitID() (string, error) {
 	return m.lastCommitIDFn()
+}
+
+func (m *mockWorkTree) PullMerge(branch string) error {
+	if m.pullMergeFn == nil {
+		return nil
+	}
+	return m.pullMergeFn(branch)
 }
 
 func (m *mockWorkTree) PullRebase(branch string) error {
@@ -246,14 +257,13 @@ func (m *mockGitHubVerifiedPushClient) DeleteRef(
 	return m.deleteRefFn(ctx, owner, repo, ref)
 }
 
-func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
+func Test_githubVerifiedPusher_compareRemote(t *testing.T) {
+	t.Parallel()
 	testCases := []struct {
-		name         string
-		client       githubVerifiedPushClient
-		targetBranch string
-		createBranch bool
-		force        bool
-		assert       func(*testing.T, promotion.StepResult, error)
+		name   string
+		client githubVerifiedPushClient
+		force  bool
+		assert func(*testing.T, *comparisonResult, error)
 	}{
 		{
 			name: "compare API error",
@@ -266,20 +276,46 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 					return nil, nil, fmt.Errorf("API error")
 				},
 			},
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
+			assert: func(t *testing.T, _ *comparisonResult, err error) {
 				t.Helper()
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error comparing")
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusErrored, result.Status,
-				)
+				require.ErrorContains(t, err, "API error")
 			},
 		},
 		{
-			name: "identical commits",
+			name: "ahead returns commits and parentSHA",
+			client: &mockGitHubVerifiedPushClient{
+				compareCommitsFn: func(
+					_ context.Context,
+					_, _, _, _ string,
+					_ *github.ListOptions,
+				) (*github.CommitsComparison, *github.Response, error) {
+					treeSHA := "tree1"
+					return &github.CommitsComparison{
+						Status:       ptr.To("ahead"),
+						AheadBy:      ptr.To(1),
+						TotalCommits: ptr.To(1),
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("commit1"),
+							Commit: &github.Commit{
+								Message: ptr.To("msg"),
+								Tree:    &github.Tree{SHA: &treeSHA},
+							},
+						}},
+					}, nil, nil
+				},
+			},
+			assert: func(
+				t *testing.T, cmp *comparisonResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Nil(t, cmp.earlyResult)
+				require.Equal(t, "target-head", cmp.parentSHA)
+				require.Len(t, cmp.commits, 1)
+			},
+		},
+		{
+			name: "identical returns early skip",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -292,20 +328,20 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				},
 			},
 			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
+				t *testing.T, cmp *comparisonResult, err error,
 			) {
 				t.Helper()
 				require.NoError(t, err)
+				require.NotNil(t, cmp.earlyResult)
 				require.Equal(
 					t,
-					kargoapi.PromotionStepStatusSkipped, result.Status,
+					kargoapi.PromotionStepStatusSkipped,
+					cmp.earlyResult.Status,
 				)
-				require.Equal(t, "abc123", result.Output["commit"])
-				require.Equal(t, "main", result.Output["branch"])
 			},
 		},
 		{
-			name: "diverged commits without force",
+			name: "diverged without force is terminal",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -317,55 +353,58 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 					}, nil, nil
 				},
 			},
+			force: false,
 			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
+				t *testing.T, _ *comparisonResult, err error,
 			) {
 				t.Helper()
 				require.Error(t, err)
 				require.True(t, promotion.IsTerminal(err))
-				require.Contains(
-					t, err.Error(), "target branch may have diverged",
-				)
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusFailed, result.Status,
-				)
 			},
 		},
 		{
-			name: "empty commits list",
+			name: "diverged with force uses merge base",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
 					_, _, _, _ string,
 					_ *github.ListOptions,
 				) (*github.CommitsComparison, *github.Response, error) {
+					treeSHA := "tree1"
 					return &github.CommitsComparison{
-						Status:  ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{},
+						Status: ptr.To("diverged"),
+						MergeBaseCommit: &github.RepositoryCommit{
+							SHA: ptr.To("merge-base-sha"),
+						},
+						Commits: []*github.RepositoryCommit{{
+							SHA: ptr.To("c1"),
+							Commit: &github.Commit{
+								Message: ptr.To("msg"),
+								Tree:    &github.Tree{SHA: &treeSHA},
+							},
+						}},
 					}, nil, nil
 				},
 			},
+			force: true,
 			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
+				t *testing.T, cmp *comparisonResult, err error,
 			) {
 				t.Helper()
 				require.NoError(t, err)
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusSkipped, result.Status,
-				)
+				require.Nil(t, cmp.earlyResult)
+				require.Equal(t, "merge-base-sha", cmp.parentSHA)
+				require.Len(t, cmp.commits, 1)
 			},
 		},
 		{
-			name: "too many revisions",
+			name: "too many revisions is terminal",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
 					_, _, _, _ string,
 					_ *github.ListOptions,
 				) (*github.CommitsComparison, *github.Response, error) {
-					// Create 11 commits (exceeds default max of 10)
 					commits := make(
 						[]*github.RepositoryCommit, 11,
 					)
@@ -379,20 +418,16 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				},
 			},
 			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
+				t *testing.T, _ *comparisonResult, err error,
 			) {
 				t.Helper()
 				require.Error(t, err)
 				require.True(t, promotion.IsTerminal(err))
-				require.Contains(t, err.Error(), "exceeds the maximum")
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusFailed, result.Status,
-				)
+				require.ErrorContains(t, err, "exceeds the maximum")
 			},
 		},
 		{
-			name: "missing tree information",
+			name: "empty commits returns skip",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -400,29 +435,26 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 					_ *github.ListOptions,
 				) (*github.CommitsComparison, *github.Response, error) {
 					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{
-							{Commit: &github.Commit{}},
-						},
+						Status:  ptr.To("ahead"),
+						Commits: []*github.RepositoryCommit{},
 					}, nil, nil
 				},
 			},
 			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
+				t *testing.T, cmp *comparisonResult, err error,
 			) {
 				t.Helper()
-				require.Error(t, err)
-				require.Contains(
-					t, err.Error(), "missing tree information",
-				)
+				require.NoError(t, err)
+				require.NotNil(t, cmp.earlyResult)
 				require.Equal(
 					t,
-					kargoapi.PromotionStepStatusErrored, result.Status,
+					kargoapi.PromotionStepStatusSkipped,
+					cmp.earlyResult.Status,
 				)
 			},
 		},
 		{
-			name: "create commit error",
+			name: "unknown status is terminal",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -430,88 +462,394 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 					_ *github.ListOptions,
 				) (*github.CommitsComparison, *github.Response, error) {
 					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{{
-							SHA: ptr.To("orig-sha"),
-							Commit: &github.Commit{
-								Message: ptr.To("test commit"),
-								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
-							},
-						}},
+						Status: ptr.To("unknown-status"),
 					}, nil, nil
 				},
+			},
+			assert: func(
+				t *testing.T, _ *comparisonResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.True(t, promotion.IsTerminal(err))
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := &githubVerifiedPusher{
+				cfg: githubVerifiedPusherConfig{MaxRevisions: 10},
+			}
+			cmp, err := g.compareRemote(
+				context.Background(),
+				tc.client,
+				"owner", "repo", "main",
+				"target-head", "local-head",
+				tc.force,
+				&mockWorkTree{url: "https://github.com/o/r"},
+			)
+			tc.assert(t, cmp, err)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name      string
+		pusher    *githubVerifiedPusher
+		client    githubVerifiedPushClient
+		commits   []*github.RepositoryCommit
+		parentSHA string
+		assert    func(*testing.T, string, error)
+	}{
+		{
+			name:   "missing tree information",
+			pusher: &githubVerifiedPusher{},
+			client: &mockGitHubVerifiedPushClient{},
+			commits: []*github.RepositoryCommit{{
+				Commit: &github.Commit{},
+			}},
+			parentSHA: "parent",
+			assert: func(t *testing.T, _ string, err error) {
+				t.Helper()
+				require.ErrorContains(
+					t, err, "missing tree information",
+				)
+			},
+		},
+		{
+			name:   "create commit API error",
+			pusher: &githubVerifiedPusher{},
+			client: &mockGitHubVerifiedPushClient{
 				createCommitFn: func(
 					_ context.Context,
 					_, _ string,
 					_ github.Commit,
 					_ *github.CreateCommitOptions,
 				) (*github.Commit, *github.Response, error) {
-					return nil, nil, fmt.Errorf("create error")
+					return nil, nil, fmt.Errorf("API error")
 				},
 			},
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
+			commits: []*github.RepositoryCommit{{
+				SHA: ptr.To("orig1"),
+				Commit: &github.Commit{
+					Message: ptr.To("msg"),
+					Tree:    &github.Tree{SHA: ptr.To("tree1")},
+				},
+			}},
+			parentSHA: "parent",
+			assert: func(t *testing.T, _ string, err error) {
 				t.Helper()
-				require.Error(t, err)
-				require.Contains(
-					t, err.Error(), "error creating revision",
-				)
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusErrored, result.Status,
-				)
+				require.ErrorContains(t, err, "API error")
 			},
 		},
 		{
-			name: "update ref error",
+			name:   "single commit replayed successfully",
+			pusher: &githubVerifiedPusher{},
 			client: &mockGitHubVerifiedPushClient{
-				compareCommitsFn: func(
-					_ context.Context,
-					_, _, _, _ string,
-					_ *github.ListOptions,
-				) (*github.CommitsComparison, *github.Response, error) {
-					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{{
-							SHA: ptr.To("orig-sha"),
-							Commit: &github.Commit{
-								Message: ptr.To("test commit"),
-								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
-							},
-						}},
-					}, nil, nil
-				},
 				createCommitFn: func(
 					_ context.Context,
 					_, _ string,
-					_ github.Commit,
+					commit github.Commit,
 					_ *github.CreateCommitOptions,
 				) (*github.Commit, *github.Response, error) {
+					// Verify parent is the seed parentSHA.
+					require.Len(t, commit.Parents, 1)
+					require.Equal(
+						t, "parent", commit.Parents[0].GetSHA(),
+					)
 					return &github.Commit{
-						SHA: ptr.To("signed-sha"),
+						SHA: ptr.To("signed1"),
 					}, nil, nil
 				},
+			},
+			commits: []*github.RepositoryCommit{{
+				SHA: ptr.To("orig1"),
+				Commit: &github.Commit{
+					Message: ptr.To("msg"),
+					Tree:    &github.Tree{SHA: ptr.To("tree1")},
+				},
+			}},
+			parentSHA: "parent",
+			assert: func(t *testing.T, sha string, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(t, "signed1", sha)
+			},
+		},
+		{
+			name:   "multiple commits chain parents correctly",
+			pusher: &githubVerifiedPusher{},
+			client: func() githubVerifiedPushClient {
+				callCount := 0
+				return &mockGitHubVerifiedPushClient{
+					createCommitFn: func(
+						_ context.Context,
+						_, _ string,
+						commit github.Commit,
+						_ *github.CreateCommitOptions,
+					) (*github.Commit, *github.Response, error) {
+						callCount++
+						if callCount == 1 {
+							require.Equal(
+								t, "parent",
+								commit.Parents[0].GetSHA(),
+							)
+							return &github.Commit{
+								SHA: ptr.To("signed1"),
+							}, nil, nil
+						}
+						require.Equal(
+							t, "signed1",
+							commit.Parents[0].GetSHA(),
+						)
+						return &github.Commit{
+							SHA: ptr.To("signed2"),
+						}, nil, nil
+					},
+				}
+			}(),
+			commits: []*github.RepositoryCommit{
+				{
+					SHA: ptr.To("orig1"),
+					Commit: &github.Commit{
+						Message: ptr.To("first"),
+						Tree:    &github.Tree{SHA: ptr.To("t1")},
+					},
+				},
+				{
+					SHA: ptr.To("orig2"),
+					Commit: &github.Commit{
+						Message: ptr.To("second"),
+						Tree:    &github.Tree{SHA: ptr.To("t2")},
+					},
+				},
+			},
+			parentSHA: "parent",
+			assert: func(t *testing.T, sha string, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(t, "signed2", sha)
+			},
+		},
+		{
+			name: "co-authored-by added for non-system author",
+			pusher: &githubVerifiedPusher{
+				gitUser: git.User{
+					Name:  "Kargo",
+					Email: "no-reply@kargo.io",
+				},
+			},
+			client: &mockGitHubVerifiedPushClient{
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					commit github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					require.Contains(
+						t,
+						commit.GetMessage(),
+						"Co-authored-by: Custom <custom@test.com>",
+					)
+					return &github.Commit{
+						SHA: ptr.To("signed1"),
+					}, nil, nil
+				},
+			},
+			commits: []*github.RepositoryCommit{{
+				SHA: ptr.To("orig1"),
+				Commit: &github.Commit{
+					Message: ptr.To("msg"),
+					Tree:    &github.Tree{SHA: ptr.To("tree1")},
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Custom"),
+						Email: ptr.To("custom@test.com"),
+					},
+				},
+			}},
+			parentSHA: "parent",
+			assert: func(t *testing.T, sha string, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(t, "signed1", sha)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			sha, err := tc.pusher.replayCommits(
+				context.Background(),
+				tc.client,
+				"owner", "repo",
+				tc.commits,
+				tc.parentSHA,
+			)
+			tc.assert(t, sha, err)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_updateTargetRef(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name         string
+		client       githubVerifiedPushClient
+		createBranch bool
+		force        bool
+		assert       func(*testing.T, error)
+	}{
+		{
+			name: "create new branch ref",
+			client: &mockGitHubVerifiedPushClient{
+				createRefFn: func(
+					_ context.Context,
+					_, _ string,
+					ref github.CreateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.Equal(
+						t, "refs/heads/feature", ref.Ref,
+					)
+					require.Equal(t, "sha123", ref.SHA)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			createBranch: true,
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "create ref error",
+			client: &mockGitHubVerifiedPushClient{
+				createRefFn: func(
+					_ context.Context,
+					_, _ string,
+					_ github.CreateRef,
+				) (*github.Reference, *github.Response, error) {
+					return nil, nil, fmt.Errorf("create failed")
+				},
+			},
+			createBranch: true,
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.ErrorContains(t, err, "create failed")
+			},
+		},
+		{
+			name: "update existing ref",
+			client: &mockGitHubVerifiedPushClient{
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					ref github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.Equal(t, "sha123", ref.SHA)
+					require.False(t, *ref.Force)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			createBranch: false,
+			force:        false,
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "update ref with force",
+			client: &mockGitHubVerifiedPushClient{
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					ref github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					require.True(t, *ref.Force)
+					return &github.Reference{}, nil, nil
+				},
+			},
+			createBranch: false,
+			force:        true,
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "HTTP 422 returns errRefUpdateConflict",
+			client: &mockGitHubVerifiedPushClient{
 				updateRefFn: func(
 					_ context.Context,
 					_, _, _ string,
 					_ github.UpdateRef,
 				) (*github.Reference, *github.Response, error) {
-					return nil, nil, fmt.Errorf("ref update error")
+					return nil, nil, &github.ErrorResponse{
+						Response: &http.Response{
+							StatusCode: http.StatusUnprocessableEntity,
+						},
+					}
 				},
 			},
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
+			createBranch: false,
+			assert: func(t *testing.T, err error) {
 				t.Helper()
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error updating ref")
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusErrored, result.Status,
+				require.True(
+					t, errors.Is(err, errRefUpdateConflict),
 				)
 			},
 		},
+		{
+			name: "other update error passes through",
+			client: &mockGitHubVerifiedPushClient{
+				updateRefFn: func(
+					_ context.Context,
+					_, _, _ string,
+					_ github.UpdateRef,
+				) (*github.Reference, *github.Response, error) {
+					return nil, nil,
+						fmt.Errorf("internal server error")
+				},
+			},
+			createBranch: false,
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.ErrorContains(
+					t, err, "internal server error",
+				)
+				require.False(
+					t, errors.Is(err, errRefUpdateConflict),
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := &githubVerifiedPusher{}
+			err := g.updateTargetRef(
+				context.Background(),
+				tc.client,
+				"owner", "repo", "feature", "sha123",
+				tc.createBranch, tc.force,
+			)
+			tc.assert(t, err)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
+	testCases := []struct {
+		name         string
+		client       githubVerifiedPushClient
+		targetBranch string
+		createBranch bool
+		force        bool
+		assert       func(*testing.T, promotion.StepResult, error)
+	}{
 		{
 			name: "successful signing of single commit",
 			client: &mockGitHubVerifiedPushClient{
@@ -563,56 +901,6 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 				commitURL, ok := result.Output["commitURL"].(string)
 				require.True(t, ok)
 				require.Contains(t, commitURL, "signed-sha")
-			},
-		},
-		{
-			name: "create ref error for new branch",
-			client: &mockGitHubVerifiedPushClient{
-				compareCommitsFn: func(
-					_ context.Context,
-					_, _, _, _ string,
-					_ *github.ListOptions,
-				) (*github.CommitsComparison, *github.Response, error) {
-					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{{
-							SHA: ptr.To("orig-sha"),
-							Commit: &github.Commit{
-								Message: ptr.To("test commit"),
-								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
-							},
-						}},
-					}, nil, nil
-				},
-				createCommitFn: func(
-					_ context.Context,
-					_, _ string,
-					_ github.Commit,
-					_ *github.CreateCommitOptions,
-				) (*github.Commit, *github.Response, error) {
-					return &github.Commit{
-						SHA: ptr.To("signed-sha"),
-					}, nil, nil
-				},
-				createRefFn: func(
-					_ context.Context,
-					_, _ string,
-					_ github.CreateRef,
-				) (*github.Reference, *github.Response, error) {
-					return nil, nil, fmt.Errorf("ref create error")
-				},
-			},
-			createBranch: true,
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
-				t.Helper()
-				require.Error(t, err)
-				require.Contains(t, err.Error(), "error creating ref")
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusErrored, result.Status,
-				)
 			},
 		},
 		{
@@ -834,117 +1122,6 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			},
 		},
 		{
-			name:  "non-force update ref passes force=false",
-			force: false,
-			client: &mockGitHubVerifiedPushClient{
-				compareCommitsFn: func(
-					_ context.Context,
-					_, _, _, _ string,
-					_ *github.ListOptions,
-				) (*github.CommitsComparison, *github.Response, error) {
-					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{{
-							SHA: ptr.To("orig-sha"),
-							Commit: &github.Commit{
-								Message: ptr.To("test commit"),
-								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
-							},
-						}},
-					}, nil, nil
-				},
-				createCommitFn: func(
-					_ context.Context,
-					_, _ string,
-					_ github.Commit,
-					_ *github.CreateCommitOptions,
-				) (*github.Commit, *github.Response, error) {
-					return &github.Commit{
-						SHA: ptr.To("signed-sha"),
-					}, nil, nil
-				},
-				updateRefFn: func(
-					_ context.Context,
-					_, _, _ string,
-					ref github.UpdateRef,
-				) (*github.Reference, *github.Response, error) {
-					require.NotNil(t, ref.Force)
-					require.False(t, *ref.Force)
-					return &github.Reference{}, nil, nil
-				},
-			},
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
-				t.Helper()
-				require.NoError(t, err)
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusSucceeded, result.Status,
-				)
-			},
-		},
-		{
-			name: "co-authored-by added for non-system author",
-			client: &mockGitHubVerifiedPushClient{
-				compareCommitsFn: func(
-					_ context.Context,
-					_, _, _, _ string,
-					_ *github.ListOptions,
-				) (*github.CommitsComparison, *github.Response, error) {
-					return &github.CommitsComparison{
-						Status: ptr.To("ahead"),
-						Commits: []*github.RepositoryCommit{{
-							SHA: ptr.To("orig-sha"),
-							Commit: &github.Commit{
-								Message: ptr.To("test commit"),
-								Tree:    &github.Tree{SHA: ptr.To("tree-sha")},
-								Author: &github.CommitAuthor{
-									Name:  ptr.To("Alice"),
-									Email: ptr.To("alice@example.com"),
-								},
-							},
-						}},
-					}, nil, nil
-				},
-				createCommitFn: func(
-					_ context.Context,
-					_, _ string,
-					commit github.Commit,
-					_ *github.CreateCommitOptions,
-				) (*github.Commit, *github.Response, error) {
-					// Verify: no Author/Committer (App signs)
-					require.Nil(t, commit.Author)
-					require.Nil(t, commit.Committer)
-					// Verify: Co-authored-by trailer added
-					require.Contains(
-						t, commit.GetMessage(),
-						"Co-authored-by: Alice <alice@example.com>",
-					)
-					return &github.Commit{
-						SHA: ptr.To("signed-sha"),
-					}, nil, nil
-				},
-				updateRefFn: func(
-					_ context.Context,
-					_, _, _ string,
-					_ github.UpdateRef,
-				) (*github.Reference, *github.Response, error) {
-					return &github.Reference{}, nil, nil
-				},
-			},
-			assert: func(
-				t *testing.T, result promotion.StepResult, err error,
-			) {
-				t.Helper()
-				require.NoError(t, err)
-				require.Equal(
-					t,
-					kargoapi.PromotionStepStatusSucceeded, result.Status,
-				)
-			},
-		},
-		{
 			name: "no co-authored-by for system author",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
@@ -1162,7 +1339,7 @@ func Test_githubVerifiedPusher_newGitHubClient(t *testing.T) {
 	}
 }
 
-func Test_parseGitHubRepoURL(t *testing.T) {
+func Test_parseRepoURL(t *testing.T) {
 	testCases := []struct {
 		name          string
 		repoURL       string
@@ -1200,8 +1377,7 @@ func Test_parseGitHubRepoURL(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := &githubVerifiedPusher{}
-			_, host, owner, repo, err := g.parseGitHubRepoURL(tc.repoURL)
+			_, host, owner, repo, err := kargogithub.ParseRepoURL(tc.repoURL)
 			if tc.expectErr {
 				require.Error(t, err)
 				return
@@ -1242,8 +1418,7 @@ func Test_buildCommitURL(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			g := &githubVerifiedPusher{}
-			result := g.buildCommitURL(tc.repoURL, tc.sha)
+			result := kargogithub.BuildCommitURL(tc.repoURL, tc.sha)
 			require.Equal(t, tc.expected, result)
 		})
 	}
@@ -2310,6 +2485,7 @@ func Test_githubVerifiedPusher_run(t *testing.T) {
 			cfg: builtinx.GitHubVerifiedPushConfig{
 				Path:         "repo",
 				TargetBranch: "main",
+				PullPolicy:   policyPtr(builtinx.Rebase),
 			},
 			assert: func(
 				t *testing.T, result promotion.StepResult, err error,
@@ -2449,6 +2625,275 @@ func Test_githubVerifiedPusher_run(t *testing.T) {
 				require.Equal(
 					t,
 					kargoapi.PromotionStepStatusSucceeded,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "merge conflict during PullMerge is terminal",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					pullMergeFn: func(_ string) error {
+						return git.ErrMergeConflict
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:         "repo",
+				TargetBranch: "main",
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.True(t, promotion.IsTerminal(err))
+				var te *promotion.TerminalError
+				require.ErrorAs(t, err, &te)
+				require.True(t, git.IsMergeConflict(te.Err))
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusFailed,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "PullMerge skipped when force=true",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				pullMergeCalled := false
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					pullMergeFn: func(_ string) error {
+						pullMergeCalled = true
+						return nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						require.False(
+							t, pullMergeCalled,
+							"PullMerge should not be called "+
+								"when force=true",
+						)
+						return "local123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				treeSHA := "tree456"
+				newSHA := "signed789"
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Reference, *github.Response, error) {
+								return &github.Reference{
+									Object: &github.GitObject{
+										SHA: ptr.To("target000"),
+									},
+								}, nil, nil
+							},
+							compareCommitsFn: func(
+								_ context.Context,
+								_, _, _, _ string,
+								_ *github.ListOptions,
+							) (*github.CommitsComparison, *github.Response, error) {
+								return &github.CommitsComparison{
+									Status:       ptr.To("ahead"),
+									AheadBy:      ptr.To(1),
+									TotalCommits: ptr.To(1),
+									Commits: []*github.RepositoryCommit{{
+										SHA: ptr.To("orig111"),
+										Commit: &github.Commit{
+											Message: ptr.To("test"),
+											Tree:    &github.Tree{SHA: &treeSHA},
+											Author: &github.CommitAuthor{
+												Name:  ptr.To("Test"),
+												Email: ptr.To("t@t.com"),
+											},
+										},
+									}},
+								}, nil, nil
+							},
+							createCommitFn: func(
+								_ context.Context,
+								_, _ string,
+								_ github.Commit,
+								_ *github.CreateCommitOptions,
+							) (*github.Commit, *github.Response, error) {
+								return &github.Commit{
+									SHA: &newSHA,
+								}, nil, nil
+							},
+							updateRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+								ref github.UpdateRef,
+							) (*github.Reference, *github.Response, error) {
+								require.NotNil(t, ref.Force)
+								require.True(t, *ref.Force)
+								return &github.Reference{}, nil, nil
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:         "repo",
+				TargetBranch: "main",
+				Force:        true,
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusSucceeded,
+					result.Status,
+				)
+			},
+		},
+		{
+			name: "FFOnly errors when remote has advanced",
+			pusher: func() *githubVerifiedPusher {
+				g := newTestPusher()
+				wt := &mockWorkTree{
+					url: "https://github.com/owner/repo",
+					currentBranchFn: func() (string, error) {
+						return "main", nil
+					},
+					lastCommitIDFn: func() (string, error) {
+						return "local123", nil
+					},
+					pushFn: func(_ *git.PushOptions) error {
+						return nil
+					},
+				}
+				g.loadWorkTreeFn = func(
+					_ string, _ *git.LoadWorkTreeOptions,
+				) (git.WorkTree, error) {
+					return wt, nil
+				}
+				g.credsDB = &credentials.FakeDB{
+					GetFn: func(
+						_ context.Context, _ string,
+						_ credentials.Type, _ string,
+					) (*credentials.Credentials, error) {
+						return &credentials.Credentials{
+							Password: "token123",
+						}, nil
+					},
+				}
+				g.newGitHubClientFn = func(
+					_, _ string, _ bool,
+				) (string, string, githubVerifiedPushClient, error) {
+					return "owner", "repo",
+						&mockGitHubVerifiedPushClient{
+							getRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Reference, *github.Response, error) {
+								return &github.Reference{
+									Object: &github.GitObject{
+										SHA: ptr.To("target000"),
+									},
+								}, nil, nil
+							},
+							compareCommitsFn: func(
+								_ context.Context,
+								_, _, _, _ string,
+								_ *github.ListOptions,
+							) (*github.CommitsComparison, *github.Response, error) {
+								return &github.CommitsComparison{
+									Status: ptr.To("diverged"),
+								}, nil, nil
+							},
+							deleteRefFn: func(
+								_ context.Context,
+								_, _, _ string,
+							) (*github.Response, error) {
+								return nil, nil
+							},
+						}, nil
+				}
+				return g
+			}(),
+			cfg: builtinx.GitHubVerifiedPushConfig{
+				Path:         "repo",
+				TargetBranch: "main",
+				PullPolicy:   policyPtr(builtinx.FFOnly),
+			},
+			assert: func(
+				t *testing.T, result promotion.StepResult, err error,
+			) {
+				t.Helper()
+				require.Error(t, err)
+				require.True(t, promotion.IsTerminal(err))
+				require.Contains(
+					t, err.Error(),
+					"target branch may have diverged",
+				)
+				require.Equal(
+					t,
+					kargoapi.PromotionStepStatusFailed,
 					result.Status,
 				)
 			},
@@ -2644,6 +3089,160 @@ func Test_isGitHubHTTPStatus(t *testing.T) {
 			assert.Equal(
 				t, tc.expect, g.isGitHubHTTPStatus(tc.err, tc.code),
 			)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_resolveParents(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name          string
+		rc            *github.RepositoryCommit
+		shaMap        map[string]string
+		defaultParent string
+		assert        func(*testing.T, []*github.Commit)
+	}{
+		{
+			name: "single parent maps through shaMap",
+			rc: &github.RepositoryCommit{
+				Parents: []*github.Commit{
+					{SHA: ptr.To("abc")},
+				},
+			},
+			shaMap:        map[string]string{"abc": "xyz"},
+			defaultParent: "fallback",
+			assert: func(t *testing.T, parents []*github.Commit) {
+				t.Helper()
+				require.Len(t, parents, 1)
+				require.Equal(t, "xyz", parents[0].GetSHA())
+			},
+		},
+		{
+			name: "merge commit preserves multiple parents",
+			rc: &github.RepositoryCommit{
+				Parents: []*github.Commit{
+					{SHA: ptr.To("abc")},
+					{SHA: ptr.To("def")},
+				},
+			},
+			shaMap:        map[string]string{"abc": "xyz"},
+			defaultParent: "fallback",
+			assert: func(t *testing.T, parents []*github.Commit) {
+				t.Helper()
+				require.Len(t, parents, 2)
+				require.Equal(t, "xyz", parents[0].GetSHA())
+				require.Equal(t, "def", parents[1].GetSHA())
+			},
+		},
+		{
+			name: "no parents falls back to defaultParent",
+			rc: &github.RepositoryCommit{
+				Parents: []*github.Commit{},
+			},
+			shaMap:        map[string]string{},
+			defaultParent: "fallback",
+			assert: func(t *testing.T, parents []*github.Commit) {
+				t.Helper()
+				require.Len(t, parents, 1)
+				require.Equal(
+					t, "fallback", parents[0].GetSHA(),
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := &githubVerifiedPusher{}
+			parents := g.resolveParents(
+				tc.rc, tc.shaMap, tc.defaultParent,
+			)
+			tc.assert(t, parents)
+		})
+	}
+}
+
+func Test_githubVerifiedPusher_pullRemote(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name   string
+		policy string
+		wt     *mockWorkTree
+		assert func(*testing.T, error)
+	}{
+		{
+			name:   "Merge calls PullMerge",
+			policy: pullPolicyMerge,
+			wt: &mockWorkTree{
+				pullMergeFn: func(branch string) error {
+					require.Equal(t, "main", branch)
+					return nil
+				},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:   "Rebase calls PullRebase",
+			policy: pullPolicyRebase,
+			wt: &mockWorkTree{
+				pullRebaseFn: func(branch string) error {
+					require.Equal(t, "main", branch)
+					return nil
+				},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:   "FFOnly does nothing",
+			policy: pullPolicyFFOnly,
+			wt: &mockWorkTree{
+				pullMergeFn: func(_ string) error {
+					require.Fail(
+						t,
+						"PullMerge should not be called "+
+							"for FFOnly",
+					)
+					return nil
+				},
+				pullRebaseFn: func(_ string) error {
+					require.Fail(
+						t,
+						"PullRebase should not be called "+
+							"for FFOnly",
+					)
+					return nil
+				},
+			},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:   "unknown policy returns error",
+			policy: "BadPolicy",
+			wt:     &mockWorkTree{},
+			assert: func(t *testing.T, err error) {
+				t.Helper()
+				require.Error(t, err)
+				require.Contains(
+					t, err.Error(), "unknown pullPolicy",
+				)
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := &githubVerifiedPusher{}
+			err := g.pullRemote(tc.wt, "main", tc.policy)
+			tc.assert(t, err)
 		})
 	}
 }

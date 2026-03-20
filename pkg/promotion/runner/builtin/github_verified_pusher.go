@@ -2,18 +2,15 @@ package builtin
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
 	"github.com/google/go-github/v76/github"
-	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -22,9 +19,9 @@ import (
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
 	"github.com/akuity/kargo/pkg/credentials"
+	kargogithub "github.com/akuity/kargo/pkg/github"
 	"github.com/akuity/kargo/pkg/logging"
 	"github.com/akuity/kargo/pkg/promotion"
-	"github.com/akuity/kargo/pkg/urls"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
 
@@ -41,6 +38,12 @@ const (
 	compareStatusDiverged  = "diverged"
 	compareStatusBehind    = "behind"
 	compareStatusIdentical = "identical"
+
+	// pullPolicy values control how local commits are reconciled with the
+	// remote target branch when it has advanced.
+	pullPolicyMerge  = "Merge"
+	pullPolicyRebase = "Rebase"
+	pullPolicyFFOnly = "FFOnly"
 )
 
 // errRefUpdateConflict is returned when UpdateRef fails because the target
@@ -142,65 +145,17 @@ type githubVerifiedPushClient interface {
 	) (*github.Response, error)
 }
 
-// githubVerifiedPushClientWrapper wraps a *github.Client to implement
-// githubVerifiedPushClient.
+// githubVerifiedPushClientWrapper wraps a *github.GitService and
+// *github.RepositoriesService to implement githubVerifiedPushClient.
 type githubVerifiedPushClientWrapper struct {
-	client *github.Client
-}
-
-func (w *githubVerifiedPushClientWrapper) CompareCommits(
-	ctx context.Context,
-	owner, repo, base, head string,
-	opts *github.ListOptions,
-) (*github.CommitsComparison, *github.Response, error) {
-	return w.client.Repositories.CompareCommits(
-		ctx, owner, repo, base, head, opts,
-	)
-}
-
-func (w *githubVerifiedPushClientWrapper) CreateCommit(
-	ctx context.Context,
-	owner, repo string,
-	commit github.Commit,
-	opts *github.CreateCommitOptions,
-) (*github.Commit, *github.Response, error) {
-	return w.client.Git.CreateCommit(ctx, owner, repo, commit, opts)
-}
-
-func (w *githubVerifiedPushClientWrapper) CreateRef(
-	ctx context.Context,
-	owner, repo string,
-	ref github.CreateRef,
-) (*github.Reference, *github.Response, error) {
-	return w.client.Git.CreateRef(ctx, owner, repo, ref)
-}
-
-func (w *githubVerifiedPushClientWrapper) GetRef(
-	ctx context.Context,
-	owner, repo, ref string,
-) (*github.Reference, *github.Response, error) {
-	return w.client.Git.GetRef(ctx, owner, repo, ref)
-}
-
-func (w *githubVerifiedPushClientWrapper) UpdateRef(
-	ctx context.Context,
-	owner, repo, ref string,
-	updateRef github.UpdateRef,
-) (*github.Reference, *github.Response, error) {
-	return w.client.Git.UpdateRef(ctx, owner, repo, ref, updateRef)
-}
-
-func (w *githubVerifiedPushClientWrapper) DeleteRef(
-	ctx context.Context,
-	owner, repo, ref string,
-) (*github.Response, error) {
-	return w.client.Git.DeleteRef(ctx, owner, repo, ref)
+	*github.GitService
+	*github.RepositoriesService
 }
 
 // githubVerifiedPusherConfig holds controller-level configuration for the
 // github-verified-push step, populated from environment variables.
 type githubVerifiedPusherConfig struct {
-	MaxRevisions int `envconfig:"GITHUB_VERIFIED_PUSH_MAX_REVISIONS" default:"10"`
+	MaxRevisions int
 }
 
 // githubVerifiedPusher is an implementation of the promotion.StepRunner
@@ -343,6 +298,10 @@ func (g *githubVerifiedPusher) run(
 	targetBranch := cfg.TargetBranch
 	createBranch := false
 	force := cfg.Force
+	pullPolicy := pullPolicyMerge // secure default
+	if cfg.PullPolicy != nil {
+		pullPolicy = string(*cfg.PullPolicy)
+	}
 	if cfg.GenerateTargetBranch {
 		targetBranch = fmt.Sprintf(
 			"kargo/promotion/%s", stepCtx.Promotion,
@@ -376,12 +335,17 @@ func (g *githubVerifiedPusher) run(
 	g.acquireBranchLock(workTree.URL(), targetBranch)
 	defer g.releaseBranchLock(workTree.URL(), targetBranch)
 
-	// Retry loop mirrors git-push: each attempt rebases onto the target
-	// branch, pushes to a staging ref, replays commits via the API, and
-	// updates the target branch ref. Retries are triggered when the ref
-	// update fails because the target branch advanced concurrently.
+	// Retry loop: each attempt reconciles with the remote target branch
+	// (using the configured pullPolicy), pushes to a staging ref, replays
+	// commits via the API, and updates the target branch ref. Retries are
+	// triggered when the ref update fails because the target branch advanced
+	// concurrently. For FFOnly, no reconciliation or retries are attempted.
+	defaultSteps := 10
+	if pullPolicy == pullPolicyFFOnly {
+		defaultSteps = 1
+	}
 	backoff := wait.Backoff{
-		Steps:    10,
+		Steps:    defaultSteps,
 		Duration: time.Second,
 		Factor:   1.5,
 		Jitter:   0.5,
@@ -411,12 +375,15 @@ func (g *githubVerifiedPusher) run(
 		backoff,
 		g.isRetryableError,
 		func() error {
-			// 1. Rebase onto target branch (like git-push's PullRebase).
-			//    Skipped when force-pushing (matches git-push behavior)
-			//    and when creating a new branch (nothing to rebase onto).
+			// 1. Reconcile with remote target branch using the configured
+			//    pull policy. Skipped when force-pushing (overwrite
+			//    semantics) and when creating a new branch (nothing to
+			//    reconcile with).
 			if !force && !createBranch {
-				if rebaseErr := workTree.PullRebase(targetBranch); rebaseErr != nil {
-					return rebaseErr
+				if pullErr := g.pullRemote(
+					workTree, targetBranch, pullPolicy,
+				); pullErr != nil {
+					return pullErr
 				}
 			}
 
@@ -475,7 +442,7 @@ func (g *githubVerifiedPusher) run(
 				Status: kargoapi.PromotionStepStatusFailed,
 			}, &promotion.TerminalError{Err: err}
 		}
-		// Errors from early in the retry closure (PullRebase,
+		// Errors from early in the retry closure (pullRemote,
 		// LastCommitID, staging push, getTargetHead) don't set
 		// result. Default to Errored.
 		if result.Status == "" {
@@ -487,14 +454,12 @@ func (g *githubVerifiedPusher) run(
 	// Sync local branch to match remote after API replay. The replayed
 	// commits have new SHAs; without this the local working tree would
 	// have stale refs. Non-fatal if it fails — the push already succeeded.
-	if !createBranch {
-		if pullErr := workTree.ForcePull(targetBranch); pullErr != nil {
-			logger.Error(
-				pullErr,
-				"error syncing local branch after push (non-fatal)",
-				"branch", targetBranch,
-			)
-		}
+	if pullErr := workTree.ForcePull(targetBranch); pullErr != nil {
+		logger.Error(
+			pullErr,
+			"error syncing local branch after push (non-fatal)",
+			"branch", targetBranch,
+		)
 	}
 
 	return result, nil
@@ -529,6 +494,26 @@ func (g *githubVerifiedPusher) getTargetHead(
 	return ref.GetObject().GetSHA(), nil
 }
 
+// pullRemote reconciles the local branch with the remote target branch
+// according to the specified pull policy.
+func (g *githubVerifiedPusher) pullRemote(
+	workTree git.WorkTree,
+	targetBranch, policy string,
+) error {
+	switch policy {
+	case pullPolicyMerge:
+		return workTree.PullMerge(targetBranch)
+	case pullPolicyRebase:
+		return workTree.PullRebase(targetBranch)
+	case pullPolicyFFOnly:
+		// No reconciliation — the signAndUpdate step will detect and
+		// reject any divergence.
+		return nil
+	default:
+		return fmt.Errorf("unknown pullPolicy: %q", policy)
+	}
+}
+
 // signAndUpdate enumerates commits in the range targetHead..localHead,
 // replays them as signed commits via the GitHub REST API, and updates the
 // target branch ref to point to the final signed commit. When createBranch
@@ -543,241 +528,44 @@ func (g *githubVerifiedPusher) signAndUpdate(
 	targetHead, localHead string,
 	workTree git.WorkTree,
 ) (promotion.StepResult, error) {
-	logger := logging.LoggerFromContext(ctx)
+	cmp, err := g.compareRemote(
+		ctx, client, owner, repo, targetBranch,
+		targetHead, localHead, force, workTree,
+	)
+	if err != nil {
+		if promotion.IsTerminal(err) {
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, err
+		}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, err
+	}
+	if cmp.earlyResult != nil {
+		return *cmp.earlyResult, nil
+	}
 
-	comparison, _, err := client.CompareCommits(
-		ctx, owner, repo, targetHead, localHead, nil,
+	lastSignedSHA, err := g.replayCommits(
+		ctx, client, owner, repo, cmp.commits, cmp.parentSHA,
 	)
 	if err != nil {
 		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusErrored,
-			}, fmt.Errorf(
-				"error comparing %s...%s: %w", targetHead, localHead, err,
-			)
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, err
 	}
 
-	status := comparison.GetStatus()
-	logger.Debug(
-		"compared revision range",
-		"targetHead", targetHead,
-		"localHead", localHead,
-		"status", status,
-		"aheadBy", comparison.GetAheadBy(),
-		"totalCommits", comparison.GetTotalCommits(),
-	)
-
-	// parentSHA is the parent for the first replayed commit.
-	parentSHA := targetHead
-
-	switch status {
-	case compareStatusAhead:
-		// Expected: target is behind local head.
-	case compareStatusIdentical:
+	if err = g.updateTargetRef(
+		ctx, client, owner, repo,
+		targetBranch, lastSignedSHA,
+		createBranch, force,
+	); err != nil {
 		return promotion.StepResult{
-			Status: kargoapi.PromotionStepStatusSkipped,
-			Message: fmt.Sprintf(
-				"no revisions to sign: %s and %s are identical",
-				targetHead, localHead,
-			),
-			Output: map[string]any{
-				stateKeyCommit: targetHead,
-				stateKeyBranch: targetBranch,
-			},
-		}, nil
-	case compareStatusDiverged, compareStatusBehind:
-		if !force {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusFailed,
-				}, &promotion.TerminalError{
-					Err: fmt.Errorf(
-						"cannot sign revision range %s..%s: "+
-							"comparison status is %q "+
-							"(target branch may have diverged)",
-						targetHead, localHead, status,
-					),
-				}
-		}
-		// When force-pushing a diverged branch, start replay from the
-		// merge base so the remote branch ends up with the local
-		// history only, matching git push --force semantics.
-		if status == compareStatusDiverged {
-			mergeBase := comparison.GetMergeBaseCommit()
-			if mergeBase == nil {
-				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"cannot determine merge base for %s..%s",
-						targetHead, localHead,
-					)
-			}
-			parentSHA = mergeBase.GetSHA()
-			logger.Debug(
-				"force push: using merge base as parent",
-				"mergeBase", parentSHA,
-			)
-		}
-	default:
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf(
-					"cannot sign revision range %s..%s: "+
-						"comparison status is %q",
-					targetHead, localHead, status,
-				),
-			}
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, err
 	}
 
-	commits := comparison.Commits
-	if len(commits) == 0 {
-		if force && status == compareStatusBehind {
-			// Local is behind target — force-update the ref to the
-			// local HEAD without replaying any commits.
-			return g.forceUpdateRef(
-				ctx, client, owner, repo,
-				targetBranch, localHead, workTree,
-			)
-		}
-		return promotion.StepResult{
-			Status:  kargoapi.PromotionStepStatusSkipped,
-			Message: "no revisions to sign in range",
-			Output: map[string]any{
-				stateKeyCommit: targetHead,
-				stateKeyBranch: targetBranch,
-			},
-		}, nil
-	}
-
-	if len(commits) > g.cfg.MaxRevisions {
-		return promotion.StepResult{
-				Status: kargoapi.PromotionStepStatusFailed,
-			}, &promotion.TerminalError{
-				Err: fmt.Errorf(
-					"revision range %s..%s contains %d revisions, "+
-						"which exceeds the maximum of %d "+
-						"(configurable via "+
-						"GITHUB_VERIFIED_PUSH_MAX_REVISIONS env var)",
-					targetHead, localHead, len(commits), g.cfg.MaxRevisions,
-				),
-			}
-	}
-
-	// Replay each revision via the API. All commits are created without
-	// explicit Author/Committer so the GitHub App signs them (producing
-	// the "Verified" badge). When the original author differs from the
-	// system identity, a Co-authored-by trailer credits them.
-	var lastSignedSHA string
-	for i, rc := range commits {
-		if rc.Commit == nil ||
-			rc.Commit.Tree == nil ||
-			rc.Commit.Tree.SHA == nil {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"revision %d in range has missing tree information", i,
-				)
-		}
-		message := rc.Commit.GetMessage()
-
-		commit := github.Commit{
-			Message: &message,
-			Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
-			Parents: []*github.Commit{{SHA: &parentSHA}},
-		}
-
-		// Credit non-system authors via Co-authored-by trailer.
-		coAuthored := false
-		if author := rc.Commit.GetAuthor(); author != nil {
-			name, email := author.GetName(), author.GetEmail()
-			if name != "" && email != "" &&
-				!g.isSystemAuthor(name, email) {
-				message = g.appendCoAuthoredBy(message, name, email)
-				commit.Message = &message
-				coAuthored = true
-			}
-		}
-
-		newCommit, _, createErr := client.CreateCommit(
-			ctx, owner, repo, commit, nil,
-		)
-		if createErr != nil {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error creating revision %d/%d "+
-						"(original: %s): %w",
-					i+1, len(commits), rc.GetSHA(), createErr,
-				)
-		}
-		lastSignedSHA = newCommit.GetSHA()
-		parentSHA = lastSignedSHA
-		logger.Debug(
-			"created revision",
-			"index", i+1,
-			"total", len(commits),
-			"original", rc.GetSHA(),
-			"new", lastSignedSHA,
-			"coAuthored", coAuthored,
-		)
-	}
-
-	// Point the target branch at the final signed commit.
-	targetRef := "heads/" + targetBranch
-	if createBranch {
-		// Create a new branch ref.
-		_, _, err = client.CreateRef(
-			ctx, owner, repo,
-			github.CreateRef{
-				Ref: "refs/" + targetRef,
-				SHA: lastSignedSHA,
-			},
-		)
-		if err != nil {
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error creating ref %s at %s: %w",
-					targetRef, lastSignedSHA, err,
-				)
-		}
-		logger.Debug(
-			"created branch ref",
-			"ref", targetRef,
-			"sha", lastSignedSHA,
-		)
-	} else {
-		_, _, err = client.UpdateRef(
-			ctx, owner, repo, targetRef,
-			github.UpdateRef{
-				SHA:   lastSignedSHA,
-				Force: &force,
-			},
-		)
-		if err != nil {
-			if g.isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
-				return promotion.StepResult{
-						Status: kargoapi.PromotionStepStatusErrored,
-					}, fmt.Errorf(
-						"error updating ref %s to %s: %w",
-						targetRef, lastSignedSHA, errRefUpdateConflict,
-					)
-			}
-			return promotion.StepResult{
-					Status: kargoapi.PromotionStepStatusErrored,
-				}, fmt.Errorf(
-					"error updating ref %s to %s: %w",
-					targetRef, lastSignedSHA, err,
-				)
-		}
-		logger.Debug(
-			"updated branch ref",
-			"ref", targetRef,
-			"sha", lastSignedSHA,
-		)
-	}
-
-	commitURL := g.buildCommitURL(workTree.URL(), lastSignedSHA)
-
+	commitURL := kargogithub.BuildCommitURL(workTree.URL(), lastSignedSHA)
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
@@ -821,7 +609,7 @@ func (g *githubVerifiedPusher) forceUpdateRef(
 		"ref", targetRef,
 		"sha", sha,
 	)
-	commitURL := g.buildCommitURL(workTree.URL(), sha)
+	commitURL := kargogithub.BuildCommitURL(workTree.URL(), sha)
 	return promotion.StepResult{
 		Status: kargoapi.PromotionStepStatusSucceeded,
 		Output: map[string]any{
@@ -876,80 +664,317 @@ func (g *githubVerifiedPusher) releaseBranchLock(repoURL, branch string) {
 	mu.Unlock()
 }
 
-// parseGitHubRepoURL extracts the scheme, host, owner, and repo name from a
-// Git repository URL.
-func (g *githubVerifiedPusher) parseGitHubRepoURL(
-	repoURL string,
-) (scheme, host, owner, repo string, err error) {
-	u, err := url.Parse(urls.NormalizeGit(repoURL))
-	if err != nil {
-		return "", "", "", "",
-			fmt.Errorf("error parsing repository URL %q: %w", repoURL, err)
-	}
-	scheme = u.Scheme
-	if scheme != "https" && scheme != "http" {
-		scheme = "https"
-	}
-	host = u.Host
-	path := strings.TrimPrefix(u.Path, "/")
-	parts := strings.Split(path, "/")
-	if len(parts) != 2 {
-		return "", "", "", "", fmt.Errorf(
-			"could not extract repository owner and name from URL %q",
-			repoURL,
-		)
-	}
-	return scheme, host, parts[0], parts[1], nil
-}
-
 // newGitHubClient creates an authenticated GitHub API client for the given
 // repository.
 func (g *githubVerifiedPusher) newGitHubClient(
 	repoURL, token string,
 	insecureSkipTLSVerify bool,
 ) (string, string, githubVerifiedPushClient, error) {
-	scheme, host, owner, repo, err := g.parseGitHubRepoURL(repoURL)
+	client, owner, repo, err := kargogithub.NewClient(
+		repoURL, token, insecureSkipTLSVerify,
+	)
 	if err != nil {
 		return "", "", nil, err
 	}
-
-	httpClient := cleanhttp.DefaultClient()
-	if insecureSkipTLSVerify {
-		transport := cleanhttp.DefaultTransport()
-		transport.TLSClientConfig = &tls.Config{
-			InsecureSkipVerify: true, // nolint: gosec
-		}
-		httpClient.Transport = transport
-	}
-
-	client := github.NewClient(httpClient)
-	if host != "github.com" {
-		baseURL := fmt.Sprintf("%s://%s", scheme, host)
-		client, err = client.WithEnterpriseURLs(baseURL, baseURL)
-		if err != nil {
-			return "", "", nil, fmt.Errorf(
-				"error configuring GitHub Enterprise URLs: %w", err,
-			)
-		}
-	}
-	client = client.WithAuthToken(token)
-
 	return owner, repo,
-		&githubVerifiedPushClientWrapper{client: client}, nil
+		&githubVerifiedPushClientWrapper{
+			GitService:          client.Git,
+			RepositoriesService: client.Repositories,
+		}, nil
 }
 
-// buildCommitURL constructs a human-readable commit URL from a repository URL
-// and commit SHA.
-func (g *githubVerifiedPusher) buildCommitURL(repoURL, sha string) string {
-	_, host, _, _, err := g.parseGitHubRepoURL(repoURL)
+// comparisonResult holds the output of compareRemote: the resolved
+// parent SHA, the commits to replay, and optionally an early result to
+// return (e.g. skip or force-update) when no replay is needed.
+type comparisonResult struct {
+	parentSHA   string
+	commits     []*github.RepositoryCommit
+	earlyResult *promotion.StepResult
+}
+
+// compareRemote calls the GitHub Compare API and interprets the
+// result. It resolves the parent SHA for the first replayed commit,
+// validates the commit list, and returns early results for skip and
+// force-update cases.
+func (g *githubVerifiedPusher) compareRemote(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, targetBranch string,
+	targetHead, localHead string,
+	force bool,
+	workTree git.WorkTree,
+) (*comparisonResult, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	comparison, _, err := client.CompareCommits(
+		ctx, owner, repo, targetHead, localHead, nil,
+	)
 	if err != nil {
-		return ""
+		return nil, fmt.Errorf(
+			"error comparing %s...%s: %w", targetHead, localHead, err,
+		)
 	}
-	u, err := url.Parse(urls.NormalizeGit(repoURL))
+
+	status := comparison.GetStatus()
+	logger.Debug(
+		"compared revision range",
+		"targetHead", targetHead,
+		"localHead", localHead,
+		"status", status,
+		"aheadBy", comparison.GetAheadBy(),
+		"totalCommits", comparison.GetTotalCommits(),
+	)
+
+	parentSHA := targetHead
+
+	switch status {
+	case compareStatusAhead:
+		// Expected: target is behind local head.
+	case compareStatusIdentical:
+		return &comparisonResult{
+			earlyResult: &promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusSkipped,
+				Message: fmt.Sprintf(
+					"no revisions to sign: %s and %s are identical",
+					targetHead, localHead,
+				),
+				Output: map[string]any{
+					stateKeyCommit: targetHead,
+					stateKeyBranch: targetBranch,
+				},
+			},
+		}, nil
+	case compareStatusDiverged, compareStatusBehind:
+		if !force {
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"cannot sign revision range %s..%s: "+
+						"comparison status is %q "+
+						"(target branch may have diverged)",
+					targetHead, localHead, status,
+				),
+			}
+		}
+		if status == compareStatusDiverged {
+			mergeBase := comparison.GetMergeBaseCommit()
+			if mergeBase == nil {
+				return nil, fmt.Errorf(
+					"cannot determine merge base for %s..%s",
+					targetHead, localHead,
+				)
+			}
+			parentSHA = mergeBase.GetSHA()
+			logger.Debug(
+				"force push: using merge base as parent",
+				"mergeBase", parentSHA,
+			)
+		}
+	default:
+		return nil, &promotion.TerminalError{
+			Err: fmt.Errorf(
+				"cannot sign revision range %s..%s: "+
+					"comparison status is %q",
+				targetHead, localHead, status,
+			),
+		}
+	}
+
+	commits := comparison.Commits
+	if len(commits) == 0 {
+		if force && status == compareStatusBehind {
+			result, err := g.forceUpdateRef(
+				ctx, client, owner, repo,
+				targetBranch, localHead, workTree,
+			)
+			return &comparisonResult{earlyResult: &result}, err
+		}
+		return &comparisonResult{
+			earlyResult: &promotion.StepResult{
+				Status:  kargoapi.PromotionStepStatusSkipped,
+				Message: "no revisions to sign in range",
+				Output: map[string]any{
+					stateKeyCommit: targetHead,
+					stateKeyBranch: targetBranch,
+				},
+			},
+		}, nil
+	}
+
+	if len(commits) > g.cfg.MaxRevisions {
+		return nil, &promotion.TerminalError{
+			Err: fmt.Errorf(
+				"revision range %s..%s contains %d revisions, "+
+					"which exceeds the maximum of %d "+
+					"(configurable via "+
+					"GITHUB_VERIFIED_PUSH_MAX_REVISIONS env var)",
+				targetHead, localHead, len(commits), g.cfg.MaxRevisions,
+			),
+		}
+	}
+
+	return &comparisonResult{
+		parentSHA: parentSHA,
+		commits:   commits,
+	}, nil
+}
+
+// replayCommits replays each commit via the GitHub API, creating signed
+// commits. It is merge-aware: merge commits are created with their original
+// multi-parent structure preserved via a SHA mapping table.
+func (g *githubVerifiedPusher) replayCommits(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo string,
+	commits []*github.RepositoryCommit,
+	parentSHA string,
+) (string, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	shaMap := map[string]string{parentSHA: parentSHA}
+	var lastSignedSHA string
+	for i, rc := range commits {
+		if rc.Commit == nil ||
+			rc.Commit.Tree == nil ||
+			rc.Commit.Tree.SHA == nil {
+			return "", fmt.Errorf(
+				"revision %d in range has missing tree information", i,
+			)
+		}
+
+		defaultParent := parentSHA
+		if lastSignedSHA != "" {
+			defaultParent = lastSignedSHA
+		}
+		parents := g.resolveParents(rc, shaMap, defaultParent)
+
+		message := rc.Commit.GetMessage()
+
+		commit := github.Commit{
+			Message: &message,
+			Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
+			Parents: parents,
+		}
+
+		// Credit non-system authors via Co-authored-by trailer.
+		coAuthored := false
+		if author := rc.Commit.GetAuthor(); author != nil {
+			name, email := author.GetName(), author.GetEmail()
+			if name != "" && email != "" &&
+				!g.isSystemAuthor(name, email) {
+				message = g.appendCoAuthoredBy(message, name, email)
+				commit.Message = &message
+				coAuthored = true
+			}
+		}
+
+		newCommit, _, createErr := client.CreateCommit(
+			ctx, owner, repo, commit, nil,
+		)
+		if createErr != nil {
+			return "", fmt.Errorf(
+				"error creating revision %d/%d "+
+					"(original: %s): %w",
+				i+1, len(commits), rc.GetSHA(), createErr,
+			)
+		}
+		lastSignedSHA = newCommit.GetSHA()
+		shaMap[rc.GetSHA()] = lastSignedSHA
+		logger.Debug(
+			"created revision",
+			"index", i+1,
+			"total", len(commits),
+			"original", rc.GetSHA(),
+			"new", lastSignedSHA,
+			"merge", len(parents) > 1,
+			"coAuthored", coAuthored,
+		)
+	}
+	return lastSignedSHA, nil
+}
+
+// updateTargetRef points the target branch at the given SHA. When
+// createBranch is true, a new ref is created; otherwise the existing ref
+// is updated. Returns errRefUpdateConflict when an UpdateRef receives
+// HTTP 422, signaling the retry loop to try again.
+func (g *githubVerifiedPusher) updateTargetRef(
+	ctx context.Context,
+	client githubVerifiedPushClient,
+	owner, repo, targetBranch, sha string,
+	createBranch, force bool,
+) error {
+	logger := logging.LoggerFromContext(ctx)
+	targetRef := "heads/" + targetBranch
+
+	if createBranch {
+		_, _, err := client.CreateRef(
+			ctx, owner, repo,
+			github.CreateRef{
+				Ref: "refs/" + targetRef,
+				SHA: sha,
+			},
+		)
+		if err != nil {
+			return fmt.Errorf(
+				"error creating ref %s at %s: %w",
+				targetRef, sha, err,
+			)
+		}
+		logger.Debug("created branch ref", "ref", targetRef, "sha", sha)
+		return nil
+	}
+
+	_, _, err := client.UpdateRef(
+		ctx, owner, repo, targetRef,
+		github.UpdateRef{
+			SHA:   sha,
+			Force: &force,
+		},
+	)
 	if err != nil {
-		return ""
+		if g.isGitHubHTTPStatus(err, http.StatusUnprocessableEntity) {
+			return fmt.Errorf(
+				"error updating ref %s to %s: %w",
+				targetRef, sha, errRefUpdateConflict,
+			)
+		}
+		return fmt.Errorf(
+			"error updating ref %s to %s: %w",
+			targetRef, sha, err,
+		)
 	}
-	return fmt.Sprintf("https://%s%s/commit/%s", host, u.Path, sha)
+	logger.Debug("updated branch ref", "ref", targetRef, "sha", sha)
+	return nil
+}
+
+// resolveParents maps a commit's original parent SHAs to their replayed
+// equivalents using the provided SHA map. Parents not in the map are assumed
+// to already exist on the remote and are used as-is. This preserves
+// multi-parent (merge) commit structure through the API replay.
+//
+// When the commit has no parent information (e.g. sparse API response),
+// defaultParent is used as the single parent to maintain linear chain
+// behavior.
+func (g *githubVerifiedPusher) resolveParents(
+	rc *github.RepositoryCommit,
+	shaMap map[string]string,
+	defaultParent string,
+) []*github.Commit {
+	origParents := rc.Parents
+	if len(origParents) == 0 && rc.Commit != nil {
+		origParents = rc.Commit.Parents
+	}
+	if len(origParents) == 0 {
+		return []*github.Commit{{SHA: &defaultParent}}
+	}
+	parents := make([]*github.Commit, 0, len(origParents))
+	for _, p := range origParents {
+		sha := p.GetSHA()
+		if mapped, ok := shaMap[sha]; ok {
+			sha = mapped
+		}
+		parents = append(parents, &github.Commit{SHA: &sha})
+	}
+	return parents
 }
 
 // isSystemAuthor reports whether the given name and email match the

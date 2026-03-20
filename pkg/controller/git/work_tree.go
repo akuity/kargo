@@ -78,6 +78,11 @@ type WorkTree interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
+	// PullMerge fetches the latest state of the specified remote branch and
+	// merges it into the current branch. If the remote branch does not
+	// exist, this is a no-op. Returns ErrMergeConflict if the merge
+	// encounters conflicts requiring manual resolution.
+	PullMerge(branch string) error
 	// PullRebase fetches the latest state of the specified remote branch and
 	// rebases the current branch on top of it. If the remote branch does not
 	// exist, this is a no-op. Returns ErrMergeConflict if the rebase
@@ -426,6 +431,24 @@ func (w *workTree) IsAncestor(parent string, child string) (bool, error) {
 	return false, fmt.Errorf("error testing ancestry of branches %q, %q: %w", parent, child, err)
 }
 
+func (w *workTree) IsMerging() (bool, error) {
+	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "MERGE_HEAD"))
+	if err != nil {
+		return false, fmt.Errorf("error determining merge status: %w", err)
+	}
+	mergeHead := strings.TrimSpace(string(res))
+	if !filepath.IsAbs(mergeHead) {
+		mergeHead = filepath.Join(w.dir, mergeHead)
+	}
+	if _, err = os.Stat(mergeHead); !os.IsNotExist(err) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, nil
+}
+
 func (w *workTree) IsRebasing() (bool, error) {
 	res, err := libExec.Exec(w.buildGitCommand("rev-parse", "--git-path", "rebase-merge"))
 	if err != nil {
@@ -671,6 +694,25 @@ type PushOptions struct {
 //
 // nolint: lll
 var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected].+\((?:non-fast-forward|fetch first|cannot lock ref.*|incorrect old value provided)\)\s*$`)
+
+func (w *workTree) PullMerge(branch string) error {
+	exists, err := w.RemoteBranchExists(branch)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return nil
+	}
+	if _, err = libExec.Exec(
+		w.buildGitCommand("pull", "--no-rebase", "origin", branch),
+	); err != nil {
+		if isMerging, mergeErr := w.IsMerging(); mergeErr == nil && isMerging {
+			return ErrMergeConflict
+		}
+		return fmt.Errorf("error pulling and merging branch: %w", err)
+	}
+	return nil
+}
 
 func (w *workTree) PullRebase(branch string) error {
 	exists, err := w.RemoteBranchExists(branch)

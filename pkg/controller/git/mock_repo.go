@@ -26,6 +26,7 @@ type MockRepo struct {
 	ListTagsFn                func() ([]TagMetadata, error)
 	ListCommitsFn             func(limit, skip uint) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
+	PullMergeFn               func(branch string) error
 	PullRebaseFn              func(branch string) error
 	PushFn                    func(*PushOptions) error
 	ForcePullFn               func(branch string) error
@@ -130,6 +131,13 @@ func (m *MockRepo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 
 func (m *MockRepo) CommitMessage(id string) (string, error) {
 	return m.CommitMessageFn(id)
+}
+
+func (m *MockRepo) PullMerge(branch string) error {
+	if m.PullMergeFn == nil {
+		return nil
+	}
+	return m.PullMergeFn(branch)
 }
 
 func (m *MockRepo) PullRebase(branch string) error {

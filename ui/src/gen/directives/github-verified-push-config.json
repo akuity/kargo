@@ -10,7 +10,7 @@
   },
   "maxAttempts": {
    "type": "integer",
-   "description": "This step implements its own internal retry logic for cases where a push is determined to have failed due to the remote branch having commits that are not present locally. Each attempt, including the first, rebases prior to pushing. This field configures the maximum number of attempts. If not specified, the default is 10.",
+   "description": "Maximum number of push attempts. Relevant when pullPolicy is 'Merge' or 'Rebase': if the remote branch advances between reading its HEAD and updating the ref, the step retries by reconciling and replaying again. Merge conflicts halt further attempts. For 'FFOnly', no retries are attempted. Default is 10 for Merge/Rebase, 1 for FFOnly.",
    "minimum": 1,
    "maximum": 2147483647
   },
@@ -31,6 +31,16 @@
    "type": "boolean",
    "description": "Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). Use with caution as this will overwrite any commits that exist on the remote branch but not in your local branch.",
    "default": false
+  },
+  "pullPolicy": {
+   "type": "string",
+   "description": "Controls how local commits are reconciled with the remote target branch when it has advanced. 'Merge' (default) creates a merge commit preserving remote history. 'Rebase' rebases local commits onto the remote branch. 'FFOnly' permits only fast-forward updates and errors if the remote has advanced.",
+   "enum": [
+    "FFOnly",
+    "Rebase",
+    "Merge"
+   ],
+   "default": "Merge"
   }
  }
 }
