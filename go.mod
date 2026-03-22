@@ -40,7 +40,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/go-openapi/errors v0.22.7
 	github.com/go-openapi/runtime v0.29.3
-	github.com/go-openapi/strfmt v0.26.0
+	github.com/go-openapi/strfmt v0.26.1
 	github.com/go-openapi/swag v0.25.5
 	github.com/go-openapi/validate v0.25.2
 	github.com/gogo/protobuf v1.3.2
@@ -52,7 +52,7 @@ require (
 	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/jferrl/go-githubauth v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/klauspost/compress v1.18.4
+	github.com/klauspost/compress v1.18.5
 	github.com/ktrysmt/go-bitbucket v0.9.87
 	github.com/microsoft/azure-devops-go-api/azuredevops/v7 v7.1.0
 	github.com/oklog/ulid/v2 v2.1.1
