@@ -54,7 +54,6 @@ func TestRegistrationPredicate(t *testing.T) {
 	}
 }
 
-
 type mockGithubClient struct {
 	mock.Mock
 	pr       *github.PullRequest
