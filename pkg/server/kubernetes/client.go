@@ -229,6 +229,14 @@ func newDefaultInternalClient(
 	if err = cluster.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Freight{},
+		indexer.FreightByCurrentStagesField,
+		indexer.FreightByCurrentStages,
+	); err != nil {
+		return nil, fmt.Errorf("error indexing Freight by Stages in which it is currently in use: %w", err)
+	}
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
 		indexer.FreightByVerifiedStagesField,
 		indexer.FreightByVerifiedStages,
 	); err != nil {
