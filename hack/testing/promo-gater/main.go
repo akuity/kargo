@@ -11,17 +11,7 @@
 //     terminal, then returns HTTP 200.
 //
 // The server exits after handling one request by default. Use --once=false
-// to keep it running.
-//
-// Example promotion step:
-//
-//   - uses: http
-//     config:
-//     url: http://host.docker.internal:24365
-//     method: GET
-//     timeout: 600s
-//     successExpression: "response.status == 200"
-//     failureExpression: "response.status == 500"
+// to keep it running. See README.md for promotion step configuration examples.
 package main
 
 import (
