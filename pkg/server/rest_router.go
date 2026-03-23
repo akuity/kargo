@@ -17,37 +17,37 @@ import (
 // @description REST API for Kargo
 // @BasePath /
 // @tag.name Core
-// @tag.description Operations on core Kargo resources: Projects, Stages, Freight, Warehouses, and Promotions.
+// @tag.description Manage the primary Kargo resources that make up a promotion pipeline: Projects (tenancy boundaries), Warehouses (artifact sources), Freight (versioned artifact bundles), Stages (promotion targets), and Promotions (records of a Freight moving through a Stage).
 // @tag.name System
-// @tag.description Cluster-wide administrative operations: version info, login, and global configuration.
+// @tag.description Cluster-wide administrative operations for Kargo operators: retrieving server and API version info, authenticating as the built-in admin user, and reading or modifying cluster-level server configuration.
 // @tag.name Rbac
-// @tag.description Role-based access control: managing Kargo Roles and API tokens.
+// @tag.description Manage Kargo's role-based access control model. Kargo Roles are named collections of Kubernetes RBAC rules scoped to a project; API tokens are service-account-backed credentials that can be bound to a Role for non-human access.
 // @tag.name Credentials
-// @tag.description Operations on credentials used by Kargo to authenticate with external systems.
+// @tag.description Top-level grouping for all credential types that Kargo uses to authenticate with external systems. See the Repo Credentials and Generic Credentials sub-tags for the specific credential kinds.
 // @tag.name Verifications
-// @tag.description Operations on Argo Rollouts AnalysisRun and AnalysisTemplate verification resources.
+// @tag.description Interact with Argo Rollouts AnalysisRun and AnalysisTemplate resources used to verify Stage health after a promotion. Includes triggering, aborting, and re-running analysis, as well as reading run logs.
 // @tag.name Resources
-// @tag.description Generic operations for creating, updating, and deleting arbitrary Kargo resources.
+// @tag.description Low-level operations for creating, updating, and deleting arbitrary Kargo Kubernetes resources by raw manifest. Useful for tooling that needs to manage resource types not covered by dedicated endpoints.
 // @tag.name Events
-// @tag.description Operations for reading Kubernetes Events associated with Kargo resources.
+// @tag.description Read Kubernetes Events emitted by Kargo controllers. Events record notable state transitions (e.g. a Promotion starting, completing, or failing) and are useful for auditing and debugging.
 // @tag.name Config
-// @tag.description Operations on configuration resources (ProjectConfig, ClusterConfig).
+// @tag.description Manage structured configuration resources: ProjectConfig holds per-project promotion policy settings; ClusterConfig holds cluster-wide defaults and feature flags applied by the Kargo operator.
 // @tag.name Generic Config
-// @tag.description Operations on generic ConfigMap-backed configuration within Kargo.
+// @tag.description Manage free-form ConfigMap-backed configuration that Kargo promotion steps can read at runtime. Supports project-scoped, system-scoped, and shared ConfigMaps, allowing pipelines to consume environment-specific values without embedding them in Git.
 // @tag.name Repo Credentials
-// @tag.description Credentials used to authenticate with Git, Helm, or container image repositories.
+// @tag.description Credentials for authenticating with artifact repositories: Git repositories, Helm chart registries, and container image registries. Kargo uses these when polling for new artifacts and when running promotion steps that read from or write to a repository.
 // @tag.name Generic Credentials
-// @tag.description Arbitrary secret credentials not tied to a specific repository type.
+// @tag.description Arbitrary key-value secrets that promotion steps can consume at runtime for any purpose not covered by repository credentials — for example, API tokens, signing keys, or connection strings for external services.
 // @tag.name Project-Level
-// @tag.description Resource is namespaced to a specific Kargo project.
+// @tag.description The resource or operation is scoped to a single Kargo project (Kubernetes namespace). Access is governed by the requesting user's permissions within that project.
 // @tag.name System-Level
-// @tag.description Resource lives in the Kargo system namespace and applies globally.
+// @tag.description The resource or operation lives in the Kargo system namespace and applies across all projects. Typically restricted to cluster administrators.
 // @tag.name Cluster-Scoped Resource
-// @tag.description Resource is cluster-scoped (not namespaced).
+// @tag.description The resource is a Kubernetes cluster-scoped object (not namespaced), such as a Project or ClusterAnalysisTemplate. These exist at the cluster level and are accessible to users with appropriate cluster-wide permissions.
 // @tag.name Shared
-// @tag.description Resource is accessible across multiple projects or scopes.
+// @tag.description The resource is defined once and shared across multiple projects or scopes. For example, a shared ConfigMap or credential can be referenced by any project without being duplicated per namespace.
 // @tag.name Singleton
-// @tag.description Only one instance of this resource exists per scope (project, cluster, etc.).
+// @tag.description Only one instance of this resource kind exists per scope. For example, each project has exactly one ProjectConfig and each cluster has exactly one ClusterConfig.
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
