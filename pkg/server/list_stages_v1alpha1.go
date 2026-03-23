@@ -56,7 +56,7 @@ func (s *server) ListStages(
 // @Security BearerAuth
 // @Produce json
 // @Param project path string true "Project name"
-// @Success 200 {object} object "StageList custom resource (github.com/akuity/kargo/api/v1alpha1.StageList)"
+// @Success 200 {object} kargoapi.StageList "StageList custom resource"
 // @Router /v1beta1/projects/{project}/stages [get]
 func (s *server) listStages(c *gin.Context) {
 	ctx := c.Request.Context()

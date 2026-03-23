@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetWarehouseReader is a Reader for the GetWarehouse structure.
@@ -42,10 +44,10 @@ func NewGetWarehouseOK() *GetWarehouseOK {
 /*
 GetWarehouseOK describes a response with status code 200, with default header values.
 
-Warehouse custom resource (github.com/akuity/kargo/api/v1alpha1.Warehouse)
+Warehouse custom resource
 */
 type GetWarehouseOK struct {
-	Payload any
+	Payload *models.GithubComAkuityKargoAPIV1alpha1Warehouse
 }
 
 // IsSuccess returns true when this get warehouse o k response has a 2xx status code
@@ -88,14 +90,16 @@ func (o *GetWarehouseOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/warehouses/{warehouse}][%d] getWarehouseOK %s", 200, payload)
 }
 
-func (o *GetWarehouseOK) GetPayload() any {
+func (o *GetWarehouseOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1Warehouse {
 	return o.Payload
 }
 
 func (o *GetWarehouseOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1Warehouse)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

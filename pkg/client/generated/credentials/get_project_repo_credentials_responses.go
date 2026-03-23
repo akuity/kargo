@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetProjectRepoCredentialsReader is a Reader for the GetProjectRepoCredentials structure.
@@ -42,10 +44,10 @@ func NewGetProjectRepoCredentialsOK() *GetProjectRepoCredentialsOK {
 /*
 GetProjectRepoCredentialsOK describes a response with status code 200, with default header values.
 
-Secret resource (k8s.io/api/core/v1.Secret)
+Secret resource
 */
 type GetProjectRepoCredentialsOK struct {
-	Payload any
+	Payload *models.V1Secret
 }
 
 // IsSuccess returns true when this get project repo credentials o k response has a 2xx status code
@@ -88,14 +90,16 @@ func (o *GetProjectRepoCredentialsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/repo-credentials/{repo-credentials}][%d] getProjectRepoCredentialsOK %s", 200, payload)
 }
 
-func (o *GetProjectRepoCredentialsOK) GetPayload() any {
+func (o *GetProjectRepoCredentialsOK) GetPayload() *models.V1Secret {
 	return o.Payload
 }
 
 func (o *GetProjectRepoCredentialsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1Secret)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

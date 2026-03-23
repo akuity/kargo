@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListPromotionsReader is a Reader for the ListPromotions structure.
@@ -42,10 +44,10 @@ func NewListPromotionsOK() *ListPromotionsOK {
 /*
 ListPromotionsOK describes a response with status code 200, with default header values.
 
-PromotionList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionList)
+PromotionList custom resource
 */
 type ListPromotionsOK struct {
-	Payload any
+	Payload *models.GithubComAkuityKargoAPIV1alpha1PromotionList
 }
 
 // IsSuccess returns true when this list promotions o k response has a 2xx status code
@@ -88,14 +90,16 @@ func (o *ListPromotionsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotions][%d] listPromotionsOK %s", 200, payload)
 }
 
-func (o *ListPromotionsOK) GetPayload() any {
+func (o *ListPromotionsOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1PromotionList {
 	return o.Payload
 }
 
 func (o *ListPromotionsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1PromotionList)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -13,6 +13,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetClusterPromotionTaskReader is a Reader for the GetClusterPromotionTask structure.
@@ -42,10 +44,10 @@ func NewGetClusterPromotionTaskOK() *GetClusterPromotionTaskOK {
 /*
 GetClusterPromotionTaskOK describes a response with status code 200, with default header values.
 
-ClusterPromotionTask custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTask)
+ClusterPromotionTask custom resource
 */
 type GetClusterPromotionTaskOK struct {
-	Payload any
+	Payload *models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTask
 }
 
 // IsSuccess returns true when this get cluster promotion task o k response has a 2xx status code
@@ -88,14 +90,16 @@ func (o *GetClusterPromotionTaskOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/cluster-promotion-tasks/{cluster-promotion-task}][%d] getClusterPromotionTaskOK %s", 200, payload)
 }
 
-func (o *GetClusterPromotionTaskOK) GetPayload() any {
+func (o *GetClusterPromotionTaskOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTask {
 	return o.Payload
 }
 
 func (o *GetClusterPromotionTaskOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTask)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 
