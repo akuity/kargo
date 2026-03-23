@@ -48,7 +48,7 @@ import (
 // @tag.name Shared
 // @tag.description The resource is defined once and shared across multiple projects or scopes. For example, a shared ConfigMap or credential can be referenced by any project without being duplicated per namespace.
 // @tag.name Singleton
-// @tag.description Only one instance of this resource kind exists per scope. For example, each project has exactly one ProjectConfig and each cluster has exactly one ClusterConfig.
+// @tag.description At most, one instance of this resource kind exists per scope. For example, each project has, at most, one ProjectConfig and each cluster has, at most, one ClusterConfig.
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
