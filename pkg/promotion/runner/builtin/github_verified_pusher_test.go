@@ -26,15 +26,17 @@ func policyPtr(p builtinx.PullPolicy) *builtinx.PullPolicy { return &p }
 // mockWorkTree is a minimal mock of git.WorkTree for testing.
 type mockWorkTree struct {
 	git.WorkTree
-	url             string
-	dir             string
-	homeDir         string
-	currentBranchFn func() (string, error)
-	lastCommitIDFn  func() (string, error)
-	pullMergeFn     func(string) error
-	pullRebaseFn    func(string) error
-	pushFn          func(*git.PushOptions) error
-	forcePullFn     func(string) error
+	url                       string
+	dir                       string
+	homeDir                   string
+	currentBranchFn           func() (string, error)
+	lastCommitIDFn            func() (string, error)
+	pullMergeFn               func(string) error
+	pullRebaseFn              func(string) error
+	pushFn                    func(*git.PushOptions) error
+	forcePullFn               func(string) error
+	commitSignatureStatusesFn func(ids []string) (map[string]git.CommitSignatureInfo, error)
+	importGPGKeyFn func(keyData string) (string, error)
 }
 
 func (m *mockWorkTree) URL() string     { return m.url }
@@ -72,6 +74,22 @@ func (m *mockWorkTree) ForcePull(branch string) error {
 		return nil
 	}
 	return m.forcePullFn(branch)
+}
+
+func (m *mockWorkTree) CommitSignatureStatuses(
+	ids []string,
+) (map[string]git.CommitSignatureInfo, error) {
+	if m.commitSignatureStatusesFn == nil {
+		return nil, nil
+	}
+	return m.commitSignatureStatusesFn(ids)
+}
+
+func (m *mockWorkTree) ImportGPGKey(keyData string) (string, error) {
+	if m.importGPGKeyFn == nil {
+		return "", nil
+	}
+	return m.importGPGKeyFn(keyData)
 }
 
 func Test_githubVerifiedPusher_convert(t *testing.T) {
@@ -635,13 +653,8 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 			},
 		},
 		{
-			name: "co-authored-by added for non-system author",
-			pusher: &githubVerifiedPusher{
-				gitUser: git.User{
-					Name:  "Kargo",
-					Email: "no-reply@kargo.io",
-				},
-			},
+			name:   "app-authored commit omits author",
+			pusher: &githubVerifiedPusher{},
 			client: &mockGitHubVerifiedPushClient{
 				createCommitFn: func(
 					_ context.Context,
@@ -649,10 +662,55 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 					commit github.Commit,
 					_ *github.CreateCommitOptions,
 				) (*github.Commit, *github.Response, error) {
-					require.Contains(
-						t,
-						commit.GetMessage(),
-						"Co-authored-by: Custom <custom@test.com>",
+					// App-authored: Author/Committer should be nil
+					// so the GitHub App signs.
+					require.Nil(t, commit.Author)
+					require.Nil(t, commit.Committer)
+					return &github.Commit{
+						SHA: ptr.To("signed1"),
+					}, nil, nil
+				},
+			},
+			commits: []*github.RepositoryCommit{{
+				SHA: ptr.To("orig1"),
+				Commit: &github.Commit{
+					Message: ptr.To("msg"),
+					Tree:    &github.Tree{SHA: ptr.To("tree1")},
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+				},
+			}},
+			parentSHA: "parent",
+			assert: func(t *testing.T, sha string, err error) {
+				t.Helper()
+				require.NoError(t, err)
+				require.Equal(t, "signed1", sha)
+			},
+		},
+		{
+			name:   "non-app commit preserves author",
+			pusher: &githubVerifiedPusher{},
+			client: &mockGitHubVerifiedPushClient{
+				createCommitFn: func(
+					_ context.Context,
+					_, _ string,
+					commit github.Commit,
+					_ *github.CreateCommitOptions,
+				) (*github.Commit, *github.Response, error) {
+					// Non-app: Author/Committer preserved.
+					require.NotNil(t, commit.Author)
+					require.Equal(
+						t, "Custom", commit.Author.GetName(),
+					)
+					require.NotNil(t, commit.Committer)
+					require.Equal(
+						t, "Custom", commit.Committer.GetName(),
 					)
 					return &github.Commit{
 						SHA: ptr.To("signed1"),
@@ -665,6 +723,10 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 					Message: ptr.To("msg"),
 					Tree:    &github.Tree{SHA: ptr.To("tree1")},
 					Author: &github.CommitAuthor{
+						Name:  ptr.To("Custom"),
+						Email: ptr.To("custom@test.com"),
+					},
+					Committer: &github.CommitAuthor{
 						Name:  ptr.To("Custom"),
 						Email: ptr.To("custom@test.com"),
 					},
@@ -687,6 +749,8 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 				"owner", "repo",
 				tc.commits,
 				tc.parentSHA,
+				"Kargo", "no-reply@kargo.io", "",
+				nil,
 			)
 			tc.assert(t, sha, err)
 		})
@@ -1122,7 +1186,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			},
 		},
 		{
-			name: "no co-authored-by for system author",
+			name: "app-authored commit omits author in signAndUpdate",
 			client: &mockGitHubVerifiedPushClient{
 				compareCommitsFn: func(
 					_ context.Context,
@@ -1140,6 +1204,10 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 									Name:  ptr.To("Kargo"),
 									Email: ptr.To("no-reply@kargo.io"),
 								},
+								Committer: &github.CommitAuthor{
+									Name:  ptr.To("Kargo"),
+									Email: ptr.To("no-reply@kargo.io"),
+								},
 							},
 						}},
 					}, nil, nil
@@ -1153,10 +1221,6 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 					// Verify: no Author/Committer (App signs)
 					require.Nil(t, commit.Author)
 					require.Nil(t, commit.Committer)
-					// Verify: no Co-authored-by trailer
-					require.NotContains(
-						t, commit.GetMessage(), "Co-authored-by",
-					)
 					return &github.Commit{
 						SHA: ptr.To("signed-sha"),
 					}, nil, nil
@@ -1281,6 +1345,7 @@ func Test_githubVerifiedPusher_signAndUpdate(t *testing.T) {
 			}
 			result, err := g.signAndUpdate(
 				context.Background(),
+				builtinx.GitHubVerifiedPushConfig{},
 				tc.client,
 				"owner", "repo",
 				targetBranch, tc.createBranch, tc.force,
@@ -1459,123 +1524,141 @@ func Test_githubVerifiedPusher_cleanupStagingRef(t *testing.T) {
 	}
 }
 
-func Test_githubVerifiedPusher_isSystemAuthor(t *testing.T) {
+func Test_githubVerifiedPusher_isAppAuthored(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
-		name    string
-		gitUser git.User
-		author  string
-		email   string
-		expect  bool
+		name           string
+		rc             *github.RepositoryCommit
+		appName        string
+		appEmail       string
+		sigStatuses    map[string]git.CommitSignatureInfo
+		appFingerprint string
+		expect         bool
 	}{
 		{
-			name: "matches default identity",
-			gitUser: git.User{
-				Name:  "Kargo",
-				Email: "no-reply@kargo.io",
+			name: "app-authored no signing",
+			rc: &github.RepositoryCommit{
+				SHA: ptr.To("abc"),
+				Commit: &github.Commit{
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+				},
 			},
-			author: "Kargo",
-			email:  "no-reply@kargo.io",
-			expect: true,
+			appName:  "Kargo",
+			appEmail: "no-reply@kargo.io",
+			expect:   true,
 		},
 		{
-			name: "does not match custom author against defaults",
-			gitUser: git.User{
-				Name:  "Kargo",
-				Email: "no-reply@kargo.io",
+			name: "app-authored with matching fingerprint",
+			rc: &github.RepositoryCommit{
+				SHA: ptr.To("abc"),
+				Commit: &github.Commit{
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+				},
 			},
-			author: "Alice",
-			email:  "alice@example.com",
-			expect: false,
-		},
-		{
-			name: "matches configured system identity",
-			gitUser: git.User{
-				Name:  "MyKargo",
-				Email: "kargo@corp.com",
+			appName:  "Kargo",
+			appEmail: "no-reply@kargo.io",
+			sigStatuses: map[string]git.CommitSignatureInfo{
+				"abc": {Fingerprint: "AAAA1234"},
 			},
-			author: "MyKargo",
-			email:  "kargo@corp.com",
-			expect: true,
+			appFingerprint: "AAAA1234",
+			expect:         true,
 		},
 		{
-			name: "does not match when name differs",
-			gitUser: git.User{
-				Name:  "MyKargo",
-				Email: "kargo@corp.com",
+			name: "not app-authored different author",
+			rc: &github.RepositoryCommit{
+				SHA: ptr.To("abc"),
+				Commit: &github.Commit{
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Alice"),
+						Email: ptr.To("alice@example.com"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Alice"),
+						Email: ptr.To("alice@example.com"),
+					},
+				},
 			},
-			author: "Kargo",
-			email:  "kargo@corp.com",
-			expect: false,
+			appName:  "Kargo",
+			appEmail: "no-reply@kargo.io",
+			expect:   false,
 		},
 		{
-			name: "does not match when email differs",
-			gitUser: git.User{
-				Name:  "Kargo",
-				Email: "kargo@corp.com",
+			name: "not app-authored author!=committer",
+			rc: &github.RepositoryCommit{
+				SHA: ptr.To("abc"),
+				Commit: &github.Commit{
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Someone"),
+						Email: ptr.To("someone@example.com"),
+					},
+				},
 			},
-			author: "Kargo",
-			email:  "no-reply@kargo.io",
-			expect: false,
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			g := &githubVerifiedPusher{gitUser: tc.gitUser}
-			require.Equal(
-				t, tc.expect,
-				g.isSystemAuthor(tc.author, tc.email),
-			)
-		})
-	}
-}
-
-func Test_appendCoAuthoredBy(t *testing.T) {
-	t.Parallel()
-	testCases := []struct {
-		name    string
-		message string
-		coName  string
-		coEmail string
-		expect  string
-	}{
-		{
-			name:    "simple message",
-			message: "fix: something",
-			coName:  "Alice",
-			coEmail: "alice@example.com",
-			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
+			appName:  "Kargo",
+			appEmail: "no-reply@kargo.io",
+			expect:   false,
 		},
 		{
-			name:    "message ending with newline",
-			message: "fix: something\n",
-			coName:  "Alice",
-			coEmail: "alice@example.com",
-			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
+			name: "not app-authored fingerprint mismatch",
+			rc: &github.RepositoryCommit{
+				SHA: ptr.To("abc"),
+				Commit: &github.Commit{
+					Author: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+					Committer: &github.CommitAuthor{
+						Name:  ptr.To("Kargo"),
+						Email: ptr.To("no-reply@kargo.io"),
+					},
+				},
+			},
+			appName:        "Kargo",
+			appEmail:       "no-reply@kargo.io",
+			sigStatuses:    map[string]git.CommitSignatureInfo{},
+			appFingerprint: "AAAA1234",
+			expect:         false,
 		},
 		{
-			name:    "message ending with double newline",
-			message: "fix: something\n\n",
-			coName:  "Alice",
-			coEmail: "alice@example.com",
-			expect:  "fix: something\n\nCo-authored-by: Alice <alice@example.com>",
-		},
-		{
-			name:    "multiline message",
-			message: "fix: something\n\nLonger description here.",
-			coName:  "Bob",
-			coEmail: "bob@example.com",
-			expect: "fix: something\n\nLonger description here." +
-				"\n\nCo-authored-by: Bob <bob@example.com>",
+			name: "nil author",
+			rc: &github.RepositoryCommit{
+				SHA:    ptr.To("abc"),
+				Commit: &github.Commit{},
+			},
+			appName:  "Kargo",
+			appEmail: "no-reply@kargo.io",
+			expect:   false,
 		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			g := &githubVerifiedPusher{}
-			result := g.appendCoAuthoredBy(tc.message, tc.coName, tc.coEmail)
-			require.Equal(t, tc.expect, result)
+			require.Equal(
+				t, tc.expect,
+				g.isAppAuthored(
+					tc.rc,
+					tc.appName, tc.appEmail,
+					tc.appFingerprint, tc.sigStatuses,
+				),
+			)
 		})
 	}
 }

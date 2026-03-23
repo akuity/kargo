@@ -38,6 +38,28 @@
       "description": "Controls how local commits are reconciled with the remote target branch when it has advanced. 'Merge' (default) creates a merge commit preserving remote history. 'Rebase' rebases local commits onto the remote branch. 'FFOnly' permits only fast-forward updates and errors if the remote has advanced.",
       "enum": ["FFOnly", "Rebase", "Merge"],
       "default": "Merge"
+    },
+    "author": {
+      "type": "object",
+      "description": "The identity used by the app for commits. Commits authored by this identity are considered app-authored: they are replayed without explicit author fields, allowing the GitHub App to sign them as 'Verified'. Commits by other authors preserve their original author and committer and are not marked Verified. Defaults to the system-level GITCLIENT_NAME/GITCLIENT_EMAIL environment variables.",
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the author.",
+          "minLength": 1
+        },
+        "email": {
+          "type": "string",
+          "description": "The email of the author.",
+          "format": "email"
+        },
+        "signingKey": {
+          "type": "string",
+          "description": "The GPG signing key for the author. When provided, commit signatures are verified against this key before replaying. Commits with a valid signature from this key and matching author identity are considered app-authored. If provided, 'email' and 'name' must match the key's UID."
+        }
+      },
+      "required": ["name", "email"]
     }
   },
   "oneOf": [

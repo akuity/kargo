@@ -1,6 +1,7 @@
 package git
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
@@ -80,7 +82,7 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupAuthor(b.homeDir, opts.User); err != nil {
+	if _, err := b.setupAuthor(b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
@@ -116,14 +118,21 @@ type User struct {
 	// SigningKeyPath is an optional path referencing a signing key for
 	// signing git objects. Ignored if SigningKey is provided.
 	SigningKeyPath string
+	// gpgFingerprint is the fingerprint of the imported GPG signing key.
+	// It is set by setupAuthor after a successful key import.
+	gpgFingerprint string
 }
 
 // setupAuthor configures the git CLI with a default commit author.
 // Optionally, the author can have an associated signing key. When using GPG
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
-// executed by this method.
-func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
+// executed by this method. Returns the fully resolved User (with
+// gpgFingerprint set when a signing key was imported).
+func (b *baseRepo) setupAuthor(
+	homeDir string,
+	author *User,
+) (*User, error) {
 	if author == nil {
 		author = &User{}
 	}
@@ -142,7 +151,7 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	// identity.
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git user name: %w", err)
+		return nil, fmt.Errorf("error configuring git user name: %w", err)
 	}
 
 	if author.Email == "" {
@@ -154,62 +163,148 @@ func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
 	cmd.Dir = homeDir
 	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error configuring git user email: %w", err)
+		return nil, fmt.Errorf("error configuring git user email: %w", err)
 	}
 
 	// For now, since only GPG signing is supported, we will assume GPG if the
 	// signing key type is not specified.
 	if author.SigningKeyType == SigningKeyTypeGPG || author.SigningKeyType == "" {
-
-		if author.SigningKey != "" {
-			author.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
-			if err := os.WriteFile(
-				author.SigningKeyPath,
-				[]byte(author.SigningKey),
-				0600,
-			); err != nil {
-				return fmt.Errorf("error writing signing key to %q: %w", author.SigningKeyPath, err)
-			}
-			defer func() {
-				if err := os.Remove(author.SigningKeyPath); err != nil {
-					logging.LoggerFromContext(context.TODO()).Error(
-						err,
-						"error removing file",
-						"file", author.SigningKeyPath,
-					)
-				}
-			}()
-		}
-
-		if author.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
+		if author.SigningKey != "" || author.SigningKeyPath != "" {
+			cmd = b.buildGitCommand(
+				"config", "--global", "commit.gpgSign", "true",
+			)
 			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error configuring commit gpg signing: %w", err)
+				return nil, fmt.Errorf(
+					"error configuring commit gpg signing: %w", err,
+				)
 			}
 
 			// Enable signing for tags as well.
-			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
+			cmd = b.buildGitCommand(
+				"config", "--global", "tag.gpgSign", "true",
+			)
 			cmd.Dir = homeDir
 			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error configuring tag gpg signing: %w", err)
+				return nil, fmt.Errorf(
+					"error configuring tag gpg signing: %w", err,
+				)
 			}
 
-			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			// See justification for both of these overrides above.
-			cmd.Dir = homeDir
-			b.setCmdHome(cmd, homeDir)
-			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+			fingerprint, err := b.importGPGSigningKey(homeDir, author)
+			if err != nil {
+				return nil, err
 			}
+			author.gpgFingerprint = fingerprint
+			return author, nil
 		}
+	}
 
+	return author, nil
+}
+
+// importGPGSigningKey imports a GPG signing key into the keyring rooted at
+// homeDir. If author.SigningKey (raw content) is set, it is written to a
+// temporary file for import. Returns the key fingerprint.
+func (b *baseRepo) importGPGSigningKey(
+	homeDir string,
+	author *User,
+) (string, error) {
+	keyPath := author.SigningKeyPath
+	if author.SigningKey != "" {
+		keyPath = filepath.Join(homeDir, "signing-key.asc")
+		if err := os.WriteFile(
+			keyPath,
+			[]byte(author.SigningKey),
+			0600,
+		); err != nil {
+			return "", fmt.Errorf(
+				"error writing signing key to %q: %w", keyPath, err,
+			)
+		}
+		defer func() {
+			if err := os.Remove(keyPath); err != nil {
+				logging.LoggerFromContext(context.TODO()).Error(
+					err,
+					"error removing file",
+					"file", keyPath,
+				)
+			}
+		}()
+	}
+
+	if keyPath == "" {
+		return "", nil
+	}
+
+	cmd := b.buildCommand(
+		"gpg", "--import",
+		"--import-options", "import-show",
+		"--with-colons",
+		keyPath,
+	)
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	res, err := libExec.Exec(cmd)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error importing gpg key %q: %w", keyPath, err,
+		)
+	}
+	return ExtractFingerprint(res), nil
+}
+
+// importGPGPublicKey exports a public key identified by fingerprint from
+// srcHome's GPG keyring and imports it into dstHome's keyring.
+func (b *baseRepo) importGPGPublicKey(
+	srcHome, dstHome, fingerprint string,
+) error {
+	exportCmd := b.buildCommand(
+		"gpg", "--export", "--armor", fingerprint,
+	)
+	exportCmd.Dir = srcHome
+	b.setCmdHome(exportCmd, srcHome)
+	pubKey, err := libExec.Exec(exportCmd)
+	if err != nil {
+		return fmt.Errorf(
+			"error exporting public key %s: %w", fingerprint, err,
+		)
+	}
+	if len(pubKey) == 0 {
+		return fmt.Errorf(
+			"no public key data exported for fingerprint %s", fingerprint,
+		)
+	}
+
+	importCmd := b.buildCommand("gpg", "--import")
+	importCmd.Dir = dstHome
+	b.setCmdHome(importCmd, dstHome)
+	importCmd.Stdin = bytes.NewReader(pubKey)
+	if _, err = libExec.Exec(importCmd); err != nil {
+		return fmt.Errorf(
+			"error importing public key %s into keyring: %w",
+			fingerprint, err,
+		)
 	}
 
 	return nil
+}
+
+// fprRegex matches the first fingerprint line in GPG's --with-colons output.
+// The format is: fpr:::::::::FINGERPRINT:
+var fprRegex = regexp.MustCompile(`(?m)^fpr:{9}([A-F0-9]+):`)
+
+// ExtractFingerprint parses the output of `gpg --with-colons` and returns the
+// first key fingerprint found.
+func ExtractFingerprint(output []byte) string {
+	matches := fprRegex.FindSubmatch(output)
+	if matches == nil {
+		return ""
+	}
+	return string(matches[1])
 }
 
 // setupAuth configures the git CLI with authentication information. The

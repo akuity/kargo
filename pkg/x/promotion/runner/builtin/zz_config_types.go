@@ -330,6 +330,12 @@ type GitWaitForPRConfig struct {
 }
 
 type GitHubVerifiedPushConfig struct {
+	// The identity used by the app for commits. Commits authored by this identity are
+	// considered app-authored: they are replayed without explicit author fields, allowing the
+	// GitHub App to sign them as 'Verified'. Commits by other authors preserve their original
+	// author and committer and are not marked Verified. Defaults to the system-level
+	// GITCLIENT_NAME/GITCLIENT_EMAIL environment variables.
+	Author *GitHubVerifiedPushConfigAuthor `json:"author,omitempty"`
 	// Whether to force push to the target branch, overwriting any existing history. This is
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
@@ -357,6 +363,23 @@ type GitHubVerifiedPushConfig struct {
 	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
 	// neither of these is provided, the target branch will be the currently checked out branch.
 	TargetBranch string `json:"targetBranch,omitempty"`
+}
+
+// The identity used by the app for commits. Commits authored by this identity are
+// considered app-authored: they are replayed without explicit author fields, allowing the
+// GitHub App to sign them as 'Verified'. Commits by other authors preserve their original
+// author and committer and are not marked Verified. Defaults to the system-level
+// GITCLIENT_NAME/GITCLIENT_EMAIL environment variables.
+type GitHubVerifiedPushConfigAuthor struct {
+	// The email of the author.
+	Email string `json:"email"`
+	// The name of the author.
+	Name string `json:"name"`
+	// The GPG signing key for the author. When provided, commit signatures are verified against
+	// this key before replaying. Commits with a valid signature from this key and matching
+	// author identity are considered app-authored. If provided, 'email' and 'name' must match
+	// the key's UID.
+	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type HelmTemplateConfig struct {

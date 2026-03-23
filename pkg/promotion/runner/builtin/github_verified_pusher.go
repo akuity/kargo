@@ -75,17 +75,21 @@ func init() {
 	var once sync.Once
 	var pusher promotion.StepRunner
 	envCfg := struct {
-		Name         string `envconfig:"GITCLIENT_NAME" default:"Kargo"`
-		Email        string `envconfig:"GITCLIENT_EMAIL" default:"no-reply@kargo.io"`
-		MaxRevisions int    `envconfig:"GITHUB_VERIFIED_PUSH_MAX_REVISIONS" default:"10"`
+		Name           string `envconfig:"GITCLIENT_NAME" default:"Kargo"`
+		Email          string `envconfig:"GITCLIENT_EMAIL" default:"no-reply@kargo.io"`
+		SigningKeyType string `envconfig:"GITCLIENT_SIGNING_KEY_TYPE"`
+		SigningKeyPath string `envconfig:"GITCLIENT_SIGNING_KEY_PATH"`
+		MaxRevisions   int    `envconfig:"GITHUB_VERIFIED_PUSH_MAX_REVISIONS" default:"10"`
 	}{}
 	envconfig.MustProcess("", &envCfg)
 	cfg := githubVerifiedPusherConfig{
 		MaxRevisions: envCfg.MaxRevisions,
 	}
 	defaultGitUser := git.User{
-		Name:  envCfg.Name,
-		Email: envCfg.Email,
+		Name:           envCfg.Name,
+		Email:          envCfg.Email,
+		SigningKeyType: git.SigningKeyType(envCfg.SigningKeyType),
+		SigningKeyPath: envCfg.SigningKeyPath,
 	}
 	promotion.DefaultStepRunnerRegistry.MustRegister(
 		promotion.StepRunnerRegistration{
@@ -430,7 +434,7 @@ func (g *githubVerifiedPusher) run(
 			// 5. Replay commits via API and update ref.
 			var signErr error
 			result, signErr = g.signAndUpdate(
-				ctx, ghClient, owner, repo,
+				ctx, cfg, ghClient, owner, repo,
 				targetBranch, createBranch, force,
 				targetHead, localHead, workTree,
 			)
@@ -522,6 +526,7 @@ func (g *githubVerifiedPusher) pullRemote(
 // uses force semantics.
 func (g *githubVerifiedPusher) signAndUpdate(
 	ctx context.Context,
+	cfg builtin.GitHubVerifiedPushConfig,
 	client githubVerifiedPushClient,
 	owner, repo, targetBranch string,
 	createBranch, force bool,
@@ -546,8 +551,45 @@ func (g *githubVerifiedPusher) signAndUpdate(
 		return *cmp.earlyResult, nil
 	}
 
+	// Resolve the app identity for author matching.
+	appName, appEmail := g.gitUser.Name, g.gitUser.Email
+	if cfg.Author != nil {
+		appName, appEmail = cfg.Author.Name, cfg.Author.Email
+	}
+
+	// Import the app's signing key (if configured) and compute its
+	// fingerprint. The fingerprint is used during replay to identify
+	// which commits were signed by the app.
+	var appFingerprint string
+	if cfg.Author != nil {
+		var sigErr error
+		appFingerprint, sigErr = g.resolveAppFingerprint(
+			ctx, workTree, cfg.Author,
+		)
+		if sigErr != nil {
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusErrored,
+			}, sigErr
+		}
+	}
+
+	commitSigs, sigErr := g.verifyCommitSignatures(
+		ctx, workTree, cmp.commits,
+	)
+	if sigErr != nil {
+		if promotion.IsTerminal(sigErr) {
+			return promotion.StepResult{
+				Status: kargoapi.PromotionStepStatusFailed,
+			}, sigErr
+		}
+		return promotion.StepResult{
+			Status: kargoapi.PromotionStepStatusErrored,
+		}, sigErr
+	}
+
 	lastSignedSHA, err := g.replayCommits(
 		ctx, client, owner, repo, cmp.commits, cmp.parentSHA,
+		appName, appEmail, appFingerprint, commitSigs,
 	)
 	if err != nil {
 		return promotion.StepResult{
@@ -818,8 +860,13 @@ func (g *githubVerifiedPusher) compareRemote(
 	}, nil
 }
 
-// replayCommits replays each commit via the GitHub API, creating signed
-// commits. It is merge-aware: merge commits are created with their original
+// replayCommits replays each commit via the GitHub API. Commits that are
+// "app-authored" (author==committer, matches configured app identity, and
+// signed by the app's key when a fingerprint is provided) are created without
+// explicit author/committer fields, allowing the GitHub App to sign them as
+// "Verified". All other commits preserve their original author and committer.
+//
+// It is merge-aware: merge commits are created with their original
 // multi-parent structure preserved via a SHA mapping table.
 func (g *githubVerifiedPusher) replayCommits(
 	ctx context.Context,
@@ -827,6 +874,8 @@ func (g *githubVerifiedPusher) replayCommits(
 	owner, repo string,
 	commits []*github.RepositoryCommit,
 	parentSHA string,
+	appName, appEmail, appFingerprint string,
+	commitSigs map[string]git.CommitSignatureInfo,
 ) (string, error) {
 	logger := logging.LoggerFromContext(ctx)
 
@@ -855,16 +904,16 @@ func (g *githubVerifiedPusher) replayCommits(
 			Parents: parents,
 		}
 
-		// Credit non-system authors via Co-authored-by trailer.
-		coAuthored := false
-		if author := rc.Commit.GetAuthor(); author != nil {
-			name, email := author.GetName(), author.GetEmail()
-			if name != "" && email != "" &&
-				!g.isSystemAuthor(name, email) {
-				message = g.appendCoAuthoredBy(message, name, email)
-				commit.Message = &message
-				coAuthored = true
-			}
+		// Determine whether this is an app-authored commit.
+		appAuthored := g.isAppAuthored(
+			rc, appName, appEmail, appFingerprint, commitSigs,
+		)
+		if !appAuthored {
+			// Preserve original author. The commit will not receive
+			// GitHub's "Verified" badge. Committer is always left nil
+			// so the authenticated identity (GitHub App) is used — it
+			// is the actual committer in all cases.
+			commit.Author = rc.Commit.Author
 		}
 
 		newCommit, _, createErr := client.CreateCommit(
@@ -886,10 +935,33 @@ func (g *githubVerifiedPusher) replayCommits(
 			"original", rc.GetSHA(),
 			"new", lastSignedSHA,
 			"merge", len(parents) > 1,
-			"coAuthored", coAuthored,
+			"appAuthored", appAuthored,
 		)
 	}
 	return lastSignedSHA, nil
+}
+
+// isAppAuthored returns true when the commit was authored by the configured
+// app identity. The check requires: author == committer, author matches the
+// app's name/email, and (when a fingerprint is provided) the commit's signing
+// key fingerprint matches.
+func (g *githubVerifiedPusher) isAppAuthored(
+	rc *github.RepositoryCommit,
+	appName, appEmail, appFingerprint string,
+	commitSigs map[string]git.CommitSignatureInfo,
+) bool {
+	author := rc.Commit.GetAuthor()
+	committer := rc.Commit.GetCommitter()
+	if author == nil || committer == nil {
+		return false
+	}
+	sameIdentity := author.GetName() == committer.GetName() &&
+		author.GetEmail() == committer.GetEmail()
+	matchesApp := author.GetName() == appName &&
+		author.GetEmail() == appEmail
+	sigVerified := appFingerprint == "" ||
+		commitSigs[rc.GetSHA()].Fingerprint == appFingerprint
+	return sameIdentity && matchesApp && sigVerified
 }
 
 // updateTargetRef points the target branch at the given SHA. When
@@ -977,25 +1049,103 @@ func (g *githubVerifiedPusher) resolveParents(
 	return parents
 }
 
-// isSystemAuthor reports whether the given name and email match the
-// controller's system identity (the default author for Kargo commits).
-func (g *githubVerifiedPusher) isSystemAuthor(
-	name, email string,
-) bool {
-	return name == g.gitUser.Name && email == g.gitUser.Email
+// resolveAppFingerprint imports the app's signing key into the work tree's
+// GPG keyring and returns its fingerprint. The fingerprint is used during
+// replay to identify commits signed by the app's key.
+func (g *githubVerifiedPusher) resolveAppFingerprint(
+	ctx context.Context,
+	workTree git.WorkTree,
+	author *builtin.GitHubVerifiedPushConfigAuthor,
+) (string, error) {
+	if author.SigningKey == "" {
+		return "", nil
+	}
+	logger := logging.LoggerFromContext(ctx)
+	logger.Debug(
+		"importing author signing key into work tree keyring",
+	)
+	fingerprint, err := workTree.ImportGPGKey(author.SigningKey)
+	if err != nil {
+		return "", fmt.Errorf(
+			"error importing author signing key: %w", err,
+		)
+	}
+	return fingerprint, nil
 }
 
-// appendCoAuthoredBy appends a Co-authored-by trailer to a commit message,
-// adding a blank separator line before the trailer if needed.
-func (g *githubVerifiedPusher) appendCoAuthoredBy(
-	message, name, email string,
-) string {
-	trailer := fmt.Sprintf("Co-authored-by: %s <%s>", name, email)
-	if strings.HasSuffix(message, "\n\n") {
-		return message + trailer
+// verifyCommitSignatures checks GPG signatures on local commits before they
+// are replayed via the GitHub API. Returns the signature status map and any
+// error. A terminal error is returned for bad ("B") or revoked ("R")
+// signatures.
+func (g *githubVerifiedPusher) verifyCommitSignatures(
+	ctx context.Context,
+	workTree git.WorkTree,
+	commits []*github.RepositoryCommit,
+) (map[string]git.CommitSignatureInfo, error) {
+	logger := logging.LoggerFromContext(ctx)
+
+	// Collect SHAs to verify.
+	var shas []string
+	for _, rc := range commits {
+		if sha := rc.GetSHA(); sha != "" {
+			shas = append(shas, sha)
+		}
 	}
-	if strings.HasSuffix(message, "\n") {
-		return message + "\n" + trailer
+	if len(shas) == 0 {
+		return nil, nil
 	}
-	return message + "\n\n" + trailer
+
+	logger.Debug(
+		"verifying commit signatures",
+		"numCommits", len(shas),
+	)
+
+	statuses, err := workTree.CommitSignatureStatuses(shas)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error checking commit signatures: %w", err,
+		)
+	}
+
+	for _, sha := range shas {
+		info := statuses[sha]
+		switch info.Status {
+		case "G", "U":
+			logger.Debug(
+				"commit signature verified",
+				"commit", sha,
+				"fingerprint", info.Fingerprint,
+				"signer", info.Signer,
+			)
+		case "N", "", "X", "Y", "E":
+			logger.Debug(
+				"commit not signed by trusted key, propagating",
+				"commit", sha,
+				"status", info.Status,
+			)
+		case "B":
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s has a bad GPG signature", sha,
+				),
+			}
+		case "R":
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s was signed with a revoked key", sha,
+				),
+			}
+		default:
+			return nil, &promotion.TerminalError{
+				Err: fmt.Errorf(
+					"commit %s GPG signature verification failed "+
+						"(status: %s)",
+					sha, info.Status,
+				),
+			}
+		}
+	}
+
+	logger.Debug("all commit signatures verified")
+	return statuses, nil
 }

@@ -35,6 +35,10 @@ type MockRepo struct {
 	ResetHardFn               func() error
 	URLFn                     func() string
 	UpdateSubmodulesFn        func() error
+	CommitSignatureStatusesFn func(
+		ids []string,
+	) (map[string]CommitSignatureInfo, error)
+	ImportGPGKeyFn func(keyData string) (string, error)
 }
 
 func (m *MockRepo) AddAll() error {
@@ -179,4 +183,14 @@ func (m *MockRepo) URL() string {
 
 func (m *MockRepo) UpdateSubmodules() error {
 	return m.UpdateSubmodulesFn()
+}
+
+func (m *MockRepo) CommitSignatureStatuses(
+	ids []string,
+) (map[string]CommitSignatureInfo, error) {
+	return m.CommitSignatureStatusesFn(ids)
+}
+
+func (m *MockRepo) ImportGPGKey(keyData string) (string, error) {
+	return m.ImportGPGKeyFn(keyData)
 }

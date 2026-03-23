@@ -18,14 +18,16 @@ func TestSetupAuthor(t *testing.T) {
 		// the repo directory hasn't been created yet.
 		createRepoDir bool
 		author        *User
-		assert        func(*testing.T, string, string, error)
+		assert        func(*testing.T, string, string, *User, error)
 	}{
 		{
 			name:          "nil author uses defaults",
 			createRepoDir: true,
 			author:        nil,
-			assert: func(t *testing.T, homeDir, _ string, err error) {
+			assert: func(t *testing.T, homeDir, _ string, author *User, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, author)
+				require.Empty(t, author.gpgFingerprint)
 				assertGitConfig(t, homeDir, "user.name", defaultUsername)
 				assertGitConfig(t, homeDir, "user.email", defaultEmail)
 			},
@@ -37,8 +39,10 @@ func TestSetupAuthor(t *testing.T) {
 				Name:  "Test User",
 				Email: "test@example.com",
 			},
-			assert: func(t *testing.T, homeDir, _ string, err error) {
+			assert: func(t *testing.T, homeDir, _ string, author *User, err error) {
 				require.NoError(t, err)
+				require.NotNil(t, author)
+				require.Empty(t, author.gpgFingerprint)
 				assertGitConfig(t, homeDir, "user.name", "Test User")
 				assertGitConfig(t, homeDir, "user.email", "test@example.com")
 			},
@@ -53,7 +57,7 @@ func TestSetupAuthor(t *testing.T) {
 				Name:  "Per-Commit Author",
 				Email: "per-commit@example.com",
 			},
-			assert: func(t *testing.T, homeDir, repoHomeDir string, err error) {
+			assert: func(t *testing.T, homeDir, repoHomeDir string, _ *User, err error) {
 				require.NoError(t, err)
 				assertGitConfig(t, homeDir, "user.name", "Per-Commit Author")
 				assertNoGitConfig(t, repoHomeDir)
@@ -65,7 +69,7 @@ func TestSetupAuthor(t *testing.T) {
 			name:          "succeeds when repo dir does not exist",
 			createRepoDir: false,
 			author:        nil,
-			assert: func(t *testing.T, homeDir, _ string, err error) {
+			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
 				require.NoError(t, err)
 				assertGitConfig(t, homeDir, "user.name", defaultUsername)
 			},
@@ -78,7 +82,7 @@ func TestSetupAuthor(t *testing.T) {
 				Email:          "test@example.com",
 				SigningKeyPath: "/nonexistent/key.asc",
 			},
-			assert: func(t *testing.T, homeDir, _ string, err error) {
+			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
 				// git config succeeds but gpg --import fails because the
 				// key file doesn't exist. This exercises the setCmdHome
 				// calls in the signing path.
@@ -94,7 +98,7 @@ func TestSetupAuthor(t *testing.T) {
 				Email:      "test@example.com",
 				SigningKey: "not-a-real-key",
 			},
-			assert: func(t *testing.T, homeDir, _ string, err error) {
+			assert: func(t *testing.T, homeDir, _ string, _ *User, err error) {
 				// The key file is written and git config succeeds but gpg
 				// --import fails because the key content is invalid.
 				require.ErrorContains(t, err, "error importing gpg key")
@@ -120,8 +124,49 @@ func TestSetupAuthor(t *testing.T) {
 				homeDir: repoHomeDir,
 			}
 
-			err := b.setupAuthor(homeDir, tc.author)
-			tc.assert(t, homeDir, repoHomeDir, err)
+			author, err := b.setupAuthor(homeDir, tc.author)
+			tc.assert(t, homeDir, repoHomeDir, author, err)
+		})
+	}
+}
+
+func TestExtractFingerprint(t *testing.T) {
+	t.Parallel()
+	testCases := []struct {
+		name   string
+		output string
+		expect string
+	}{
+		{
+			name: "standard gpg --with-colons output",
+			output: "pub:-:2048:1:563D953648779237:1772732699:::-:::escarESCA::::::23::0:\n" +
+				"fpr:::::::::1E61A1E91E9C735D88A056F3563D953648779237:\n" +
+				"uid:-::::1772732699::7E14C1CEF7573F4B6EDBCF5580BFFA4865B248DF" +
+				"::Test <test@test.com>::::::::::0:\n",
+			expect: "1E61A1E91E9C735D88A056F3563D953648779237",
+		},
+		{
+			name:   "no fingerprint line",
+			output: "pub:-:2048:1:563D953648779237:1772732699:::-:::escarESCA::::::23::0:\n",
+			expect: "",
+		},
+		{
+			name:   "empty output",
+			output: "",
+			expect: "",
+		},
+		{
+			name: "multiple fingerprints returns first",
+			output: "fpr:::::::::AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:\n" +
+				"fpr:::::::::BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB:\n",
+			expect: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			result := ExtractFingerprint([]byte(tc.output))
+			require.Equal(t, tc.expect, result)
 		})
 	}
 }

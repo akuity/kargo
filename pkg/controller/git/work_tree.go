@@ -105,6 +105,15 @@ type WorkTree interface {
 	URL() string
 	// UpdateSubmodules updates the submodules in the working tree.
 	UpdateSubmodules() error
+	// CommitSignatureStatuses returns GPG signature info for the specified
+	// commits via a single git log --no-walk call. Returns a map keyed by
+	// commit ID.
+	CommitSignatureStatuses(
+		ids []string,
+	) (map[string]CommitSignatureInfo, error)
+	// ImportGPGKey imports a raw GPG key (ASCII-armored) into the work
+	// tree's GPG keyring. Returns the key's fingerprint.
+	ImportGPGKey(keyData string) (string, error)
 }
 
 // workTree is an implementation of the WorkTree interface for interacting with
@@ -228,6 +237,7 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	}
 
 	var homeDir string
+	var author *User
 	if opts.Author != nil {
 		// This author information is specific to this commit, so we will override
 		// repository-level author information by creating a temporary home
@@ -246,9 +256,10 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		if author, err = w.setupAuthor(homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
-				"error setting up author information for commit command: %w", err,
+				"error setting up author information for commit command: %w",
+				err,
 			)
 		}
 	}
@@ -266,6 +277,21 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error committing changes: %w", err)
 	}
+
+	// Import the per-commit author's public key into the repo-level GPG
+	// keyring so that downstream steps (e.g. github-verified-push) can
+	// verify the signature.
+	if author != nil && author.gpgFingerprint != "" {
+		if importErr := w.importGPGPublicKey(
+			homeDir, w.homeDir, author.gpgFingerprint,
+		); importErr != nil {
+			logging.LoggerFromContext(context.TODO()).Error(
+				importErr,
+				"error importing author signing key into repo keyring",
+			)
+		}
+	}
+
 	return nil
 }
 
@@ -351,7 +377,7 @@ func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+		if _, err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for tag command: %w", err,
 			)
@@ -821,6 +847,68 @@ func (w *workTree) UpdateSubmodules() error {
 		return fmt.Errorf("error updating submodules: %w", err)
 	}
 	return nil
+}
+
+// CommitSignatureInfo holds GPG signature details for a single commit,
+// as reported by git log format placeholders.
+type CommitSignatureInfo struct {
+	// Status is the signature status character: G (good), B (bad),
+	// U (good, untrusted key), N (no signature), E (cannot check), etc.
+	Status string
+	// KeyID is the GPG key ID used to create the signature (%GK).
+	// Empty for unsigned commits.
+	KeyID string
+	// Fingerprint is the full fingerprint of the signing key (%GF).
+	// Empty for unsigned commits.
+	Fingerprint string
+	// Signer is the name of the signer (%GS). Empty for unsigned commits.
+	Signer string
+}
+
+func (w *workTree) CommitSignatureStatuses(
+	ids []string,
+) (map[string]CommitSignatureInfo, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	// Output: SHA<TAB>status<TAB>keyID<TAB>fingerprint<TAB>signer
+	args := append(
+		[]string{
+			"log", "--no-walk",
+			"--format=%H%x09%G?%x09%GK%x09%GF%x09%GS",
+		},
+		ids...,
+	)
+	res, err := libExec.Exec(w.buildGitCommand(args...))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error getting signature statuses: %w", err,
+		)
+	}
+	statuses := make(map[string]CommitSignatureInfo, len(ids))
+	scanner := bufio.NewScanner(bytes.NewReader(res))
+	for scanner.Scan() {
+		parts := bytes.SplitN(scanner.Bytes(), []byte("\t"), 5)
+		if len(parts) < 4 {
+			continue
+		}
+		info := CommitSignatureInfo{
+			Status:      string(parts[1]),
+			KeyID:       string(parts[2]),
+			Fingerprint: string(parts[3]),
+		}
+		if len(parts) == 5 {
+			info.Signer = string(parts[4])
+		}
+		statuses[string(parts[0])] = info
+	}
+	return statuses, nil
+}
+
+func (w *workTree) ImportGPGKey(keyData string) (string, error) {
+	return w.importGPGSigningKey(w.homeDir, &User{
+		SigningKey: keyData,
+	})
 }
 
 // validateSparsePatterns validates sparse checkout patterns for cone mode.

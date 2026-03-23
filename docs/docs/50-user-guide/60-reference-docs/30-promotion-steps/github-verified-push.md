@@ -74,8 +74,8 @@ Stages that write to the same branch do not write to the same files.
 :::caution
 
 If you use `pullPolicy: Rebase`, be aware that Kargo may need to rewrite commits
-made by committers outside the promotion flow. Such commits will be signed by
-Kargo and will contain a `Co-authored-by` trailer to credit the original author.
+made by committers outside the promotion flow. Such rebased commits preserve
+their original author and will not receive GitHub's "Verified" badge.
 
 :::
 
@@ -92,20 +92,30 @@ for setup instructions.
 
 ## Commit Verification and Authorship
 
-All commits replayed by this step are created through the GitHub API without
-explicit author or committer fields. This means the authenticated identity
-(GitHub App or PAT owner) becomes the commit's author and committer, and — when
-using a GitHub App — the commit receives GitHub's "Verified" badge.
+This step distinguishes between **app-authored** commits and commits made by
+other authors. A commit is considered app-authored when its author and committer
+are the same identity and that identity matches the configured app author
+(defaults to the controller's `GITCLIENT_NAME`/`GITCLIENT_EMAIL` environment
+variables).
 
-When the original commit's author differs from Kargo's system identity, a
-`Co-authored-by` trailer is added to the commit message to credit the original
-author. GitHub renders these trailers as linked avatars in the commit UI.
+- **App-authored commits** are replayed without explicit author or committer
+  fields, allowing the authenticated identity (GitHub App or PAT owner) to
+  become the commit's author and committer. When using a GitHub App, these
+  commits receive GitHub's "Verified" badge.
+- **Other commits** preserve their original author and committer fields. These
+  commits are **not** marked as "Verified" on GitHub, but they retain proper
+  attribution to the original author.
+
+When the optional `author.signingKey` is configured, commit GPG signatures are
+checked before replaying. Only commits signed by the matching key (verified by
+fingerprint) are eligible to be treated as app-authored. Commits with bad or
+revoked signatures cause a terminal error.
 
 :::note
 
-If you use the [`git-commit`](git-commit.md) step with a custom `author`
-configuration, that author will appear as a co-author on the resulting
-GitHub commit.
+If you use the [`git-commit`](git-commit.md) step with a different `author`
+configuration, that author will be preserved on the resulting GitHub commit,
+and the commit will not be marked as "Verified."
 
 :::
 
@@ -120,6 +130,7 @@ GitHub commit.
 | `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. |
 | `maxAttempts` | `integer` | N | Maximum number of push attempts. Relevant when `pullPolicy` is `Merge` or `Rebase`: if the remote branch advances between reading its HEAD and updating the ref, the step retries by reconciling and replaying. Merge conflicts halt further attempts. For `FFOnly`, no retries are attempted. Default is `10` for `Merge`/`Rebase`, `1` for `FFOnly`. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification when communicating with the GitHub API. Default is `false`. Intended for GitHub Enterprise instances with self-signed certificates. |
+| `author` | `object` | N | The identity used by the app for commits. Commits matching this identity are considered app-authored and may receive the "Verified" badge. Defaults to the system-level `GITCLIENT_NAME`/`GITCLIENT_EMAIL`. Has sub-fields: `name` (string, required), `email` (string, required), and `signingKey` (string, optional GPG key for signature verification). |
 
 ## Output
 
