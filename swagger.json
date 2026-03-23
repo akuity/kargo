@@ -5156,7 +5156,7 @@
             "name": "Shared"
         },
         {
-            "description": "Only one instance of this resource kind exists per scope. For example, each project has exactly one ProjectConfig and each cluster has exactly one ClusterConfig.",
+            "description": "At most, one instance of this resource kind exists per scope. For example, each project has, at most, one ProjectConfig and each cluster has, at most, one ClusterConfig.",
             "name": "Singleton"
         }
     ]
