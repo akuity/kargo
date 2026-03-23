@@ -225,7 +225,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			}
 			logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshPromotions(ctx, w, g.client, g.project, repoURLs, prNumber)
+			refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, prNumber)
 			return
 
 		case *gh.PushEvent:

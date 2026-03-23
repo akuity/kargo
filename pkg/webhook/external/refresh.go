@@ -188,11 +188,11 @@ func refreshWarehouses(
 	)
 }
 
-// refreshPromotions refreshes all running Promotions that are waiting on a
+// refreshPromotionsByPR refreshes all running Promotions that are waiting on a
 // pull request matching any of the given repository URLs and PR number. If the
 // project is non-empty, only Promotions in that namespace are considered.
 // Note: Callers are responsible for normalizing the provided repository URLs.
-func refreshPromotions(
+func refreshPromotionsByPR(
 	ctx context.Context,
 	w http.ResponseWriter,
 	c client.Client,
