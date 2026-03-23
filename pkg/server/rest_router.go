@@ -12,6 +12,7 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
+// nolint: lll
 // @title Kargo API
 // @version v1alpha1
 // @description REST API for Kargo
