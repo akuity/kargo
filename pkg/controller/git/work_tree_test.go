@@ -1,19 +1,14 @@
 package git
 
 import (
-	"fmt"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
 	testingPkg "github.com/akuity/kargo/api/testing"
-	"github.com/akuity/kargo/pkg/types"
 )
 
 func TestNonFastForwardRegex(t *testing.T) {
@@ -31,53 +26,8 @@ func TestNonFastForwardRegex(t *testing.T) {
 }
 
 func TestWorkTree(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	// This will be something to opt into because on some OSes, this will lead
-	// to keychain-related prompts.
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
-		},
-	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
-
-	setupRep, err := Clone(
-		testRepoURL,
-		&ClientOptions{
-			Credentials: &testRepoCreds,
-		},
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, setupRep)
-	defer setupRep.Close()
-	err = os.WriteFile(fmt.Sprintf("%s/%s", setupRep.Dir(), "test.txt"), []byte("foo"), 0600)
-	require.NoError(t, err)
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
-	require.NoError(t, err)
-	err = setupRep.Push(nil)
-	require.NoError(t, err)
-	err = setupRep.Close()
-	require.NoError(t, err)
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t, initialMainCommit)
+	defer testServer.Close()
 
 	rep, err := CloneBare(
 		testRepoURL,

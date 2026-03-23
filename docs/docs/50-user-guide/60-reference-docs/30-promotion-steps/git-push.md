@@ -12,9 +12,60 @@ often followed by a [`git-open-pr` step](git-open-pr.md).
 
 This step also implements its own, internal retry logic. If a push fails, with
 the cause determined to be the presence of new commits in the remote branch that
-are not present in the local branch, the step will attempt to rebase before
-retrying the push. Any merge conflict requiring manual resolution will
+are not present in the local branch, the step will integrate the remote changes
+and retry the push. Any merge conflict requiring manual resolution will
 immediately halt further attempts.
+
+How remote changes are integrated is controlled by the system-level __push
+integration policy__, which is configured by a Kargo operator. The available
+policies are:
+
+- `AlwaysRebase` — Unconditionally rebase. Simplest, but may re-sign or strip
+  commit signatures.
+
+- `RebaseOrMerge` — Rebase when a signature-trust analysis determines it is
+  safe; merge otherwise. This preserves linear history when possible without
+  undermining trust.
+
+- `RebaseOrFail` — Rebase when the signature-trust analysis determines it is
+  safe; fail the step otherwise.
+
+- `AlwaysMerge` — Unconditionally create a merge commit. Most conservative.
+
+:::caution
+
+The current default policy is `AlwaysRebase`.
+
+Starting with v1.12.0, the default will change to `RebaseOrMerge`.
+
+:::
+
+When the policy evaluates rebase safety (`RebaseOrMerge` and `RebaseOrFail`),
+the decision is based on the GPG signature status of the local commits that
+would be replayed:
+
+- If all local commits are __signed by a trusted key__ and signing is configured
+  for the committer, a __rebase__ is performed. The replacement commits are
+  re-signed by the committer.
+
+- If all local commits are __unsigned__ and signing is _not_ configured, a
+  __rebase__ is performed. The replacement commits remain unsigned.
+
+- In all other cases, the policy's fallback behavior applies (merge or fail).
+
+A "trusted key" is one that has been imported into the committer's GPG keyring
+with ultimate trust. When a `committer` with a `signingKey` is specified in this
+step's configuration, that key is the only trusted key. When `committer` is not
+specified, the trusted key (if any) is the one configured during the
+[`git-clone`](git-clone.md) step -- either from the `author` field or from
+system-level defaults set by a Kargo admin.
+
+:::info
+
+For more information on configuring the push integration policy, see the
+[operator guide](../../../40-operator-guide/20-advanced-installation/30-common-configurations.md#push-integration-policy).
+
+:::
 
 :::info
 
@@ -27,7 +78,6 @@ recommended to design your Promotion processes such that Promotions to multiple
 Stages that write to the same branch do not write to the same files.
 
 :::
-
 
 :::note
 
@@ -43,19 +93,23 @@ system to access the git repos.
 ## Configuration
 
 | Name | Type | Required | Description |
-|------|------|----------|-------------|
+| ---- | ---- | -------- | ----------- |
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true` and `tag`. If none of these are provided, the target branch will be the same as the branch currently checked out in the working tree. |
 | `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of `true` is mutually exclusive with `targetBranch` and `tag`. If none of these are provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
+| `committer` | `object` | N | Optional committer information for merge commits or replacement commits created when integrating remote changes before pushing. If provided, this takes precedence over both system-level defaults and any default authorship information configured in the [`git-clone`](./git-clone.md) step. |
+| `committer.name` | `string` | Y | The committer's name. |
+| `committer.email` | `string` | Y | The committer's email address. |
+| `committer.signingKey` | `string` | N | A GPG signing key for the committer. This field is optional. |
 | `tag` | `string` | N | An tag to push to the remote repository. Mutually exclusive with `generateTargetBranch` and `targetBranch`. |
-| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. A value of `true` is mutually exclusive with `tag`.  |
+| `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. A value of `true` is mutually exclusive with `tag`. |
 | `provider` | `string` | N | The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github', and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly specified. This setting does not affect the push operation but helps generate the correct [`commitURL` output](#output) when working with repositories where the provider cannot be automatically determined, such as self-hosted instances. |
 
 ## Output
 
 | Name | Type | Description |
-|------|------|-------------|
+| ---- | ---- | ----------- |
 | `branch` | `string` | The name of the remote branch pushed to by this step. This is especially useful when the `generateTargetBranch=true` option has been used, in which case a subsequent [`git-open-pr`](git-open-pr.md) will typically reference this output to learn what branch to use as the head branch of a new pull request. |
 | `commit` | `string` | The ID (SHA) of the commit pushed by this step. |
 | `commitURL` | `string` | The URL of the commit that was pushed to the remote repository. |
@@ -111,6 +165,65 @@ steps:
 # Open a PR and wait for it to be merged or closed...
 ```
 
+### Push with Custom Committer
+
+The `committer` field can be used to specify the identity used for merge commits
+or replacement commits created when integrating remote changes before pushing.
+
+```yaml
+steps:
+# Clone, prepare the contents of ./out, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests
+- uses: git-push
+  config:
+    path: ./out
+    committer:
+      name: Kargo
+      email: kargo@example.com
+```
+
+### Push with Signed Commits
+
+In this example, the `git-push` step uses a GPG signing key for the committer,
+sourced from an existing secret in the same namespace using the
+[`secret()`](../40-expressions.md#secretname) expression function. This ensures
+that any merge commits or replacement commits created when integrating remote
+changes bear a valid GPG signature.
+
+:::note
+
+Committer information may have been configured at the system level by a Kargo
+admin. If system-level configuration exists, the example shown below would
+override it.
+
+:::
+
+```yaml
+steps:
+# Clone, prepare the contents of ./out, etc...
+- uses: git-commit
+  config:
+    path: ./out
+    message: rendered updated manifests
+- uses: git-push
+  config:
+    path: ./out
+    committer:
+      name: Me
+      email: me@example.com
+      signingKey: ${{ secret('my-gpg-secret').privateKey }}
+```
+
+:::note
+
+If `committer.signingKey` is provided, but `committer.name` and
+`committer.email` do not match the key's UID, the push will fail.
+
+:::
+
 ### Pushing Tags
 
 In this example, a new tag is pushed to the remote repository.
@@ -129,7 +242,7 @@ In this example, a new tag is pushed to the remote repository.
 
 :::caution
 
-If the specified tag already exists in the remote repository, the `git-push` 
+If the specified tag already exists in the remote repository, the `git-push`
 step will fail.
 
 :::

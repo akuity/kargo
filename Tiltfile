@@ -87,6 +87,7 @@ k8s_yaml(
 # Normally the API server serves up the front end, but we want live updates
 # of the UI, so we're breaking it out into its own separate deployment here.
 k8s_yaml('hack/tilt/ui.yaml')
+k8s_yaml('hack/tilt/gpg-secret.yaml')
 
 k8s_resource(
   new_name = 'common',
@@ -160,6 +161,7 @@ k8s_resource(
     'kargo-controller-read-secrets:clusterrole',
     'kargo-controller-rollouts:clusterrole',
     'kargo-controller-rollouts:clusterrolebinding',
+    'kargo-test-gpg-signing-key:secret'
   ],
   resource_deps=['back-end-compile', 'credential-helper-compile', ]
 )

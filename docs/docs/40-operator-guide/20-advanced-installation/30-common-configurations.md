@@ -293,6 +293,54 @@ key.
 
 :::
 
+### Push Integration Policy
+
+When the [`git-push`](../../50-user-guide/60-reference-docs/30-promotion-steps/git-push.md)
+promotion step pushes to a remote branch that has new commits the local branch
+doesn't have, it must integrate those remote changes first. The push integration
+policy controls how this integration is performed.
+
+Four options are available, forming a spectrum from least to most conservative:
+
+- `AlwaysRebase`: Unconditionally uses `pull --rebase` to integrate remote
+  changes. This preserves linear history but may re-sign commits that Kargo did
+  not author or strip existing signatures from commits.
+
+- `RebaseOrMerge`: Uses `pull --rebase` when a signature-trust analysis
+  determines it is safe, and falls back to a merge commit otherwise. This
+  preserves linear history when possible without undermining trust.
+
+- `RebaseOrFail`: Uses `pull --rebase` when the signature-trust analysis
+  determines it is safe, and fails the push step otherwise. This puts
+  constraints on promotion process design and treats the failure scenario as
+  worthy of human investigation.
+
+- `AlwaysMerge`: Unconditionally creates a merge commit to integrate remote
+  changes. This is the most conservative option — it never touches existing
+  commits and always preserves original signatures.
+
+:::caution
+
+The current default is `AlwaysRebase`.
+
+Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
+on the current behavior, set the policy explicitly before upgrading.
+
+:::
+
+```yaml
+controller:
+  gitClient:
+    pushIntegrationPolicy: RebaseOrMerge
+```
+
+:::info
+
+For more information about the security implications of this setting, see
+[Secure Configuration](../40-security/10-secure-configuration.md#push-integration-policy).
+
+:::
+
 ## Argo CD Configuration
 
 Kargo supports a number of Argo CD-related configurations that can be set at
