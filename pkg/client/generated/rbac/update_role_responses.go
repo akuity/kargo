@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // UpdateRoleReader is a Reader for the UpdateRole structure.
@@ -44,10 +42,10 @@ func NewUpdateRoleOK() *UpdateRoleOK {
 /*
 UpdateRoleOK describes a response with status code 200, with default header values.
 
-Role resource
+Role resource (github.com/akuity/kargo/api/rbac/v1alpha1.Role)
 */
 type UpdateRoleOK struct {
-	Payload *models.GithubComAkuityKargoAPIRbacV1alpha1Role
+	Payload any
 }
 
 // IsSuccess returns true when this update role o k response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *UpdateRoleOK) String() string {
 	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/roles/{role}][%d] updateRoleOK %s", 200, payload)
 }
 
-func (o *UpdateRoleOK) GetPayload() *models.GithubComAkuityKargoAPIRbacV1alpha1Role {
+func (o *UpdateRoleOK) GetPayload() any {
 	return o.Payload
 }
 
 func (o *UpdateRoleOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIRbacV1alpha1Role)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

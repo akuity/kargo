@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListProjectRolesReader is a Reader for the ListProjectRoles structure.
@@ -44,10 +42,10 @@ func NewListProjectRolesOK() *ListProjectRolesOK {
 /*
 ListProjectRolesOK describes a response with status code 200, with default header values.
 
-List of Role resources or their underlying Kubernetes resources
+RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)
 */
 type ListProjectRolesOK struct {
-	Payload []*models.GithubComAkuityKargoAPIRbacV1alpha1Role
+	Payload any
 }
 
 // IsSuccess returns true when this list project roles o k response has a 2xx status code
@@ -90,7 +88,7 @@ func (o *ListProjectRolesOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/roles][%d] listProjectRolesOK %s", 200, payload)
 }
 
-func (o *ListProjectRolesOK) GetPayload() []*models.GithubComAkuityKargoAPIRbacV1alpha1Role {
+func (o *ListProjectRolesOK) GetPayload() any {
 	return o.Payload
 }
 

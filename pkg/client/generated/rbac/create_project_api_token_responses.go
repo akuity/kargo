@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // CreateProjectAPITokenReader is a Reader for the CreateProjectAPIToken structure.
@@ -44,10 +42,10 @@ func NewCreateProjectAPITokenCreated() *CreateProjectAPITokenCreated {
 /*
 CreateProjectAPITokenCreated describes a response with status code 201, with default header values.
 
-Secret resource
+Secret resource (k8s.io/api/core/v1.Secret)
 */
 type CreateProjectAPITokenCreated struct {
-	Payload *models.V1Secret
+	Payload any
 }
 
 // IsSuccess returns true when this create project Api token created response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *CreateProjectAPITokenCreated) String() string {
 	return fmt.Sprintf("[POST /v1beta1/projects/{project}/roles/{role}/api-tokens][%d] createProjectApiTokenCreated %s", 201, payload)
 }
 
-func (o *CreateProjectAPITokenCreated) GetPayload() *models.V1Secret {
+func (o *CreateProjectAPITokenCreated) GetPayload() any {
 	return o.Payload
 }
 
 func (o *CreateProjectAPITokenCreated) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.V1Secret)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

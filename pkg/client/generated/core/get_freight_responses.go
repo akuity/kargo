@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetFreightReader is a Reader for the GetFreight structure.
@@ -44,10 +42,10 @@ func NewGetFreightOK() *GetFreightOK {
 /*
 GetFreightOK describes a response with status code 200, with default header values.
 
-Freight custom resource
+Freight custom resource (github.com/akuity/kargo/api/v1alpha1.Freight)
 */
 type GetFreightOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1Freight
+	Payload any
 }
 
 // IsSuccess returns true when this get freight o k response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *GetFreightOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/freight/{freight-name-or-alias}][%d] getFreightOK %s", 200, payload)
 }
 
-func (o *GetFreightOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1Freight {
+func (o *GetFreightOK) GetPayload() any {
 	return o.Payload
 }
 
 func (o *GetFreightOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1Freight)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // PatchProjectGenericCredentialsReader is a Reader for the PatchProjectGenericCredentials structure.
@@ -44,10 +42,10 @@ func NewPatchProjectGenericCredentialsOK() *PatchProjectGenericCredentialsOK {
 /*
 PatchProjectGenericCredentialsOK describes a response with status code 200, with default header values.
 
-Secret resource
+Secret resource (k8s.io/api/core/v1.Secret)
 */
 type PatchProjectGenericCredentialsOK struct {
-	Payload *models.V1Secret
+	Payload any
 }
 
 // IsSuccess returns true when this patch project generic credentials o k response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *PatchProjectGenericCredentialsOK) String() string {
 	return fmt.Sprintf("[PATCH /v1beta1/projects/{project}/generic-credentials/{generic-credentials}][%d] patchProjectGenericCredentialsOK %s", 200, payload)
 }
 
-func (o *PatchProjectGenericCredentialsOK) GetPayload() *models.V1Secret {
+func (o *PatchProjectGenericCredentialsOK) GetPayload() any {
 	return o.Payload
 }
 
 func (o *PatchProjectGenericCredentialsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.V1Secret)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

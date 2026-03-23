@@ -23,8 +23,8 @@ import type {
 
 import type {
   AdminLoginResponse,
+  GetClusterConfig200,
   GetConfigResponse,
-  GithubComAkuityKargoApiV1alpha1ClusterConfig,
   PublicConfig,
   VersionInfo
 } from '.././models';
@@ -99,7 +99,7 @@ export const useAdminLogin = <TError = unknown, TContext = unknown>(
  * @summary Retrieve the ClusterConfig
  */
 export type getClusterConfigResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ClusterConfig;
+  data: GetClusterConfig200;
   status: 200;
 };
 

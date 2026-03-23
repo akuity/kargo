@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListSystemConfigMapsReader is a Reader for the ListSystemConfigMaps structure.
@@ -44,10 +42,10 @@ func NewListSystemConfigMapsOK() *ListSystemConfigMapsOK {
 /*
 ListSystemConfigMapsOK describes a response with status code 200, with default header values.
 
-ConfigMapList resource
+ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)
 */
 type ListSystemConfigMapsOK struct {
-	Payload *models.V1ConfigMapList
+	Payload any
 }
 
 // IsSuccess returns true when this list system config maps o k response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *ListSystemConfigMapsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/system/configmaps][%d] listSystemConfigMapsOK %s", 200, payload)
 }
 
-func (o *ListSystemConfigMapsOK) GetPayload() *models.V1ConfigMapList {
+func (o *ListSystemConfigMapsOK) GetPayload() any {
 	return o.Payload
 }
 
 func (o *ListSystemConfigMapsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.V1ConfigMapList)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

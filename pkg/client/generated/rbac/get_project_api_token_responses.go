@@ -13,8 +13,6 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
-
-	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetProjectAPITokenReader is a Reader for the GetProjectAPIToken structure.
@@ -44,10 +42,10 @@ func NewGetProjectAPITokenOK() *GetProjectAPITokenOK {
 /*
 GetProjectAPITokenOK describes a response with status code 200, with default header values.
 
-Secret resource
+Secret resource (k8s.io/api/core/v1.Secret)
 */
 type GetProjectAPITokenOK struct {
-	Payload *models.V1Secret
+	Payload any
 }
 
 // IsSuccess returns true when this get project Api token o k response has a 2xx status code
@@ -90,16 +88,14 @@ func (o *GetProjectAPITokenOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/api-tokens/{apitoken}][%d] getProjectApiTokenOK %s", 200, payload)
 }
 
-func (o *GetProjectAPITokenOK) GetPayload() *models.V1Secret {
+func (o *GetProjectAPITokenOK) GetPayload() any {
 	return o.Payload
 }
 
 func (o *GetProjectAPITokenOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.V1Secret)
-
 	// response payload
-	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

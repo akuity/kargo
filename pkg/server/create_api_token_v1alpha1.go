@@ -8,14 +8,10 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/gin-gonic/gin"
-	corev1 "k8s.io/api/core/v1"
 
 	svcv1alpha1 "github.com/akuity/kargo/api/service/v1alpha1"
 	libhttp "github.com/akuity/kargo/pkg/http"
 )
-
-// anchor corev1 import for swagger type resolution.
-var _ *corev1.Secret
 
 func (s *server) CreateAPIToken(
 	ctx context.Context,
@@ -74,7 +70,7 @@ type createAPITokenRequest struct {
 // @Param project path string true "Project name"
 // @Param role path string true "Role name"
 // @Param body body createAPITokenRequest true "Token"
-// @Success 201 {object} corev1.Secret "Secret resource"
+// @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/projects/{project}/roles/{role}/api-tokens [post]
 func (s *server) createProjectAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()
@@ -117,7 +113,7 @@ func (s *server) createProjectAPIToken(c *gin.Context) {
 // @Produce json
 // @Param role path string true "Role name"
 // @Param body body createAPITokenRequest true "Token"
-// @Success 201 {object} corev1.Secret "Secret resource"
+// @Success 201 {object} object "Secret resource (k8s.io/api/core/v1.Secret)"
 // @Router /v1beta1/system/roles/{role}/api-tokens [post]
 func (s *server) createSystemAPIToken(c *gin.Context) {
 	ctx := c.Request.Context()

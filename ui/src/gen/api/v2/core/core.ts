@@ -24,32 +24,46 @@ import type {
 import type {
   ApproveFreightParams,
   CreateConfigMapRequestBody,
-  GithubComAkuityKargoApiV1alpha1ClusterPromotionTask,
-  GithubComAkuityKargoApiV1alpha1ClusterPromotionTaskList,
-  GithubComAkuityKargoApiV1alpha1Freight,
-  GithubComAkuityKargoApiV1alpha1Project,
-  GithubComAkuityKargoApiV1alpha1ProjectConfig,
-  GithubComAkuityKargoApiV1alpha1ProjectList,
-  GithubComAkuityKargoApiV1alpha1Promotion,
-  GithubComAkuityKargoApiV1alpha1PromotionList,
-  GithubComAkuityKargoApiV1alpha1PromotionTask,
-  GithubComAkuityKargoApiV1alpha1PromotionTaskList,
-  GithubComAkuityKargoApiV1alpha1Stage,
-  GithubComAkuityKargoApiV1alpha1StageList,
-  GithubComAkuityKargoApiV1alpha1Warehouse,
-  GithubComAkuityKargoApiV1alpha1WarehouseList,
+  CreateProjectConfigMap201,
+  CreateSharedConfigMap201,
+  CreateSystemConfigMap201,
+  GetClusterPromotionTask200,
+  GetFreight200,
+  GetProject200,
+  GetProjectConfig200,
+  GetProjectConfigMap200,
+  GetPromotion200,
+  GetPromotionTask200,
+  GetSharedConfigMap200,
+  GetStage200,
+  GetSystemConfigMap200,
+  GetWarehouse200,
+  ListClusterPromotionTasks200,
   ListImages200,
+  ListProjectConfigMaps200,
+  ListProjects200,
+  ListPromotionTasks200,
+  ListPromotions200,
   ListPromotionsParams,
+  ListSharedConfigMaps200,
+  ListStages200,
+  ListSystemConfigMaps200,
+  ListWarehouses200,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
+  PatchProjectConfigMap200,
+  PatchSharedConfigMap200,
+  PatchSystemConfigMap200,
   PromoteDownstream201,
   PromoteDownstreamRequest,
+  PromoteToStage201,
   PromoteToStageRequest,
   QueryFreightsRest200,
   QueryFreightsRestParams,
   UpdateConfigMapRequestBody,
-  V1ConfigMap,
-  V1ConfigMapList
+  UpdateProjectConfigMap200,
+  UpdateSharedConfigMap200,
+  UpdateSystemConfigMap200
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -61,7 +75,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary List projects
  */
 export type listProjectsResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ProjectList;
+  data: ListProjects200;
   status: 200;
 };
 
@@ -173,7 +187,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  * @summary Retrieve a Project resource
  */
 export type getProjectResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Project;
+  data: GetProject200;
   status: 200;
 };
 
@@ -385,7 +399,7 @@ namespace.
  * @summary Retrieve ProjectConfig
  */
 export type getProjectConfigResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ProjectConfig;
+  data: GetProjectConfig200;
   status: 200;
 };
 
@@ -711,7 +725,7 @@ Kubernetes ConfigMapList resource.
  * @summary List project-level ConfigMaps
  */
 export type listProjectConfigMapsResponse200 = {
-  data: V1ConfigMapList;
+  data: ListProjectConfigMaps200;
   status: 200;
 };
 
@@ -858,7 +872,7 @@ Kubernetes ConfigMap resource.
  * @summary Create a project-level ConfigMap
  */
 export type createProjectConfigMapResponse201 = {
-  data: V1ConfigMap;
+  data: CreateProjectConfigMap201;
   status: 201;
 };
 
@@ -955,7 +969,7 @@ export const useCreateProjectConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a project-level ConfigMap
  */
 export type getProjectConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: GetProjectConfigMap200;
   status: 200;
 };
 
@@ -1111,7 +1125,7 @@ is replaced. Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a project-level ConfigMap
  */
 export type updateProjectConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: UpdateProjectConfigMap200;
   status: 200;
 };
 
@@ -1312,7 +1326,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a project-level ConfigMap
  */
 export type patchProjectConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: PatchProjectConfigMap200;
   status: 200;
 };
 
@@ -1580,7 +1594,7 @@ or alias.
  * @summary Retrieve a Freight resource
  */
 export type getFreightResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Freight;
+  data: GetFreight200;
   status: 200;
 };
 
@@ -2151,7 +2165,7 @@ a PromotionTaskList resource.
  * @summary List PromotionTasks
  */
 export type listPromotionTasksResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionTaskList;
+  data: ListPromotionTasks200;
   status: 200;
 };
 
@@ -2289,7 +2303,7 @@ export function useListPromotionTasks<
  * @summary Retrieve a PromotionTask
  */
 export type getPromotionTaskResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionTask;
+  data: GetPromotionTask200;
   status: 200;
 };
 
@@ -2433,7 +2447,7 @@ PromotionList resource.
  * @summary List Promotions
  */
 export type listPromotionsResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionList;
+  data: ListPromotions200;
   status: 200;
 };
 
@@ -2585,7 +2599,7 @@ export function useListPromotions<
  * @summary Retrieve a Promotion
  */
 export type getPromotionResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Promotion;
+  data: GetPromotion200;
   status: 200;
 };
 
@@ -2901,7 +2915,7 @@ StageList resource.
  * @summary List Stages
  */
 export type listStagesResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1StageList;
+  data: ListStages200;
   status: 200;
 };
 
@@ -3023,7 +3037,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
  * @summary Retrieve a Stage
  */
 export type getStageResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Stage;
+  data: GetStage200;
   status: 200;
 };
 
@@ -3242,7 +3256,7 @@ the state represented by the specified Freight.
  * @summary Promote to Stage
  */
 export type promoteToStageResponse201 = {
-  data: GithubComAkuityKargoApiV1alpha1Promotion;
+  data: PromoteToStage201;
   status: 201;
 };
 
@@ -3527,7 +3541,7 @@ WarehouseList resource.
  * @summary List Warehouses
  */
 export type listWarehousesResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1WarehouseList;
+  data: ListWarehouses200;
   status: 200;
 };
 
@@ -3661,7 +3675,7 @@ export function useListWarehouses<
  * @summary Retrieve a Warehouse
  */
 export type getWarehouseResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Warehouse;
+  data: GetWarehouse200;
   status: 200;
 };
 
@@ -3979,7 +3993,7 @@ ClusterPromotionTaskList resource.
  * @summary List ClusterPromotionTasks
  */
 export type listClusterPromotionTasksResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ClusterPromotionTaskList;
+  data: ListClusterPromotionTasks200;
   status: 200;
 };
 
@@ -4117,7 +4131,7 @@ export function useListClusterPromotionTasks<
  * @summary Retrieve a ClusterPromotionTask
  */
 export type getClusterPromotionTaskResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ClusterPromotionTask;
+  data: GetClusterPromotionTask200;
   status: 200;
 };
 
@@ -4268,7 +4282,7 @@ Returns a Kubernetes ConfigMapList resource.
  * @summary List shared ConfigMaps
  */
 export type listSharedConfigMapsResponse200 = {
-  data: V1ConfigMapList;
+  data: ListSharedConfigMaps200;
   status: 200;
 };
 
@@ -4405,7 +4419,7 @@ the created Kubernetes ConfigMap resource.
  * @summary Create a shared ConfigMap
  */
 export type createSharedConfigMapResponse201 = {
-  data: V1ConfigMap;
+  data: CreateSharedConfigMap201;
   status: 201;
 };
 
@@ -4501,7 +4515,7 @@ export const useCreateSharedConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a shared ConfigMap
  */
 export type getSharedConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: GetSharedConfigMap200;
   status: 200;
 };
 
@@ -4640,7 +4654,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a shared ConfigMap
  */
 export type updateSharedConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: UpdateSharedConfigMap200;
   status: 200;
 };
 
@@ -4833,7 +4847,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a shared ConfigMap
  */
 export type patchSharedConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: PatchSharedConfigMap200;
   status: 200;
 };
 
@@ -4931,7 +4945,7 @@ ConfigMapList resource.
  * @summary List system-level ConfigMaps
  */
 export type listSystemConfigMapsResponse200 = {
-  data: V1ConfigMapList;
+  data: ListSystemConfigMaps200;
   status: 200;
 };
 
@@ -5068,7 +5082,7 @@ ConfigMap resource.
  * @summary Create a system-level ConfigMap
  */
 export type createSystemConfigMapResponse201 = {
-  data: V1ConfigMap;
+  data: CreateSystemConfigMap201;
   status: 201;
 };
 
@@ -5164,7 +5178,7 @@ export const useCreateSystemConfigMap = <TError = unknown, TContext = unknown>(
  * @summary Retrieve a system-level ConfigMap
  */
 export type getSystemConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: GetSystemConfigMap200;
   status: 200;
 };
 
@@ -5303,7 +5317,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Replace a system-level ConfigMap
  */
 export type updateSystemConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: UpdateSystemConfigMap200;
   status: 200;
 };
 
@@ -5496,7 +5510,7 @@ Returns the updated Kubernetes ConfigMap resource.
  * @summary Patch a system-level ConfigMap
  */
 export type patchSystemConfigMapResponse200 = {
-  data: V1ConfigMap;
+  data: PatchSystemConfigMap200;
   status: 200;
 };
 

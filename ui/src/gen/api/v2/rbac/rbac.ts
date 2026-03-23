@@ -23,16 +23,25 @@ import type {
 
 import type {
   CreateAPITokenRequestBody,
+  CreateProjectAPIToken201,
+  CreateProjectRole201,
   CreateProjectRoleBodyBody,
+  CreateSystemAPIToken201,
+  GetProjectAPIToken200,
   GetProjectRole200,
+  GetSystemAPIToken200,
   GetSystemRole200,
-  GithubComAkuityKargoApiRbacV1alpha1Role,
+  Grant200,
   GrantRequest,
+  ListProjectAPITokens200,
   ListProjectAPITokensParams,
+  ListProjectRoles200,
+  ListSystemAPITokens200,
   ListSystemAPITokensParams,
+  ListSystemRoles200,
+  Revoke200,
   RevokeRequest,
-  V1Secret,
-  V1SecretList
+  UpdateRole200
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -45,7 +54,7 @@ resource containing heavily redacted Secrets.
  * @summary List project-level API tokens
  */
 export type listProjectAPITokensResponse200 = {
-  data: V1SecretList;
+  data: ListProjectAPITokens200;
   status: 200;
 };
 
@@ -216,7 +225,7 @@ redacted Kubernetes Secret resource.
  * @summary Retrieve a project-level API token
  */
 export type getProjectAPITokenResponse200 = {
-  data: V1Secret;
+  data: GetProjectAPIToken200;
   status: 200;
 };
 
@@ -462,7 +471,7 @@ RoleList resource.
  * @summary List project-level Kargo Role virtual resources
  */
 export type listProjectRolesResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role[];
+  data: ListProjectRoles200;
   status: 200;
 };
 
@@ -598,7 +607,7 @@ resources.
  * @summary Create a project-level Kargo Role virtual resource
  */
 export type createProjectRoleResponse201 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: CreateProjectRole201;
   status: 201;
 };
 
@@ -696,7 +705,7 @@ to a project-level Kargo Role.
  * @summary Grant permissions
  */
 export type grantResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: Grant200;
   status: 200;
 };
 
@@ -789,7 +798,7 @@ permissions from a project-level Kargo Role.
  * @summary Revoke permissions
  */
 export type revokeResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: Revoke200;
   status: 200;
 };
 
@@ -1025,7 +1034,7 @@ resources.
  * @summary Update a project-level Kargo Role virtual resource
  */
 export type updateRoleResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: UpdateRole200;
   status: 200;
 };
 
@@ -1219,7 +1228,7 @@ redacted form.
  * @summary Create a project-level API token
  */
 export type createProjectAPITokenResponse201 = {
-  data: V1Secret;
+  data: CreateProjectAPIToken201;
   status: 201;
 };
 
@@ -1318,7 +1327,7 @@ resource containing heavily redacted Secrets.
  * @summary List system-level API tokens
  */
 export type listSystemAPITokensResponse200 = {
-  data: V1SecretList;
+  data: ListSystemAPITokens200;
   status: 200;
 };
 
@@ -1477,7 +1486,7 @@ redacted Kubernetes Secret resource.
  * @summary Retrieve a system-level API token
  */
 export type getSystemAPITokenResponse200 = {
-  data: V1Secret;
+  data: GetSystemAPIToken200;
   status: 200;
 };
 
@@ -1708,7 +1717,7 @@ RoleList resource.
  * @summary List system-level Kargo Role virtual resources
  */
 export type listSystemRolesResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role[];
+  data: ListSystemRoles200;
   status: 200;
 };
 
@@ -1972,7 +1981,7 @@ a redacted form.
  * @summary Create a system-level API token
  */
 export type createSystemAPITokenResponse201 = {
-  data: V1Secret;
+  data: CreateSystemAPIToken201;
   status: 201;
 };
 
