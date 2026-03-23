@@ -15,13 +15,13 @@
 //
 // Example promotion step:
 //
-//	- uses: http
-//	  config:
-//	    url: http://host.docker.internal:24365
-//	    method: GET
-//	    timeout: 600s
-//	    successExpression: "response.status == 200"
-//	    failureExpression: "response.status == 500"
+//   - uses: http
+//     config:
+//     url: http://host.docker.internal:24365
+//     method: GET
+//     timeout: 600s
+//     successExpression: "response.status == 200"
+//     failureExpression: "response.status == 500"
 package main
 
 import (
@@ -39,6 +39,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -57,7 +58,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf(
+		log.Printf( //nolint:gosec
 			"request received: %s %s from %s",
 			r.Method, r.URL.Path, r.RemoteAddr,
 		)
@@ -83,9 +84,10 @@ func main() {
 		}
 	})
 
-	server := &http.Server{
-		Addr:    listenAddr,
-		Handler: mux,
+	server := &http.Server{ // nolint: gosec
+		Addr:              listenAddr,
+		Handler:           mux,
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
 	// Graceful shutdown on signal.
@@ -100,7 +102,7 @@ func main() {
 		case <-done:
 		case <-ctx.Done():
 		}
-		server.Shutdown(context.Background()) // nolint: errcheck
+		_ = server.Shutdown(context.Background())
 	}()
 
 	ln, err := net.Listen("tcp", listenAddr)
@@ -130,7 +132,7 @@ func handleCommand(
 	args []string,
 	env []string,
 ) {
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...) // nolint: gosec
 	cmd.Env = env
 
 	out, err := cmd.CombinedOutput()
@@ -146,18 +148,21 @@ func handleCommand(
 			log.Printf("command error: %v", err)
 		}
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write(out) // nolint: errcheck
+		_, _ = w.Write(out) // nolint: gosec
 		return
 	}
 
 	log.Printf("command succeeded")
 	w.WriteHeader(http.StatusOK)
-	w.Write(out) // nolint: errcheck
+	_, _ = w.Write(out) // nolint: gosec
 }
 
 func handleInteractive(w http.ResponseWriter) {
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, ">>> Promotion step is waiting. Press Enter to release...")
+	fmt.Fprintln(
+		os.Stderr,
+		">>> Promotion step is waiting. Press Enter to release...",
+	)
 	fmt.Fprintln(os.Stderr, "")
 
 	scanner := bufio.NewScanner(os.Stdin)
@@ -165,5 +170,5 @@ func handleInteractive(w http.ResponseWriter) {
 
 	log.Printf("gate released by user")
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("released\n")) // nolint: errcheck
+	_, _ = w.Write([]byte("released\n"))
 }
