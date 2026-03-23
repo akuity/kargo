@@ -16,6 +16,38 @@ import (
 // @version v1alpha1
 // @description REST API for Kargo
 // @BasePath /
+// @tag.name Core
+// @tag.description Operations on core Kargo resources: Projects, Stages, Freight, Warehouses, and Promotions.
+// @tag.name System
+// @tag.description Cluster-wide administrative operations: version info, login, and global configuration.
+// @tag.name Rbac
+// @tag.description Role-based access control: managing Kargo Roles and API tokens.
+// @tag.name Credentials
+// @tag.description Operations on credentials used by Kargo to authenticate with external systems.
+// @tag.name Verifications
+// @tag.description Operations on Argo Rollouts AnalysisRun and AnalysisTemplate verification resources.
+// @tag.name Resources
+// @tag.description Generic operations for creating, updating, and deleting arbitrary Kargo resources.
+// @tag.name Events
+// @tag.description Operations for reading Kubernetes Events associated with Kargo resources.
+// @tag.name Config
+// @tag.description Operations on configuration resources (ProjectConfig, ClusterConfig).
+// @tag.name Generic Config
+// @tag.description Operations on generic ConfigMap-backed configuration within Kargo.
+// @tag.name Repo Credentials
+// @tag.description Credentials used to authenticate with Git, Helm, or container image repositories.
+// @tag.name Generic Credentials
+// @tag.description Arbitrary secret credentials not tied to a specific repository type.
+// @tag.name Project-Level
+// @tag.description Resource is namespaced to a specific Kargo project.
+// @tag.name System-Level
+// @tag.description Resource lives in the Kargo system namespace and applies globally.
+// @tag.name Cluster-Scoped Resource
+// @tag.description Resource is cluster-scoped (not namespaced).
+// @tag.name Shared
+// @tag.description Resource is accessible across multiple projects or scopes.
+// @tag.name Singleton
+// @tag.description Only one instance of this resource exists per scope (project, cluster, etc.).
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
