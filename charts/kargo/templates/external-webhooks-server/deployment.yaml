@@ -44,10 +44,11 @@ spec:
         {{- end }}
       {{- end }}
     spec:
-      {{- if .Values.rbac.useDefaultServiceAccount }}
-      automountServiceAccountToken: false
-      {{- else }}
+      {{- if not .Values.rbac.useDefaultServiceAccount }}
       serviceAccount: kargo-external-webhooks-server
+      {{- end }}
+      {{- if .Values.rbac.disableAutomountServiceAccountToken }}
+      automountServiceAccountToken: false
       {{- end }}
       {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
       affinity:
