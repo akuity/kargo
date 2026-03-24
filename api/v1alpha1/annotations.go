@@ -70,6 +70,11 @@ const (
 	// is set to true.
 	AnnotationValueTrue = "true"
 
+	// AnnotationKeyRollback is an annotation key that can be set on a Promotion
+	// to indicate that it was created as a rollback to a previously verified
+	// piece of Freight.
+	AnnotationKeyRollback = "kargo.akuity.io/rollback"
+
 	// AnnotationKeyGitHubTokenScope is the key for an annotation that can
 	// optionally be added to any Secret resources that represents a GitHub App
 	// installation in order to limit the scope of the installation access tokens

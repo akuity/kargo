@@ -67,6 +67,9 @@ type Context struct {
 	Vars []kargoapi.ExpressionVariable
 	// Actor is the name of the actor triggering the Promotion.
 	Actor string
+	// Rollback indicates whether this Promotion is a rollback to a previously
+	// verified piece of Freight.
+	Rollback bool
 
 	// currentStepMetadata is a pointer to the StepMetadata for the
 	// current step being executed. It is used to track the execution state of
@@ -143,6 +146,8 @@ func NewContext(
 		StepExecutionMetadata: promo.Status.StepExecutionMetadata,
 		State:                 State(promo.Status.GetState()),
 		Vars:                  promo.Spec.Vars,
+		Rollback: promo.Annotations[kargoapi.AnnotationKeyRollback] ==
+			kargoapi.AnnotationValueTrue,
 	}
 
 	if stage != nil && len(stage.Spec.RequestedFreight) > 0 {
@@ -230,6 +235,7 @@ func (c *Context) DeepCopy() Context {
 		State:                 c.State.DeepCopy(),
 		Vars:                  slices.Clone(c.Vars),
 		Actor:                 c.Actor,
+		Rollback:              c.Rollback,
 	}
 
 	if c.FreightRequests != nil {
@@ -385,6 +391,9 @@ type StepContext struct {
 	Promotion string
 	// PromotionActor is the name of the actor triggering the Promotion.
 	PromotionActor string
+	// Rollback indicates whether this Promotion is a rollback to a previously
+	// verified piece of Freight.
+	Rollback bool
 	// FreightRequests is the list of Freight from various origins that is
 	// requested by the Stage targeted by the Promotion. This information is
 	// sometimes useful to Step that reference a particular artifact and, in the

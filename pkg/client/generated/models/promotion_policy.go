@@ -24,6 +24,15 @@ type PromotionPolicy struct {
 	// artifacts are detected.
 	AutoPromotionEnabled bool `json:"autoPromotionEnabled,omitempty"`
 
+	// AutoRollback describes the conditions under which this Stage should
+	// automatically roll back to the last known-good (verified) Freight. When
+	// nil, auto-rollback is disabled.
+	//
+	// Kargo Enterprise only: This field is ignored in Kargo OSS.
+	AutoRollback struct {
+		AutoRollbackConfig
+	} `json:"autoRollback,omitempty"`
+
 	// Stage is the name of the Stage to which this policy applies.
 	//
 	// Deprecated: Use StageSelector instead.
@@ -42,6 +51,10 @@ type PromotionPolicy struct {
 func (m *PromotionPolicy) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateAutoRollback(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateStageSelector(formats); err != nil {
 		res = append(res, err)
 	}
@@ -49,6 +62,14 @@ func (m *PromotionPolicy) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *PromotionPolicy) validateAutoRollback(formats strfmt.Registry) error {
+	if swag.IsZero(m.AutoRollback) { // not required
+		return nil
+	}
+
 	return nil
 }
 
@@ -64,6 +85,10 @@ func (m *PromotionPolicy) validateStageSelector(formats strfmt.Registry) error {
 func (m *PromotionPolicy) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateAutoRollback(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateStageSelector(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -71,6 +96,11 @@ func (m *PromotionPolicy) ContextValidate(ctx context.Context, formats strfmt.Re
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *PromotionPolicy) contextValidateAutoRollback(ctx context.Context, formats strfmt.Registry) error {
+
 	return nil
 }
 
