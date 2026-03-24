@@ -35,7 +35,6 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-admin
-{{- if not .Values.rbac.useDefaultServiceAccount }}
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-controller
@@ -43,5 +42,4 @@ subjects:
 - kind: ServiceAccount
   namespace:  {{ .Release.Namespace }}
   name: kargo-api
-{{- end }}
 {{- end }}
