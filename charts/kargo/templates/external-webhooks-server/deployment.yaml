@@ -44,7 +44,11 @@ spec:
         {{- end }}
       {{- end }}
     spec:
+      {{- if .Values.rbac.useDefaultServiceAccount }}
+      automountServiceAccountToken: false
+      {{- else }}
       serviceAccount: kargo-external-webhooks-server
+      {{- end }}
       {{- with .Values.externalWebhooksServer.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

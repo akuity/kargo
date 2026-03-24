@@ -44,7 +44,11 @@ spec:
         {{- end }}
       {{- end }}
     spec:
+      {{- if .Values.rbac.useDefaultServiceAccount }}
+      automountServiceAccountToken: false
+      {{- else }}
       serviceAccount: kargo-controller
+      {{- end }}
       {{- with .Values.controller.affinity | default .Values.global.affinity }}
       affinity:
         {{- toYaml . | nindent 8 }}

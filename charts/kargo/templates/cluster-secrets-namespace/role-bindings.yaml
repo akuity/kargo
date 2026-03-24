@@ -1,3 +1,4 @@
+{{- if not .Values.rbac.useDefaultServiceAccount }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -16,6 +17,7 @@ subjects:
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-external-webhooks-server
+{{- end }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -29,9 +31,11 @@ roleRef:
   kind: Role
   name: kargo-cluster-secrets-admin
 subjects:
+{{- if not .Values.rbac.useDefaultServiceAccount }}
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-api
+{{- end }}
 - kind: ServiceAccount
   namespace: {{ .Release.Namespace }}
   name: kargo-admin
