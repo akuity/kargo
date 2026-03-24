@@ -902,18 +902,22 @@ func (g *githubVerifiedPusher) replayCommits(
 			Message: &message,
 			Tree:    &github.Tree{SHA: rc.Commit.Tree.SHA},
 			Parents: parents,
+			Author:  rc.Commit.Author,
+			Committer: &github.CommitAuthor{
+				Name:  &appName,
+				Email: &appEmail,
+			},
 		}
 
-		// Determine whether this is an app-authored commit.
+		// When the commit is app-authored, clear Author and Committer
+		// so the authenticated identity (GitHub App) is used for both
+		// and the commit receives the "Verified" badge.
 		appAuthored := g.isAppAuthored(
 			rc, appName, appEmail, appFingerprint, commitSigs,
 		)
-		if !appAuthored {
-			// Preserve original author. The commit will not receive
-			// GitHub's "Verified" badge. Committer is always left nil
-			// so the authenticated identity (GitHub App) is used — it
-			// is the actual committer in all cases.
-			commit.Author = rc.Commit.Author
+		if appAuthored {
+			commit.Author = nil
+			commit.Committer = nil
 		}
 
 		newCommit, _, createErr := client.CreateCommit(

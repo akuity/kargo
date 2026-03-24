@@ -653,7 +653,7 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 			},
 		},
 		{
-			name:   "app-authored commit omits author",
+			name:   "app-authored commit clears author and committer",
 			pusher: &githubVerifiedPusher{},
 			client: &mockGitHubVerifiedPushClient{
 				createCommitFn: func(
@@ -694,7 +694,7 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 			},
 		},
 		{
-			name:   "non-app commit preserves author",
+			name:   "non-app commit preserves author and sets app as committer",
 			pusher: &githubVerifiedPusher{},
 			client: &mockGitHubVerifiedPushClient{
 				createCommitFn: func(
@@ -703,14 +703,14 @@ func Test_githubVerifiedPusher_replayCommits(t *testing.T) {
 					commit github.Commit,
 					_ *github.CreateCommitOptions,
 				) (*github.Commit, *github.Response, error) {
-					// Non-app: Author/Committer preserved.
+					// Non-app: Author preserved, Committer set to app.
 					require.NotNil(t, commit.Author)
 					require.Equal(
 						t, "Custom", commit.Author.GetName(),
 					)
 					require.NotNil(t, commit.Committer)
 					require.Equal(
-						t, "Custom", commit.Committer.GetName(),
+						t, "Kargo", commit.Committer.GetName(),
 					)
 					return &github.Commit{
 						SHA: ptr.To("signed1"),
