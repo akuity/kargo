@@ -1,4 +1,4 @@
-{{- if and .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly }}
+{{- if and .Values.controller.argocd.integrationEnabled .Values.controller.argocd.watchArgocdNamespaceOnly (not .Values.rbac.useDefaultServiceAccount) }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:

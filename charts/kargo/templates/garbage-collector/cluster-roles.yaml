@@ -1,4 +1,4 @@
-{{- if and .Values.garbageCollector.enabled .Values.rbac.installClusterRoles }}
+{{- if and .Values.garbageCollector.enabled .Values.rbac.installClusterRoles (not .Values.rbac.useDefaultServiceAccount) }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
