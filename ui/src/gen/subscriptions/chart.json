@@ -24,6 +24,10 @@
    "maximum": 100,
    "default": 20,
    "description": "DiscoveryLimit is an optional limit on the number of chart versions that can be discovered for this subscription. The limit is applied after filtering charts based on the semverConstraint field. The upper limit for this field is 100."
+  },
+  "insecureSkipTLSVerify": {
+   "type": "boolean",
+   "description": "InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution."
   }
  },
  "additionalProperties": false
