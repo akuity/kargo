@@ -2205,7 +2205,7 @@ RawFormat specifies the format for raw resource representation.
  GitDiscoveryResult represents the result of a Git discovery operation for a GitSubscription.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.     |
+| repoURL | [string](#string) |  RepoURL is the repository URL of the GitSubscription.  TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.     |
 | commits | [DiscoveredCommit](#github-com-akuity-kargo-api-v1alpha1-DiscoveredCommit) |  Commits is a list of commits discovered by the Warehouse for the GitSubscription. An empty list indicates that the discovery operation was successful, but no commits matching the GitSubscription criteria were found.  +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitHubWebhookReceiverConfig"></a>
@@ -2241,7 +2241,7 @@ RawFormat specifies the format for raw resource representation.
 | ignoreTagsRegexes | [string](#string) |  IgnoreTagsRegexes is a list of regular expressions that can optionally be used to exclude tags from consideration. Only has effect when CommitSelectionStrategy is Lexical, NewestTag, or SemVer. |
 | includePaths | [string](#string) |  IncludePaths is a list of selectors that designate paths in the repository that should trigger the production of new Freight when changes are detected therein. |
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
-| repoURL | [string](#string) |  URL is the repository's URL. This is a required field. |
+| repoURL | [string](#string) |  URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer. |
 | strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag contains ALL of major, minor, and patch version components. Only has effect when CommitSelectionStrategy is SemVer. |
 

@@ -152,7 +152,9 @@ type GitCloneConfig struct {
 	// Indicates whether to recursively clone submodules. Default is false. Note that any
 	// provided credentials must also be valid for the submodules.
 	RecurseSubmodules bool `json:"recurseSubmodules,omitempty"`
-	// The URL of a remote Git repository to clone. Required.
+	// The URL of a remote Git repository to clone. Required. Deprecated: Support for SSH URLs
+	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
+	// v1.13.0. Use HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 }
 
@@ -225,7 +227,9 @@ type GitMergePRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of the remote Git repository containing the pull request.
+	// The URL of the remote Git repository containing the pull request. Deprecated: Support for
+	// SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be
+	// removed in v1.13.0. Use HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 	// If true, the step will return RUNNING instead of FAILED when the PR is not yet mergeable.
 	// The merge will be retried on the next reconciliation until it succeeds or times out.
@@ -247,7 +251,9 @@ type GitOpenPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone.
+	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
+	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
+	// HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 	// The branch containing the changes to be merged. This branch must already exist and be up
 	// to date on the remote.
@@ -348,7 +354,9 @@ type GitWaitForPRConfig struct {
 	// and 'gitlab' are supported. Kargo will try to infer the provider if it is not explicitly
 	// specified.
 	Provider *Provider `json:"provider,omitempty"`
-	// The URL of a remote Git repository to clone.
+	// The URL of a remote Git repository to clone. Deprecated: Support for SSH URLs (ssh:// and
+	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
+	// HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
 }
 
