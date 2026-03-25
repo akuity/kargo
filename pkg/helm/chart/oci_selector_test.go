@@ -47,6 +47,19 @@ func TestNewOCISelector(t *testing.T) {
 				require.NotNil(t, o.repo)
 			},
 		},
+		{
+			name: "insecureSkipTLSVerify propagated to authorizer",
+			sub: kargoapi.ChartSubscription{
+				RepoURL:               "oci://charts.example.com/repo",
+				InsecureSkipTLSVerify: true,
+			},
+			assertions: func(t *testing.T, s Selector, err error) {
+				require.NoError(t, err)
+				o, ok := s.(*ociSelector)
+				require.True(t, ok)
+				require.True(t, o.insecureSkipTLSVerify)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

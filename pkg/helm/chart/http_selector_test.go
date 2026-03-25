@@ -69,6 +69,60 @@ func TestNewHTTPSelector(t *testing.T) {
 	}
 }
 
+func Test_httpSelector_Select_insecureTLS(t *testing.T) {
+	// Use a TLS test server with a self-signed certificate to verify that
+	// insecureSkipTLSVerify controls whether TLS errors are ignored.
+	tlsServer := httptest.NewTLSServer(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			defer r.Body.Close()
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write([]byte(`entries:
+  fake-chart:
+    - version: 1.0.0
+`))
+			require.NoError(t, err)
+		}),
+	)
+	defer tlsServer.Close()
+
+	testCases := []struct {
+		name                  string
+		insecureSkipTLSVerify bool
+		assertions            func(t *testing.T, versions []string, err error)
+	}{
+		{
+			name:                  "TLS error when insecureSkipTLSVerify is false",
+			insecureSkipTLSVerify: false,
+			assertions: func(t *testing.T, _ []string, err error) {
+				require.ErrorContains(t, err, "error querying repository index")
+			},
+		},
+		{
+			name:                  "success when insecureSkipTLSVerify is true",
+			insecureSkipTLSVerify: true,
+			assertions: func(t *testing.T, versions []string, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []string{"1.0.0"}, versions)
+			},
+		},
+	}
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			repoURL := fmt.Sprintf("%s/fake-repo", tlsServer.URL)
+			s := &httpSelector{
+				baseSelector: &baseSelector{
+					repoURL:               repoURL,
+					insecureSkipTLSVerify: testCase.insecureSkipTLSVerify,
+				},
+				indexURL:  fmt.Sprintf("%s/index.yaml", repoURL),
+				chartName: "fake-chart",
+			}
+			versions, err := s.Select(context.Background())
+			testCase.assertions(t, versions, err)
+		})
+	}
+}
+
 func Test_httpSelector_Select(t *testing.T) {
 	// This is a mock registry. Depending on the request path, it returns a 404,
 	// invalid YAML, or valid YAML.

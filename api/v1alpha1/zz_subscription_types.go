@@ -8,10 +8,13 @@ type ChartSubscription struct {
 	// discovered for this subscription. The limit is applied after filtering charts based on
 	// the semverConstraint field. The upper limit for this field is 100.
 	DiscoveryLimit int64 `json:"discoveryLimit,omitempty" protobuf:"varint,1,opt,name=discoveryLimit"`
+	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
+	// when connecting to the repository. This should be enabled only with great caution.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,2,opt,name=insecureSkipTLSVerify"`
 	// Name specifies the name of a Helm chart to subscribe to within a classic chart repository
 	// specified by the repoURL field. This field is required when the repoURL field points to a
 	// classic chart repository and MUST otherwise be empty.
-	Name string `json:"name,omitempty" protobuf:"bytes,2,opt,name=name"`
+	Name string `json:"name,omitempty" protobuf:"bytes,3,opt,name=name"`
 	// RepoURL specifies the URL of a Helm chart repository. It may be a classic chart
 	// repository (using HTTP/S) OR a repository within an OCI registry. Classic chart
 	// repositories can contain differently named charts. When this field points to such a
@@ -19,12 +22,12 @@ type ChartSubscription struct {
 	// within that repository. In the case of a repository within an OCI registry, the URL
 	// implicitly points to a specific chart and the name field MUST NOT be used. This field is
 	// required.
-	RepoURL string `json:"repoURL" protobuf:"bytes,3,opt,name=repoURL"`
+	RepoURL string `json:"repoURL" protobuf:"bytes,4,opt,name=repoURL"`
 	// SemverConstraint specifies constraints on what new chart versions are permissible. When
 	// left unspecified, there will be no constraints, which means the latest version of the
 	// chart will always be used. Care should be taken with leaving this field unspecified, as
 	// it can lead to the unanticipated rollout of breaking changes.
-	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,4,opt,name=semverConstraint"`
+	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,5,opt,name=semverConstraint"`
 }
 
 // GitSubscription defines a subscription to a Git repository.

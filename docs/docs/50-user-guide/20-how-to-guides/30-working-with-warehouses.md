@@ -761,6 +761,14 @@ Helm chart repository subscriptions can be defined using the following fields:
 
   The default is `20`.
 
+- `insecureSkipTLSVerify`: Set to `true` to disable validation of the
+  repository's TLS certificate.
+
+  :::warning
+
+  This is a security risk and should only be used in development environments.
+  :::
+
   Example:
 
   ```yaml
