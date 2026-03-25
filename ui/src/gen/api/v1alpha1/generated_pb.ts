@@ -1818,6 +1818,8 @@ export type GitDiscoveryResult = Message<"github.com.akuity.kargo.api.v1alpha1.G
   /**
    * RepoURL is the repository URL of the GitSubscription.
    *
+   * TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
+   *
    * +kubebuilder:validation:MinLength=1
    * +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
    * +akuity:test-kubebuilder-pattern=GitRepoURLPattern
@@ -2014,7 +2016,9 @@ export type GitSubscription = Message<"github.com.akuity.kargo.api.v1alpha1.GitS
   insecureSkipTLSVerify: boolean;
 
   /**
-   * URL is the repository's URL. This is a required field.
+   * URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
+   * (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
+   * v1.13.0. Use HTTPS URLs instead.
    *
    * @generated from field: optional string repoURL = 12;
    */

@@ -16,6 +16,7 @@ or scheduled for removal.
 
 | Feature | Deprecated In | Removed In | Replacement/Notes |
 |---------|---------------|------------|-------------------|
+| SSH URLs and SSH private keys for Git repositories | v1.10.0 | Scheduled for v1.13.0 | Use HTTPS URLs with a personal access token or equivalent. SSH keys cannot authenticate to git provider APIs, forcing users to maintain two sets of credentials. See [#5858](https://github.com/akuity/kargo/issues/5858) for details. |
 | The Connect-based API | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | A new, RESTful API has been introduced. Most users will not be impacted beyond simply needing to upgrade their CLI when upgrading the back end to v1.9.0 or greater. |
 | "global credentials namespace(s)" | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | Replaced with "shared secrets namespace." See [release notes](./90-v1.9.0.md#-the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |
 | "cluster secrets namespace" | [v1.9.0](./90-v1.9.0.md) | Scheduled for v1.12.0 | Replaced with "system resources namespace." See [release notes](./90-v1.9.0.md#-the-secret-shuffle) and [docs](../40-operator-guide/40-security/40-managing-secrets.md#transitioning) for details. |

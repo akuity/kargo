@@ -855,6 +855,8 @@ message GitCommit {
 message GitDiscoveryResult {
   // RepoURL is the repository URL of the GitSubscription.
   //
+  // TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
+  //
   // +kubebuilder:validation:MinLength=1
   // +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
   // +akuity:test-kubebuilder-pattern=GitRepoURLPattern
@@ -958,7 +960,9 @@ message GitSubscription {
   // when connecting to the repository. This should be enabled only with great caution.
   optional bool insecureSkipTLSVerify = 11;
 
-  // URL is the repository's URL. This is a required field.
+  // URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
+  // (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
+  // v1.13.0. Use HTTPS URLs instead.
   optional string repoURL = 12;
 
   // SemverConstraint specifies constraints on what new tagged commits are considered in

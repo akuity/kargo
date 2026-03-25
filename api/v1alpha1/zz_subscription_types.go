@@ -71,7 +71,9 @@ type GitSubscription struct {
 	// InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored
 	// when connecting to the repository. This should be enabled only with great caution.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty" protobuf:"varint,11,opt,name=insecureSkipTLSVerify"`
-	// URL is the repository's URL. This is a required field.
+	// URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs
+	// (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in
+	// v1.13.0. Use HTTPS URLs instead.
 	RepoURL string `json:"repoURL" protobuf:"bytes,12,opt,name=repoURL"`
 	// SemverConstraint specifies constraints on what new tagged commits are considered in
 	// determining the newest commit of interest. Only has effect when CommitSelectionStrategy
