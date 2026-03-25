@@ -70,5 +70,5 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
     return [item];
   });
 
-  return <Collapse expandIconPosition='end' items={items} />;
+  return <Collapse expandIconPosition='end' bordered={false} items={items} />;
 };
