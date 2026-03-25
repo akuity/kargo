@@ -225,6 +225,7 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 	if b.creds == nil {
 		return nil
 	}
+	// TODO(v1.13.0): Remove this block when SSH support is removed.
 	// If an SSH key was provided, use that.
 	if b.creds.SSHPrivateKey != "" {
 		sshPath := filepath.Join(homeDir, ".ssh")
@@ -353,6 +354,7 @@ func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 
 func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := b.buildCommand("git", arg...)
+	// TODO(v1.13.0): Remove this line when SSH support is removed.
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
 		cmd.Env = append(

@@ -9,7 +9,7 @@
             "type": "string",
             "minLength": 1,
             "pattern": "(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))$",
-            "description": "URL is the repository's URL. This is a required field."
+            "description": "URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead."
         },
         "commitSelectionStrategy": {
             "type": "string",
