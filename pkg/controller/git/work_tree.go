@@ -416,7 +416,7 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 }
 
 func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-only", commitID))
+	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-only", "--first-parent", commitID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
