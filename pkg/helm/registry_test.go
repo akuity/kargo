@@ -49,7 +49,7 @@ func TestNewRegistryClient(t *testing.T) {
 }
 
 func TestNewEphemeralAuthorizer(t *testing.T) {
-	t.Run("secure", func(t *testing.T) {
+	t.Run("skipping tls cert verification", func(t *testing.T) {
 		authorizer := NewEphemeralAuthorizer(false)
 
 		assert.NotNil(t, authorizer)

@@ -117,7 +117,7 @@ func Test_httpSelector_Select_insecureTLS(t *testing.T) {
 				indexURL:  fmt.Sprintf("%s/index.yaml", repoURL),
 				chartName: "fake-chart",
 			}
-			versions, err := s.Select(context.Background())
+			versions, err := s.Select(t.Context())
 			testCase.assertions(t, versions, err)
 		})
 	}
