@@ -1,7 +1,6 @@
 package replicatedresource
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -45,7 +44,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.True(t, resp.Allowed)
 			},
 		},
@@ -60,7 +58,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.True(t, resp.Allowed)
 			},
 		},
@@ -75,7 +72,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.True(t, resp.Allowed)
 			},
 		},
@@ -90,7 +86,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.False(t, resp.Allowed)
 			},
 		},
@@ -105,7 +100,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.False(t, resp.Allowed)
 			},
 		},
@@ -120,7 +114,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.False(t, resp.Allowed)
 			},
 		},
@@ -135,7 +128,6 @@ func TestHandle(t *testing.T) {
 				},
 			},
 			assert: func(t *testing.T, resp admission.Response) {
-				t.Helper()
 				require.False(t, resp.Allowed)
 			},
 		},
@@ -144,7 +136,7 @@ func TestHandle(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			t.Parallel()
 			w := newWebhook(cfg)
-			resp := w.Handle(context.Background(), testCase.req)
+			resp := w.Handle(t.Context(), testCase.req)
 			testCase.assert(t, resp)
 		})
 	}
