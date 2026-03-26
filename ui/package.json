@@ -92,7 +92,7 @@
     "recharts": "3.6.0",
     "semver": "7.7.3",
     "vite-plugin-monaco-editor": "1.1.0",
-    "yaml": "2.8.2",
+    "yaml": "2.8.3",
     "zod": "4.1.13"
   }
 }
