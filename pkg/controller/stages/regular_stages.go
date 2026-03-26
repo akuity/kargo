@@ -1939,6 +1939,7 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 	stage metav1.ObjectMeta,
 ) (bool, error) {
 	logger := logging.LoggerFromContext(ctx)
+	now := time.Now()
 
 	projectCfg := &kargoapi.ProjectConfig{}
 	if err := r.client.Get(ctx, types.NamespacedName{
@@ -1989,6 +1990,16 @@ func (r *RegularStageReconciler) autoPromotionAllowed(
 		}
 
 		// If we reach this point, we have found a matching PromotionPolicy.
+
+		allowed, err := api.CheckPromotionWindows(ctx, now, policy.PromotionWindows, r.client, stage.Namespace)
+		if err != nil {
+			return policy.AutoPromotionEnabled, fmt.Errorf("error checking PromotionWindows for PromotionPolicy in Project %q: %w", stage.Namespace, err)
+		}
+		if !allowed {
+			logger.Debug("auto promotion denied by promotion window")
+			return false, nil
+		}
+
 		logger.Debug(
 			"found PromotionPolicy associated with Stage",
 			"autoPromotionEnabled", policy.AutoPromotionEnabled,
