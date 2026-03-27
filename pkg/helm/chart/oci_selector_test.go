@@ -1,7 +1,6 @@
 package chart
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -79,7 +78,7 @@ func Test_ociSelector_Select(t *testing.T) {
 		nil,
 	)
 	require.NoError(t, err)
-	versions, err := s.Select(context.Background())
+	versions, err := s.Select(t.Context())
 	require.NoError(t, err)
 	require.NotEmpty(t, versions)
 }

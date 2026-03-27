@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -750,7 +749,7 @@ metadata:
 				WorkDir: workDir,
 				Project: "test-project",
 			}
-			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, workDir, result, err)
 		})
 	}

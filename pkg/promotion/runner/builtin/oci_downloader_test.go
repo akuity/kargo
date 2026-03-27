@@ -220,7 +220,7 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			img, err := runner.resolveImage(context.Background(), stepCtx, tt.cfg)
+			img, err := runner.resolveImage(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, img, err)
 		})
 	}
@@ -404,7 +404,7 @@ func Test_ociDownloader_buildRemoteOptions(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			opts, err := runner.buildRemoteOptions(context.Background(), stepCtx, tt.cfg, ref, credType)
+			opts, err := runner.buildRemoteOptions(t.Context(), stepCtx, tt.cfg, ref, credType)
 			tt.assertions(t, opts, err)
 		})
 	}
@@ -611,7 +611,7 @@ func Test_ociDownloader_getAuthOption(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			opt, err := runner.getAuthOption(context.Background(), stepCtx, ref, credType)
+			opt, err := runner.getAuthOption(t.Context(), stepCtx, ref, credType)
 			tt.assertions(t, opt, err)
 		})
 	}

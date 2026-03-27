@@ -190,7 +190,7 @@ func TestLocalStepExecutor_ExecuteStep(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executor := NewLocalStepExecutor(tt.registry, nil, nil, nil)
-			result, err := executor.ExecuteStep(context.Background(), tt.request)
+			result, err := executor.ExecuteStep(t.Context(), tt.request)
 			tt.assertions(t, result, err)
 		})
 	}

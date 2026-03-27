@@ -187,7 +187,7 @@ func TestValidateProjectExists(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.server.validateProjectExists(context.Background(), "fake-project"),
+				testCase.server.validateProjectExists(t.Context(), "fake-project"),
 			)
 		})
 	}

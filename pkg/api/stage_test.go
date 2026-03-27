@@ -57,7 +57,7 @@ func TestGetStage(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			stage, err := GetStage(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",
@@ -261,7 +261,7 @@ func TestListFreightAvailableToStage(t *testing.T) {
 				},
 			}
 			freight, err := ListFreightAvailableToStage(
-				context.Background(), c, stage,
+				t.Context(), c, stage,
 			)
 			testCase.assertions(t, freight, err)
 		})
@@ -275,7 +275,7 @@ func TestReverifyStageFreight(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -292,7 +292,7 @@ func TestReverifyStageFreight(t *testing.T) {
 			},
 		).Build()
 
-		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -318,7 +318,7 @@ func TestReverifyStageFreight(t *testing.T) {
 			},
 		).Build()
 
-		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -345,7 +345,7 @@ func TestReverifyStageFreight(t *testing.T) {
 			},
 		).Build()
 
-		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -374,13 +374,13 @@ func TestReverifyStageFreight(t *testing.T) {
 			},
 		).Build()
 
-		err := ReverifyStageFreight(context.TODO(), c, types.NamespacedName{
+		err := ReverifyStageFreight(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
 
-		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+		stage, err := GetStage(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -398,7 +398,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -415,7 +415,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -441,7 +441,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -468,7 +468,7 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -498,13 +498,13 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
 
-		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+		stage, err := GetStage(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -535,13 +535,13 @@ func TestAbortStageFreightVerification(t *testing.T) {
 			},
 		).Build()
 
-		err := AbortStageFreightVerification(context.TODO(), c, types.NamespacedName{
+		err := AbortStageFreightVerification(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
 		require.NoError(t, err)
 
-		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+		stage, err := GetStage(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -559,7 +559,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		err := AnnotateStageWithArgoCDContext(context.TODO(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
+		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-stage",
 				Namespace: "fake-namespace",
@@ -578,7 +578,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 			},
 		).Build()
 
-		err := AnnotateStageWithArgoCDContext(context.TODO(), c, []kargoapi.HealthCheckStep{
+		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{
 			{
 				Uses: "argocd-update",
 				Config: &apiextensionsv1.JSON{
@@ -593,7 +593,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+		stage, err := GetStage(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})
@@ -616,7 +616,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 			},
 		).Build()
 
-		err := AnnotateStageWithArgoCDContext(context.TODO(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
+		err := AnnotateStageWithArgoCDContext(t.Context(), c, []kargoapi.HealthCheckStep{}, &kargoapi.Stage{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "fake-stage",
 				Namespace: "fake-namespace",
@@ -624,7 +624,7 @@ func TestAnnotateStageWithArgoCDContext(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		stage, err := GetStage(context.TODO(), c, types.NamespacedName{
+		stage, err := GetStage(t.Context(), c, types.NamespacedName{
 			Namespace: "fake-namespace",
 			Name:      "fake-stage",
 		})

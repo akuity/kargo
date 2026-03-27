@@ -101,7 +101,7 @@ func TestIndexField(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			index := NewSharedFieldIndexer(tt.internalIndex)
-			err := index.IndexField(context.Background(), &mockObject{}, "metadata.name", nil)
+			err := index.IndexField(t.Context(), &mockObject{}, "metadata.name", nil)
 			tt.assertions(t, index, tt.key, err)
 		})
 	}
