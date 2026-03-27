@@ -69,7 +69,7 @@ type Interface interface {
 	// - *PullRequest: the merged PR if successful
 	// - bool: true if merge was performed, false if PR is not ready to merge
 	// - error: only for actual errors (auth, network, invalid PR, etc.)
-	MergePullRequest(context.Context, *MergePullRequestOpts) (*PullRequest, bool, error)
+	MergePullRequest(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
 
 	// GetCommitURL returns a commit URL inferred from the provided repository URL
 	// and commit ID.
@@ -111,8 +111,6 @@ type ListPullRequestOptions struct {
 // MergePullRequestOpts encapsulates the options used when merging a pull
 // request.
 type MergePullRequestOpts struct {
-	// Number is the pull request number to merge.
-	Number int64
 	// MergeMethod is the method to use when merging. If empty, uses the
 	// repository's default merge method.
 	MergeMethod MergeMethod
