@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+
+	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 func TestRepo(t *testing.T) {
@@ -175,4 +177,88 @@ with a body
 		require.True(t, os.IsNotExist(err))
 	})
 
+}
+
+func TestGetDiffPathsForMergeCommit(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	wt := internalWorkTree(t, rep)
+
+	// Create initial commit on main with base files
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/foo", rep.Dir()), 0o755))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file1.txt", rep.Dir()),
+			[]byte("base"),
+			0o600,
+		),
+	)
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file2.txt", rep.Dir()),
+			[]byte("base"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("initial commit", nil))
+
+	// Create branch-a and modify file1
+	require.NoError(t, rep.CreateChildBranch("branch-a"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file1.txt", rep.Dir()),
+			[]byte("changed by branch-a"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("branch-a: modify file1", nil))
+
+	// Back to main, create branch-b, modify file2
+	require.NoError(t, rep.Checkout("main"))
+	require.NoError(t, rep.CreateChildBranch("branch-b"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file2.txt", rep.Dir()),
+			[]byte("changed by branch-b"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("branch-b: modify file2", nil))
+
+	// Merge branch-b into main
+	require.NoError(t, rep.Checkout("main"))
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "branch-b", "--no-ff", "-m", "merge branch-b",
+	))
+	require.NoError(t, err)
+
+	// Merge branch-a into main
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "branch-a", "--no-ff", "-m", "merge branch-a",
+	))
+	require.NoError(t, err)
+
+	mergeCommitID, err := rep.LastCommitID()
+	require.NoError(t, err)
+
+	// GetDiffPathsForCommitID on the merge commit should return only
+	// the file introduced by that merge (file1, from branch-a), not
+	// file2 which was already on main via the earlier merge of branch-b.
+	paths, err := rep.GetDiffPathsForCommitID(mergeCommitID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"foo/file1.txt"}, paths)
 }
