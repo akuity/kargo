@@ -1,7 +1,6 @@
 package project
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -120,7 +119,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				cfg:    libWebhook.Config{KargoNamespace: "kargo-system"},
 			}
 
-			ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
+			ctx := admission.NewContextWithRequest(t.Context(), admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
 					DryRun: &tt.isDryRun,
 				},
@@ -141,7 +140,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 		},
 	}
 
-	warnings, err := w.ValidateUpdate(context.Background(), project, project)
+	warnings, err := w.ValidateUpdate(t.Context(), project, project)
 	assert.Empty(t, warnings)
 	assert.NoError(t, err)
 }
@@ -155,7 +154,7 @@ func Test_webhook_ValidateDelete(t *testing.T) {
 		},
 	}
 
-	warnings, err := w.ValidateDelete(context.Background(), project)
+	warnings, err := w.ValidateDelete(t.Context(), project)
 	assert.Empty(t, warnings)
 	assert.NoError(t, err)
 }
@@ -239,7 +238,7 @@ func Test_webhook_ensureNamespace(t *testing.T) {
 				client: c,
 			}
 
-			err := w.ensureNamespace(context.Background(), tt.project)
+			err := w.ensureNamespace(t.Context(), tt.project)
 			tt.assertions(t, err)
 		})
 	}
@@ -297,7 +296,7 @@ func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
 
 				// Check role binding creation
 				rb := &rbacv1.RoleBinding{}
-				err = c.Get(context.Background(), client.ObjectKey{
+				err = c.Get(t.Context(), client.ObjectKey{
 					Name:      roleBindingName,
 					Namespace: testProjectName,
 				}, rb)
@@ -334,7 +333,7 @@ func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
 				cfg:    libWebhook.Config{KargoNamespace: kargoNamespace},
 			}
 
-			err := w.ensureProjectAdminPermissions(context.Background(), tt.project)
+			err := w.ensureProjectAdminPermissions(t.Context(), tt.project)
 			tt.assertions(t, err, c)
 		})
 	}

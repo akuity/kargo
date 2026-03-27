@@ -285,7 +285,7 @@ func TestMapBasedRegistry_WithFunctionValues(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify the factory function works
-	result, err := reg.Value(context.Background(), "test")
+	result, err := reg.Value(t.Context(), "test")
 	require.NoError(t, err)
 	require.Equal(t, "output-test", result)
 }

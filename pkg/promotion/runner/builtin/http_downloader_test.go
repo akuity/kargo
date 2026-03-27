@@ -373,7 +373,7 @@ func Test_httpDownloader_run(t *testing.T) {
 
 			// Run the downloader
 			d := &httpDownloader{}
-			res, err := d.run(context.Background(), stepCtx, tt.cfg)
+			res, err := d.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, res, err, workDir)
 		})
 	}
@@ -524,7 +524,7 @@ func Test_httpDownloader_downloadToFile(t *testing.T) {
 
 			// Download the file
 			d := &httpDownloader{}
-			err := d.downloadToFile(context.Background(), resp, outPath)
+			err := d.downloadToFile(t.Context(), resp, outPath)
 			tt.assertions(t, err, outPath)
 		})
 	}
@@ -553,7 +553,7 @@ func Test_httpDownloader_downloadToFile_contextCancellation(t *testing.T) {
 	outPath := filepath.Join(tempDir, "interrupted-file.txt")
 
 	// Create context that will be canceled
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	// Cancel context after a short delay
 	go func() {
@@ -591,7 +591,7 @@ func Test_httpDownloader_downloadToFile_sizeExceeded(t *testing.T) {
 	outPath := filepath.Join(tempDir, "large-file.txt")
 
 	d := &httpDownloader{}
-	err := d.downloadToFile(context.Background(), resp, outPath)
+	err := d.downloadToFile(t.Context(), resp, outPath)
 
 	require.ErrorContains(t, err, "download exceeds limit")
 

@@ -3,7 +3,6 @@
 package image
 
 import (
-	"context"
 	"testing"
 
 	"github.com/Masterminds/semver/v3"
@@ -28,7 +27,7 @@ func TestSelectImageDockerHub(t *testing.T) {
 	logger, err := logging.NewLogger(logging.TraceLevel, logging.DefaultFormat)
 	require.NoError(t, err)
 
-	ctx := logging.ContextWithLogger(context.Background(), logger)
+	ctx := logging.ContextWithLogger(t.Context(), logger)
 
 	t.Run("digest strategy", func(t *testing.T) {
 

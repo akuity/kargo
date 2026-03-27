@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"errors"
 	"testing"
 	"time"
@@ -186,7 +185,7 @@ func Test_newestFromBranchSelector_Select(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commits, err := testCase.selector.Select(context.Background())
+			commits, err := testCase.selector.Select(t.Context())
 			testCase.assertions(t, commits, err)
 		})
 	}

@@ -1,7 +1,6 @@
 package chart
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -201,7 +200,7 @@ func Test_httpSelector_Select(t *testing.T) {
 				),
 				chartName: testCase.chart,
 			}
-			versions, err := s.Select(context.Background())
+			versions, err := s.Select(t.Context())
 			testCase.assertions(t, versions, err)
 		})
 	}

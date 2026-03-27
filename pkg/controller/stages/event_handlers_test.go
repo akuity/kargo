@@ -306,7 +306,7 @@ func Test_downstreamStageEnqueuer_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*kargoapi.Freight]{
 					ObjectOld: tt.oldFreight,
 					ObjectNew: tt.newFreight,
@@ -412,7 +412,7 @@ func Test_stageEnqueuerForApprovedFreight_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*kargoapi.Freight]{
 					ObjectOld: tt.oldFreight,
 					ObjectNew: tt.newFreight,
@@ -678,7 +678,7 @@ func Test_warehouseStageEnqueuer_Create(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Create(
-				context.Background(),
+				t.Context(),
 				event.TypedCreateEvent[*kargoapi.Freight]{
 					Object: tt.freight,
 				},
@@ -1053,7 +1053,7 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*argocd.Application]{
 					ObjectOld: tt.oldApp,
 					ObjectNew: tt.newApp,
@@ -1350,7 +1350,7 @@ func Test_stageEnqueuerForAnalysisRuns_Update(t *testing.T) {
 			queue := &controllertest.Queue{TypedInterface: workqueue.NewTyped[reconcile.Request]()}
 
 			enqueuer.Update(
-				context.Background(),
+				t.Context(),
 				event.TypedUpdateEvent[*rollouts.AnalysisRun]{
 					ObjectOld: tt.oldAnalysisRun,
 					ObjectNew: tt.newAnalysisRun,
@@ -1495,7 +1495,7 @@ func Test_appHealthOrSyncStatusChanged(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.updated,
-				appHealthOrSyncStatusChanged(context.Background(), e),
+				appHealthOrSyncStatusChanged(t.Context(), e),
 			)
 		})
 	}
@@ -1546,7 +1546,7 @@ func Test_analysisRunPhaseChanged(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.updated,
-				analysisRunPhaseChanged(context.Background(), e),
+				analysisRunPhaseChanged(t.Context(), e),
 			)
 		})
 	}

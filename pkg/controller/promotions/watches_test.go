@@ -238,7 +238,7 @@ func TestUpdatedArgoCDAppHandler_Update(t *testing.T) {
 			}
 
 			wq := workqueue.NewTypedRateLimitingQueue(workqueue.DefaultTypedControllerRateLimiter[reconcile.Request]())
-			u.Update(context.TODO(), tt.e, wq)
+			u.Update(t.Context(), tt.e, wq)
 
 			tt.assertions(t, wq)
 		})
@@ -376,7 +376,7 @@ func TestPromotionAcknowledgedByStageHandler_Update(t *testing.T) {
 			wq := workqueue.NewTypedRateLimitingQueue(
 				workqueue.DefaultTypedControllerRateLimiter[reconcile.Request](),
 			)
-			p.Update(context.Background(), testCase.e, wq)
+			p.Update(t.Context(), testCase.e, wq)
 
 			testCase.assertions(t, wq)
 		})

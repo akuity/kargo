@@ -292,7 +292,7 @@ generated: "2023-01-01T00:00:00Z"
 						Version:    dep.Version,
 					}
 				}
-				require.NoError(t, em.setupRepositories(context.Background(), dependencies))
+				require.NoError(t, em.setupRepositories(t.Context(), dependencies))
 			}
 
 			updates, err := em.update(chartDir)
@@ -728,7 +728,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(t.Context(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},
@@ -819,7 +819,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 
 				// Verify an entry exists for the OCI host
 				ociHost := hostForRepositoryURL(ociServer)
-				entry, err := em.authorizer.Get(context.Background(), ociHost)
+				entry, err := em.authorizer.Get(t.Context(), ociHost)
 				assert.NoError(t, err)
 				assert.NotNil(t, entry)
 			},
@@ -852,7 +852,7 @@ func TestEphemeralDependencyManager_setupRepositories(t *testing.T) {
 				}
 			}
 
-			err := em.setupRepositories(context.Background(), dependencies)
+			err := em.setupRepositories(t.Context(), dependencies)
 			tt.assertions(t, registryURL, em, err)
 		})
 	}

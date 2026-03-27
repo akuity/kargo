@@ -213,7 +213,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		},
 	}
 	mockClient.
-		On("CreatePullRequest", context.Background(), testRepoOwner, testRepoName, mock.Anything).
+		On("CreatePullRequest", t.Context(), testRepoOwner, testRepoName, mock.Anything).
 		Return(
 			&gitea.PullRequest{
 				Index: int64(42),
@@ -233,7 +233,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 			nil,
 		)
 	mockClient.
-		On("AddLabelsToIssue", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.Index), mock.Anything).
+		On("AddLabelsToIssue", t.Context(), testRepoOwner, testRepoName, int(mockClient.pr.Index), mock.Anything).
 		Return(
 			[]*gitea.Label{},
 			&gitea.Response{},
@@ -246,7 +246,7 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		repo:   testRepoName,
 		client: mockClient,
 	}
-	pr, err := g.CreatePullRequest(context.Background(), &opts)
+	pr, err := g.CreatePullRequest(t.Context(), &opts)
 
 	// assert that the expectations were met
 	mockClient.AssertExpectations(t)
@@ -291,7 +291,7 @@ func TestGetPullRequest(t *testing.T) {
 	}
 
 	mockClient.
-		On("GetPullRequests", context.Background(), testRepoOwner, testRepoName, int(mockClient.pr.Index)).
+		On("GetPullRequests", t.Context(), testRepoOwner, testRepoName, int(mockClient.pr.Index)).
 		Return(
 			&gitea.PullRequest{
 				Index: int64(42),
@@ -316,7 +316,7 @@ func TestGetPullRequest(t *testing.T) {
 		repo:   testRepoName,
 		client: mockClient,
 	}
-	pr, err := g.GetPullRequest(context.Background(), 42)
+	pr, err := g.GetPullRequest(t.Context(), 42)
 
 	// assert that the expectations were met
 	mockClient.AssertExpectations(t)
@@ -356,7 +356,7 @@ func TestListPullRequests(t *testing.T) {
 		},
 	}
 	mockClient.
-		On("ListPullRequests", context.Background(), testRepoOwner, testRepoName, &gitea.ListPullRequestsOptions{
+		On("ListPullRequests", t.Context(), testRepoOwner, testRepoName, &gitea.ListPullRequestsOptions{
 			State: "all",
 			ListOptions: gitea.ListOptions{
 				Page: 0,
@@ -388,7 +388,7 @@ func TestListPullRequests(t *testing.T) {
 		client: mockClient,
 	}
 
-	prs, err := g.ListPullRequests(context.Background(), &opts)
+	prs, err := g.ListPullRequests(t.Context(), &opts)
 	require.NoError(t, err)
 
 	require.Equal(t, testRepoOwner, mockClient.owner)
@@ -571,7 +571,7 @@ func TestMergePullRequest(t *testing.T) {
 
 			tt.setupMock(mockClient)
 
-			pr, merged, err := p.MergePullRequest(context.Background(), tt.prNumber)
+			pr, merged, err := p.MergePullRequest(t.Context(), tt.prNumber)
 
 			if tt.expectError {
 				require.Error(t, err)

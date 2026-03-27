@@ -48,7 +48,7 @@ c1e3
 -----END CERTIFICATE-----`)
 
 func TestNewAuthInterceptor(t *testing.T) {
-	a := newAuthInterceptor(context.Background(), config.ServerConfig{}, nil)
+	a := newAuthInterceptor(t.Context(), config.ServerConfig{}, nil)
 	require.NotNil(t, a)
 	require.NotNil(t, a.parseUnverifiedJWTFn)
 	require.NotNil(t, a.verifyKargoIssuedTokenFn)
@@ -147,7 +147,7 @@ func TestGetKeySet(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			svr, cfg := testCase.setup()
 			t.Cleanup(svr.Close)
-			keyset, err := getKeySet(context.Background(), cfg)
+			keyset, err := getKeySet(t.Context(), cfg)
 			require.NoError(t, err)
 			require.NotNil(t, keyset)
 		})
@@ -408,7 +408,7 @@ func TestAuthenticate(t *testing.T) {
 				header.Set("Authorization", ts.token)
 			}
 			ctx, err := ts.authInterceptor.authenticate(
-				context.Background(),
+				t.Context(),
 				ts.procedure,
 				header,
 			)
@@ -503,7 +503,7 @@ func TestVerifyIDPIssuedTokenFn(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			c, err := testCase.authInterceptor.verifyIDPIssuedToken(
-				context.Background(),
+				t.Context(),
 				// With the way these tests are constructed, this doesn't have to
 				// be valid.
 				"some-token",

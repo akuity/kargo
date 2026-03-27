@@ -172,7 +172,7 @@ func Test_argocdUpdater_check(t *testing.T) {
 			testCase.assertions(
 				t,
 				runner.check(
-					context.Background(),
+					t.Context(),
 					ArgoCDHealthInput{
 						Apps: []ArgoCDAppHealthCheck{
 							{
@@ -516,7 +516,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 					Build(),
 			}
 			stageHealth, appStatus, err := runner.getApplicationHealth(
-				context.Background(),
+				t.Context(),
 				client.ObjectKey{
 					Namespace: app.Namespace,
 					Name:      app.Name,
