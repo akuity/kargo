@@ -2,7 +2,6 @@ package stages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"slices"
 	"strings"
@@ -448,39 +447,11 @@ func (r *RegularStageReconciler) reconcile(
 			name: "assessing health",
 			reconcile: func() (kargoapi.StageStatus, error) {
 				status := r.assessHealth(ctx, stage)
-				if status.Health != nil && status.Health.Status == kargoapi.HealthStateUnknown {
-					// If Stage health has evaluated to Unknown, there are two specific
-					// scenarios between which we must distinguish and handle differently
-					// from one another:
-					//
-					//  1. If Stage health is unknown specifically because the last
-					//     Promotion did not succeed, we know we cannot obtain a more
-					//     definitive assessment of Stage health until a new Promotion has
-					//     restored the Stage to a consistent state by executing to
-					//     completion. In such a case, we're DONE reconciling the Stage,
-					//     for now. We would like the Stage's conditions to reflect that
-					//     and for the next reconciliation attempt to occur after the
-					//     usual interval. This can be accomplished by returning a nil
-					//     error.
-					//
-					//  2. If Stage health is unknown for any other reason, we MAY
-					//     possibly obtain a more definitive assessment simply by
-					//     re-attempting reconciliation. In such a case, we would like
-					//     the Stage's conditions to reflect that we're still trying to
-					//     reconcile, with subsequent attempts observing a progressive
-					//     backoff. This can be accomplished by returning an error.
-					if lastPromo := status.LastPromotion; lastPromo == nil ||
-						lastPromo.Status == nil ||
-						!lastPromo.Status.Phase.IsTerminal() ||
-						lastPromo.Status.Phase == kargoapi.PromotionPhaseSucceeded {
-						// Scenario 2: There was no last Promotion or there was and it was
-						// successful. Whatever the reason the Stage health evaluated to
-						// Unknown, an unsuccessful Promotion wasn't it.
-						return status, errors.New("Stage health evaluated to Unknown") // nolint: staticcheck
-					}
-				}
-				// Health assessment was definitive OR scenario 1: Stage health is
-				// unknown specifically because the last Promotion did not succeed.
+				// Unknown health is a normal, expected transient state (e.g. waiting
+				// for Argo CD to reconcile after an operation). The Application watcher
+				// will re-enqueue the Stage when the relevant condition changes, so
+				// there is no longer a need to return an error here just for the sake
+				// of triggering progressive backoff, as we did once upon a time.
 				return status, nil
 			},
 		},
