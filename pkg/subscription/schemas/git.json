@@ -87,10 +87,10 @@
             "default": 20,
             "description": "DiscoveryLimit is an optional limit on the number of commits that can be discovered for this subscription. The upper limit is 100."
         },
-        "sinceDate": {
+        "since": {
             "type": "string",
-            "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
-            "description": "SinceDate is an optional date (YYYY-MM-DD) that limits commit discovery to commits at or after this date. When specified, discovery stops upon reaching a commit older than this date. When left unspecified, there is no date cutoff."
+            "format": "date-time",
+            "description": "An optional date (RFC 3339) that limits commit discovery to commits at or after this date. When specified, discovery stops upon reaching a commit older than this date. When left unspecified, there is no cutoff."
         }
     },
     "additionalProperties": false
