@@ -31,7 +31,12 @@ sed -i.bak 's/Digest[[:space:]]*ImageSelectionStrategy/ImageSelectionStrategyDig
 sed -i.bak 's/NewestBuild[[:space:]]*ImageSelectionStrategy/ImageSelectionStrategyNewestBuild ImageSelectionStrategy/' ${out_file}
 sed -i.bak 's/CacheByTag[[:space:]]*\*bool/CacheByTag bool/' ${out_file}
 sed -i.bak 's/InsecureSkipTLSVerify[[:space:]]*\*bool/InsecureSkipTLSVerify bool/' ${out_file}
+sed -i.bak 's/time\.Time/metav1.Time/g' ${out_file}
+# quicktype emits per-schema import statements that can end up in the middle of
+# the file when multiple schemas are combined. Remove them and let goimports
+# add a proper import block based on usage.
+sed -i.bak '/^import /d' ${out_file}
 
 rm ${out_file}.bak
 
-gofmt -w ${out_file}
+hack/bin/goimports -w ${out_file}
