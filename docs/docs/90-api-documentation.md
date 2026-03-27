@@ -2244,7 +2244,7 @@ RawFormat specifies the format for raw resource representation.
 | insecureSkipTLSVerify | [bool](#bool) |  InsecureSkipTLSVerify specifies whether certificate verification errors should be ignored when connecting to the repository. This should be enabled only with great caution. |
 | repoURL | [string](#string) |  URL is the repository's URL. This is a required field. Deprecated: Support for SSH URLs (ssh:// and SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | semverConstraint | [string](#string) |  SemverConstraint specifies constraints on what new tagged commits are considered in determining the newest commit of interest. Only has effect when CommitSelectionStrategy is SemVer. |
-| sinceDate | [string](#string) |  SinceDate is an optional date (YYYY-MM-DD) that limits commit discovery to commits at or after this date. When specified, discovery stops upon reaching a commit older than this date. When left unspecified, there is no date cutoff. |
+| since | k8s.io.apimachinery.pkg.apis.meta.v1.Time |  An optional date (RFC 3339) that limits commit discovery to commits at or after this date. When specified, discovery stops upon reaching a commit older than this date. When left unspecified, there is no cutoff. |
 | strictSemvers | [bool](#bool) |  StrictSemvers specifies whether only "strict" semver tags should be considered. A "strict" semver tag contains ALL of major, minor, and patch version components. Only has effect when CommitSelectionStrategy is SemVer. |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GiteaWebhookReceiverConfig"></a>
