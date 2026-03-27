@@ -329,6 +329,19 @@ Git repository subscriptions can be defined using the following fields:
   subscription.
   :::
 
+- `sinceDate`: An optional date in `YYYY-MM-DD` format that bounds how far back
+  commit discovery will look. When specified, discovery stops as soon as it
+  encounters a commit older than this date and returns any matching commits found
+  up to that point. When left unspecified, there is no date cutoff.
+
+  :::note
+
+  `sinceDate` only has effect when `commitSelectionStrategy` is
+  `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
+  It is particularly useful for large repositories with long histories where
+  `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
+  :::
+
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
 
