@@ -970,10 +970,15 @@ message GitSubscription {
   // is SemVer.
   optional string semverConstraint = 13;
 
+  // SinceDate is an optional date (YYYY-MM-DD) that limits commit discovery to commits at or
+  // after this date. When specified, discovery stops upon reaching a commit older than this
+  // date. When left unspecified, there is no date cutoff.
+  optional string sinceDate = 14;
+
   // StrictSemvers specifies whether only "strict" semver tags should be considered. A
   // "strict" semver tag contains ALL of major, minor, and patch version components. Only has
   // effect when CommitSelectionStrategy is SemVer.
-  optional bool strictSemvers = 14;
+  optional bool strictSemvers = 15;
 }
 
 // GiteaWebhookReceiverConfig describes a webhook receiver that is compatible

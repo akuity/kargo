@@ -30,6 +30,32 @@ func TestNewNewestFromBranchSelector(t *testing.T) {
 			},
 		},
 		{
+			name: "invalid sinceDate format",
+			sub: kargoapi.GitSubscription{
+				Branch:    "main",
+				SinceDate: "not-a-date",
+			},
+			assertions: func(t *testing.T, _ Selector, err error) {
+				require.ErrorContains(t, err, "error parsing sinceDate")
+			},
+		},
+		{
+			name: "success with sinceDate",
+			sub: kargoapi.GitSubscription{
+				Branch:    "main",
+				SinceDate: "2024-01-01",
+			},
+			assertions: func(t *testing.T, s Selector, err error) {
+				require.NoError(t, err)
+				n, ok := s.(*newestFromBranchSelector)
+				require.True(t, ok)
+				require.NotNil(t, n.sinceDate)
+				require.Equal(t, 2024, n.sinceDate.Year())
+				require.Equal(t, time.January, n.sinceDate.Month())
+				require.Equal(t, 1, n.sinceDate.Day())
+			},
+		},
+		{
 			name: "success",
 			sub:  kargoapi.GitSubscription{Branch: "main"},
 			assertions: func(t *testing.T, s Selector, err error) {
@@ -435,6 +461,84 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				require.Equal(
 					t,
 					[]git.CommitMetadata{{ID: "B"}, {ID: "C"}, {ID: "D"}},
+					commits,
+				)
+			},
+		},
+		{
+			name: "sinceDate stops discovery when cutoff is reached with no commits selected",
+			selector: func() *newestFromBranchSelector {
+				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+				return &newestFromBranchSelector{
+					baseSelector:  &baseSelector{discoveryLimit: 3},
+					sinceDate:     &cutoff,
+					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+						return []git.CommitMetadata{
+							{ID: "A", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "B", CommitDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
+						}, nil
+					},
+				}
+			}(),
+			assertions: func(t *testing.T, _ []git.CommitMetadata, err error) {
+				require.ErrorContains(t, err, "no commits found in branch since 2024-06-01")
+			},
+		},
+		{
+			name: "sinceDate stops discovery and returns commits selected so far",
+			selector: func() *newestFromBranchSelector {
+				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+				return &newestFromBranchSelector{
+					baseSelector:  &baseSelector{discoveryLimit: 3},
+					sinceDate:     &cutoff,
+					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+						return []git.CommitMetadata{
+							{ID: "A", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "B", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "C", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "D", CommitDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
+						}, nil
+					},
+				}
+			}(),
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]git.CommitMetadata{
+						{ID: "A", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
+						{ID: "B", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
+					},
+					commits,
+				)
+			},
+		},
+		{
+			name: "sinceDate with no filters uses per-commit loop instead of fast path",
+			selector: func() *newestFromBranchSelector {
+				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
+				return &newestFromBranchSelector{
+					baseSelector:  &baseSelector{discoveryLimit: 5},
+					sinceDate:     &cutoff,
+					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+						return []git.CommitMetadata{
+							{ID: "A", CommitDate: time.Date(2024, 9, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "B", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "C", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
+							{ID: "D", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
+						}, nil
+					},
+				}
+			}(),
+			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]git.CommitMetadata{
+						{ID: "A", CommitDate: time.Date(2024, 9, 1, 0, 0, 0, 0, time.UTC)},
+						{ID: "B", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
+						{ID: "C", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
+					},
 					commits,
 				)
 			},

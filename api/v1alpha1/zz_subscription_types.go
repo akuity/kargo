@@ -79,10 +79,14 @@ type GitSubscription struct {
 	// determining the newest commit of interest. Only has effect when CommitSelectionStrategy
 	// is SemVer.
 	SemverConstraint string `json:"semverConstraint,omitempty" protobuf:"bytes,13,opt,name=semverConstraint"`
+	// SinceDate is an optional date (YYYY-MM-DD) that limits commit discovery to commits at or
+	// after this date. When specified, discovery stops upon reaching a commit older than this
+	// date. When left unspecified, there is no date cutoff.
+	SinceDate string `json:"sinceDate,omitempty" protobuf:"bytes,14,opt,name=sinceDate"`
 	// StrictSemvers specifies whether only "strict" semver tags should be considered. A
 	// "strict" semver tag contains ALL of major, minor, and patch version components. Only has
 	// effect when CommitSelectionStrategy is SemVer.
-	StrictSemvers *bool `json:"strictSemvers,omitempty" protobuf:"varint,14,opt,name=strictSemvers"`
+	StrictSemvers *bool `json:"strictSemvers,omitempty" protobuf:"varint,15,opt,name=strictSemvers"`
 }
 
 // ImageSubscription defines a subscription to a container image repository.

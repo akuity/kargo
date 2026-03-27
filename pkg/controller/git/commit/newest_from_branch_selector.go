@@ -33,7 +33,8 @@ func init() {
 // kargoapi.CommitSelectionStrategyNewestFromBranch.
 type newestFromBranchSelector struct {
 	*baseSelector
-	branch string
+	branch    string
+	sinceDate *time.Time
 
 	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
@@ -55,9 +56,21 @@ func newNewestFromBranchSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
+
+	var sinceDate *time.Time
+	if sub.SinceDate != "" {
+		parsedTime, err := time.Parse("2006-01-02", sub.SinceDate)
+		if err != nil {
+			return nil, fmt.Errorf("error parsing sinceDate: %w", err)
+		}
+		parsedTime = parsedTime.UTC()
+		sinceDate = &parsedTime
+	}
+
 	s := &newestFromBranchSelector{
 		baseSelector: base,
 		branch:       sub.Branch,
+		sinceDate:    sinceDate,
 	}
 	s.selectCommitsFn = s.selectCommits
 	s.listCommitsFn = s.listCommits
@@ -140,12 +153,24 @@ func (n *newestFromBranchSelector) selectCommits(
 			break
 		}
 
-		// If no filters are specified, return the first commits up to the limit.
-		if n.includePaths == nil && n.excludePaths == nil && n.filterExpression == nil {
+		// If no filters are specified and no sinceDate cutoff, return the first commits up to
+		// the limit.
+		if n.includePaths == nil && n.excludePaths == nil && n.filterExpression == nil &&
+			n.sinceDate == nil {
 			return trimSlice(commits, n.discoveryLimit), nil
 		}
 
 		for _, commit := range commits {
+			if n.sinceDate != nil && commit.CommitDate.Before(*n.sinceDate) {
+				if len(selectedCommits) == 0 {
+					return nil, fmt.Errorf(
+						"no commits found in branch since %s",
+						n.sinceDate.Format("2006-01-02"),
+					)
+				}
+				return trimSlice(selectedCommits, n.discoveryLimit), nil
+			}
+
 			// Filter commits based on expressions.
 			include, err := n.evaluateCommitExpression(commit)
 			if err != nil {
