@@ -57,20 +57,12 @@ func newNewestFromBranchSelector(
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
 
-	var sinceDate *time.Time
-	if sub.SinceDate != "" {
-		parsedTime, err := time.Parse("2006-01-02", sub.SinceDate)
-		if err != nil {
-			return nil, fmt.Errorf("error parsing sinceDate: %w", err)
-		}
-		parsedTime = parsedTime.UTC()
-		sinceDate = &parsedTime
-	}
-
 	s := &newestFromBranchSelector{
 		baseSelector: base,
 		branch:       sub.Branch,
-		sinceDate:    sinceDate,
+	}
+	if sub.Since != nil {
+		s.sinceDate = &sub.Since.Time
 	}
 	s.selectCommitsFn = s.selectCommits
 	s.listCommitsFn = s.listCommits

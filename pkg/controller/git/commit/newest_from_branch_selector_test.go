@@ -8,6 +8,8 @@ import (
 	"github.com/expr-lang/expr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/controller/git"
@@ -30,29 +32,16 @@ func TestNewNewestFromBranchSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "invalid sinceDate format",
-			sub: kargoapi.GitSubscription{
-				Branch:    "main",
-				SinceDate: "not-a-date",
-			},
-			assertions: func(t *testing.T, _ Selector, err error) {
-				require.ErrorContains(t, err, "error parsing sinceDate")
-			},
-		},
-		{
 			name: "success with sinceDate",
 			sub: kargoapi.GitSubscription{
-				Branch:    "main",
-				SinceDate: "2024-01-01",
+				Branch: "main",
+				Since:  ptr.To(metav1.Now()),
 			},
 			assertions: func(t *testing.T, s Selector, err error) {
 				require.NoError(t, err)
 				n, ok := s.(*newestFromBranchSelector)
 				require.True(t, ok)
 				require.NotNil(t, n.sinceDate)
-				require.Equal(t, 2024, n.sinceDate.Year())
-				require.Equal(t, time.January, n.sinceDate.Month())
-				require.Equal(t, 1, n.sinceDate.Day())
 			},
 		},
 		{
