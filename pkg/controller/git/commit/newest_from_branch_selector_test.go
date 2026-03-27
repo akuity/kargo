@@ -470,8 +470,8 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			selector: func() *newestFromBranchSelector {
 				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 				return &newestFromBranchSelector{
-					baseSelector:  &baseSelector{discoveryLimit: 3},
-					sinceDate:     &cutoff,
+					baseSelector: &baseSelector{discoveryLimit: 3},
+					sinceDate:    &cutoff,
 					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 						return []git.CommitMetadata{
 							{ID: "A", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
@@ -489,8 +489,8 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			selector: func() *newestFromBranchSelector {
 				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 				return &newestFromBranchSelector{
-					baseSelector:  &baseSelector{discoveryLimit: 3},
-					sinceDate:     &cutoff,
+					baseSelector: &baseSelector{discoveryLimit: 3},
+					sinceDate:    &cutoff,
 					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 						return []git.CommitMetadata{
 							{ID: "A", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
@@ -518,8 +518,8 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			selector: func() *newestFromBranchSelector {
 				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 				return &newestFromBranchSelector{
-					baseSelector:  &baseSelector{discoveryLimit: 5},
-					sinceDate:     &cutoff,
+					baseSelector: &baseSelector{discoveryLimit: 5},
+					sinceDate:    &cutoff,
 					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
 						return []git.CommitMetadata{
 							{ID: "A", CommitDate: time.Date(2024, 9, 1, 0, 0, 0, 0, time.UTC)},
