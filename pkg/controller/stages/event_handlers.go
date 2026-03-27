@@ -535,9 +535,10 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 	//
 	//    To handle this, we check whether reconciledAt just crossed the
 	//    finishedAt threshold. We only trigger when the OLD reconciledAt
-	//    was stale (absent or <= finishedAt) and has now advanced. Once
-	//    reconciledAt is past finishedAt, subsequent advances are routine
-	//    Argo CD refreshes and do not need to trigger re-reconciliation.
+	//    was stale (absent or before finishedAt) and has now advanced. Once
+	//    reconciledAt is at or past finishedAt, subsequent advances are
+	//    routine Argo CD refreshes and do not need to trigger
+	//    re-reconciliation.
 	oldReconciledAt, _, _ := unstructured.NestedString(
 		oldUn, "status", "reconciledAt",
 	)
@@ -555,7 +556,7 @@ func appHealthOrSyncStatusChanged[T any](ctx context.Context, e event.TypedUpdat
 	}
 	// RFC3339 timestamps are lexicographically orderable, so string
 	// comparison preserves chronological order.
-	return oldReconciledAt == "" || oldReconciledAt <= finishedAt
+	return oldReconciledAt == "" || oldReconciledAt < finishedAt
 }
 
 // stageEnqueuerForAnalysisRuns triggers reconciliation of Stages when their

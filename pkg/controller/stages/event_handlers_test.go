@@ -1550,6 +1550,36 @@ func Test_appHealthOrSyncStatusChanged(t *testing.T) {
 			updated: true,
 		},
 		{
+			name: "reconciledAt equal to finishedAt is already fresh",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 11, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			updated: false,
+		},
+		{
 			name: "reconciledAt changed but was already fresh",
 			old: &argocd.Application{
 				Status: argocd.ApplicationStatus{

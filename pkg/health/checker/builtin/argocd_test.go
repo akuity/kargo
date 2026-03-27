@@ -235,7 +235,13 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		appStatus        argocd.ApplicationStatus
 		interceptor      interceptor.Funcs
 		desiredRevisions []string
-		assertions       func(*testing.T, kargoapi.HealthState, ArgoCDAppStatus, error)
+		assertions       func(
+			*testing.T,
+			kargoapi.HealthState,
+			ArgoCDAppStatus,
+			client.Client,
+			error,
+		)
 	}{
 		{
 			name: "Application not found",
@@ -255,6 +261,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "unable to find Argo CD Application")
@@ -280,6 +287,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "error finding Argo CD Application")
@@ -304,6 +312,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				c client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -313,6 +322,21 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
 				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				// Verify hard refresh was requested
+				app := &argocd.Application{}
+				require.NoError(t, c.Get(
+					context.Background(),
+					client.ObjectKey{
+						Namespace: testApp.Namespace,
+						Name:      testApp.Name,
+					},
+					app,
+				))
+				require.Equal(
+					t,
+					string(argocd.RefreshTypeHard),
+					app.Annotations[argocd.AnnotationKeyRefresh],
+				)
 			},
 		},
 		{
@@ -333,6 +357,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				c client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -342,6 +367,21 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
 				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				// Verify hard refresh was requested
+				app := &argocd.Application{}
+				require.NoError(t, c.Get(
+					context.Background(),
+					client.ObjectKey{
+						Namespace: testApp.Namespace,
+						Name:      testApp.Name,
+					},
+					app,
+				))
+				require.Equal(
+					t,
+					string(argocd.RefreshTypeHard),
+					app.Annotations[argocd.AnnotationKeyRefresh],
+				)
 			},
 		},
 		{
@@ -378,6 +418,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -417,6 +458,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "Argo CD Application")
@@ -453,6 +495,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -488,6 +531,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "Not all sources of Application")
@@ -525,6 +569,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -541,13 +586,12 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := testApp.DeepCopy()
 			app.Status = testCase.appStatus
-			runner := &argocdChecker{
-				argocdClient: fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(app).
-					WithInterceptorFuncs(testCase.interceptor).
-					Build(),
-			}
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(app).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+			runner := &argocdChecker{argocdClient: fakeClient}
 			stageHealth, appStatus, err := runner.getApplicationHealth(
 				context.Background(),
 				client.ObjectKey{
@@ -556,7 +600,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				},
 				testCase.desiredRevisions,
 			)
-			testCase.assertions(t, stageHealth, appStatus, err)
+			testCase.assertions(t, stageHealth, appStatus, fakeClient, err)
 		})
 	}
 }

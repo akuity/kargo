@@ -14,6 +14,7 @@ import (
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/health"
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const applicationStatusesKey = "applicationStatuses"
@@ -210,13 +211,22 @@ func (a *argocdChecker) getApplicationHealth(
 	// on an App, Argo CD enqueues that App for reconciliation, which will
 	// reassess health and update the App's status.reconciledAt field.
 	//
-	// For our purposes, if reconciledAt is AFTER operation completion, we can
-	// infer that health was assessed after the operation completed and can be
-	// trusted. Otherwise, the health assessment may be stale, otherwise, we
-	// need to consider the health status to be unknown.
+	// For our purposes, if reconciledAt is at or after operation completion, we
+	// can infer that health was assessed after the operation completed and can
+	// be trusted. Equal timestamps are acceptable because Argo CD always
+	// enqueues reconciliation after setting finishedAt, so a same-second
+	// reconciledAt means the health loop ran after the operation completed.
+	// If reconciledAt is before finishedAt, the health assessment may be
+	// stale and we need to consider the health status to be unknown.
 	if app.Status.OperationState != nil &&
 		app.Status.OperationState.FinishedAt != nil &&
-		(app.Status.ReconciledAt == nil || !app.Status.ReconciledAt.After(app.Status.OperationState.FinishedAt.Time)) {
+		(app.Status.ReconciledAt == nil || app.Status.ReconciledAt.Before(app.Status.OperationState.FinishedAt)) {
+		// Request a hard refresh to ensure Argo CD persists its status
+		// (including reconciledAt) even if nothing else changed. Without
+		// this, Argo CD may skip the status write after reconciliation
+		// if health/sync are identical to before the operation, leaving
+		// reconciledAt stale indefinitely until the next periodic refresh.
+		a.requestAppRefresh(ctx, app)
 		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown,
 			appStatus,
@@ -373,6 +383,29 @@ func (a *argocdChecker) stageHealthForAppHealth(
 			app.Status.Health.Status,
 		)
 		return kargoapi.HealthStateUnhealthy, err
+	}
+}
+
+// requestAppRefresh annotates the Argo CD Application with a hard refresh
+// request. This ensures Argo CD invalidates its cache and persists the full
+// status (including reconciledAt) on the next reconciliation — even when
+// health and sync status are unchanged from before the operation.
+func (a *argocdChecker) requestAppRefresh(
+	ctx context.Context,
+	app *argocd.Application,
+) {
+	patch := client.MergeFrom(app.DeepCopy())
+	if app.Annotations == nil {
+		app.Annotations = make(map[string]string, 1)
+	}
+	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
+	if err := a.argocdClient.Patch(ctx, app, patch); err != nil {
+		logging.LoggerFromContext(ctx).Error(
+			err,
+			"failed to request hard refresh for Argo CD Application",
+			"namespace", app.Namespace,
+			"name", app.Name,
+		)
 	}
 }
 
