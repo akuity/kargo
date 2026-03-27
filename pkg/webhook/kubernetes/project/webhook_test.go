@@ -18,14 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
+	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
-
-func TestWebhookConfigFromEnv(t *testing.T) {
-	const kargoNamespace = "test-kargo-namespace"
-	t.Setenv("KARGO_NAMESPACE", kargoNamespace)
-	cfg := WebhookConfigFromEnv()
-	assert.Equal(t, kargoNamespace, cfg.KargoNamespace)
-}
 
 func Test_webhook_ValidateCreate(t *testing.T) {
 	scheme := runtime.NewScheme()
@@ -123,9 +117,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 
 			w := &webhook{
 				client: c,
-				cfg: WebhookConfig{
-					KargoNamespace: "kargo-system",
-				},
+				cfg:    libWebhook.Config{KargoNamespace: "kargo-system"},
 			}
 
 			ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
@@ -339,9 +331,7 @@ func Test_webhook_ensureProjectAdminPermissions(t *testing.T) {
 
 			w := &webhook{
 				client: c,
-				cfg: WebhookConfig{
-					KargoNamespace: kargoNamespace,
-				},
+				cfg:    libWebhook.Config{KargoNamespace: kargoNamespace},
 			}
 
 			err := w.ensureProjectAdminPermissions(context.Background(), tt.project)
