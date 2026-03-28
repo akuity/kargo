@@ -14,7 +14,7 @@ import (
 
 // V1NodeSelectorRequirement v1 node selector requirement
 //
-// swagger:model v1.NodeSelectorRequirement
+// swagger:model V1NodeSelectorRequirement
 type V1NodeSelectorRequirement struct {
 
 	// The label key that the selector applies to.

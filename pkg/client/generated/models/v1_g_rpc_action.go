@@ -14,7 +14,7 @@ import (
 
 // V1GRPCAction v1 g RPC action
 //
-// swagger:model v1.GRPCAction
+// swagger:model V1GRPCAction
 type V1GRPCAction struct {
 
 	// Port number of the gRPC service. Number must be in the range 1 to 65535.

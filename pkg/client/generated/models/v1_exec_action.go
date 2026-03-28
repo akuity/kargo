@@ -14,7 +14,7 @@ import (
 
 // V1ExecAction v1 exec action
 //
-// swagger:model v1.ExecAction
+// swagger:model V1ExecAction
 type V1ExecAction struct {
 
 	// Command is the command line to execute inside the container, the working directory for the

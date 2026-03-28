@@ -14,7 +14,7 @@ import (
 
 // V1SeccompProfile v1 seccomp profile
 //
-// swagger:model v1.SeccompProfile
+// swagger:model V1SeccompProfile
 type V1SeccompProfile struct {
 
 	// localhostProfile indicates a profile defined in a file on the node should be used.

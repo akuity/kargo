@@ -14,7 +14,7 @@ import (
 
 // V1ContainerPort v1 container port
 //
-// swagger:model v1.ContainerPort
+// swagger:model V1ContainerPort
 type V1ContainerPort struct {
 
 	// Number of port to expose on the pod's IP address.

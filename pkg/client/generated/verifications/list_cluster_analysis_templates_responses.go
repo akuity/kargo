@@ -47,7 +47,7 @@ ListClusterAnalysisTemplatesOK describes a response with status code 200, with d
 ClusterAnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.ClusterAnalysisTemplateList)
 */
 type ListClusterAnalysisTemplatesOK struct {
-	Payload *models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1ClusterAnalysisTemplateList
+	Payload *models.RolloutsClusterAnalysisTemplateList
 }
 
 // IsSuccess returns true when this list cluster analysis templates o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListClusterAnalysisTemplatesOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/cluster-analysis-templates][%d] listClusterAnalysisTemplatesOK %s", 200, payload)
 }
 
-func (o *ListClusterAnalysisTemplatesOK) GetPayload() *models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1ClusterAnalysisTemplateList {
+func (o *ListClusterAnalysisTemplatesOK) GetPayload() *models.RolloutsClusterAnalysisTemplateList {
 	return o.Payload
 }
 
 func (o *ListClusterAnalysisTemplatesOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1ClusterAnalysisTemplateList)
+	o.Payload = new(models.RolloutsClusterAnalysisTemplateList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

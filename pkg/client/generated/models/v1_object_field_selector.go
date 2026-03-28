@@ -14,7 +14,7 @@ import (
 
 // V1ObjectFieldSelector v1 object field selector
 //
-// swagger:model v1.ObjectFieldSelector
+// swagger:model V1ObjectFieldSelector
 type V1ObjectFieldSelector struct {
 
 	// Version of the schema the FieldPath is written in terms of, defaults to "v1".

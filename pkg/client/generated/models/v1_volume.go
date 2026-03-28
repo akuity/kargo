@@ -15,7 +15,7 @@ import (
 
 // V1Volume v1 volume
 //
-// swagger:model v1.Volume
+// swagger:model V1Volume
 type V1Volume struct {
 
 	// awsElasticBlockStore represents an AWS Disk resource that is attached to a

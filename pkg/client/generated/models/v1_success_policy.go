@@ -17,7 +17,7 @@ import (
 
 // V1SuccessPolicy v1 success policy
 //
-// swagger:model v1.SuccessPolicy
+// swagger:model V1SuccessPolicy
 type V1SuccessPolicy struct {
 
 	// rules represents the list of alternative rules for the declaring the Jobs

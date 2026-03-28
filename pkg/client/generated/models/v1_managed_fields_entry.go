@@ -15,7 +15,7 @@ import (
 
 // V1ManagedFieldsEntry v1 managed fields entry
 //
-// swagger:model v1.ManagedFieldsEntry
+// swagger:model V1ManagedFieldsEntry
 type V1ManagedFieldsEntry struct {
 
 	// APIVersion defines the version of this resource that this field set

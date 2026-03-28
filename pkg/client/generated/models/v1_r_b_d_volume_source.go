@@ -15,7 +15,7 @@ import (
 
 // V1RBDVolumeSource v1 r b d volume source
 //
-// swagger:model v1.RBDVolumeSource
+// swagger:model V1RBDVolumeSource
 type V1RBDVolumeSource struct {
 
 	// fsType is the filesystem type of the volume that you want to mount.

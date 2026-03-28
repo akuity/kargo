@@ -17,7 +17,7 @@ import (
 
 // V1SecretList v1 secret list
 //
-// swagger:model v1.SecretList
+// swagger:model V1SecretList
 type V1SecretList struct {
 
 	// APIVersion defines the versioned schema of this representation of an object.

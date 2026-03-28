@@ -17,7 +17,7 @@ import (
 
 // V1SecretVolumeSource v1 secret volume source
 //
-// swagger:model v1.SecretVolumeSource
+// swagger:model V1SecretVolumeSource
 type V1SecretVolumeSource struct {
 
 	// defaultMode is Optional: mode bits used to set permissions on created files by default.

@@ -14,7 +14,7 @@ import (
 
 // V1FlockerVolumeSource v1 flocker volume source
 //
-// swagger:model v1.FlockerVolumeSource
+// swagger:model V1FlockerVolumeSource
 type V1FlockerVolumeSource struct {
 
 	// datasetName is Name of the dataset stored as metadata -> name on the dataset for Flocker

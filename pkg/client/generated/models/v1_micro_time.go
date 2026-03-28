@@ -14,7 +14,7 @@ import (
 
 // V1MicroTime v1 micro time
 //
-// swagger:model v1.MicroTime
+// swagger:model V1MicroTime
 type V1MicroTime struct {
 
 	// time time

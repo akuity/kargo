@@ -15,7 +15,7 @@ import (
 
 // V1SecurityContext v1 security context
 //
-// swagger:model v1.SecurityContext
+// swagger:model V1SecurityContext
 type V1SecurityContext struct {
 
 	// AllowPrivilegeEscalation controls whether a process can gain more

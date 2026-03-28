@@ -15,7 +15,7 @@ import (
 
 // V1CephFSVolumeSource v1 ceph f s volume source
 //
-// swagger:model v1.CephFSVolumeSource
+// swagger:model V1CephFSVolumeSource
 type V1CephFSVolumeSource struct {
 
 	// monitors is Required: Monitors is a collection of Ceph monitors

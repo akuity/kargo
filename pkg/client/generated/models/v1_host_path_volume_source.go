@@ -14,7 +14,7 @@ import (
 
 // V1HostPathVolumeSource v1 host path volume source
 //
-// swagger:model v1.HostPathVolumeSource
+// swagger:model V1HostPathVolumeSource
 type V1HostPathVolumeSource struct {
 
 	// path of the directory on the host.

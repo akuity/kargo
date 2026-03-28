@@ -17,7 +17,7 @@ import (
 
 // V1ConfigMapVolumeSource v1 config map volume source
 //
-// swagger:model v1.ConfigMapVolumeSource
+// swagger:model V1ConfigMapVolumeSource
 type V1ConfigMapVolumeSource struct {
 
 	// defaultMode is optional: mode bits used to set permissions on created files by default.

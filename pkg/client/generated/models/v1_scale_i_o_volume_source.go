@@ -15,7 +15,7 @@ import (
 
 // V1ScaleIOVolumeSource v1 scale i o volume source
 //
-// swagger:model v1.ScaleIOVolumeSource
+// swagger:model V1ScaleIOVolumeSource
 type V1ScaleIOVolumeSource struct {
 
 	// fsType is the filesystem type to mount.

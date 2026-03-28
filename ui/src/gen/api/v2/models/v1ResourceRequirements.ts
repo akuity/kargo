@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { K8sIoApiCoreV1ResourceClaim } from './k8sIoApiCoreV1ResourceClaim';
+import type { V1ResourceClaim } from './v1ResourceClaim';
 import type { V1ResourceList } from './v1ResourceList';
 
 export interface V1ResourceRequirements {
@@ -21,7 +21,7 @@ This field is immutable. It can only be set for containers.
 +listMapKey=name
 +featureGate=DynamicResourceAllocation
 +optional */
-  claims?: K8sIoApiCoreV1ResourceClaim[];
+  claims?: V1ResourceClaim[];
   /** Limits describes the maximum amount of compute resources allowed.
 More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 +optional */

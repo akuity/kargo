@@ -15,7 +15,7 @@ import (
 
 // V1EmptyDirVolumeSource v1 empty dir volume source
 //
-// swagger:model v1.EmptyDirVolumeSource
+// swagger:model V1EmptyDirVolumeSource
 type V1EmptyDirVolumeSource struct {
 
 	// medium represents what type of storage medium should back this directory.
@@ -33,7 +33,7 @@ type V1EmptyDirVolumeSource struct {
 	// More info: https://kubernetes.io/docs/concepts/storage/volumes#emptydir
 	// +optional
 	SizeLimit struct {
-		ResourceQuantity
+		Quantity
 	} `json:"sizeLimit,omitempty"`
 }
 

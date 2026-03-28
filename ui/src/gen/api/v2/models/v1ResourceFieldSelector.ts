@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { ResourceQuantity } from './resourceQuantity';
+import type { Quantity } from './quantity';
 
 export interface V1ResourceFieldSelector {
   /** Container name: required for volumes, optional for env vars
@@ -13,7 +13,7 @@ export interface V1ResourceFieldSelector {
   containerName?: string;
   /** Specifies the output format of the exposed resources, defaults to "1"
 +optional */
-  divisor?: ResourceQuantity;
+  divisor?: Quantity;
   /** Required: resource to select */
   resource?: string;
 }

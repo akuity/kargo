@@ -15,7 +15,7 @@ import (
 
 // V1FlexVolumeSource v1 flex volume source
 //
-// swagger:model v1.FlexVolumeSource
+// swagger:model V1FlexVolumeSource
 type V1FlexVolumeSource struct {
 
 	// driver is the name of the driver to use for this volume.

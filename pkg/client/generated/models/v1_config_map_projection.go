@@ -17,7 +17,7 @@ import (
 
 // V1ConfigMapProjection v1 config map projection
 //
-// swagger:model v1.ConfigMapProjection
+// swagger:model V1ConfigMapProjection
 type V1ConfigMapProjection struct {
 
 	// items if unspecified, each key-value pair in the Data field of the referenced

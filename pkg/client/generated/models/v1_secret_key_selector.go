@@ -14,7 +14,7 @@ import (
 
 // V1SecretKeySelector v1 secret key selector
 //
-// swagger:model v1.SecretKeySelector
+// swagger:model V1SecretKeySelector
 type V1SecretKeySelector struct {
 
 	// The key of the secret to select from.  Must be a valid secret key.

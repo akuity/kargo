@@ -15,7 +15,7 @@ import (
 
 // V1JobSpec v1 job spec
 //
-// swagger:model v1.JobSpec
+// swagger:model V1JobSpec
 type V1JobSpec struct {
 
 	// Specifies the duration in seconds relative to the startTime that the job

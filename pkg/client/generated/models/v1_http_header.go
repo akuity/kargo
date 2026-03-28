@@ -14,7 +14,7 @@ import (
 
 // V1HTTPHeader v1 HTTP header
 //
-// swagger:model v1.HTTPHeader
+// swagger:model V1HTTPHeader
 type V1HTTPHeader struct {
 
 	// The header field name.

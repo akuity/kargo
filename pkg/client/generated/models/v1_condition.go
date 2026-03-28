@@ -14,7 +14,7 @@ import (
 
 // V1Condition v1 condition
 //
-// swagger:model v1.Condition
+// swagger:model V1Condition
 type V1Condition struct {
 
 	// lastTransitionTime is the last time the condition transitioned from one status to another.

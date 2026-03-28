@@ -14,7 +14,7 @@ import (
 
 // V1ConfigMapEnvSource v1 config map env source
 //
-// swagger:model v1.ConfigMapEnvSource
+// swagger:model V1ConfigMapEnvSource
 type V1ConfigMapEnvSource struct {
 
 	// Name of the referent.

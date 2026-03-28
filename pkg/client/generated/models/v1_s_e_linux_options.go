@@ -14,7 +14,7 @@ import (
 
 // V1SELinuxOptions v1 s e linux options
 //
-// swagger:model v1.SELinuxOptions
+// swagger:model V1SELinuxOptions
 type V1SELinuxOptions struct {
 
 	// Level is SELinux level label that applies to the container.

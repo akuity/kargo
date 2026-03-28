@@ -47,7 +47,7 @@ GetPromotionOK describes a response with status code 200, with default header va
 Promotion custom resource (github.com/akuity/kargo/api/v1alpha1.Promotion)
 */
 type GetPromotionOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1Promotion
+	Payload *models.Promotion
 }
 
 // IsSuccess returns true when this get promotion o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *GetPromotionOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotions/{promotion}][%d] getPromotionOK %s", 200, payload)
 }
 
-func (o *GetPromotionOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1Promotion {
+func (o *GetPromotionOK) GetPayload() *models.Promotion {
 	return o.Payload
 }
 
 func (o *GetPromotionOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1Promotion)
+	o.Payload = new(models.Promotion)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

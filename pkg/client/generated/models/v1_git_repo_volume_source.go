@@ -14,7 +14,7 @@ import (
 
 // V1GitRepoVolumeSource v1 git repo volume source
 //
-// swagger:model v1.GitRepoVolumeSource
+// swagger:model V1GitRepoVolumeSource
 type V1GitRepoVolumeSource struct {
 
 	// directory is the target directory name.

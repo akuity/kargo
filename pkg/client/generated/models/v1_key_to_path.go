@@ -14,7 +14,7 @@ import (
 
 // V1KeyToPath v1 key to path
 //
-// swagger:model v1.KeyToPath
+// swagger:model V1KeyToPath
 type V1KeyToPath struct {
 
 	// key is the key to project.

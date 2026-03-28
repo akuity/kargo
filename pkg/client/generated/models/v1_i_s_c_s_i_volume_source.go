@@ -15,7 +15,7 @@ import (
 
 // V1ISCSIVolumeSource v1 i s c s i volume source
 //
-// swagger:model v1.ISCSIVolumeSource
+// swagger:model V1ISCSIVolumeSource
 type V1ISCSIVolumeSource struct {
 
 	// chapAuthDiscovery defines whether support iSCSI Discovery CHAP authentication

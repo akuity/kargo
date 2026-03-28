@@ -15,7 +15,7 @@ import (
 
 // V1EphemeralVolumeSource v1 ephemeral volume source
 //
-// swagger:model v1.EphemeralVolumeSource
+// swagger:model V1EphemeralVolumeSource
 type V1EphemeralVolumeSource struct {
 
 	// Will be used to create a stand-alone PVC to provision the volume.

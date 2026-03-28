@@ -47,7 +47,7 @@ ListPromotionTasksOK describes a response with status code 200, with default hea
 PromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.PromotionTaskList)
 */
 type ListPromotionTasksOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1PromotionTaskList
+	Payload *models.PromotionTaskList
 }
 
 // IsSuccess returns true when this list promotion tasks o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListPromotionTasksOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/promotion-tasks][%d] listPromotionTasksOK %s", 200, payload)
 }
 
-func (o *ListPromotionTasksOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1PromotionTaskList {
+func (o *ListPromotionTasksOK) GetPayload() *models.PromotionTaskList {
 	return o.Payload
 }
 
 func (o *ListPromotionTasksOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1PromotionTaskList)
+	o.Payload = new(models.PromotionTaskList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

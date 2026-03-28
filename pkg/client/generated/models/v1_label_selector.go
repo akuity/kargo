@@ -17,7 +17,7 @@ import (
 
 // V1LabelSelector v1 label selector
 //
-// swagger:model v1.LabelSelector
+// swagger:model V1LabelSelector
 type V1LabelSelector struct {
 
 	// matchExpressions is a list of label selector requirements. The requirements are ANDed.

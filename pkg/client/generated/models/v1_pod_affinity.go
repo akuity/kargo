@@ -17,7 +17,7 @@ import (
 
 // V1PodAffinity v1 pod affinity
 //
-// swagger:model v1.PodAffinity
+// swagger:model V1PodAffinity
 type V1PodAffinity struct {
 
 	// The scheduler will prefer to schedule pods to nodes that satisfy

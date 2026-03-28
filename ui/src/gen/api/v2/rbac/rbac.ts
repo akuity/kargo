@@ -26,12 +26,12 @@ import type {
   CreateProjectRoleBodyBody,
   GetProjectRole200,
   GetSystemRole200,
-  GithubComAkuityKargoApiRbacV1alpha1Role,
   GrantRequest,
   ListProjectAPITokensParams,
   ListProjectRoles200,
   ListSystemAPITokensParams,
   ListSystemRoles200,
+  RbacRole,
   RevokeRequest,
   V1Secret,
   V1SecretList
@@ -600,7 +600,7 @@ resources.
  * @summary Create a project-level Kargo Role virtual resource
  */
 export type createProjectRoleResponse201 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: RbacRole;
   status: 201;
 };
 
@@ -698,7 +698,7 @@ to a project-level Kargo Role.
  * @summary Grant permissions
  */
 export type grantResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: RbacRole;
   status: 200;
 };
 
@@ -791,7 +791,7 @@ permissions from a project-level Kargo Role.
  * @summary Revoke permissions
  */
 export type revokeResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: RbacRole;
   status: 200;
 };
 
@@ -1027,7 +1027,7 @@ resources.
  * @summary Update a project-level Kargo Role virtual resource
  */
 export type updateRoleResponse200 = {
-  data: GithubComAkuityKargoApiRbacV1alpha1Role;
+  data: RbacRole;
   status: 200;
 };
 

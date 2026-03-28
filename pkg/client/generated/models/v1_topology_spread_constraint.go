@@ -15,7 +15,7 @@ import (
 
 // V1TopologySpreadConstraint v1 topology spread constraint
 //
-// swagger:model v1.TopologySpreadConstraint
+// swagger:model V1TopologySpreadConstraint
 type V1TopologySpreadConstraint struct {
 
 	// LabelSelector is used to find matching pods.

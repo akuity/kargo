@@ -14,7 +14,7 @@ import (
 
 // V1PhotonPersistentDiskVolumeSource v1 photon persistent disk volume source
 //
-// swagger:model v1.PhotonPersistentDiskVolumeSource
+// swagger:model V1PhotonPersistentDiskVolumeSource
 type V1PhotonPersistentDiskVolumeSource struct {
 
 	// fsType is the filesystem type to mount.

@@ -14,7 +14,7 @@ import (
 
 // V1GCEPersistentDiskVolumeSource v1 g c e persistent disk volume source
 //
-// swagger:model v1.GCEPersistentDiskVolumeSource
+// swagger:model V1GCEPersistentDiskVolumeSource
 type V1GCEPersistentDiskVolumeSource struct {
 
 	// fsType is filesystem type of the volume that you want to mount.

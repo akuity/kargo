@@ -14,7 +14,7 @@ import (
 
 // V1AzureFileVolumeSource v1 azure file volume source
 //
-// swagger:model v1.AzureFileVolumeSource
+// swagger:model V1AzureFileVolumeSource
 type V1AzureFileVolumeSource struct {
 
 	// readOnly defaults to false (read/write). ReadOnly here will force

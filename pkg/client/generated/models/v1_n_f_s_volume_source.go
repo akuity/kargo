@@ -14,7 +14,7 @@ import (
 
 // V1NFSVolumeSource v1 n f s volume source
 //
-// swagger:model v1.NFSVolumeSource
+// swagger:model V1NFSVolumeSource
 type V1NFSVolumeSource struct {
 
 	// path that is exported by the NFS server.

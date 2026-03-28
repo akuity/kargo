@@ -5,8 +5,8 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { ResourceQuantity } from './resourceQuantity';
+import type { Quantity } from './quantity';
 
 export interface V1ResourceList {
-  [key: string]: ResourceQuantity;
+  [key: string]: Quantity;
 }

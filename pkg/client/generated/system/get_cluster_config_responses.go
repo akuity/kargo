@@ -47,7 +47,7 @@ GetClusterConfigOK describes a response with status code 200, with default heade
 ClusterConfig custom resource
 */
 type GetClusterConfigOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1ClusterConfig
+	Payload *models.ClusterConfig
 }
 
 // IsSuccess returns true when this get cluster config o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *GetClusterConfigOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/system/cluster-config][%d] getClusterConfigOK %s", 200, payload)
 }
 
-func (o *GetClusterConfigOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1ClusterConfig {
+func (o *GetClusterConfigOK) GetPayload() *models.ClusterConfig {
 	return o.Payload
 }
 
 func (o *GetClusterConfigOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1ClusterConfig)
+	o.Payload = new(models.ClusterConfig)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

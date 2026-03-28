@@ -15,7 +15,7 @@ import (
 
 // V1ClusterTrustBundleProjection v1 cluster trust bundle projection
 //
-// swagger:model v1.ClusterTrustBundleProjection
+// swagger:model V1ClusterTrustBundleProjection
 type V1ClusterTrustBundleProjection struct {
 
 	// Select all ClusterTrustBundles that match this label selector.  Only has

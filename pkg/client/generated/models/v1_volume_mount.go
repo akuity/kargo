@@ -14,7 +14,7 @@ import (
 
 // V1VolumeMount v1 volume mount
 //
-// swagger:model v1.VolumeMount
+// swagger:model V1VolumeMount
 type V1VolumeMount struct {
 
 	// Path within the container at which the volume should be mounted.  Must

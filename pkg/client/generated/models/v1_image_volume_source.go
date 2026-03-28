@@ -14,7 +14,7 @@ import (
 
 // V1ImageVolumeSource v1 image volume source
 //
-// swagger:model v1.ImageVolumeSource
+// swagger:model V1ImageVolumeSource
 type V1ImageVolumeSource struct {
 
 	// Policy for pulling OCI objects. Possible values are:

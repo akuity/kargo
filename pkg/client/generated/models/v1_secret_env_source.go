@@ -14,7 +14,7 @@ import (
 
 // V1SecretEnvSource v1 secret env source
 //
-// swagger:model v1.SecretEnvSource
+// swagger:model V1SecretEnvSource
 type V1SecretEnvSource struct {
 
 	// Name of the referent.

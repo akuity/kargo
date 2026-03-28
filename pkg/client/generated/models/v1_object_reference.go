@@ -14,7 +14,7 @@ import (
 
 // V1ObjectReference v1 object reference
 //
-// swagger:model v1.ObjectReference
+// swagger:model V1ObjectReference
 type V1ObjectReference struct {
 
 	// API version of the referent.

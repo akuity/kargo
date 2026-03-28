@@ -14,7 +14,7 @@ import (
 
 // V1SleepAction v1 sleep action
 //
-// swagger:model v1.SleepAction
+// swagger:model V1SleepAction
 type V1SleepAction struct {
 
 	// Seconds is the number of seconds to sleep.

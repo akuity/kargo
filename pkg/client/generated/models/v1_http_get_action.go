@@ -17,7 +17,7 @@ import (
 
 // V1HTTPGetAction v1 HTTP get action
 //
-// swagger:model v1.HTTPGetAction
+// swagger:model V1HTTPGetAction
 type V1HTTPGetAction struct {
 
 	// Host name to connect to, defaults to the pod IP. You probably want to set
@@ -38,7 +38,7 @@ type V1HTTPGetAction struct {
 	// Number must be in the range 1 to 65535.
 	// Name must be an IANA_SVC_NAME.
 	Port struct {
-		IntstrIntOrString
+		IntOrString
 	} `json:"port,omitempty"`
 
 	// Scheme to use for connecting to the host.

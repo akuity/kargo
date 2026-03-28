@@ -7,5 +7,5 @@ package models
 
 // V1FieldsV1 v1 fields v1
 //
-// swagger:model v1.FieldsV1
+// swagger:model V1FieldsV1
 type V1FieldsV1 any

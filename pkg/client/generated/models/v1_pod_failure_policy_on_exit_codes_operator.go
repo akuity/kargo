@@ -16,7 +16,7 @@ import (
 
 // V1PodFailurePolicyOnExitCodesOperator v1 pod failure policy on exit codes operator
 //
-// swagger:model v1.PodFailurePolicyOnExitCodesOperator
+// swagger:model V1PodFailurePolicyOnExitCodesOperator
 type V1PodFailurePolicyOnExitCodesOperator string
 
 func NewV1PodFailurePolicyOnExitCodesOperator(value V1PodFailurePolicyOnExitCodesOperator) *V1PodFailurePolicyOnExitCodesOperator {

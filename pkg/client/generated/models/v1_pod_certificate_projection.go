@@ -14,7 +14,7 @@ import (
 
 // V1PodCertificateProjection v1 pod certificate projection
 //
-// swagger:model v1.PodCertificateProjection
+// swagger:model V1PodCertificateProjection
 type V1PodCertificateProjection struct {
 
 	// Write the certificate chain at this path in the projected volume.

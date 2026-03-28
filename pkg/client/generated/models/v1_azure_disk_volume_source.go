@@ -14,7 +14,7 @@ import (
 
 // V1AzureDiskVolumeSource v1 azure disk volume source
 //
-// swagger:model v1.AzureDiskVolumeSource
+// swagger:model V1AzureDiskVolumeSource
 type V1AzureDiskVolumeSource struct {
 
 	// cachingMode is the Host Caching mode: None, Read Only, Read Write.

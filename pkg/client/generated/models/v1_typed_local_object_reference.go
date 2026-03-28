@@ -14,7 +14,7 @@ import (
 
 // V1TypedLocalObjectReference v1 typed local object reference
 //
-// swagger:model v1.TypedLocalObjectReference
+// swagger:model V1TypedLocalObjectReference
 type V1TypedLocalObjectReference struct {
 
 	// APIGroup is the group for the resource being referenced.

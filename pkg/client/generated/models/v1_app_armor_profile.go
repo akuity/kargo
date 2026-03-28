@@ -14,7 +14,7 @@ import (
 
 // V1AppArmorProfile v1 app armor profile
 //
-// swagger:model v1.AppArmorProfile
+// swagger:model V1AppArmorProfile
 type V1AppArmorProfile struct {
 
 	// localhostProfile indicates a profile loaded on the node that should be used.

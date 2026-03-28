@@ -15,7 +15,7 @@ import (
 
 // V1TCPSocketAction v1 TCP socket action
 //
-// swagger:model v1.TCPSocketAction
+// swagger:model V1TCPSocketAction
 type V1TCPSocketAction struct {
 
 	// Optional: Host name to connect to, defaults to the pod IP.
@@ -26,7 +26,7 @@ type V1TCPSocketAction struct {
 	// Number must be in the range 1 to 65535.
 	// Name must be an IANA_SVC_NAME.
 	Port struct {
-		IntstrIntOrString
+		IntOrString
 	} `json:"port,omitempty"`
 }
 

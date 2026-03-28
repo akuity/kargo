@@ -14,7 +14,7 @@ import (
 
 // V1ConfigMapKeySelector v1 config map key selector
 //
-// swagger:model v1.ConfigMapKeySelector
+// swagger:model V1ConfigMapKeySelector
 type V1ConfigMapKeySelector struct {
 
 	// The key to select.

@@ -14,7 +14,7 @@ import (
 
 // V1WindowsSecurityContextOptions v1 windows security context options
 //
-// swagger:model v1.WindowsSecurityContextOptions
+// swagger:model V1WindowsSecurityContextOptions
 type V1WindowsSecurityContextOptions struct {
 
 	// GMSACredentialSpec is where the GMSA admission webhook

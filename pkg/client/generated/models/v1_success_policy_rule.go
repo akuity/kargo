@@ -14,7 +14,7 @@ import (
 
 // V1SuccessPolicyRule v1 success policy rule
 //
-// swagger:model v1.SuccessPolicyRule
+// swagger:model V1SuccessPolicyRule
 type V1SuccessPolicyRule struct {
 
 	// succeededCount specifies the minimal required size of the actual set of the succeeded indexes

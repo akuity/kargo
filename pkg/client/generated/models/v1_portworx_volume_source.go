@@ -14,7 +14,7 @@ import (
 
 // V1PortworxVolumeSource v1 portworx volume source
 //
-// swagger:model v1.PortworxVolumeSource
+// swagger:model V1PortworxVolumeSource
 type V1PortworxVolumeSource struct {
 
 	// fSType represents the filesystem type to mount

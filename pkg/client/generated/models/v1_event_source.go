@@ -14,7 +14,7 @@ import (
 
 // V1EventSource v1 event source
 //
-// swagger:model v1.EventSource
+// swagger:model V1EventSource
 type V1EventSource struct {
 
 	// Component from which the event is generated.

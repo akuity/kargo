@@ -15,7 +15,7 @@ import (
 
 // V1Lifecycle v1 lifecycle
 //
-// swagger:model v1.Lifecycle
+// swagger:model V1Lifecycle
 type V1Lifecycle struct {
 
 	// PostStart is called immediately after a container is created. If the handler fails,

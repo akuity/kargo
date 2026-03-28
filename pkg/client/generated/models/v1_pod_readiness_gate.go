@@ -14,7 +14,7 @@ import (
 
 // V1PodReadinessGate v1 pod readiness gate
 //
-// swagger:model v1.PodReadinessGate
+// swagger:model V1PodReadinessGate
 type V1PodReadinessGate struct {
 
 	// ConditionType refers to a condition in the pod's condition list with matching type.

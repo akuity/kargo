@@ -14,7 +14,7 @@ import (
 
 // V1HostAlias v1 host alias
 //
-// swagger:model v1.HostAlias
+// swagger:model V1HostAlias
 type V1HostAlias struct {
 
 	// Hostnames for the above IP address.

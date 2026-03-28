@@ -15,7 +15,7 @@ import (
 
 // V1PreferredSchedulingTerm v1 preferred scheduling term
 //
-// swagger:model v1.PreferredSchedulingTerm
+// swagger:model V1PreferredSchedulingTerm
 type V1PreferredSchedulingTerm struct {
 
 	// A node selector term, associated with the corresponding weight.

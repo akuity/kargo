@@ -15,7 +15,7 @@ import (
 
 // V1PersistentVolumeClaimTemplate v1 persistent volume claim template
 //
-// swagger:model v1.PersistentVolumeClaimTemplate
+// swagger:model V1PersistentVolumeClaimTemplate
 type V1PersistentVolumeClaimTemplate struct {
 
 	// May contain labels and annotations that will be copied into the PVC

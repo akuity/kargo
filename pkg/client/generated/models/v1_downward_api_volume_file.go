@@ -15,7 +15,7 @@ import (
 
 // V1DownwardAPIVolumeFile v1 downward API volume file
 //
-// swagger:model v1.DownwardAPIVolumeFile
+// swagger:model V1DownwardAPIVolumeFile
 type V1DownwardAPIVolumeFile struct {
 
 	// Required: Selects a field of the pod: only annotations, labels, name, namespace and uid are supported.

@@ -17,7 +17,7 @@ import (
 
 // V1Container v1 container
 //
-// swagger:model v1.Container
+// swagger:model V1Container
 type V1Container struct {
 
 	// Arguments to the entrypoint.

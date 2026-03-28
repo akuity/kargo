@@ -14,7 +14,7 @@ import (
 
 // V1AWSElasticBlockStoreVolumeSource v1 a w s elastic block store volume source
 //
-// swagger:model v1.AWSElasticBlockStoreVolumeSource
+// swagger:model V1AWSElasticBlockStoreVolumeSource
 type V1AWSElasticBlockStoreVolumeSource struct {
 
 	// fsType is the filesystem type of the volume that you want to mount.

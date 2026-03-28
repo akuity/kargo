@@ -15,7 +15,7 @@ import (
 
 // V1Affinity v1 affinity
 //
-// swagger:model v1.Affinity
+// swagger:model V1Affinity
 type V1Affinity struct {
 
 	// Describes node affinity scheduling rules for the pod.

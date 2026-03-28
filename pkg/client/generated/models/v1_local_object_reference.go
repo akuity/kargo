@@ -14,7 +14,7 @@ import (
 
 // V1LocalObjectReference v1 local object reference
 //
-// swagger:model v1.LocalObjectReference
+// swagger:model V1LocalObjectReference
 type V1LocalObjectReference struct {
 
 	// Name of the referent.

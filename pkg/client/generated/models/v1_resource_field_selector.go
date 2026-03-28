@@ -15,7 +15,7 @@ import (
 
 // V1ResourceFieldSelector v1 resource field selector
 //
-// swagger:model v1.ResourceFieldSelector
+// swagger:model V1ResourceFieldSelector
 type V1ResourceFieldSelector struct {
 
 	// Container name: required for volumes, optional for env vars
@@ -25,7 +25,7 @@ type V1ResourceFieldSelector struct {
 	// Specifies the output format of the exposed resources, defaults to "1"
 	// +optional
 	Divisor struct {
-		ResourceQuantity
+		Quantity
 	} `json:"divisor,omitempty"`
 
 	// Required: resource to select

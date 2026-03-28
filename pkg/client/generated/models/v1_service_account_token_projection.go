@@ -14,7 +14,7 @@ import (
 
 // V1ServiceAccountTokenProjection v1 service account token projection
 //
-// swagger:model v1.ServiceAccountTokenProjection
+// swagger:model V1ServiceAccountTokenProjection
 type V1ServiceAccountTokenProjection struct {
 
 	// audience is the intended audience of the token. A recipient of a token

@@ -14,7 +14,7 @@ import (
 
 // V1PolicyRule v1 policy rule
 //
-// swagger:model v1.PolicyRule
+// swagger:model V1PolicyRule
 type V1PolicyRule struct {
 
 	// APIGroups is the name of the APIGroup that contains the resources.  If multiple API groups are specified, any action requested against one of

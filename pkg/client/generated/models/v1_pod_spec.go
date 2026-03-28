@@ -17,7 +17,7 @@ import (
 
 // V1PodSpec v1 pod spec
 //
-// swagger:model v1.PodSpec
+// swagger:model V1PodSpec
 type V1PodSpec struct {
 
 	// Optional duration in seconds the pod may be active on the node relative to

@@ -16,8 +16,8 @@ import (
 
 // V1ResourceList v1 resource list
 //
-// swagger:model v1.ResourceList
-type V1ResourceList map[string]ResourceQuantity
+// swagger:model V1ResourceList
+type V1ResourceList map[string]Quantity
 
 // Validate validates this v1 resource list
 func (m V1ResourceList) Validate(formats strfmt.Registry) error {

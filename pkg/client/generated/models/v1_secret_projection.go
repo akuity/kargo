@@ -17,7 +17,7 @@ import (
 
 // V1SecretProjection v1 secret projection
 //
-// swagger:model v1.SecretProjection
+// swagger:model V1SecretProjection
 type V1SecretProjection struct {
 
 	// items if unspecified, each key-value pair in the Data field of the referenced

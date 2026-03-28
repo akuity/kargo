@@ -23,11 +23,11 @@ import type {
 
 import type {
   GetAnalysisRunLogsParams,
-  GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisRun,
-  GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisTemplate,
-  GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisTemplateList,
-  GithubComAkuityKargoApiStubsRolloutsV1alpha1ClusterAnalysisTemplate,
-  GithubComAkuityKargoApiStubsRolloutsV1alpha1ClusterAnalysisTemplateList
+  RolloutsAnalysisRun,
+  RolloutsAnalysisTemplate,
+  RolloutsAnalysisTemplateList,
+  RolloutsClusterAnalysisTemplate,
+  RolloutsClusterAnalysisTemplateList
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -39,7 +39,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary Retrieve an AnalysisRun
  */
 export type getAnalysisRunResponse200 = {
-  data: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisRun;
+  data: RolloutsAnalysisRun;
   status: 200;
 };
 
@@ -362,7 +362,7 @@ export function useGetAnalysisRunLogs<
  * @summary List AnalysisTemplates
  */
 export type listAnalysisTemplatesResponse200 = {
-  data: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisTemplateList;
+  data: RolloutsAnalysisTemplateList;
   status: 200;
 };
 
@@ -509,7 +509,7 @@ namespace.
  * @summary Retrieve an AnalysisTemplate
  */
 export type getAnalysisTemplateResponse200 = {
-  data: GithubComAkuityKargoApiStubsRolloutsV1alpha1AnalysisTemplate;
+  data: RolloutsAnalysisTemplate;
   status: 200;
 };
 
@@ -953,7 +953,7 @@ ClusterAnalysisTemplateList resource.
  * @summary List ClusterAnalysisTemplates
  */
 export type listClusterAnalysisTemplatesResponse200 = {
-  data: GithubComAkuityKargoApiStubsRolloutsV1alpha1ClusterAnalysisTemplateList;
+  data: RolloutsClusterAnalysisTemplateList;
   status: 200;
 };
 
@@ -1092,7 +1092,7 @@ export function useListClusterAnalysisTemplates<
  * @summary Retrieve a ClusterAnalysisTemplate
  */
 export type getClusterAnalysisTemplateResponse200 = {
-  data: GithubComAkuityKargoApiStubsRolloutsV1alpha1ClusterAnalysisTemplate;
+  data: RolloutsClusterAnalysisTemplate;
   status: 200;
 };
 

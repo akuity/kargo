@@ -17,7 +17,7 @@ import (
 
 // V1ResourceRequirements v1 resource requirements
 //
-// swagger:model v1.ResourceRequirements
+// swagger:model V1ResourceRequirements
 type V1ResourceRequirements struct {
 
 	// Claims lists the names of resources, defined in spec.resourceClaims,
@@ -32,7 +32,7 @@ type V1ResourceRequirements struct {
 	// +listMapKey=name
 	// +featureGate=DynamicResourceAllocation
 	// +optional
-	Claims []*K8sIoAPICoreV1ResourceClaim `json:"claims"`
+	Claims []*V1ResourceClaim `json:"claims"`
 
 	// Limits describes the maximum amount of compute resources allowed.
 	// More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/

@@ -14,7 +14,7 @@ import (
 
 // V1Sysctl v1 sysctl
 //
-// swagger:model v1.Sysctl
+// swagger:model V1Sysctl
 type V1Sysctl struct {
 
 	// Name of a property to set

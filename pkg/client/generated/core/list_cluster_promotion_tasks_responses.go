@@ -47,7 +47,7 @@ ListClusterPromotionTasksOK describes a response with status code 200, with defa
 ClusterPromotionTaskList custom resource (github.com/akuity/kargo/api/v1alpha1.ClusterPromotionTaskList)
 */
 type ListClusterPromotionTasksOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTaskList
+	Payload *models.ClusterPromotionTaskList
 }
 
 // IsSuccess returns true when this list cluster promotion tasks o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListClusterPromotionTasksOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/cluster-promotion-tasks][%d] listClusterPromotionTasksOK %s", 200, payload)
 }
 
-func (o *ListClusterPromotionTasksOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTaskList {
+func (o *ListClusterPromotionTasksOK) GetPayload() *models.ClusterPromotionTaskList {
 	return o.Payload
 }
 
 func (o *ListClusterPromotionTasksOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1ClusterPromotionTaskList)
+	o.Payload = new(models.ClusterPromotionTaskList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

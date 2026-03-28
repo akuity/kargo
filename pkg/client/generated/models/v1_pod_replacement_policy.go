@@ -16,7 +16,7 @@ import (
 
 // V1PodReplacementPolicy v1 pod replacement policy
 //
-// swagger:model v1.PodReplacementPolicy
+// swagger:model V1PodReplacementPolicy
 type V1PodReplacementPolicy string
 
 func NewV1PodReplacementPolicy(value V1PodReplacementPolicy) *V1PodReplacementPolicy {

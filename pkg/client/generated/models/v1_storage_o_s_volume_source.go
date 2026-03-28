@@ -15,7 +15,7 @@ import (
 
 // V1StorageOSVolumeSource v1 storage o s volume source
 //
-// swagger:model v1.StorageOSVolumeSource
+// swagger:model V1StorageOSVolumeSource
 type V1StorageOSVolumeSource struct {
 
 	// fsType is the filesystem type to mount.

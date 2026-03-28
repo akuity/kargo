@@ -14,7 +14,7 @@ import (
 
 // V1PodResourceClaim v1 pod resource claim
 //
-// swagger:model v1.PodResourceClaim
+// swagger:model V1PodResourceClaim
 type V1PodResourceClaim struct {
 
 	// Name uniquely identifies this resource claim inside the pod.

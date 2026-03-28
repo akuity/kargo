@@ -15,7 +15,7 @@ import (
 
 // V1LifecycleHandler v1 lifecycle handler
 //
-// swagger:model v1.LifecycleHandler
+// swagger:model V1LifecycleHandler
 type V1LifecycleHandler struct {
 
 	// Exec specifies a command to execute in the container.

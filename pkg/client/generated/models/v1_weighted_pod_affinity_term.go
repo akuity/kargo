@@ -15,7 +15,7 @@ import (
 
 // V1WeightedPodAffinityTerm v1 weighted pod affinity term
 //
-// swagger:model v1.WeightedPodAffinityTerm
+// swagger:model V1WeightedPodAffinityTerm
 type V1WeightedPodAffinityTerm struct {
 
 	// Required. A pod affinity term, associated with the corresponding weight.

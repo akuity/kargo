@@ -16,7 +16,7 @@ import (
 
 // V1CompletionMode v1 completion mode
 //
-// swagger:model v1.CompletionMode
+// swagger:model V1CompletionMode
 type V1CompletionMode string
 
 func NewV1CompletionMode(value V1CompletionMode) *V1CompletionMode {

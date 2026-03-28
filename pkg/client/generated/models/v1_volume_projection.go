@@ -15,7 +15,7 @@ import (
 
 // V1VolumeProjection v1 volume projection
 //
-// swagger:model v1.VolumeProjection
+// swagger:model V1VolumeProjection
 type V1VolumeProjection struct {
 
 	// ClusterTrustBundle allows a pod to access the `.spec.trustBundle` field

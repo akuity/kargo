@@ -14,7 +14,7 @@ import (
 
 // V1ContainerRestartRuleOnExitCodes v1 container restart rule on exit codes
 //
-// swagger:model v1.ContainerRestartRuleOnExitCodes
+// swagger:model V1ContainerRestartRuleOnExitCodes
 type V1ContainerRestartRuleOnExitCodes struct {
 
 	// Represents the relationship between the container exit code(s) and the

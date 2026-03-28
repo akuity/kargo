@@ -14,7 +14,7 @@ import (
 
 // V1VolumeDevice v1 volume device
 //
-// swagger:model v1.VolumeDevice
+// swagger:model V1VolumeDevice
 type V1VolumeDevice struct {
 
 	// devicePath is the path inside of the container that the device will be mapped to.

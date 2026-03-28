@@ -17,7 +17,7 @@ import (
 
 // V1NodeSelectorTerm v1 node selector term
 //
-// swagger:model v1.NodeSelectorTerm
+// swagger:model V1NodeSelectorTerm
 type V1NodeSelectorTerm struct {
 
 	// A list of node selector requirements by node's labels.

@@ -14,7 +14,7 @@ import (
 
 // V1VsphereVirtualDiskVolumeSource v1 vsphere virtual disk volume source
 //
-// swagger:model v1.VsphereVirtualDiskVolumeSource
+// swagger:model V1VsphereVirtualDiskVolumeSource
 type V1VsphereVirtualDiskVolumeSource struct {
 
 	// fsType is filesystem type to mount.

@@ -17,7 +17,7 @@ import (
 
 // V1PodSecurityContext v1 pod security context
 //
-// swagger:model v1.PodSecurityContext
+// swagger:model V1PodSecurityContext
 type V1PodSecurityContext struct {
 
 	// appArmorProfile is the AppArmor options to use by the containers in this pod.

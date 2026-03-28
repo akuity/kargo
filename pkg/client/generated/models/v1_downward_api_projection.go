@@ -17,7 +17,7 @@ import (
 
 // V1DownwardAPIProjection v1 downward API projection
 //
-// swagger:model v1.DownwardAPIProjection
+// swagger:model V1DownwardAPIProjection
 type V1DownwardAPIProjection struct {
 
 	// Items is a list of DownwardAPIVolume file

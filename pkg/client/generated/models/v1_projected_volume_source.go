@@ -17,7 +17,7 @@ import (
 
 // V1ProjectedVolumeSource v1 projected volume source
 //
-// swagger:model v1.ProjectedVolumeSource
+// swagger:model V1ProjectedVolumeSource
 type V1ProjectedVolumeSource struct {
 
 	// defaultMode are the mode bits used to set permissions on created files by default.

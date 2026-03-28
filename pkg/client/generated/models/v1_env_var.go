@@ -15,7 +15,7 @@ import (
 
 // V1EnvVar v1 env var
 //
-// swagger:model v1.EnvVar
+// swagger:model V1EnvVar
 type V1EnvVar struct {
 
 	// Name of the environment variable.

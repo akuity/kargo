@@ -17,7 +17,7 @@ import (
 
 // V1EphemeralContainer v1 ephemeral container
 //
-// swagger:model v1.EphemeralContainer
+// swagger:model V1EphemeralContainer
 type V1EphemeralContainer struct {
 
 	// Arguments to the entrypoint.

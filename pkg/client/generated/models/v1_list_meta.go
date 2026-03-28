@@ -14,7 +14,7 @@ import (
 
 // V1ListMeta v1 list meta
 //
-// swagger:model v1.ListMeta
+// swagger:model V1ListMeta
 type V1ListMeta struct {
 
 	// continue may be set if the user set a limit on the number of items returned, and indicates that

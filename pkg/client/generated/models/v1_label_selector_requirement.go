@@ -14,7 +14,7 @@ import (
 
 // V1LabelSelectorRequirement v1 label selector requirement
 //
-// swagger:model v1.LabelSelectorRequirement
+// swagger:model V1LabelSelectorRequirement
 type V1LabelSelectorRequirement struct {
 
 	// key is the label key that the selector applies to.

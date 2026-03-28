@@ -17,7 +17,7 @@ import (
 
 // V1PodFailurePolicyRule v1 pod failure policy rule
 //
-// swagger:model v1.PodFailurePolicyRule
+// swagger:model V1PodFailurePolicyRule
 type V1PodFailurePolicyRule struct {
 
 	// Specifies the action taken on a pod failure when the requirements are satisfied.

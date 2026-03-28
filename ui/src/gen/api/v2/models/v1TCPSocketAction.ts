@@ -5,7 +5,7 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
-import type { IntstrIntOrString } from './intstrIntOrString';
+import type { IntOrString } from './intOrString';
 
 export interface V1TCPSocketAction {
   /** Optional: Host name to connect to, defaults to the pod IP.
@@ -14,5 +14,5 @@ export interface V1TCPSocketAction {
   /** Number or name of the port to access on the container.
 Number must be in the range 1 to 65535.
 Name must be an IANA_SVC_NAME. */
-  port?: IntstrIntOrString;
+  port?: IntOrString;
 }

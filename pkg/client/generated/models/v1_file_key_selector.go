@@ -14,7 +14,7 @@ import (
 
 // V1FileKeySelector v1 file key selector
 //
-// swagger:model v1.FileKeySelector
+// swagger:model V1FileKeySelector
 type V1FileKeySelector struct {
 
 	// The key within the env file. An invalid key will prevent the pod from starting.

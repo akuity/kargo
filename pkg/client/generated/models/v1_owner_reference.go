@@ -14,7 +14,7 @@ import (
 
 // V1OwnerReference v1 owner reference
 //
-// swagger:model v1.OwnerReference
+// swagger:model V1OwnerReference
 type V1OwnerReference struct {
 
 	// API version of the referent.

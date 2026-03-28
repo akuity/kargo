@@ -14,7 +14,7 @@ import (
 
 // V1PodDNSConfigOption v1 pod DNS config option
 //
-// swagger:model v1.PodDNSConfigOption
+// swagger:model V1PodDNSConfigOption
 type V1PodDNSConfigOption struct {
 
 	// Name is this DNS resolver option's name.

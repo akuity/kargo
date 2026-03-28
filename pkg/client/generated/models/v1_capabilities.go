@@ -14,7 +14,7 @@ import (
 
 // V1Capabilities v1 capabilities
 //
-// swagger:model v1.Capabilities
+// swagger:model V1Capabilities
 type V1Capabilities struct {
 
 	// Added capabilities

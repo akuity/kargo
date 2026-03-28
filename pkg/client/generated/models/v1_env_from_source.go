@@ -15,7 +15,7 @@ import (
 
 // V1EnvFromSource v1 env from source
 //
-// swagger:model v1.EnvFromSource
+// swagger:model V1EnvFromSource
 type V1EnvFromSource struct {
 
 	// The ConfigMap to select from

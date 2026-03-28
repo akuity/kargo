@@ -15,7 +15,7 @@ import (
 
 // V1CinderVolumeSource v1 cinder volume source
 //
-// swagger:model v1.CinderVolumeSource
+// swagger:model V1CinderVolumeSource
 type V1CinderVolumeSource struct {
 
 	// fsType is the filesystem type to mount.

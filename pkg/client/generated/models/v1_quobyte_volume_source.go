@@ -14,7 +14,7 @@ import (
 
 // V1QuobyteVolumeSource v1 quobyte volume source
 //
-// swagger:model v1.QuobyteVolumeSource
+// swagger:model V1QuobyteVolumeSource
 type V1QuobyteVolumeSource struct {
 
 	// group to map volume access to

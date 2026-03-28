@@ -14,7 +14,7 @@ import (
 
 // V1Toleration v1 toleration
 //
-// swagger:model v1.Toleration
+// swagger:model V1Toleration
 type V1Toleration struct {
 
 	// Effect indicates the taint effect to match. Empty means match all taint effects.

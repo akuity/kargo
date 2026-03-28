@@ -15,7 +15,7 @@ import (
 
 // V1PodFailurePolicyOnExitCodesRequirement v1 pod failure policy on exit codes requirement
 //
-// swagger:model v1.PodFailurePolicyOnExitCodesRequirement
+// swagger:model V1PodFailurePolicyOnExitCodesRequirement
 type V1PodFailurePolicyOnExitCodesRequirement struct {
 
 	// Restricts the check for exit codes to the container with the

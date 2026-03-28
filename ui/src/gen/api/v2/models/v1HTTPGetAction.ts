@@ -6,7 +6,7 @@
  * OpenAPI spec version: v1alpha1
  */
 import type { V1HTTPHeader } from './v1HTTPHeader';
-import type { IntstrIntOrString } from './intstrIntOrString';
+import type { IntOrString } from './intOrString';
 
 export interface V1HTTPGetAction {
   /** Host name to connect to, defaults to the pod IP. You probably want to set
@@ -23,7 +23,7 @@ export interface V1HTTPGetAction {
   /** Name or number of the port to access on the container.
 Number must be in the range 1 to 65535.
 Name must be an IANA_SVC_NAME. */
-  port?: IntstrIntOrString;
+  port?: IntOrString;
   /** Scheme to use for connecting to the host.
 Defaults to HTTP.
 +optional */

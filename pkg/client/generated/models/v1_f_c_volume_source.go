@@ -14,7 +14,7 @@ import (
 
 // V1FCVolumeSource v1 f c volume source
 //
-// swagger:model v1.FCVolumeSource
+// swagger:model V1FCVolumeSource
 type V1FCVolumeSource struct {
 
 	// fsType is the filesystem type to mount.

@@ -16,7 +16,7 @@ import (
 
 // V1PodFailurePolicyAction v1 pod failure policy action
 //
-// swagger:model v1.PodFailurePolicyAction
+// swagger:model V1PodFailurePolicyAction
 type V1PodFailurePolicyAction string
 
 func NewV1PodFailurePolicyAction(value V1PodFailurePolicyAction) *V1PodFailurePolicyAction {

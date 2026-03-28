@@ -17,7 +17,7 @@ import (
 
 // V1PodDNSConfig v1 pod DNS config
 //
-// swagger:model v1.PodDNSConfig
+// swagger:model V1PodDNSConfig
 type V1PodDNSConfig struct {
 
 	// A list of DNS name server IP addresses.

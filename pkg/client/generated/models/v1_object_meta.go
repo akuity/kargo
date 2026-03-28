@@ -17,7 +17,7 @@ import (
 
 // V1ObjectMeta v1 object meta
 //
-// swagger:model v1.ObjectMeta
+// swagger:model V1ObjectMeta
 type V1ObjectMeta struct {
 
 	// Annotations is an unstructured key value map stored with a resource that may be

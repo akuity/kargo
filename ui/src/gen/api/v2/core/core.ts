@@ -23,33 +23,33 @@ import type {
 
 import type {
   ApproveFreightParams,
+  ClusterPromotionTask,
+  ClusterPromotionTaskList,
   CreateConfigMapRequestBody,
-  GithubComAkuityKargoApiV1alpha1ClusterPromotionTask,
-  GithubComAkuityKargoApiV1alpha1ClusterPromotionTaskList,
-  GithubComAkuityKargoApiV1alpha1Freight,
-  GithubComAkuityKargoApiV1alpha1Project,
-  GithubComAkuityKargoApiV1alpha1ProjectConfig,
-  GithubComAkuityKargoApiV1alpha1ProjectList,
-  GithubComAkuityKargoApiV1alpha1Promotion,
-  GithubComAkuityKargoApiV1alpha1PromotionList,
-  GithubComAkuityKargoApiV1alpha1PromotionTask,
-  GithubComAkuityKargoApiV1alpha1PromotionTaskList,
-  GithubComAkuityKargoApiV1alpha1Stage,
-  GithubComAkuityKargoApiV1alpha1StageList,
-  GithubComAkuityKargoApiV1alpha1Warehouse,
-  GithubComAkuityKargoApiV1alpha1WarehouseList,
+  Freight,
   ListImages200,
   ListPromotionsParams,
   PatchConfigMapRequestBody,
   PatchFreightAliasParams,
+  Project,
+  ProjectConfig,
+  ProjectList,
   PromoteDownstream201,
   PromoteDownstreamRequest,
   PromoteToStageRequest,
+  Promotion,
+  PromotionList,
+  PromotionTask,
+  PromotionTaskList,
   QueryFreightsRest200,
   QueryFreightsRestParams,
+  Stage,
+  StageList,
   UpdateConfigMapRequestBody,
   V1ConfigMap,
-  V1ConfigMapList
+  V1ConfigMapList,
+  Warehouse,
+  WarehouseList
 } from '.././models';
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
@@ -61,7 +61,7 @@ type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
  * @summary List projects
  */
 export type listProjectsResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ProjectList;
+  data: ProjectList;
   status: 200;
 };
 
@@ -173,7 +173,7 @@ export function useListProjects<TData = Awaited<ReturnType<typeof listProjects>>
  * @summary Retrieve a Project resource
  */
 export type getProjectResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Project;
+  data: Project;
   status: 200;
 };
 
@@ -385,7 +385,7 @@ namespace.
  * @summary Retrieve ProjectConfig
  */
 export type getProjectConfigResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ProjectConfig;
+  data: ProjectConfig;
   status: 200;
 };
 
@@ -1580,7 +1580,7 @@ or alias.
  * @summary Retrieve a Freight resource
  */
 export type getFreightResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Freight;
+  data: Freight;
   status: 200;
 };
 
@@ -2151,7 +2151,7 @@ a PromotionTaskList resource.
  * @summary List PromotionTasks
  */
 export type listPromotionTasksResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionTaskList;
+  data: PromotionTaskList;
   status: 200;
 };
 
@@ -2289,7 +2289,7 @@ export function useListPromotionTasks<
  * @summary Retrieve a PromotionTask
  */
 export type getPromotionTaskResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionTask;
+  data: PromotionTask;
   status: 200;
 };
 
@@ -2433,7 +2433,7 @@ PromotionList resource.
  * @summary List Promotions
  */
 export type listPromotionsResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1PromotionList;
+  data: PromotionList;
   status: 200;
 };
 
@@ -2585,7 +2585,7 @@ export function useListPromotions<
  * @summary Retrieve a Promotion
  */
 export type getPromotionResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Promotion;
+  data: Promotion;
   status: 200;
 };
 
@@ -2901,7 +2901,7 @@ StageList resource.
  * @summary List Stages
  */
 export type listStagesResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1StageList;
+  data: StageList;
   status: 200;
 };
 
@@ -3023,7 +3023,7 @@ export function useListStages<TData = Awaited<ReturnType<typeof listStages>>, TE
  * @summary Retrieve a Stage
  */
 export type getStageResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Stage;
+  data: Stage;
   status: 200;
 };
 
@@ -3242,7 +3242,7 @@ the state represented by the specified Freight.
  * @summary Promote to Stage
  */
 export type promoteToStageResponse201 = {
-  data: GithubComAkuityKargoApiV1alpha1Promotion;
+  data: Promotion;
   status: 201;
 };
 
@@ -3527,7 +3527,7 @@ WarehouseList resource.
  * @summary List Warehouses
  */
 export type listWarehousesResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1WarehouseList;
+  data: WarehouseList;
   status: 200;
 };
 
@@ -3661,7 +3661,7 @@ export function useListWarehouses<
  * @summary Retrieve a Warehouse
  */
 export type getWarehouseResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1Warehouse;
+  data: Warehouse;
   status: 200;
 };
 
@@ -3979,7 +3979,7 @@ ClusterPromotionTaskList resource.
  * @summary List ClusterPromotionTasks
  */
 export type listClusterPromotionTasksResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ClusterPromotionTaskList;
+  data: ClusterPromotionTaskList;
   status: 200;
 };
 
@@ -4117,7 +4117,7 @@ export function useListClusterPromotionTasks<
  * @summary Retrieve a ClusterPromotionTask
  */
 export type getClusterPromotionTaskResponse200 = {
-  data: GithubComAkuityKargoApiV1alpha1ClusterPromotionTask;
+  data: ClusterPromotionTask;
   status: 200;
 };
 

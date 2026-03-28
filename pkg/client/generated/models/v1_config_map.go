@@ -15,7 +15,7 @@ import (
 
 // V1ConfigMap v1 config map
 //
-// swagger:model v1.ConfigMap
+// swagger:model V1ConfigMap
 type V1ConfigMap struct {
 
 	// APIVersion defines the versioned schema of this representation of an object.

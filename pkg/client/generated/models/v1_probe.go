@@ -15,7 +15,7 @@ import (
 
 // V1Probe v1 probe
 //
-// swagger:model v1.Probe
+// swagger:model V1Probe
 type V1Probe struct {
 
 	// Exec specifies a command to execute in the container.

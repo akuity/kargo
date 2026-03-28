@@ -14,7 +14,7 @@ import (
 
 // V1PersistentVolumeClaimVolumeSource v1 persistent volume claim volume source
 //
-// swagger:model v1.PersistentVolumeClaimVolumeSource
+// swagger:model V1PersistentVolumeClaimVolumeSource
 type V1PersistentVolumeClaimVolumeSource struct {
 
 	// claimName is the name of a PersistentVolumeClaim in the same namespace as the pod using this volume.

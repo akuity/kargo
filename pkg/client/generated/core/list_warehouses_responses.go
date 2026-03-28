@@ -47,7 +47,7 @@ ListWarehousesOK describes a response with status code 200, with default header 
 WarehouseList custom resource
 */
 type ListWarehousesOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1WarehouseList
+	Payload *models.WarehouseList
 }
 
 // IsSuccess returns true when this list warehouses o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListWarehousesOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/warehouses][%d] listWarehousesOK %s", 200, payload)
 }
 
-func (o *ListWarehousesOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1WarehouseList {
+func (o *ListWarehousesOK) GetPayload() *models.WarehouseList {
 	return o.Payload
 }
 
 func (o *ListWarehousesOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1WarehouseList)
+	o.Payload = new(models.WarehouseList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

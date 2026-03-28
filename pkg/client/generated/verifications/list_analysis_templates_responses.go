@@ -47,7 +47,7 @@ ListAnalysisTemplatesOK describes a response with status code 200, with default 
 AnalysisTemplateList custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplateList)
 */
 type ListAnalysisTemplatesOK struct {
-	Payload *models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisTemplateList
+	Payload *models.RolloutsAnalysisTemplateList
 }
 
 // IsSuccess returns true when this list analysis templates o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListAnalysisTemplatesOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-templates][%d] listAnalysisTemplatesOK %s", 200, payload)
 }
 
-func (o *ListAnalysisTemplatesOK) GetPayload() *models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisTemplateList {
+func (o *ListAnalysisTemplatesOK) GetPayload() *models.RolloutsAnalysisTemplateList {
 	return o.Payload
 }
 
 func (o *ListAnalysisTemplatesOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIStubsRolloutsV1alpha1AnalysisTemplateList)
+	o.Payload = new(models.RolloutsAnalysisTemplateList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

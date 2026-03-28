@@ -15,7 +15,7 @@ import (
 
 // V1VolumeResourceRequirements v1 volume resource requirements
 //
-// swagger:model v1.VolumeResourceRequirements
+// swagger:model V1VolumeResourceRequirements
 type V1VolumeResourceRequirements struct {
 
 	// Limits describes the maximum amount of compute resources allowed.

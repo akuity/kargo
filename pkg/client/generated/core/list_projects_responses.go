@@ -47,7 +47,7 @@ ListProjectsOK describes a response with status code 200, with default header va
 ProjectList custom resource
 */
 type ListProjectsOK struct {
-	Payload *models.GithubComAkuityKargoAPIV1alpha1ProjectList
+	Payload *models.ProjectList
 }
 
 // IsSuccess returns true when this list projects o k response has a 2xx status code
@@ -90,13 +90,13 @@ func (o *ListProjectsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects][%d] listProjectsOK %s", 200, payload)
 }
 
-func (o *ListProjectsOK) GetPayload() *models.GithubComAkuityKargoAPIV1alpha1ProjectList {
+func (o *ListProjectsOK) GetPayload() *models.ProjectList {
 	return o.Payload
 }
 
 func (o *ListProjectsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
-	o.Payload = new(models.GithubComAkuityKargoAPIV1alpha1ProjectList)
+	o.Payload = new(models.ProjectList)
 
 	// response payload
 	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {

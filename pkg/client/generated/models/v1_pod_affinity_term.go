@@ -15,7 +15,7 @@ import (
 
 // V1PodAffinityTerm v1 pod affinity term
 //
-// swagger:model v1.PodAffinityTerm
+// swagger:model V1PodAffinityTerm
 type V1PodAffinityTerm struct {
 
 	// A label query over a set of resources, in this case pods.

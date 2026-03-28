@@ -14,7 +14,7 @@ import (
 
 // V1PodSchedulingGate v1 pod scheduling gate
 //
-// swagger:model v1.PodSchedulingGate
+// swagger:model V1PodSchedulingGate
 type V1PodSchedulingGate struct {
 
 	// Name of the scheduling gate.

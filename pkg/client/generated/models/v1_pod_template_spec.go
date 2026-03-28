@@ -15,7 +15,7 @@ import (
 
 // V1PodTemplateSpec v1 pod template spec
 //
-// swagger:model v1.PodTemplateSpec
+// swagger:model V1PodTemplateSpec
 type V1PodTemplateSpec struct {
 
 	// Standard object's metadata.

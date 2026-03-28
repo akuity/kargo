@@ -14,7 +14,7 @@ import (
 
 // V1PodFailurePolicyOnPodConditionsPattern v1 pod failure policy on pod conditions pattern
 //
-// swagger:model v1.PodFailurePolicyOnPodConditionsPattern
+// swagger:model V1PodFailurePolicyOnPodConditionsPattern
 type V1PodFailurePolicyOnPodConditionsPattern struct {
 
 	// Specifies the required Pod condition status. To match a pod condition

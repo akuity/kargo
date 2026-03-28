@@ -14,7 +14,7 @@ import (
 
 // V1ContainerResizePolicy v1 container resize policy
 //
-// swagger:model v1.ContainerResizePolicy
+// swagger:model V1ContainerResizePolicy
 type V1ContainerResizePolicy struct {
 
 	// Name of the resource to which this resource resize policy applies.

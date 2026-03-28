@@ -15,7 +15,7 @@ import (
 
 // V1ContainerRestartRule v1 container restart rule
 //
-// swagger:model v1.ContainerRestartRule
+// swagger:model V1ContainerRestartRule
 type V1ContainerRestartRule struct {
 
 	// Specifies the action taken on a container exit if the requirements

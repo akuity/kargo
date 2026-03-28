@@ -15,7 +15,7 @@ import (
 
 // V1EnvVarSource v1 env var source
 //
-// swagger:model v1.EnvVarSource
+// swagger:model V1EnvVarSource
 type V1EnvVarSource struct {
 
 	// Selects a key of a ConfigMap.

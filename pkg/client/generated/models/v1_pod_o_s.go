@@ -14,7 +14,7 @@ import (
 
 // V1PodOS v1 pod o s
 //
-// swagger:model v1.PodOS
+// swagger:model V1PodOS
 type V1PodOS struct {
 
 	// Name is the name of the operating system. The currently supported values are linux and windows.

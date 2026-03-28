@@ -15,7 +15,7 @@ import (
 
 // V1CSIVolumeSource v1 c s i volume source
 //
-// swagger:model v1.CSIVolumeSource
+// swagger:model V1CSIVolumeSource
 type V1CSIVolumeSource struct {
 
 	// driver is the name of the CSI driver that handles this volume.

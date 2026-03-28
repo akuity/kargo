@@ -14,7 +14,7 @@ import (
 
 // V1GlusterfsVolumeSource v1 glusterfs volume source
 //
-// swagger:model v1.GlusterfsVolumeSource
+// swagger:model V1GlusterfsVolumeSource
 type V1GlusterfsVolumeSource struct {
 
 	// endpoints is the endpoint name that details Glusterfs topology.

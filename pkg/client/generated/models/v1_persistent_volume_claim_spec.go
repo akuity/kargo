@@ -15,7 +15,7 @@ import (
 
 // V1PersistentVolumeClaimSpec v1 persistent volume claim spec
 //
-// swagger:model v1.PersistentVolumeClaimSpec
+// swagger:model V1PersistentVolumeClaimSpec
 type V1PersistentVolumeClaimSpec struct {
 
 	// accessModes contains the desired access modes the volume should have.

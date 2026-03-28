@@ -17,7 +17,7 @@ import (
 
 // V1DownwardAPIVolumeSource v1 downward API volume source
 //
-// swagger:model v1.DownwardAPIVolumeSource
+// swagger:model V1DownwardAPIVolumeSource
 type V1DownwardAPIVolumeSource struct {
 
 	// Optional: mode bits to use on created files by default. Must be a
