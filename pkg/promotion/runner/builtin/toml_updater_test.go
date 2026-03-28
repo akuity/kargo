@@ -108,14 +108,14 @@ func Test_tomlUpdater_run(t *testing.T) {
 					Status: kargoapi.PromotionStepStatusSucceeded,
 					Output: map[string]any{
 						"commitMessage": "Updated config.toml\n\n" +
-							"- package.version: \"1.0.1\"\n" +
+							"- package.version: '1.0.1'\n" +
 							"- features.newFeature: true\n" +
 							"- threshold: 100",
 					},
 				}, result)
 				content, err := os.ReadFile(path.Join(workDir, "config.toml"))
 				require.NoError(t, err)
-				assert.Contains(t, string(content), "version = \"1.0.1\"")
+				assert.Contains(t, string(content), "version = '1.0.1'")
 				assert.Contains(t, string(content), "newFeature = true")
 				assert.Contains(t, string(content), "threshold = 100")
 			},
@@ -180,7 +180,7 @@ func Test_tomlUpdater_updateFile(t *testing.T) {
 				require.NoError(t, err)
 				content, readErr := os.ReadFile(valuesFilePath)
 				require.NoError(t, readErr)
-				assert.Equal(t, "title = \"newvalue\"\n", string(content))
+				assert.Equal(t, "title = 'newvalue'\n", string(content))
 			},
 		},
 		{
@@ -242,7 +242,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 			path:    "values.toml",
 			updates: []builtin.TOMLUpdate{{Key: "package.version", Value: "1.2.3"}},
 			assertions: func(t *testing.T, result string) {
-				assert.Equal(t, "Updated values.toml\n\n- package.version: \"1.2.3\"", result)
+				assert.Equal(t, "Updated values.toml\n\n- package.version: '1.2.3'", result)
 			},
 		},
 		{
@@ -254,7 +254,11 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 				{Key: "threshold", Value: 42},
 			},
 			assertions: func(t *testing.T, result string) {
-				assert.Equal(t, "Updated Cargo.toml\n\n- package.version: \"1.2.3\"\n- features.enabled: true\n- threshold: 42", result)
+				assert.Equal(
+					t,
+					"Updated Cargo.toml\n\n- package.version: '1.2.3'\n- features.enabled: true\n- threshold: 42",
+					result,
+				)
 			},
 		},
 	}

@@ -13,6 +13,7 @@ func TestSetValuesInBytes(t *testing.T) {
 		updates    []Update
 		assertions func(*testing.T, []byte, error)
 	}{
+		// Error cases
 		{
 			name:    "invalid TOML",
 			inBytes: []byte("key = \n"),
@@ -22,21 +23,40 @@ func TestSetValuesInBytes(t *testing.T) {
 			},
 		},
 		{
+			name:    "missing key",
+			inBytes: []byte("title = \"old\"\n"),
+			updates: []Update{{Key: "missing", Value: "new"}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.ErrorContains(t, err, "key path not found")
+				require.Nil(t, bytes)
+			},
+		},
+		{
+			name:    "non scalar target",
+			inBytes: []byte("[service]\nname = \"api\"\n"),
+			updates: []Update{{Key: "service", Value: "other"}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.ErrorContains(t, err, "addresses Table instead of a scalar node")
+				require.Nil(t, bytes)
+			},
+		},
+		{
+			name:    "unsupported value type",
+			inBytes: []byte("title = \"old\"\n"),
+			updates: []Update{{Key: "title", Value: []string{"a", "b"}}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.ErrorContains(t, err, "value is not a TOML scalar type")
+				require.Nil(t, bytes)
+			},
+		},
+		// Single top-level updates
+		{
 			name:    "updates scalar value",
 			inBytes: []byte("title = \"old\"\nactive = true\n"),
 			updates: []Update{{Key: "title", Value: "new"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
 				require.Equal(t, []byte("title = 'new'\nactive = true\n"), bytes)
-			},
-		},
-		{
-			name:    "preserves inline comments around updated value",
-			inBytes: []byte("title = \"old\" # keep me\nactive = true\n"),
-			updates: []Update{{Key: "title", Value: "new"}},
-			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.NoError(t, err)
-				require.Equal(t, []byte("title = 'new' # keep me\nactive = true\n"), bytes)
 			},
 		},
 		{
@@ -48,6 +68,35 @@ func TestSetValuesInBytes(t *testing.T) {
 				require.Equal(t, []byte("\"example.com/version\" = '2.0.0'\n"), bytes)
 			},
 		},
+		// Single updates under tables
+		{
+			name:    "updates scalar under table header",
+			inBytes: []byte("[package]\nversion = \"1.0.0\"\n"),
+			updates: []Update{{Key: "package.version", Value: "2.0.0"}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("[package]\nversion = '2.0.0'\n"), bytes)
+			},
+		},
+		{
+			name:    "updates scalar under nested table header",
+			inBytes: []byte("[a.b]\nc = 1\n"),
+			updates: []Update{{Key: "a.b.c", Value: 99}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("[a.b]\nc = 99\n"), bytes)
+			},
+		},
+		{
+			name:    "updates scalar under table header that follows other expressions",
+			inBytes: []byte("threshold = 1\n\n[features]\nenabled = false\n"),
+			updates: []Update{{Key: "features.enabled", Value: true}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("threshold = 1\n\n[features]\nenabled = true\n"), bytes)
+			},
+		},
+		// Single updates in inline/array constructs
 		{
 			name:    "updates array item",
 			inBytes: []byte("values = [1, 2, 3]\n"),
@@ -79,31 +128,118 @@ func TestSetValuesInBytes(t *testing.T) {
 				)
 			},
 		},
+		// Formatting preservation
 		{
-			name:    "non scalar target",
-			inBytes: []byte("[service]\nname = \"api\"\n"),
-			updates: []Update{{Key: "service", Value: "other"}},
+			name:    "preserves inline comments around updated value",
+			inBytes: []byte("title = \"old\" # keep me\nactive = true\n"),
+			updates: []Update{{Key: "title", Value: "new"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.ErrorContains(t, err, "addresses Table instead of a scalar node")
-				require.Nil(t, bytes)
+				require.NoError(t, err)
+				require.Equal(t, []byte("title = 'new' # keep me\nactive = true\n"), bytes)
 			},
 		},
 		{
-			name:    "missing key",
-			inBytes: []byte("title = \"old\"\n"),
-			updates: []Update{{Key: "missing", Value: "new"}},
+			name:    "preserves standalone comment lines",
+			inBytes: []byte("# header comment\nv = 1\n# footer comment\n"),
+			updates: []Update{{Key: "v", Value: 2}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.ErrorContains(t, err, "key path not found")
-				require.Nil(t, bytes)
+				require.NoError(t, err)
+				require.Equal(t, []byte("# header comment\nv = 2\n# footer comment\n"), bytes)
 			},
 		},
 		{
-			name:    "unsupported value type",
-			inBytes: []byte("title = \"old\"\n"),
-			updates: []Update{{Key: "title", Value: []string{"a", "b"}}},
+			name:    "preserves blank lines between sections",
+			inBytes: []byte("[a]\nx = 1\n\n\n[b]\ny = 2\n"),
+			updates: []Update{{Key: "b.y", Value: 99}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.ErrorContains(t, err, "value is not a TOML scalar type")
-				require.Nil(t, bytes)
+				require.NoError(t, err)
+				require.Equal(t, []byte("[a]\nx = 1\n\n\n[b]\ny = 99\n"), bytes)
+			},
+		},
+		{
+			name:    "value grows in length",
+			inBytes: []byte("v = 1\nother = true\n"),
+			updates: []Update{{Key: "v", Value: 99999}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("v = 99999\nother = true\n"), bytes)
+			},
+		},
+		{
+			name:    "value shrinks in length",
+			inBytes: []byte("v = 99999\nother = true\n"),
+			updates: []Update{{Key: "v", Value: 1}},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("v = 1\nother = true\n"), bytes)
+			},
+		},
+		// Multiple updates
+		{
+			name:    "multiple updates to different top-level keys",
+			inBytes: []byte("a = 1\nb = 2\nc = 3\n"),
+			updates: []Update{
+				{Key: "a", Value: 10},
+				{Key: "c", Value: 30},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("a = 10\nb = 2\nc = 30\n"), bytes)
+			},
+		},
+		{
+			name:    "multiple updates across top-level and table-scoped keys",
+			inBytes: []byte("threshold = 1\n\n[package]\nversion = \"1.0.0\"\n\n[features]\nenabled = false\n"),
+			updates: []Update{
+				{Key: "threshold", Value: 100},
+				{Key: "package.version", Value: "2.0.0"},
+				{Key: "features.enabled", Value: true},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]byte("threshold = 100\n\n[package]\nversion = '2.0.0'\n\n[features]\nenabled = true\n"),
+					bytes,
+				)
+			},
+		},
+		{
+			name:    "multiple updates within same table",
+			inBytes: []byte("[server]\nhost = \"localhost\"\nport = 8080\n"),
+			updates: []Update{
+				{Key: "server.host", Value: "0.0.0.0"},
+				{Key: "server.port", Value: 9090},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(
+					t,
+					[]byte("[server]\nhost = '0.0.0.0'\nport = 9090\n"),
+					bytes,
+				)
+			},
+		},
+		{
+			name:    "duplicate key in updates uses last value",
+			inBytes: []byte("v = 1\n"),
+			updates: []Update{
+				{Key: "v", Value: 2},
+				{Key: "v", Value: 3},
+			},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("v = 3\n"), bytes)
+			},
+		},
+		// Edge cases
+		{
+			name:    "no updates returns input unchanged",
+			inBytes: []byte("title = \"hello\"\n"),
+			updates: []Update{},
+			assertions: func(t *testing.T, bytes []byte, err error) {
+				require.NoError(t, err)
+				require.Equal(t, []byte("title = \"hello\"\n"), bytes)
 			},
 		},
 	}

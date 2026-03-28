@@ -186,7 +186,7 @@ func indexNodes(inBytes []byte) (*nodeIndex, error) {
 			idx.register(currentPath, expr)
 		case unstable.KeyValue:
 			fullPath := append(copyPath(currentPath), iteratorParts(expr.Key())...)
-			idx.indexValue(expr.Value(), fullPath)
+			idx.indexValue(&parser, expr.Value(), fullPath)
 		default:
 			return nil, fmt.Errorf(
 				"error parsing input: unsupported expression kind %s",
@@ -202,7 +202,11 @@ func indexNodes(inBytes []byte) (*nodeIndex, error) {
 	return idx, nil
 }
 
-func (n *nodeIndex) indexValue(node *unstable.Node, path []string) {
+func (n *nodeIndex) indexValue(
+	parser *unstable.Parser,
+	node *unstable.Node,
+	path []string,
+) {
 	if node == nil || !node.Valid() {
 		return
 	}
@@ -214,7 +218,7 @@ func (n *nodeIndex) indexValue(node *unstable.Node, path []string) {
 		it := node.Children()
 		index := 0
 		for it.Next() {
-			n.indexValue(it.Node(), append(copyPath(path), strconv.Itoa(index)))
+			n.indexValue(parser, it.Node(), append(copyPath(path), strconv.Itoa(index)))
 			index++
 		}
 	case unstable.InlineTable:
@@ -225,7 +229,7 @@ func (n *nodeIndex) indexValue(node *unstable.Node, path []string) {
 				continue
 			}
 			childPath := append(copyPath(path), iteratorParts(child.Key())...)
-			n.indexValue(child.Value(), childPath)
+			n.indexValue(parser, child.Value(), childPath)
 		}
 	case unstable.String,
 		unstable.Bool,
@@ -235,7 +239,11 @@ func (n *nodeIndex) indexValue(node *unstable.Node, path []string) {
 		unstable.LocalTime,
 		unstable.LocalDateTime,
 		unstable.DateTime:
-		n.scalars[encodePath(path)] = nodeRef{kind: node.Kind, raw: node.Raw}
+		raw := node.Raw
+		if raw.Length == 0 && len(node.Data) > 0 {
+			raw = parser.Range(node.Data)
+		}
+		n.scalars[encodePath(path)] = nodeRef{kind: node.Kind, raw: raw}
 	}
 }
 
