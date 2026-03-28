@@ -10,6 +10,10 @@ import (
 	"time"
 
 	tomlv2 "github.com/pelletier/go-toml/v2"
+	// Note: This is the only go-toml API that exposes byte offsets, which we need
+	// for in-place edits. It is explicitly not a stable API, so go-toml version
+	// bumps may require changes here. Test coverage in toml_test.go exercises
+	// every node type and should catch most unanticipated breaking changes.
 	"github.com/pelletier/go-toml/v2/unstable"
 
 	"github.com/akuity/kargo/pkg/sjson"
