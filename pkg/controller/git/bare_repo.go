@@ -192,6 +192,18 @@ func (b *bareRepo) AddWorkTree(path string, opts *AddWorkTreeOptions) (WorkTree,
 	if slices.Contains(workTreePaths, path) {
 		return nil, fmt.Errorf("working tree already exists at %q", path)
 	}
+	// If the target directory already exists on disk but is not registered
+	// as a git worktree (e.g. left over from a previous failed promotion
+	// attempt), remove it before calling git worktree add, which would
+	// otherwise fail with "fatal: '<path>' already exists".
+	if _, statErr := os.Stat(path); statErr == nil {
+		if removeErr := os.RemoveAll(path); removeErr != nil {
+			return nil, fmt.Errorf(
+				"error removing pre-existing directory at %q: %w",
+				path, removeErr,
+			)
+		}
+	}
 	args := []string{"worktree", "add", path}
 	if opts.Orphan {
 		args = append(args, "--orphan")
