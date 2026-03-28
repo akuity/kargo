@@ -1,6 +1,7 @@
 package git
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -9,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	testingPkg "github.com/akuity/kargo/api/testing"
+	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 func TestNonFastForwardRegex(t *testing.T) {
@@ -125,4 +127,89 @@ func Test_parseTagMetadataLine(t *testing.T) {
 func mustParseTime(s string) time.Time {
 	t, _ := time.Parse("2006-01-02 15:04:05 -0700", s)
 	return t
+}
+
+func TestListCommits(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	wt := internalWorkTree(t, rep)
+
+	// Create initial commit on main
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/file.txt", rep.Dir()),
+			[]byte("initial"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("main: initial commit", nil))
+
+	// Create a feature branch from the initial commit
+	require.NoError(t, rep.CreateChildBranch("feature"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/feature.txt", rep.Dir()),
+			[]byte("feature work 1"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("feature: work 1", nil))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/feature.txt", rep.Dir()),
+			[]byte("feature work 2"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("feature: work 2", nil))
+
+	// Back to main, add another commit
+	require.NoError(t, rep.Checkout("main"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/file.txt", rep.Dir()),
+			[]byte("second"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("main: second commit", nil))
+
+	// Merge the feature branch into main
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "feature", "--no-ff", "-m", "main: merge feature",
+	))
+	require.NoError(t, err)
+
+	// ListCommits should only return first-parent commits (main line),
+	// not the individual feature branch commits.
+	commits, err := rep.ListCommits(0, 0)
+	require.NoError(t, err)
+
+	subjects := make([]string, len(commits))
+	for i, c := range commits {
+		subjects[i] = c.Subject
+	}
+	require.Equal(
+		t,
+		[]string{
+			"main: merge feature",
+			"main: second commit",
+			"main: initial commit",
+		},
+		subjects,
+	)
 }

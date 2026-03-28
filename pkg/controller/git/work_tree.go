@@ -504,6 +504,7 @@ type CommitMetadata struct {
 func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	args := []string{
 		"log",
+		"--first-parent",
 		// This format is designed to output the following fields, separated by
 		// tabs (%x09):
 		//
