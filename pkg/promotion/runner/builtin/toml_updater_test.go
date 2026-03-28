@@ -93,7 +93,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLUpdateConfig{
 				Path: "config.toml",
-				Updates: []builtin.TOMLUpdate{
+				Updates: []builtin.TomlUpdate{
 					{Key: "package.version", Value: "1.0.1"},
 					{Key: "features.newFeature", Value: true},
 					{Key: "threshold", Value: 100},
@@ -125,7 +125,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLUpdateConfig{
 				Path:    "non-existent/config.toml",
-				Updates: []builtin.TOMLUpdate{{Key: "package.version", Value: "1.0.1"}},
+				Updates: []builtin.TomlUpdate{{Key: "package.version", Value: "1.0.1"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -136,7 +136,7 @@ func Test_tomlUpdater_run(t *testing.T) {
 		{
 			name:    "no updates provided",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg:     builtin.TOMLUpdateConfig{Path: "config.toml", Updates: []builtin.TOMLUpdate{}},
+			cfg:     builtin.TOMLUpdateConfig{Path: "config.toml", Updates: []builtin.TomlUpdate{}},
 			files:   map[string]string{"config.toml": "[package]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, workDir string, result promotion.StepResult, err error) {
 				assert.NoError(t, err)
@@ -227,7 +227,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 	tests := []struct {
 		name       string
 		path       string
-		updates    []builtin.TOMLUpdate
+		updates    []builtin.TomlUpdate
 		assertions func(*testing.T, string)
 	}{
 		{
@@ -240,7 +240,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name:    "single change",
 			path:    "values.toml",
-			updates: []builtin.TOMLUpdate{{Key: "package.version", Value: "1.2.3"}},
+			updates: []builtin.TomlUpdate{{Key: "package.version", Value: "1.2.3"}},
 			assertions: func(t *testing.T, result string) {
 				assert.Equal(t, "Updated values.toml\n\n- package.version: '1.2.3'", result)
 			},
@@ -248,7 +248,7 @@ func Test_tomlUpdater_generateCommitMessage(t *testing.T) {
 		{
 			name: "multiple changes",
 			path: "Cargo.toml",
-			updates: []builtin.TOMLUpdate{
+			updates: []builtin.TomlUpdate{
 				{Key: "package.version", Value: "1.2.3"},
 				{Key: "features.enabled", Value: true},
 				{Key: "threshold", Value: 42},

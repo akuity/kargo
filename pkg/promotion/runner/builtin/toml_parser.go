@@ -113,7 +113,7 @@ func (tp *tomlParser) readAndParseTOML(workDir string, path string) (any, error)
 // []builtin.TOMLParse.
 func (tp *tomlParser) extractValues(
 	data any,
-	outputs []builtin.TOMLParse,
+	outputs []builtin.TomlParse,
 ) (map[string]any, error) {
 	results := make(map[string]any, len(outputs))
 	for _, output := range outputs {

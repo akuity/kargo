@@ -97,7 +97,7 @@ func (t *tomlUpdater) updateFile(workDir string, path string, updates []inttoml.
 	return nil
 }
 
-func (t *tomlUpdater) generateCommitMessage(path string, updates []builtin.TOMLUpdate) string {
+func (t *tomlUpdater) generateCommitMessage(path string, updates []builtin.TomlUpdate) string {
 	if len(updates) == 0 {
 		return ""
 	}

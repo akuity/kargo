@@ -107,7 +107,7 @@ func Test_tomlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLParseConfig{
 				Path: "config.toml",
-				Outputs: []builtin.TOMLParse{
+				Outputs: []builtin.TomlParse{
 					{Name: "appVersion", FromExpression: "app.version"},
 					{Name: "featureStatus", FromExpression: "features.newFeature"},
 				},
@@ -131,7 +131,7 @@ func Test_tomlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLParseConfig{
 				Path:    "config.toml",
-				Outputs: []builtin.TOMLParse{{Name: "invalidField", FromExpression: "nonexistent.path"}},
+				Outputs: []builtin.TomlParse{{Name: "invalidField", FromExpression: "nonexistent.path"}},
 			},
 			files: map[string]string{"config.toml": "[app]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -143,7 +143,7 @@ func Test_tomlParser_run(t *testing.T) {
 		{
 			name:    "no outputs provided",
 			stepCtx: &promotion.StepContext{Project: "test-project"},
-			cfg:     builtin.TOMLParseConfig{Path: "config.toml", Outputs: []builtin.TOMLParse{}},
+			cfg:     builtin.TOMLParseConfig{Path: "config.toml", Outputs: []builtin.TomlParse{}},
 			files:   map[string]string{"config.toml": "[app]\nversion = \"1.0.0\"\n"},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -156,7 +156,7 @@ func Test_tomlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLParseConfig{
 				Path:    "config.toml",
-				Outputs: []builtin.TOMLParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			files: map[string]string{"config.toml": ""},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
@@ -170,7 +170,7 @@ func Test_tomlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLParseConfig{
 				Path:    "",
-				Outputs: []builtin.TOMLParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
@@ -183,7 +183,7 @@ func Test_tomlParser_run(t *testing.T) {
 			stepCtx: &promotion.StepContext{Project: "test-project"},
 			cfg: builtin.TOMLParseConfig{
 				Path:    "config",
-				Outputs: []builtin.TOMLParse{{Name: "key", FromExpression: "app.key"}},
+				Outputs: []builtin.TomlParse{{Name: "key", FromExpression: "app.key"}},
 			},
 			assertions: func(t *testing.T, _ string, result promotion.StepResult, err error) {
 				assert.Error(t, err)
