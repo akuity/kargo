@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/akuity/kargo/pkg/sjson"
 )
 
 // The maximum size of the input buffer for processing YAML files. Given that the max size of a
@@ -79,7 +81,7 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
-		keyPath, err := splitKey(update.Key)
+		keyPath, err := sjson.SplitKey(update.Key)
 		if err != nil {
 			return nil, fmt.Errorf("error splitting key %s: %w", update.Key, err)
 		}

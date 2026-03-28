@@ -11,6 +11,8 @@ import (
 
 	tomlv2 "github.com/pelletier/go-toml/v2"
 	"github.com/pelletier/go-toml/v2/unstable"
+
+	"github.com/akuity/kargo/pkg/sjson"
 )
 
 // Update represents a discrete update to be made to a TOML document.
@@ -70,7 +72,10 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 
 	changesByPath := map[string]change{}
 	for _, update := range updates {
-		keyPath := splitKeyPath(update.Key)
+		keyPath, err := sjson.SplitKey(update.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error splitting key %s: %w", update.Key, err)
+		}
 		encodedPath := encodePath(keyPath)
 
 		node, ok := index.scalars[encodedPath]
@@ -255,31 +260,6 @@ func iteratorParts(iterator unstable.Iterator) []string {
 	for iterator.Next() {
 		parts = append(parts, string(iterator.Node().Data))
 	}
-	return parts
-}
-
-func splitKeyPath(key string) []string {
-	var parts []string
-	var current strings.Builder
-	escaped := false
-	for _, r := range key {
-		switch {
-		case escaped:
-			current.WriteRune(r)
-			escaped = false
-		case r == '\\':
-			escaped = true
-		case r == '.':
-			parts = append(parts, current.String())
-			current.Reset()
-		default:
-			current.WriteRune(r)
-		}
-	}
-	if escaped {
-		current.WriteRune('\\')
-	}
-	parts = append(parts, current.String())
 	return parts
 }
 
