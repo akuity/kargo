@@ -27,7 +27,7 @@ func TestSetValuesInBytes(t *testing.T) {
 			updates: []Update{{Key: "title", Value: "new"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
-				require.Equal(t, []byte("title = \"new\"\nactive = true\n"), bytes)
+				require.Equal(t, []byte("title = 'new'\nactive = true\n"), bytes)
 			},
 		},
 		{
@@ -36,7 +36,7 @@ func TestSetValuesInBytes(t *testing.T) {
 			updates: []Update{{Key: "title", Value: "new"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
-				require.Equal(t, []byte("title = \"new\" # keep me\nactive = true\n"), bytes)
+				require.Equal(t, []byte("title = 'new' # keep me\nactive = true\n"), bytes)
 			},
 		},
 		{
@@ -45,7 +45,7 @@ func TestSetValuesInBytes(t *testing.T) {
 			updates: []Update{{Key: `example\.com/version`, Value: "2.0.0"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
 				require.NoError(t, err)
-				require.Equal(t, []byte("\"example.com/version\" = \"2.0.0\"\n"), bytes)
+				require.Equal(t, []byte("\"example.com/version\" = '2.0.0'\n"), bytes)
 			},
 		},
 		{
@@ -84,7 +84,7 @@ func TestSetValuesInBytes(t *testing.T) {
 			inBytes: []byte("[service]\nname = \"api\"\n"),
 			updates: []Update{{Key: "service", Value: "other"}},
 			assertions: func(t *testing.T, bytes []byte, err error) {
-				require.ErrorContains(t, err, "does not address a scalar node")
+				require.ErrorContains(t, err, "addresses Table instead of a scalar node")
 				require.Nil(t, bytes)
 			},
 		},
@@ -117,7 +117,7 @@ func TestSetValuesInBytes(t *testing.T) {
 }
 
 func TestFormatValueString(t *testing.T) {
-	require.Equal(t, `"value"`, FormatValueString("value"))
+	require.Equal(t, `'value'`, FormatValueString("value"))
 	require.Equal(t, "42", FormatValueString(42))
 	require.Equal(t, "true", FormatValueString(true))
 }
