@@ -220,7 +220,7 @@ codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller c
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger install-jq
-	rm -f swagger.yaml swagger.json
+	rm -f swagger.json
 	rm -rf pkg/client/generated
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
@@ -229,8 +229,7 @@ codegen-openapi: install-swag install-go-swagger install-jq
 		--output /tmp/swagger-build \
 		--parseDependency \
 		--parseInternal \
-		--outputTypes yaml,json
-	mv /tmp/swagger-build/swagger.yaml .
+		--outputTypes json
 	mv /tmp/swagger-build/swagger.json .
 	rm -rf /tmp/swagger-build
 	hack/codegen/fix-swagger-spec.sh swagger.json
