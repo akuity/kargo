@@ -1,16 +1,18 @@
 ---
-sidebar_label: yaml-update
-description: Updates the values of specified keys in any YAML file.
+sidebar_label: toml-update
+description: Updates the values of specified keys in any TOML file.
 ---
 
-# `yaml-update`
+# `toml-update`
 
-`yaml-update` updates the values of specified keys in any YAML file, in-place,
+<span class="tag beta"></span>
+
+`toml-update` updates the values of specified keys in any TOML file, in-place,
 without disruption to existing formatting choices.
 
 :::note[Limitations]
 
-`yaml-update` updates scalar values only and can only update the values of
+`toml-update` updates scalar values only and can only update the values of
 existing keys.
 
 :::
@@ -19,7 +21,7 @@ existing keys.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `path` | `string` | Y | Path to a YAML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
+| `path` | `string` | Y | Path to a TOML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
 | `updates[].key` | `string` | Y | The key to update within the file. For nested values, use dots to delimit key parts. e.g. `image.tag`. The syntax is identical to that supported by the `json-update` step and is documented in more detail [here](https://github.com/tidwall/sjson?tab=readme-ov-file#path-syntax). |
 | `updates[].value` | `any` | Y | The new scalar value for the key. Typically specified using an expression. Supports strings, numbers, and booleans. |
@@ -34,30 +36,29 @@ existing keys.
 
 **Nested keys:**
 
-```yaml
-image:
-  tag: v1.0.0
+```toml
+[package]
+version = "1.0.0"
 ```
 
-Update key: `image.tag`
+Update key: `package.version`
 
 **Keys with literal dots:**
 
-```yaml
-example.com/version: v1.0.0
+```toml
+[labels]
+"example.com/version" = "1.0.0"
 ```
 
-Update key: `example\.com/version`
+Update key: `labels.example\.com/version`
 
 **Sequences:**
 
-```yaml
-containers:
-- name: my-app
-  image: my-app:v1.0
+```toml
+values = [1, 2, 3]
 ```
 
-Update key: `containers.0.image`
+Update key: `values.1`
 
 :::note
 
@@ -70,10 +71,10 @@ for the full description of the syntax.
 
 ### Common Usage
 
-In this example, a Helm values file is updated to use a new container image tag.
-After cloning the repository and clearing the output directory, the
-`yaml-update` step modifies `values.yaml` to use the image tag from the
-`Freight` being promoted.
+In this example, a TOML file's values are updated according to changes in a
+container image tag. After cloning the repository and clearing the output
+directory, the `toml-update` step updates the `image.tag` field in
+`configs/settings.toml` to match the tag of the image being promoted.
 
 This pattern is commonly seen when managing configuration files that need to
 stay synchronized with deployed container versions.
@@ -95,9 +96,9 @@ steps:
 - uses: git-clear
   config:
     path: ./out
-- uses: yaml-update
+- uses: toml-update
   config:
-    path: ./src/charts/my-chart/values.yaml
+    path: ./src/configs/settings.toml
     updates:
     - key: image.tag
       value: ${{ imageFrom("my/image").Tag }}

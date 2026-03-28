@@ -9,6 +9,8 @@ import (
 	"strings"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/akuity/kargo/pkg/sjson"
 )
 
 // The maximum size of the input buffer for processing YAML files. Given that the max size of a
@@ -79,7 +81,10 @@ func SetValuesInBytes(inBytes []byte, updates []Update) ([]byte, error) {
 	}
 	changesByLine := map[int]change{}
 	for _, update := range updates {
-		keyPath := splitKeyPath(update.Key)
+		keyPath, err := sjson.SplitKey(update.Key)
+		if err != nil {
+			return nil, fmt.Errorf("error splitting key %s: %w", update.Key, err)
+		}
 		line, col, err := findScalarNode(doc, keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("error finding key %s: %w", update.Key, err)
@@ -161,41 +166,4 @@ func findScalarNode(node *yaml.Node, keyPath []string) (int, int, error) {
 		return findScalarNode(node.Content[index], keyPath[1:])
 	}
 	return 0, 0, fmt.Errorf("key path not found")
-}
-
-// splitKeyPath splits a key string into path elements for traversal.
-//
-// Escape sequences:
-//   - \. → literal dot (not a separator)
-//   - \\ → literal backslash
-//   - \x → x (any other escaped char becomes itself)
-//
-// Examples:
-//   - `image.tag`              → [`image`, `tag`]
-//   - `example\.com/version`   → [`example.com/version`]
-//   - `path\\to.file`          → [`path\to", `file`]
-func splitKeyPath(key string) []string {
-	var parts []string
-	var current strings.Builder
-	escaped := false
-	for _, r := range key {
-		switch {
-		case escaped:
-			current.WriteRune(r)
-			escaped = false
-		case r == '\\':
-			escaped = true
-		case r == '.':
-			parts = append(parts, current.String())
-			current.Reset()
-		default:
-			current.WriteRune(r)
-		}
-	}
-	// Trailing backslash is preserved literally
-	if escaped {
-		current.WriteRune('\\')
-	}
-	parts = append(parts, current.String())
-	return parts
 }
