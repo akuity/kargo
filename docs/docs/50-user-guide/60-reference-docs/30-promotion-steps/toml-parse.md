@@ -5,6 +5,8 @@ description: Parses a TOML file and extracts values based on specified expressio
 
 # `toml-parse`
 
+<span class="tag beta"></span>
+
 `toml-parse` is a utility step that parses a TOML file and extracts values
 using [expr-lang] expressions.
 

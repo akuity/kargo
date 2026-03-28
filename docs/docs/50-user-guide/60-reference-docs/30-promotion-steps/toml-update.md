@@ -5,6 +5,8 @@ description: Updates the values of specified keys in any TOML file.
 
 # `toml-update`
 
+<span class="tag beta"></span>
+
 `toml-update` updates the values of specified keys in any TOML file, in-place,
 without disruption to existing formatting choices.
 
