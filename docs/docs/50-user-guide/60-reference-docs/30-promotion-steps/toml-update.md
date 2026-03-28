@@ -5,7 +5,15 @@ description: Updates the values of specified keys in any TOML file.
 
 # `toml-update`
 
-`toml-update` updates the values of specified keys in any TOML file.
+`toml-update` updates the values of specified keys in any TOML file, in-place,
+without disruption to existing formatting choices.
+
+:::note[Limitations]
+
+`toml-update` updates scalar values only and can only update the values of
+existing keys.
+
+:::
 
 ## Configuration
 
@@ -13,8 +21,8 @@ description: Updates the values of specified keys in any TOML file.
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a TOML file. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `updates` | `[]object` | Y | The details of changes to be applied to the file. At least one must be specified. |
-| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use dots to delimit key parts. Use `\.` for literal dots in key names and numeric segments for array indexes. |
-| `updates[].value` | `any` | Y | The new scalar value for the key. Typically specified using an expression. |
+| `updates[].key` | `string` | Y | The key to update within the file. For nested values, use dots to delimit key parts. e.g. `image.tag`. The syntax is identical to that supported by the `json-update` step and is documented in more detail [here](https://github.com/tidwall/sjson?tab=readme-ov-file#path-syntax). |
+| `updates[].value` | `any` | Y | The new scalar value for the key. Typically specified using an expression. Supports strings, numbers, and booleans. |
 
 ## Output
 
@@ -42,7 +50,7 @@ Update key: `package.version`
 
 Update key: `labels.example\.com/version`
 
-**Arrays:**
+**Sequences:**
 
 ```toml
 values = [1, 2, 3]
@@ -52,8 +60,8 @@ Update key: `values.1`
 
 :::note
 
-`toml-update` updates existing scalar values in place. It preserves untouched
-bytes in the file, but it does not create missing keys or rewrite tables.
+See the [sjson path syntax documentation](https://github.com/tidwall/sjson?tab=readme-ov-file#path-syntax)
+for the full description of the syntax.
 
 :::
 
@@ -61,9 +69,13 @@ bytes in the file, but it does not create missing keys or rewrite tables.
 
 ### Common Usage
 
-In this example, a KCL module manifest is updated to use a new dependency
-version. After cloning the repository and clearing the output directory, the
-`toml-update` step modifies `kcl.mod` to set the `dependencies.k8s` field.
+In this example, a TOML file's values are updated according to changes in a
+container image tag. After cloning the repository and clearing the output
+directory, the `toml-update` step updates the `image.tag` field in
+`configs/settings.toml` to match the tag of the image being promoted.
+
+This pattern is commonly seen when managing configuration files that need to
+stay synchronized with deployed container versions.
 
 ```yaml
 vars:
@@ -84,9 +96,16 @@ steps:
     path: ./out
 - uses: toml-update
   config:
-    path: ./src/kcl.mod
+    path: ./src/configs/settings.toml
     updates:
-    - key: dependencies.k8s
-      value: ${{ vars.k8sVersion }}
-# Commit, push, etc...
+    - key: image.tag
+      value: ${{ imageFrom("my/image").Tag }}
+# Render manifests to ./out, commit, push, etc...
 ```
+
+:::info
+
+For more information on `imageFrom()` and expressions used in the example above,
+see the [Expressions](../40-expressions.md#functions) documentation.
+
+:::

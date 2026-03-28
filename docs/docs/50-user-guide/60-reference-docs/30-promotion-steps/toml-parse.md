@@ -24,12 +24,17 @@ The `fromExpression` field supports [expr-lang] expressions.
 :::note
 
 Expressions should _not_ be offset by `${{` and `}}` to prevent pre-processing
-execution by Kargo. The `toml-parse` step itself evaluates these expressions.
+evaluation by Kargo. The `toml-parse` step itself will evaluate these
+expressions.
 
 :::
 
 An `outputs` object (a `map[string]any`) is available to these expressions. It
-contains the parsed TOML document.
+is structured as follows:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `outputs` | `map[string]any` | The parsed TOML object. |
 
 ## Outputs
 
@@ -40,10 +45,11 @@ its configuration.
 
 ### Common Usage
 
-In this example, a TOML file is parsed to find the package version. After
+In this example, a TOML file is parsed to find the container image tag. After
 cloning the repository and clearing the output directory, the `toml-parse` step
-parses `Cargo.toml` and extracts the package version from the repository being
-promoted.
+parses `config.toml` to extract the image tag from the `Freight` being promoted.
+Using dot notation (`image.tag`), it extracts the nested value from the TOML
+file.
 
 ```yaml
 vars:
@@ -63,21 +69,23 @@ steps:
   config:
     path: ./out
 - uses: toml-parse
-  as: cargo
+  as: values
   config:
-    path: ./src/Cargo.toml
+    path: './src/config.toml'
     outputs:
-    - name: version
-      fromExpression: package.version
-# Commit, push, etc...
+    - name: imageTag
+      fromExpression: image.tag
+# Render manifests to ./out, commit, push, etc...
 ```
 
 Given the sample input TOML:
 
 ```toml
-[package]
-name = "demo"
-version = "1.2.3"
+[image]
+tag = "v1.2.3"
+
+[rbac]
+installClusterRoles = true
 ```
 
 The step would produce the following
@@ -85,6 +93,6 @@ The step would produce the following
 
 | Name | Type | Value |
 |------|------|-------|
-| `version` | `string` | `1.2.3` |
+| `imageTag` | `string` | `v1.2.3` |
 
 [expr-lang]: https://expr-lang.org
