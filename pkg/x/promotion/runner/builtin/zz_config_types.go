@@ -542,34 +542,6 @@ type JSONUpdate struct {
 	Value interface{} `json:"value"`
 }
 
-type TOMLParseConfig struct {
-	// An array of outputs to extract from the TOML file.
-	Outputs []TOMLParse `json:"outputs"`
-	// The path to the TOML file to be parsed.
-	Path string `json:"path"`
-}
-
-type TOMLParse struct {
-	// The expression used to extract data from the TOML file.
-	FromExpression string `json:"fromExpression"`
-	// The name of the output variable to store the result.
-	Name string `json:"name"`
-}
-
-type TOMLUpdateConfig struct {
-	// The path to a TOML file.
-	Path string `json:"path"`
-	// A list of updates to apply to the TOML file.
-	Updates []TOMLUpdate `json:"updates"`
-}
-
-type TOMLUpdate struct {
-	// The key whose value needs to be updated. For nested values, use a TOML dot notation path.
-	Key string `json:"key"`
-	// The new value for the specified key.
-	Value interface{} `json:"value"`
-}
-
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`
@@ -660,6 +632,34 @@ type Update struct {
 	Name string `json:"name"`
 	// Key/value pairs to set as metadata on the resource
 	Values map[string]interface{} `json:"values"`
+}
+
+type TOMLParseConfig struct {
+	// An array of outputs to extract from the TOML file.
+	Outputs []TomlParse `json:"outputs"`
+	// The path to the TOML file to be parsed.
+	Path string `json:"path"`
+}
+
+type TomlParse struct {
+	// The expression used to extract data from the TOML file.
+	FromExpression string `json:"fromExpression"`
+	// The name of the output variable to store the result.
+	Name string `json:"name"`
+}
+
+type TOMLUpdateConfig struct {
+	// The path to a TOML file.
+	Path string `json:"path"`
+	// A list of updates to apply to the TOML file.
+	Updates []TomlUpdate `json:"updates"`
+}
+
+type TomlUpdate struct {
+	// The key whose value needs to be updated. For nested values, use a TOML dot notation path.
+	Key string `json:"key"`
+	// The new value for the specified key.
+	Value interface{} `json:"value"`
 }
 
 type UntarConfig struct {
