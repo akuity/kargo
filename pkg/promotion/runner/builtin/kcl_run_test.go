@@ -230,7 +230,25 @@ app = {
     }
 }
 `), 0o600))
-				require.NoError(t, os.WriteFile(filepath.Join(dir, "app", "kcl.yaml"), []byte("kcl_cli_configs:\n  file:\n    - main.k\n\nkcl_options:\n  - key: app-name\n    value: demo\n  - key: namespace\n    value: prod\n  - key: version\n    value: \"v1.2.3\"\n"), 0o600))
+				require.NoError(
+					t,
+					os.WriteFile(
+						filepath.Join(dir, "app", "kcl.yaml"),
+						[]byte(`kcl_cli_configs:
+	file:
+		- main.k
+
+kcl_options:
+	- key: app-name
+		value: demo
+	- key: namespace
+		value: prod
+	- key: version
+		value: "v1.2.3"
+`),
+						0o600,
+					),
+				)
 			},
 			config: configbuiltin.KCLRunConfig{
 				Path:    "./app/kcl.yaml",

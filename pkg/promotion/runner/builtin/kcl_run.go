@@ -274,7 +274,7 @@ func (k *kclRunner) writeOutput(
 
 func pathLooksLikeFile(path string) bool {
 	ext := filepath.Ext(path)
-	return ext == ".yaml" || ext == ".yml"
+	return ext == ".yaml" || ext == ".yml" //nolint:goconst
 }
 
 func writeManifestDirectory(
@@ -314,13 +314,39 @@ func writeManifestDirectory(
 				fallbackIndex++
 			}
 
-			if err = os.WriteFile(filepath.Join(outPath, fileName), resource, 0o600); err != nil {
+			outputPath, err := safeOutputResourcePath(outPath, fileName)
+			if err != nil {
+				return err
+			}
+
+			//nolint:gosec // outputPath is constrained to outPath by basename validation and securejoin
+			if err = os.WriteFile(outputPath, resource, 0o600); err != nil {
 				return fmt.Errorf("failed to write resource to file %q: %w", fileName, err)
 			}
 		}
 	}
 
 	return nil
+}
+
+func safeOutputResourcePath(outPath string, fileName string) (string, error) {
+	cleanName := filepath.Clean(fileName)
+	if cleanName == "." || cleanName == ".." {
+		return "", fmt.Errorf("invalid resource file name %q", fileName)
+	}
+	if filepath.IsAbs(cleanName) {
+		return "", fmt.Errorf("resource file name %q must be relative", fileName)
+	}
+	if cleanName != filepath.Base(cleanName) {
+		return "", fmt.Errorf("resource file name %q must not contain path separators", fileName)
+	}
+
+	joinedPath, err := securejoin.SecureJoin(outPath, cleanName)
+	if err != nil {
+		return "", fmt.Errorf("failed to build output path for %q: %w", fileName, err)
+	}
+
+	return joinedPath, nil
 }
 
 func splitManifestResources(document []byte) ([][]byte, error) {
