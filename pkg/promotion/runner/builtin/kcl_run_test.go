@@ -449,11 +449,11 @@ kcl_options:
 		require.NoError(t, err)
 		assert.Equal(t, baseDir, settingsDir)
 		require.NotNil(t, option.ExecProgramArgs)
-		assert.Equal(t, baseDir, option.ExecProgramArgs.WorkDir)
-		assert.Contains(t, option.ExecProgramArgs.KFilenameList, filepath.Join(baseDir, "relative.k"))
-		assert.Contains(t, option.ExecProgramArgs.KFilenameList, filepath.Join(baseDir, "pwd.k"))
-		assert.Contains(t, option.ExecProgramArgs.KFilenameList, "${KCL_MOD}/mod.k")
-		require.Len(t, option.ExecProgramArgs.ExternalPkgs, 3)
+		assert.Equal(t, baseDir, option.WorkDir)
+		assert.Contains(t, option.KFilenameList, filepath.Join(baseDir, "relative.k"))
+		assert.Contains(t, option.KFilenameList, filepath.Join(baseDir, "pwd.k"))
+		assert.Contains(t, option.KFilenameList, "${KCL_MOD}/mod.k")
+		require.Len(t, option.ExternalPkgs, 3)
 	})
 }
 
