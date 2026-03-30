@@ -4,8 +4,8 @@ sidebar_label: GitHub
 
 # GitHub Webhook Receiver
 
-The GitHub webhook receiver responds to `ping`, `push`, `package`, and
-`registry_package` events originating from GitHub.
+The GitHub webhook receiver responds to `ping`, `pull_request`, `push`,
+`package`, and `registry_package` events originating from GitHub.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
@@ -16,7 +16,15 @@ Warehouse has `includePaths` or `excludePaths` configured, the receiver extracts
 the list of changed files from the push event and only refreshes the Warehouse
 if the changed files match those path filters.
 
-The receiver responds to  `package` events by _refreshing_ all `Warehouse`
+The receiver responds to `pull_request` events with a `closed` action by
+_refreshing_ all running `Promotion` resources that are waiting on the closed
+pull request via a [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md)
+step. This enables near-instant detection of PR merges and closures instead of
+relying on the default polling interval. Events with other actions (e.g.
+`opened`, `synchronize`) are acknowledged with an HTTP `200` status code but
+produce no side effects.
+
+The receiver responds to `package` events by _refreshing_ all `Warehouse`
 resources subscribed to the GHCR repositories from which those events
 originated.
 
@@ -25,6 +33,16 @@ originated.
 "Refreshing" a `Warehouse` resource means enqueuing it for immediate
 reconciliation by the Kargo controller, which will execute the discovery of new
 artifacts from all repositories to which that `Warehouse` subscribes.
+
+:::
+
+:::info
+
+"Refreshing" a `Promotion` resource means enqueuing it for immediate
+reconciliation. The
+[`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step will then
+call the Git provider's API to detect whether the PR has been merged or closed,
+and proceed accordingly.
 
 :::
 
@@ -148,13 +166,19 @@ To configure a single GitHub repository to notify a receiver of relevant events:
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
 
-        Leave <Hlt>Just the push event.</Hlt> selected, unless you would
-        like to receive events when container images or Helm charts are
-        pushed to associated GHCR repositories.
+        Select <Hlt>Let me select individual events.</Hlt>, then ensure
+        <Hlt>Pushes</Hlt> is selected.
 
-        To receive such events, select
-        <Hlt>Let me select individual events.</Hlt>, then ensure
-        <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
+        If you use PR-based promotion workflows (i.e. promotions that
+        include a
+        [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md)
+        step), also select <Hlt>Pull requests</Hlt>. This enables Kargo
+        to detect PR merges and closures near-instantly instead of relying
+        on the default polling interval.
+
+        If you would like to receive events when container images or Helm
+        charts are pushed to associated GHCR repositories, also select
+        <Hlt>Packages</Hlt>.
 
         :::note
 
@@ -222,13 +246,19 @@ repositories in the organization:
 
     1. Under <Hlt>Which events would you like to trigger this webhook?</Hlt>:
 
-        Leave <Hlt>Just the push event.</Hlt> selected, unless you would
-        like to receive events when container images or Helm charts are
-        pushed to associated GHCR repositories.
+        Select <Hlt>Let me select individual events.</Hlt>, then ensure
+        <Hlt>Pushes</Hlt> is selected.
 
-        To receive such events, select
-        <Hlt>Let me select individual events.</Hlt>, then ensure
-        <Hlt>Pushes</Hlt> and <Hlt>Packages</Hlt> are both selected.
+        If you use PR-based promotion workflows (i.e. promotions that
+        include a
+        [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md)
+        step), also select <Hlt>Pull requests</Hlt>. This enables Kargo
+        to detect PR merges and closures near-instantly instead of relying
+        on the default polling interval.
+
+        If you would like to receive events when container images or Helm
+        charts are pushed to associated GHCR repositories, also select
+        <Hlt>Packages</Hlt>.
 
         :::note
 
@@ -327,6 +357,10 @@ receiver of relevant events from any repository into which it's been installed:
 
     1. Ensure <Hlt>Contents</Hlt> is set to <Hlt>Read-only</Hlt>.
 
+    1. If you use PR-based promotion workflows (i.e. promotions that include
+       a [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md)
+       step), set <Hlt>Pull requests</Hlt> to <Hlt>Read-only</Hlt>.
+
     1. If you would like to receive events when container images or Helm charts
        are pushed to associated GHCR repositories, set <Hlt>Packages</Hlt> to
        <Hlt>Read-only</Hlt>.
@@ -342,6 +376,11 @@ receiver of relevant events from any repository into which it's been installed:
 
     1. In the <Hlt>Subscribe to events</Hlt> section of the form, ensure
        <Hlt>Push</Hlt> is selected.
+
+        If you use PR-based promotion workflows, ensure
+        <Hlt>Pull requests</Hlt> is also selected. This enables Kargo to
+        detect PR merges and closures near-instantly instead of relying on
+        the default polling interval.
 
         If you would like to receive events when container images or Helm charts
         are pushed to associated GHCR repositories, ensure

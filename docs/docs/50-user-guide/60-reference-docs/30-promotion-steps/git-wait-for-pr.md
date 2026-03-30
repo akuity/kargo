@@ -9,6 +9,17 @@ description: Waits for a specified open pull request to be merged or closed.
 closed. This step commonly follows a [`git-open-pr` step](git-open-pr.md)
 and is commonly followed by an `argocd-update` step.
 
+:::tip[Accelerate with webhooks]
+
+By default, Kargo polls the Git provider every few minutes to check whether the
+PR has been merged or closed. If you configure a
+[webhook receiver](../80-webhook-receivers/github/index.md) and enable
+`pull_request` events, Kargo detects PR changes near-instantly. The polling
+fallback remains active for reliability. See
+[Webhook Receivers](../80-webhook-receivers/index.md) for setup instructions.
+
+:::
+
 ## Credentials
 
 Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
