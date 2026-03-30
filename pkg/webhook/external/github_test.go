@@ -1113,57 +1113,6 @@ func TestGithubHandler(t *testing.T) {
 				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
 			},
 		},
-		{
-			name:       "closed pull_request matches via SSH URL",
-			secretData: testSecretData,
-			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
-				&kargoapi.Promotion{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: testProjectName,
-						Name:      "promo-ssh-url",
-					},
-					Spec: kargoapi.PromotionSpec{
-						Stage: testStage.Name,
-						Steps: []kargoapi.PromotionStep{
-							{
-								Uses: "git-wait-for-pr",
-								As:   "wait-pr",
-								Config: &apiextensionsv1.JSON{
-									Raw: []byte(`{"repoURL":"git@github.com:example/repo.git","prNumber":42}`),
-								},
-							},
-						},
-					},
-					Status: kargoapi.PromotionStatus{
-						Phase:       kargoapi.PromotionPhaseRunning,
-						CurrentStep: 0,
-						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
-						},
-					},
-				},
-			).WithIndex(
-				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
-			).Build(),
-			req: func() *http.Request {
-				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)
-				require.NoError(t, err)
-				req := httptest.NewRequest(
-					http.MethodPost,
-					testURL,
-					bytes.NewBuffer(bodyBytes),
-				)
-				req.Header.Set(gh.EventTypeHeader, githubEventTypePullRequest)
-				req.Header.Set(gh.SHA256SignatureHeader, sign(bodyBytes))
-				return req
-			},
-			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
-				require.Equal(t, http.StatusOK, rr.Code)
-				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
-			},
-		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {

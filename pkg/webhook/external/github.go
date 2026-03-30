@@ -221,7 +221,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			prNumber := e.GetNumber()
 			repoURLs = []string{
 				urls.NormalizeGit(e.GetRepo().GetCloneURL()),
-				urls.NormalizeGit(e.GetRepo().GetSSHURL()),
 			}
 			logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
 			ctx = logging.ContextWithLogger(ctx, logger)
