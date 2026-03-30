@@ -329,14 +329,14 @@ Git repository subscriptions can be defined using the following fields:
   subscription.
   :::
 
-- `sinceDate`: An optional date in `YYYY-MM-DD` format that bounds how far back
-  commit discovery will look. When specified, discovery stops as soon as it
-  encounters a commit older than this date and returns any matching commits found
-  up to that point. When left unspecified, there is no date cutoff.
+- `since`: An optional date in RFC 3339 format (e.g. `2026-01-01T00:00:00Z`)
+  that bounds how far back commit discovery will look. When specified, only
+  commits at or after this date are considered. When left unspecified, there is
+  no date cutoff.
 
   :::note
 
-  `sinceDate` only has effect when `commitSelectionStrategy` is
+  `since` only has effect when `commitSelectionStrategy` is
   `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
   It is particularly useful for large repositories with long histories where
   `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
