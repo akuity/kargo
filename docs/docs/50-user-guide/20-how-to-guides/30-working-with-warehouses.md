@@ -340,6 +340,7 @@ Git repository subscriptions can be defined using the following fields:
   `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
   It is particularly useful for large repositories with long histories where
   `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
+  
   :::
 
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the

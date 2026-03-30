@@ -512,6 +512,9 @@ type CommitMetadata struct {
 }
 
 func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	if opts == nil {
+		opts = &ListCommitsOptions{}
+	}
 	args := []string{
 		"log",
 		// This format is designed to output the following fields, separated by
@@ -524,16 +527,14 @@ func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, erro
 		// - subject
 		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%cn <%ce>%x09%s",
 	}
-	if opts != nil {
-		if opts.Limit > 0 {
-			args = append(args, fmt.Sprintf("--max-count=%d", opts.Limit))
-		}
-		if opts.Skip > 0 {
-			args = append(args, fmt.Sprintf("--skip=%d", opts.Skip))
-		}
-		if opts.Since != nil {
-			args = append(args, fmt.Sprintf("--since=%s", opts.Since.Format(time.RFC3339)))
-		}
+	if opts.Limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", opts.Limit))
+	}
+	if opts.Skip > 0 {
+		args = append(args, fmt.Sprintf("--skip=%d", opts.Skip))
+	}
+	if opts.Since != nil {
+		args = append(args, fmt.Sprintf("--since=%s", opts.Since.Format(time.RFC3339)))
 	}
 
 	b, err := libExec.Exec(w.buildGitCommand(args...))
