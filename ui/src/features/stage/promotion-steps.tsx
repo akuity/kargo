@@ -39,11 +39,16 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   const errorItem = {
     key: 'error',
     label: (
-      <Alert className='rounded-none' message={props.promotion.status?.message} type='error' />
+      <Alert
+        className='rounded-none'
+        rootClassName='border-none'
+        message={props.promotion.status?.message}
+        type='error'
+      />
     ),
     showArrow: false,
     collapsible: 'disabled' as const,
-    style: { border: 'none' },
+    style: { border: 'none', paddingBottom: '24px', backgroundColor: 'white' },
     styles: { header: { padding: 0 } }
   };
 
