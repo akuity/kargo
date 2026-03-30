@@ -39,8 +39,7 @@ type newestFromBranchSelector struct {
 	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
 		repo git.Repo,
-		limit uint,
-		skip uint,
+		opts *git.ListCommitsOptions,
 	) ([]git.CommitMetadata, error)
 	getDiffPathsForCommitIDFn func(
 		repo git.Repo,
@@ -133,9 +132,12 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 func (n *newestFromBranchSelector) selectCommits(
 	repo git.Repo,
 ) ([]git.CommitMetadata, error) {
+	opts := &git.ListCommitsOptions{Since: n.sinceDate}
 	selectedCommits := make([]git.CommitMetadata, 0, n.discoveryLimit)
 	for skip, batch := uint(0), uint(n.discoveryLimit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
-		commits, err := n.listCommitsFn(repo, batch, skip) // nolint: gosec
+		opts.Limit = batch // nolint: gosec
+		opts.Skip = skip   // nolint: gosec
+		commits, err := n.listCommitsFn(repo, opts)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error listing commits from git repo %q: %w", n.repoURL, err)
@@ -145,24 +147,12 @@ func (n *newestFromBranchSelector) selectCommits(
 			break
 		}
 
-		// If no filters are specified and no sinceDate cutoff, return the first commits up to
-		// the limit.
-		if n.includePaths == nil && n.excludePaths == nil && n.filterExpression == nil &&
-			n.sinceDate == nil {
+		// If no filters are specified, return the first commits up to the limit.
+		if n.includePaths == nil && n.excludePaths == nil && n.filterExpression == nil {
 			return trimSlice(commits, n.discoveryLimit), nil
 		}
 
 		for _, commit := range commits {
-			if n.sinceDate != nil && commit.CommitDate.Before(*n.sinceDate) {
-				if len(selectedCommits) == 0 {
-					return nil, fmt.Errorf(
-						"no commits found in branch since %s",
-						n.sinceDate.Format("2006-01-02"),
-					)
-				}
-				return trimSlice(selectedCommits, n.discoveryLimit), nil
-			}
-
 			// Filter commits based on expressions.
 			include, err := n.evaluateCommitExpression(commit)
 			if err != nil {
@@ -202,10 +192,9 @@ func (n *newestFromBranchSelector) selectCommits(
 
 func (n *newestFromBranchSelector) listCommits(
 	repo git.Repo,
-	limit uint,
-	skip uint,
+	opts *git.ListCommitsOptions,
 ) ([]git.CommitMetadata, error) {
-	return repo.ListCommits(limit, skip) // nolint: gosec
+	return repo.ListCommits(opts)
 }
 
 func (n *newestFromBranchSelector) getDiffPathsForCommitID(
