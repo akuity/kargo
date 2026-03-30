@@ -32,7 +32,7 @@ func TestNewNewestFromBranchSelector(t *testing.T) {
 			},
 		},
 		{
-			name: "success with sinceDate",
+			name: "success with since",
 			sub: kargoapi.GitSubscription{
 				Branch: "main",
 				Since:  ptr.To(metav1.Now()),
@@ -339,7 +339,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			name: "error listing commits",
 			selector: &newestFromBranchSelector{
 				baseSelector: &baseSelector{},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return nil, errors.New("something went wrong")
 				},
 			},
@@ -353,7 +353,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}, {}, {}, {}, {}}, nil
 				},
 			},
@@ -368,7 +368,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					filterExpression: nonBoolExpression,
 				},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
 			},
@@ -382,7 +382,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 				baseSelector: &baseSelector{
 					includePaths: includePaths,
 				},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{{}}, nil
 				},
 				getDiffPathsForCommitIDFn: func(git.Repo, string) ([]string, error) {
@@ -400,7 +400,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					filterExpression: idFilterExpression,
 					discoveryLimit:   3,
 				},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},
@@ -426,7 +426,7 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 					includePaths:   includePaths,
 					discoveryLimit: 3,
 				},
-				listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+				listCommitsFn: func(git.Repo, *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
 					return []git.CommitMetadata{
 						{ID: "A"},
 						{ID: "B"},
@@ -455,66 +455,20 @@ func Test_newestFromBranchSelector_selectCommits(t *testing.T) {
 			},
 		},
 		{
-			name: "sinceDate stops discovery when cutoff is reached with no commits selected",
-			selector: func() *newestFromBranchSelector {
-				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
-				return &newestFromBranchSelector{
-					baseSelector: &baseSelector{discoveryLimit: 3},
-					sinceDate:    &cutoff,
-					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
-						return []git.CommitMetadata{
-							{ID: "A", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
-							{ID: "B", CommitDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
-						}, nil
-					},
-				}
-			}(),
-			assertions: func(t *testing.T, _ []git.CommitMetadata, err error) {
-				require.ErrorContains(t, err, "no commits found in branch since 2024-06-01")
-			},
-		},
-		{
-			name: "sinceDate stops discovery and returns commits selected so far",
-			selector: func() *newestFromBranchSelector {
-				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
-				return &newestFromBranchSelector{
-					baseSelector: &baseSelector{discoveryLimit: 3},
-					sinceDate:    &cutoff,
-					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
-						return []git.CommitMetadata{
-							{ID: "A", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
-							{ID: "B", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
-							{ID: "C", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
-							{ID: "D", CommitDate: time.Date(2024, 4, 1, 0, 0, 0, 0, time.UTC)},
-						}, nil
-					},
-				}
-			}(),
-			assertions: func(t *testing.T, commits []git.CommitMetadata, err error) {
-				require.NoError(t, err)
-				require.Equal(
-					t,
-					[]git.CommitMetadata{
-						{ID: "A", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
-						{ID: "B", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
-					},
-					commits,
-				)
-			},
-		},
-		{
-			name: "sinceDate with no filters uses per-commit loop instead of fast path",
+			name: "since with no filters passes option to git and uses fast path",
 			selector: func() *newestFromBranchSelector {
 				cutoff := time.Date(2024, 6, 1, 0, 0, 0, 0, time.UTC)
 				return &newestFromBranchSelector{
 					baseSelector: &baseSelector{discoveryLimit: 5},
 					sinceDate:    &cutoff,
-					listCommitsFn: func(git.Repo, uint, uint) ([]git.CommitMetadata, error) {
+					listCommitsFn: func(_ git.Repo, opts *git.ListCommitsOptions) ([]git.CommitMetadata, error) {
+						// Simulate git filtering by date -- only return commits after cutoff.
+						require.NotNil(t, opts)
+						require.NotNil(t, opts.Since)
 						return []git.CommitMetadata{
 							{ID: "A", CommitDate: time.Date(2024, 9, 1, 0, 0, 0, 0, time.UTC)},
 							{ID: "B", CommitDate: time.Date(2024, 8, 1, 0, 0, 0, 0, time.UTC)},
 							{ID: "C", CommitDate: time.Date(2024, 7, 1, 0, 0, 0, 0, time.UTC)},
-							{ID: "D", CommitDate: time.Date(2024, 5, 1, 0, 0, 0, 0, time.UTC)},
 						}, nil
 					},
 				}
