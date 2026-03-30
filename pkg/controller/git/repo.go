@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
@@ -119,21 +120,23 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	// NOTE(hidde): Temporarily disabled until we figure out why this can result
-	// in "could not fetch <commit> from promisor remote" errors.
-	//
-	// if opts.Filter != "" {
-	//  	args = append(args, "--filter", opts.Filter)
-	// }
+	if opts.Filter != "" {
+		args = append(args, "--filter", opts.Filter)
+	}
 	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
+		if opts.Filter != "" && strings.Contains(err.Error(), "promisor remote") {
+			// Some Git servers do not support partial clones. Fall back to a
+			// full clone without the filter.
+			opts.Filter = ""
+			return r.clone(opts)
+		}
 		return fmt.Errorf("error cloning repo %q into %q: %w", r.originalURL, r.dir, err)
 	}
 	return nil
 }
-
 type LoadRepoOptions struct {
 	Credentials *RepoCredentials
 }
