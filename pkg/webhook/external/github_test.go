@@ -183,7 +183,6 @@ func TestGithubHandler(t *testing.T) {
 		GithubSecretDataKey: []byte(githubSigningKey),
 	}
 
-
 	testCases := []struct {
 		name       string
 		client     client.Client
