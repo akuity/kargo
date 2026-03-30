@@ -1098,28 +1098,63 @@ func TestGetCommitURL(t *testing.T) {
 }
 
 func TestUnsupportedMergeMethod(t *testing.T) {
-	mergeMethods := []gitprovider.MergeMethod{
-		gitprovider.MergeMethodSquash, gitprovider.MergeMethodRebase,
+	mockClient := &mockPullRequestClient{}
+	provider := &provider{
+		owner:    "owner",
+		repoSlug: "repo",
+		client:   mockClient,
 	}
 
-	for _, mergeMethod := range mergeMethods {
-		t.Run(string(mergeMethod), func(t *testing.T) {
-			mockClient := &mockPullRequestClient{}
-			provider := &provider{
-				owner:    "owner",
-				repoSlug: "repo",
-				client:   mockClient,
-			}
+	ctx := t.Context()
+	opts := &gitprovider.MergePullRequestOpts{
+		MergeMethod: gitprovider.MergeMethod("unknown"),
+	}
 
-			ctx := context.Background()
-			opts := &gitprovider.MergePullRequestOpts{
-				MergeMethod: mergeMethod,
-			}
+	pr, merged, err := provider.MergePullRequest(ctx, 1, opts)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported merge method")
+	assert.Nil(t, pr)
+	assert.False(t, merged)
+}
 
-			pr, merged, err := provider.MergePullRequest(ctx, opts)
-			assert.Error(t, err)
-			assert.Nil(t, pr)
-			assert.False(t, merged)
+func TestMapBitbucketMergeMethod(t *testing.T) {
+	testCases := []struct {
+		name             string
+		mergeMethod      gitprovider.MergeMethod
+		expectedStrategy string
+		expectErr        bool
+	}{
+		{
+			name:             "merge",
+			mergeMethod:      gitprovider.MergeMethodMerge,
+			expectedStrategy: "merge_commit",
+		},
+		{
+			name:        "squash",
+			mergeMethod: gitprovider.MergeMethodSquash,
+			expectErr:   true,
+		},
+		{
+			name:        "rebase",
+			mergeMethod: gitprovider.MergeMethodRebase,
+			expectErr:   true,
+		},
+		{
+			name:        "unknown returns error",
+			mergeMethod: gitprovider.MergeMethod("unknown"),
+			expectErr:   true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			strategy, err := mapBitbucketMergeMethod(tt.mergeMethod)
+			if tt.expectErr {
+				assert.Error(t, err)
+				return
+			}
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedStrategy, strategy)
 		})
 	}
 }

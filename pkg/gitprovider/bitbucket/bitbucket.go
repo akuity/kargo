@@ -308,22 +308,21 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	_ context.Context,
+	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	if opts.MergeMethod != gitprovider.MergeMethodMerge {
-		return nil, false, fmt.Errorf("unsupported merge method '%s' for provider", opts.MergeMethod)
-	}
+	idStr := strconv.FormatInt(id, 10)
 
 	// Get the PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(opts.Number, 10),
+		ID:       idStr,
 	}
 
 	prResp, err := p.client.GetPullRequest(prOpts)
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 
 	bbPR, err := toBitbucketPR(prResp)
@@ -340,7 +339,7 @@ func (p *provider) MergePullRequest(
 	if bbPR.State != prStateOpen {
 		// If it's not open and not merged, then it's closed
 		return nil, false, fmt.Errorf(
-			"pull request %d is closed but not merged (state: %s)", opts.Number, bbPR.State,
+			"pull request %d is closed but not merged (state: %s)", id, bbPR.State,
 		)
 	}
 
@@ -359,17 +358,26 @@ func (p *provider) MergePullRequest(
 	// This limitation makes the "wait" option unreliable for Bitbucket
 	// repositories.
 
-	// Attempt to merge the PR
+	// Attempt to merge the PR. When no merge method is specified, omit the
+	// strategy so the Bitbucket API uses the repository's configured default.
 	mergeOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       strconv.FormatInt(opts.Number, 10),
+		ID:       idStr,
+	}
+	// Merge method/strategy is not supported on the go-bitbucket library
+	// this fails with an error if anything other than "merge" is set
+	if opts.MergeMethod != "" {
+		_, err := mapBitbucketMergeMethod(opts.MergeMethod)
+		if err != nil {
+			return nil, false, err
+		}
 	}
 
 	// Perform the merge
 	mergeResp, err := p.client.MergePullRequest(mergeOpts)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
 	// Parse the merged PR response
@@ -511,4 +519,22 @@ func parseRepoURL(repoURL string) (host, owner, slug string, err error) {
 	}
 
 	return u.Hostname(), parts[0], parts[1], nil
+}
+
+// mergeMethodMap maps gitprovider.MergeMethod values to Bitbucket merge
+// strategy names. Bitbucket supports merge, squash, and fast-forward (rebase).
+var mergeMethodMap = map[gitprovider.MergeMethod]string{
+	gitprovider.MergeMethodMerge: "merge_commit",
+}
+
+func mapBitbucketMergeMethod(
+	mergeMethod gitprovider.MergeMethod,
+) (string, error) {
+	strategy, ok := mergeMethodMap[mergeMethod]
+	if !ok {
+		return "", fmt.Errorf(
+			"unsupported merge method %q for provider", mergeMethod,
+		)
+	}
+	return strategy, nil
 }

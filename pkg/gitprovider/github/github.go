@@ -298,14 +298,15 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
+	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
+	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if ghPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
 	switch {
@@ -314,13 +315,18 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case ptr.Deref(ghPR.State, prStateClosed) != prStateOpen:
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
 	case ptr.Deref(ghPR.Draft, false) || !ptr.Deref(ghPR.Mergeable, false):
 		return nil, false, nil
 	}
 
 	// Merge the PR
+	//
+	// The gitprovider.MergeMethod string values ("merge", "squash", "rebase")
+	// align exactly with GitHub's API merge method values, so no mapping is
+	// needed. When unspecified, the GitHub API uses the repository's configured
+	// default merge method.
 	prOpts := &github.PullRequestOptions{}
 	if opts.MergeMethod != "" {
 		prOpts.MergeMethod = string(opts.MergeMethod)
@@ -329,20 +335,20 @@ func (p *provider) MergePullRequest(
 		ctx,
 		p.owner,
 		p.repo,
-		int(opts.Number),
+		int(id),
 		"", // Use default commit message
 		prOpts,
 	)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
 	}
 
-	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting pull request %d after merge: %w", id, err)
 	}
 	if updatedPR == nil {
 		return nil, false, fmt.Errorf("unexpected nil pull request after merge")

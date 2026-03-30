@@ -128,6 +128,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
+					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					return nil, false, errors.New("authentication failed")
@@ -148,6 +149,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
+					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					return nil, false, nil
@@ -168,6 +170,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
+					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					return nil, false, nil
@@ -188,9 +191,10 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					_ context.Context,
-					opts *gitprovider.MergePullRequestOpts,
+					id int64,
+					_ *gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
-					require.Equal(t, int64(123), opts.Number)
+					require.Equal(t, int64(123), id)
 					return &gitprovider.PullRequest{
 						MergeCommitSHA: "commit456",
 					}, true, nil
@@ -210,6 +214,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
+					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					return &gitprovider.PullRequest{
@@ -231,6 +236,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					context.Context,
+					int64,
 					*gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					return &gitprovider.PullRequest{
@@ -252,6 +258,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			provider: &gitprovider.Fake{
 				MergePullRequestFn: func(
 					_ context.Context,
+					_ int64,
 					opts *gitprovider.MergePullRequestOpts,
 				) (*gitprovider.PullRequest, bool, error) {
 					require.Equal(t, gitprovider.MergeMethodSquash, opts.MergeMethod)

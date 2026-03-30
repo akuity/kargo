@@ -111,8 +111,8 @@ type ListPullRequestOptions struct {
 // MergePullRequestOpts encapsulates the options used when merging a pull
 // request.
 type MergePullRequestOpts struct {
-	// MergeMethod is the method to use when merging. If empty, uses the
-	// repository's default merge method.
+	// MergeMethod is the method to use when merging. If empty, the provider's
+	// API uses the repository's configured default merge method.
 	MergeMethod MergeMethod
 }
 
@@ -158,7 +158,7 @@ type Fake struct {
 		*ListPullRequestOptions,
 	) ([]PullRequest, error)
 	// MergePullRequestFn defines the functionality of the MergePullRequest method.
-	MergePullRequestFn func(context.Context, *MergePullRequestOpts) (*PullRequest, bool, error)
+	MergePullRequestFn func(context.Context, int64, *MergePullRequestOpts) (*PullRequest, bool, error)
 	// GetCommitURLFn defines the functionality of the GetCommitURL method.
 	GetCommitURLFn func(repoURL string, commitID string) (string, error)
 }
@@ -190,9 +190,10 @@ func (f *Fake) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (f *Fake) MergePullRequest(
 	ctx context.Context,
+	id int64,
 	opts *MergePullRequestOpts,
 ) (*PullRequest, bool, error) {
-	return f.MergePullRequestFn(ctx, opts)
+	return f.MergePullRequestFn(ctx, id, opts)
 }
 
 // GetCommitURL implements gitprovider.Interface.

@@ -130,8 +130,8 @@ func (g *gitPRMerger) run(
 	for i := range maxMergeAttempts {
 		if mergedPR, merged, err = gitProv.MergePullRequest(
 			ctx,
+			cfg.PRNumber,
 			&gitprovider.MergePullRequestOpts{
-				Number:      cfg.PRNumber,
 				MergeMethod: mergeMethod,
 			},
 		); err != nil {

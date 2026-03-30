@@ -573,7 +573,7 @@ func TestMergePullRequest(t *testing.T) {
 			tt.setupMock(mockClient)
 
 			pr, merged, err := p.MergePullRequest(context.Background(),
-				&gitprovider.MergePullRequestOpts{Number: tt.prNumber})
+				tt.prNumber, &gitprovider.MergePullRequestOpts{})
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -647,7 +647,7 @@ func TestMergePullRequestMergeMethod(t *testing.T) {
 				}, &gitea.Response{}, nil).Once()
 
 			_, _, err := p.MergePullRequest(context.Background(),
-				&gitprovider.MergePullRequestOpts{Number: 1234, MergeMethod: tt.method})
+				1234, &gitprovider.MergePullRequestOpts{MergeMethod: tt.method})
 
 			require.NoError(t, err)
 			require.NotNil(t, opts)

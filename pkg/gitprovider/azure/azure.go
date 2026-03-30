@@ -184,6 +184,7 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
+	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
 	var pr *gitprovider.PullRequest
@@ -197,13 +198,13 @@ func (p *provider) MergePullRequest(
 	adoPR, err := gitClient.GetPullRequest(ctx, adogit.GetPullRequestArgs{
 		Project:       &p.project,
 		RepositoryId:  &p.repo,
-		PullRequestId: ptr.To(int(opts.Number)),
+		PullRequestId: ptr.To(int(id)),
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if adoPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
 	status := ptr.Deref(adoPR.Status, adogit.PullRequestStatusValues.NotSet)
@@ -213,11 +214,11 @@ func (p *provider) MergePullRequest(
 	case adogit.PullRequestStatusValues.Completed:
 		pr, err = convertADOPullRequest(adoPR)
 		if err != nil {
-			return nil, false, fmt.Errorf("error converting pull request %d: %w", opts.Number, err)
+			return nil, false, fmt.Errorf("error converting pull request %d: %w", id, err)
 		}
 		return pr, true, nil
 	case adogit.PullRequestStatusValues.Abandoned:
-		return nil, false, fmt.Errorf("pull request %d is abandoned", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d is abandoned", id)
 	case adogit.PullRequestStatusValues.Active:
 		// Draft PRs can have a merge status of `succeeded`, but aren't actually
 		// mergable, so we explicitly check for draft status.
@@ -232,7 +233,8 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Try to merge
+	// Try to merge. When no merge method is specified, omit CompletionOptions
+	// so Azure DevOps uses the repository's configured default strategy.
 	prUpdate := &adogit.GitPullRequest{
 		Status: ptr.To(adogit.PullRequestStatusValues.Completed),
 		// LastMergeSourceCommit ensures merge is based on the exact commit we validated.
@@ -241,7 +243,10 @@ func (p *provider) MergePullRequest(
 		LastMergeSourceCommit: adoPR.LastMergeSourceCommit,
 	}
 	if opts.MergeMethod != "" {
-		strategy := mapMergeMethod(opts.MergeMethod)
+		strategy, err := mapMergeMethod(opts.MergeMethod)
+		if err != nil {
+			return nil, false, err
+		}
 		prUpdate.CompletionOptions = &adogit.GitPullRequestCompletionOptions{
 			MergeStrategy: &strategy,
 		}
@@ -249,19 +254,19 @@ func (p *provider) MergePullRequest(
 	updatedPR, err := gitClient.UpdatePullRequest(ctx, adogit.UpdatePullRequestArgs{
 		Project:                &p.project,
 		RepositoryId:           &p.repo,
-		PullRequestId:          ptr.To(int(opts.Number)),
+		PullRequestId:          ptr.To(int(id)),
 		GitPullRequestToUpdate: prUpdate,
 	})
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if updatedPR == nil {
-		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", opts.Number)
+		return nil, false, fmt.Errorf("unexpected nil response after merging pull request %d", id)
 	}
 
 	pr, err = convertADOPullRequest(updatedPR)
 	if err != nil {
-		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error converting merged pull request %d: %w", id, err)
 	}
 	return pr, true, nil
 }
@@ -342,15 +347,20 @@ func parseLegacyRepoURL(u *url.URL) (string, string, string, error) {
 	return organization, parts[1], parts[3], nil
 }
 
-func mapMergeMethod(mergeMethod gitprovider.MergeMethod) adogit.GitPullRequestMergeStrategy {
-	switch mergeMethod {
-	case gitprovider.MergeMethodMerge:
-		return adogit.GitPullRequestMergeStrategyValues.NoFastForward
-	case gitprovider.MergeMethodSquash:
-		return adogit.GitPullRequestMergeStrategyValues.Squash
-	case gitprovider.MergeMethodRebase:
-		return adogit.GitPullRequestMergeStrategyValues.Rebase
-	default:
-		return adogit.GitPullRequestMergeStrategyValues.NoFastForward
+// mergeMethodMap maps gitprovider.MergeMethod values to Azure DevOps merge
+// strategies. Azure supports all three standard merge methods.
+var mergeMethodMap = map[gitprovider.MergeMethod]adogit.GitPullRequestMergeStrategy{
+	gitprovider.MergeMethodMerge:  adogit.GitPullRequestMergeStrategyValues.NoFastForward,
+	gitprovider.MergeMethodSquash: adogit.GitPullRequestMergeStrategyValues.Squash,
+	gitprovider.MergeMethodRebase: adogit.GitPullRequestMergeStrategyValues.Rebase,
+}
+
+func mapMergeMethod(
+	mergeMethod gitprovider.MergeMethod,
+) (adogit.GitPullRequestMergeStrategy, error) {
+	strategy, ok := mergeMethodMap[mergeMethod]
+	if !ok {
+		return "", fmt.Errorf("unsupported merge method %q for provider", mergeMethod)
 	}
+	return strategy, nil
 }

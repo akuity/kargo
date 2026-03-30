@@ -15,7 +15,7 @@ description: Merges an open pull request.
 This step only executes synchronous merges. It can neither initiate an
 asynchronous merge by placing a PR on a merge queue (or similar), nor can it
 recognize when an open PR is already _in_ a merge queue (having been placed
-there by someone or something else), and thus cannot wait for an aynchronous
+there by someone or something else), and thus cannot wait for an asynchronous
 merge in-progress to complete.
 
 :::
@@ -39,13 +39,13 @@ system to access the git repos.
 ## Configuration
 
 | Name                    | Type      | Required | Description                                                                                                                                                                                                    |
-| ----------------------- | --------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repoURL`               | `string`  | Y        | The URL of a remote Git repository. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.                             |
-| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                                       |
-| `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                                      |
-| `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                                                 |
-| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are `merge`, `squash` or `rebase`. Not all merge methods are supported by all providers, refer to [Merge Method](#merge-method). Default is `merge`. |
-| `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`.                    |
+| ----------------------- | --------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repoURL`               | `string`  | Y        | The URL of a remote Git repository. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead.          |
+| `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
+| `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                   |
+| `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
+| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are `merge`, `squash`, or `rebase`. Not all merge methods are supported by all providers; refer to [Merge Method](#merge-method). If not specified, the repository's configured default merge method is used. |
+| `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
 
 :::warning
 
@@ -57,13 +57,13 @@ The `wait` option is unreliable for repositories hosted by Bitbucket due to API 
 
 The table below documents the supported merge methods for each of the currently supported providers.
 
-|           | Merge              | Squash             | Rebase             |
-|-----------|--------------------|--------------------|--------------------|
-| Azure     | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| BitBucket | :white_check_mark: | :x:                | :x:                |
-| Gitea     | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| GitHub    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| GitLab    | :white_check_mark: | :white_check_mark: | :x:                |
+|           | Merge              | Squash             | Rebase             | Default                                                                                                                                                                                                    |
+|-----------|--------------------|--------------------|--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Azure     | :white_check_mark: | :white_check_mark: | :white_check_mark: | [repository default](https://learn.microsoft.com/en-us/javascript/api/azure-devops-extension-api/gitpullrequestcompletionoptions#azure-devops-extension-api-gitpullrequestcompletionoptions-mergestrategy) |
+| BitBucket | :white_check_mark: | :x:                | :x:                | merge                                                                                                                                                                                                      |
+| Gitea     | :white_check_mark: | :white_check_mark: | :white_check_mark: | merge                                                                                                                                                                                                      |
+| GitHub    | :white_check_mark: | :white_check_mark: | :white_check_mark: | merge                                                                                                                                                                                                      |
+| GitLab    | :white_check_mark: | :white_check_mark: | :x:                | merge                                                                                                                                                                                                      |
 
 ## Output
 
@@ -104,9 +104,9 @@ steps:
 
 ### Merge Method
 
-This example demonstrates merging a pull request with a merge method. The squash method
-combines all commits in the pull request into a single commit. This is useful for
-maintaining a clean commit history.
+This example demonstrates merging a pull request with a specific merge method.
+The squash method combines all commits in the pull request into a single commit.
+This is useful for maintaining a clean commit history.
 
 ```yaml
 steps:

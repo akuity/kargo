@@ -9,6 +9,7 @@ import (
 
 	"github.com/hashicorp/go-cleanhttp"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
+	"k8s.io/utils/ptr"
 
 	"github.com/akuity/kargo/pkg/gitprovider"
 	"github.com/akuity/kargo/pkg/urls"
@@ -208,14 +209,15 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	_ context.Context,
+	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	glMR, _, err := p.client.GetMergeRequest(p.projectName, opts.Number, nil)
+	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting merge request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
 	}
 	if glMR == nil {
-		return nil, false, fmt.Errorf("merge request %d not found", opts.Number)
+		return nil, false, fmt.Errorf("merge request %d not found", id)
 	}
 
 	switch {
@@ -224,30 +226,30 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case glMR.State != "opened":
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
 	case glMR.Draft || glMR.DetailedMergeStatus != "mergeable":
 		return nil, false, nil
 	}
 
-	// Merge the MR
+	// Merge the MR. When unspecified, the GitLab API uses a merge commit
+	// Squash is supported via a boolean flag. Rebase is not supported
+	// through the accept-merge-request API.
 	mrOpts := &gitlab.AcceptMergeRequestOptions{}
 	switch opts.MergeMethod {
+	case "", gitprovider.MergeMethodMerge:
 	case gitprovider.MergeMethodSquash:
-		// GitLab only supports Squash merging as a boolean
-		squash := true
-		mrOpts.Squash = &squash
-	case gitprovider.MergeMethodRebase:
-		// Rebases would be done by commenting /rebase to trigger
-		// the quick action if the branch is out-of-date
-		return nil, false, fmt.Errorf("unsupported merge method '%s' for provider", opts.MergeMethod)
+		mrOpts.Squash = ptr.To(true)
+	default:
+		return nil, false,
+			fmt.Errorf("unsupported merge method %q for provider", opts.MergeMethod)
 	}
 
 	updatedMR, _, err := p.client.AcceptMergeRequest(
-		p.projectName, opts.Number, mrOpts,
+		p.projectName, id, mrOpts,
 	)
 	if err != nil {
-		return nil, false, fmt.Errorf("error merging merge request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
 	}
 	if updatedMR == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge request after merge")

@@ -131,30 +131,41 @@ func TestGetCommitURL(t *testing.T) {
 
 func TestMapMergeMethod(t *testing.T) {
 	testCases := []struct {
+		name             string
 		mergeMethod      gitprovider.MergeMethod
 		expectedStrategy adogit.GitPullRequestMergeStrategy
+		expectErr        bool
 	}{
 		{
+			name:             "merge",
 			mergeMethod:      gitprovider.MergeMethodMerge,
 			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.NoFastForward,
 		},
 		{
+			name:             "squash",
 			mergeMethod:      gitprovider.MergeMethodSquash,
 			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.Squash,
 		},
 		{
+			name:             "rebase",
 			mergeMethod:      gitprovider.MergeMethodRebase,
 			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.Rebase,
 		},
 		{
-			mergeMethod:      gitprovider.MergeMethod("unknown"),
-			expectedStrategy: adogit.GitPullRequestMergeStrategyValues.NoFastForward,
+			name:        "unknown returns error",
+			mergeMethod: gitprovider.MergeMethod("unknown"),
+			expectErr:   true,
 		},
 	}
 
 	for _, tt := range testCases {
-		t.Run(string(tt.mergeMethod), func(t *testing.T) {
-			actualStrategy := mapMergeMethod(tt.mergeMethod)
+		t.Run(tt.name, func(t *testing.T) {
+			actualStrategy, err := mapMergeMethod(tt.mergeMethod)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
 			require.Equal(t, tt.expectedStrategy, actualStrategy)
 		})
 	}

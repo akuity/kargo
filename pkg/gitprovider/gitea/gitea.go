@@ -279,14 +279,15 @@ func (p *provider) ListPullRequests(
 // MergePullRequest implements gitprovider.Interface.
 func (p *provider) MergePullRequest(
 	ctx context.Context,
+	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
+	giteaPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, false, fmt.Errorf("error getting pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
 	if giteaPR == nil {
-		return nil, false, fmt.Errorf("pull request %d not found", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d not found", id)
 	}
 
 	switch {
@@ -295,38 +296,33 @@ func (p *provider) MergePullRequest(
 		return &pr, true, nil
 
 	case giteaPR.State != gitea.StateOpen:
-		return nil, false, fmt.Errorf("pull request %d is closed but not merged", opts.Number)
+		return nil, false, fmt.Errorf("pull request %d is closed but not merged", id)
 
 	case giteaPR.Draft || !giteaPR.Mergeable:
 		return nil, false, nil
 	}
 
-	// Merge the PR
 	mergeOpts := &gitea.MergePullRequestOption{}
+	// Style is a required field
+	mergeOpts.Style = gitea.MergeStyleMerge
+
 	if opts.MergeMethod != "" {
-		// Convert to Gitea's MergeStyle type
-		var style gitea.MergeStyle
-		switch opts.MergeMethod {
-		case gitprovider.MergeMethodMerge:
-			style = gitea.MergeStyleMerge
-		case gitprovider.MergeMethodSquash:
-			style = gitea.MergeStyleSquash
-		case gitprovider.MergeMethodRebase:
-			style = gitea.MergeStyleRebase
-		default:
-			style = gitea.MergeStyleMerge
+		style, err := mapGiteaMergeMethod(opts.MergeMethod)
+		if err != nil {
+			return nil, false, err
 		}
 		mergeOpts.Style = style
 	}
+
 	if _, err = p.client.MergePullRequest(
-		ctx, p.owner, p.repo, int(opts.Number), mergeOpts,
+		ctx, p.owner, p.repo, int(id), mergeOpts,
 	); err != nil {
-		return nil, false, fmt.Errorf("error merging pull request %d: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 
-	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(opts.Number))
+	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
-		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", opts.Number, err)
+		return nil, false, fmt.Errorf("error fetching PR %d after merge: %w", id, err)
 	}
 	if updatedPR == nil {
 		return nil, false, fmt.Errorf("unexpected nil PR after merge")
@@ -390,4 +386,22 @@ func parseRepoURL(repoURL string) (string, string, string, string, error) {
 	}
 
 	return scheme, u.Host, parts[0], parts[1], nil
+}
+
+// mergeMethodMap maps gitprovider.MergeMethod values to Gitea merge styles.
+// Gitea supports all three standard merge methods.
+var mergeMethodMap = map[gitprovider.MergeMethod]gitea.MergeStyle{
+	gitprovider.MergeMethodMerge:  gitea.MergeStyleMerge,
+	gitprovider.MergeMethodSquash: gitea.MergeStyleSquash,
+	gitprovider.MergeMethodRebase: gitea.MergeStyleRebase,
+}
+
+func mapGiteaMergeMethod(
+	mergeMethod gitprovider.MergeMethod,
+) (gitea.MergeStyle, error) {
+	style, ok := mergeMethodMap[mergeMethod]
+	if !ok {
+		return "", fmt.Errorf("unsupported merge method %q for provider", mergeMethod)
+	}
+	return style, nil
 }
