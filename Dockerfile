@@ -31,6 +31,7 @@ ARG CGO_ENABLED=0
 
 WORKDIR /kargo
 COPY ["api/go.mod", "api/go.sum", "api/"]
+COPY ["pkg/client/generated/go.mod", "pkg/client/generated/go.sum", "pkg/client/generated/"]
 COPY ["go.mod", "go.sum", "./"]
 RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build go mod download
 COPY api/ api/
