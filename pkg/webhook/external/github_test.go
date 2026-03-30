@@ -2,7 +2,6 @@ package external
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -184,10 +183,6 @@ func TestGithubHandler(t *testing.T) {
 		GithubSecretDataKey: []byte(githubSigningKey),
 	}
 
-	stageClient := fake.NewClientBuilder().
-		WithScheme(testScheme).
-		WithObjects(testStage.DeepCopy()).
-		Build()
 
 	testCases := []struct {
 		name       string
@@ -1005,6 +1000,7 @@ func TestGithubHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{
 							{
 								Uses: "git-wait-for-pr",
+								As:   "wait-pr",
 								Config: &apiextensionsv1.JSON{
 									Raw: []byte(`{"repoURL":"https://github.com/example/repo","prNumber":42}`),
 								},
@@ -1014,12 +1010,15 @@ func TestGithubHandler(t *testing.T) {
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
 				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest(context.Background(), stageClient),
+				indexer.RunningPromotionsByPullRequest,
 			).Build(),
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)
@@ -1052,6 +1051,7 @@ func TestGithubHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{
 							{
 								Uses: "git-wait-for-pr",
+								As:   "wait-pr",
 								Config: &apiextensionsv1.JSON{
 									Raw: []byte(`{"repoURL":"https://github.com/example/repo","prNumber":42}`),
 								},
@@ -1061,12 +1061,15 @@ func TestGithubHandler(t *testing.T) {
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
 				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest(context.Background(), stageClient),
+				indexer.RunningPromotionsByPullRequest,
 			).Build(),
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(validPullRequestEventClosedNotMerged)
@@ -1091,7 +1094,7 @@ func TestGithubHandler(t *testing.T) {
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
 				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest(context.Background(), stageClient),
+				indexer.RunningPromotionsByPullRequest,
 			).Build(),
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)
@@ -1124,6 +1127,7 @@ func TestGithubHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{
 							{
 								Uses: "git-wait-for-pr",
+								As:   "wait-pr",
 								Config: &apiextensionsv1.JSON{
 									Raw: []byte(`{"repoURL":"git@github.com:example/repo.git","prNumber":42}`),
 								},
@@ -1133,12 +1137,15 @@ func TestGithubHandler(t *testing.T) {
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
 				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest(context.Background(), stageClient),
+				indexer.RunningPromotionsByPullRequest,
 			).Build(),
 			req: func() *http.Request {
 				bodyBytes, err := json.Marshal(validPullRequestEventClosedMerged)

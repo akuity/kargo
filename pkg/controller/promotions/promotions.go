@@ -122,7 +122,7 @@ func SetupReconcilerWithManager(
 		ctx,
 		&kargoapi.Promotion{},
 		indexer.RunningPromotionsByPullRequestField,
-		indexer.RunningPromotionsByPullRequest(ctx, kargoMgr.GetClient()),
+		indexer.RunningPromotionsByPullRequest,
 	); err != nil {
 		return fmt.Errorf("index running Promotions by pull request: %w", err)
 	}
