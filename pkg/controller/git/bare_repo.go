@@ -117,23 +117,28 @@ func CloneBare(
 	return b, nil
 }
 
-func (b *bareRepo) clone(_ *BareCloneOptions) error {
+func (b *bareRepo) clone(opts *BareCloneOptions) error {
+	if opts == nil {
+		opts = &BareCloneOptions{}
+	}
 	args := []string{"clone", "--bare"}
-	// NOTE(hidde): Temporarily disabled until we figure out why this can result
-	// in "could not fetch <commit> from promisor remote" errors.
-	//
-	// if opts.Filter != "" {
-	//  	args = append(args, "--filter", opts.Filter)
-	// }
+	if opts.Filter != "" {
+		args = append(args, "--filter", opts.Filter)
+	}
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
+		if opts.Filter != "" && strings.Contains(err.Error(), "promisor remote") {
+			// Some Git servers do not support partial clones. Fall back to a
+			// full clone without the filter.
+			opts.Filter = ""
+			return b.clone(opts)
+		}
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.originalURL, b.dir, err)
 	}
 	return nil
 }
-
 type LoadBareRepoOptions struct {
 	Credentials *RepoCredentials
 }
