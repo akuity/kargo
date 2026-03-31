@@ -221,7 +221,7 @@ codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go c
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger
 	rm -f swagger.yaml swagger.json
-	rm -rf pkg/client/generated
+	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
 	$(SWAG_LINK) init \

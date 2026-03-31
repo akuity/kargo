@@ -3,7 +3,10 @@ import { useMemo } from 'react';
 
 import { Promotion } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { getPromotionDirectiveStepStatus } from '../common/promotion-directive-step-status/utils';
+import {
+  getPromotionDirectiveStepStatus,
+  isFailedStep
+} from '../common/promotion-directive-step-status/utils';
 import {
   getPromotionStatusPhase,
   isPromotionPhaseTerminal,
@@ -28,23 +31,33 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
   const shouldShowMessage =
     isPromotionPhaseTerminal(phase) &&
     phase !== PromotionStatusPhase.SUCCEEDED &&
+    phase !== PromotionStatusPhase.ERRORED && // because its already handled at individual step level
     !!props.promotion?.status?.message;
+
+  const steps = props.promotion?.spec?.steps ?? [];
+
+  const errorItem = {
+    key: 'error',
+    label: <Alert message={props.promotion.status?.message} type='error' />,
+    showArrow: false,
+    collapsible: 'disabled' as const,
+    styles: { header: { paddingTop: 0 } }
+  };
+
+  const items = steps.flatMap((step, i) => {
+    const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
+    const item = Step({ step, result, output: outputsByStepAlias[step.as || ''] });
+
+    return isFailedStep(i, props.promotion.status)
+      ? [{ ...item, className: `${item.className || ''} !border-none` }, errorItem]
+      : [item];
+  });
 
   return (
     <>
-      <Collapse
-        expandIconPosition='end'
-        bordered={false}
-        items={props.promotion?.spec?.steps.map((step, i) => {
-          return Step({
-            step,
-            result: getPromotionDirectiveStepStatus(i, props.promotion.status),
-            output: outputsByStepAlias?.[step?.as || '']
-          });
-        })}
-      />
+      <Collapse expandIconPosition='end' bordered={false} items={items} />
       {shouldShowMessage && (
-        <Alert message={props.promotion?.status?.message} type='error' className='mt-4' />
+        <Alert message={props.promotion.status?.message} type='error' className='mt-4' />
       )}
     </>
   );

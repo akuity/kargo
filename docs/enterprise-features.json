@@ -14,7 +14,9 @@
         "snow-update",
         "snow-delete",
         "snow-query-for-records",
-        "snow-wait-for-condition"
+        "snow-wait-for-condition",
+        "toml-parse",
+        "toml-update"
     ],
     "pro": [
         "jira",

@@ -517,6 +517,7 @@ func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, erro
 	}
 	args := []string{
 		"log",
+		"--first-parent",
 		// This format is designed to output the following fields, separated by
 		// tabs (%x09):
 		//
