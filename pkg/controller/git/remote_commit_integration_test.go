@@ -41,7 +41,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 
 		// A rebase produces no merge commits:
 		// initial + remote + local = 3.
-		commits, err := repo.ListCommits(0, 0)
+		commits, err := repo.ListCommits(nil)
 		require.NoError(t, err)
 		require.Len(t, commits, 3)
 	})
@@ -63,7 +63,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 
 		// All local commits are unsigned and signing is not configured, so
 		// rebase is safe. No merge commits: initial + remote + local = 3.
-		commits, err := repo.ListCommits(0, 0)
+		commits, err := repo.ListCommits(nil)
 		require.NoError(t, err)
 		require.Len(t, commits, 3)
 	})
@@ -109,7 +109,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		require.NoError(t, err)
 
 		// Rebase is safe (unsigned, signing not configured).
-		commits, err := repo.ListCommits(0, 0)
+		commits, err := repo.ListCommits(nil)
 		require.NoError(t, err)
 		require.Len(t, commits, 3)
 	})
@@ -206,7 +206,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 
 		// The rebase should not have created any merge commits, so the commit count
 		// should be: initial + remote + local = 3.
-		commits, err := repo.ListCommits(0, 0)
+		commits, err := repo.ListCommits(nil)
 		require.NoError(t, err)
 		require.Len(t, commits, 3)
 	})

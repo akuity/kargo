@@ -216,7 +216,7 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger
@@ -260,7 +260,7 @@ codegen-controller: install-controller-gen
 		paths=./...
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go:
+codegen-schema-to-go: install-goimports
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh

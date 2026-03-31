@@ -76,7 +76,7 @@ type WorkTree interface {
 	ListTags() ([]TagMetadata, error)
 	// ListCommits returns a slice of commits in the current branch with
 	// metadata such as commit ID, commit date, and subject.
-	ListCommits(limit, skip uint) ([]CommitMetadata, error)
+	ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -93,6 +93,16 @@ type WorkTree interface {
 	URL() string
 	// UpdateSubmodules updates the submodules in the working tree.
 	UpdateSubmodules() error
+}
+
+// ListCommitsOptions contains options for listing commits.
+type ListCommitsOptions struct {
+	// Limit is the maximum number of commits to return. 0 means no limit.
+	Limit uint
+	// Skip is the number of commits to skip before returning results.
+	Skip uint
+	// Since limits commits to those at or after this time.
+	Since *time.Time
 }
 
 // workTree is an implementation of the WorkTree interface for interacting with
@@ -501,7 +511,10 @@ type CommitMetadata struct {
 	Subject string
 }
 
-func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
+func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	if opts == nil {
+		opts = &ListCommitsOptions{}
+	}
 	args := []string{
 		"log",
 		"--first-parent",
@@ -515,14 +528,17 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 		// - subject
 		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%cn <%ce>%x09%s",
 	}
-	if limit > 0 {
-		args = append(args, fmt.Sprintf("--max-count=%d", limit))
+	if opts.Limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", opts.Limit))
 	}
-	if skip > 0 {
-		args = append(args, fmt.Sprintf("--skip=%d", skip))
+	if opts.Skip > 0 {
+		args = append(args, fmt.Sprintf("--skip=%d", opts.Skip))
+	}
+	if opts.Since != nil {
+		args = append(args, fmt.Sprintf("--since=%s", opts.Since.Format(time.RFC3339)))
 	}
 
-	commitsBytes, err := libExec.Exec(w.buildGitCommand(args...))
+	b, err := libExec.Exec(w.buildGitCommand(args...))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits for repo %q: %w",
@@ -531,7 +547,7 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	}
 
 	var commits []CommitMetadata
-	scanner := bufio.NewScanner(bytes.NewReader(commitsBytes))
+	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.SplitN(scanner.Bytes(), []byte("\t"), 5)
@@ -552,7 +568,9 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 			Subject:    string(parts[4]),
 		})
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error scanning commits output: %w", err)
+	}
 	return commits, nil
 }
 

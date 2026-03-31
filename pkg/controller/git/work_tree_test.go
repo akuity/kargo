@@ -196,7 +196,7 @@ func TestListCommits(t *testing.T) {
 
 	// ListCommits should only return first-parent commits (main line),
 	// not the individual feature branch commits.
-	commits, err := rep.ListCommits(0, 0)
+	commits, err := rep.ListCommits(nil)
 	require.NoError(t, err)
 
 	subjects := make([]string, len(commits))

@@ -33,13 +33,13 @@ func init() {
 // kargoapi.CommitSelectionStrategyNewestFromBranch.
 type newestFromBranchSelector struct {
 	*baseSelector
-	branch string
+	branch    string
+	sinceDate *time.Time
 
 	selectCommitsFn func(git.Repo) ([]git.CommitMetadata, error)
 	listCommitsFn   func(
 		repo git.Repo,
-		limit uint,
-		skip uint,
+		opts *git.ListCommitsOptions,
 	) ([]git.CommitMetadata, error)
 	getDiffPathsForCommitIDFn func(
 		repo git.Repo,
@@ -55,9 +55,13 @@ func newNewestFromBranchSelector(
 	if err != nil {
 		return nil, fmt.Errorf("error building base selector: %w", err)
 	}
+
 	s := &newestFromBranchSelector{
 		baseSelector: base,
 		branch:       sub.Branch,
+	}
+	if sub.Since != nil {
+		s.sinceDate = &sub.Since.Time
 	}
 	s.selectCommitsFn = s.selectCommits
 	s.listCommitsFn = s.listCommits
@@ -128,9 +132,12 @@ func (n *newestFromBranchSelector) Select(ctx context.Context) (
 func (n *newestFromBranchSelector) selectCommits(
 	repo git.Repo,
 ) ([]git.CommitMetadata, error) {
+	opts := &git.ListCommitsOptions{Since: n.sinceDate}
 	selectedCommits := make([]git.CommitMetadata, 0, n.discoveryLimit)
 	for skip, batch := uint(0), uint(n.discoveryLimit); ; skip, batch = skip+batch, min(batch*2, 1000) { // nolint: gosec
-		commits, err := n.listCommitsFn(repo, batch, skip) // nolint: gosec
+		opts.Limit = batch // nolint: gosec
+		opts.Skip = skip   // nolint: gosec
+		commits, err := n.listCommitsFn(repo, opts)
 		if err != nil {
 			return nil,
 				fmt.Errorf("error listing commits from git repo %q: %w", n.repoURL, err)
@@ -185,10 +192,9 @@ func (n *newestFromBranchSelector) selectCommits(
 
 func (n *newestFromBranchSelector) listCommits(
 	repo git.Repo,
-	limit uint,
-	skip uint,
+	opts *git.ListCommitsOptions,
 ) ([]git.CommitMetadata, error) {
-	return repo.ListCommits(limit, skip) // nolint: gosec
+	return repo.ListCommits(opts)
 }
 
 func (n *newestFromBranchSelector) getDiffPathsForCommitID(
