@@ -90,12 +90,17 @@ export const useReactFlowPipelineGraph = (
         continue;
       }
 
+      // All nodes share a uniform virtual height in dagre (= max stage height)
+      // so edges connect at the same center. Use the actual measured height to
+      // visually center each node within its virtual slot.
+      const actualHeight = dimensionState[node]?.height || dagreNode?.height;
+
       reactFlowNodes.push({
         id: node,
         type: reactFlowNodeConstants.CUSTOM_NODE,
         position: {
           x: dagreNode?.x - dagreNode?.width / 2,
-          y: dagreNode?.y - dagreNode?.height / 2
+          y: dagreNode?.y - actualHeight / 2
         },
         data: {
           label: node,

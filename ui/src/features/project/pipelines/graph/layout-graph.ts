@@ -48,6 +48,13 @@ export const layoutGraph = (
     stageByName[s?.metadata?.name || ''] = s;
   }
 
+  const maxStageHeight = Math.max(
+    stageSizer.size().height,
+    ...stage.stages
+      .filter((s) => !stage.ignore?.(s))
+      .map((s) => dimensionState[stageIndexer.index(s)]?.height || 0)
+  );
+
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
       continue;
@@ -56,7 +63,8 @@ export const layoutGraph = (
     const warehouseNodeIndex = warehouseIndexer.index(w);
     graph.setNode(warehouseNodeIndex, {
       ...warehouseLabelling.label(w),
-      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {})
+      ...pickMaxSize(warehouseSizer.size(), dimensionState[warehouseNodeIndex] || {}),
+      height: maxStageHeight
     });
 
     if (hideSubscriptions?.[w?.metadata?.name || '']) {
@@ -68,7 +76,8 @@ export const layoutGraph = (
 
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
-        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {})
+        ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {}),
+        height: maxStageHeight
       });
 
       graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
@@ -84,7 +93,8 @@ export const layoutGraph = (
 
     graph.setNode(stageNodeIndex, {
       ...stageLabelling.label(s),
-      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {})
+      ...pickMaxSize(stageSizer.size(), dimensionState[stageNodeIndex] || {}),
+      height: maxStageHeight
     });
 
     for (const requestedOrigin of s.spec?.requestedFreight || []) {
