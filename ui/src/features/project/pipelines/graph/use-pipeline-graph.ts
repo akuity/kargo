@@ -9,6 +9,7 @@ import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
 import { stackedIndexer, warehouseIndexer } from './node-indexer';
+import { STACKED_NODE_DUMMY_KEY, stackSizer } from './node-sizer';
 import { stackNodes } from './stack-nodes';
 import { DimensionState } from './use-node-dimension-state';
 
@@ -40,7 +41,7 @@ export const useReactFlowPipelineGraph = (
     }
 
     // eslint-disable-next-line prefer-const
-    let { graph, stageByName } = layoutGraph(
+    let { graph, stageByName, maxStageHeight } = layoutGraph(
       {
         stages,
         ignore(s) {
@@ -61,9 +62,7 @@ export const useReactFlowPipelineGraph = (
       hideSubscriptions
     );
 
-    const stackedNodes = stackNodes(stack?.afterNodes || [], graph, stageByName);
-
-    graph = stackedNodes.graph;
+    graph = stackNodes(stack?.afterNodes || [], graph, stageByName, maxStageHeight);
 
     layout(graph, { disableOptimalOrderHeuristic: true });
 
@@ -74,12 +73,14 @@ export const useReactFlowPipelineGraph = (
       const dagreNode = graph.node(node);
 
       if (stackedIndexer.is(node)) {
+        const stackedActualHeight =
+          dimensionState[STACKED_NODE_DUMMY_KEY]?.height || stackSizer.size().height;
         reactFlowNodes.push({
           id: node,
           type: reactFlowNodeConstants.STACKED_NODE,
           position: {
             x: dagreNode?.x - dagreNode?.width / 2,
-            y: dagreNode?.y - dagreNode?.height / 2
+            y: dagreNode?.y - stackedActualHeight / 2
           },
           data: {
             value: dagreNode?.value,

@@ -125,5 +125,5 @@ export const layoutGraph = (
     }
   }
 
-  return { graph, stageByName, warehouseByName };
+  return { graph, stageByName, maxStageHeight };
 };

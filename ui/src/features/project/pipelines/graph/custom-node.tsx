@@ -101,6 +101,11 @@ CustomNode.Container = (
             }}
           />
         ))}
+        <Handle
+          type='source'
+          position={Position.Right}
+          style={{ top: '50%', backgroundColor: 'transparent' }}
+        />
       </>
     );
   }

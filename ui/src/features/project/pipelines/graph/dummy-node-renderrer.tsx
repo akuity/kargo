@@ -1,10 +1,12 @@
 import { useEffect } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
+import { StackedNodeBody } from '@ui/features/project/pipelines/nodes/stacked-nodes';
 import { RepoSubscription, Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
 import { CustomNode } from './custom-node';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
+import { STACKED_NODE_DUMMY_KEY } from './node-sizer';
 import { DimensionState } from './use-node-dimension-state';
 
 // render nodes to compute the dimension of each node
@@ -51,6 +53,12 @@ export const DummyNodeRenderrer = (props: {
       }
     }
 
+    const stackedElement = document.getElementById(`dummy-${STACKED_NODE_DUMMY_KEY}`);
+    if (stackedElement) {
+      const { width, height } = stackedElement.getBoundingClientRect();
+      dimensionState[STACKED_NODE_DUMMY_KEY] = { width, height };
+    }
+
     props.onDimensionChange(dimensionState);
   }, [props.onDimensionChange]);
 
@@ -59,6 +67,7 @@ export const DummyNodeRenderrer = (props: {
       {customNodes.map((node) => (
         <CustomNode id={`dummy-${node.label}`} key={node.label} data={node} />
       ))}
+      <StackedNodeBody id={`dummy-${STACKED_NODE_DUMMY_KEY}`} />
     </>
   );
 };
