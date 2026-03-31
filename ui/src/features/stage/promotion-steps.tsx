@@ -38,25 +38,19 @@ export const PromotionSteps = (props: PromotionStepsProps) => {
 
   const errorItem = {
     key: 'error',
-    label: (
-      <Alert
-        className='rounded-none'
-        rootClassName='border-none'
-        message={props.promotion.status?.message}
-        type='error'
-      />
-    ),
+    label: <Alert message={props.promotion.status?.message} type='error' />,
     showArrow: false,
     collapsible: 'disabled' as const,
-    style: { border: 'none', paddingBottom: '24px', backgroundColor: 'white' },
-    styles: { header: { padding: 0 } }
+    styles: { header: { paddingTop: 0 } }
   };
 
   const items = steps.flatMap((step, i) => {
     const result = getPromotionDirectiveStepStatus(i, props.promotion.status);
     const item = Step({ step, result, output: outputsByStepAlias[step.as || ''] });
 
-    return isFailedStep(i, props.promotion.status) ? [item, errorItem] : [item];
+    return isFailedStep(i, props.promotion.status)
+      ? [{ ...item, className: `${item.className || ''} !border-none` }, errorItem]
+      : [item];
   });
 
   return (
