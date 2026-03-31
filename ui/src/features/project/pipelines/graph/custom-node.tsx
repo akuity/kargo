@@ -83,7 +83,7 @@ CustomNode.Container = (
             type='target'
             position={Position.Left}
             style={{
-              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              top: `${50 - ((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}%`,
               backgroundColor: 'transparent'
             }}
           />
@@ -96,7 +96,7 @@ CustomNode.Container = (
             type='source'
             position={Position.Right}
             style={{
-              top: `${50 - howManyStagesDoThisStageSubscribe + idx * EDGE_GAP}%`,
+              top: `${50 - ((howManyStagesDoThisStageSubscribe - 1) * EDGE_GAP) / 2 + idx * EDGE_GAP}%`,
               backgroundColor: 'transparent'
             }}
           />
