@@ -1,17 +1,17 @@
 export const warehouseSizer = {
-  size: () => ({ width: 300, height: 100 })
+  size: () => ({ width: 250, height: 100 })
 };
 
 export const repoSubscriptionSizer = {
-  size: () => ({ width: 300, height: 100 })
+  size: () => ({ width: 250, height: 100 })
 };
 
 export const stageSizer = {
-  size: () => ({ width: 300, height: 170 })
+  size: () => ({ width: 250, height: 170 })
 };
 
 export const stackSizer = {
-  size: () => ({ width: 300, height: 100 })
+  size: () => ({ width: 250, height: 100 })
 };
 
 export const STACKED_NODE_DUMMY_KEY = '__stacked__';
