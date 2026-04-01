@@ -342,10 +342,13 @@ func (p *provider) MergePullRequest(
 		case <-time.After(time.Second):
 		}
 	}
+	// If the PR hasn't reached Completed after polling, return false without an
+	// error so the caller can retry on a future reconciliation — at which point
+	// the PR will either be Completed (caught by the early return at the top of
+	// this function) or still Active with a fresh state.
 	if ptr.Deref(completedPR.Status, "") !=
 		adogit.PullRequestStatusValues.Completed {
-		return nil, false,
-			fmt.Errorf("pull request %d did not complete after merge", id)
+		return nil, false, nil
 	}
 
 	pr, err := convertADOPullRequest(completedPR)
