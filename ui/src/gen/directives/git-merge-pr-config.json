@@ -36,12 +36,8 @@
   },
   "mergeMethod": {
    "type": "string",
-   "description": "The merge method to use when merging the pull request. Options are 'merge' (traditional merge commit), 'squash' (squash all commits into one), or 'rebase' (rebase and merge). If not specified, the default merge method configured on the repository will be used.",
-   "enum": [
-    "merge",
-    "squash",
-    "rebase"
-   ]
+   "description": "The merge method to use when merging the pull request. Options are provider-specific.",
+   "minLength": 1
   }
  }
 }
