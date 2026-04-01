@@ -69,6 +69,13 @@ type argocdWaiter struct {
 		namespace string,
 		selector *builtin.ArgoCDAppSelector,
 	) ([]*argocd.Application, error)
+
+	checkAppReadinessFn func(
+		ctx context.Context,
+		app *argocd.Application,
+		waitFor []builtin.WaitFor,
+		prevHealthStatus string,
+	) (ready bool, healthStatus string, err error)
 }
 
 // newArgocdWaiter returns an implementation of the promotion.StepRunner
@@ -77,6 +84,7 @@ func newArgocdWaiter(caps promotion.StepRunnerCapabilities) promotion.StepRunner
 	w := &argocdWaiter{argocdClient: caps.ArgoCDClient}
 	w.schemaLoader = getConfigSchemaLoader(stepKindArgoCDWait)
 	w.getApplicationsFn = getArgoCDApplications
+	w.checkAppReadinessFn = w.checkAppReadiness
 	return w
 }
 
@@ -156,7 +164,7 @@ func (w *argocdWaiter) run(
 			)
 
 			ready, healthStatus, err :=
-				w.checkAppReadiness(ctx, app, waitFor, prevHealthStatuses[appKey])
+				w.checkAppReadinessFn(ctx, app, waitFor, prevHealthStatuses[appKey])
 			if healthStatus != "" {
 				newHealthStatuses[appKey] = healthStatus
 			}

@@ -48,32 +48,34 @@ func Test_argocdWaiter_convert(t *testing.T) {
 			},
 		},
 		{
-			name: "app with neither name nor selector",
+			name: "app entry has neither name nor selector",
 			config: promotion.Config{
-				"apps": []promotion.Config{{}},
+				"apps": []promotion.Config{
+					{},
+				},
 			},
 			expectedProblems: []string{
-				"Must validate one and only one schema (oneOf)",
+				"apps.0: Must validate one and only one schema",
 			},
 		},
 		{
-			name: "app with both name and selector",
+			name: "app entry has both name and selector",
 			config: promotion.Config{
 				"apps": []promotion.Config{
 					{
 						"name": "my-app",
 						"selector": promotion.Config{
-							"matchLabels": promotion.Config{"app": "test"},
+							"matchLabels": map[string]string{"env": "prod"},
 						},
 					},
 				},
 			},
 			expectedProblems: []string{
-				"Must validate one and only one schema (oneOf)",
+				"apps.0: Must validate one and only one schema",
 			},
 		},
 		{
-			name: "invalid waitFor value",
+			name: "waitFor has invalid value",
 			config: promotion.Config{
 				"apps": []promotion.Config{
 					{
@@ -83,19 +85,33 @@ func Test_argocdWaiter_convert(t *testing.T) {
 				},
 			},
 			expectedProblems: []string{
-				"apps.0.waitFor.0",
+				"apps.0.waitFor.0: apps.0.waitFor.0 must be one of the following",
 			},
 		},
 		{
-			name: "valid: app with name, no waitFor",
+			name: "valid config with name",
 			config: promotion.Config{
 				"apps": []promotion.Config{
 					{"name": "my-app"},
 				},
 			},
+			expectedProblems: nil,
 		},
 		{
-			name: "valid: app with name and waitFor",
+			name: "valid config with selector",
+			config: promotion.Config{
+				"apps": []promotion.Config{
+					{
+						"selector": promotion.Config{
+							"matchLabels": map[string]string{"env": "prod"},
+						},
+					},
+				},
+			},
+			expectedProblems: nil,
+		},
+		{
+			name: "valid config with waitFor",
 			config: promotion.Config{
 				"apps": []promotion.Config{
 					{
@@ -104,25 +120,11 @@ func Test_argocdWaiter_convert(t *testing.T) {
 					},
 				},
 			},
-		},
-		{
-			name: "valid: app with selector",
-			config: promotion.Config{
-				"apps": []promotion.Config{
-					{
-						"selector": promotion.Config{
-							"matchLabels": promotion.Config{"app": "test"},
-						},
-						"waitFor": []string{"health"},
-					},
-				},
-			},
+			expectedProblems: nil,
 		},
 	}
-
-	r := newArgocdWaiter(promotion.StepRunnerCapabilities{})
-	runner, ok := r.(*argocdWaiter)
-	require.True(t, ok)
+	runner := &argocdWaiter{}
+	runner.schemaLoader = getConfigSchemaLoader(stepKindArgoCDWait)
 	runValidationTests(t, runner.convert, tests)
 }
 
@@ -169,27 +171,73 @@ func Test_argocdWaiter_run(t *testing.T) {
 			},
 		},
 		{
-			name: "operation in progress returns Running",
+			name: "checkAppReadiness terminal error stops loop",
 			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Operation: &argocd.Operation{},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{}),
+				checkAppReadinessFn: func(
+					context.Context, *argocd.Application,
+					[]builtin.WaitFor, string,
+				) (bool, string, error) {
+					return false, "", &promotion.TerminalError{
+						Err: errors.New("bad condition"),
+					}
+				},
 			},
 			stepCtx: &promotion.StepContext{},
 			stepCfg: builtin.ArgoCDWaitConfig{
 				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "bad condition")
+			},
+		},
+		{
+			name: "health status tracked in output",
+			runner: &argocdWaiter{
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"}}),
+				checkAppReadinessFn: func(
+					context.Context, *argocd.Application,
+					[]builtin.WaitFor, string,
+				) (bool, string, error) {
+					return false, "Progressing", nil
+				},
+			},
+			stepCtx: &promotion.StepContext{},
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+				statuses, ok := res.Output[healthStatusKey].(map[string]string)
+				require.True(t, ok)
+				assert.Equal(t, "Progressing", statuses["argocd/my-app"])
+			},
+		},
+		{
+			name: "multiple apps, one not ready returns Running",
+			runner: &argocdWaiter{
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: func(
+					_ context.Context, _ client.Client,
+					name, _ string, _ *builtin.ArgoCDAppSelector,
+				) ([]*argocd.Application, error) {
+					return []*argocd.Application{{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "argocd"}}}, nil
+				},
+				checkAppReadinessFn: func(
+					_ context.Context, app *argocd.Application,
+					_ []builtin.WaitFor, _ string,
+				) (bool, string, error) {
+					return app.Name == "app-a", "", nil
+				},
+			},
+			stepCtx: &promotion.StepContext{},
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps: []builtin.ArgoCDAppWait{{Name: "app-a"}, {Name: "app-b"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -198,282 +246,20 @@ func Test_argocdWaiter_run(t *testing.T) {
 			},
 		},
 		{
-			name: "reconciledAt nil after operation requests refresh and returns Running",
+			name: "all apps ready returns Succeeded",
 			runner: &argocdWaiter{
-				argocdClient: fake.NewClientBuilder().WithScheme(argocdScheme).WithObjects(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-						OperationState: &argocd.OperationState{
-							Phase:      argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{Time: time.Now()},
-						},
-					},
-				}).Build(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-						OperationState: &argocd.OperationState{
-							Phase:      argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{Time: time.Now()},
-						},
-						// ReconciledAt is nil: not yet reconciled after op
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "reconciledAt before finishedAt requests refresh and returns Running",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewClientBuilder().WithScheme(argocdScheme).WithObjects(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-						OperationState: &argocd.OperationState{
-							Phase: argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{
-								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
-							},
-						},
-						ReconciledAt: &metav1.Time{
-							Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
-						},
-					},
-				}).Build(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-						OperationState: &argocd.OperationState{
-							Phase: argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{
-								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
-							},
-						},
-						ReconciledAt: &metav1.Time{
-							Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "reconciledAt at or after finishedAt trusts health",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-						OperationState: &argocd.OperationState{
-							Phase: argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{
-								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
-							},
-						},
-						ReconciledAt: &metav1.Time{
-							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-			},
-		},
-		{
-			name: "healthy and synced returns Succeeded",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-			},
-		},
-		{
-			name: "progressing returns Running",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusProgressing,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "out of sync returns Running",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusHealthy,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeOutOfSync,
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "waitFor sync only ignores health",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusDegraded,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{
-					{Name: "my-app", WaitFor: []builtin.WaitFor{builtin.Sync}},
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{}),
+				checkAppReadinessFn: func(
+					context.Context, *argocd.Application,
+					[]builtin.WaitFor, string,
+				) (bool, string, error) {
+					return true, "Healthy", nil
 				},
 			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-			},
-		},
-		{
-			name: "waitFor health and suspended, app is suspended",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusSuspended,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
-			},
 			stepCtx: &promotion.StepContext{},
 			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{
-					{
-						Name:    "my-app",
-						WaitFor: []builtin.WaitFor{builtin.Health, builtin.Suspended},
-					},
-				},
+				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
@@ -481,22 +267,17 @@ func Test_argocdWaiter_run(t *testing.T) {
 			},
 		},
 		{
-			name: "health regression to degraded is terminal error",
+			name: "previous health statuses passed to checkAppReadiness",
 			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusDegraded,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
+				argocdClient:      fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"}}),
+				checkAppReadinessFn: func(
+					_ context.Context, _ *argocd.Application,
+					_ []builtin.WaitFor, prevStatus string,
+				) (bool, string, error) {
+					assert.Equal(t, "Progressing", prevStatus)
+					return true, "Healthy", nil
+				},
 			},
 			stepCtx: &promotion.StepContext{
 				Alias: "wait-step",
@@ -512,184 +293,6 @@ func Test_argocdWaiter_run(t *testing.T) {
 				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
-				require.Error(t, err)
-				assert.True(t, promotion.IsTerminal(err))
-				assert.Contains(t, err.Error(), "regressed")
-			},
-		},
-		{
-			name: "degraded without prior state is not terminal",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusDegraded,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeSynced,
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "error condition is terminal",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Conditions: []argocd.ApplicationCondition{
-							{
-								Type:    argocd.ApplicationConditionInvalidSpecError,
-								Message: "bad spec",
-							},
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				assert.Equal(t, kargoapi.PromotionStepStatusErrored, res.Status)
-				require.Error(t, err)
-				assert.True(t, promotion.IsTerminal(err))
-				assert.Contains(t, err.Error(), "bad spec")
-			},
-		},
-		{
-			name: "multiple apps, one not ready",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: func(
-					_ context.Context, _ client.Client,
-					name, _ string,
-					_ *builtin.ArgoCDAppSelector,
-				) ([]*argocd.Application, error) {
-					if name == "app-a" {
-						return []*argocd.Application{{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "app-a", Namespace: "argocd",
-							},
-							Status: argocd.ApplicationStatus{
-								Health: argocd.HealthStatus{
-									Status: argocd.HealthStatusHealthy,
-								},
-								Sync: argocd.SyncStatus{
-									Status: argocd.SyncStatusCodeSynced,
-								},
-							},
-						}}, nil
-					}
-					return []*argocd.Application{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "app-b", Namespace: "argocd",
-						},
-						Status: argocd.ApplicationStatus{
-							Health: argocd.HealthStatus{
-								Status: argocd.HealthStatusProgressing,
-							},
-							Sync: argocd.SyncStatus{
-								Status: argocd.SyncStatusCodeSynced,
-							},
-						},
-					}}, nil
-				},
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{
-					{Name: "app-a"},
-					{Name: "app-b"},
-				},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-			},
-		},
-		{
-			name: "multiple apps, all ready",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: func(
-					_ context.Context, _ client.Client,
-					_ string, _ string,
-					_ *builtin.ArgoCDAppSelector,
-				) ([]*argocd.Application, error) {
-					return []*argocd.Application{{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "my-app", Namespace: "argocd",
-						},
-						Status: argocd.ApplicationStatus{
-							Health: argocd.HealthStatus{
-								Status: argocd.HealthStatusHealthy,
-							},
-							Sync: argocd.SyncStatus{
-								Status: argocd.SyncStatusCodeSynced,
-							},
-						},
-					}}, nil
-				},
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{
-					{Name: "app-a"},
-					{Name: "app-b"},
-				},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
-				require.NoError(t, err)
-				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
-			},
-		},
-		{
-			name: "waitFor operation only, operation completed",
-			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "my-app", Namespace: "argocd",
-					},
-					Status: argocd.ApplicationStatus{
-						Health: argocd.HealthStatus{
-							Status: argocd.HealthStatusDegraded,
-						},
-						Sync: argocd.SyncStatus{
-							Status: argocd.SyncStatusCodeOutOfSync,
-						},
-						OperationState: &argocd.OperationState{
-							Phase:      argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{Time: time.Now().Add(-time.Minute)},
-						},
-					},
-				}),
-			},
-			stepCtx: &promotion.StepContext{},
-			stepCfg: builtin.ArgoCDWaitConfig{
-				Apps: []builtin.ArgoCDAppWait{
-					{Name: "my-app", WaitFor: []builtin.WaitFor{builtin.Operation}},
-				},
-			},
-			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusSucceeded, res.Status)
 			},
@@ -699,6 +302,260 @@ func Test_argocdWaiter_run(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			res, err := tc.runner.run(context.Background(), tc.stepCtx, tc.stepCfg)
 			tc.assertions(t, res, err)
+		})
+	}
+}
+
+func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	testCases := []struct {
+		name            string
+		app             *argocd.Application
+		storedApp       *argocd.Application // pre-loaded into fake client for refresh patch
+		waitFor         []builtin.WaitFor
+		prevHealthStatus string
+		assertions      func(*testing.T, bool, string, error)
+	}{
+		{
+			name: "error condition is terminal",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Conditions: []argocd.ApplicationCondition{{
+						Type:    argocd.ApplicationConditionInvalidSpecError,
+						Message: "bad spec",
+					}},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "bad spec")
+			},
+		},
+		{
+			name: "operation in progress returns not ready",
+			app: &argocd.Application{
+				Operation: &argocd.Operation{},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "reconciledAt nil after operation requests refresh and returns not ready",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+					OperationState: &argocd.OperationState{
+						Phase:      argocd.OperationSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					// ReconciledAt is nil
+				},
+			},
+			storedApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "reconciledAt before finishedAt requests refresh and returns not ready",
+			app: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+					OperationState: &argocd.OperationState{
+						Phase:      argocd.OperationSucceeded,
+						FinishedAt: &metav1.Time{Time: now.Add(10 * time.Second)},
+					},
+					ReconciledAt: &metav1.Time{Time: now.Add(5 * time.Second)},
+				},
+			},
+			storedApp: &argocd.Application{
+				ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "reconciledAt equal to finishedAt trusts health",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+					OperationState: &argocd.OperationState{
+						Phase:      argocd.OperationSucceeded,
+						FinishedAt: &metav1.Time{Time: now},
+					},
+					ReconciledAt: &metav1.Time{Time: now},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.True(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "healthy and synced returns ready",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, healthStatus string, err error) {
+				assert.True(t, ready)
+				assert.Equal(t, string(argocd.HealthStatusHealthy), healthStatus)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "progressing returns not ready",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusProgressing},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "out of sync returns not ready",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeOutOfSync},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "waitFor sync only — degraded health ignored",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusDegraded},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: []builtin.WaitFor{builtin.Sync},
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.True(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "waitFor health and suspended — suspended satisfies health check",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusSuspended},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: []builtin.WaitFor{builtin.Health, builtin.Suspended},
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.True(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "health regression to Degraded from prior non-Degraded is terminal",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusDegraded},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor:          defaultWaitFor,
+			prevHealthStatus: string(argocd.HealthStatusProgressing),
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.True(t, promotion.IsTerminal(err))
+				require.ErrorContains(t, err, "regressed")
+			},
+		},
+		{
+			name: "degraded with no prior health status is not terminal",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusDegraded},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeSynced},
+				},
+			},
+			waitFor: defaultWaitFor,
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.False(t, ready)
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "waitFor operation only — operation completed, health/sync ignored",
+			app: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: argocd.HealthStatusDegraded},
+					Sync:   argocd.SyncStatus{Status: argocd.SyncStatusCodeOutOfSync},
+					OperationState: &argocd.OperationState{
+						Phase:      argocd.OperationSucceeded,
+						FinishedAt: &metav1.Time{Time: now.Add(-time.Minute)},
+					},
+				},
+			},
+			waitFor: []builtin.WaitFor{builtin.Operation},
+			assertions: func(t *testing.T, ready bool, _ string, err error) {
+				assert.True(t, ready)
+				require.NoError(t, err)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			var argocdClient client.Client
+			if tc.storedApp != nil {
+				argocdClient = fake.NewClientBuilder().
+					WithScheme(argocdScheme).
+					WithObjects(tc.storedApp).
+					Build()
+			} else {
+				argocdClient = fake.NewFakeClient()
+			}
+
+			w := &argocdWaiter{argocdClient: argocdClient}
+			ready, healthStatus, err := w.checkAppReadiness(
+				context.Background(), tc.app, tc.waitFor, tc.prevHealthStatus,
+			)
+			tc.assertions(t, ready, healthStatus, err)
 		})
 	}
 }
