@@ -236,23 +236,33 @@ func (r *reconciler) Reconcile(
 	ctx = logging.ContextWithLogger(ctx, logger)
 	logger.Debug("reconciling Promotion")
 
-	// Use direct API read to ensure we see the latest status.
-	// This avoids a race condition where the cache hasn't yet reflected
-	// a recently-patched status, causing promotions to error out if the informer cache is stale.
-
-	promo := &kargoapi.Promotion{}
-	if err := r.apiReader.Get(ctx, req.NamespacedName, promo); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
+	// Use the cache for cheap early exits — no API server call needed for
+	// promotions that are already finished or not assigned to this shard.
+	cachedPromo, err := api.GetPromotion(ctx, r.kargoClient, req.NamespacedName)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
-
-	if promo == nil || promo.Status.Phase.IsTerminal() {
-		// Ignore if not found or already finished. Promo might be nil if the
-		// Promotion was deleted after the current reconciliation request was issued.
+	if cachedPromo == nil || cachedPromo.Status.Phase.IsTerminal() {
+		// Ignore if not found or already finished. cachedPromo might be nil if
+		// the Promotion was deleted after the reconciliation request was issued.
+		return ctrl.Result{}, nil
+	}
+	if !r.shardPredicate.IsResponsible(cachedPromo) {
+		logger.Debug("ignoring Promotion because it is not assigned to this shard")
 		return ctrl.Result{}, nil
 	}
 
-	if !r.shardPredicate.IsResponsible(promo) {
-		logger.Debug("ignoring Promotion because it is not assigned to this shard")
+	// Use a direct API read (bypassing the cache) to ensure we see the latest
+	// status. This avoids a race condition where the informer cache hasn't yet
+	// reflected a recently-patched status, which would cause the reconciler to
+	// re-execute already-completed steps.
+	promo := &kargoapi.Promotion{}
+	if err = r.apiReader.Get(ctx, req.NamespacedName, promo); err != nil {
+		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+	if promo.Status.Phase.IsTerminal() {
+		// The Promotion reached a terminal state between the cache read above
+		// and the direct API read. Nothing left to do.
 		return ctrl.Result{}, nil
 	}
 

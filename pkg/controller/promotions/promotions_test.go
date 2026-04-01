@@ -32,6 +32,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
+		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -54,6 +55,7 @@ func newFakeReconciler(
 	kargoClient := fake.NewClientBuilder().WithScheme(scheme).
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	return newReconciler(
+		kargoClient,
 		kargoClient,
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
