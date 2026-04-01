@@ -19,6 +19,15 @@ rules:
 - apiGroups:
   - kargo.akuity.io
   resources:
+  - promotions
+  verbs:
+  - get
+  - list
+  - patch
+  - watch
+- apiGroups:
+  - kargo.akuity.io
+  resources:
   - warehouses
   verbs:
   - get
