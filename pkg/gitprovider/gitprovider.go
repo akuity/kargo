@@ -22,18 +22,6 @@ const (
 	PullRequestStateOpen PullRequestState = "Open"
 )
 
-// MergeMethod represents the method used to merge a pull request.
-type MergeMethod string
-
-const (
-	// MergeMethodMerge creates a merge commit (traditional merge).
-	MergeMethodMerge MergeMethod = "merge"
-	// MergeMethodSquash squashes all commits into a single commit.
-	MergeMethodSquash MergeMethod = "squash"
-	// MergeMethodRebase rebases and merges the commits.
-	MergeMethodRebase MergeMethod = "rebase"
-)
-
 // Options encapsulates options used in instantiating any implementation
 // of Interface.
 type Options struct {
@@ -113,7 +101,7 @@ type ListPullRequestOptions struct {
 type MergePullRequestOpts struct {
 	// MergeMethod is the method to use when merging. If empty, the provider's
 	// API uses the repository's configured default merge method.
-	MergeMethod MergeMethod
+	MergeMethod string
 }
 
 // PullRequest is an abstracted representation of a Git hosting provider's pull
