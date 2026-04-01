@@ -353,7 +353,12 @@ func (p *provider) MergePullRequest(
 		ID:       strconv.FormatInt(id, 10),
 	}
 
-	// Perform the merge
+	// TODO(krancour): The Bitbucket merge endpoint can return 202 for async
+	// merges. The go-bitbucket library treats 202 as success (no error), but the
+	// response body would be a polling URL, not a PR object. This would cause
+	// toBitbucketPR to fail or produce incorrect results. If async merges are
+	// encountered in practice, we'll need to detect the 202 and poll for
+	// completion.
 	mergeResp, err := p.client.Merge(mergeOpts)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
@@ -365,9 +370,12 @@ func (p *provider) MergePullRequest(
 		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
 	}
 
+	// Per the Bitbucket API docs, the merge endpoint returns 200 only on
+	// success (409 for conflicts, 555 for timeout — both surfaced as errors
+	// above). A 200 response with a non-merged state would be unexpected.
 	if mergedBBPR.State != prStateMerged {
 		return nil, false,
-			fmt.Errorf("merge rejected for pull request %d (state: %s)", id, mergedBBPR.State)
+			fmt.Errorf("unexpected state %q after merging pull request %d", mergedBBPR.State, id)
 	}
 
 	return toProviderPR(mergedBBPR, mergeResp), true, nil

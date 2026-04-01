@@ -103,6 +103,10 @@ func NewProvider(
 	}
 	organizationUrl := fmt.Sprintf("https://%s/%s", modernHostSuffix, org)
 	client, err := adogit.NewClient(
+		// The Azure SDK's NewClient performs a one-time service discovery HTTP call
+		// to resolve the git resource area endpoint. Given it's limited use, using
+		// background context is preferable here to refactoring all provider
+		// registrations to be context-aware.
 		context.Background(),
 		azuredevops.NewPatConnection(organizationUrl, opts.Token),
 	)
@@ -332,7 +336,11 @@ func (p *provider) MergePullRequest(
 			adogit.PullRequestStatusValues.Completed {
 			break
 		}
-		time.Sleep(time.Second)
+		select {
+		case <-ctx.Done():
+			return nil, false, ctx.Err()
+		case <-time.After(time.Second):
+		}
 	}
 	if ptr.Deref(completedPR.Status, "") !=
 		adogit.PullRequestStatusValues.Completed {

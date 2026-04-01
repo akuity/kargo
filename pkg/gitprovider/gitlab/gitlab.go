@@ -236,9 +236,9 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Merge the MR. When unspecified, the GitLab API uses a merge commit. Squash
-	// is supported via a boolean flag. Rebase is not supported through the
-	// accept-merge-request API.
+	// GitLab's AcceptMergeRequest API only supports "merge" (default) and
+	// "squash" (via a boolean flag). Other strategies are not available through
+	// this endpoint.
 	var squash *bool
 	switch opts.MergeMethod {
 	case "", "merge":
