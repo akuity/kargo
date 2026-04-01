@@ -66,8 +66,8 @@ func newFakeReconciler(
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name      string
-		promos    []client.Object
+		name   string
+		promos []client.Object
 		// apiReader, if set, overrides the reconciler's direct API reader. Use
 		// this to simulate cache/API divergence or to assert the reader is not
 		// called (e.g. wrap with an interceptor that calls t.Error on Get).
@@ -327,7 +327,11 @@ func TestReconcile(t *testing.T) {
 				return p
 			}()),
 			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
-			promoteFn: func(_ context.Context, p kargoapi.Promotion, _ *kargoapi.Freight) (*kargoapi.PromotionStatus, *time.Duration, error) {
+			promoteFn: func(
+				_ context.Context,
+				p kargoapi.Promotion,
+				_ *kargoapi.Freight,
+			) (*kargoapi.PromotionStatus, *time.Duration, error) {
 				// Assert the reconciler is using the API's authoritative state,
 				// not the stale cached copy.
 				if len(p.Status.StepExecutionMetadata) == 0 {
