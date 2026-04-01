@@ -93,7 +93,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		eventType := gl.HookEventType(r)
 		switch eventType {
-		case gl.EventTypePush, gl.EventTypeTagPush:
+		case gl.EventTypeMergeRequest, gl.EventTypePush, gl.EventTypeTagPush:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -118,6 +118,21 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		}
 
 		switch e := event.(type) {
+		case *gl.MergeEvent:
+			action := e.ObjectAttributes.Action
+			if action != "close" && action != "merge" {
+				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+				return
+			}
+			mrNumber := int(e.ObjectAttributes.IID)
+			repoURLs := []string{
+				urls.NormalizeGit(e.Project.GitHTTPURL),
+				urls.NormalizeGit(e.Project.GitSSHURL),
+			}
+			logger = logger.WithValues("mrNumber", mrNumber, "repoURLs", repoURLs)
+			ctx = logging.ContextWithLogger(ctx, logger)
+			refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, mrNumber)
+			return
 		case *gl.PushEvent:
 			var repoURLs []string
 			if e.Repository != nil {
