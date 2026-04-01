@@ -197,8 +197,10 @@ func Test_argocdWaiter_run(t *testing.T) {
 		{
 			name: "health status tracked in output",
 			runner: &argocdWaiter{
-				argocdClient:      fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"}}),
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				}),
 				checkAppReadinessFn: func(
 					context.Context, *argocd.Application,
 					[]builtin.WaitFor, string,
@@ -269,8 +271,10 @@ func Test_argocdWaiter_run(t *testing.T) {
 		{
 			name: "previous health statuses passed to checkAppReadiness",
 			runner: &argocdWaiter{
-				argocdClient:      fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"}}),
+				argocdClient: fake.NewFakeClient(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "argocd"},
+				}),
 				checkAppReadinessFn: func(
 					_ context.Context, _ *argocd.Application,
 					_ []builtin.WaitFor, prevStatus string,
@@ -312,12 +316,12 @@ func Test_argocdWaiter_checkAppReadiness(t *testing.T) {
 	now := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	testCases := []struct {
-		name            string
-		app             *argocd.Application
-		storedApp       *argocd.Application // pre-loaded into fake client for refresh patch
-		waitFor         []builtin.WaitFor
+		name             string
+		app              *argocd.Application
+		storedApp        *argocd.Application // pre-loaded into fake client for refresh patch
+		waitFor          []builtin.WaitFor
 		prevHealthStatus string
-		assertions      func(*testing.T, bool, string, error)
+		assertions       func(*testing.T, bool, string, error)
 	}{
 		{
 			name: "error condition is terminal",
