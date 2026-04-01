@@ -3,6 +3,7 @@ package bitbucket
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -58,11 +59,11 @@ func init() {
 
 // pullRequestClient defines the interface for pull request operations.
 type pullRequestClient interface {
-	CreatePullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
-	ListPullRequests(opt *bitbucket.PullRequestsOptions) (any, error)
-	GetPullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
-	GetCommit(opt *bitbucket.CommitsOptions) (any, error)
-	MergePullRequest(opt *bitbucket.PullRequestsOptions) (any, error)
+	Create(*bitbucket.PullRequestsOptions) (any, error)
+	Gets(*bitbucket.PullRequestsOptions) (any, error)
+	Get(*bitbucket.PullRequestsOptions) (any, error)
+	GetCommit(*bitbucket.CommitsOptions) (any, error)
+	Merge(*bitbucket.PullRequestsOptions) (any, error)
 }
 
 // provider is a Bitbucket-based implementation of gitprovider.Interface.
@@ -107,43 +108,17 @@ func NewProvider(
 	return &provider{
 		owner:    owner,
 		repoSlug: repoSlug,
-		client:   &clientWrapper{client},
+		client: &clientWrapper{
+			Commits:      client.Repositories.Commits,
+			PullRequests: client.Repositories.PullRequests,
+		},
 	}, nil
 }
 
 // clientWrapper wraps a bitbucket.Client to implement the prClient interface
 type clientWrapper struct {
-	client *bitbucket.Client
-}
-
-func (w *clientWrapper) CreatePullRequest(
-	opt *bitbucket.PullRequestsOptions,
-) (any, error) {
-	return w.client.Repositories.PullRequests.Create(opt)
-}
-
-func (w *clientWrapper) ListPullRequests(
-	opt *bitbucket.PullRequestsOptions,
-) (any, error) {
-	return w.client.Repositories.PullRequests.Gets(opt)
-}
-
-func (w *clientWrapper) GetPullRequest(
-	opt *bitbucket.PullRequestsOptions,
-) (any, error) {
-	return w.client.Repositories.PullRequests.Get(opt)
-}
-
-func (w *clientWrapper) GetCommit(
-	opt *bitbucket.CommitsOptions,
-) (any, error) {
-	return w.client.Repositories.Commits.GetCommit(opt)
-}
-
-func (w *clientWrapper) MergePullRequest(
-	opt *bitbucket.PullRequestsOptions,
-) (any, error) {
-	return w.client.Repositories.PullRequests.Merge(opt)
+	*bitbucket.Commits
+	*bitbucket.PullRequests
 }
 
 // CreatePullRequest implements gitprovider.Interface.
@@ -165,7 +140,7 @@ func (p *provider) CreatePullRequest(
 	}
 	createOpts.WithContext(ctx)
 
-	resp, err := p.client.CreatePullRequest(createOpts)
+	resp, err := p.client.Create(createOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -198,7 +173,7 @@ func (p *provider) GetPullRequest(
 	}
 	getOpts.WithContext(ctx)
 
-	resp, err := p.client.GetPullRequest(getOpts)
+	resp, err := p.client.Get(getOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -248,7 +223,7 @@ func (p *provider) ListPullRequests(
 		return nil, fmt.Errorf("unknown pull request state %q", opts.State)
 	}
 
-	resp, err := p.client.ListPullRequests(listOpts)
+	resp, err := p.client.Gets(listOpts)
 	if err != nil {
 		return nil, err
 	}
@@ -311,16 +286,18 @@ func (p *provider) MergePullRequest(
 	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
-	idStr := strconv.FormatInt(id, 10)
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
 
 	// Get the PR to check its state
 	prOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       idStr,
+		ID:       strconv.FormatInt(id, 10),
 	}
 
-	prResp, err := p.client.GetPullRequest(prOpts)
+	prResp, err := p.client.Get(prOpts)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
 	}
@@ -358,24 +335,26 @@ func (p *provider) MergePullRequest(
 	// This limitation makes the "wait" option unreliable for Bitbucket
 	// repositories.
 
-	// Attempt to merge the PR. When no merge method is specified, omit the
-	// strategy so the Bitbucket API uses the repository's configured default.
+	// TODO(krancour): go-bitbucket does not expose the merge method/strategy as
+	// an option. The merge will always use the repository's default merge
+	// strategy, so simply fail if any merge strategy was specified. This is
+	// strictly a limitation of the go-bitbucket library and not the Bitbucket API
+	// itself, so this can be revisited in the future if the library adds support
+	// for this or if we decide to implement this API call ourselves instead of
+	// using the library.
+	if opts.MergeMethod != "" {
+		return nil, false, errors.New( // nolint: staticcheck
+			"Kargo's Bitbucket client does not yet support specifying a merge method",
+		)
+	}
 	mergeOpts := &bitbucket.PullRequestsOptions{
 		Owner:    p.owner,
 		RepoSlug: p.repoSlug,
-		ID:       idStr,
-	}
-	// Merge method/strategy is not supported on the go-bitbucket library
-	// this fails with an error if anything other than "merge" is set
-	if opts.MergeMethod != "" {
-		_, err := mapBitbucketMergeMethod(opts.MergeMethod)
-		if err != nil {
-			return nil, false, err
-		}
+		ID:       strconv.FormatInt(id, 10),
 	}
 
 	// Perform the merge
-	mergeResp, err := p.client.MergePullRequest(mergeOpts)
+	mergeResp, err := p.client.Merge(mergeOpts)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
@@ -384,6 +363,11 @@ func (p *provider) MergePullRequest(
 	mergedBBPR, err := toBitbucketPR(mergeResp)
 	if err != nil {
 		return nil, false, fmt.Errorf("error parsing merged pull request response: %w", err)
+	}
+
+	if mergedBBPR.State != prStateMerged {
+		return nil, false,
+			fmt.Errorf("merge rejected for pull request %d (state: %s)", id, mergedBBPR.State)
 	}
 
 	return toProviderPR(mergedBBPR, mergeResp), true, nil
@@ -519,22 +503,4 @@ func parseRepoURL(repoURL string) (host, owner, slug string, err error) {
 	}
 
 	return u.Hostname(), parts[0], parts[1], nil
-}
-
-// mergeMethodMap maps gitprovider.MergeMethod values to Bitbucket merge
-// strategy names. Bitbucket supports merge, squash, and fast-forward (rebase).
-var mergeMethodMap = map[gitprovider.MergeMethod]string{
-	gitprovider.MergeMethodMerge: "merge_commit",
-}
-
-func mapBitbucketMergeMethod(
-	mergeMethod gitprovider.MergeMethod,
-) (string, error) {
-	strategy, ok := mergeMethodMap[mergeMethod]
-	if !ok {
-		return "", fmt.Errorf(
-			"unsupported merge method %q for provider", mergeMethod,
-		)
-	}
-	return strategy, nil
 }
