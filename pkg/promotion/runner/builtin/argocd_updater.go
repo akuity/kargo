@@ -115,7 +115,7 @@ func newArgocdUpdater(caps promotion.StepRunnerCapabilities) promotion.StepRunne
 	r := &argocdUpdater{argocdClient: caps.ArgoCDClient}
 	r.schemaLoader = getConfigSchemaLoader(stepKindArgoCDUpdate)
 	r.getAuthorizedApplicationsFn = r.getAuthorizedApplications
-	r.buildLabelSelectorFn = r.buildLabelSelector
+	r.buildLabelSelectorFn = buildArgoCDAppLabelSelector
 	r.buildDesiredSourcesFn = r.buildDesiredSources
 	r.mustPerformUpdateFn = r.mustPerformUpdate
 	r.syncApplicationFn = r.syncApplication
@@ -930,14 +930,6 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 		return permErr
 	}
 	return nil
-}
-
-// buildLabelSelector converts an ArgoCDAppSelector into a Kubernetes
-// labels.Selector.
-func (a *argocdUpdater) buildLabelSelector(
-	selector *builtin.ArgoCDAppSelector,
-) (labels.Selector, error) {
-	return buildArgoCDAppLabelSelector(selector)
 }
 
 // applyArgoCDSourceUpdate updates a single Argo CD ApplicationSource.
