@@ -82,6 +82,7 @@ export const useReactFlowPipelineGraph = (
             x: dagreNode?.x - dagreNode?.width / 2,
             y: dagreNode?.y - stackedActualHeight / 2
           },
+          style: { transition: 'transform 0.3s ease' },
           data: {
             value: dagreNode?.value,
             id: dagreNode?.id,
@@ -103,6 +104,7 @@ export const useReactFlowPipelineGraph = (
           x: dagreNode?.x - dagreNode?.width / 2,
           y: dagreNode?.y - actualHeight / 2
         },
+        style: { transition: 'transform 0.3s ease' },
         data: {
           label: node,
           value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,

@@ -4,11 +4,12 @@ import {
   ControlButton,
   Controls,
   MiniMap,
+  NodeDimensionChange,
   ReactFlow,
   ReactFlowInstance,
   useNodesState
 } from '@xyflow/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
@@ -76,9 +77,49 @@ export const Graph = (props: GraphProps) => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
 
-  useEffect(() => {
+  // useLayoutEffect fires synchronously after DOM mutations but before the browser
+  // paints. This prevents the one-frame intermediate state where node content has
+  // changed (and grown) but positions haven't been recalculated yet.
+  useLayoutEffect(() => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
+
+  const handleNodesChange = useCallback(
+    (changes: Parameters<typeof onNodesChange>[0]) => {
+      const sizeChanges = changes.filter(
+        (c): c is NodeDimensionChange => c.type === 'dimensions' && !!c.dimensions
+      );
+
+      if (sizeChanges.length > 0) {
+        setTimeout(() => {
+          setDimensions((prev) => {
+            let changed = false;
+            const updated = { ...prev };
+
+            for (const change of sizeChanges) {
+              if (change.dimensions) {
+                // Round to integer pixels to avoid floating-point noise from
+                // ResizeObserver on high-DPI (retina) displays, which would
+                // otherwise trigger repeated relayouts on sub-pixel differences.
+                const w = Math.round(change.dimensions.width);
+                const h = Math.round(change.dimensions.height);
+
+                if (updated[change.id]?.height !== h || updated[change.id]?.width !== w) {
+                  updated[change.id] = { width: w, height: h };
+                  changed = true;
+                }
+              }
+            }
+
+            return changed ? updated : prev;
+          });
+        });
+      }
+
+      onNodesChange(changes);
+    },
+    [onNodesChange, setDimensions]
+  );
 
   useEventsWatcher(props.project, {
     onStage(stage) {
@@ -169,7 +210,7 @@ export const Graph = (props: GraphProps) => {
         }}
         proOptions={{ hideAttribution: true }}
         minZoom={0}
-        onNodesChange={onNodesChange}
+        onNodesChange={handleNodesChange}
         onlyRenderVisibleElements
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
