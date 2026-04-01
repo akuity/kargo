@@ -103,11 +103,11 @@ steps:
     wait: true
 ```
 
-### Merge Method
+### Specifying a Merge Method
 
 This example demonstrates merging a pull request with a specific merge method.
-The squash method combines all commits in the pull request into a single commit.
-This is useful for maintaining a clean commit history.
+Refer to the [Merge Method](#merge-method) section for supported values per
+provider.
 
 ```yaml
 steps:
