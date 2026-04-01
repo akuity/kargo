@@ -13,6 +13,17 @@ specified source and target branches. This step is often used after a
 At present, this feature only supports GitHub, Gitea, Azure DevOps, and
 GitLab pull/merge requests.
 
+:::note
+
+Not all providers support all features. Specifically:
+
+- **Labels**: GitHub, GitLab, and Azure DevOps support labeling pull/merge
+  requests. Gitea does not currently support labels (see
+  [#6021](https://github.com/akuity/kargo/issues/6021) for status). Bitbucket
+  does not support labeling of any kind through its APIs.
+
+:::
+
 ## Credentials
 
 Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
@@ -30,7 +41,7 @@ system to access the git repos.
 | `createTargetBranch` | `boolean` | N | **Deprecated**. Is a no-op if set. Will be removed in a future release.|
 | `title` | `string` | N | The title for the pull request. Kargo generates a title based on the commit messages if it is not explicitly specified. |
 | `description` | `string` | N | The description for the pull request. |
-| `labels` | `[]string` | N | Labels to add to the pull request. |
+| `labels` | `[]string` | N | Labels to add to the pull request. **Note:** Not all providers support labels. GitHub, GitLab, and Azure DevOps support this feature, but Gitea and Bitbucket do not. |
 
 ## Output
 
