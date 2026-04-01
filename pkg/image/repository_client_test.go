@@ -230,7 +230,7 @@ func Test_repositoryClient_getImageByTag(t *testing.T) {
 				testCase.setupCache(t, testCase.client.imageCache)
 			}
 			img, err := testCase.client.getImageByTag(
-				context.Background(),
+				t.Context(),
 				testTag,
 				testCase.platformConstraint,
 			)
@@ -336,7 +336,7 @@ func Test_repositoryClient_getImageByDigest(t *testing.T) {
 				require.NoError(t, err)
 			}
 			img, err := testCase.client.getImageByDigest(
-				context.Background(),
+				t.Context(),
 				testDigest,
 			)
 			testCase.assertions(t, img, err)
@@ -370,7 +370,7 @@ func Test_repositoryClient_getImageFromRemoteDesc(t *testing.T) {
 	for _, mediaType := range mediaTypes {
 		t.Run(string(mediaType), func(t *testing.T) {
 			img, err := testClient.getImageFromRemoteDesc(
-				context.Background(),
+				t.Context(),
 				&remote.Descriptor{
 					Descriptor: v1.Descriptor{
 						MediaType: mediaType,
@@ -413,7 +413,7 @@ func Test_repositoryClient_getImageFromRemoteDesc(t *testing.T) {
 		}
 
 		img, err := testClientWithAnnotations.getImageFromRemoteDesc(
-			context.Background(),
+			t.Context(),
 			remoteDesc,
 		)
 		require.NoError(t, err)
@@ -535,7 +535,7 @@ func Test_repositoryClient_getImageFromV1ImageIndex(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			image, err := testCase.client.getImageFromV1ImageIndex(
-				context.Background(),
+				t.Context(),
 				testDigest,
 				testCase.idx,
 			)

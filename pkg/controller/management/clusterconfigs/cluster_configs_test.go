@@ -1,7 +1,6 @@
 package clusterconfigs
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -163,7 +162,7 @@ func TestReconciler_syncWebhookReceivers(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncWebhookReceivers(
-				context.Background(),
+				t.Context(),
 				testCase.clusterCfg,
 			)
 			testCase.assertions(t, status, err)

@@ -35,6 +35,11 @@ api:
         - kilgore@kilgore.trout
 controller:
   logLevel: DEBUG
+  gitClient:
+    name: "Kargo Test Key"
+    email: "no-reply@kargo.io"
+    signingKeySecret:
+      name: kargo-test-gpg-signing-key
   images:
     cache:
       cacheByTagPolicy: Force

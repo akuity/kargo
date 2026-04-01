@@ -1,7 +1,6 @@
 package indexer
 
 import (
-	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -528,7 +527,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 				t,
 				testCase.expected,
 				RunningPromotionsByArgoCDApplications(
-					context.TODO(),
+					t.Context(),
 					c,
 					testCase.shardName,
 					false,

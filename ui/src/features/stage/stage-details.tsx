@@ -12,6 +12,7 @@ import moment from 'moment';
 import { useEffect, useMemo, useState } from 'react';
 import { generatePath, useNavigate, useParams } from 'react-router-dom';
 
+import { SHARD_LABEL_KEY } from '@ui/config/labels';
 import { paths } from '@ui/config/paths';
 import { useExtensionsContext } from '@ui/extensions/extensions-context';
 import { Description } from '@ui/features/common/description';
@@ -92,7 +93,7 @@ export const StageDetails = ({ stage }: { stage: Stage }) => {
   const getConfigQuery = useQuery(getConfig);
   const config = getConfigQuery.data;
 
-  const shardKey = stage?.metadata?.labels['kargo.akuity.io/shard'] || '';
+  const shardKey = stage?.metadata?.labels[SHARD_LABEL_KEY] || '';
   const argocdShard = config?.argocdShards?.[shardKey];
 
   const { stageTabs } = useExtensionsContext();

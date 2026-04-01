@@ -1,7 +1,6 @@
 package gitlab
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -95,7 +94,7 @@ func TestCreatePullRequest(t *testing.T) {
 		Title:       "title",
 		Description: "desc",
 	}
-	pr, err := g.CreatePullRequest(context.Background(), &opts)
+	pr, err := g.CreatePullRequest(t.Context(), &opts)
 
 	require.NoError(t, err)
 	require.Equal(t, testProjectName, mockClient.pid)
@@ -126,7 +125,7 @@ func TestGetPullRequest(t *testing.T) {
 		client:      mockClient,
 	}
 
-	pr, err := g.GetPullRequest(context.Background(), 1)
+	pr, err := g.GetPullRequest(t.Context(), 1)
 
 	require.NoError(t, err)
 	require.Equal(t, testProjectName, mockClient.pid)
@@ -157,7 +156,7 @@ func TestListPullRequests(t *testing.T) {
 		HeadBranch: "head",
 		BaseBranch: "base",
 	}
-	prs, err := g.ListPullRequests(context.Background(), &opts)
+	prs, err := g.ListPullRequests(t.Context(), &opts)
 	require.NoError(t, err)
 
 	require.Equal(t, testProjectName, mockClient.pid)
@@ -359,7 +358,7 @@ func TestMergePullRequest(t *testing.T) {
 				client:      tc.mockClient,
 			}
 
-			pr, merged, err := g.MergePullRequest(context.Background(), tc.id)
+			pr, merged, err := g.MergePullRequest(t.Context(), tc.id)
 
 			if tc.expectErr {
 				require.Error(t, err)

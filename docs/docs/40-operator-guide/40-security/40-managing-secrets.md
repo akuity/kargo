@@ -137,20 +137,20 @@ SSH-style URLs of the form `git@github.com:example/repo.git`), the key
 `sshPrivateKey` in the `Secret`'s `data` block may have as its value a
 PEM-encoded SSH private key.
 
-:::warning[Not Recommended]
+:::warning[Deprecated]
 
-While an SSH private key is an adequate credential for basic Git operations that
-are formally part of the Git specification (i.e. `clone`, `checkout`, etc.), the
-proprietary APIs offered by the major git hosting platforms (e.g. GitHub or
+Support for SSH URLs and SSH private keys is **deprecated as of v1.10.0** and
+**scheduled for removal in v1.13.0**.
+
+The proprietary APIs offered by the major Git hosting platforms (e.g. GitHub or
 GitLab) to enable actions such as opening or closing pull requests are
 invariably HTTP-based and therefore cannot use an SSH private key for
-authentication.
+authentication. This forces users who rely on SSH to maintain a second set of
+credentials (e.g. a personal access token) for API operations.
 
-If your Projects will create or merge pull request, which is common, rather than
-using an SSH private key for basic operations and a second credential, such as a
-personal access token, for API calls, the Kargo team recommends using a single
-credential that works for both -- and an SSH private key is not such a
-credential.
+Using HTTPS URLs with a single token-based credential that works for both
+standard Git operations and provider API calls is simpler and more secure. Users
+should migrate to HTTPS URLs before v1.13.0.
 
 :::
 
@@ -239,6 +239,94 @@ Exercise due caution when deciding what secrets are suitable to be shared in
 this manner.
 
 :::
+
+### Replicating Shared Resources to Project Namespaces
+
+By default, shared secrets are accessed _indirectly_ -- repository credentials
+are matched automatically by URL, and generic credentials are accessed through
+the `sharedSecret()` expression function. In both cases, the `Secret` resources
+themselves remain in the shared resources namespace and their values are never
+copied into Project namespaces.
+
+In some situations, however, workloads running in a Project namespace may need
+_direct_ access to a `Secret` or `ConfigMap` -- for example, as a volume mount
+or environment variable reference. For these cases, Kargo can automatically
+**replicate** resources from the shared resources namespace into every Project
+namespace.
+
+#### Enabling Replication
+
+To opt a resource into replication, annotate it with
+`kargo.akuity.io/replicate-to: "*"`:
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: shared-tls-cert
+  namespace: kargo-shared-resources
+  labels:
+    kargo.akuity.io/cred-type: generic
+  annotations:
+    kargo.akuity.io/replicate-to: "*"
+data:
+  tls.crt: <base64-encoded cert>
+  tls.key: <base64-encoded key>
+```
+
+`ConfigMap` resources work the same way:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shared-config
+  namespace: kargo-shared-resources
+  annotations:
+    kargo.akuity.io/replicate-to: "*"
+data:
+  settings.yaml: |
+    key: value
+```
+
+:::info
+
+Currently, the only supported value for the `kargo.akuity.io/replicate-to`
+annotation is `"*"`, which replicates to all Project namespaces. Selective
+replication to specific Projects is not yet supported.
+
+:::
+
+:::info
+
+Only `Secret` resources labeled with `kargo.akuity.io/cred-type` (i.e.
+recognized as credentials) are eligible for replication. Arbitrary `Secret`
+resources without this label will not be replicated, even if annotated with
+`kargo.akuity.io/replicate-to`. All `ConfigMap` resources in the shared
+resources namespace are eligible.
+
+:::
+
+#### How Replication Works
+
+When a resource in the shared resources namespace is annotated for replication,
+Kargo's management controller automatically creates a copy of it in every
+Project namespace. These copies are kept in sync: any change to the source
+resource is propagated to all replicas. If the source is deleted, all replicas
+are cleaned up.
+
+Replicated resources are labeled with `kargo.akuity.io/replicated-from` (set to
+the name of the source resource) so they can be easily identified.
+
+#### Immutability of Replicated Resources
+
+Replicated copies are **immutable to end users.** A validating webhook prevents
+any user from modifying or deleting them. Only Kargo's management controller is
+permitted to update or remove replicated resources.
+
+To change the contents of a replicated resource, modify the **source** resource
+in the shared resources namespace. The change will propagate automatically to
+all replicas.
 
 ### Configuring the Shared Resources Namespace
 

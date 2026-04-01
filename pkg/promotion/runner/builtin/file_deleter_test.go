@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -224,7 +223,7 @@ func Test_fileDeleter_run(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			workDir := tt.setupFiles(t)
 			result, err := runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{WorkDir: workDir},
 				tt.cfg,
 			)

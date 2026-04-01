@@ -27,7 +27,7 @@ import (
 )
 
 func TestUpdateRepoCredentials(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cl, err := kubernetes.NewClient(
 		ctx,

@@ -1,7 +1,6 @@
 package projectconfig
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"sort"
@@ -651,7 +650,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 				client: c,
 			}
 
-			ctx := admission.NewContextWithRequest(context.Background(), admission.Request{
+			ctx := admission.NewContextWithRequest(t.Context(), admission.Request{
 				AdmissionRequest: admissionv1.AdmissionRequest{
 					DryRun: &tt.isDryRun,
 				},
@@ -858,7 +857,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			w := &webhook{}
-			warnings, err := w.ValidateUpdate(context.Background(), nil, tt.projectCfg)
+			warnings, err := w.ValidateUpdate(t.Context(), nil, tt.projectCfg)
 			tt.assertions(t, warnings, err)
 		})
 	}

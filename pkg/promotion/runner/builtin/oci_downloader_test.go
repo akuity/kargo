@@ -53,6 +53,20 @@ func Test_ociDownloader_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid config with non-standard port",
+			config: promotion.Config{
+				"imageRef": "an.internal.registry.com:5050/myrepo/myimage:latest",
+				"outPath":  "output/file.tar",
+			},
+		},
+		{
+			name: "valid config with OCI protocol and non-standard port",
+			config: promotion.Config{
+				"imageRef": "oci://registry.example.com:5050/image:tag",
+				"outPath":  "output/file.tar",
+			},
+		},
+		{
 			name: "valid config with optional fields",
 			config: promotion.Config{
 				"imageRef":              "registry.example.com/image:tag",
@@ -136,7 +150,7 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			img, err := runner.resolveImage(context.Background(), stepCtx, tt.cfg)
+			img, err := runner.resolveImage(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, img, err)
 		})
 	}

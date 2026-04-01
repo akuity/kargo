@@ -64,7 +64,7 @@ func TestCleanProjects(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 3*time.Second)
 			defer cancel()
 
 			projectCh := make(chan string)
@@ -125,7 +125,7 @@ func TestCleanProject(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.collector.cleanProject(context.Background(), "fake-project"),
+				testCase.collector.cleanProject(t.Context(), "fake-project"),
 			)
 		})
 	}

@@ -1,3 +1,4 @@
+// TODO(v1.13.0): Remove this package when SSH support is removed.
 package ssh
 
 import (

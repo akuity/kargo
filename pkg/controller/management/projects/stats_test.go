@@ -265,7 +265,7 @@ func Test_reconciler_collectStats(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			r := &reconciler{client: tt.client}
-			status, err := r.collectStats(context.Background(), tt.project)
+			status, err := r.collectStats(t.Context(), tt.project)
 			tt.assertions(t, status, err)
 		})
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	gh "github.com/google/go-github/v76/github"
@@ -147,6 +148,7 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 
 		var qualifiers []string
 		var repoURLs []string
+		var changedFiles []string
 
 		switch e := event.(type) {
 		case *gh.PackageEvent:
@@ -217,7 +219,31 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 			ref := e.GetRef()
 			qualifiers = []string{ref}
 			logger = logger.WithValues("ref", ref)
-
+			// GitHub includes a max of 2048 commits in the push event payload. If
+			// there are more than that, you need to use the GitHub API to retrieve
+			// the full list of commits. We're not going to do that. Instead, for such
+			// a case, we'll let the list of changed files remain empty, the effect of
+			// which will be that all Warehouses subscribed to the repository will be
+			// refreshed instead of just the ones whose filters match the changed
+			// files. This is good enough for this edge case. So we proceed only if
+			// there are fewer than 2048 commits in the payload.
+			//
+			// Also note: e.Commits is deprecated with a note that GitHub will be
+			// removing commit details from event payloads beginning October 7, 2025,
+			// however, as of this writing (March 18, 2026) GitHub is still including
+			// commit details in the payloads. GitHub's own API documentation for the
+			// push event does not indicate these are deprecated.
+			//
+			// See: https://docs.github.com/en/webhooks/webhook-events-and-payloads#push
+			if len(e.Commits) < 2048 { // nolint: staticcheck
+				commits := e.Commits // nolint: staticcheck
+				if e.HeadCommit != nil {
+					commits = append(commits, e.HeadCommit)
+				}
+				changedFiles = collectPaths(commits, func(c *gh.HeadCommit) []string {
+					return slices.Concat(c.Added, c.Modified, c.Removed)
+				})
+			}
 		case *gh.RegistryPackageEvent:
 			action := e.GetAction()
 			switch action {
@@ -270,6 +296,6 @@ func (g *githubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 		logger = logger.WithValues("repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 
-		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, qualifiers...)
+		refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, qualifiers...)
 	})
 }

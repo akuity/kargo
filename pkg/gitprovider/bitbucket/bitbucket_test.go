@@ -1,7 +1,6 @@
 package bitbucket
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -107,7 +106,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		opts := &gitprovider.CreatePullRequestOpts{
 			Title:       "Test PR",
 			Description: "PR description",
@@ -139,7 +138,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -169,7 +168,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -188,7 +187,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -207,7 +206,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -234,7 +233,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -277,7 +276,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -312,7 +311,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -333,7 +332,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -352,7 +351,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -376,7 +375,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.NoError(t, err)
 		assert.Len(t, prs, 2)
@@ -403,7 +402,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: gitprovider.PullRequestStateAny,
 		})
@@ -431,7 +430,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: gitprovider.PullRequestStateClosed,
 		})
@@ -486,7 +485,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			HeadBranch: "feature-1",
 		})
@@ -542,7 +541,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			BaseBranch: "dev",
 		})
@@ -588,7 +587,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			HeadCommit: "specific-hash",
 		})
@@ -622,7 +621,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.NoError(t, err)
 		assert.Len(t, prs, 1)
@@ -641,7 +640,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -659,7 +658,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -677,7 +676,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -695,7 +694,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -707,7 +706,7 @@ func TestListPullRequests(t *testing.T) {
 			repoSlug: "repo",
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: "invalid-state",
 		})
@@ -732,7 +731,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.NoError(t, err)
 		assert.Equal(t, "full1234567890abcdef", sha)
@@ -744,7 +743,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			repoSlug: "repo",
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "")
 		assert.NoError(t, err)
 		assert.Equal(t, "", sha)
@@ -762,7 +761,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -780,7 +779,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -798,7 +797,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -818,7 +817,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)

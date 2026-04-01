@@ -17,6 +17,7 @@ type MockRepo struct {
 	CurrentBranchFn           func() (string, error)
 	DeleteBranchFn            func(branch string) error
 	DirFn                     func() string
+	FetchFn                   func(opts *FetchOptions) error
 	HasDiffsFn                func() (bool, error)
 	HomeDirFn                 func() string
 	GetDiffPathsForCommitIDFn func(commitID string) ([]string, error)
@@ -24,7 +25,7 @@ type MockRepo struct {
 	IsRebasingFn              func() (bool, error)
 	LastCommitIDFn            func() (string, error)
 	ListTagsFn                func() ([]TagMetadata, error)
-	ListCommitsFn             func(limit, skip uint) ([]CommitMetadata, error)
+	ListCommitsFn             func(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
 	PushFn                    func(*PushOptions) error
 	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
@@ -92,6 +93,10 @@ func (m *MockRepo) Dir() string {
 	return m.DirFn()
 }
 
+func (m *MockRepo) Fetch(opts *FetchOptions) error {
+	return m.FetchFn(opts)
+}
+
 func (m *MockRepo) HasDiffs() (bool, error) {
 	return m.HasDiffsFn()
 }
@@ -122,8 +127,8 @@ func (m *MockRepo) ListTags() ([]TagMetadata, error) {
 	return m.ListTagsFn()
 }
 
-func (m *MockRepo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
-	return m.ListCommitsFn(limit, skip)
+func (m *MockRepo) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	return m.ListCommitsFn(opts)
 }
 
 func (m *MockRepo) CommitMessage(id string) (string, error) {

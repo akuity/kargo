@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -163,7 +162,7 @@ func Test_gitTagger_run(t *testing.T) {
 
 	// Test creating a tag
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		&promotion.StepContext{WorkDir: workDir},
 		builtin.GitTagConfig{
 			Path: "master",

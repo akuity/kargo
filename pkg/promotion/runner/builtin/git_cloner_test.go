@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -349,7 +348,7 @@ func Test_gitCloner_run(t *testing.T) {
 	}
 
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		stepCtx,
 		builtin.GitCloneConfig{
 			RepoURL: fmt.Sprintf("%s/test.git", server.URL),

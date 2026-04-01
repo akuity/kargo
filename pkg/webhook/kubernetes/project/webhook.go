@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/kelseyhightower/envconfig"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -20,6 +19,7 @@ import (
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/logging"
+	libWebhook "github.com/akuity/kargo/pkg/webhook/kubernetes"
 )
 
 var projectGroupResource = schema.GroupResource{
@@ -27,22 +27,12 @@ var projectGroupResource = schema.GroupResource{
 	Resource: "projects",
 }
 
-type WebhookConfig struct {
-	KargoNamespace string `envconfig:"KARGO_NAMESPACE" required:"true"`
-}
-
-func WebhookConfigFromEnv() WebhookConfig {
-	cfg := WebhookConfig{}
-	envconfig.MustProcess("", &cfg)
-	return cfg
-}
-
 type webhook struct {
-	cfg    WebhookConfig
+	cfg    libWebhook.Config
 	client client.Client
 }
 
-func SetupWebhookWithManager(mgr ctrl.Manager, cfg WebhookConfig) error {
+func SetupWebhookWithManager(mgr ctrl.Manager, cfg libWebhook.Config) error {
 	w := &webhook{
 		cfg:    cfg,
 		client: mgr.GetClient(),

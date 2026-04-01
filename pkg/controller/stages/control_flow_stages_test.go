@@ -173,7 +173,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), testStage, stage)
+				err = c.Get(t.Context(), testStage, stage)
 				require.NoError(t, err)
 				assert.Contains(t, stage.Finalizers, kargoapi.FinalizerName)
 			},
@@ -200,7 +200,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify annotation was removed
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), testStage, stage)
+				err = c.Get(t.Context(), testStage, stage)
 				require.NoError(t, err)
 				assert.NotContains(t, stage.Annotations, kargoapi.AnnotationKeyArgoCDContext)
 			},
@@ -230,7 +230,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify error is recorded in status
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), testStage, stage)
+				err = c.Get(t.Context(), testStage, stage)
 				require.NoError(t, err)
 			},
 		},
@@ -302,7 +302,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify status was updated
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), testStage, stage)
+				err = c.Get(t.Context(), testStage, stage)
 				require.NoError(t, err)
 			},
 		},
@@ -349,7 +349,7 @@ func TestControlFlowStageReconciler_Reconcile(t *testing.T) {
 				},
 			}
 
-			result, err := r.Reconcile(context.Background(), tt.req)
+			result, err := r.Reconcile(t.Context(), tt.req)
 			tt.assertions(t, c, result, err)
 		})
 	}
@@ -430,7 +430,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				require.NoError(t, err)
 				updatedFreight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Namespace: testProject,
 						Name:      "fake-freight",
@@ -675,7 +675,7 @@ func TestControlFlowStageReconciler_reconcile(t *testing.T) {
 				},
 			}
 
-			status, err := r.reconcile(context.Background(), tt.stage, time.Now())
+			status, err := r.reconcile(t.Context(), tt.stage, time.Now())
 			tt.assertions(t, status, c, err)
 		})
 	}
@@ -861,7 +861,7 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				assert.Len(t, recorder.Events, 2)
 
 				freight1 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-1",
 				}, freight1))
@@ -873,7 +873,7 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				)
 
 				freight2 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-2",
 				}, freight2))
@@ -990,28 +990,28 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				assert.Len(t, recorder.Events, 2)
 
 				freight1 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-1",
 				}, freight1))
 				assert.Contains(t, freight1.Status.VerifiedIn, "test-stage")
 
 				freight2 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-2",
 				}, freight2))
 				assert.NotContains(t, freight2.Status.VerifiedIn, "test-stage")
 
 				freight3 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-3",
 				}, freight3))
 				assert.Contains(t, freight3.Status.VerifiedIn, "test-stage")
 
 				freight4 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-4",
 				}, freight4))
@@ -1035,7 +1035,7 @@ func TestControlFlowStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				eventSender: k8sevent.NewEventSender(recorder),
 			}
 
-			_, err := r.markFreightVerifiedForStage(context.Background(), tt.stage, tt.freight, tt.startTime, tt.finishTime)
+			_, err := r.markFreightVerifiedForStage(t.Context(), tt.stage, tt.freight, tt.startTime, tt.finishTime)
 			tt.assertions(t, c, recorder, err)
 		})
 	}
@@ -1164,7 +1164,7 @@ func TestControlFlowStageReconciler_handleDelete(t *testing.T) {
 				client: c,
 			}
 
-			err := r.handleDelete(context.Background(), tt.stage)
+			err := r.handleDelete(t.Context(), tt.stage)
 			tt.assertions(t, tt.stage, err)
 		})
 	}
@@ -1230,7 +1230,7 @@ func TestControlFlowStageReconciler_clearVerifications(t *testing.T) {
 				require.NoError(t, err)
 
 				freight1 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-1",
 				}, freight1))
@@ -1238,7 +1238,7 @@ func TestControlFlowStageReconciler_clearVerifications(t *testing.T) {
 				assert.Contains(t, freight1.Status.VerifiedIn, "another-stage")
 
 				freight2 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-2",
 				}, freight2))
@@ -1359,7 +1359,7 @@ func TestControlFlowStageReconciler_clearVerifications(t *testing.T) {
 				client: c,
 			}
 
-			tt.assertions(t, c, r.clearVerifications(context.Background(), tt.stage))
+			tt.assertions(t, c, r.clearVerifications(t.Context(), tt.stage))
 		})
 	}
 }
@@ -1424,7 +1424,7 @@ func TestControlFlowStageReconciler_clearApprovals(t *testing.T) {
 				require.NoError(t, err)
 
 				freight1 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-1",
 				}, freight1))
@@ -1432,7 +1432,7 @@ func TestControlFlowStageReconciler_clearApprovals(t *testing.T) {
 				assert.Contains(t, freight1.Status.ApprovedFor, "another-stage")
 
 				freight2 := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "freight-2",
 				}, freight2))
@@ -1553,7 +1553,7 @@ func TestControlFlowStageReconciler_clearApprovals(t *testing.T) {
 				client: c,
 			}
 
-			tt.assertions(t, c, r.clearApprovals(context.Background(), tt.stage))
+			tt.assertions(t, c, r.clearApprovals(t.Context(), tt.stage))
 		})
 	}
 }
@@ -1631,7 +1631,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 
 				// Verify analysis runs for test-stage are deleted
 				var runs rollouts.AnalysisRunList
-				err = c.List(context.Background(), &runs,
+				err = c.List(t.Context(), &runs,
 					client.InNamespace("default"),
 					client.MatchingLabels{kargoapi.LabelKeyStage: "test-stage"},
 				)
@@ -1639,7 +1639,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				assert.Empty(t, runs.Items)
 
 				// Verify other analysis runs still exist
-				err = c.List(context.Background(), &runs,
+				err = c.List(t.Context(), &runs,
 					client.InNamespace("default"),
 					client.MatchingLabels{kargoapi.LabelKeyStage: "other-stage"},
 				)
@@ -1694,7 +1694,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				require.NoError(t, err)
 
 				var runs rollouts.AnalysisRunList
-				err = c.List(context.Background(), &runs, client.InNamespace("default"))
+				err = c.List(t.Context(), &runs, client.InNamespace("default"))
 				require.NoError(t, err)
 				assert.Empty(t, runs.Items)
 			},
@@ -1714,7 +1714,7 @@ func TestControlFlowStageReconciler_clearAnalysisRuns(t *testing.T) {
 				cfg:    tt.cfg,
 			}
 
-			tt.assertions(t, c, r.clearAnalysisRuns(context.Background(), tt.stage))
+			tt.assertions(t, c, r.clearAnalysisRuns(t.Context(), tt.stage))
 		})
 	}
 }

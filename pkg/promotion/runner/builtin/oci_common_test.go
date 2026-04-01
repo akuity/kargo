@@ -59,6 +59,16 @@ func Test_parseOCIReference(t *testing.T) {
 				assert.Equal(t, "localhost:5000/chart:latest", ref.String())
 			},
 		},
+		{
+			name:     "standard registry reference with port",
+			imageRef: "an.internal.registry.com:5050/myrepo/myimage:latest",
+			assertions: func(t *testing.T, ref name.Reference, credType credentials.Type, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, ref)
+				assert.Equal(t, credentials.TypeImage, credType)
+				assert.Equal(t, "an.internal.registry.com:5050/myrepo/myimage:latest", ref.String())
+			},
+		},
 	}
 
 	for _, tt := range tests {

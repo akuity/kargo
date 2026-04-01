@@ -329,6 +329,20 @@ Git repository subscriptions can be defined using the following fields:
   subscription.
   :::
 
+- `since`: An optional date in RFC 3339 format (e.g. `2026-01-01T00:00:00Z`)
+  that bounds how far back commit discovery will look. When specified, only
+  commits at or after this date are considered. When left unspecified, there is
+  no date cutoff.
+
+  :::note
+
+  `since` only has effect when `commitSelectionStrategy` is
+  `NewestFromBranch` (or unspecified, since `NewestFromBranch` is the default).
+  It is particularly useful for large repositories with long histories where
+  `discoveryLimit` alone is not sufficient to prevent slow lookbacks.
+  
+  :::
+
 - `insecureSkipTLSVerify`: Set to `true` to disable validation of the
   repository's TLS certificate.
 
@@ -707,6 +721,19 @@ Paths may _also_ be specified using glob patterns (by prefixing the string with
 
 :::
 
+:::info
+
+These path filters are also respected by
+[webhook receivers](#triggering-artifact-discovery-using-webhooks). When a
+webhook receiver processes a `push` event from a supported provider (GitHub,
+GitLab, or Gitea), it extracts the list of changed files from the event payload
+and only refreshes Warehouses whose path filters match those files. Warehouses
+without path filters configured, or events from providers that do not include
+file change information in their payloads, will continue to be refreshed
+unconditionally.
+
+:::
+
 ### Helm Chart Repository Subscriptions
 
 Helm chart repository subscriptions can be defined using the following fields:
@@ -747,6 +774,14 @@ Helm chart repository subscriptions can be defined using the following fields:
   charts. `discoveryLimit` specifies how many chart versions to discover.
 
   The default is `20`.
+
+- `insecureSkipTLSVerify`: Set to `true` to disable validation of the
+  repository's TLS certificate.
+
+  :::warning
+
+  This is a security risk and should only be used in development environments.
+  :::
 
   Example:
 
@@ -1112,7 +1147,13 @@ contains structured information (usually JSON) the sender wishes to share about
 some event. Invariably, among this information, is the URL of the repository
 from which the event originated.
 
-A webhook receiver's only job is to extract a repository URL from the webhook
-request's payload, query for all `Warehouse` resources within the Project having
-subscriptions to that repository, and request each to execute their discovery
-process.
+A webhook receiver extracts a repository URL from the webhook request's payload,
+queries for all `Warehouse` resources within the Project having subscriptions to
+that repository, and requests each to execute their discovery process.
+
+For Git `push` events from providers that include file change information in
+their payloads (GitHub, GitLab, and Gitea), the receiver additionally extracts
+the list of changed files and evaluates each matching Warehouse's
+[`includePaths` and `excludePaths`](#git-subscription-path-filtering) filters.
+Only Warehouses with path filters that match the changed files are refreshed.
+Warehouses without path filters configured are always refreshed.

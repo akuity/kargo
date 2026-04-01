@@ -4,6 +4,19 @@ import (
 	"errors"
 )
 
+// ErrRebaseUnsafe is returned when the PushIntegrationPolicyRebaseOrFail
+// policy is in effect and the signature-trust decision matrix determines that
+// rebasing is not safe.
+var ErrRebaseUnsafe = errors.New(
+	"rebase is unsafe and policy prohibits merge fallback",
+)
+
+// IsRebaseUnsafe returns true if the error is a rebase-unsafe error or wraps
+// one and false otherwise.
+func IsRebaseUnsafe(err error) bool {
+	return errors.Is(err, ErrRebaseUnsafe)
+}
+
 // ErrMergeConflict is returned when a merge conflict occurs.
 var ErrMergeConflict = errors.New("merge conflict")
 
