@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -17,6 +18,16 @@ import (
 	"github.com/akuity/kargo/pkg/promotion"
 	"github.com/akuity/kargo/pkg/x/promotion/runner/builtin"
 )
+
+// argocdScheme is a runtime scheme with Argo CD types registered, used for
+// fake clients that need to store Argo CD Application objects.
+var argocdScheme = func() *runtime.Scheme {
+	s := runtime.NewScheme()
+	if err := argocd.AddToScheme(s); err != nil {
+		panic(err)
+	}
+	return s
+}()
 
 func Test_argocdWaiter_convert(t *testing.T) {
 	tests := []validationTestCase{
@@ -187,10 +198,9 @@ func Test_argocdWaiter_run(t *testing.T) {
 			},
 		},
 		{
-			name: "operation finished recently returns Running (cooldown)",
+			name: "reconciledAt nil after operation requests refresh and returns Running",
 			runner: &argocdWaiter{
-				argocdClient: fake.NewFakeClient(),
-				getApplicationsFn: appsFn(&argocd.Application{
+				argocdClient: fake.NewClientBuilder().WithScheme(argocdScheme).WithObjects(&argocd.Application{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "my-app", Namespace: "argocd",
 					},
@@ -206,6 +216,24 @@ func Test_argocdWaiter_run(t *testing.T) {
 							FinishedAt: &metav1.Time{Time: time.Now()},
 						},
 					},
+				}).Build(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-app", Namespace: "argocd",
+					},
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+						OperationState: &argocd.OperationState{
+							Phase:      argocd.OperationSucceeded,
+							FinishedAt: &metav1.Time{Time: time.Now()},
+						},
+						// ReconciledAt is nil: not yet reconciled after op
+					},
 				}),
 			},
 			stepCtx: &promotion.StepContext{},
@@ -215,12 +243,67 @@ func Test_argocdWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				require.NotNil(t, res.RetryAfter)
-				assert.LessOrEqual(t, *res.RetryAfter, waitHealthCooldownDuration)
 			},
 		},
 		{
-			name: "cooldown bypassed when LastTransitionTime is after FinishedAt",
+			name: "reconciledAt before finishedAt requests refresh and returns Running",
+			runner: &argocdWaiter{
+				argocdClient: fake.NewClientBuilder().WithScheme(argocdScheme).WithObjects(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-app", Namespace: "argocd",
+					},
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+						OperationState: &argocd.OperationState{
+							Phase: argocd.OperationSucceeded,
+							FinishedAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+							},
+						},
+						ReconciledAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
+						},
+					},
+				}).Build(),
+				getApplicationsFn: appsFn(&argocd.Application{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "my-app", Namespace: "argocd",
+					},
+					Status: argocd.ApplicationStatus{
+						Health: argocd.HealthStatus{
+							Status: argocd.HealthStatusHealthy,
+						},
+						Sync: argocd.SyncStatus{
+							Status: argocd.SyncStatusCodeSynced,
+						},
+						OperationState: &argocd.OperationState{
+							Phase: argocd.OperationSucceeded,
+							FinishedAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+							},
+						},
+						ReconciledAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
+						},
+					},
+				}),
+			},
+			stepCtx: &promotion.StepContext{},
+			stepCfg: builtin.ArgoCDWaitConfig{
+				Apps: []builtin.ArgoCDAppWait{{Name: "my-app"}},
+			},
+			assertions: func(t *testing.T, res promotion.StepResult, err error) {
+				require.NoError(t, err)
+				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
+			},
+		},
+		{
+			name: "reconciledAt at or after finishedAt trusts health",
 			runner: &argocdWaiter{
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: appsFn(&argocd.Application{
@@ -229,15 +312,19 @@ func Test_argocdWaiter_run(t *testing.T) {
 					},
 					Status: argocd.ApplicationStatus{
 						Health: argocd.HealthStatus{
-							Status:             argocd.HealthStatusHealthy,
-							LastTransitionTime: &metav1.Time{Time: time.Now()},
+							Status: argocd.HealthStatusHealthy,
 						},
 						Sync: argocd.SyncStatus{
 							Status: argocd.SyncStatusCodeSynced,
 						},
 						OperationState: &argocd.OperationState{
-							Phase:      argocd.OperationSucceeded,
-							FinishedAt: &metav1.Time{Time: time.Now().Add(-5 * time.Second)},
+							Phase: argocd.OperationSucceeded,
+							FinishedAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+							},
+						},
+						ReconciledAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
 						},
 					},
 				}),

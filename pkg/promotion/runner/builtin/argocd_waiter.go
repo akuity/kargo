@@ -32,12 +32,6 @@ const (
 // behavior of `argocd app wait` when no flags are specified.
 var defaultWaitFor = []builtin.WaitFor{builtin.Health, builtin.Sync, builtin.Operation}
 
-// waitHealthCooldownDuration is the duration after a completed operation during
-// which the health status is not trusted, used as a fallback for older ArgoCD
-// versions that do not report status.health.lastTransitionTime. This matches
-// the cooldown in the ArgoCD health checker.
-var waitHealthCooldownDuration = 10 * time.Second
-
 // healthErrorConditions are the ApplicationConditionType conditions that
 // indicate an Argo CD Application has a configuration error.
 var waitHealthErrorConditions = []argocd.ApplicationConditionType{
@@ -163,7 +157,7 @@ func (w *argocdWaiter) run(
 				"app", app.Name, "namespace", app.Namespace,
 			)
 
-			ready, healthStatus, appRetryAfter, err :=
+			ready, healthStatus, err :=
 				w.checkAppReadiness(ctx, app, waitFor, prevHealthStatuses[appKey])
 			if healthStatus != "" {
 				newHealthStatuses[appKey] = healthStatus
@@ -179,9 +173,6 @@ func (w *argocdWaiter) run(
 			if !ready {
 				appLogger.Info("application is not ready")
 				allReady = false
-				if appRetryAfter > 0 && appRetryAfter < retryAfter {
-					retryAfter = appRetryAfter
-				}
 			} else {
 				appLogger.Info("application is ready")
 			}
@@ -214,15 +205,13 @@ func (w *argocdWaiter) run(
 // desired conditions specified by waitFor. It returns:
 //   - ready: whether all conditions are met
 //   - healthStatus: the current health status string (for tracking)
-//   - retryAfter: a suggested retry duration when not ready due to a
-//     time-bound condition (e.g. health cooldown); zero means use default
 //   - err: a TerminalError if a non-recoverable condition is detected
 func (w *argocdWaiter) checkAppReadiness(
 	ctx context.Context,
 	app *argocd.Application,
 	waitFor []builtin.WaitFor,
 	prevHealthStatus string,
-) (ready bool, healthStatus string, retryAfter time.Duration, err error) {
+) (ready bool, healthStatus string, err error) {
 	logger := logging.LoggerFromContext(ctx).WithValues(
 		"app", app.Name, "namespace", app.Namespace,
 	)
@@ -239,7 +228,7 @@ func (w *argocdWaiter) checkAppReadiness(
 				app.Name, app.Namespace, condition.Type, condition.Message,
 			)
 		}
-		return false, healthStatus, 0, &promotion.TerminalError{
+		return false, healthStatus, &promotion.TerminalError{
 			Err: errors.Join(issues...),
 		}
 	}
@@ -248,31 +237,29 @@ func (w *argocdWaiter) checkAppReadiness(
 	if slices.Contains(waitFor, "operation") {
 		if operationInProgress(app) {
 			logger.Info("operation is in progress")
-			return false, healthStatus, 0, nil
+			return false, healthStatus, nil
 		}
 	}
 
-	// Health cooldown: don't trust health status right after an operation
-	// completes, unless the health status has a LastTransitionTime that is
-	// after the operation finished (meaning ArgoCD has re-assessed health
-	// post-operation).
 	healthBeingChecked := slices.Contains(waitFor, "health") ||
 		slices.Contains(waitFor, "suspended") ||
 		slices.Contains(waitFor, "degraded")
+
+	// Argo CD executes operations and assesses health in separate reconciliation
+	// loops. Immediately after an operation completes, the health status may
+	// reflect state from prior to the operation. If app.Status.ReconciledAt is
+	// at or after the operation's FinishedAt, health was assessed after the
+	// operation completed and can be trusted. Otherwise, request a hard refresh
+	// so Argo CD will reconcile and update ReconciledAt; return not-ready until
+	// that occurs.
 	if healthBeingChecked {
 		if app.Status.OperationState != nil &&
 			app.Status.OperationState.FinishedAt != nil &&
-			time.Since(app.Status.OperationState.FinishedAt.Time) < waitHealthCooldownDuration {
-			// If the health status has a LastTransitionTime after the
-			// operation finished, the health assessment is fresh.
-			if app.Status.Health.LastTransitionTime == nil ||
-				app.Status.Health.LastTransitionTime.Before(app.Status.OperationState.FinishedAt) {
-				remaining := waitHealthCooldownDuration - time.Since(app.Status.OperationState.FinishedAt.Time)
-				logger.Info("operation completed recently, health status not yet trusted",
-					"retryAfter", remaining,
-				)
-				return false, healthStatus, remaining, nil
-			}
+			(app.Status.ReconciledAt == nil || app.Status.ReconciledAt.Before(app.Status.OperationState.FinishedAt)) {
+			libargocd.RequestAppRefresh(ctx, w.argocdClient, app)
+			logger.Info("application not yet reconciled after last operation, " +
+				"health status not trusted")
+			return false, healthStatus, nil
 		}
 	}
 
@@ -299,7 +286,7 @@ func (w *argocdWaiter) checkAppReadiness(
 			prevHealthStatus != "" &&
 			prevHealthStatus != string(argocd.HealthStatusDegraded) &&
 			prevHealthStatus != string(argocd.HealthStatusUnknown) {
-			return false, healthStatus, 0, &promotion.TerminalError{
+			return false, healthStatus, &promotion.TerminalError{
 				Err: fmt.Errorf( // nolint:staticcheck
 					"Argo CD Application %q in namespace %q health has "+
 						"regressed from %s to %s",
@@ -314,7 +301,7 @@ func (w *argocdWaiter) checkAppReadiness(
 				"health check not passed",
 				"currentHealth", app.Status.Health.Status,
 			)
-			return false, healthStatus, 0, nil
+			return false, healthStatus, nil
 		}
 	}
 
@@ -325,11 +312,11 @@ func (w *argocdWaiter) checkAppReadiness(
 				"sync check not passed",
 				"currentSync", app.Status.Sync.Status,
 			)
-			return false, healthStatus, 0, nil
+			return false, healthStatus, nil
 		}
 	}
 
-	return true, healthStatus, 0, nil
+	return true, healthStatus, nil
 }
 
 // operationInProgress returns true if the Application has an operation that is
