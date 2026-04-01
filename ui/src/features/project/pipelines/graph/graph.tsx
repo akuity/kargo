@@ -61,7 +61,7 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
-  const [dimensions, setDimensions] = useNodeDimensionState();
+  const [dimensions, setDimensions, onNodeSizeChange] = useNodeDimensionState();
 
   const graph = useReactFlowPipelineGraph(
     props.stages,
@@ -91,34 +91,12 @@ export const Graph = (props: GraphProps) => {
       );
 
       if (sizeChanges.length > 0) {
-        setTimeout(() => {
-          setDimensions((prev) => {
-            let changed = false;
-            const updated = { ...prev };
-
-            for (const change of sizeChanges) {
-              if (change.dimensions) {
-                // Round to integer pixels to avoid floating-point noise from
-                // ResizeObserver on high-DPI (retina) displays, which would
-                // otherwise trigger repeated relayouts on sub-pixel differences.
-                const w = Math.round(change.dimensions.width);
-                const h = Math.round(change.dimensions.height);
-
-                if (updated[change.id]?.height !== h || updated[change.id]?.width !== w) {
-                  updated[change.id] = { width: w, height: h };
-                  changed = true;
-                }
-              }
-            }
-
-            return changed ? updated : prev;
-          });
-        });
+        onNodeSizeChange(sizeChanges);
       }
 
       onNodesChange(changes);
     },
-    [onNodesChange, setDimensions]
+    [onNodesChange, onNodeSizeChange]
   );
 
   useEventsWatcher(props.project, {
