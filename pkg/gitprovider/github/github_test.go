@@ -431,7 +431,7 @@ func TestMergePullRequest(t *testing.T) {
 	tests := []struct {
 		name               string
 		prNumber           int64
-		mergeMethod        gitprovider.MergeMethod
+		mergeOpts          *gitprovider.MergePullRequestOpts
 		setupMock          func(*mockGithubClient)
 		expectedMerged     bool
 		expectError        bool
@@ -439,9 +439,8 @@ func TestMergePullRequest(t *testing.T) {
 		expectMergeOptions *github.PullRequestOptions
 	}{
 		{
-			name:        "error getting initial PR state",
-			prNumber:    999,
-			mergeMethod: "",
+			name:     "error getting initial PR state",
+			prNumber: 999,
 			setupMock: func(m *mockGithubClient) {
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(999)).
 					Return(nil, nil, errors.New("get PR failed"))
@@ -634,9 +633,8 @@ func TestMergePullRequest(t *testing.T) {
 			errorContains: "unexpected nil pull request after merge",
 		},
 		{
-			name:        "successful merge",
-			prNumber:    777,
-			mergeMethod: "",
+			name:     "successful merge",
+			prNumber: 777,
 			setupMock: func(m *mockGithubClient) {
 				// First Get PR
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(777)).
@@ -673,11 +671,10 @@ func TestMergePullRequest(t *testing.T) {
 			expectedMerged: true,
 		},
 		{
-			name:        "successful squash merge",
-			prNumber:    100,
-			mergeMethod: gitprovider.MergeMethodSquash,
+			name:      "successful merge with explicit method",
+			prNumber:  100,
+			mergeOpts: &gitprovider.MergePullRequestOpts{MergeMethod: "squash"},
 			setupMock: func(m *mockGithubClient) {
-				// First Get PR
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(100)).
 					Return(&github.PullRequest{
 						Number:    github.Ptr(100),
@@ -688,7 +685,6 @@ func TestMergePullRequest(t *testing.T) {
 						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/100"),
 					}, &github.Response{}, nil).Once()
 
-				// Merge with squash method
 				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(100), "",
 					mock.MatchedBy(func(opts *github.PullRequestOptions) bool {
 						return opts.MergeMethod == "squash"
@@ -699,7 +695,6 @@ func TestMergePullRequest(t *testing.T) {
 						Message: github.Ptr("Pull Request successfully merged"),
 					}, &github.Response{}, nil)
 
-				// Second Get PR returns merged
 				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(100)).
 					Return(&github.PullRequest{
 						Number:         github.Ptr(100),
@@ -708,88 +703,6 @@ func TestMergePullRequest(t *testing.T) {
 						MergeCommitSHA: github.Ptr("squash_sha"),
 						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
 						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/100"),
-						MergedAt:       &github.Timestamp{Time: time.Now()},
-					}, &github.Response{}, nil).Once()
-			},
-			expectedMerged: true,
-		},
-		{
-			name:        "successful rebase merge",
-			prNumber:    200,
-			mergeMethod: gitprovider.MergeMethodRebase,
-			setupMock: func(m *mockGithubClient) {
-				// First Get PR
-				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(200)).
-					Return(&github.PullRequest{
-						Number:    github.Ptr(200),
-						State:     github.Ptr("open"),
-						Merged:    github.Ptr(false),
-						Mergeable: github.Ptr(true),
-						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
-						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/200"),
-					}, &github.Response{}, nil).Once()
-
-				// Merge with rebase method
-				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(200), "",
-					mock.MatchedBy(func(opts *github.PullRequestOptions) bool {
-						return opts.MergeMethod == "rebase"
-					})).
-					Return(&github.PullRequestMergeResult{
-						SHA:     github.Ptr("rebase_sha"),
-						Merged:  github.Ptr(true),
-						Message: github.Ptr("Pull Request successfully merged"),
-					}, &github.Response{}, nil)
-
-				// Second Get PR returns merged
-				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(200)).
-					Return(&github.PullRequest{
-						Number:         github.Ptr(200),
-						State:          github.Ptr("closed"),
-						Merged:         github.Ptr(true),
-						MergeCommitSHA: github.Ptr("rebase_sha"),
-						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
-						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/200"),
-						MergedAt:       &github.Timestamp{Time: time.Now()},
-					}, &github.Response{}, nil).Once()
-			},
-			expectedMerged: true,
-		},
-		{
-			name:        "successful traditional merge",
-			prNumber:    300,
-			mergeMethod: gitprovider.MergeMethodMerge,
-			setupMock: func(m *mockGithubClient) {
-				// First Get PR
-				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(300)).
-					Return(&github.PullRequest{
-						Number:    github.Ptr(300),
-						State:     github.Ptr("open"),
-						Merged:    github.Ptr(false),
-						Mergeable: github.Ptr(true),
-						Head:      &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
-						HTMLURL:   github.Ptr("https://github.com/akuity/kargo/pull/300"),
-					}, &github.Response{}, nil).Once()
-
-				// Merge with merge method
-				m.On("MergePullRequest", mock.Anything, testRepoOwner, testRepoName, int(300), "",
-					mock.MatchedBy(func(opts *github.PullRequestOptions) bool {
-						return opts.MergeMethod == "merge"
-					})).
-					Return(&github.PullRequestMergeResult{
-						SHA:     github.Ptr("merge_commit_sha"),
-						Merged:  github.Ptr(true),
-						Message: github.Ptr("Pull Request successfully merged"),
-					}, &github.Response{}, nil)
-
-				// Second Get PR returns merged
-				m.On("GetPullRequests", mock.Anything, testRepoOwner, testRepoName, int(300)).
-					Return(&github.PullRequest{
-						Number:         github.Ptr(300),
-						State:          github.Ptr("closed"),
-						Merged:         github.Ptr(true),
-						MergeCommitSHA: github.Ptr("merge_commit_sha"),
-						Head:           &github.PullRequestBranch{SHA: github.Ptr("head_sha")},
-						HTMLURL:        github.Ptr("https://github.com/akuity/kargo/pull/300"),
 						MergedAt:       &github.Timestamp{Time: time.Now()},
 					}, &github.Response{}, nil).Once()
 			},
@@ -808,9 +721,11 @@ func TestMergePullRequest(t *testing.T) {
 
 			tt.setupMock(mockClient)
 
-			pr, merged, err := p.MergePullRequest(context.Background(), tt.prNumber, &gitprovider.MergePullRequestOpts{
-				MergeMethod: tt.mergeMethod,
-			})
+			pr, merged, err := p.MergePullRequest(
+				t.Context(),
+				tt.prNumber,
+				tt.mergeOpts,
+			)
 			if tt.expectError {
 				require.Error(t, err)
 				require.Contains(t, err.Error(), tt.errorContains)

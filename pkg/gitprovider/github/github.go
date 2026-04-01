@@ -301,6 +301,10 @@ func (p *provider) MergePullRequest(
 	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
 	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
@@ -322,28 +326,23 @@ func (p *provider) MergePullRequest(
 	}
 
 	// Merge the PR
-	//
-	// The gitprovider.MergeMethod string values ("merge", "squash", "rebase")
-	// align exactly with GitHub's API merge method values, so no mapping is
-	// needed. When unspecified, the GitHub API uses the repository's configured
-	// default merge method.
-	prOpts := &github.PullRequestOptions{}
-	if opts.MergeMethod != "" {
-		prOpts.MergeMethod = string(opts.MergeMethod)
-	}
 	mergeResult, _, err := p.client.MergePullRequest(
 		ctx,
 		p.owner,
 		p.repo,
 		int(id),
-		"", // Use default commit message
-		prOpts,
+		"", // Use default commit message.
+		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
+	}
+	if !ptr.Deref(mergeResult.Merged, false) {
+		return nil, false,
+			fmt.Errorf("merge rejected for pull request %d", id)
 	}
 
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
