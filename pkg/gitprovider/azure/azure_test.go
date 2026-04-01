@@ -13,17 +13,17 @@ import (
 )
 
 type mockAzureGitClient struct {
-	getRepositoryFunc func(
+	getRepositoryFn func(
 		context.Context,
 		adogit.GetRepositoryArgs,
 	) (*adogit.GitRepository, error)
 	createPullRequestFn func(
 		context.Context, adogit.CreatePullRequestArgs,
 	) (*adogit.GitPullRequest, error)
-	getPullRequestFunc func(
+	getPullRequestFn func(
 		context.Context, adogit.GetPullRequestArgs,
 	) (*adogit.GitPullRequest, error)
-	getPullRequestsFunc func(
+	getPullRequestsFn func(
 		context.Context, adogit.GetPullRequestsArgs,
 	) (*[]adogit.GitPullRequest, error)
 	updatePullRequestFn func(
@@ -34,7 +34,7 @@ type mockAzureGitClient struct {
 func (m *mockAzureGitClient) GetRepository(
 	ctx context.Context, args adogit.GetRepositoryArgs,
 ) (*adogit.GitRepository, error) {
-	return m.getRepositoryFunc(ctx, args)
+	return m.getRepositoryFn(ctx, args)
 }
 
 func (m *mockAzureGitClient) CreatePullRequest(
@@ -46,13 +46,13 @@ func (m *mockAzureGitClient) CreatePullRequest(
 func (m *mockAzureGitClient) GetPullRequest(
 	ctx context.Context, args adogit.GetPullRequestArgs,
 ) (*adogit.GitPullRequest, error) {
-	return m.getPullRequestFunc(ctx, args)
+	return m.getPullRequestFn(ctx, args)
 }
 
 func (m *mockAzureGitClient) GetPullRequests(
 	ctx context.Context, args adogit.GetPullRequestsArgs,
 ) (*[]adogit.GitPullRequest, error) {
-	return m.getPullRequestsFunc(ctx, args)
+	return m.getPullRequestsFn(ctx, args)
 }
 
 func (m *mockAzureGitClient) UpdatePullRequest(
@@ -75,7 +75,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "error getting PR",
 			prNumber: 999,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return nil, errors.New("get PR failed")
@@ -88,7 +88,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "nil PR returned",
 			prNumber: 404,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return nil, nil
@@ -101,7 +101,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "PR already completed",
 			prNumber: 123,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -123,7 +123,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "PR abandoned",
 			prNumber: 456,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -139,7 +139,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "PR is draft",
 			prNumber: 333,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -157,7 +157,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "PR not ready to merge",
 			prNumber: 444,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -174,7 +174,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "unknown status",
 			prNumber: 555,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -189,7 +189,7 @@ func TestMergePullRequest(t *testing.T) {
 			prNumber:  100,
 			mergeOpts: &gitprovider.MergePullRequestOpts{MergeMethod: "bogus"},
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					_ context.Context, _ adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -211,7 +211,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "merge operation fails",
 			prNumber: 888,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -238,7 +238,7 @@ func TestMergePullRequest(t *testing.T) {
 			name:     "nil response after merge",
 			prNumber: 777,
 			mockClient: &mockAzureGitClient{
-				getPullRequestFunc: func(
+				getPullRequestFn: func(
 					context.Context, adogit.GetPullRequestArgs,
 				) (*adogit.GitPullRequest, error) {
 					return &adogit.GitPullRequest{
@@ -267,7 +267,7 @@ func TestMergePullRequest(t *testing.T) {
 			mockClient: func() *mockAzureGitClient {
 				calls := 0
 				return &mockAzureGitClient{
-					getPullRequestFunc: func(
+					getPullRequestFn: func(
 						_ context.Context, _ adogit.GetPullRequestArgs,
 					) (*adogit.GitPullRequest, error) {
 						calls++
@@ -319,7 +319,7 @@ func TestMergePullRequest(t *testing.T) {
 			mockClient: func() *mockAzureGitClient {
 				calls := 0
 				return &mockAzureGitClient{
-					getPullRequestFunc: func(
+					getPullRequestFn: func(
 						_ context.Context, _ adogit.GetPullRequestArgs,
 					) (*adogit.GitPullRequest, error) {
 						calls++
