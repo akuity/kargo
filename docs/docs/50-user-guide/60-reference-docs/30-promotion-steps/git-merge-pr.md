@@ -44,7 +44,7 @@ system to access the git repos.
 | `provider`              | `string`  | N        | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified.                    |
 | `insecureSkipTLSVerify` | `boolean` | N        | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production.                                                   |
 | `prNumber`              | `integer` | Y        | The pull request number to merge.                                                                                                                                                                              |
-| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are `merge`, `squash`, or `rebase`. Not all merge methods are supported by all providers; refer to [Merge Method](#merge-method). If not specified, the repository's configured default merge method is used. |
+| `mergeMethod`           | `string`  | N        | The merge method to use when merging the pull request. The supported methods are provider-specific; refer to the [Merge Method](#merge-method) section. |
 | `wait`                  | `boolean` | N        | If `true`, the step will return a running status instead of failing when the PR is not yet mergeable. The merge will be retried on the next reconciliation until it succeeds or times out. Default is `false`. |
 
 :::warning
@@ -55,15 +55,16 @@ The `wait` option is unreliable for repositories hosted by Bitbucket due to API 
 
 ### Merge Method
 
-The table below documents the supported merge methods for each of the currently supported providers.
+The table below documents the supported merge methods/strategies for each of the
+currently supported Git hosting providers.
 
-|           | Merge              | Squash             | Rebase             | Default                                                                                                                                                                                                    |
-|-----------|--------------------|--------------------|--------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Azure     | :white_check_mark: | :white_check_mark: | :white_check_mark: | [repository default](https://learn.microsoft.com/en-us/javascript/api/azure-devops-extension-api/gitpullrequestcompletionoptions#azure-devops-extension-api-gitpullrequestcompletionoptions-mergestrategy) |
-| BitBucket | :white_check_mark: | :x:                | :x:                | merge                                                                                                                                                                                                      |
-| Gitea     | :white_check_mark: | :white_check_mark: | :white_check_mark: | merge                                                                                                                                                                                                      |
-| GitHub    | :white_check_mark: | :white_check_mark: | :white_check_mark: | merge                                                                                                                                                                                                      |
-| GitLab    | :white_check_mark: | :white_check_mark: | :x:                | merge                                                                                                                                                                                                      |
+| Provider | Supported Methods | Default |
+| -------- | ----------------- | ------- |
+| Azure | <ul><li>`noFastForward`</li><li>`rebase`</li><li>`rebaseMerge`</li><li>`squash`</li></ul> | First allowed strategy per the target branch's merge type policy; merge commit if no policy is configured |
+| BitBucket | Client does not yet support specifying a merge strategy | The repository's configured default merge strategy |
+| Gitea | <ul><li>`fast-forward-only`</li><li>`manually-merged`</li><li>`merge`</li><li>`rebase`</li><li>`rebase-merge`</li><li>`squash`</li></ul> | `merge` |
+| GitHub | <ul><li>`merge`</li><li>`rebase`</li><li>`squash`</li></ul> | `merge` |
+| GitLab | <ul><li>`merge`</li><li>`squash`</li></ul> | Defers to the merge request and project-level squash settings |
 
 ## Output
 
