@@ -190,6 +190,7 @@ export const Graph = (props: GraphProps) => {
         minZoom={0}
         onNodesChange={handleNodesChange}
         onlyRenderVisibleElements
+        panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
         {!Object.keys(dimensions).length && (

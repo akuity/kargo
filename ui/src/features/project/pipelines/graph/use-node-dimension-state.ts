@@ -1,10 +1,13 @@
 import { NodeDimensionChange } from '@xyflow/react';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 export type DimensionState = Record<string, { width: number; height: number }>;
 
+const transitionDurationMs = 300;
+
 export const useNodeDimensionState = () => {
   const [dimensions, setDimensions] = useState<DimensionState>({});
+  const cursorTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onNodeSizeChange = useCallback(
     (sizeChanges: NodeDimensionChange[]) => {
@@ -31,6 +34,18 @@ export const useNodeDimensionState = () => {
           return changed ? updated : prev;
         });
       });
+
+      // When dimensions change, nodes reposition and onlyRenderVisibleElements
+      // briefly unmounts nodes that shifted outside the viewport, causing the
+      // pane to show a grab cursor. Override body cursor for the transition
+      // duration so the user sees no flicker.
+      document.body.style.cursor = 'pointer';
+      if (cursorTimerRef.current) {
+        clearTimeout(cursorTimerRef.current);
+      }
+      cursorTimerRef.current = setTimeout(() => {
+        document.body.style.cursor = '';
+      }, transitionDurationMs);
     },
     [setDimensions]
   );
