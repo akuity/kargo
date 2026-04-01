@@ -339,7 +339,31 @@ func RunningPromotionsByPullRequest(obj client.Object) []string {
 		if repoURL == "" {
 			continue
 		}
-		res = append(res, fmt.Sprintf("%s:%d", urls.NormalizeGit(repoURL), prID))
+		// repoURL may be an unevaluated template expression (e.g.
+		// ${{ vars.gitRepo }}). Evaluate it using the promotion's vars so the
+		// index key matches what the webhook handler produces from the clone URL.
+		// Mirror StepEvaluator.Vars(): global promotion vars first, then
+		// step-level vars (which carry task vars when using a promotionTask).
+		vars := make(map[string]any)
+		for _, v := range append(promo.Spec.Vars, step.Vars...) {
+			evaluated, err := expressions.EvaluateTemplate(
+				v.Value,
+				map[string]any{"vars": vars},
+			)
+			if err == nil {
+				vars[v.Name] = evaluated
+			}
+		}
+		if result, err := expressions.EvaluateTemplate(
+			repoURL,
+			map[string]any{"vars": vars},
+		); err == nil {
+			if resolved, ok := result.(string); ok && resolved != "" {
+				repoURL = resolved
+			}
+		}
+		key := fmt.Sprintf("%s:%d", urls.NormalizeGit(repoURL), prID)
+		res = append(res, key)
 	}
 	return res
 }
