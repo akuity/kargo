@@ -136,7 +136,8 @@ export const useReactFlowPipelineGraph = (
         },
         style: {
           strokeWidth: 2,
-          stroke: dagreEdge.edgeColor || ''
+          stroke: dagreEdge.edgeColor || '',
+          transition: 'd 0.3s ease'
         }
       });
     }
