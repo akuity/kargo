@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
-import { faStar } from '@fortawesome/free-solid-svg-icons';
+import { faStar, faUser } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Empty, Flex, Pagination } from 'antd';
+import { Button, Empty, Flex, Pagination, Space } from 'antd';
 import { useEffect, useState } from 'react';
 
 import { LoadingState } from '@ui/features/common';
@@ -25,6 +25,7 @@ export const ProjectsList = () => {
     'starred-projects-view',
     false
   );
+  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', true);
 
   const [starred, toggleStar] = useStarProjects();
 
@@ -32,7 +33,8 @@ export const ProjectsList = () => {
     pageSize: pageSize,
     page: page - 1,
     filter,
-    uid: starredProjectsView ? starred : []
+    uid: starredProjectsView ? starred : [],
+    mine: myProjectsView || undefined
   });
 
   useEffect(() => {
@@ -58,16 +60,33 @@ export const ProjectsList = () => {
   if (isEmpty) {
     return (
       <>
-        <div className='flex items-center mb-20'>
+        <Flex align='center' className='mb-20' gap={8}>
           <ProjectListFilter onChange={handleFilterChange} init={filter} />
-          <Button
-            className='ml-auto'
-            icon={<FontAwesomeIcon icon={faStar} />}
-            onClick={() => setStarredProjectsView(!starredProjectsView)}
-          >
-            Show {starredProjectsView ? 'all' : 'only starred'} projects
-          </Button>
-        </div>
+          <Space className='ml-auto'>
+            <Button
+              variant='outlined'
+              color={myProjectsView ? 'primary' : 'default'}
+              icon={<FontAwesomeIcon icon={faUser} />}
+              onClick={() => {
+                setMyProjectsView(!myProjectsView);
+                setPage(1);
+              }}
+            >
+              My Projects
+            </Button>
+            <Button
+              variant='outlined'
+              color={starredProjectsView ? 'primary' : 'default'}
+              icon={<FontAwesomeIcon icon={faStar} />}
+              onClick={() => {
+                setStarredProjectsView(!starredProjectsView);
+                setPage(1);
+              }}
+            >
+              Starred Projects
+            </Button>
+          </Space>
+        </Flex>
         <Empty />
       </>
     );
@@ -75,16 +94,33 @@ export const ProjectsList = () => {
 
   return (
     <>
-      <div className='mb-6 flex items-center'>
+      <Flex align='center' className='mb-6' gap={8}>
         <ProjectListFilter onChange={handleFilterChange} init={filter} />
-        <Button
-          className='ml-auto'
-          icon={<FontAwesomeIcon icon={faStar} />}
-          onClick={() => setStarredProjectsView(!starredProjectsView)}
-        >
-          Show {starredProjectsView ? 'all' : 'only starred'} projects
-        </Button>
-      </div>
+        <Space className='ml-auto'>
+          <Button
+            variant='outlined'
+            color={myProjectsView ? 'primary' : 'default'}
+            icon={<FontAwesomeIcon icon={faUser} />}
+            onClick={() => {
+              setMyProjectsView(!myProjectsView);
+              setPage(1);
+            }}
+          >
+            My Projects
+          </Button>
+          <Button
+            variant='outlined'
+            color={starredProjectsView ? 'primary' : 'default'}
+            icon={<FontAwesomeIcon icon={faStar} />}
+            onClick={() => {
+              setStarredProjectsView(!starredProjectsView);
+              setPage(1);
+            }}
+          >
+            Starred Projects
+          </Button>
+        </Space>
+      </Flex>
       <div className={styles.list}>
         {data.projects.map((proj) => (
           <ProjectItem

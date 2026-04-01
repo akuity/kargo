@@ -85,7 +85,7 @@ func TestCleanProjectFreight(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.collector.cleanProjectFreight(
-					context.Background(),
+					t.Context(),
 					"fake-project",
 				),
 			)
@@ -271,7 +271,7 @@ func TestCleanWarehouseFreight(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.collector.cleanWarehouseFreight(
-					context.Background(),
+					t.Context(),
 					"fake-project",
 					"fake-warehouse",
 				),

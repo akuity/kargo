@@ -92,7 +92,7 @@ func TestWatchStage(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchStage(ctx, "test-project", "test-stage")
@@ -133,7 +133,7 @@ func TestWatchStages(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchStages(ctx, "test-project")
@@ -174,7 +174,7 @@ func TestWatchWarehouse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchWarehouse(ctx, "test-project", "test-warehouse")
@@ -215,7 +215,7 @@ func TestWatchWarehouses(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchWarehouses(ctx, "test-project")
@@ -256,7 +256,7 @@ func TestWatchPromotion(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchPromotion(ctx, "test-project", "test-promotion")
@@ -297,7 +297,7 @@ func TestWatchPromotions(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchPromotions(ctx, "test-project")
@@ -338,7 +338,7 @@ func TestWatchProjectConfig(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchProjectConfig(ctx, "test-project")
@@ -378,7 +378,7 @@ func TestWatchClusterConfig(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchClusterConfig(ctx)
@@ -402,7 +402,7 @@ func TestWatchResource_ErrorResponse(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "bad-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchStage(ctx, "test-project", "test-stage")
@@ -428,7 +428,7 @@ func TestWatchResource_ContextCancellation(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	eventCh, errCh := client.WatchStage(ctx, "test-project", "test-stage")
 
@@ -512,7 +512,7 @@ data: {"type":"ADDED","object":{"name":"test"}}
 			reader := strings.NewReader(tt.input)
 			eventCh := make(chan Event[*testObject], 1)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			err := readSSEStream(ctx, reader, eventCh)
 
 			if tt.expectError {
@@ -542,7 +542,7 @@ func TestReadSSEStream_ContextCancellation(t *testing.T) {
 
 	eventCh := make(chan Event[*testObject])
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(t.Context())
 
 	errCh := make(chan error, 1)
 	go func() {
@@ -624,7 +624,7 @@ func TestStreamAnalysisRunLogs(t *testing.T) {
 			defer server.Close()
 
 			client := NewClient(server.URL, server.Client(), "test-token")
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 
 			logCh, errCh := client.StreamAnalysisRunLogs(ctx, "test-project", "test-run", tt.metricName, tt.containerName)
@@ -653,7 +653,7 @@ func TestStreamAnalysisRunLogs_Error(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	logCh, errCh := client.StreamAnalysisRunLogs(ctx, "test-project", "test-run", "", "")
@@ -724,7 +724,7 @@ data: line 2
 			reader := strings.NewReader(tt.input)
 			logCh := make(chan string, 10)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			err := readLogStream(ctx, reader, logCh)
 			close(logCh)
 
@@ -772,7 +772,7 @@ func TestMultipleEventsInStream(t *testing.T) {
 	defer server.Close()
 
 	client := NewClient(server.URL, server.Client(), "test-token")
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 	defer cancel()
 
 	eventCh, errCh := client.WatchStages(ctx, "test-project")

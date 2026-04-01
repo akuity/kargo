@@ -293,6 +293,54 @@ key.
 
 :::
 
+### Push Integration Policy
+
+When the [`git-push`](../../50-user-guide/60-reference-docs/30-promotion-steps/git-push.md)
+promotion step pushes to a remote branch that has new commits the local branch
+doesn't have, it must integrate those remote changes first. The push integration
+policy controls how this integration is performed.
+
+Four options are available, forming a spectrum from least to most conservative:
+
+- `AlwaysRebase`: Unconditionally uses `pull --rebase` to integrate remote
+  changes. This preserves linear history but may re-sign commits that Kargo did
+  not author or strip existing signatures from commits.
+
+- `RebaseOrMerge`: Uses `pull --rebase` when a signature-trust analysis
+  determines it is safe, and falls back to a merge commit otherwise. This
+  preserves linear history when possible without undermining trust.
+
+- `RebaseOrFail`: Uses `pull --rebase` when the signature-trust analysis
+  determines it is safe, and fails the push step otherwise. This puts
+  constraints on promotion process design and treats the failure scenario as
+  worthy of human investigation.
+
+- `AlwaysMerge`: Unconditionally creates a merge commit to integrate remote
+  changes. This is the most conservative option — it never touches existing
+  commits and always preserves original signatures.
+
+:::caution
+
+The current default is `AlwaysRebase`.
+
+Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
+on the current behavior, set the policy explicitly before upgrading.
+
+:::
+
+```yaml
+controller:
+  gitClient:
+    pushIntegrationPolicy: RebaseOrMerge
+```
+
+:::info
+
+For more information about the security implications of this setting, see
+[Secure Configuration](../40-security/10-secure-configuration.md#push-integration-policy).
+
+:::
+
 ## Argo CD Configuration
 
 Kargo supports a number of Argo CD-related configurations that can be set at
@@ -609,26 +657,52 @@ garbageCollector:
 
 ### Retention Settings
 
-The garbage collector offers a number of settings to control the retention of
-`Freight` and `Promotion` resources. The following settings are available:
+The garbage collector offers settings to control the retention of `Promotion` and
+`Freight` resources.
+
+#### Promotion Retention
+
+For each `Stage`, the garbage collector identifies the oldest `Promotion` that
+is still in a non-terminal phase (i.e., not `Succeeded` or `Failed`). It then
+retains up to `maxRetainedPromotions` that are _older_ than this non-terminal
+`Promotion`. Any `Promotion` resources beyond this retention limit are eligible
+for deletion, but will only be deleted if they have reached the
+`minPromotionDeletionAge`. This means the actual number of retained `Promotion`
+resources may exceed `maxRetainedPromotions` if some would-be-deleted
+`Promotion` resources have not yet reached the minimum age. If all `Promotion`
+resources for a `Stage` are in a terminal phase, the garbage collector simply
+retains the most recent `maxRetainedPromotions` and considers the rest for
+deletion (subject to the minimum age criterion).
+
+#### Freight Retention
+
+For each `Warehouse`, the garbage collector identifies the oldest `Freight` that
+is still in use by any `Stage`. It then retains up to `maxRetainedFreight` that
+are _older_ than this in-use `Freight`. Any `Freight` resources beyond this
+retention limit are eligible for deletion, but will only be deleted if they have
+reached the `minFreightDeletionAge`. This means the actual number of retained
+`Freight` resources may exceed `maxRetainedFreight` if some would-be-deleted
+`Freight` resources have not yet reached the minimum age. If no `Freight` from a
+`Warehouse` is currently in use, the garbage collector simply retains the most
+recent `maxRetainedFreight` and considers the rest for deletion (subject to the
+minimum age criterion).
 
 ```yaml
 garbageCollector:
-  # The minimum age a Promotion resource must be before it can be deleted.
-  # This is a duration string (e.g. 336h for 14 days).
+  # The minimum age a Promotion must be before considered eligible for garbage
+  # collection. This is a duration string (e.g. 336h for 14 days).
   minPromotionDeletionAge: 336h
-  # The number of Promotion resources for each Stage to retain that are older
-  # than the minimum deletion age. I.e., if a Stage has 30 Promotions older
-  # than minPromotionDeletionAge, only the 20 most recent will be retained.
+  # The ideal maximum number of Promotions OLDER than the oldest Promotion in a
+  # non-terminal phase (for each Stage) that may be spared by the garbage
+  # collector.
   maxRetainedPromotions: 20
-  
-  # The minimum age a Freight resource must be before it can be deleted.
-  # This is a duration string (e.g. 336h for 14 days).
+
+  # The minimum age Freight must be before considered eligible for garbage
+  # collection. This is a duration string (e.g. 336h for 14 days).
   minFreightDeletionAge: 336h
-  # The number of Freight resources for each Warehouse to retain that are older
-  # than the minimum deletion age. I.e., if a Warehouse has 20 Freight older
-  # than minFreightDeletionAge, only the 20 most recent will be retained.
-  maxRetainedFreight: 10
+  # The ideal maximum number of Freight OLDER than the oldest still in use
+  # (from each Warehouse) that may be spared by the garbage collector.
+  maxRetainedFreight: 20
 ```
 
 :::note

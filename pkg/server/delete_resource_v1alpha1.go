@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,7 +28,11 @@ func (s *server) DeleteResource(
 	res := make([]*svcv1alpha1.DeleteResourceResult, 0, len(resources))
 	for _, r := range resources {
 		resource := r // Avoid implicit memory aliasing
-		res = append(res, s.deleteResourceProto(ctx, &resource))
+		deleteResult := s.deleteResourceProto(ctx, &resource)
+		if deleteResult.GetError() != "" && len(resources) == 1 {
+			return nil, errors.New(deleteResult.GetError())
+		}
+		res = append(res, deleteResult)
 	}
 	return &connect.Response[svcv1alpha1.DeleteResourceResponse]{
 		Msg: &svcv1alpha1.DeleteResourceResponse{

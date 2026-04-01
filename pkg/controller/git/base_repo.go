@@ -80,7 +80,7 @@ func (b *baseRepo) setupClient(opts *ClientOptions) error {
 		opts = &ClientOptions{}
 	}
 
-	if err := b.setupAuthor(b.homeDir, opts.User); err != nil {
+	if err := b.setupUser(b.homeDir, opts.User); err != nil {
 		return fmt.Errorf("error configuring the author: %w", err)
 	}
 
@@ -118,83 +118,98 @@ type User struct {
 	SigningKeyPath string
 }
 
-// setupAuthor configures the git CLI with a default commit author.
-// Optionally, the author can have an associated signing key. When using GPG
+// setupUser configures the git CLI with a default user.
+// Optionally, the user can have an associated signing key. When using GPG
 // signing, the name and email must match the GPG key identity. The directory
 // specified by homeDir is used as a virtual home directory for all commands
 // executed by this method.
-func (b *baseRepo) setupAuthor(homeDir string, author *User) error {
-	if author == nil {
-		author = &User{}
+func (b *baseRepo) setupUser(homeDir string, user *User) error {
+	if user == nil {
+		user = &User{}
 	}
 
-	if author.Name == "" {
-		author.Name = defaultUsername
+	if user.Name == "" {
+		user.Name = defaultUsername
 	}
 
-	cmd := b.buildGitCommand("config", "--global", "user.name", author.Name)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
+	cmd := b.buildGitCommand("config", "--global", "user.name", user.Name)
+	// Override cmd.Dir set by buildGitCommand(). The repo path may not exist
+	// yet if called during clone. homeDir is safe since we're only writing
+	// "global" git config for a synthetic user.
 	cmd.Dir = homeDir
+	// Override HOME set by buildGitCommand(). The caller may provide a different
+	// homeDir to set up ephemeral config for a per-command user identity.
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user name: %w", err)
 	}
 
-	if author.Email == "" {
-		author.Email = defaultEmail
+	if user.Email == "" {
+		user.Email = defaultEmail
 	}
 
-	cmd = b.buildGitCommand("config", "--global", "user.email", author.Email)
-	// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-	// repository's path, but if this method was called as part of the cloning
-	// process, that path may not exist yet.
+	cmd = b.buildGitCommand("config", "--global", "user.email", user.Email)
+	// See justification for both of these overrides above.
 	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
 	if _, err := libExec.Exec(cmd); err != nil {
 		return fmt.Errorf("error configuring git user email: %w", err)
 	}
 
 	// For now, since only GPG signing is supported, we will assume GPG if the
 	// signing key type is not specified.
-	if author.SigningKeyType == SigningKeyTypeGPG || author.SigningKeyType == "" {
+	if user.SigningKeyType == SigningKeyTypeGPG || user.SigningKeyType == "" {
 
-		if author.SigningKey != "" {
-			author.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
+		if user.SigningKey != "" {
+			user.SigningKeyPath = filepath.Join(homeDir, "signing-key.asc")
 			if err := os.WriteFile(
-				author.SigningKeyPath,
-				[]byte(author.SigningKey),
+				user.SigningKeyPath,
+				[]byte(user.SigningKey),
 				0600,
 			); err != nil {
-				return fmt.Errorf("error writing signing key to %q: %w", author.SigningKeyPath, err)
+				return fmt.Errorf("error writing signing key to %q: %w", user.SigningKeyPath, err)
 			}
 			defer func() {
-				if err := os.Remove(author.SigningKeyPath); err != nil {
+				if err := os.Remove(user.SigningKeyPath); err != nil {
 					logging.LoggerFromContext(context.TODO()).Error(
 						err,
 						"error removing file",
-						"file", author.SigningKeyPath,
+						"file", user.SigningKeyPath,
 					)
 				}
 			}()
 		}
 
-		if author.SigningKeyPath != "" {
-			cmd = b.buildGitCommand("config", "--global", "commit.gpgsign", "true")
-			// Override the cmd.Dir that's set by b.buildGitCommand(). It's normally the
-			// repository's path, but if this method was called as part of the cloning
-			// process, that path may not exist yet.
+		if user.SigningKeyPath != "" {
+			cmd = b.buildGitCommand("config", "--global", "commit.gpgSign", "true")
+			// See justification for both of these overrides above.
 			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
 				return fmt.Errorf("error configuring commit gpg signing: %w", err)
 			}
 
-			cmd = b.buildCommand("gpg", "--import", author.SigningKeyPath)
-			// Override the cmd.Dir that's set by b.buildCommand(). It's normally the
-			// repository's path, but if this method was called as part of the cloning
-			// process, that path may not exist yet.
+			// Enable signing for tags as well.
+			cmd = b.buildGitCommand("config", "--global", "tag.gpgSign", "true")
 			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
 			if _, err := libExec.Exec(cmd); err != nil {
-				return fmt.Errorf("error importing gpg key %q: %w", author.SigningKeyPath, err)
+				return fmt.Errorf("error configuring tag gpg signing: %w", err)
+			}
+
+			cmd = b.buildCommand("gpg", "--import", user.SigningKeyPath)
+			// See justification for both of these overrides above.
+			cmd.Dir = homeDir
+			b.setCmdHome(cmd, homeDir)
+			if _, err := libExec.Exec(cmd); err != nil {
+				return fmt.Errorf("error importing gpg key %q: %w", user.SigningKeyPath, err)
+			}
+
+			// Set ultimate trust on the imported key so that commits signed
+			// by this key are considered trusted during signature
+			// verification (e.g. when deciding whether a rebase is safe).
+			if err := b.setUltimateTrust(homeDir, user.SigningKeyPath); err != nil {
+				return fmt.Errorf("error setting trust on gpg key: %w", err)
 			}
 		}
 
@@ -210,6 +225,7 @@ func (b *baseRepo) setupAuth(homeDir string) error {
 	if b.creds == nil {
 		return nil
 	}
+	// TODO(v1.13.0): Remove this block when SSH support is removed.
 	// If an SSH key was provided, use that.
 	if b.creds.SSHPrivateKey != "" {
 		sshPath := filepath.Join(homeDir, ".ssh")
@@ -338,6 +354,7 @@ func (b *baseRepo) buildCommand(command string, arg ...string) *exec.Cmd {
 
 func (b *baseRepo) buildGitCommand(arg ...string) *exec.Cmd {
 	cmd := b.buildCommand("git", arg...)
+	// TODO(v1.13.0): Remove this line when SSH support is removed.
 	cmd.Env = append(cmd.Env, fmt.Sprintf("GIT_SSH_COMMAND=ssh -F %s/.ssh/config", b.homeDir))
 	if b.creds != nil && b.creds.Password != "" {
 		cmd.Env = append(
@@ -392,6 +409,52 @@ func (b *baseRepo) RemoteBranchExists(branch string) (bool, error) {
 
 func (b *baseRepo) URL() string {
 	return b.originalURL
+}
+
+// setUltimateTrust sets ultimate trust (level 6) on a GPG key so that
+// signatures made by this key are considered fully trusted during verification.
+func (b *baseRepo) setUltimateTrust(homeDir, keyPath string) error {
+	// Get the fingerprint of the key.
+	cmd := b.buildCommand(
+		"gpg",
+		"--with-colons",
+		"--fingerprint",
+		"--import-options", "show-only",
+		"--import",
+		keyPath,
+	)
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	res, err := libExec.Exec(cmd)
+	if err != nil {
+		return fmt.Errorf("error getting fingerprint of gpg key: %w", err)
+	}
+	// Sample response:
+	//
+	// sec:u:2048:1:C984DEC578866F8A:1773322865:::u:::escarESCA::::::23::0:
+	// fpr:::::::::27CDB28C1429C96E91CBAE09C984DEC578866F8A:
+	// grp:::::::::2E518991B28783A8A4D06373B4FCBA74D53F397D:
+	// uid:u::::1773322865::F2E723F89EE13F7007A48DDACDB395768100ABC3::Test User <test@example.com>::::::::::0:
+	var fingerprint string
+	for _, line := range strings.Split(string(res), "\n") {
+		fields := strings.Split(line, ":")
+		if len(fields) >= 10 && fields[0] == "fpr" {
+			fingerprint = fields[9]
+			break
+		}
+	}
+	if fingerprint == "" {
+		return fmt.Errorf("could not determine fingerprint of gpg key %q", keyPath)
+	}
+	// Import owner trust: level 6 = ultimate trust.
+	cmd = b.buildCommand("gpg", "--import-ownertrust")
+	cmd.Dir = homeDir
+	b.setCmdHome(cmd, homeDir)
+	cmd.Stdin = strings.NewReader(fmt.Sprintf("%s:6:\n", fingerprint))
+	if _, err = libExec.Exec(cmd); err != nil {
+		return fmt.Errorf("error setting ultimate trust on gpg key: %w", err)
+	}
+	return nil
 }
 
 func (b *baseRepo) setCmdHome(cmd *exec.Cmd, homeDir string) {

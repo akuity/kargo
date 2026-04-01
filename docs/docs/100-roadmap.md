@@ -31,11 +31,29 @@ every submission.
 
 ### v1.10.0
 
-**Expected:** TBD
+**Expected:** Mid-April, 2026
 
-* UI to begin transition to new API
+🧬 Evolution; not revolution — apart from the usual slate of bug fixes and
+performance + stability improvements, v1.10.0 is set to deliver a broad
+collection of small, but meaningful quality-of-life improvements.
 
-* Remaining scope TBD
+A modest selection of anticipated highlights:
+
+* UI "My Projects" filter
+* Path filtering for push events from Git repositories ➡️ fewer Warehouses
+  executing unnecessary artifact discovery cycles
+* Broad range of new and improved promotion steps
+* Enhanced trust model for commits made by Kargo
+* New Helm chart options to support common operational concerns
+
+v1.10.0 will also include a partial UI transition from the deprecated gRPC API
+to new RESTful API.
+
+## Upcoming
+
+### v1.11.0
+
+**Expected:** Mid-June, 2026
 
 ## Completed
 

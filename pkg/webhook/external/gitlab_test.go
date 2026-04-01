@@ -36,6 +36,23 @@ const gitlabTagPushEventRequestBody = `
 	}
 }`
 
+const gitlabPushEventRequestBodyTruncated = `
+{
+	"ref": "refs/heads/main",
+	"repository":{
+		"git_http_url": "https://gitlab.com/example/repo.git",
+		"git_ssh_url": "git@gitlab.com:example/repo.git"
+	},
+	"commits": [
+		{
+			"added": ["apps/bar/values.yaml"],
+			"modified": [],
+			"removed": []
+		}
+	],
+	"total_commits_count": 25
+}`
+
 func TestGitLabHandler(t *testing.T) {
 	const testURL = "https://webhooks.kargo.example.com/nonsense"
 
@@ -355,6 +372,47 @@ func TestGitLabHandler(t *testing.T) {
 				)
 				req.Header.Set(gitlabTokenHeader, testToken)
 				req.Header.Set(gitlabEventHeader, string(gl.EventTypeTagPush))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(
+					t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String(),
+				)
+			},
+		},
+		{
+			name:       "truncated commits — path filtering skipped, warehouse refreshed",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:      "https://gitlab.com/example/repo",
+								IncludePaths: []string{"glob:apps/foo/**"},
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(gitlabPushEventRequestBodyTruncated))
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bodyBuf,
+				)
+				req.Header.Set(gitlabTokenHeader, testToken)
+				req.Header.Set(gitlabEventHeader, string(gl.EventTypePush))
 				return req
 			},
 			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {

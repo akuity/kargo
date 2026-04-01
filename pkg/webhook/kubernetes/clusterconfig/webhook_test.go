@@ -1,7 +1,6 @@
 package clusterconfig
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -106,7 +105,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{}
-			warnings, err := w.ValidateCreate(context.Background(), testCase.cfg)
+			warnings, err := w.ValidateCreate(t.Context(), testCase.cfg)
 			testCase.assertions(t, warnings, err)
 		})
 	}
@@ -181,7 +180,7 @@ func Test_webhook_ValidateUpdate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{}
-			warnings, err := w.ValidateUpdate(context.Background(), nil, testCase.cfg)
+			warnings, err := w.ValidateUpdate(t.Context(), nil, testCase.cfg)
 			testCase.assertions(t, warnings, err)
 		})
 	}

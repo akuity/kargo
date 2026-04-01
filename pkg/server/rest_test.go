@@ -44,7 +44,10 @@ type restTestCase struct {
 	// serverSetup is an optional function that can be used to perform additional
 	// case-specific server initialization.
 	serverSetup func(*testing.T, *server)
-	assertions  func(*testing.T, *httptest.ResponseRecorder, client.Client)
+	// ctxSetup optionally transforms the request context before the request
+	// is served. Use this to inject context-bound values like user.Info.
+	ctxSetup   func(context.Context) context.Context
+	assertions func(*testing.T, *httptest.ResponseRecorder, client.Client)
 }
 
 func testRESTEndpoint(
@@ -107,7 +110,8 @@ func testRESTEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 
@@ -121,6 +125,9 @@ func testRESTEndpoint(
 			}
 			w := httptest.NewRecorder()
 			req := httptest.NewRequest(method, u, testCase.body)
+			if testCase.ctxSetup != nil {
+				req = req.WithContext(testCase.ctxSetup(req.Context()))
+			}
 			for key, value := range testCase.headers {
 				req.Header.Set(key, value)
 			}
@@ -198,7 +205,7 @@ func testRESTWatchEndpoint(
 			internalClient := testCase.clientBuilder.WithScheme(testScheme).Build()
 			var err error
 			s.client, err = kubernetes.NewClient(
-				context.Background(),
+				t.Context(),
 				&rest.Config{},
 				kubernetes.ClientOptions{
 					SkipAuthorization: true,
@@ -213,7 +220,8 @@ func testRESTWatchEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 
@@ -228,7 +236,7 @@ func testRESTWatchEndpoint(
 			}
 
 			// Create a context with timeout to prevent hanging on watch endpoints
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 			defer cancel()
 			req = req.WithContext(ctx)
 
@@ -241,7 +249,7 @@ func testRESTWatchEndpoint(
 				}()
 			}
 
-			router := s.setupRESTRouter(context.Background())
+			router := s.setupRESTRouter(t.Context())
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)

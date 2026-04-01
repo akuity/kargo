@@ -214,6 +214,10 @@ func (in *ApplicationStatus) DeepCopyInto(out *ApplicationStatus) {
 	*out = *in
 	in.Health.DeepCopyInto(&out.Health)
 	in.Sync.DeepCopyInto(&out.Sync)
+	if in.ReconciledAt != nil {
+		in, out := &in.ReconciledAt, &out.ReconciledAt
+		*out = (*in).DeepCopy()
+	}
 	if in.Conditions != nil {
 		in, out := &in.Conditions, &out.Conditions
 		*out = make([]ApplicationCondition, len(*in))

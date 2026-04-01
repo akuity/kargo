@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"os"
 	"path"
 	"testing"
@@ -186,7 +185,7 @@ image:
 				require.NoError(t, os.WriteFile(path.Join(stepCtx.WorkDir, p), []byte(c), 0o600))
 			}
 
-			result, err := runner.run(context.Background(), stepCtx, tt.cfg)
+			result, err := runner.run(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, stepCtx.WorkDir, result, err)
 		})
 	}

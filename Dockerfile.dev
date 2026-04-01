@@ -1,4 +1,4 @@
-FROM golang:1.26.0-trixie
+FROM golang:1.26.1-trixie
 
 ARG TARGETARCH
 
@@ -29,6 +29,7 @@ ARG GROUP_ID=1000
 RUN addgroup --gid ${GROUP_ID} user \
     && adduser --disabled-password --gecos '' --uid ${USER_ID} --gid ${GROUP_ID} user \
     && mkdir -p /workspaces/kargo/ui/node_modules \
+    && mkdir -p /workspaces/kargo/docs/static \
     && chown -R ${USER_ID}:${GROUP_ID} /workspaces/kargo \
     && chown -R ${USER_ID}:${GROUP_ID} /go
 

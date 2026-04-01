@@ -9,11 +9,16 @@ description: Waits for a specified open pull request to be merged or closed.
 closed. This step commonly follows a [`git-open-pr` step](git-open-pr.md)
 and is commonly followed by an `argocd-update` step.
 
+## Credentials
+
+Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access the git repos.
+
 ## Configuration
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `repoURL` | `string` | Y | The URL of a remote Git repository. |
+| `repoURL` | `string` | Y | The URL of a remote Git repository. **Deprecated:** Support for SSH URLs (`ssh://` and SCP-style `git@host:path`) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use HTTPS URLs instead. |
 | `provider` | `string` | N | The name of the Git provider to use. Currently `azure`, `bitbucket`, `gitea`, `github`, and `gitlab` are supported. Kargo will try to infer the provider if it is not explicitly specified. |
 | `insecureSkipTLSVerify` | `boolean` | N | Indicates whether to bypass TLS certificate verification when interfacing with the Git provider. Setting this to `true` is highly discouraged in production. |
 | `prNumber` | `integer` | Y | The pull request number to wait for. |

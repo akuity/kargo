@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -222,7 +221,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	}
 
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		stepCtx,
 		builtin.GitCommitConfig{
 			Path:    "master",
@@ -243,7 +242,7 @@ func Test_gitCommitter_run(t *testing.T) {
 	// Run the step again to confirm a Skipped status is returned when no new
 	// commit is actually made.
 	res, err = runner.run(
-		context.Background(),
+		t.Context(),
 		stepCtx,
 		builtin.GitCommitConfig{
 			Path:    "master",

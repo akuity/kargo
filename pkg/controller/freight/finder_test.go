@@ -1,7 +1,6 @@
 package freight
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -239,7 +238,7 @@ func TestFindCommit(t *testing.T) {
 				cl = testCase.client()
 			}
 			commit, err := FindCommit(
-				context.Background(),
+				t.Context(),
 				cl,
 				testCase.stage.Namespace,
 				testCase.stage.Spec.RequestedFreight,
@@ -473,7 +472,7 @@ func TestFindImage(t *testing.T) {
 				cl = testCase.client()
 			}
 			image, err := FindImage(
-				context.Background(),
+				t.Context(),
 				cl,
 				testCase.stage.Namespace,
 				testCase.stage.Spec.RequestedFreight,
@@ -604,7 +603,7 @@ func TestHasAmbiguousImageRequest(t *testing.T) {
 				cl = testCase.client()
 			}
 			ok, err := HasAmbiguousImageRequest(
-				context.Background(),
+				t.Context(),
 				cl,
 				testNamespace,
 				testCase.freight,
@@ -841,7 +840,7 @@ func TestFindChart(t *testing.T) {
 				cl = testCase.client()
 			}
 			chart, err := FindChart(
-				context.Background(),
+				t.Context(),
 				cl,
 				testCase.stage.Namespace,
 				testCase.stage.Spec.RequestedFreight,
@@ -1096,7 +1095,7 @@ func TestFindArtifact(t *testing.T) {
 				cl = testCase.client()
 			}
 			commit, err := FindArtifact(
-				context.Background(),
+				t.Context(),
 				cl,
 				testCase.stage.Namespace,
 				testCase.stage.Spec.RequestedFreight,

@@ -1,7 +1,6 @@
 package commit
 
 import (
-	"context"
 	"errors"
 	"regexp"
 	"testing"
@@ -361,7 +360,7 @@ func Test_lexicalSelector_Select(t *testing.T) {
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			commits, err := testCase.selector.Select(context.Background())
+			commits, err := testCase.selector.Select(t.Context())
 			testCase.assertions(t, commits, err)
 		})
 	}

@@ -81,7 +81,14 @@ func (e *LocalStepExecutor) ExecuteStep(
 	}()
 
 	if err != nil {
-		err = fmt.Errorf("error running step %q: %w", req.Step.Alias, err)
+		if result.Status == kargoapi.PromotionStepStatusErrored {
+			// e.g. error running step "clone": error cloning repo: auth failed
+			err = fmt.Errorf("error running step %q: %w", req.Step.Alias, err)
+		} else {
+			// e.g. step "failer": failed: deployment blocked by policy
+			// e.g. step "push": invalid git-push config: path is required
+			err = fmt.Errorf("step %q: %w", req.Step.Alias, err)
+		}
 	}
 
 	return result, err

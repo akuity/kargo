@@ -1078,6 +1078,10 @@ func (in *GitSubscription) DeepCopyInto(out *GitSubscription) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
+	if in.Since != nil {
+		in, out := &in.Since, &out.Since
+		*out = (*in).DeepCopy()
+	}
 	if in.StrictSemvers != nil {
 		in, out := &in.StrictSemvers, &out.StrictSemvers
 		*out = new(bool)
