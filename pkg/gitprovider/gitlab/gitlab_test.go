@@ -174,7 +174,7 @@ func TestMergePullRequest(t *testing.T) {
 		name         string
 		mockClient   *mockGitLabClient
 		id           int64
-		mergeMethod  gitprovider.MergeMethod
+		mergeOpts    *gitprovider.MergePullRequestOpts
 		expectErr    bool
 		expectMerged bool
 		expectPR     bool
@@ -347,7 +347,6 @@ func TestMergePullRequest(t *testing.T) {
 				return mc
 			}(),
 			id:           789,
-			mergeMethod:  "",
 			expectMerged: true,
 			expectPR:     true,
 		},
@@ -385,12 +384,12 @@ func TestMergePullRequest(t *testing.T) {
 				return mc
 			}(),
 			id:           100,
-			mergeMethod:  gitprovider.MergeMethodSquash,
+			mergeOpts:    &gitprovider.MergePullRequestOpts{MergeMethod: "squash"},
 			expectMerged: true,
 			expectPR:     true,
 		},
 		{
-			name: "unsupported rebase merge method",
+			name: "unsupported merge method",
 			id:   101,
 			mockClient: func() *mockGitLabClient {
 				mc := &mockGitLabClient{}
@@ -409,8 +408,8 @@ func TestMergePullRequest(t *testing.T) {
 				return mc
 			}(),
 			expectErr:   true,
-			errContains: `unsupported merge method "rebase" for provider`,
-			mergeMethod: gitprovider.MergeMethodRebase,
+			errContains: "unsupported merge method",
+			mergeOpts:   &gitprovider.MergePullRequestOpts{MergeMethod: "rebase"},
 		},
 	}
 
@@ -421,9 +420,10 @@ func TestMergePullRequest(t *testing.T) {
 				client:      tc.mockClient,
 			}
 
-			pr, merged, err := g.MergePullRequest(context.Background(), tc.id, &gitprovider.MergePullRequestOpts{
-				MergeMethod: tc.mergeMethod,
-			})
+			pr, merged, err := g.MergePullRequest(
+				t.Context(), tc.id,
+				tc.mergeOpts,
+			)
 
 			if tc.expectErr {
 				require.Error(t, err)

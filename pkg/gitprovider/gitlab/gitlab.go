@@ -212,6 +212,10 @@ func (p *provider) MergePullRequest(
 	id int64,
 	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
 	glMR, _, err := p.client.GetMergeRequest(p.projectName, id, nil)
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting merge request %d: %w", id, err)
@@ -232,21 +236,20 @@ func (p *provider) MergePullRequest(
 		return nil, false, nil
 	}
 
-	// Merge the MR. When unspecified, the GitLab API uses a merge commit
-	// Squash is supported via a boolean flag. Rebase is not supported
-	// through the accept-merge-request API.
-	mrOpts := &gitlab.AcceptMergeRequestOptions{}
+	// Merge the MR. When unspecified, the GitLab API uses a merge commit. Squash
+	// is supported via a boolean flag. Rebase is not supported through the
+	// accept-merge-request API.
+	var squash *bool
 	switch opts.MergeMethod {
-	case "", gitprovider.MergeMethodMerge:
-	case gitprovider.MergeMethodSquash:
-		mrOpts.Squash = ptr.To(true)
+	case "", "merge":
+		// Accept API's default merge method (merge commit)
+	case "squash":
+		squash = ptr.To(true) // Opt-in to a squash merge
 	default:
-		return nil, false,
-			fmt.Errorf("unsupported merge method %q for provider", opts.MergeMethod)
+		return nil, false, fmt.Errorf("unsupported merge method %q", opts.MergeMethod)
 	}
-
 	updatedMR, _, err := p.client.AcceptMergeRequest(
-		p.projectName, id, mrOpts,
+		p.projectName, id, &gitlab.AcceptMergeRequestOptions{Squash: squash},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging merge request %d: %w", id, err)
