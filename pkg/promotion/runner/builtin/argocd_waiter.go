@@ -65,7 +65,6 @@ type argocdWaiter struct {
 	getApplicationsFn func(
 		ctx context.Context,
 		argocdClient client.Client,
-		stepCtx *promotion.StepContext,
 		name string,
 		namespace string,
 		selector *builtin.ArgoCDAppSelector,
@@ -77,7 +76,7 @@ type argocdWaiter struct {
 func newArgocdWaiter(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	w := &argocdWaiter{argocdClient: caps.ArgoCDClient}
 	w.schemaLoader = getConfigSchemaLoader(stepKindArgoCDWait)
-	w.getApplicationsFn = getAuthorizedArgoCDApplications
+	w.getApplicationsFn = getArgoCDApplications
 	return w
 }
 
@@ -140,7 +139,6 @@ func (w *argocdWaiter) run(
 		apps, err := w.getApplicationsFn(
 			ctx,
 			w.argocdClient,
-			stepCtx,
 			appSpec.Name,
 			appSpec.Namespace,
 			appSpec.Selector,
@@ -363,12 +361,11 @@ func (w *argocdWaiter) loadPreviousHealthStatuses(
 	return result
 }
 
-// getAuthorizedArgoCDApplications resolves Argo CD Applications by name or
-// label selector and filters by authorization.
-func getAuthorizedArgoCDApplications(
+// getArgoCDApplications resolves Argo CD Applications by name or label
+// selector.
+func getArgoCDApplications(
 	ctx context.Context,
 	argocdClient client.Client,
-	stepCtx *promotion.StepContext,
 	name string,
 	namespace string,
 	selector *builtin.ArgoCDAppSelector,
@@ -377,7 +374,6 @@ func getAuthorizedArgoCDApplications(
 		namespace = libargocd.Namespace()
 	}
 
-	var apps []*argocd.Application
 	if selector != nil {
 		labelSelector, err := buildArgoCDAppLabelSelector(selector)
 		if err != nil {
@@ -393,66 +389,33 @@ func getAuthorizedArgoCDApplications(
 				"error listing Argo CD Applications matching selector: %w", err,
 			)
 		}
+		if len(appList.Items) == 0 {
+			return nil, fmt.Errorf(
+				"no Argo CD Applications found matching selector in namespace %q",
+				namespace,
+			)
+		}
+		apps := make([]*argocd.Application, len(appList.Items))
 		for i := range appList.Items {
-			apps = append(apps, &appList.Items[i])
+			apps[i] = &appList.Items[i]
 		}
-	} else {
-		app, err := argocd.GetApplication(ctx, argocdClient, namespace, name)
-		if err != nil {
-			return nil, fmt.Errorf(
-				"error finding Argo CD Application %q in namespace %q: %w",
-				name, namespace, err,
-			)
-		}
-		if app == nil {
-			return nil, fmt.Errorf(
-				"unable to find Argo CD Application %q in namespace %q",
-				name, namespace,
-			)
-		}
-		apps = append(apps, app)
+		return apps, nil
 	}
 
-	// Filter by authorization.
-	logger := logging.LoggerFromContext(ctx)
-	authorizedApps := make([]*argocd.Application, 0, len(apps))
-	for _, app := range apps {
-		if err := authorizeArgoCDAppAccess(stepCtx, app.ObjectMeta); err != nil {
-			logger.Info(
-				"skipping unauthorized Application",
-				"app", app.Name,
-				"namespace", app.Namespace,
-				"reason", err.Error(),
-			)
-			continue
-		}
-		authorizedApps = append(authorizedApps, app)
+	app, err := argocd.GetApplication(ctx, argocdClient, namespace, name)
+	if err != nil {
+		return nil, fmt.Errorf(
+			"error finding Argo CD Application %q in namespace %q: %w",
+			name, namespace, err,
+		)
 	}
-
-	if len(authorizedApps) == 0 {
-		if selector != nil {
-			totalAppsFound := len(apps)
-			if totalAppsFound == 0 {
-				return nil, fmt.Errorf(
-					"no Argo CD Applications found matching selector "+
-						"in namespace %q",
-					namespace,
-				)
-			}
-			return nil, fmt.Errorf(
-				"found %d Application(s) matching selector in namespace %q, "+
-					"but none are authorized for Stage %s:%s",
-				totalAppsFound, namespace,
-				stepCtx.Project, stepCtx.Stage,
-			)
-		}
-		return nil, fmt.Errorf( // nolint:staticcheck
-			"Argo CD Application %q in namespace %q is not authorized",
+	if app == nil {
+		return nil, fmt.Errorf(
+			"unable to find Argo CD Application %q in namespace %q",
 			name, namespace,
 		)
 	}
-
-	return authorizedApps, nil
+	return []*argocd.Application{app}, nil
 }
 
 // filterArgoCDAppConditions returns a slice of ApplicationCondition that match

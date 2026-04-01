@@ -153,7 +153,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 			runner: &argocdWaiter{
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: func(
-					context.Context, client.Client, *promotion.StepContext,
+					context.Context, client.Client,
 					string, string, *builtin.ArgoCDAppSelector,
 				) ([]*argocd.Application, error) {
 					return nil, errors.New("something went wrong")
@@ -580,7 +580,6 @@ func Test_argocdWaiter_run(t *testing.T) {
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: func(
 					_ context.Context, _ client.Client,
-					_ *promotion.StepContext,
 					name, _ string,
 					_ *builtin.ArgoCDAppSelector,
 				) ([]*argocd.Application, error) {
@@ -632,7 +631,6 @@ func Test_argocdWaiter_run(t *testing.T) {
 				argocdClient: fake.NewFakeClient(),
 				getApplicationsFn: func(
 					_ context.Context, _ client.Client,
-					_ *promotion.StepContext,
 					_ string, _ string,
 					_ *builtin.ArgoCDAppSelector,
 				) ([]*argocd.Application, error) {
@@ -708,11 +706,11 @@ func Test_argocdWaiter_run(t *testing.T) {
 // appsFn is a helper that returns a getApplicationsFn that always returns the
 // given applications.
 func appsFn(apps ...*argocd.Application) func(
-	context.Context, client.Client, *promotion.StepContext,
+	context.Context, client.Client,
 	string, string, *builtin.ArgoCDAppSelector,
 ) ([]*argocd.Application, error) {
 	return func(
-		context.Context, client.Client, *promotion.StepContext,
+		context.Context, client.Client,
 		string, string, *builtin.ArgoCDAppSelector,
 	) ([]*argocd.Application, error) {
 		return apps, nil

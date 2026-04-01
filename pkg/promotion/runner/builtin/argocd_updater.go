@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
@@ -888,7 +889,47 @@ func (a *argocdUpdater) authorizeArgoCDAppUpdate(
 	stepCtx *promotion.StepContext,
 	appMeta metav1.ObjectMeta,
 ) error {
-	return authorizeArgoCDAppAccess(stepCtx, appMeta)
+	// nolint:staticcheck
+	permErr := fmt.Errorf(
+		"Argo CD Application %q in namespace %q does not permit mutation by "+
+			"Kargo Stage %s in namespace %s",
+		appMeta.Name,
+		appMeta.Namespace,
+		stepCtx.Stage,
+		stepCtx.Project,
+	)
+
+	allowedStage, ok := appMeta.Annotations[kargoapi.AnnotationKeyAuthorizedStage]
+	if !ok {
+		return permErr
+	}
+
+	tokens := strings.SplitN(allowedStage, ":", 2)
+	if len(tokens) != 2 {
+		return fmt.Errorf(
+			"unable to parse value of annotation %q (%q) on Argo CD Application %q in namespace %q",
+			kargoapi.AnnotationKeyAuthorizedStage,
+			allowedStage,
+			appMeta.Name,
+			appMeta.Namespace,
+		)
+	}
+
+	projectName, stageName := tokens[0], tokens[1]
+	if strings.Contains(projectName, "*") || strings.Contains(stageName, "*") {
+		// nolint:staticcheck
+		return fmt.Errorf(
+			"Argo CD Application %q in namespace %q has deprecated glob expression in annotation %q (%q)",
+			appMeta.Name,
+			appMeta.Namespace,
+			kargoapi.AnnotationKeyAuthorizedStage,
+			allowedStage,
+		)
+	}
+	if projectName != stepCtx.Project || stageName != stepCtx.Stage {
+		return permErr
+	}
+	return nil
 }
 
 // buildLabelSelector converts an ArgoCDAppSelector into a Kubernetes

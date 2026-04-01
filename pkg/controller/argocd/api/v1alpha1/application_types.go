@@ -153,9 +153,8 @@ type SyncStatus struct {
 }
 
 type HealthStatus struct {
-	Status             HealthStatusCode `json:"status,omitempty"`
-	Message            string           `json:"message,omitempty"`
-	LastTransitionTime *metav1.Time     `json:"lastTransitionTime,omitempty"`
+	Status  HealthStatusCode `json:"status,omitempty"`
+	Message string           `json:"message,omitempty"`
 }
 
 type ApplicationConditionType string
