@@ -12,11 +12,13 @@ and is commonly followed by an `argocd-update` step.
 :::tip[Accelerate with webhooks]
 
 By default, Kargo polls the Git provider every few minutes to check whether the
-PR has been merged or closed. If you configure a
-[github webhook receiver](../80-webhook-receivers/github/index.md) and enable
-`pull_request` events, Kargo detects PR changes near-instantly. The polling
-fallback remains active for reliability. See
-[Webhook Receivers](../80-webhook-receivers/index.md) for setup instructions.
+PR has been merged or closed. If you configure a webhook receiver that supports
+`pull_request` events
+([GitHub](../80-webhook-receivers/github/index.md),
+[Gitea](../80-webhook-receivers/gitea/index.md)),
+Kargo detects PR changes near-instantly. The polling fallback remains active for
+reliability. See [Webhook Receivers](../80-webhook-receivers/index.md) for setup
+instructions.
 
 :::
 
