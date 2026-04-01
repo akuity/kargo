@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"os"
@@ -94,7 +93,7 @@ func Test_gitTreeOverwriter_run(t *testing.T) {
 	require.True(t, ok)
 
 	res, err := runner.run(
-		context.Background(),
+		t.Context(),
 		&promotion.StepContext{
 			Project: "fake-project",
 			Stage:   "fake-stage",

@@ -195,7 +195,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify finalizer was added
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "test-stage",
 				}, stage)
@@ -238,7 +238,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify error is recorded in status
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "test-stage",
 				}, stage)
@@ -361,7 +361,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 
 				// Verify status was updated
 				stage := &kargoapi.Stage{}
-				err = c.Get(context.Background(), types.NamespacedName{
+				err = c.Get(t.Context(), types.NamespacedName{
 					Namespace: "default",
 					Name:      "test-stage",
 				}, stage)
@@ -423,7 +423,7 @@ func TestRegularStageReconciler_Reconcile(t *testing.T) {
 				eventSender: k8sevent.NewEventSender(fakeevent.NewEventRecorder(10)),
 			}
 
-			result, err := r.Reconcile(context.Background(), tt.req)
+			result, err := r.Reconcile(t.Context(), tt.req)
 			tt.assertions(t, c, result, err)
 		})
 	}
@@ -563,7 +563,7 @@ func TestRegularStagesReconciler_reconcile(t *testing.T) {
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
-			status, requeue, err := r.reconcile(context.Background(), tt.stage, now)
+			status, requeue, err := r.reconcile(t.Context(), tt.stage, now)
 			tt.assertions(t, status, requeue, err)
 		})
 	}
@@ -1325,7 +1325,7 @@ func TestRegularStageReconciler_syncPromotions(t *testing.T) {
 				client: c,
 			}
 
-			status, requeue, err := r.syncPromotions(context.Background(), tt.stage)
+			status, requeue, err := r.syncPromotions(t.Context(), tt.stage)
 			tt.assertions(t, status, requeue, err)
 		})
 	}
@@ -1419,28 +1419,28 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				require.NoError(t, err)
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
 					freight,
 				)
 				require.NoError(t, err)
 				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
 					freight,
 				)
 				require.NoError(t, err)
 				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-3"},
 					freight,
 				)
 				require.NoError(t, err)
 				require.NotContains(t, freight.Status.CurrentlyIn, testStage.Name)
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-4"},
 					freight,
 				)
@@ -1494,7 +1494,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				// Check that expected freight remain in CurrentlyIn (they're in the stage's FreightHistory)
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
 					freight,
 				)
@@ -1502,7 +1502,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
 
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
 					freight,
 				)
@@ -1511,7 +1511,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 
 				// Check verified freight - should be removed from CurrentlyIn and soak time updated
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "verified-freight"},
 					freight,
 				)
@@ -1564,7 +1564,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				// Check unverified freight - should just be removed from CurrentlyIn
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "unverified-freight"},
 					freight,
 				)
@@ -1619,7 +1619,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				// Check longer soak freight - should be removed but soak time should not be updated
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "longer-soak-freight"},
 					freight,
 				)
@@ -1684,7 +1684,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
 					freight,
 				)
@@ -1692,7 +1692,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
 
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
 					freight,
 				)
@@ -1701,7 +1701,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 
 				// Should handle nil Since field gracefully without panic
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "nil-since-freight"},
 					freight,
 				)
@@ -1766,7 +1766,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				// Check that expected freight remains in CurrentlyIn (they're in the stage's FreightHistory)
 				freight := &kargoapi.Freight{}
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-1"},
 					freight,
 				)
@@ -1774,7 +1774,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 				require.Contains(t, freight.Status.CurrentlyIn, testStage.Name)
 
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "fake-freight-2"},
 					freight,
 				)
@@ -1783,7 +1783,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 
 				// Should handle nil LongestCompletedSoak gracefully
 				err = c.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{Namespace: testProject, Name: "nil-soak-freight"},
 					freight,
 				)
@@ -1816,7 +1816,7 @@ func TestRegularStageReconciler_syncFreight(t *testing.T) {
 
 			r := &RegularStageReconciler{client: c}
 
-			err := r.syncFreight(context.Background(), testStage)
+			err := r.syncFreight(t.Context(), testStage)
 			testCase.assertions(t, c, err)
 		})
 	}
@@ -2062,7 +2062,7 @@ func TestRegularStageReconciler_assessHealth(t *testing.T) {
 				},
 			}
 
-			status := r.assessHealth(context.Background(), tt.stage)
+			status := r.assessHealth(t.Context(), tt.stage)
 			tt.assertions(t, status)
 		})
 	}
@@ -2428,7 +2428,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 
 				// Verify AnalysisRun was patched to terminate
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Name:      "test-analysis-run",
 					Namespace: "fake-project",
 				}, ar))
@@ -2508,7 +2508,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 
 				// Verify new AnalysisRun was created
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Name:      lastVerification.AnalysisRun.Name,
 					Namespace: lastVerification.AnalysisRun.Namespace,
 				}, ar))
@@ -2914,7 +2914,7 @@ func TestRegularStageReconciler_verifyStageFreight(t *testing.T) {
 				},
 			}
 
-			status, err := r.verifyStageFreight(context.Background(), tt.stage, startTime, fixedEndTime)
+			status, err := r.verifyStageFreight(t.Context(), tt.stage, startTime, fixedEndTime)
 			tt.assertions(t, c, recorder, status, err)
 		})
 	}
@@ -3111,7 +3111,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 				// Check if freight was properly marked as verified
 				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), client.ObjectKey{
+				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
 					Namespace: "fake-project",
 					Name:      "test-freight",
 				}, freight))
@@ -3165,7 +3165,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 
 				// Verify no changes were made to the freight
 				freight := &kargoapi.Freight{}
-				require.NoError(t, c.Get(context.Background(), client.ObjectKey{
+				require.NoError(t, c.Get(t.Context(), client.ObjectKey{
 					Namespace: "fake-project",
 					Name:      "test-freight",
 				}, freight))
@@ -3222,7 +3222,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				// Check both freight objects were marked as verified
 				for _, name := range []string{"freight-1", "freight-2"} {
 					freight := &kargoapi.Freight{}
-					require.NoError(t, c.Get(context.Background(), client.ObjectKey{
+					require.NoError(t, c.Get(t.Context(), client.ObjectKey{
 						Namespace: "fake-project",
 						Name:      name,
 					}, freight))
@@ -3342,7 +3342,7 @@ func TestRegularStageReconciler_markFreightVerifiedForStage(t *testing.T) {
 				healthChecker: &health.MockAggregatingChecker{},
 			}
 
-			status, err := r.markFreightVerifiedForStage(context.Background(), tt.stage)
+			status, err := r.markFreightVerifiedForStage(t.Context(), tt.stage)
 			tt.assertions(t, c, status, err)
 		})
 	}
@@ -3774,7 +3774,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 
 				// Verify analysis run was created
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
@@ -3822,7 +3822,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 
 				// Verify analysis run was created
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
@@ -3893,7 +3893,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 
 				// Verify promotion annotation was added
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
@@ -3953,7 +3953,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 
 				// Verify analysis run was created
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: vi.AnalysisRun.Namespace,
 					Name:      vi.AnalysisRun.Name,
 				}, ar))
@@ -4021,7 +4021,7 @@ func TestRegularStageReconciler_startVerification(t *testing.T) {
 				},
 			}
 
-			vi, err := r.startVerification(context.Background(), tt.stage, tt.freightCol, tt.req, now)
+			vi, err := r.startVerification(t.Context(), tt.stage, tt.freightCol, tt.req, now)
 			tt.assertions(t, c, vi, err)
 		})
 	}
@@ -4352,7 +4352,7 @@ func TestRegularStageReconciler_getVerificationResult(t *testing.T) {
 				},
 			}
 
-			vi, err := r.getVerificationResult(context.Background(), tt.freight)
+			vi, err := r.getVerificationResult(t.Context(), tt.freight)
 			tt.assertions(t, vi, err)
 		})
 	}
@@ -4552,7 +4552,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 
 				// Verify analysis run was patched with terminate = true
 				ar := &rolloutsapi.AnalysisRun{}
-				require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+				require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 					Namespace: "fake-project",
 					Name:      "test-analysis",
 				}, ar))
@@ -4696,7 +4696,7 @@ func TestRegularStageReconciler_abortVerification(t *testing.T) {
 				},
 			}
 
-			vi, err := r.abortVerification(context.Background(), tt.freightCol, tt.req)
+			vi, err := r.abortVerification(t.Context(), tt.freightCol, tt.req)
 			tt.assertions(t, c, vi, err)
 		})
 	}
@@ -4958,7 +4958,7 @@ func TestRegularStageReconciler_findExistingAnalysisRun(t *testing.T) {
 				client: c,
 			}
 
-			ar, err := r.findExistingAnalysisRun(context.Background(), tt.stage, tt.freightColID)
+			ar, err := r.findExistingAnalysisRun(t.Context(), tt.stage, tt.freightColID)
 			tt.assertions(t, ar, err)
 		})
 	}
@@ -5000,7 +5000,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Empty(t, promoList.Items)
 			},
 		},
@@ -5051,7 +5051,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Empty(t, promoList.Items)
 			},
 		},
@@ -5086,7 +5086,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Empty(t, promoList.Items)
 			},
 		},
@@ -5177,7 +5177,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify promotion was created for newest freight
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
 			},
@@ -5258,7 +5258,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Empty(t, promoList.Items)
 			},
 		},
@@ -5342,7 +5342,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no new promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Len(t, promoList.Items, 1)
 				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
 			},
@@ -5430,7 +5430,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify no new promotions were created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Len(t, promoList.Items, 1)
 				assert.Equal(t, "existing-promotion", promoList.Items[0].Name)
 			},
@@ -5516,7 +5516,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify promotion was created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
 			},
@@ -5636,7 +5636,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify promotion was created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "test-freight-2", promoList.Items[0].Spec.Freight)
 			},
@@ -5717,7 +5717,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify promotion was created
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 1)
 				assert.Equal(t, "test-freight-1", promoList.Items[0].Spec.Freight)
 			},
@@ -5824,7 +5824,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify promotions were created for both freight items
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				require.Len(t, promoList.Items, 2)
 
 				// Verify they're for different freight
@@ -6000,7 +6000,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 
 				// Verify only one promotion was created despite multiple sources
 				promoList := &kargoapi.PromotionList{}
-				require.NoError(t, c.List(context.Background(), promoList, client.InNamespace("fake-project")))
+				require.NoError(t, c.List(t.Context(), promoList, client.InNamespace("fake-project")))
 				assert.Len(t, promoList.Items, 1)
 			},
 		},
@@ -6193,7 +6193,7 @@ func TestRegularStageReconciler_autoPromoteFreight(t *testing.T) {
 				eventSender: k8sevent.NewEventSender(recorder),
 			}
 
-			status, err := r.autoPromoteFreight(context.Background(), tt.stage)
+			status, err := r.autoPromoteFreight(t.Context(), tt.stage)
 			tt.assertions(t, recorder, c, status, err)
 		})
 	}
@@ -6474,7 +6474,7 @@ func TestRegularStageReconciler_autoPromotionAllowed(t *testing.T) {
 				client: c,
 			}
 
-			allowed, err := r.autoPromotionAllowed(context.Background(), tt.stage)
+			allowed, err := r.autoPromotionAllowed(t.Context(), tt.stage)
 			tt.assertions(t, allowed, err)
 		})
 	}

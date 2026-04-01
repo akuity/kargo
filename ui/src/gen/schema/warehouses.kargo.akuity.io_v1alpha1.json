@@ -210,7 +210,7 @@
                     "type": "array"
                   },
                   "repoURL": {
-                    "description": "RepoURL is the repository URL of the GitSubscription.",
+                    "description": "RepoURL is the repository URL of the GitSubscription.\n",
                     "minLength": 1,
                     "pattern": "(?:^(ssh|https?)://(?:([\\w-]+)(:(.+))?@)?([\\w-]+(?:\\.[\\w-]+)*)(?::(\\d{1,5}))?(/.*)$)|(?:^([\\w-]+)@([\\w+]+(?:\\.[\\w-]+)*):(/?.*))",
                     "type": "string"

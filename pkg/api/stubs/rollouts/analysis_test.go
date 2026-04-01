@@ -1,7 +1,6 @@
 package rollouts
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -53,7 +52,7 @@ func TestGetAnalysisTemplate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			template, err := GetAnalysisTemplate(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",
@@ -102,7 +101,7 @@ func TestGetClusterAnalysisTemplate(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			template, err := GetClusterAnalysisTemplate(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				"fake-template",
 			)
@@ -150,7 +149,7 @@ func TestGetAnalysisRun(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			run, err := GetAnalysisRun(
-				context.Background(),
+				t.Context(),
 				testCase.client,
 				types.NamespacedName{
 					Namespace: "fake-namespace",

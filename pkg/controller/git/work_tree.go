@@ -76,7 +76,7 @@ type WorkTree interface {
 	ListTags() ([]TagMetadata, error)
 	// ListCommits returns a slice of commits in the current branch with
 	// metadata such as commit ID, commit date, and subject.
-	ListCommits(limit, skip uint) ([]CommitMetadata, error)
+	ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
@@ -93,6 +93,16 @@ type WorkTree interface {
 	URL() string
 	// UpdateSubmodules updates the submodules in the working tree.
 	UpdateSubmodules() error
+}
+
+// ListCommitsOptions contains options for listing commits.
+type ListCommitsOptions struct {
+	// Limit is the maximum number of commits to return. 0 means no limit.
+	Limit uint
+	// Skip is the number of commits to skip before returning results.
+	Skip uint
+	// Since limits commits to those at or after this time.
+	Since *time.Time
 }
 
 // workTree is an implementation of the WorkTree interface for interacting with
@@ -217,10 +227,10 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 
 	var homeDir string
 	if opts.Author != nil {
-		// This author information is specific to this commit, so we will override
-		// repository-level author information by creating a temporary home
-		// directory, configuring the author information "globally" within it, and
-		// then ensuring the git commit command uses that home directory.
+		// This author + committer is specific to this commit, so we will override
+		// repository-level user information by creating a temporary home directory,
+		// configuring the user information "globally" within it, and then ensuring
+		// the git commit command uses that home directory.
 		var err error
 		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
 			return fmt.Errorf(
@@ -234,9 +244,9 @@ func (w *workTree) Commit(message string, opts *CommitOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Author); err != nil {
+		if err = w.setupUser(homeDir, opts.Author); err != nil {
 			return fmt.Errorf(
-				"error setting up author information for commit command: %w", err,
+				"error setting up author + committer information for commit command: %w", err,
 			)
 		}
 	}
@@ -321,10 +331,10 @@ func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 	}
 
 	var homeDir string
-	// This signing config is specific to this tag, so we will override
-	// repository-level signing config by creating a temporary home
-	// directory, setting the tag configuration "globally" within it, and
-	// then ensuring the git tag command uses that home directory.
+	// This tagger is specific to this tag, so we will override repository-level
+	// user information by creating a temporary home directory, configuring the
+	// user information "globally" within it, and then ensuring the git tag
+	// command uses that home directory.
 	if opts.Tagger != nil {
 		var err error
 		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
@@ -339,7 +349,7 @@ func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
 					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
 			}
 		}()
-		if err = w.setupAuthor(homeDir, opts.Tagger); err != nil {
+		if err = w.setupUser(homeDir, opts.Tagger); err != nil {
 			return fmt.Errorf(
 				"error setting up author information for tag command: %w", err,
 			)
@@ -416,7 +426,7 @@ func (w *workTree) Fetch(opts *FetchOptions) error {
 }
 
 func (w *workTree) GetDiffPathsForCommitID(commitID string) ([]string, error) {
-	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-only", commitID))
+	resBytes, err := libExec.Exec(w.buildGitCommand("show", "--pretty=", "--name-only", "--first-parent", commitID))
 	if err != nil {
 		return nil, fmt.Errorf("error getting diff paths for commit %q: %w", commitID, err)
 	}
@@ -501,9 +511,13 @@ type CommitMetadata struct {
 	Subject string
 }
 
-func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
+func (w *workTree) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	if opts == nil {
+		opts = &ListCommitsOptions{}
+	}
 	args := []string{
 		"log",
+		"--first-parent",
 		// This format is designed to output the following fields, separated by
 		// tabs (%x09):
 		//
@@ -514,14 +528,17 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 		// - subject
 		"--pretty=format:%H%x09%ci%x09%an <%ae>%x09%cn <%ce>%x09%s",
 	}
-	if limit > 0 {
-		args = append(args, fmt.Sprintf("--max-count=%d", limit))
+	if opts.Limit > 0 {
+		args = append(args, fmt.Sprintf("--max-count=%d", opts.Limit))
 	}
-	if skip > 0 {
-		args = append(args, fmt.Sprintf("--skip=%d", skip))
+	if opts.Skip > 0 {
+		args = append(args, fmt.Sprintf("--skip=%d", opts.Skip))
+	}
+	if opts.Since != nil {
+		args = append(args, fmt.Sprintf("--since=%s", opts.Since.Format(time.RFC3339)))
 	}
 
-	commitsBytes, err := libExec.Exec(w.buildGitCommand(args...))
+	b, err := libExec.Exec(w.buildGitCommand(args...))
 	if err != nil {
 		return nil, fmt.Errorf(
 			"error listing commits for repo %q: %w",
@@ -530,7 +547,7 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 	}
 
 	var commits []CommitMetadata
-	scanner := bufio.NewScanner(bytes.NewReader(commitsBytes))
+	scanner := bufio.NewScanner(bytes.NewReader(b))
 	for scanner.Scan() {
 		line := scanner.Bytes()
 		parts := bytes.SplitN(scanner.Bytes(), []byte("\t"), 5)
@@ -551,7 +568,9 @@ func (w *workTree) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
 			Subject:    string(parts[4]),
 		})
 	}
-
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error scanning commits output: %w", err)
+	}
 	return commits, nil
 }
 
@@ -679,10 +698,15 @@ type PushOptions struct {
 	// locally. Whether this field is empty or non-empty, if Tag is non-empty,
 	// it takes precedence and the tag will be pushed -- the branch will not.
 	TargetBranch string
-	// PullRebase indicates whether to pull and rebase before pushing. This can
-	// be useful when pushing changes to a remote branch that has been updated
-	// in the time since the local branch was last pulled.
-	PullRebase bool
+	// IntegrationPolicy controls how remote changes are integrated before
+	// pushing. If empty or set to PushIntegrationPolicyNone, no integration
+	// is performed.
+	IntegrationPolicy PushIntegrationPolicy
+	// Committer is the identity used as the committer for merge commits or
+	// replacement commits created when integrating remote changes before
+	// pushing. If nil, the default author already configured in the git
+	// repository will be used.
+	Committer *User
 	// Tag specifies a tag to push to the remote repository. If this field and
 	// TargetBranch are both non-empty, this field takes precedence and the tag
 	// will be pushed -- the branch will not.
@@ -697,6 +721,9 @@ var nonFastForwardRegex = regexp.MustCompile(`(?m)^\s*!\s+\[(?:remote )?rejected
 func (w *workTree) Push(opts *PushOptions) error {
 	if opts == nil {
 		opts = &PushOptions{}
+	}
+	if opts.IntegrationPolicy == "" {
+		opts.IntegrationPolicy = PushIntegrationPolicyNone
 	}
 
 	args := []string{"push", "origin"}
@@ -717,23 +744,18 @@ func (w *workTree) Push(opts *PushOptions) error {
 	}
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-	if opts.PullRebase {
+	if opts.IntegrationPolicy != PushIntegrationPolicyNone {
 		exists, err := w.RemoteBranchExists(targetBranch)
 		if err != nil {
 			return err
 		}
-		// We only want to pull and rebase if the remote branch exists.
+		// We only want to pull and rebase/merge if the remote branch exists.
 		if exists {
-			if _, err = libExec.Exec(w.buildGitCommand("pull", "--rebase", "origin", targetBranch)); err != nil {
-				// The error we're most concerned with is a merge conflict requiring
-				// manual resolution, because it's an error that no amount of retries
-				// will fix. If we find that a rebase is in progress, this is what
-				// has happened.
-				if isRebasing, isRebasingErr := w.IsRebasing(); isRebasingErr == nil && isRebasing {
-					return ErrMergeConflict
-				}
-				// If we get to here, the error isn't a merge conflict.
-				return fmt.Errorf("error pulling and rebasing branch: %w", err)
+			if err = w.integrateBeforePush(
+				targetBranch,
+				opts.Committer, opts.IntegrationPolicy,
+			); err != nil {
+				return err
 			}
 		}
 	}

@@ -2,18 +2,15 @@ package git
 
 import (
 	"fmt"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
-	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
 
 	testingPkg "github.com/akuity/kargo/api/testing"
-	"github.com/akuity/kargo/pkg/types"
+	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
 func TestNonFastForwardRegex(t *testing.T) {
@@ -31,53 +28,8 @@ func TestNonFastForwardRegex(t *testing.T) {
 }
 
 func TestWorkTree(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	// This will be something to opt into because on some OSes, this will lead
-	// to keychain-related prompts.
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
-		},
-	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
-
-	setupRep, err := Clone(
-		testRepoURL,
-		&ClientOptions{
-			Credentials: &testRepoCreds,
-		},
-		nil,
-	)
-	require.NoError(t, err)
-	require.NotNil(t, setupRep)
-	defer setupRep.Close()
-	err = os.WriteFile(fmt.Sprintf("%s/%s", setupRep.Dir(), "test.txt"), []byte("foo"), 0600)
-	require.NoError(t, err)
-	err = setupRep.AddAllAndCommit(fmt.Sprintf("initial commit %s", uuid.NewString()), nil)
-	require.NoError(t, err)
-	err = setupRep.Push(nil)
-	require.NoError(t, err)
-	err = setupRep.Close()
-	require.NoError(t, err)
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t, initialMainCommit)
+	defer testServer.Close()
 
 	rep, err := CloneBare(
 		testRepoURL,
@@ -175,4 +127,173 @@ func Test_parseTagMetadataLine(t *testing.T) {
 func mustParseTime(s string) time.Time {
 	t, _ := time.Parse("2006-01-02 15:04:05 -0700", s)
 	return t
+}
+
+func TestListCommits(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	wt := internalWorkTree(t, rep)
+
+	// Create initial commit on main
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/file.txt", rep.Dir()),
+			[]byte("initial"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("main: initial commit", nil))
+
+	// Create a feature branch from the initial commit
+	require.NoError(t, rep.CreateChildBranch("feature"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/feature.txt", rep.Dir()),
+			[]byte("feature work 1"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("feature: work 1", nil))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/feature.txt", rep.Dir()),
+			[]byte("feature work 2"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("feature: work 2", nil))
+
+	// Back to main, add another commit
+	require.NoError(t, rep.Checkout("main"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/file.txt", rep.Dir()),
+			[]byte("second"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("main: second commit", nil))
+
+	// Merge the feature branch into main
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "feature", "--no-ff", "-m", "main: merge feature",
+	))
+	require.NoError(t, err)
+
+	// ListCommits should only return first-parent commits (main line),
+	// not the individual feature branch commits.
+	commits, err := rep.ListCommits(nil)
+	require.NoError(t, err)
+
+	subjects := make([]string, len(commits))
+	for i, c := range commits {
+		subjects[i] = c.Subject
+	}
+	require.Equal(
+		t,
+		[]string{
+			"main: merge feature",
+			"main: second commit",
+			"main: initial commit",
+		},
+		subjects,
+	)
+}
+
+func TestGetDiffPathsForMergeCommit(t *testing.T) {
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
+
+	rep, err := Clone(
+		testRepoURL,
+		&ClientOptions{Credentials: &testRepoCreds},
+		nil,
+	)
+	require.NoError(t, err)
+	require.NotNil(t, rep)
+	defer rep.Close()
+
+	wt := internalWorkTree(t, rep)
+
+	// Create initial commit on main with base files
+	require.NoError(t, os.MkdirAll(fmt.Sprintf("%s/foo", rep.Dir()), 0o755))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file1.txt", rep.Dir()),
+			[]byte("base"),
+			0o600,
+		),
+	)
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file2.txt", rep.Dir()),
+			[]byte("base"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("initial commit", nil))
+
+	// Create branch-a and modify file1
+	require.NoError(t, rep.CreateChildBranch("branch-a"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file1.txt", rep.Dir()),
+			[]byte("changed by branch-a"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("branch-a: modify file1", nil))
+
+	// Back to main, create branch-b, modify file2
+	require.NoError(t, rep.Checkout("main"))
+	require.NoError(t, rep.CreateChildBranch("branch-b"))
+	require.NoError(
+		t,
+		os.WriteFile(
+			fmt.Sprintf("%s/foo/file2.txt", rep.Dir()),
+			[]byte("changed by branch-b"),
+			0o600,
+		),
+	)
+	require.NoError(t, rep.AddAllAndCommit("branch-b: modify file2", nil))
+
+	// Merge branch-b into main
+	require.NoError(t, rep.Checkout("main"))
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "branch-b", "--no-ff", "-m", "merge branch-b",
+	))
+	require.NoError(t, err)
+
+	// Merge branch-a into main
+	_, err = libExec.Exec(wt.buildGitCommand(
+		"merge", "branch-a", "--no-ff", "-m", "merge branch-a",
+	))
+	require.NoError(t, err)
+
+	mergeCommitID, err := rep.LastCommitID()
+	require.NoError(t, err)
+
+	// GetDiffPathsForCommitID on the merge commit should return only
+	// the file introduced by that merge (file1, from branch-a), not
+	// file2 which was already on main via the earlier merge of branch-b.
+	paths, err := rep.GetDiffPathsForCommitID(mergeCommitID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"foo/file1.txt"}, paths)
 }

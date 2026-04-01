@@ -327,10 +327,11 @@ Waits for a Jira issue to reach a specific status before proceeding.
 
 #### Configuration
 
-| Name                           | Type     | Required | Description                                                    |
-| ------------------------------ | -------- | -------- | -------------------------------------------------------------- |
-| `waitForStatus.issueKey`       | `string` | Y        | The Jira Issue Key (e.g., EXT-123).                            |
-| `waitForStatus.expectedStatus` | `string` | Y        | The expected status to wait for (e.g., 'IN PROGRESS', 'DONE'). |
+| Name                           | Type      | Required | Description                                                    |
+| ------------------------------ | --------- | -------- | -------------------------------------------------------------- |
+| `waitForStatus.issueKey`       | `string`  | Y        | The Jira Issue Key (e.g., EXT-123).                            |
+| `waitForStatus.expectedStatus` | `string`  | Y        | The expected status to wait for (e.g., 'IN PROGRESS', 'DONE'). |
+| `waitForStatus.pollInterval`   | `string`  | N        | Poll interval for checking issue status, specified as a [Go duration string](https://pkg.go.dev/time#ParseDuration) (e.g., `30s`, `5m`). Overrides the default controller reconciliation interval of 5 minutes when set. Available in Kargo >= v1.10. |
 
 #### Output
 

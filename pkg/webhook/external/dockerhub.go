@@ -103,6 +103,6 @@ func (d *dockerhubWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			"mediaType", payload.PushData.MediaType,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, d.client, d.project, repoURLs, payload.PushData.Tag)
+		refreshWarehouses(ctx, w, d.client, d.project, repoURLs, nil, payload.PushData.Tag)
 	})
 }

@@ -2,47 +2,17 @@ package git
 
 import (
 	"fmt"
-	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/sosedoff/gitkit"
 	"github.com/stretchr/testify/require"
-
-	"github.com/akuity/kargo/pkg/types"
 )
 
 func TestRepo(t *testing.T) {
-	testRepoCreds := RepoCredentials{
-		Username: "fake-username",
-		Password: "fake-password",
-	}
-
-	// This will be something to opt into because on some OSes, this will lead
-	// to keychain-related prompts.
-	var useAuth bool
-	if useAuthStr := os.Getenv("TEST_GIT_CLIENT_WITH_AUTH"); useAuthStr != "" {
-		useAuth = types.MustParseBool(useAuthStr)
-	}
-	service := gitkit.New(
-		gitkit.Config{
-			Dir:        t.TempDir(),
-			AutoCreate: true,
-			Auth:       useAuth,
-		},
-	)
-	require.NoError(t, service.Setup())
-	service.AuthFunc =
-		func(cred gitkit.Credential, _ *gitkit.Request) (bool, error) {
-			return cred.Username == testRepoCreds.Username &&
-				cred.Password == testRepoCreds.Password, nil
-		}
-	server := httptest.NewServer(service)
-	defer server.Close()
-
-	testRepoURL := fmt.Sprintf("%s/test.git", server.URL)
+	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t)
+	defer testServer.Close()
 
 	rep, err := Clone(
 		testRepoURL,

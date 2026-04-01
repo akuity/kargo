@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"go.yaml.in/yaml/v3"
+
+	"github.com/akuity/kargo/pkg/sjson"
 )
 
 // FieldNotFoundErr is an error type that is returned when a field is not found
@@ -21,7 +23,7 @@ func (e FieldNotFoundErr) Error() string {
 // and decodes it into the provided value. The path is specified using a
 // dot-separated string, similar to the UpdateField function.
 func DecodeField(node *yaml.Node, path string, out any) error {
-	parts, err := splitKey(path)
+	parts, err := sjson.SplitKey(path)
 	if err != nil {
 		return err
 	}

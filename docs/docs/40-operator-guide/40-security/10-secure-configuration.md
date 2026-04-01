@@ -193,3 +193,42 @@ credential namespaces" as described [here](40-managing-secrets.md). __We
 still do not recommend this.__
 
 :::
+
+### Push Integration Policy
+
+When the
+[`git-push`](../../50-user-guide/60-reference-docs/30-promotion-steps/git-push.md)
+promotion step needs to integrate remote changes before pushing, it can either
+rebase (replaying local commits on top of the remote branch) or merge (creating
+a merge commit). Rebasing produces cleaner, linear history but has a trust
+implication: git recreates each rebased commit with a new identity, effectively
+re-signing them as the committer. This means:
+
+- __Commits signed by untrusted keys__ would be re-signed as Kargo, falsely
+  attesting that Kargo trusts their content.
+- __Unsigned commits__ would gain Kargo's signature if signing is configured,
+  fabricating trust that didn't previously exist.
+- __Signed commits__ would lose their signatures if signing is _not_ configured,
+  stripping trust that did previously exist.
+
+The `controller.gitClient.pushIntegrationPolicy` setting controls this behavior.
+__We recommend `RebaseOrMerge` or stricter for any environment where commit
+signatures carry trust meaning.__
+
+:::caution
+
+The current default is `AlwaysRebase`.
+
+Starting with v1.12.0, the default will change to `RebaseOrMerge`. If you rely
+on the current behavior, set the policy explicitly before upgrading.
+
+:::
+
+```yaml
+controller:
+  gitClient:
+    pushIntegrationPolicy: RebaseOrMerge
+```
+
+For a full description of all available options, see
+[Common Configurations](../20-advanced-installation/30-common-configurations.md#push-integration-policy).

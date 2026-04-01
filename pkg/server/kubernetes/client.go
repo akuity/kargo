@@ -93,6 +93,8 @@ func setOptionsDefaults(opts ClientOptions) (ClientOptions, error) {
 	return opts, nil
 }
 
+type AuthorizingClient struct{}
+
 // The Client interface combines the familiar controller-runtime WithWatch
 // interface with a helpful Authorized() method.
 type Client interface {
@@ -223,6 +225,14 @@ func newDefaultInternalClient(
 		indexer.FreightByWarehouse,
 	); err != nil {
 		return nil, fmt.Errorf("error indexing Freight by Warehouse: %w", err)
+	}
+	if err = cluster.GetFieldIndexer().IndexField(
+		ctx,
+		&kargoapi.Freight{},
+		indexer.FreightByCurrentStagesField,
+		indexer.FreightByCurrentStages,
+	); err != nil {
+		return nil, fmt.Errorf("error indexing Freight by Stages in which it is currently in use: %w", err)
 	}
 	if err = cluster.GetFieldIndexer().IndexField(
 		ctx,

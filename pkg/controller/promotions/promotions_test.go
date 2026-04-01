@@ -305,7 +305,7 @@ func TestReconcile(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.TODO()
+			ctx := t.Context()
 			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
 
@@ -532,7 +532,7 @@ func Test_reconciler_terminatePromotion(t *testing.T) {
 			}
 
 			req := tt.req
-			err := r.terminatePromotion(context.Background(), &req, tt.promo, tt.freight)
+			err := r.terminatePromotion(t.Context(), &req, tt.promo, tt.freight)
 			tt.assertions(t, recorder, tt.promo, err)
 		})
 	}
@@ -628,7 +628,7 @@ func Test_reconciler_handleDeletion(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx := t.Context()
 			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.objects...)
 
@@ -666,13 +666,13 @@ func Test_reconciler_terminatePromotion_cleansUpWorkDir(t *testing.T) {
 	}
 
 	req := kargoapi.AbortPromotionRequest{Action: kargoapi.AbortActionTerminate}
-	err := r.terminatePromotion(context.Background(), &req, promo, nil)
+	err := r.terminatePromotion(t.Context(), &req, promo, nil)
 	require.NoError(t, err)
 
 	require.True(t, cleanupCalled)
 
 	var updated kargoapi.Promotion
-	require.NoError(t, c.Get(context.Background(), types.NamespacedName{
+	require.NoError(t, c.Get(t.Context(), types.NamespacedName{
 		Namespace: "fake-ns",
 		Name:      "fake-promo",
 	}, &updated))

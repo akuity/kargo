@@ -110,7 +110,8 @@ func testRESTEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 
@@ -204,7 +205,7 @@ func testRESTWatchEndpoint(
 			internalClient := testCase.clientBuilder.WithScheme(testScheme).Build()
 			var err error
 			s.client, err = kubernetes.NewClient(
-				context.Background(),
+				t.Context(),
 				&rest.Config{},
 				kubernetes.ClientOptions{
 					SkipAuthorization: true,
@@ -219,7 +220,8 @@ func testRESTWatchEndpoint(
 			)
 			require.NoError(t, err)
 			s.rolesDB = rbac.NewKubernetesRolesDatabase(
-				internalClient,
+				s.client,
+				s.client,
 				rbac.RolesDatabaseConfig{KargoNamespace: testKargoNamespace},
 			)
 
@@ -234,7 +236,7 @@ func testRESTWatchEndpoint(
 			}
 
 			// Create a context with timeout to prevent hanging on watch endpoints
-			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
 			defer cancel()
 			req = req.WithContext(ctx)
 
@@ -247,7 +249,7 @@ func testRESTWatchEndpoint(
 				}()
 			}
 
-			router := s.setupRESTRouter(context.Background())
+			router := s.setupRESTRouter(t.Context())
 			router.ServeHTTP(w, req)
 
 			testCase.assertions(t, w, internalClient)

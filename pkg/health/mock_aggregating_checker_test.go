@@ -12,12 +12,12 @@ import (
 func TestMockAggregatingChecker_Check(t *testing.T) {
 	t.Run("without function injection", func(t *testing.T) {
 		checker := &MockAggregatingChecker{}
-		res := checker.Check(context.Background(), "fake-project", "fake-stage", nil)
+		res := checker.Check(t.Context(), "fake-project", "fake-stage", nil)
 		assert.Equal(t, kargoapi.HealthStateHealthy, res.Status)
 	})
 
 	t.Run("with function injection", func(t *testing.T) {
-		ctx := context.Background()
+		ctx := t.Context()
 		const testProject = "fake-project"
 		const testStage = "fake-stage"
 		criteria := []Criteria{{Kind: "mock"}}

@@ -406,7 +406,7 @@ func TestReconciler_reconcile(t *testing.T) {
 				WithObjects(tt.project).
 				WithInterceptorFuncs(tt.interceptor).
 				Build()
-			status, err := tt.reconciler.reconcile(context.Background(), tt.project)
+			status, err := tt.reconciler.reconcile(t.Context(), tt.project)
 			tt.assertions(t, status, tt.reconciler.client, err)
 		})
 	}
@@ -1174,7 +1174,7 @@ func TestReconciler_syncProject(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			status, err := testCase.reconciler.syncProject(
-				context.Background(),
+				t.Context(),
 				testCase.project,
 			)
 			testCase.assertions(t, status, err)
@@ -1421,7 +1421,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureNamespace(context.Background(), testCase.project),
+				testCase.reconciler.ensureNamespace(t.Context(), testCase.project),
 			)
 		})
 	}
@@ -1521,7 +1521,7 @@ func TestReconciler_ensureSystemPermissions(t *testing.T) {
 			testCase.assertions(
 				t,
 				testCase.reconciler.ensureSystemPermissions(
-					context.Background(),
+					t.Context(),
 					&kargoapi.Project{},
 				),
 			)
@@ -1629,7 +1629,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "fake-controller",
 						Namespace: cfg.KargoNamespace,
@@ -1670,7 +1670,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSA.Name),
 						Namespace: testProject.Name,
@@ -1716,7 +1716,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSA.Name),
 						Namespace: testProject.Name,
@@ -1777,7 +1777,7 @@ func TestReconciler_ensureControllerPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, cfg)
-			err = r.ensureControllerPermissions(context.Background(), testProject)
+			err = r.ensureControllerPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}
@@ -2001,7 +2001,7 @@ func TestReconciler_ensureDefaultUserRoles(t *testing.T) {
 			}
 			testCase.assertions(
 				t,
-				testCase.reconciler.ensureDefaultUserRoles(context.Background(), p),
+				testCase.reconciler.ensureDefaultUserRoles(t.Context(), p),
 			)
 		})
 	}
@@ -2070,7 +2070,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ServiceAccount still exists
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2095,7 +2095,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2108,7 +2108,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2135,7 +2135,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ArgoCD ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-argocd-service-account",
 						Namespace: testProject.Name,
@@ -2162,7 +2162,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ClusterRoleBinding was created
 				crb := &rbacv1.ClusterRoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
 					},
@@ -2193,7 +2193,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify ArgoCD RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-%s", testProject.Name)),
 						Namespace: "argocd",
@@ -2227,7 +2227,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify orchestrator ServiceAccount was created
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-orchestrator",
 						Namespace: testProject.Name,
@@ -2239,7 +2239,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify control plane ServiceAccount was created
 				sa = &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-control-plane",
 						Namespace: testProject.Name,
@@ -2259,7 +2259,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				for _, rbName := range roleBindings {
 					rb := &rbacv1.RoleBinding{}
 					err = cl.Get(
-						context.Background(),
+						t.Context(),
 						types.NamespacedName{
 							Name:      rbName,
 							Namespace: testProject.Name,
@@ -2286,7 +2286,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify orchestrator ServiceAccount was NOT created in project namespace
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "test-orchestrator",
 						Namespace: testProject.Name,
@@ -2313,7 +2313,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify manager RoleBinding was created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-manager",
 						Namespace: testProject.Name,
@@ -2342,7 +2342,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify manager RoleBinding was NOT created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      "kargo-manager",
 						Namespace: testProject.Name,
@@ -2424,7 +2424,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 				// Verify it still exists
 				crb := &rbacv1.ClusterRoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name: kubernetes.ShortenResourceName(fmt.Sprintf("kargo-argocd-role-%s", testProject.Name)),
 					},
@@ -2438,7 +2438,7 @@ func TestReconciler_ensureExtendedPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, testCase.cfg)
-			err := r.ensureExtendedPermissions(context.Background(), testProject)
+			err := r.ensureExtendedPermissions(t.Context(), testProject)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}

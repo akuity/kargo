@@ -258,7 +258,7 @@ func Test_gitPRMerger_run(t *testing.T) {
 			cfg.RepoURL = "https://github.com/example/repo.git"
 
 			res, err := runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				cfg,
 			)

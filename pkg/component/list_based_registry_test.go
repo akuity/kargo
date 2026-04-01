@@ -213,11 +213,11 @@ func TestListBasedRegistry_WithFunctionValues(t *testing.T) {
 	}
 
 	// Test matching predicate
-	reg, err := registry.Get(context.Background(), "match")
+	reg, err := registry.Get(t.Context(), "match")
 	require.NoError(t, err)
 
 	// Verify the factory function works
-	result, err := reg.Value(context.Background(), "test")
+	result, err := reg.Value(t.Context(), "test")
 	require.NoError(t, err)
 	require.Equal(t, "output-test", result)
 }
