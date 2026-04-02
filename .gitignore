@@ -11,4 +11,3 @@ vendor/
 internal/server/ui/
 .DS_Store
 docs/static/swagger.json
-docs/static/swagger.yaml
