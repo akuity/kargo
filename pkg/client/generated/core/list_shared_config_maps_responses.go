@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListSharedConfigMapsReader is a Reader for the ListSharedConfigMaps structure.
@@ -42,7 +44,7 @@ ListSharedConfigMapsOK describes a response with status code 200, with default h
 ConfigMapList resource (k8s.io/api/core/v1.ConfigMapList)
 */
 type ListSharedConfigMapsOK struct {
-	Payload any
+	Payload *models.V1ConfigMapList
 }
 
 // IsSuccess returns true when this list shared config maps o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *ListSharedConfigMapsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/shared/configmaps][%d] listSharedConfigMapsOK %s", 200, payload)
 }
 
-func (o *ListSharedConfigMapsOK) GetPayload() any {
+func (o *ListSharedConfigMapsOK) GetPayload() *models.V1ConfigMapList {
 	return o.Payload
 }
 
 func (o *ListSharedConfigMapsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1ConfigMapList)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -299,7 +299,12 @@ func (p *provider) ListPullRequests(
 func (p *provider) MergePullRequest(
 	ctx context.Context,
 	id int64,
+	opts *gitprovider.MergePullRequestOpts,
 ) (*gitprovider.PullRequest, bool, error) {
+	if opts == nil {
+		opts = &gitprovider.MergePullRequestOpts{}
+	}
+
 	ghPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))
 	if err != nil {
 		return nil, false, fmt.Errorf("error getting pull request %d: %w", id, err)
@@ -326,14 +331,18 @@ func (p *provider) MergePullRequest(
 		p.owner,
 		p.repo,
 		int(id),
-		"", // Use default commit message
-		&github.PullRequestOptions{},
+		"", // Use default commit message.
+		&github.PullRequestOptions{MergeMethod: opts.MergeMethod},
 	)
 	if err != nil {
 		return nil, false, fmt.Errorf("error merging pull request %d: %w", id, err)
 	}
 	if mergeResult == nil {
 		return nil, false, fmt.Errorf("unexpected nil merge result")
+	}
+	if !ptr.Deref(mergeResult.Merged, false) {
+		return nil, false,
+			fmt.Errorf("merge rejected for pull request %d", id)
 	}
 
 	updatedPR, _, err := p.client.GetPullRequests(ctx, p.owner, p.repo, int(id))

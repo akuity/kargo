@@ -247,6 +247,8 @@ type GitCommitConfigAuthor struct {
 type GitMergePRConfig struct {
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The merge method to use when merging the pull request. Options are provider-specific.
+	MergeMethod string `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
@@ -637,6 +639,22 @@ type OCIDownloadConfig struct {
 	MediaType string `json:"mediaType,omitempty"`
 	// OutPath is the path to the destination file where the extracted artifact will be saved.
 	OutPath string `json:"outPath"`
+}
+
+type OCIPushConfig struct {
+	// Annotations to set on the destination artifact. Keys may be prefixed with 'index:' or
+	// 'manifest:' to scope them to the index or image manifest respectively. Unprefixed keys
+	// default to the image manifest. For single images, 'index:'-prefixed keys are ignored.
+	Annotations map[string]string `json:"annotations,omitempty"`
+	// DestRef is the destination reference including tag (e.g. 'registry/repo:tag' or
+	// 'oci://registry/repo:tag'). For retag-in-place, use the same repo as srcRef with the new
+	// tag.
+	DestRef string `json:"destRef"`
+	// Whether to skip TLS verification when communicating with registries. Defaults to false.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// SrcRef is the source OCI artifact reference with tag or digest (e.g. 'registry/repo:tag'
+	// or 'registry/repo@sha256:...'). Use 'oci://' prefix for Helm charts.
+	SrcRef string `json:"srcRef"`
 }
 
 type SetFreightAliasConfig struct {

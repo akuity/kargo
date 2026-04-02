@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // UpdateProjectGenericCredentialsReader is a Reader for the UpdateProjectGenericCredentials structure.
@@ -42,7 +44,7 @@ UpdateProjectGenericCredentialsOK describes a response with status code 200, wit
 Secret resource (k8s.io/api/core/v1.Secret)
 */
 type UpdateProjectGenericCredentialsOK struct {
-	Payload any
+	Payload *models.V1Secret
 }
 
 // IsSuccess returns true when this update project generic credentials o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *UpdateProjectGenericCredentialsOK) String() string {
 	return fmt.Sprintf("[PUT /v1beta1/projects/{project}/generic-credentials/{generic-credentials}][%d] updateProjectGenericCredentialsOK %s", 200, payload)
 }
 
-func (o *UpdateProjectGenericCredentialsOK) GetPayload() any {
+func (o *UpdateProjectGenericCredentialsOK) GetPayload() *models.V1Secret {
 	return o.Payload
 }
 
 func (o *UpdateProjectGenericCredentialsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1Secret)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -615,7 +615,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -651,7 +651,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -687,7 +687,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -1079,7 +1079,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 				// Verify health checks include all 3 apps
 				require.NotNil(t, res.HealthCheck)

@@ -3,6 +3,7 @@ package promotions
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -32,6 +33,7 @@ func TestNewPromotionReconciler(t *testing.T) {
 	kubeClient := fake.NewClientBuilder().Build()
 	r := newReconciler(
 		kubeClient,
+		kubeClient,
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -55,6 +57,7 @@ func newFakeReconciler(
 		WithObjects(objects...).WithStatusSubresource(objects...).Build()
 	return newReconciler(
 		kargoClient,
+		kargoClient,
 		k8sevent.NewEventSender(recorder),
 		&promotion.MockEngine{},
 		ReconcilerConfig{},
@@ -63,8 +66,12 @@ func newFakeReconciler(
 
 func TestReconcile(t *testing.T) {
 	testCases := []struct {
-		name      string
-		promos    []client.Object
+		name   string
+		promos []client.Object
+		// apiReader, if set, overrides the reconciler's direct API reader. Use
+		// this to simulate cache/API divergence or to assert the reader is not
+		// called (e.g. wrap with an interceptor that calls t.Error on Get).
+		apiReader client.Reader
 		promoteFn func(
 			context.Context,
 			kargoapi.Promotion,
@@ -103,6 +110,7 @@ func TestReconcile(t *testing.T) {
 		{
 			name:                  "promo doesn't exist",
 			promoToReconcile:      &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			apiReader:             assertNotCalledReader(t),
 			expectPromoteFnCalled: false,
 		},
 		{
@@ -114,6 +122,7 @@ func TestReconcile(t *testing.T) {
 			promos: []client.Object{
 				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseErrored, now),
 			},
+			apiReader: assertNotCalledReader(t),
 		},
 		{
 			name:                  "Promotion doesn't belong to shard",
@@ -134,6 +143,7 @@ func TestReconcile(t *testing.T) {
 					},
 				},
 			},
+			apiReader: assertNotCalledReader(t),
 		},
 		{
 			name:                  "promo already running",
@@ -281,6 +291,71 @@ func TestReconcile(t *testing.T) {
 			},
 		},
 		{
+			// issue-5282: the cache holds a stale Running promotion with no step
+			// metadata (as it was just before any steps ran), while the API has
+			// the authoritative state reflecting steps already completed. The
+			// reconciler must use the API data so it resumes from the correct
+			// step rather than re-executing from step 0.
+			name:                  "stale cache: cache has no step metadata, API has current state",
+			expectPromoteFnCalled: true,
+			expectedPhase:         kargoapi.PromotionPhaseSucceeded,
+			expectedEventRecorded: true,
+			expectedEventType:     kargoapi.EventTypePromotionSucceeded,
+			promos: []client.Object{
+				&kargoapi.Stage{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "fake-stage",
+						Namespace: "fake-namespace",
+					},
+					Status: kargoapi.StageStatus{
+						CurrentPromotion: &kargoapi.PromotionReference{
+							Name: "fake-promo",
+						},
+					},
+				},
+				// Stale cached copy: Running but no step metadata.
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
+			},
+			apiReader: fakeReaderWithObjects(t, func() *kargoapi.Promotion {
+				// Fresh API copy: Running with step metadata showing progress.
+				p := newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now)
+				p.Status.CurrentStep = 1
+				p.Status.StepExecutionMetadata = kargoapi.StepExecutionMetadataList{{
+					Alias:  "step-0",
+					Status: kargoapi.PromotionStepStatusSucceeded,
+				}}
+				return p
+			}()),
+			promoToReconcile: &types.NamespacedName{Namespace: "fake-namespace", Name: "fake-promo"},
+			promoteFn: func(
+				_ context.Context,
+				p kargoapi.Promotion,
+				_ *kargoapi.Freight,
+			) (*kargoapi.PromotionStatus, *time.Duration, error) {
+				// Assert the reconciler is using the API's authoritative state,
+				// not the stale cached copy.
+				if len(p.Status.StepExecutionMetadata) == 0 {
+					return nil, nil, fmt.Errorf(
+						"expected step execution metadata from API reader, got none (stale cache used)",
+					)
+				}
+				return &kargoapi.PromotionStatus{Phase: kargoapi.PromotionPhaseSucceeded}, nil, nil
+			},
+		},
+		{
+			// The cache shows the Promotion as active, but the direct API read
+			// (apiReader) returns a terminal state — the Promotion completed
+			// between the two reads. The reconciler must not proceed.
+			name:                  "promo terminal in API but active in cache",
+			expectPromoteFnCalled: false,
+			promos: []client.Object{
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseRunning, now),
+			},
+			apiReader: fakeReaderWithObjects(t,
+				newPromo("fake-namespace", "fake-promo", "fake-stage", kargoapi.PromotionPhaseSucceeded, now),
+			),
+		},
+		{
 			name: "terminates promotion on request",
 			promos: []client.Object{
 				func() *kargoapi.Promotion {
@@ -306,6 +381,9 @@ func TestReconcile(t *testing.T) {
 			ctx := t.Context()
 			recorder := fakeevent.NewEventRecorder(1)
 			r := newFakeReconciler(t, recorder, tc.promos...)
+			if tc.apiReader != nil {
+				r.apiReader = tc.apiReader
+			}
 
 			promoteWasCalled := false
 			r.promoteFn = func(
@@ -1108,4 +1186,37 @@ func Test_buildTargetFreightCollection(t *testing.T) {
 			require.Len(t, result.Freight, tc.expectedNumFreight)
 		})
 	}
+}
+
+// assertNotCalledReader returns a client.Reader that fails the test if Get is
+// called. Use it to verify that a code path exits before reaching the direct
+// API read.
+func assertNotCalledReader(t *testing.T) client.Reader {
+	t.Helper()
+	return interceptor.NewClient(
+		fake.NewClientBuilder().Build(),
+		interceptor.Funcs{
+			Get: func(
+				_ context.Context,
+				_ client.WithWatch,
+				_ client.ObjectKey,
+				_ client.Object,
+				_ ...client.GetOption,
+			) error {
+				t.Error("apiReader.Get was called but should not have been")
+				return nil
+			},
+		},
+	)
+}
+
+// fakeReaderWithObjects returns a client.Reader backed by a fake client
+// pre-populated with the given objects. Use it to simulate a direct API read
+// returning data that differs from the informer cache.
+func fakeReaderWithObjects(t *testing.T, objs ...client.Object) client.Reader {
+	t.Helper()
+	scheme := k8sruntime.NewScheme()
+	require.NoError(t, kargoapi.SchemeBuilder.AddToScheme(scheme))
+	return fake.NewClientBuilder().WithScheme(scheme).
+		WithObjects(objs...).WithStatusSubresource(objs...).Build()
 }

@@ -69,7 +69,7 @@ func (s *server) ListProjectEvents(
 // @Security BearerAuth
 // @Param project path string true "Project name"
 // @Produce json
-// @Success 200 {object} object "EventList resource (k8s.io/api/core/v1.EventList)"
+// @Success 200 {object} corev1.EventList "EventList resource (k8s.io/api/core/v1.EventList)"
 // @Router /v1beta1/projects/{project}/events [get]
 func (s *server) listProjectEvents(c *gin.Context) {
 	ctx := c.Request.Context()
