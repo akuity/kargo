@@ -25,7 +25,7 @@ type MockRepo struct {
 	IsRebasingFn              func() (bool, error)
 	LastCommitIDFn            func() (string, error)
 	ListTagsFn                func() ([]TagMetadata, error)
-	ListCommitsFn             func(limit, skip uint) ([]CommitMetadata, error)
+	ListCommitsFn             func(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
 	PushFn                    func(*PushOptions) error
 	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
@@ -127,8 +127,8 @@ func (m *MockRepo) ListTags() ([]TagMetadata, error) {
 	return m.ListTagsFn()
 }
 
-func (m *MockRepo) ListCommits(limit, skip uint) ([]CommitMetadata, error) {
-	return m.ListCommitsFn(limit, skip)
+func (m *MockRepo) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, error) {
+	return m.ListCommitsFn(opts)
 }
 
 func (m *MockRepo) CommitMessage(id string) (string, error) {

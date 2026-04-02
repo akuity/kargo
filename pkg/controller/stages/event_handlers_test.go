@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -799,7 +800,7 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 			},
 		},
 		{
-			name: "sync status changed",
+			name: "operation phase changed",
 			oldApp: &argocd.Application{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-app",
@@ -808,8 +809,8 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 					},
 				},
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "OutOfSync",
+					OperationState: &argocd.OperationState{
+						Phase: "Running",
 					},
 				},
 			},
@@ -821,8 +822,8 @@ func Test_stageEnqueuerForArgoCDChanges_Update(t *testing.T) {
 					},
 				},
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "Synced",
+					OperationState: &argocd.OperationState{
+						Phase: "Succeeded",
 					},
 				},
 			},
@@ -1414,36 +1415,36 @@ func Test_appHealthOrSyncStatusChanged(t *testing.T) {
 			updated: false,
 		},
 		{
-			name: "sync status changed",
+			name: "operation phase changed",
 			old: &argocd.Application{
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "",
+					OperationState: &argocd.OperationState{
+						Phase: "Running",
 					},
 				},
 			},
 			new: &argocd.Application{
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "Synced",
+					OperationState: &argocd.OperationState{
+						Phase: "Succeeded",
 					},
 				},
 			},
 			updated: true,
 		},
 		{
-			name: "sync status did not change",
+			name: "operation phase did not change",
 			old: &argocd.Application{
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "Synced",
+					OperationState: &argocd.OperationState{
+						Phase: "Succeeded",
 					},
 				},
 			},
 			new: &argocd.Application{
 				Status: argocd.ApplicationStatus{
-					Sync: argocd.SyncStatus{
-						Status: "Synced",
+					OperationState: &argocd.OperationState{
+						Phase: "Succeeded",
 					},
 				},
 			},
@@ -1480,6 +1481,176 @@ func Test_appHealthOrSyncStatusChanged(t *testing.T) {
 				Status: argocd.ApplicationStatus{
 					Sync: argocd.SyncStatus{
 						Revision: "fake-revision",
+					},
+				},
+			},
+			updated: false,
+		},
+		{
+			name: "multi-source revisions changed",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revisions: []string{"rev-a", "rev-b"},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revisions: []string{"rev-a", "rev-c"},
+					},
+				},
+			},
+			updated: true,
+		},
+		{
+			name: "multi-source revisions did not change",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revisions: []string{"rev-a", "rev-b"},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Sync: argocd.SyncStatus{
+						Revisions: []string{"rev-a", "rev-b"},
+					},
+				},
+			},
+			updated: false,
+		},
+		{
+			name: "reconciledAt transitioned from stale to fresh",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 11, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			updated: true,
+		},
+		{
+			name: "reconciledAt equal to finishedAt is already fresh",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 11, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			updated: false,
+		},
+		{
+			name: "reconciledAt changed but was already fresh",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 11, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 12, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			updated: false,
+		},
+		{
+			name: "reconciledAt changed but no finishedAt",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 11, 0, time.UTC),
+					},
+				},
+			},
+			updated: false,
+		},
+		{
+			name: "reconciledAt did not change",
+			old: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
+					},
+				},
+			},
+			new: &argocd.Application{
+				Status: argocd.ApplicationStatus{
+					Health: argocd.HealthStatus{Status: "Healthy"},
+					ReconciledAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
+					},
+					OperationState: &argocd.OperationState{
+						FinishedAt: &metav1.Time{
+							Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+						},
 					},
 				},
 			},
