@@ -189,6 +189,9 @@ func SetupReconcilerWithManager(
 					ArgoCDAppSyncChanged[*argocd.Application]{
 						logger: logger,
 					},
+					ArgoCDAppReconciledAfterOperation[*argocd.Application]{
+						logger: logger,
+					},
 				),
 			),
 		); err != nil {
