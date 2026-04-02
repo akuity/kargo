@@ -56,6 +56,20 @@ func Test_ociDownloader_validate(t *testing.T) {
 			},
 		},
 		{
+			name: "valid config with non-standard port",
+			config: promotion.Config{
+				"imageRef": "an.internal.registry.com:5050/myrepo/myimage:latest",
+				"outPath":  "output/file.tar",
+			},
+		},
+		{
+			name: "valid config with OCI protocol and non-standard port",
+			config: promotion.Config{
+				"imageRef": "oci://registry.example.com:5050/image:tag",
+				"outPath":  "output/file.tar",
+			},
+		},
+		{
 			name: "valid config with optional fields",
 			config: promotion.Config{
 				"imageRef":              "registry.example.com/image:tag",
@@ -116,6 +130,16 @@ func Test_ociDownloader_parseImageReference(t *testing.T) {
 				require.NotNil(t, ref)
 				assert.Equal(t, credentials.TypeHelm, credType)
 				assert.Equal(t, "localhost:5000/chart:latest", ref.String())
+			},
+		},
+		{
+			name:     "standard registry reference with port",
+			imageRef: "an.internal.registry.com:5050/myrepo/myimage:latest",
+			assertions: func(t *testing.T, ref name.Reference, credType credentials.Type, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, ref)
+				assert.Equal(t, credentials.TypeImage, credType)
+				assert.Equal(t, "an.internal.registry.com:5050/myrepo/myimage:latest", ref.String())
 			},
 		},
 	}
@@ -196,7 +220,7 @@ func Test_ociDownloader_resolveImage(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			img, err := runner.resolveImage(context.Background(), stepCtx, tt.cfg)
+			img, err := runner.resolveImage(t.Context(), stepCtx, tt.cfg)
 			tt.assertions(t, img, err)
 		})
 	}
@@ -380,7 +404,7 @@ func Test_ociDownloader_buildRemoteOptions(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			opts, err := runner.buildRemoteOptions(context.Background(), stepCtx, tt.cfg, ref, credType)
+			opts, err := runner.buildRemoteOptions(t.Context(), stepCtx, tt.cfg, ref, credType)
 			tt.assertions(t, opts, err)
 		})
 	}
@@ -499,6 +523,52 @@ func Test_ociDownloader_getAuthOption(t *testing.T) {
 			},
 		},
 		{
+			name: "valid image credentials with port",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					_ context.Context,
+					_ string,
+					credType credentials.Type,
+					repoURL string,
+				) (*credentials.Credentials, error) {
+					assert.Equal(t, credentials.TypeImage, credType)
+					assert.Equal(t, "an.internal.registry.com:5050/myrepo/myimage", repoURL)
+					return &credentials.Credentials{
+						Username: "user",
+						Password: "pass",
+					}, nil
+				},
+			},
+			imageRef: "an.internal.registry.com:5050/myrepo/myimage:latest",
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, opt)
+			},
+		},
+		{
+			name: "valid Helm credentials with OCI prefix and port",
+			credsDB: &credentials.FakeDB{
+				GetFn: func(
+					_ context.Context,
+					_ string,
+					credType credentials.Type,
+					repoURL string,
+				) (*credentials.Credentials, error) {
+					assert.Equal(t, credentials.TypeHelm, credType)
+					assert.Equal(t, "oci://registry.example.com:5050/chart", repoURL)
+					return &credentials.Credentials{
+						Username: "helm-user",
+						Password: "helm-pass",
+					}, nil
+				},
+			},
+			imageRef: "oci://registry.example.com:5050/chart:1.0.0",
+			assertions: func(t *testing.T, opt remote.Option, err error) {
+				require.NoError(t, err)
+				require.NotNil(t, opt)
+			},
+		},
+		{
 			name: "empty username and password",
 			credsDB: &credentials.FakeDB{
 				GetFn: func(context.Context, string, credentials.Type, string) (*credentials.Credentials, error) {
@@ -541,7 +611,7 @@ func Test_ociDownloader_getAuthOption(t *testing.T) {
 				Project: "fake-project",
 			}
 
-			opt, err := runner.getAuthOption(context.Background(), stepCtx, ref, credType)
+			opt, err := runner.getAuthOption(t.Context(), stepCtx, ref, credType)
 			tt.assertions(t, opt, err)
 		})
 	}

@@ -16,6 +16,8 @@ successful, but no commits matching the GitSubscription criteria were found.
   commits?: DiscoveredCommit[];
   /** RepoURL is the repository URL of the GitSubscription.
 
+TODO(v1.13.0): Remove SSH/SCP-style URL support from this pattern.
+
 +kubebuilder:validation:MinLength=1
 +kubebuilder:validation:Pattern=`(?:^(ssh|https?)://(?:([\w-]+)(:(.+))?@)?([\w-]+(?:\.[\w-]+)*)(?::(\d{1,5}))?(/.*)$)|(?:^([\w-]+)@([\w+]+(?:\.[\w-]+)*):(/?.*))`
 +akuity:test-kubebuilder-pattern=GitRepoURLPattern */

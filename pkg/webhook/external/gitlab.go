@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"slices"
 
 	gl "gitlab.com/gitlab-org/api/client-go"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -125,12 +126,25 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 					urls.NormalizeGit(e.Repository.GitSSHURL),
 				}
 			}
+			var changedFiles []string
+			if e.TotalCommitsCount > int64(len(e.Commits)) {
+				logger.Info(
+					"push event commits were truncated by GitLab; "+
+						"skipping path filtering for this event",
+					"totalCommits", e.TotalCommitsCount,
+					"receivedCommits", len(e.Commits),
+				)
+			} else {
+				changedFiles = collectPaths(e.Commits, func(c *gl.PushEventCommit) []string {
+					return slices.Concat(c.Added, c.Modified, c.Removed)
+				})
+			}
 			logger = logger.WithValues(
 				"repoURLs", repoURLs,
 				"ref", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, e.Ref)
 		case *gl.TagEvent:
 			var repoURLs []string
 			if e.Repository != nil {
@@ -144,7 +158,7 @@ func (g *gitlabWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc 
 				"tag", e.Ref,
 			)
 			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, e.Ref)
+			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, nil, e.Ref)
 		}
 	})
 }

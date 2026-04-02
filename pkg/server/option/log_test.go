@@ -1,7 +1,6 @@
 package option
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -55,7 +54,7 @@ func TestUnaryServerLogging(t *testing.T) {
 				srv.URL+"/grpc.health.v1.Health/Check",
 				connect.WithGRPC(),
 			)
-			_, err := client.CallUnary(context.Background(),
+			_, err := client.CallUnary(t.Context(),
 				connect.NewRequest[grpc_health_v1.HealthCheckRequest](
 					&grpc_health_v1.HealthCheckRequest{}))
 			require.NoError(t, err)

@@ -120,7 +120,7 @@ func TestReconcile(t *testing.T) {
 				// RoleBinding should be deleted
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProjectName,
@@ -133,7 +133,7 @@ func TestReconcile(t *testing.T) {
 				// Finalizer should be removed
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
@@ -172,7 +172,7 @@ func TestReconcile(t *testing.T) {
 				// RoleBinding should be deleted
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProjectName,
@@ -185,7 +185,7 @@ func TestReconcile(t *testing.T) {
 				// Finalizer should be removed
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      testControllerSARef.Name,
 						Namespace: testControllerSARef.Namespace,
@@ -282,7 +282,7 @@ func TestReconcile(t *testing.T) {
 				// Finalizer should be added
 				sa := &corev1.ServiceAccount{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					testControllerSARef,
 					sa,
 				)
@@ -292,7 +292,7 @@ func TestReconcile(t *testing.T) {
 				// RoleBinding should be created
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProjectName,
@@ -307,7 +307,7 @@ func TestReconcile(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, cfg)
 			_, err := r.Reconcile(
-				context.Background(),
+				t.Context(),
 				ctrl.Request{
 					NamespacedName: testControllerSARef,
 				},
@@ -391,7 +391,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProject.Name,
@@ -437,7 +437,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProject.Name,
@@ -498,7 +498,7 @@ func TestEnsureControllerPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, cfg)
-			err = r.ensureControllerPermissions(context.Background(), testControllerSARef)
+			err = r.ensureControllerPermissions(t.Context(), testControllerSARef)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}
@@ -586,7 +586,7 @@ func TestRemoveControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProject.Name,
@@ -607,7 +607,7 @@ func TestRemoveControllerPermissions(t *testing.T) {
 				require.NoError(t, err)
 				rb := &rbacv1.RoleBinding{}
 				err = cl.Get(
-					context.Background(),
+					t.Context(),
 					types.NamespacedName{
 						Name:      getRoleBindingName(testControllerSARef.Name),
 						Namespace: testProject.Name,
@@ -622,7 +622,7 @@ func TestRemoveControllerPermissions(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			r := newReconciler(testCase.client, cfg)
-			err = r.removeControllerPermissions(context.Background(), testControllerSARef)
+			err = r.removeControllerPermissions(t.Context(), testControllerSARef)
 			testCase.assertions(t, testCase.client, err)
 		})
 	}

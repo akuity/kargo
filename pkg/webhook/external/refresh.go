@@ -72,14 +72,16 @@ func getResult(total, successes, failures int) string {
 // refreshWarehouses refreshes all Warehouses in the given namespace that are
 // subscribed to any of the given repository URLs. If the namespace is empty,
 // all Warehouses in the cluster subscribed to the given repository URLs are
-// refreshed. Note: Callers are responsible for normalizing the provided
-// repository URLs.
+// refreshed. When changedFiles is non-empty, only Warehouses whose
+// includePaths/excludePaths filters match the changed files are refreshed.
+// Note: Callers are responsible for normalizing the provided repository URLs.
 func refreshWarehouses(
 	ctx context.Context,
 	w http.ResponseWriter,
 	c client.Client,
 	project string,
 	repoURLs []string,
+	changedFiles []string,
 	qualifiers ...string,
 ) {
 	logger := logging.LoggerFromContext(ctx)
@@ -129,7 +131,7 @@ func refreshWarehouses(
 			}
 
 			if len(qualifiers) > 0 {
-				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, qualifiers...)
+				shouldRefresh, err := shouldRefresh(ctx, wh, repoURL, changedFiles, qualifiers...)
 				if err != nil {
 					logger.Error(
 						err,
@@ -190,9 +192,9 @@ func shouldRefresh(
 	ctx context.Context,
 	wh kargoapi.Warehouse,
 	repoURL string,
+	changedFiles []string,
 	qualifiers ...string,
 ) (bool, error) {
-	var shouldRefresh bool
 	for _, s := range wh.Spec.InternalSubscriptions {
 		switch {
 		case s.Git != nil && urls.NormalizeGit(s.Git.RepoURL) == repoURL:
@@ -202,7 +204,10 @@ func shouldRefresh(
 					s.Git.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesRef)
+			if slices.ContainsFunc(qualifiers, selector.MatchesRef) &&
+				(len(changedFiles) == 0 || selector.MatchesPaths(changedFiles)) {
+				return true, nil
+			}
 		case s.Image != nil && urls.NormalizeImage(s.Image.RepoURL) == repoURL:
 			selector, err := image.NewSelector(ctx, *s.Image, nil)
 			if err != nil {
@@ -210,7 +215,9 @@ func shouldRefresh(
 					s.Image.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesTag)
+			if slices.ContainsFunc(qualifiers, selector.MatchesTag) {
+				return true, nil
+			}
 		case s.Chart != nil && urls.NormalizeChart(s.Chart.RepoURL) == repoURL:
 			selector, err := chart.NewSelector(*s.Chart, nil)
 			if err != nil {
@@ -218,10 +225,9 @@ func shouldRefresh(
 					s.Chart.RepoURL, err,
 				)
 			}
-			shouldRefresh = slices.ContainsFunc(qualifiers, selector.MatchesVersion)
-		}
-		if shouldRefresh {
-			return true, nil
+			if slices.ContainsFunc(qualifiers, selector.MatchesVersion) {
+				return true, nil
+			}
 		}
 	}
 	return false, nil

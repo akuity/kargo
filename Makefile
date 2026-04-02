@@ -216,12 +216,12 @@ build-cli-with-ui: build-ui build-cli
 ################################################################################
 
 .PHONY: codegen
-codegen: codegen-openapi codegen-schema-to-go codegen-proto codegen-controller codegen-ui codegen-docs
+codegen: codegen-openapi codegen-proto codegen-controller codegen-schema-to-go codegen-ui codegen-docs
 
 .PHONY: codegen-openapi
 codegen-openapi: install-swag install-go-swagger install-jq
 	rm -f swagger.json
-	rm -rf pkg/client/generated
+	find pkg/client/generated -mindepth 1 ! -name go.mod ! -name go.sum -exec rm -rf {} +
 	rm -rf /tmp/swagger-build
 	mkdir -p /tmp/swagger-build
 	$(SWAG_LINK) init \
@@ -260,7 +260,7 @@ codegen-controller: install-controller-gen
 		paths=./...
 
 .PHONY: codegen-schema-to-go
-codegen-schema-to-go:
+codegen-schema-to-go: install-goimports
 	npm install -g quicktype@23.0.176
 	./hack/codegen/promotion-step-configs.sh
 	./hack/codegen/subscriptions.sh
@@ -273,6 +273,7 @@ codegen-ui:
 .PHONY: codegen-docs
 codegen-docs:
 	npm install -g @bitnami/readme-generator-for-helm
+	pnpm install --dir docs
 	bash hack/helm-docs/helm-docs.sh
 
 ################################################################################

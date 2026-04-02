@@ -38,7 +38,7 @@ func (s *server) GetRole(
 		}
 	}
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, systemLevel, project, name)
+	resources, err := s.rolesDB.GetAsResources(ctx, systemLevel, project, name)
 	if err != nil {
 		if systemLevel {
 			return nil, fmt.Errorf(
@@ -52,7 +52,7 @@ func (s *server) GetRole(
 		)
 	}
 
-	if sa == nil {
+	if resources.ServiceAccount == nil {
 		return nil, connect.NewError(connect.CodeNotFound, nil)
 	}
 
@@ -62,9 +62,10 @@ func (s *server) GetRole(
 				Namespace: project,
 				Name:      name,
 			},
-			ServiceAccount: *sa,
-			Roles:          roles,
-			RoleBindings:   rbs,
+			ServiceAccount: *resources.ServiceAccount,
+			Roles:          resources.Roles,
+			ClusterRoles:   resources.ClusterRoles,
+			RoleBindings:   resources.RoleBindings,
 		}
 		return connect.NewResponse(&svcv1alpha1.GetRoleResponse{
 			Result: &svcv1alpha1.GetRoleResponse_Resources{
@@ -73,7 +74,7 @@ func (s *server) GetRole(
 		}), nil
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(resources)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +124,7 @@ func (s *server) getProjectRole(c *gin.Context) {
 	name := c.Param("role")
 	asResources := c.Query("as-resources") == trueStr
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, name)
+	resources, err := s.rolesDB.GetAsResources(ctx, false, project, name)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -131,7 +132,7 @@ func (s *server) getProjectRole(c *gin.Context) {
 
 	// The ServiceAccount is the most critical component of a Kargo Role. If one
 	// was not found, the Kargo Role does not exist.
-	if sa == nil {
+	if resources.ServiceAccount == nil {
 		_ = c.Error(libhttp.ErrorStr("Role not found", http.StatusNotFound))
 		return
 	}
@@ -142,15 +143,16 @@ func (s *server) getProjectRole(c *gin.Context) {
 				Namespace: project,
 				Name:      name,
 			},
-			ServiceAccount: *sa,
-			Roles:          roles,
-			RoleBindings:   rbs,
+			ServiceAccount: *resources.ServiceAccount,
+			Roles:          resources.Roles,
+			ClusterRoles:   resources.ClusterRoles,
+			RoleBindings:   resources.RoleBindings,
 		}
 		c.JSON(http.StatusOK, resources)
 		return
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(resources)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -177,7 +179,7 @@ func (s *server) getSystemRole(c *gin.Context) {
 	name := c.Param("role")
 	asResources := c.Query("as-resources") == trueStr
 
-	sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", name)
+	resources, err := s.rolesDB.GetAsResources(ctx, true, "", name)
 	if err != nil {
 		_ = c.Error(err)
 		return
@@ -185,7 +187,7 @@ func (s *server) getSystemRole(c *gin.Context) {
 
 	// The ServiceAccount is the most critical component of a Kargo Role. If one
 	// was not found, the Kargo Role does not exist.
-	if sa == nil {
+	if resources.ServiceAccount == nil {
 		_ = c.Error(libhttp.ErrorStr("Role not found", http.StatusNotFound))
 		return
 	}
@@ -193,18 +195,19 @@ func (s *server) getSystemRole(c *gin.Context) {
 	if asResources {
 		resources := &rbacapi.RoleResources{
 			ObjectMeta: metav1.ObjectMeta{
-				Namespace: sa.Namespace,
+				Namespace: resources.ServiceAccount.Namespace,
 				Name:      name,
 			},
-			ServiceAccount: *sa,
-			Roles:          roles,
-			RoleBindings:   rbs,
+			ServiceAccount: *resources.ServiceAccount,
+			Roles:          resources.Roles,
+			ClusterRoles:   resources.ClusterRoles,
+			RoleBindings:   resources.RoleBindings,
 		}
 		c.JSON(http.StatusOK, resources)
 		return
 	}
 
-	kargoRole, err := rbac.ResourcesToRole(sa, roles, rbs)
+	kargoRole, err := rbac.ResourcesToRole(resources)
 	if err != nil {
 		_ = c.Error(err)
 		return

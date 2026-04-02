@@ -8,7 +8,7 @@ import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv1";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv1";
 import type { ServiceAccount } from "../../../k8s.io/api/core/v1/generated_pb";
 import { file_k8s_io_api_core_v1_generated } from "../../../k8s.io/api/core/v1/generated_pb";
-import type { PolicyRule, Role as Role$1, RoleBinding } from "../../../k8s.io/api/rbac/v1/generated_pb";
+import type { ClusterRole, PolicyRule, Role as Role$1, RoleBinding } from "../../../k8s.io/api/rbac/v1/generated_pb";
 import { file_k8s_io_api_rbac_v1_generated } from "../../../k8s.io/api/rbac/v1/generated_pb";
 import type { ObjectMeta } from "../../../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb";
 import { file_k8s_io_apimachinery_pkg_apis_meta_v1_generated } from "../../../k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb";
@@ -20,7 +20,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file api/rbac/v1alpha1/generated.proto.
  */
 export const file_api_rbac_v1alpha1_generated: GenFile = /*@__PURE__*/
-  fileDesc("CiFhcGkvcmJhYy92MWFscGhhMS9nZW5lcmF0ZWQucHJvdG8SKWdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExIiUKBUNsYWltEgwKBG5hbWUYASABKAkSDgoGdmFsdWVzGAIgAygJIkwKD1Jlc291cmNlRGV0YWlscxIUCgxyZXNvdXJjZVR5cGUYASABKAkSFAoMcmVzb3VyY2VOYW1lGAIgASgJEg0KBXZlcmJzGAMgAygJItEBCgRSb2xlEkIKCG1ldGFkYXRhGAEgASgLMjAuazhzLmlvLmFwaW1hY2hpbmVyeS5wa2cuYXBpcy5tZXRhLnYxLk9iamVjdE1ldGESFAoMa2FyZ29NYW5hZ2VkGAIgASgIEkAKBmNsYWltcxgHIAMoCzIwLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExLkNsYWltEi0KBXJ1bGVzGAYgAygLMh4uazhzLmlvLmFwaS5yYmFjLnYxLlBvbGljeVJ1bGUi7wEKDVJvbGVSZXNvdXJjZXMSQgoIbWV0YWRhdGEYASABKAsyMC5rOHMuaW8uYXBpbWFjaGluZXJ5LnBrZy5hcGlzLm1ldGEudjEuT2JqZWN0TWV0YRI6Cg5zZXJ2aWNlQWNjb3VudBgCIAEoCzIiLms4cy5pby5hcGkuY29yZS52MS5TZXJ2aWNlQWNjb3VudBInCgVyb2xlcxgDIAMoCzIYLms4cy5pby5hcGkucmJhYy52MS5Sb2xlEjUKDHJvbGVCaW5kaW5ncxgEIAMoCzIfLms4cy5pby5hcGkucmJhYy52MS5Sb2xlQmluZGluZyI6ChdTZXJ2aWNlQWNjb3VudFJlZmVyZW5jZRIMCgRuYW1lGAEgASgJEhEKCW5hbWVzcGFjZRgCIAEoCUK3AgotY29tLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExQg5HZW5lcmF0ZWRQcm90b1ABWilnaXRodWIuY29tL2FrdWl0eS9rYXJnby9hcGkvcmJhYy92MWFscGhhMaICBkdDQUtBUqoCKUdpdGh1Yi5Db20uQWt1aXR5LkthcmdvLkFwaS5SYmFjLlYxYWxwaGExygIpR2l0aHViXENvbVxBa3VpdHlcS2FyZ29cQXBpXFJiYWNcVjFhbHBoYTHiAjVHaXRodWJcQ29tXEFrdWl0eVxLYXJnb1xBcGlcUmJhY1xWMWFscGhhMVxHUEJNZXRhZGF0YeoCL0dpdGh1Yjo6Q29tOjpBa3VpdHk6OkthcmdvOjpBcGk6OlJiYWM6OlYxYWxwaGEx", [file_k8s_io_api_core_v1_generated, file_k8s_io_api_rbac_v1_generated, file_k8s_io_apimachinery_pkg_apis_meta_v1_generated, file_k8s_io_apimachinery_pkg_runtime_generated, file_k8s_io_apimachinery_pkg_runtime_schema_generated]);
+  fileDesc("CiFhcGkvcmJhYy92MWFscGhhMS9nZW5lcmF0ZWQucHJvdG8SKWdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExIiUKBUNsYWltEgwKBG5hbWUYASABKAkSDgoGdmFsdWVzGAIgAygJIkwKD1Jlc291cmNlRGV0YWlscxIUCgxyZXNvdXJjZVR5cGUYASABKAkSFAoMcmVzb3VyY2VOYW1lGAIgASgJEg0KBXZlcmJzGAMgAygJItEBCgRSb2xlEkIKCG1ldGFkYXRhGAEgASgLMjAuazhzLmlvLmFwaW1hY2hpbmVyeS5wa2cuYXBpcy5tZXRhLnYxLk9iamVjdE1ldGESFAoMa2FyZ29NYW5hZ2VkGAIgASgIEkAKBmNsYWltcxgHIAMoCzIwLmdpdGh1Yi5jb20uYWt1aXR5LmthcmdvLmFwaS5yYmFjLnYxYWxwaGExLkNsYWltEi0KBXJ1bGVzGAYgAygLMh4uazhzLmlvLmFwaS5yYmFjLnYxLlBvbGljeVJ1bGUipgIKDVJvbGVSZXNvdXJjZXMSQgoIbWV0YWRhdGEYASABKAsyMC5rOHMuaW8uYXBpbWFjaGluZXJ5LnBrZy5hcGlzLm1ldGEudjEuT2JqZWN0TWV0YRI6Cg5zZXJ2aWNlQWNjb3VudBgCIAEoCzIiLms4cy5pby5hcGkuY29yZS52MS5TZXJ2aWNlQWNjb3VudBInCgVyb2xlcxgDIAMoCzIYLms4cy5pby5hcGkucmJhYy52MS5Sb2xlEjUKDGNsdXN0ZXJSb2xlcxgFIAMoCzIfLms4cy5pby5hcGkucmJhYy52MS5DbHVzdGVyUm9sZRI1Cgxyb2xlQmluZGluZ3MYBCADKAsyHy5rOHMuaW8uYXBpLnJiYWMudjEuUm9sZUJpbmRpbmciOgoXU2VydmljZUFjY291bnRSZWZlcmVuY2USDAoEbmFtZRgBIAEoCRIRCgluYW1lc3BhY2UYAiABKAlCtwIKLWNvbS5naXRodWIuY29tLmFrdWl0eS5rYXJnby5hcGkucmJhYy52MWFscGhhMUIOR2VuZXJhdGVkUHJvdG9QAVopZ2l0aHViLmNvbS9ha3VpdHkva2FyZ28vYXBpL3JiYWMvdjFhbHBoYTGiAgZHQ0FLQVKqAilHaXRodWIuQ29tLkFrdWl0eS5LYXJnby5BcGkuUmJhYy5WMWFscGhhMcoCKUdpdGh1YlxDb21cQWt1aXR5XEthcmdvXEFwaVxSYmFjXFYxYWxwaGEx4gI1R2l0aHViXENvbVxBa3VpdHlcS2FyZ29cQXBpXFJiYWNcVjFhbHBoYTFcR1BCTWV0YWRhdGHqAi9HaXRodWI6OkNvbTo6QWt1aXR5OjpLYXJnbzo6QXBpOjpSYmFjOjpWMWFscGhhMQ", [file_k8s_io_api_core_v1_generated, file_k8s_io_api_rbac_v1_generated, file_k8s_io_apimachinery_pkg_apis_meta_v1_generated, file_k8s_io_apimachinery_pkg_runtime_generated, file_k8s_io_apimachinery_pkg_runtime_schema_generated]);
 
 /**
  * @generated from message github.com.akuity.kargo.api.rbac.v1alpha1.Claim
@@ -125,6 +125,11 @@ export type RoleResources = Message<"github.com.akuity.kargo.api.rbac.v1alpha1.R
    * @generated from field: repeated k8s.io.api.rbac.v1.Role roles = 3;
    */
   roles: Role$1[];
+
+  /**
+   * @generated from field: repeated k8s.io.api.rbac.v1.ClusterRole clusterRoles = 5;
+   */
+  clusterRoles: ClusterRole[];
 
   /**
    * @generated from field: repeated k8s.io.api.rbac.v1.RoleBinding roleBindings = 4;

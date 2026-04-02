@@ -59,8 +59,11 @@ func Test_argocdUpdater_check(t *testing.T) {
 							OperationState: &argocd.OperationState{
 								Phase: argocd.OperationSucceeded,
 								FinishedAt: &metav1.Time{
-									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+							},
+							ReconciledAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
@@ -80,8 +83,11 @@ func Test_argocdUpdater_check(t *testing.T) {
 							OperationState: &argocd.OperationState{
 								Phase: argocd.OperationSucceeded,
 								FinishedAt: &metav1.Time{
-									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+							},
+							ReconciledAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 							},
 							Conditions: []argocd.ApplicationCondition{
 								{Type: argocd.ApplicationConditionComparisonError},
@@ -118,8 +124,11 @@ func Test_argocdUpdater_check(t *testing.T) {
 							OperationState: &argocd.OperationState{
 								Phase: argocd.OperationSucceeded,
 								FinishedAt: &metav1.Time{
-									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+							},
+							ReconciledAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
@@ -142,8 +151,11 @@ func Test_argocdUpdater_check(t *testing.T) {
 							OperationState: &argocd.OperationState{
 								Phase: argocd.OperationSucceeded,
 								FinishedAt: &metav1.Time{
-									Time: time.Now().Add(-1 * appHealthCooldownDuration),
+									Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 								},
+							},
+							ReconciledAt: &metav1.Time{
+								Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 							},
 							Health: argocd.HealthStatus{
 								Status: argocd.HealthStatusHealthy,
@@ -172,7 +184,7 @@ func Test_argocdUpdater_check(t *testing.T) {
 			testCase.assertions(
 				t,
 				runner.check(
-					context.Background(),
+					t.Context(),
 					ArgoCDHealthInput{
 						Apps: []ArgoCDAppHealthCheck{
 							{
@@ -223,7 +235,13 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		appStatus        argocd.ApplicationStatus
 		interceptor      interceptor.Funcs
 		desiredRevisions []string
-		assertions       func(*testing.T, kargoapi.HealthState, ArgoCDAppStatus, error)
+		assertions       func(
+			*testing.T,
+			kargoapi.HealthState,
+			ArgoCDAppStatus,
+			client.Client,
+			error,
+		)
 	}{
 		{
 			name: "Application not found",
@@ -243,6 +261,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "unable to find Argo CD Application")
@@ -268,6 +287,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "error finding Argo CD Application")
@@ -278,34 +298,12 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 			},
 		},
 		{
-			name: "Application has an in-progress operation",
-			appStatus: argocd.ApplicationStatus{
-				OperationState: &argocd.OperationState{Phase: argocd.OperationRunning},
-				Health:         argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
-			},
-			assertions: func(
-				t *testing.T,
-				stageHealth kargoapi.HealthState,
-				appStatus ArgoCDAppStatus,
-				err error,
-			) {
-				require.Error(t, err)
-				require.ErrorContains(t, err, "last operation of Argo CD Application")
-				require.ErrorContains(t, err, string(argocd.OperationRunning))
-				require.ErrorContains(t, err, "Application health status not trusted")
-				require.Equal(t, kargoapi.HealthStateUnknown, stageHealth)
-				require.Equal(t, testApp.Namespace, appStatus.Namespace)
-				require.Equal(t, testApp.Name, appStatus.Name)
-				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
-			},
-		},
-		{
-			name: "Application's last operation completed recently",
+			name: "Application not reconciled after last operation",
 			appStatus: argocd.ApplicationStatus{
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1*appHealthCooldownDuration + appHealthCooldownDuration/2),
+						Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
 					},
 				},
 				Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
@@ -314,16 +312,76 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				c client.Client,
 				err error,
 			) {
 				require.Error(t, err)
-				require.ErrorContains(t, err, "last operation of Argo CD Application")
-				require.ErrorContains(t, err, "completed less than")
+				require.ErrorContains(t, err, "was not reconciled after")
 				require.ErrorContains(t, err, "Application health status not trusted")
 				require.Equal(t, kargoapi.HealthStateUnknown, stageHealth)
 				require.Equal(t, testApp.Namespace, appStatus.Namespace)
 				require.Equal(t, testApp.Name, appStatus.Name)
 				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				// Verify hard refresh was requested
+				app := &argocd.Application{}
+				require.NoError(t, c.Get(
+					context.Background(),
+					client.ObjectKey{
+						Namespace: testApp.Namespace,
+						Name:      testApp.Name,
+					},
+					app,
+				))
+				require.Equal(
+					t,
+					string(argocd.RefreshTypeHard),
+					app.Annotations[argocd.AnnotationKeyRefresh],
+				)
+			},
+		},
+		{
+			name: "Application reconciled before last operation completed",
+			appStatus: argocd.ApplicationStatus{
+				OperationState: &argocd.OperationState{
+					Phase: argocd.OperationSucceeded,
+					FinishedAt: &metav1.Time{
+						Time: time.Date(2024, 1, 1, 0, 0, 10, 0, time.UTC),
+					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 5, 0, time.UTC),
+				},
+				Health: argocd.HealthStatus{Status: argocd.HealthStatusHealthy},
+			},
+			assertions: func(
+				t *testing.T,
+				stageHealth kargoapi.HealthState,
+				appStatus ArgoCDAppStatus,
+				c client.Client,
+				err error,
+			) {
+				require.Error(t, err)
+				require.ErrorContains(t, err, "was not reconciled after")
+				require.ErrorContains(t, err, "Application health status not trusted")
+				require.Equal(t, kargoapi.HealthStateUnknown, stageHealth)
+				require.Equal(t, testApp.Namespace, appStatus.Namespace)
+				require.Equal(t, testApp.Name, appStatus.Name)
+				require.Equal(t, argocd.HealthStatusHealthy, appStatus.Health.Status)
+				// Verify hard refresh was requested
+				app := &argocd.Application{}
+				require.NoError(t, c.Get(
+					context.Background(),
+					client.ObjectKey{
+						Namespace: testApp.Namespace,
+						Name:      testApp.Name,
+					},
+					app,
+				))
+				require.Equal(
+					t,
+					string(argocd.RefreshTypeHard),
+					app.Annotations[argocd.AnnotationKeyRefresh],
+				)
 			},
 		},
 		{
@@ -332,8 +390,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 				},
 				Conditions: []argocd.ApplicationCondition{
 					{
@@ -357,6 +418,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.Error(t, err)
@@ -378,8 +440,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 				},
 				Health: argocd.HealthStatus{
 					Status:  argocd.HealthStatusDegraded,
@@ -393,6 +458,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "Argo CD Application")
@@ -411,8 +477,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 				},
 				Health: argocd.HealthStatus{
 					Status:  argocd.HealthStatusHealthy,
@@ -426,6 +495,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -442,8 +512,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 				},
 				Health: argocd.HealthStatus{
 					Status: argocd.HealthStatusHealthy,
@@ -458,6 +531,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.ErrorContains(t, err, "Not all sources of Application")
@@ -476,8 +550,11 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				OperationState: &argocd.OperationState{
 					Phase: argocd.OperationSucceeded,
 					FinishedAt: &metav1.Time{
-						Time: time.Now().Add(-1 * appHealthCooldownDuration),
+						Time: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC),
 					},
+				},
+				ReconciledAt: &metav1.Time{
+					Time: time.Date(2024, 1, 1, 0, 0, 1, 0, time.UTC),
 				},
 				Health: argocd.HealthStatus{
 					Status: argocd.HealthStatusHealthy,
@@ -492,6 +569,7 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 				t *testing.T,
 				stageHealth kargoapi.HealthState,
 				appStatus ArgoCDAppStatus,
+				_ client.Client,
 				err error,
 			) {
 				require.NoError(t, err)
@@ -508,22 +586,21 @@ func Test_argocdUpdater_getApplicationHealth(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			app := testApp.DeepCopy()
 			app.Status = testCase.appStatus
-			runner := &argocdChecker{
-				argocdClient: fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(app).
-					WithInterceptorFuncs(testCase.interceptor).
-					Build(),
-			}
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(app).
+				WithInterceptorFuncs(testCase.interceptor).
+				Build()
+			runner := &argocdChecker{argocdClient: fakeClient}
 			stageHealth, appStatus, err := runner.getApplicationHealth(
-				context.Background(),
+				t.Context(),
 				client.ObjectKey{
 					Namespace: app.Namespace,
 					Name:      app.Name,
 				},
 				testCase.desiredRevisions,
 			)
-			testCase.assertions(t, stageHealth, appStatus, err)
+			testCase.assertions(t, stageHealth, appStatus, fakeClient, err)
 		})
 	}
 }

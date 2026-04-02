@@ -623,7 +623,7 @@ func Test_webhook_Default(t *testing.T) {
 			}
 
 			ctx := admission.NewContextWithRequest(
-				context.Background(),
+				t.Context(),
 				testCase.req,
 			)
 			testCase.assertions(
@@ -926,7 +926,7 @@ func Test_webhook_ValidateCreate(t *testing.T) {
 			if testCase.userInfo != nil {
 				req.UserInfo = *testCase.userInfo
 			}
-			ctx := admission.NewContextWithRequest(context.Background(), req)
+			ctx := admission.NewContextWithRequest(t.Context(), req)
 
 			_, err := testCase.webhook.ValidateCreate(
 				ctx,
@@ -1030,7 +1030,7 @@ func Tes_webhook_tValidateUpdate(t *testing.T) {
 				authorizeFn: testCase.authorizeFn,
 			}
 			oldPromo, newPromo := testCase.setup()
-			_, err := w.ValidateUpdate(context.Background(), oldPromo, newPromo)
+			_, err := w.ValidateUpdate(t.Context(), oldPromo, newPromo)
 			testCase.assertions(t, err)
 		})
 	}
@@ -1068,7 +1068,7 @@ func Test_webhook_ValidateDelete(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			_, err := testCase.webhook.ValidateDelete(
-				context.Background(),
+				t.Context(),
 				&kargoapi.Promotion{},
 			)
 			testCase.assertions(t, err)
@@ -1168,7 +1168,7 @@ func Test_webhook_Authorize(t *testing.T) {
 			testCase.assertions(
 				t,
 				w.authorize(
-					context.Background(),
+					t.Context(),
 					&kargoapi.Promotion{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "fake-promotion",

@@ -128,61 +128,70 @@ export const CredentialsList = ({ project = '' }: Props) => {
           {
             key: 'actions',
             fixed: 'right',
-            render: (record) => (
-              <Space>
-                <Button
-                  icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
-                  color='default'
-                  variant='filled'
-                  size='small'
-                  onClick={() => {
-                    showCreate((p) => (
-                      <CreateCredentialsModal
-                        type='repo'
-                        project={project}
-                        onSuccess={listCredentialsQuery.refetch}
-                        editing
-                        init={record}
-                        {...p}
-                      />
-                    ));
-                  }}
-                >
-                  Edit
-                </Button>
-                <Button
-                  icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
-                  color='danger'
-                  variant='filled'
-                  size='small'
-                  onClick={() => {
-                    confirm({
-                      title: (
-                        <div className='flex items-center'>
-                          <FontAwesomeIcon icon={faTrash} className='mr-2' />
-                          Delete Credentials
-                        </div>
-                      ),
-                      content: (
-                        <p>
-                          Are you sure you want to delete credentials{' '}
-                          <b>{record?.metadata?.name}</b>?
-                        </p>
-                      ),
-                      onOk: () => {
-                        deleteCredentialsMutation.mutate({
-                          project,
-                          name: record?.metadata?.name || ''
-                        });
-                      },
-                      hide: () => {}
-                    });
-                  }}
-                >
-                  Delete
-                </Button>
-              </Space>
-            )
+            render: (record) => {
+              if (record?.metadata?.labels?.['kargo.akuity.io/replicated-from']) {
+                return (
+                  <Typography.Text type='secondary' italic>
+                    Replicated
+                  </Typography.Text>
+                );
+              }
+              return (
+                <Space>
+                  <Button
+                    icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
+                    color='default'
+                    variant='filled'
+                    size='small'
+                    onClick={() => {
+                      showCreate((p) => (
+                        <CreateCredentialsModal
+                          type='repo'
+                          project={project}
+                          onSuccess={listCredentialsQuery.refetch}
+                          editing
+                          init={record}
+                          {...p}
+                        />
+                      ));
+                    }}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    icon={<FontAwesomeIcon icon={faTrash} size='sm' />}
+                    color='danger'
+                    variant='filled'
+                    size='small'
+                    onClick={() => {
+                      confirm({
+                        title: (
+                          <div className='flex items-center'>
+                            <FontAwesomeIcon icon={faTrash} className='mr-2' />
+                            Delete Credentials
+                          </div>
+                        ),
+                        content: (
+                          <p>
+                            Are you sure you want to delete credentials{' '}
+                            <b>{record?.metadata?.name}</b>?
+                          </p>
+                        ),
+                        onOk: () => {
+                          deleteCredentialsMutation.mutate({
+                            project,
+                            name: record?.metadata?.name || ''
+                          });
+                        },
+                        hide: () => {}
+                      });
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </Space>
+              );
+            }
           }
         ]}
         expandable={descriptionExpandable()}

@@ -96,7 +96,7 @@ func (o *serverOptions) run(ctx context.Context) error {
 			LocalMode:  true,
 		},
 		client,
-		rbac.NewKubernetesRolesDatabase(client, rbac.RolesDatabaseConfigFromEnv()),
+		rbac.NewKubernetesRolesDatabase(client, client, rbac.RolesDatabaseConfigFromEnv()),
 		k8sevent.NewEventSender(&fakeevent.EventRecorder{}),
 	)
 	if err := srv.Serve(ctx, l); err != nil {

@@ -616,7 +616,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -652,7 +652,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -688,7 +688,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 			},
 		},
@@ -1080,7 +1080,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 			},
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 				require.NoError(t, err)
 				// Verify health checks include all 3 apps
 				require.NotNil(t, res.HealthCheck)
@@ -1271,7 +1271,7 @@ func Test_argoCDUpdater_run(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			res, err := testCase.runner.run(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				testCase.stepCfg,
 			)
@@ -1796,7 +1796,7 @@ func Test_argoCDUpdater_syncApplication(t *testing.T) {
 				},
 			}
 			err := testCase.runner.syncApplication(
-				context.Background(),
+				t.Context(),
 				stepCtx,
 				testCase.app,
 				testCase.desiredSources,
@@ -1892,7 +1892,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 			eventMessage: "fake-message",
 			assertions: func(t *testing.T, c client.Client, app *argocd.Application) {
 				events := &corev1.EventList{}
-				require.NoError(t, c.List(context.Background(), events))
+				require.NoError(t, c.List(t.Context(), events))
 				assert.Len(t, events.Items, 1)
 
 				event := events.Items[0]
@@ -1929,7 +1929,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 			eventMessage: "fake-message",
 			assertions: func(t *testing.T, c client.Client, _ *argocd.Application) {
 				events := &corev1.EventList{}
-				require.NoError(t, c.List(context.Background(), events))
+				require.NoError(t, c.List(t.Context(), events))
 				assert.Len(t, events.Items, 1)
 
 				event := events.Items[0]
@@ -1945,7 +1945,7 @@ func Test_argoCDUpdater_logAppEvent(t *testing.T) {
 				argocdClient: c,
 			}
 			runner.logAppEvent(
-				context.Background(),
+				t.Context(),
 				testCase.app,
 				testCase.user,
 				testCase.eventReason,
@@ -2812,7 +2812,7 @@ func Test_argoCDUpdater_getAuthorizedApplications(t *testing.T) {
 			runner.buildLabelSelectorFn = runner.buildLabelSelector
 
 			apps, err := runner.getAuthorizedApplications(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{
 					Project: "fake-project",
 					Stage:   "fake-stage",
@@ -3060,7 +3060,7 @@ func Test_argoCDUpdater_processApplication(t *testing.T) {
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			phase, err := testCase.runner.processApplication(
-				context.Background(),
+				t.Context(),
 				&promotion.StepContext{},
 				testCase.update,
 				testCase.app,

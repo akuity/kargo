@@ -157,7 +157,7 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			"refs", refs,
 		)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshWarehouses(ctx, w, b.client, b.project, repoURLs, refs...)
+		refreshWarehouses(ctx, w, b.client, b.project, repoURLs, nil, refs...)
 	})
 }
 

@@ -2,7 +2,9 @@ package builtin
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -48,7 +50,10 @@ func init() {
 			// runner, which is necessary to ensure proper locking behavior.
 			Value: func(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 				once.Do(func() {
-					pusher = newGitPusher(caps)
+					pusher = newGitPusher(
+						caps,
+						git.PushIntegrationPolicy(os.Getenv("GIT_PUSH_INTEGRATION_POLICY")),
+					)
 				})
 				return pusher
 			},
@@ -59,19 +64,27 @@ func init() {
 // gitPushPusher is an implementation of the promotion.StepRunner interface that
 // pushes commits and tags from a local Git repository to a remote Git repository.
 type gitPushPusher struct {
-	schemaLoader gojsonschema.JSONLoader
-	credsDB      credentials.Database
-	branchMus    map[string]*sync.Mutex
-	masterMu     sync.Mutex
+	schemaLoader      gojsonschema.JSONLoader
+	credsDB           credentials.Database
+	integrationPolicy git.PushIntegrationPolicy
+	branchMus         map[string]*sync.Mutex
+	masterMu          sync.Mutex
 }
 
 // newGitPusher returns an implementation of the promotion.StepRunner interface
 // that pushes commits from a local Git repository to a remote Git repository.
-func newGitPusher(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
+func newGitPusher(
+	caps promotion.StepRunnerCapabilities,
+	pushIntegrationPolicy git.PushIntegrationPolicy,
+) promotion.StepRunner {
+	if pushIntegrationPolicy == "" {
+		pushIntegrationPolicy = git.PushIntegrationPolicyAlwaysRebase
+	}
 	return &gitPushPusher{
-		credsDB:      caps.CredsDB,
-		branchMus:    map[string]*sync.Mutex{},
-		schemaLoader: getConfigSchemaLoader(stepKindGitPush),
+		credsDB:           caps.CredsDB,
+		integrationPolicy: pushIntegrationPolicy,
+		branchMus:         map[string]*sync.Mutex{},
+		schemaLoader:      getConfigSchemaLoader(stepKindGitPush),
 	}
 }
 
@@ -139,13 +152,17 @@ func (g *gitPushPusher) run(
 			fmt.Errorf("error loading working tree from %s: %w", cfg.Path, err)
 	}
 	pushOpts := &git.PushOptions{
-		// Start with whatever was specified in the config, which may be empty.
 		TargetBranch: cfg.TargetBranch,
-		// Attempt to rebase on top of the state of the remote branch to help
-		// avoid conflicts.
-		PullRebase: true,
-		// Allow force push if explicitly requested in config
-		Force: cfg.Force,
+
+		IntegrationPolicy: g.integrationPolicy,
+		Force:             cfg.Force,
+	}
+	if cfg.Committer != nil {
+		pushOpts.Committer = &git.User{
+			Name:       cfg.Committer.Name,
+			Email:      cfg.Committer.Email,
+			SigningKey: cfg.Committer.SigningKey,
+		}
 	}
 	// If we're supposed to generate a target branch name, do so.
 	if cfg.GenerateTargetBranch {
@@ -166,14 +183,15 @@ func (g *gitPushPusher) run(
 	}
 	if cfg.Tag != "" {
 		pushOpts.Tag = cfg.Tag
-		// If we're pushing a tag, we should not attempt to pull/rebase first as
-		// tags are immutable and any existing tag with the same name on the remote
-		// would cause the pull/rebase to fail.
-		pushOpts.PullRebase = false
+		// If we're pushing a tag, we should not attempt to integrate remote
+		// changes first as tags are immutable and any existing tag with the
+		// same name on the remote would cause the integration to fail.
+		pushOpts.IntegrationPolicy = git.PushIntegrationPolicyNone
 	}
-	// Disable pull/rebase when force pushing to allow overwriting remote history
+	// Disable remote change integration when force pushing to allow
+	// overwriting remote history.
 	if pushOpts.Force {
-		pushOpts.PullRebase = false
+		pushOpts.IntegrationPolicy = git.PushIntegrationPolicyNone
 	}
 	if pushOpts.TargetBranch == "" {
 		// If targetBranch is still empty, we want to set it to the current branch
@@ -218,8 +236,14 @@ func (g *gitPushPusher) run(
 		},
 	); err != nil {
 		if git.IsMergeConflict(err) {
-			// Special case: A merge conflict requires manual resolution and no amount
-			// of retries will fix that.
+			// A merge conflict requires manual resolution and no amount of retries
+			// will fix that.
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
+				&promotion.TerminalError{Err: err}
+		}
+		if errors.Is(err, git.ErrRebaseUnsafe) {
+			// The integration policy prohibits merge fallback and rebase is unsafe.
+			// No amount of retries will fix this.
 			return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 				&promotion.TerminalError{Err: err}
 		}

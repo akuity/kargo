@@ -1,7 +1,7 @@
 import { useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Flex, Table, Tag } from 'antd';
+import { Button, Card, Flex, Table, Tag, Typography } from 'antd';
 
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { listConfigMaps } from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
@@ -66,28 +66,37 @@ export const ConfigMaps = ({ systemLevel = false, project = '' }: Props) => {
         <Table.Column<ConfigMap>
           align='right'
           width={200}
-          render={(_, record) => (
-            <Flex justify='flex-end' gap={8}>
-              <Button
-                icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
-                color='default'
-                variant='filled'
-                size='small'
-                onClick={() =>
-                  actionModal.show((p) => (
-                    <EditConfigMapModal {...p} configMap={record} project={project} />
-                  ))
-                }
-              >
-                Edit
-              </Button>
-              <DeleteConfigMapButton
-                project={project}
-                name={record?.metadata?.name || ''}
-                systemLevel={systemLevel}
-              />
-            </Flex>
-          )}
+          render={(_, record) => {
+            if (record?.metadata?.labels?.['kargo.akuity.io/replicated-from']) {
+              return (
+                <Typography.Text type='secondary' italic>
+                  Replicated
+                </Typography.Text>
+              );
+            }
+            return (
+              <Flex justify='flex-end' gap={8}>
+                <Button
+                  icon={<FontAwesomeIcon icon={faPencil} size='sm' />}
+                  color='default'
+                  variant='filled'
+                  size='small'
+                  onClick={() =>
+                    actionModal.show((p) => (
+                      <EditConfigMapModal {...p} configMap={record} project={project} />
+                    ))
+                  }
+                >
+                  Edit
+                </Button>
+                <DeleteConfigMapButton
+                  project={project}
+                  name={record?.metadata?.name || ''}
+                  systemLevel={systemLevel}
+                />
+              </Flex>
+            );
+          }}
         />
       </Table>
     </Card>

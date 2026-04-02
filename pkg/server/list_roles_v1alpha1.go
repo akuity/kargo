@@ -44,7 +44,7 @@ func (s *server) ListRoles(
 	if req.Msg.AsResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(
+			rbacResources, err := s.rolesDB.GetAsResources(
 				ctx,
 				systemLevel,
 				project,
@@ -67,9 +67,10 @@ func (s *server) ListRoles(
 					Namespace: project,
 					Name:      kargoRoleName,
 				},
-				ServiceAccount: *sa,
-				Roles:          roles,
-				RoleBindings:   rbs,
+				ServiceAccount: *rbacResources.ServiceAccount,
+				Roles:          rbacResources.Roles,
+				ClusterRoles:   rbacResources.ClusterRoles,
+				RoleBindings:   rbacResources.RoleBindings,
 			}
 		}
 		return connect.NewResponse(
@@ -128,7 +129,12 @@ func (s *server) listProjectRoles(c *gin.Context) {
 	if asResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, false, project, kargoRoleName)
+			rbacResources, err := s.rolesDB.GetAsResources(
+				ctx,
+				false,
+				project,
+				kargoRoleName,
+			)
 			if err != nil {
 				_ = c.Error(err)
 				return
@@ -138,9 +144,10 @@ func (s *server) listProjectRoles(c *gin.Context) {
 					Namespace: project,
 					Name:      kargoRoleName,
 				},
-				ServiceAccount: *sa,
-				Roles:          roles,
-				RoleBindings:   rbs,
+				ServiceAccount: *rbacResources.ServiceAccount,
+				Roles:          rbacResources.Roles,
+				ClusterRoles:   rbacResources.ClusterRoles,
+				RoleBindings:   rbacResources.RoleBindings,
 			}
 		}
 
@@ -194,19 +201,20 @@ func (s *server) listSystemRoles(c *gin.Context) {
 	if asResources {
 		resources := make([]*rbacapi.RoleResources, len(kargoRoleNames))
 		for i, kargoRoleName := range kargoRoleNames {
-			sa, roles, rbs, err := s.rolesDB.GetAsResources(ctx, true, "", kargoRoleName)
+			rbacResources, err := s.rolesDB.GetAsResources(ctx, true, "", kargoRoleName)
 			if err != nil {
 				_ = c.Error(err)
 				return
 			}
 			resources[i] = &rbacapi.RoleResources{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: sa.Namespace,
+					Namespace: rbacResources.ServiceAccount.Namespace,
 					Name:      kargoRoleName,
 				},
-				ServiceAccount: *sa,
-				Roles:          roles,
-				RoleBindings:   rbs,
+				ServiceAccount: *rbacResources.ServiceAccount,
+				Roles:          rbacResources.Roles,
+				ClusterRoles:   rbacResources.ClusterRoles,
+				RoleBindings:   rbacResources.RoleBindings,
 			}
 		}
 

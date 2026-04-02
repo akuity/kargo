@@ -4,6 +4,7 @@ import { JSONSchema7 } from 'json-schema';
 import argocdUpdateConfig from '@ui/gen/directives/argocd-update-config.json';
 import copyConfig from '@ui/gen/directives/copy-config.json';
 import deleteConfig from '@ui/gen/directives/delete-config.json';
+import failConfig from '@ui/gen/directives/fail-config.json';
 import gitOverwriteConfig from '@ui/gen/directives/git-clear-config.json';
 import gitCloneConfig from '@ui/gen/directives/git-clone-config.json';
 import gitCommitConfig from '@ui/gen/directives/git-commit-config.json';
@@ -17,6 +18,8 @@ import jsonParseConfig from '@ui/gen/directives/json-parse-config.json';
 import jsonUpdateConfig from '@ui/gen/directives/json-update-config.json';
 import kustomizeBuildConfig from '@ui/gen/directives/kustomize-build-config.json';
 import kustomizeSetImageConfig from '@ui/gen/directives/kustomize-set-image-config.json';
+import tomlParseConfig from '@ui/gen/directives/toml-parse-config.json';
+import tomlUpdateConfig from '@ui/gen/directives/toml-update-config.json';
 import yamlMergeConfig from '@ui/gen/directives/yaml-merge-config.json';
 import yamlParseConfig from '@ui/gen/directives/yaml-parse-config.json';
 import yamlUpdateConfig from '@ui/gen/directives/yaml-update-config.json';
@@ -83,6 +86,14 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
         config: jsonUpdateConfig as unknown as JSONSchema7
       },
       {
+        identifier: 'toml-parse',
+        config: tomlParseConfig as JSONSchema7
+      },
+      {
+        identifier: 'toml-update',
+        config: tomlUpdateConfig as unknown as JSONSchema7
+      },
+      {
         identifier: 'git-push',
         config: gitPushConfig as unknown as JSONSchema7
       },
@@ -109,6 +120,10 @@ export const useDiscoverPromotionDirectivesRegistries = (): PromotionDirectivesR
       {
         identifier: 'http',
         config: httpConfig as JSONSchema7
+      },
+      {
+        identifier: 'fail',
+        config: failConfig as JSONSchema7
       }
     ]
   };

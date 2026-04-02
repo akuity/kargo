@@ -1,7 +1,6 @@
 package bitbucket
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -13,31 +12,39 @@ import (
 )
 
 type mockPullRequestClient struct {
-	createPullRequestFunc func(opt *bitbucket.PullRequestsOptions) (any, error)
-	listPullRequestsFunc  func(opt *bitbucket.PullRequestsOptions) (any, error)
-	getPullRequestFunc    func(opt *bitbucket.PullRequestsOptions) (any, error)
-	getCommitFunc         func(opt *bitbucket.CommitsOptions) (any, error)
-	mergePullRequestFunc  func(opt *bitbucket.PullRequestsOptions) (any, error)
+	createFunc    func(opt *bitbucket.PullRequestsOptions) (any, error)
+	getsFunc      func(opt *bitbucket.PullRequestsOptions) (any, error)
+	getFunc       func(opt *bitbucket.PullRequestsOptions) (any, error)
+	getCommitFunc func(opt *bitbucket.CommitsOptions) (any, error)
+	mergeFunc     func(opt *bitbucket.PullRequestsOptions) (any, error)
 }
 
-func (m *mockPullRequestClient) CreatePullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
-	return m.createPullRequestFunc(opt)
+func (m *mockPullRequestClient) Create(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return m.createFunc(opt)
 }
 
-func (m *mockPullRequestClient) ListPullRequests(opt *bitbucket.PullRequestsOptions) (any, error) {
-	return m.listPullRequestsFunc(opt)
+func (m *mockPullRequestClient) Gets(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return m.getsFunc(opt)
 }
 
-func (m *mockPullRequestClient) GetPullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
-	return m.getPullRequestFunc(opt)
+func (m *mockPullRequestClient) Get(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return m.getFunc(opt)
 }
 
 func (m *mockPullRequestClient) GetCommit(opt *bitbucket.CommitsOptions) (any, error) {
 	return m.getCommitFunc(opt)
 }
 
-func (m *mockPullRequestClient) MergePullRequest(opt *bitbucket.PullRequestsOptions) (any, error) {
-	return m.mergePullRequestFunc(opt)
+func (m *mockPullRequestClient) Merge(
+	opt *bitbucket.PullRequestsOptions,
+) (any, error) {
+	return m.mergeFunc(opt)
 }
 
 func TestNewProvider(t *testing.T) {
@@ -75,7 +82,7 @@ func TestNewProvider(t *testing.T) {
 func TestCreatePullRequest(t *testing.T) {
 	t.Run("successful creation", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{
 					"id":    int64(1),
 					"state": prStateOpen,
@@ -107,7 +114,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		opts := &gitprovider.CreatePullRequestOpts{
 			Title:       "Test PR",
 			Description: "PR description",
@@ -126,7 +133,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	t.Run("successful creation with nil options", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{
 					"id":    int64(1),
 					"state": prStateOpen,
@@ -139,7 +146,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -148,7 +155,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	t.Run("creation with merge commit", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{
 					"id":    int64(1),
 					"state": prStateOpen,
@@ -169,7 +176,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -178,7 +185,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	t.Run("error during creation", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return nil, errors.New("creation failed")
 			},
 		}
@@ -188,7 +195,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -196,7 +203,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	t.Run("error converting PR response", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				// Return something that can't be properly unmarshaled
 				return make(chan int), nil
 			},
@@ -207,7 +214,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -215,7 +222,7 @@ func TestCreatePullRequest(t *testing.T) {
 
 	t.Run("error getting full commit SHA", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			createPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			createFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{
 					"id":    int64(1),
 					"state": prStateOpen,
@@ -234,7 +241,7 @@ func TestCreatePullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.CreatePullRequest(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -244,7 +251,7 @@ func TestCreatePullRequest(t *testing.T) {
 func TestGetPullRequest(t *testing.T) {
 	t.Run("successful retrieval", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			getPullRequestFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
+			getFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
 				assert.Equal(t, "1", opt.ID)
 				return map[string]any{
 					"id":    int64(1),
@@ -277,7 +284,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -291,7 +298,7 @@ func TestGetPullRequest(t *testing.T) {
 
 	t.Run("retrieval of merged PR", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			getPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{
 					"id":    int64(1),
 					"state": prStateMerged,
@@ -312,7 +319,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.NoError(t, err)
 		assert.NotNil(t, pr)
@@ -323,7 +330,7 @@ func TestGetPullRequest(t *testing.T) {
 
 	t.Run("error during retrieval", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			getPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return nil, errors.New("retrieval failed")
 			},
 		}
@@ -333,7 +340,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -341,7 +348,7 @@ func TestGetPullRequest(t *testing.T) {
 
 	t.Run("error converting PR response", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			getPullRequestFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				// Return something that can't be properly unmarshaled
 				return make(chan int), nil
 			},
@@ -352,7 +359,7 @@ func TestGetPullRequest(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		pr, err := provider.GetPullRequest(ctx, 1)
 		assert.Error(t, err)
 		assert.Nil(t, pr)
@@ -362,7 +369,7 @@ func TestGetPullRequest(t *testing.T) {
 func TestListPullRequests(t *testing.T) {
 	t.Run("list open PRs by default", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
 				assert.Equal(t, []string{prStateOpen}, opt.States)
 				return map[string]any{"values": []any{
 					map[string]any{"id": int64(1), "state": prStateOpen},
@@ -376,7 +383,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.NoError(t, err)
 		assert.Len(t, prs, 2)
@@ -384,7 +391,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("list all PRs", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
 				assert.Contains(t, opt.States, prStateOpen)
 				assert.Contains(t, opt.States, prStateMerged)
 				assert.Contains(t, opt.States, prStateDeclined)
@@ -403,7 +410,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: gitprovider.PullRequestStateAny,
 		})
@@ -413,7 +420,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("list closed PRs", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(opt *bitbucket.PullRequestsOptions) (any, error) {
 				assert.Contains(t, opt.States, prStateMerged)
 				assert.Contains(t, opt.States, prStateDeclined)
 				assert.Contains(t, opt.States, prStateSuperseded)
@@ -431,7 +438,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: gitprovider.PullRequestStateClosed,
 		})
@@ -441,7 +448,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("filter by head branch", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{"values": []any{
 					map[string]any{
 						"id":    int64(1),
@@ -486,7 +493,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			HeadBranch: "feature-1",
 		})
@@ -497,7 +504,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("filter by base branch", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{"values": []any{
 					map[string]any{
 						"id":    int64(1),
@@ -542,7 +549,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			BaseBranch: "dev",
 		})
@@ -553,7 +560,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("filter by head commit", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{"values": []any{
 					map[string]any{
 						"id":    int64(1),
@@ -588,7 +595,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			HeadCommit: "specific-hash",
 		})
@@ -599,7 +606,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("PR with merge commit", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{"values": []any{
 					map[string]any{
 						"id":    int64(1),
@@ -622,7 +629,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.NoError(t, err)
 		assert.Len(t, prs, 1)
@@ -631,7 +638,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("error during list", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return nil, errors.New("list failed")
 			},
 		}
@@ -641,7 +648,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -649,7 +656,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("invalid response format", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return "not a map", nil
 			},
 		}
@@ -659,7 +666,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -667,7 +674,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("missing values field", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{}, nil
 			},
 		}
@@ -677,7 +684,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -685,7 +692,7 @@ func TestListPullRequests(t *testing.T) {
 
 	t.Run("invalid values type", func(t *testing.T) {
 		mockClient := &mockPullRequestClient{
-			listPullRequestsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+			getsFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
 				return map[string]any{"values": "not an array"}, nil
 			},
 		}
@@ -695,7 +702,7 @@ func TestListPullRequests(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, nil)
 		assert.Error(t, err)
 		assert.Nil(t, prs)
@@ -707,13 +714,219 @@ func TestListPullRequests(t *testing.T) {
 			repoSlug: "repo",
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		prs, err := provider.ListPullRequests(ctx, &gitprovider.ListPullRequestOptions{
 			State: "invalid-state",
 		})
 		assert.Error(t, err)
 		assert.Nil(t, prs)
 	})
+}
+
+func TestMergePullRequest(t *testing.T) {
+	testCases := []struct {
+		name           string
+		prNumber       int64
+		mergeOpts      *gitprovider.MergePullRequestOpts
+		mockClient     *mockPullRequestClient
+		expectedMerged bool
+		expectError    bool
+		errorContains  string
+	}{
+		{
+			name:     "error getting PR",
+			prNumber: 999,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return nil, errors.New("get PR failed")
+				},
+			},
+			expectError:   true,
+			errorContains: "error getting pull request",
+		},
+		{
+			name:     "error parsing PR response",
+			prNumber: 999,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return "not a valid response", nil
+				},
+			},
+			expectError:   true,
+			errorContains: "error parsing pull request response",
+		},
+		{
+			name:     "PR already merged",
+			prNumber: 123,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(123),
+						"state": prStateMerged,
+						"links": map[string]any{
+							"html": map[string]any{
+								"href": "https://bitbucket.org/owner/repo/pull-requests/123",
+							},
+						},
+						"merge_commit": map[string]any{
+							"hash": "merge_sha",
+						},
+						"source": map[string]any{
+							"commit": map[string]any{
+								"hash": "head_sha",
+							},
+						},
+					}, nil
+				},
+			},
+			expectedMerged: true,
+		},
+		{
+			name:     "PR declined",
+			prNumber: 456,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(456),
+						"state": prStateDeclined,
+					}, nil
+				},
+			},
+			expectError:   true,
+			errorContains: "closed but not merged",
+		},
+		{
+			name:     "PR is draft",
+			prNumber: 333,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(333),
+						"state": prStateOpen,
+						"draft": true,
+					}, nil
+				},
+			},
+		},
+		{
+			name:      "merge method specified",
+			prNumber:  100,
+			mergeOpts: &gitprovider.MergePullRequestOpts{MergeMethod: "squash"},
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(100),
+						"state": prStateOpen,
+					}, nil
+				},
+			},
+			expectError:   true,
+			errorContains: "does not yet support specifying a merge method",
+		},
+		{
+			name:     "merge operation fails",
+			prNumber: 888,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(888),
+						"state": prStateOpen,
+					}, nil
+				},
+				mergeFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return nil, errors.New("merge failed")
+				},
+			},
+			expectError:   true,
+			errorContains: "error merging pull request",
+		},
+		{
+			name:     "error parsing merge response",
+			prNumber: 777,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(777),
+						"state": prStateOpen,
+					}, nil
+				},
+				mergeFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return "not a valid response", nil
+				},
+			},
+			expectError:   true,
+			errorContains: "error parsing merged pull request response",
+		},
+		{
+			name:     "successful merge",
+			prNumber: 1234,
+			mockClient: &mockPullRequestClient{
+				getFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(1234),
+						"state": prStateOpen,
+						"links": map[string]any{
+							"html": map[string]any{
+								"href": "https://bitbucket.org/owner/repo/pull-requests/1234",
+							},
+						},
+						"source": map[string]any{
+							"commit": map[string]any{
+								"hash": "head_sha",
+							},
+						},
+					}, nil
+				},
+				mergeFunc: func(*bitbucket.PullRequestsOptions) (any, error) {
+					return map[string]any{
+						"id":    int64(1234),
+						"state": prStateMerged,
+						"links": map[string]any{
+							"html": map[string]any{
+								"href": "https://bitbucket.org/owner/repo/pull-requests/1234",
+							},
+						},
+						"merge_commit": map[string]any{
+							"hash": "merge_sha",
+						},
+						"source": map[string]any{
+							"commit": map[string]any{
+								"hash": "head_sha",
+							},
+						},
+					}, nil
+				},
+			},
+			expectedMerged: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			p := &provider{
+				owner:    "owner",
+				repoSlug: "repo",
+				client:   tc.mockClient,
+			}
+
+			pr, merged, err := p.MergePullRequest(t.Context(), tc.prNumber, tc.mergeOpts)
+
+			if tc.expectError {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tc.errorContains)
+				require.False(t, merged)
+				require.Nil(t, pr)
+				return
+			}
+
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedMerged, merged)
+			if tc.expectedMerged {
+				require.NotNil(t, pr)
+				require.Equal(t, tc.prNumber, pr.Number)
+			}
+		})
+	}
 }
 
 func TestGetFullCommitSHA(t *testing.T) {
@@ -732,7 +945,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.NoError(t, err)
 		assert.Equal(t, "full1234567890abcdef", sha)
@@ -744,7 +957,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			repoSlug: "repo",
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "")
 		assert.NoError(t, err)
 		assert.Equal(t, "", sha)
@@ -762,7 +975,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -780,7 +993,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -798,7 +1011,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
@@ -818,7 +1031,7 @@ func TestGetFullCommitSHA(t *testing.T) {
 			client:   mockClient,
 		}
 
-		ctx := context.Background()
+		ctx := t.Context()
 		sha, err := provider.getFullCommitSHA(ctx, "short123")
 		assert.Error(t, err)
 		assert.Equal(t, "", sha)
