@@ -129,74 +129,94 @@ func (g *giteaWebhookReceiver) getHandler(requestBody []byte) http.HandlerFunc {
 
 		switch eventType {
 		case giteaEventTypePullRequest:
-			payload := struct {
-				Action string `json:"action"`
-				Number int    `json:"number"`
-				Repo   struct {
-					CloneURL string `json:"clone_url"`
-				} `json:"repository"`
-			}{}
-			if err := json.Unmarshal(requestBody, &payload); err != nil {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
-				)
-				return
-			}
-			if payload.Action != "closed" {
-				logger.Info("pull request action is not 'closed'; skipping", "action", payload.Action)
-				xhttp.WriteResponseJSON(w, http.StatusOK, nil)
-				return
-			}
-			repoURLs := []string{urls.NormalizeGit(payload.Repo.CloneURL)}
-			logger = logger.WithValues("prNumber", payload.Number, "repoURLs", repoURLs)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, payload.Number)
+			g.handlePullRequestEvent(ctx, w, requestBody)
 		case giteaEventTypePush:
-			type commit struct {
-				Added    []string `json:"added"`
-				Modified []string `json:"modified"`
-				Removed  []string `json:"removed"`
-			}
-
-			payload := struct {
-				Ref  string `json:"ref"`
-				Repo struct {
-					URL string `json:"clone_url"`
-				} `json:"repository"`
-				Commits      []commit `json:"commits"`
-				TotalCommits int      `json:"total_commits"`
-			}{}
-			if err := json.Unmarshal(requestBody, &payload); err != nil {
-				xhttp.WriteErrorJSON(
-					w,
-					xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
-				)
-				return
-			}
-
-			repoURLs := []string{urls.NormalizeGit(payload.Repo.URL)}
-
-			var changedFiles []string
-			if payload.TotalCommits > len(payload.Commits) {
-				logger.Info(
-					"push event commits were truncated by Gitea; "+
-						"skipping path filtering for this event",
-					"totalCommits", payload.TotalCommits,
-					"receivedCommits", len(payload.Commits),
-				)
-			} else {
-				changedFiles = collectPaths(payload.Commits, func(c commit) []string {
-					return slices.Concat(c.Added, c.Modified, c.Removed)
-				})
-			}
-
-			logger = logger.WithValues(
-				"repoURLs", repoURLs,
-				"ref", payload.Ref,
-			)
-			ctx = logging.ContextWithLogger(ctx, logger)
-			refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, payload.Ref)
+			g.handlePushEvent(ctx, w, requestBody)
 		}
 	})
+}
+
+func (g *giteaWebhookReceiver) handlePullRequestEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	payload := struct {
+		Action string `json:"action"`
+		Number int    `json:"number"`
+		Repo   struct {
+			CloneURL string `json:"clone_url"`
+		} `json:"repository"`
+	}{}
+	if err := json.Unmarshal(requestBody, &payload); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+		)
+		return
+	}
+	if payload.Action != "closed" {
+		logger.Info("pull request action is not 'closed'; skipping", "action", payload.Action)
+		xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+		return
+	}
+	repoURLs := []string{urls.NormalizeGit(payload.Repo.CloneURL)}
+	logger = logger.WithValues("prNumber", payload.Number, "repoURLs", repoURLs)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, payload.Number)
+}
+
+func (g *giteaWebhookReceiver) handlePushEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	logger := logging.LoggerFromContext(ctx)
+
+	type commit struct {
+		Added    []string `json:"added"`
+		Modified []string `json:"modified"`
+		Removed  []string `json:"removed"`
+	}
+
+	payload := struct {
+		Ref  string `json:"ref"`
+		Repo struct {
+			URL string `json:"clone_url"`
+		} `json:"repository"`
+		Commits      []commit `json:"commits"`
+		TotalCommits int      `json:"total_commits"`
+	}{}
+	if err := json.Unmarshal(requestBody, &payload); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+		)
+		return
+	}
+
+	repoURLs := []string{urls.NormalizeGit(payload.Repo.URL)}
+
+	var changedFiles []string
+	if payload.TotalCommits > len(payload.Commits) {
+		logger.Info(
+			"push event commits were truncated by Gitea; "+
+				"skipping path filtering for this event",
+			"totalCommits", payload.TotalCommits,
+			"receivedCommits", len(payload.Commits),
+		)
+	} else {
+		changedFiles = collectPaths(payload.Commits, func(c commit) []string {
+			return slices.Concat(c.Added, c.Modified, c.Removed)
+		})
+	}
+
+	logger = logger.WithValues(
+		"repoURLs", repoURLs,
+		"ref", payload.Ref,
+	)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshWarehouses(ctx, w, g.client, g.project, repoURLs, changedFiles, payload.Ref)
 }
