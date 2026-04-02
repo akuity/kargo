@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // PatchSystemConfigMapReader is a Reader for the PatchSystemConfigMap structure.
@@ -42,7 +44,7 @@ PatchSystemConfigMapOK describes a response with status code 200, with default h
 ConfigMap resource (k8s.io/api/core/v1.ConfigMap)
 */
 type PatchSystemConfigMapOK struct {
-	Payload any
+	Payload *models.V1ConfigMap
 }
 
 // IsSuccess returns true when this patch system config map o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *PatchSystemConfigMapOK) String() string {
 	return fmt.Sprintf("[PATCH /v1beta1/system/configmaps/{configmap}][%d] patchSystemConfigMapOK %s", 200, payload)
 }
 
-func (o *PatchSystemConfigMapOK) GetPayload() any {
+func (o *PatchSystemConfigMapOK) GetPayload() *models.V1ConfigMap {
 	return o.Payload
 }
 
 func (o *PatchSystemConfigMapOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1ConfigMap)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

@@ -78,7 +78,7 @@ func (s *server) GetStage(
 // @Produce json
 // @Param project path string true "Project name"
 // @Param stage path string true "Stage name"
-// @Success 200 {object} object "Stage custom resource (github.com/akuity/kargo/api/v1alpha1.Stage)"
+// @Success 200 {object} kargoapi.Stage "Stage custom resource (github.com/akuity/kargo/api/v1alpha1.Stage)"
 // @Router /v1beta1/projects/{project}/stages/{stage} [get]
 func (s *server) getStage(c *gin.Context) {
 	ctx := c.Request.Context()

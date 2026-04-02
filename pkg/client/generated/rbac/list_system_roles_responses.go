@@ -39,7 +39,7 @@ func NewListSystemRolesOK() *ListSystemRolesOK {
 /*
 ListSystemRolesOK describes a response with status code 200, with default header values.
 
-RoleList custom resource (github.com/akuity/kargo/api/rbac/v1alpha1.RoleList)
+RoleList custom resource (rbacapi.RoleList) or underlying resources
 */
 type ListSystemRolesOK struct {
 	Payload any

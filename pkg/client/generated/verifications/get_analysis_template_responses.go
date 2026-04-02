@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // GetAnalysisTemplateReader is a Reader for the GetAnalysisTemplate structure.
@@ -42,7 +44,7 @@ GetAnalysisTemplateOK describes a response with status code 200, with default he
 AnalysisTemplate custom resource (github.com/argoproj/argo-rollouts/pkg/apis/rollouts/v1alpha1.AnalysisTemplate)
 */
 type GetAnalysisTemplateOK struct {
-	Payload any
+	Payload *models.RolloutsAnalysisTemplate
 }
 
 // IsSuccess returns true when this get analysis template o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *GetAnalysisTemplateOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/projects/{project}/analysis-templates/{analysis-template}][%d] getAnalysisTemplateOK %s", 200, payload)
 }
 
-func (o *GetAnalysisTemplateOK) GetPayload() any {
+func (o *GetAnalysisTemplateOK) GetPayload() *models.RolloutsAnalysisTemplate {
 	return o.Payload
 }
 
 func (o *GetAnalysisTemplateOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.RolloutsAnalysisTemplate)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 

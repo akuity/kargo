@@ -10,6 +10,8 @@ import (
 
 	"github.com/go-openapi/runtime"
 	"github.com/go-openapi/strfmt"
+
+	"github.com/akuity/kargo/pkg/client/generated/models"
 )
 
 // ListSystemGenericCredentialsReader is a Reader for the ListSystemGenericCredentials structure.
@@ -42,7 +44,7 @@ ListSystemGenericCredentialsOK describes a response with status code 200, with d
 SecretList resource (k8s.io/api/core/v1.SecretList)
 */
 type ListSystemGenericCredentialsOK struct {
-	Payload any
+	Payload *models.V1SecretList
 }
 
 // IsSuccess returns true when this list system generic credentials o k response has a 2xx status code
@@ -85,14 +87,16 @@ func (o *ListSystemGenericCredentialsOK) String() string {
 	return fmt.Sprintf("[GET /v1beta1/system/generic-credentials][%d] listSystemGenericCredentialsOK %s", 200, payload)
 }
 
-func (o *ListSystemGenericCredentialsOK) GetPayload() any {
+func (o *ListSystemGenericCredentialsOK) GetPayload() *models.V1SecretList {
 	return o.Payload
 }
 
 func (o *ListSystemGenericCredentialsOK) readResponse(response runtime.ClientResponse, consumer runtime.Consumer, formats strfmt.Registry) error {
 
+	o.Payload = new(models.V1SecretList)
+
 	// response payload
-	if err := consumer.Consume(response.Body(), &o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
+	if err := consumer.Consume(response.Body(), o.Payload); err != nil && !stderrors.Is(err, io.EOF) {
 		return err
 	}
 
