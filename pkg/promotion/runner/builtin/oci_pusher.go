@@ -96,11 +96,11 @@ func (p *ociPusher) run(
 	stepCtx *promotion.StepContext,
 	cfg builtin.OCIPushConfig,
 ) (promotion.StepResult, error) {
-	srcRef, srcCredType, err := parseOCIReference(cfg.ImageRef)
+	srcRef, srcCredType, err := parseOCIReference(cfg.SrcRef)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusFailed},
 			&promotion.TerminalError{
-				Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.ImageRef, err),
+				Err: fmt.Errorf("failed to parse source reference %q: %w", cfg.SrcRef, err),
 			}
 	}
 
@@ -129,7 +129,7 @@ func (p *ociPusher) run(
 	desc, err := remote.Get(srcRef, srcOpts...)
 	if err != nil {
 		return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
-			fmt.Errorf("failed to get source artifact %q: %w", cfg.ImageRef, err)
+			fmt.Errorf("failed to get source artifact %q: %w", cfg.SrcRef, err)
 	}
 
 	digest, err := p.push(desc, srcRef, dstRef, cfg.Annotations, dstOpts)

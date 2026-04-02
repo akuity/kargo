@@ -16,8 +16,8 @@ is supported for both source and destination.
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| `imageRef` | `string` | Y | Reference to the source OCI artifact. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. For Helm OCI artifacts, the `oci://` prefix is supported (e.g., `oci://registry/repository:tag`) and will use Helm-specific credential lookup. |
-| `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For Helm OCI artifacts, the `oci://` prefix is supported. For retag-in-place, use the same repository as `imageRef` with the new tag. |
+| `srcRef` | `string` | Y | Reference to the source OCI artifact. Supports both tag format `registry/repository:tag` and digest format `registry/repository@sha256:digest`. For Helm OCI artifacts, the `oci://` prefix is supported (e.g., `oci://registry/repository:tag`) and will use Helm-specific credential lookup. |
+| `destRef` | `string` | Y | Destination reference including tag (e.g., `registry/repository:tag`). For Helm OCI artifacts, the `oci://` prefix is supported. For retag-in-place, use the same repository as `srcRef` with the new tag. |
 | `annotations` | `object` | N | Annotations to set on the destination artifact. Keys may be prefixed with `index:` or `manifest:` to scope them to the index or image manifest respectively. Unprefixed keys default to the image manifest. For single images, `index:`-prefixed keys are ignored. Values support expressions. Existing annotations on the source artifact are preserved; specified annotations are added or overwritten. |
 | `insecureSkipTLSVerify` | `boolean` | N | Whether to skip TLS verification for both source and destination registries. Defaults to `false`. |
 
@@ -35,7 +35,7 @@ The total compressed size of the artifact (config blob and all layers) must not
 exceed 1 GiB (or as configured by your administrator). For multi-arch image indexes, this includes the sum across all
 child images. Exceeding this limit causes a terminal (non-retryable) error.
 
-This limit is not enforced when `imageRef` and `destRef` refer to the same
+This limit is not enforced when `srcRef` and `destRef` refer to the same
 repository (i.e. retagging within the same registry and path), since no blob
 transfer occurs in that case.
 
@@ -53,7 +53,7 @@ metadata operation with no blob transfer.
 steps:
 - uses: oci-push
   config:
-    imageRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
+    srcRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
     destRef: registry.example.com/myapp:v1.2.3
 ```
 
@@ -67,7 +67,7 @@ are resolved independently.
 steps:
 - uses: oci-push
   config:
-    imageRef: sandbox.example.com/myapp@${{ imageFrom("sandbox.example.com/myapp").digest }}
+    srcRef: sandbox.example.com/myapp@${{ imageFrom("sandbox.example.com/myapp").digest }}
     destRef: prod.example.com/myapp:${{ imageFrom("sandbox.example.com/myapp").tag }}
 ```
 
@@ -82,7 +82,7 @@ steps:
 - uses: oci-push
   as: push-to-stage
   config:
-    imageRef: registry.example.com/widget-service@${{ imageFrom("registry.example.com/widget-service").digest }}
+    srcRef: registry.example.com/widget-service@${{ imageFrom("registry.example.com/widget-service").digest }}
     destRef: registry.example.com/widget-service/${{ ctx.stage }}:${{ imageFrom("registry.example.com/widget-service").tag }}
 ```
 
@@ -97,7 +97,7 @@ authentication.
 steps:
 - uses: oci-push
   config:
-    imageRef: oci://registry.example.com/charts/my-app:${{ chartFrom("oci://registry.example.com/charts/my-app").version }}
+    srcRef: oci://registry.example.com/charts/my-app:${{ chartFrom("oci://registry.example.com/charts/my-app").version }}
     destRef: oci://prod-registry.example.com/charts/my-app:${{ chartFrom("oci://registry.example.com/charts/my-app").version }}
 ```
 
@@ -111,7 +111,7 @@ source repository or Kargo promotion name.
 steps:
 - uses: oci-push
   config:
-    imageRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
+    srcRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
     destRef: registry.example.com/myapp:v1.2.3
     annotations:
       org.opencontainers.image.source: "https://github.com/example/myapp"
@@ -128,7 +128,7 @@ default to the image manifest.
 steps:
 - uses: oci-push
   config:
-    imageRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
+    srcRef: registry.example.com/myapp@${{ imageFrom("registry.example.com/myapp").digest }}
     destRef: registry.example.com/myapp:v1.2.3
     annotations:
       org.opencontainers.image.source: "https://github.com/example/myapp"
@@ -146,7 +146,7 @@ development or testing environments where the registries are trusted.
 steps:
 - uses: oci-push
   config:
-    imageRef: internal-registry.local/myapp:latest
+    srcRef: internal-registry.local/myapp:latest
     destRef: staging-registry.local/myapp:latest
     insecureSkipTLSVerify: true
 ```

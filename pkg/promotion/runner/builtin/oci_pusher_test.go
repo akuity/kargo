@@ -27,10 +27,10 @@ import (
 func Test_ociPusher_validate(t *testing.T) {
 	tests := []validationTestCase{
 		{
-			name:   "imageRef is not specified",
+			name:   "srcRef is not specified",
 			config: promotion.Config{},
 			expectedProblems: []string{
-				"(root): imageRef is required",
+				"(root): srcRef is required",
 			},
 		},
 		{
@@ -43,35 +43,35 @@ func Test_ociPusher_validate(t *testing.T) {
 		{
 			name: "valid minimal config",
 			config: promotion.Config{
-				"imageRef": "registry.example.com/image:tag",
+				"srcRef": "registry.example.com/image:tag",
 				"destRef":  "registry.example.com/image:newtag",
 			},
 		},
 		{
 			name: "valid config with OCI protocol",
 			config: promotion.Config{
-				"imageRef": "oci://registry.example.com/chart:1.0.0",
+				"srcRef": "oci://registry.example.com/chart:1.0.0",
 				"destRef":  "oci://registry.example.com/chart:2.0.0",
 			},
 		},
 		{
 			name: "valid config with non-standard port",
 			config: promotion.Config{
-				"imageRef": "an.internal.registry.com:5050/myrepo/myimage:latest",
+				"srcRef": "an.internal.registry.com:5050/myrepo/myimage:latest",
 				"destRef":  "an.internal.registry.com:5050/myrepo/myimage:newtag",
 			},
 		},
 		{
 			name: "valid config with OCI protocol and non-standard port",
 			config: promotion.Config{
-				"imageRef": "oci://registry.example.com:5050/chart:1.0.0",
+				"srcRef": "oci://registry.example.com:5050/chart:1.0.0",
 				"destRef":  "oci://registry.example.com:5050/chart:2.0.0",
 			},
 		},
 		{
 			name: "valid config with all optional fields",
 			config: promotion.Config{
-				"imageRef":              "registry.example.com/image:tag",
+				"srcRef":              "registry.example.com/image:tag",
 				"destRef":               "registry.example.com/image:newtag",
 				"insecureSkipTLSVerify": true,
 				"annotations": map[string]any{
@@ -131,7 +131,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push single image to new tag",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcImageRef,
+				SrcRef: srcImageRef,
 				DestRef:  fmt.Sprintf("%s/test/image:v2.0.0", regHost),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
@@ -157,7 +157,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push image by digest",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: fmt.Sprintf("%s/test/image@%s", regHost, srcDigest.String()),
+				SrcRef: fmt.Sprintf("%s/test/image@%s", regHost, srcDigest.String()),
 				DestRef:  fmt.Sprintf("%s/test/image:pinned", regHost),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
@@ -170,7 +170,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push image index",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcIndexRef,
+				SrcRef: srcIndexRef,
 				DestRef:  fmt.Sprintf("%s/test/multiarch:v2.0.0", regHost),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
@@ -192,7 +192,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push with annotations",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcImageRef,
+				SrcRef: srcImageRef,
 				DestRef:  fmt.Sprintf("%s/test/image:annotated", regHost),
 				Annotations: map[string]string{
 					"org.opencontainers.image.source": "https://github.com/example",
@@ -220,7 +220,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push index with unprefixed annotations goes to child manifests",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcIndexRef,
+				SrcRef: srcIndexRef,
 				DestRef:  fmt.Sprintf("%s/test/multiarch:annotated", regHost),
 				Annotations: map[string]string{
 					"io.kargo.test": "true",
@@ -255,7 +255,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "push index with scoped annotations",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcIndexRef,
+				SrcRef: srcIndexRef,
 				DestRef:  fmt.Sprintf("%s/test/multiarch:scoped", regHost),
 				Annotations: map[string]string{
 					"index:io.kargo.index-only":       "idx",
@@ -296,7 +296,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "cross-repo push",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcImageRef,
+				SrcRef: srcImageRef,
 				DestRef:  fmt.Sprintf("%s/other/repo:latest", regHost),
 			},
 			assertions: func(t *testing.T, result promotion.StepResult, err error) {
@@ -316,7 +316,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "source not found",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: fmt.Sprintf("%s/nonexistent/image:v1.0.0", regHost),
+				SrcRef: fmt.Sprintf("%s/nonexistent/image:v1.0.0", regHost),
 				DestRef:  fmt.Sprintf("%s/test/image:copy", regHost),
 			},
 			assertions: func(t *testing.T, _ promotion.StepResult, err error) {
@@ -326,7 +326,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "invalid source reference",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: "invalid::ref",
+				SrcRef: "invalid::ref",
 				DestRef:  fmt.Sprintf("%s/test/image:copy", regHost),
 			},
 			assertions: func(t *testing.T, _ promotion.StepResult, err error) {
@@ -339,7 +339,7 @@ func Test_ociPusher_run(t *testing.T) {
 		{
 			name: "invalid destination reference",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: srcImageRef,
+				SrcRef: srcImageRef,
 				DestRef:  "invalid::ref",
 			},
 			assertions: func(t *testing.T, _ promotion.StepResult, err error) {
@@ -399,7 +399,7 @@ func Test_ociPusher_run_credentialError(t *testing.T) {
 		{
 			name: "source credential error",
 			cfg: builtin.OCIPushConfig{
-				ImageRef: "registry.example.com/image:tag",
+				SrcRef: "registry.example.com/image:tag",
 				DestRef:  "registry.example.com/image:newtag",
 			},
 			credsDB: &credentials.FakeDB{
@@ -464,7 +464,7 @@ func Test_ociPusher_run_noAnnotationsMutation(t *testing.T) {
 	result, err := runner.run(context.Background(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
-		ImageRef: fmt.Sprintf("%s/test/annotated:v1", regHost),
+		SrcRef: fmt.Sprintf("%s/test/annotated:v1", regHost),
 		DestRef:  fmt.Sprintf("%s/test/annotated:v2", regHost),
 	})
 	require.NoError(t, err)
@@ -561,7 +561,7 @@ func Test_ociPusher_run_scopedAnnotationsOnImage(t *testing.T) {
 	result, err := runner.run(context.Background(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
-		ImageRef: fmt.Sprintf("%s/test/scoped:v1", regHost),
+		SrcRef: fmt.Sprintf("%s/test/scoped:v1", regHost),
 		DestRef:  fmt.Sprintf("%s/test/scoped:v2", regHost),
 		Annotations: map[string]string{
 			"index:ignored.key": "ignored",
@@ -608,7 +608,7 @@ func Test_ociPusher_run_ociManifestAnnotations(t *testing.T) {
 	result, err := runner.run(context.Background(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
-		ImageRef: fmt.Sprintf("%s/test/oci:v1", regHost),
+		SrcRef: fmt.Sprintf("%s/test/oci:v1", regHost),
 		DestRef:  fmt.Sprintf("%s/test/oci:v2", regHost),
 		Annotations: map[string]string{
 			"test.key": "test.value",
@@ -690,16 +690,16 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 	require.NoError(t, remote.WriteIndex(idxRef, srcIdx))
 
 	tests := []struct {
-		name     string
-		imageRef string
+		name   string
+		srcRef string
 	}{
 		{
-			name:     "image exceeds size limit",
-			imageRef: fmt.Sprintf("%s/test/big:v1", regHost),
+			name:   "image exceeds size limit",
+			srcRef: fmt.Sprintf("%s/test/big:v1", regHost),
 		},
 		{
-			name:     "index exceeds size limit",
-			imageRef: fmt.Sprintf("%s/test/bigidx:v1", regHost),
+			name:   "index exceeds size limit",
+			srcRef: fmt.Sprintf("%s/test/bigidx:v1", regHost),
 		},
 	}
 
@@ -714,7 +714,7 @@ func Test_ociPusher_push_sizeLimitExceeded(t *testing.T) {
 			result, err := runner.run(context.Background(), &promotion.StepContext{
 				Project: "fake-project",
 			}, builtin.OCIPushConfig{
-				ImageRef: tt.imageRef,
+				SrcRef: tt.srcRef,
 				DestRef:  fmt.Sprintf("%s/test/dst:v1", regHost),
 			})
 			assert.Equal(t, string(kargoapi.PromotionStepStatusErrored), string(result.Status))
@@ -746,7 +746,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 
 	t.Run("cross-repo push is blocked", func(t *testing.T) {
 		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
-			ImageRef: fmt.Sprintf("%s/test/img:v1", regHost),
+			SrcRef: fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef:  fmt.Sprintf("%s/other/repo:v1", regHost),
 		})
 		assert.Equal(t, string(kargoapi.PromotionStepStatusErrored), string(result.Status))
@@ -755,7 +755,7 @@ func Test_ociPusher_push_sizeLimitZero(t *testing.T) {
 
 	t.Run("same-repo retag succeeds", func(t *testing.T) {
 		result, err := runner.run(context.Background(), stepCtx, builtin.OCIPushConfig{
-			ImageRef: fmt.Sprintf("%s/test/img:v1", regHost),
+			SrcRef: fmt.Sprintf("%s/test/img:v1", regHost),
 			DestRef:  fmt.Sprintf("%s/test/img:v2", regHost),
 		})
 		require.NoError(t, err)
@@ -784,7 +784,7 @@ func Test_ociPusher_push_sizeLimitDisabled(t *testing.T) {
 	result, err := runner.run(context.Background(), &promotion.StepContext{
 		Project: "fake-project",
 	}, builtin.OCIPushConfig{
-		ImageRef: fmt.Sprintf("%s/test/img:v1", regHost),
+		SrcRef: fmt.Sprintf("%s/test/img:v1", regHost),
 		DestRef:  fmt.Sprintf("%s/other/repo:v1", regHost),
 	})
 	require.NoError(t, err)
