@@ -181,9 +181,20 @@ func SetupReconcilerWithManager(
 				&UpdatedArgoCDAppHandler[*argocd.Application]{
 					kargoClient: kargoMgr.GetClient(),
 				},
-				ArgoCDAppOperationCompleted[*argocd.Application]{
-					logger: logger,
-				},
+				predicate.Or(
+					ArgoCDAppOperationCompleted[*argocd.Application]{
+						logger: logger,
+					},
+					ArgoCDAppHealthChanged[*argocd.Application]{
+						logger: logger,
+					},
+					ArgoCDAppSyncChanged[*argocd.Application]{
+						logger: logger,
+					},
+					ArgoCDAppReconciledAfterOperation[*argocd.Application]{
+						logger: logger,
+					},
+				),
 			),
 		); err != nil {
 			return fmt.Errorf("unable to watch Applications: %w", err)

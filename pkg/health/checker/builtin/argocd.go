@@ -14,7 +14,6 @@ import (
 	libargocd "github.com/akuity/kargo/pkg/argocd"
 	argocd "github.com/akuity/kargo/pkg/controller/argocd/api/v1alpha1"
 	"github.com/akuity/kargo/pkg/health"
-	"github.com/akuity/kargo/pkg/logging"
 )
 
 const applicationStatusesKey = "applicationStatuses"
@@ -226,7 +225,7 @@ func (a *argocdChecker) getApplicationHealth(
 		// this, Argo CD may skip the status write after reconciliation
 		// if health/sync are identical to before the operation, leaving
 		// reconciledAt stale indefinitely until the next periodic refresh.
-		a.requestAppRefresh(ctx, app)
+		libargocd.RequestAppRefresh(ctx, a.argocdClient, app)
 		// nolint:staticcheck
 		return kargoapi.HealthStateUnknown,
 			appStatus,
@@ -383,29 +382,6 @@ func (a *argocdChecker) stageHealthForAppHealth(
 			app.Status.Health.Status,
 		)
 		return kargoapi.HealthStateUnhealthy, err
-	}
-}
-
-// requestAppRefresh annotates the Argo CD Application with a hard refresh
-// request. This ensures Argo CD invalidates its cache and persists the full
-// status (including reconciledAt) on the next reconciliation — even when
-// health and sync status are unchanged from before the operation.
-func (a *argocdChecker) requestAppRefresh(
-	ctx context.Context,
-	app *argocd.Application,
-) {
-	patch := client.MergeFrom(app.DeepCopy())
-	if app.Annotations == nil {
-		app.Annotations = make(map[string]string, 1)
-	}
-	app.Annotations[argocd.AnnotationKeyRefresh] = string(argocd.RefreshTypeHard)
-	if err := a.argocdClient.Patch(ctx, app, patch); err != nil {
-		logging.LoggerFromContext(ctx).Error(
-			err,
-			"failed to request hard refresh for Argo CD Application",
-			"namespace", app.Namespace,
-			"name", app.Name,
-		)
 	}
 }
 
