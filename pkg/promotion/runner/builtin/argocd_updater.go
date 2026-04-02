@@ -13,7 +13,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -235,17 +234,6 @@ func (a *argocdUpdater) run(
 		"status", aggregatedStatus,
 	)
 
-	// TODO(krancour): This enables more aggressive polling while waiting to
-	// observe the Application has successfully synced. This is a workaround for
-	// an as-yet-unexplained, but rare phenomenon where Application status change
-	// events do not seem to be promptly triggering re-reconciliation of the
-	// Promotion resources.
-	var retryAfter *time.Duration
-	if aggregatedStatus == kargoapi.PromotionStepStatusRunning {
-		retryAfter = ptr.To(30 * time.Second)
-		logger.Info("step to be retried", "interval", retryAfter)
-	}
-
 	return promotion.StepResult{
 		Status: aggregatedStatus,
 		HealthCheck: &health.Criteria{
@@ -254,7 +242,6 @@ func (a *argocdUpdater) run(
 				"apps": appHealthChecks,
 			},
 		},
-		RetryAfter: retryAfter,
 	}, nil
 }
 
