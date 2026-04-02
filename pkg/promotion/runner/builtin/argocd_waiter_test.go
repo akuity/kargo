@@ -244,7 +244,7 @@ func Test_argocdWaiter_run(t *testing.T) {
 			assertions: func(t *testing.T, res promotion.StepResult, err error) {
 				require.NoError(t, err)
 				assert.Equal(t, kargoapi.PromotionStepStatusRunning, res.Status)
-				assert.NotNil(t, res.RetryAfter)
+				assert.Nil(t, res.RetryAfter)
 			},
 		},
 		{

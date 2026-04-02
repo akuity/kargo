@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/xeipuuv/gojsonschema"
-	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -132,7 +131,6 @@ func (w *argocdWaiter) run(
 	newHealthStatuses := make(map[string]string, len(prevHealthStatuses))
 	maps.Copy(newHealthStatuses, prevHealthStatuses)
 
-	retryAfter := 30 * time.Second
 	allReady := true
 	for i := range stepCfg.Apps {
 		appSpec := &stepCfg.Apps[i]
@@ -195,12 +193,9 @@ func (w *argocdWaiter) run(
 		}, nil
 	}
 
-	logger.Info("waiting for applications to become ready",
-		"retryAfter", retryAfter,
-	)
+	logger.Info("waiting for applications to become ready")
 	return promotion.StepResult{
-		Status:     kargoapi.PromotionStepStatusRunning,
-		RetryAfter: ptr.To(retryAfter),
+		Status: kargoapi.PromotionStepStatusRunning,
 		Output: map[string]any{
 			healthStatusKey: newHealthStatuses,
 		},
