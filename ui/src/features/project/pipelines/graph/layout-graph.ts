@@ -48,12 +48,7 @@ export const layoutGraph = (
     stageByName[s?.metadata?.name || ''] = s;
   }
 
-  const maxStageHeight = Math.max(
-    stageSizer.size().height,
-    ...stage.stages
-      .filter((s) => !stage.ignore?.(s))
-      .map((s) => dimensionState[stageIndexer.index(s)]?.height || 0)
-  );
+  const maxStageHeight = 200;
 
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
