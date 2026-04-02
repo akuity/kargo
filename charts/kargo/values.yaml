@@ -548,6 +548,9 @@ controller:
       cacheByTagPolicy: Allow
       ## @param controller.images.cache.maxEntries specifies the maximum number of entries in the internal image metadata cache.
       maxEntries: 100000
+    push:
+      ## @param controller.images.push.maxArtifactSize The maximum size (in bytes) for cross-repository OCI artifact pushes. Defaults to 1 GiB (1073741824). Set to 0 to block all cross-repo pushes, or -1 to disable the limit.
+      maxArtifactSize: 1073741824
 
   ## All settings relating to the Argo CD control plane this controller might
   ## integrate with.
