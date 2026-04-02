@@ -600,7 +600,7 @@ in a `Secret` resource.
 Both of these options rely upon extensive external configuration that likely
 requires the assistance of Kargo's operator and an AWS account administrator,
 and as such, further details are covered in the
-[Managing Secrets](../../40-operator-guide/40-security/40-managing-secrets.md)
+[Ambient Credentials](../../40-operator-guide/40-security/50-ambient-credentials.md)
 section of the Operator Guide.
 
 :::
