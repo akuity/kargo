@@ -84,6 +84,13 @@ steps:
   config:
     srcRef: registry.example.com/widget-service@${{ imageFrom("registry.example.com/widget-service").digest }}
     destRef: registry.example.com/widget-service/${{ ctx.stage }}:${{ imageFrom("registry.example.com/widget-service").tag }}
+- uses: kustomize-set-image
+  config:
+    path: ./out
+    images:
+    - image: registry.example.com/widget-service
+      newName: registry.example.com/widget-service/${{ ctx.stage }}
+      digest: ${{ outputs["push-to-stage"].digest }}
 ```
 
 ### Promoting an OCI Helm Chart
