@@ -7,9 +7,10 @@ description: Copies or retags OCI artifacts (container images, Helm charts) betw
 
 `oci-push` copies or retags OCI artifacts between registries or within the same
 registry. This step supports container images and Helm charts stored in OCI
-registries, making it useful for promoting verified artifacts through a pipeline
-— for example, retagging an image with a release version after verification, or
-copying it to a production registry. Multi-arch image indexes are copied in full.
+registries, making it useful for promoting artifacts through a pipeline — for
+example, retagging an image with a release version or copying it to a production
+registry. Multi-arch image indexes are copied in full. Registry authentication
+is supported for both source and destination.
 
 ## Configuration
 
