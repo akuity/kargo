@@ -221,6 +221,8 @@ type GitCommitConfigAuthor struct {
 type GitMergePRConfig struct {
 	// Skip TLS verification when interacting with the Git provider. Default is false.
 	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The merge method to use when merging the pull request. Options are provider-specific.
+	MergeMethod string `json:"mergeMethod,omitempty"`
 	// The number of the pull request to merge.
 	PRNumber int64 `json:"prNumber"`
 	// The name of the Git provider to use. Currently 'azure', 'bitbucket', 'gitea', 'github',
