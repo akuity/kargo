@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -279,6 +280,72 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "PR merged event refreshes matching Promotion",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"repoURL":"https://dev.azure.com/testorg/testproject/_git/testrepo","prNumber":42}`),
+							},
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestField,
+				indexer.RunningPromotionsByPullRequest,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newAzurePayload(azureDevOpsPRMergedEvent, ""),
+				)
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name: "PR merged event with no matching Promotions",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestField,
+				indexer.RunningPromotionsByPullRequest,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					newAzurePayload(azureDevOpsPRMergedEvent, ""),
+				)
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name: "no ref match (git)",
 			// This event would prompt the Warehouse to refresh if not for the ref in
 			// the event being for the main branch whilst the subscription is
@@ -408,6 +475,17 @@ func newAzurePayload(event, mediaType string) *bytes.Buffer {
 						"name": "refs/heads/main"
 					}
 				],
+				"repository": {
+					"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+				}
+			}
+		}`)
+	case azureDevOpsPRMergedEvent:
+		return bytes.NewBufferString(`
+		{
+			"eventType": "git.pullrequest.merged",
+			"resource": {
+				"pullRequestId": 42,
 				"repository": {
 					"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
 				}
