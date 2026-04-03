@@ -33,8 +33,8 @@ const (
 	PromotionsByStageField           = "stage"
 	PromotionsByTerminalField        = "terminal"
 
-	RunningPromotionsByArgoCDApplicationsField  = "applications"
-	RunningPromotionsByPullRequestURLField      = "pullRequestURL"
+	RunningPromotionsByArgoCDApplicationsField = "applications"
+	RunningPromotionsByPullRequestURLField     = "pullRequestURL"
 
 	StagesByAnalysisRunField    = "analysisRun"
 	StagesByFreightField        = "freight"
@@ -331,7 +331,6 @@ func RunningPromotionsByPullRequestURL(obj client.Object) []string {
 	}
 	return res
 }
-
 
 // PromotionsByStageAndFreight is a client.IndexerFunc that indexes Promotions
 // by the Freight and Stage they reference.

@@ -331,7 +331,15 @@ func TestBitbucketHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.org/example/repo/pull-requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.org/example/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -372,7 +380,15 @@ func TestBitbucketHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.org/example/repo/pull-requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.org/example/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -433,7 +449,15 @@ func TestBitbucketHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -474,7 +498,15 @@ func TestBitbucketHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},

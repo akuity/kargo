@@ -298,7 +298,15 @@ func TestAzureHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -365,7 +373,15 @@ func TestAzureHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},

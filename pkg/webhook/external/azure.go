@@ -247,7 +247,7 @@ type acrEvent struct {
 // nolint:lll
 type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"`
-	Resource struct {
+	Resource  struct {
 		PullRequestID int    `json:"pullRequestId,omitempty"`
 		Status        string `json:"status,omitempty"`
 		RefUpdates    []struct {

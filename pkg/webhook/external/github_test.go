@@ -1007,7 +1007,15 @@ func TestGithubHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/example/repo/pull/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://github.com/example/repo/pull/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -1053,7 +1061,15 @@ func TestGithubHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/example/repo/pull/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://github.com/example/repo/pull/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},

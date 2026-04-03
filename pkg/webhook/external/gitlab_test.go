@@ -204,7 +204,15 @@ func TestGitLabHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitlab.com/example/repo/-/merge_requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitlab.com/example/repo/-/merge_requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -245,7 +253,15 @@ func TestGitLabHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitlab.com/example/repo/-/merge_requests/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitlab.com/example/repo/-/merge_requests/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},

@@ -377,7 +377,15 @@ func TestGiteaHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitea.com/example/repo/pulls/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitea.com/example/repo/pulls/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
@@ -422,7 +430,15 @@ func TestGiteaHandler(t *testing.T) {
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitea.com/example/repo/pulls/42","open":true,"merged":false}}}`),
+							Raw: []byte(`{
+								"wait-pr": {
+									"pr": {
+										"url": "https://gitea.com/example/repo/pulls/42",
+										"open": true,
+										"merged": false
+									}
+								}
+							}`),
 						},
 					},
 				},
