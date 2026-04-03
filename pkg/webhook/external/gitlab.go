@@ -138,15 +138,11 @@ func (g *gitlabWebhookReceiver) handleMergeRequestEvent(
 		xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 		return
 	}
-	mrNumber := int(e.ObjectAttributes.IID)
-	repoURLs := []string{
-		urls.NormalizeGit(e.Project.GitHTTPURL),
-		urls.NormalizeGit(e.Project.GitSSHURL),
-	}
+	prURL := e.ObjectAttributes.URL
 	logger := logging.LoggerFromContext(ctx)
-	logger = logger.WithValues("mrNumber", mrNumber, "repoURLs", repoURLs)
+	logger = logger.WithValues("prURL", prURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, mrNumber)
+	refreshPromotionsByPrURL(ctx, w, g.client, g.project, prURL)
 }
 
 func (g *gitlabWebhookReceiver) handlePushEvent(
