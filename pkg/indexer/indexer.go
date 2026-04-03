@@ -33,8 +33,8 @@ const (
 	PromotionsByStageField           = "stage"
 	PromotionsByTerminalField        = "terminal"
 
-	RunningPromotionsByArgoCDApplicationsField = "applications"
-	RunningPromotionsByPullRequestField        = "pullRequests"
+	RunningPromotionsByArgoCDApplicationsField  = "applications"
+	RunningPromotionsByPullRequestURLField      = "pullRequestURL"
 
 	StagesByAnalysisRunField    = "analysisRun"
 	StagesByFreightField        = "freight"
@@ -300,15 +300,11 @@ func RunningPromotionsByArgoCDApplications(
 	}
 }
 
-// RunningPromotionsByPullRequest is a client.IndexerFunc that indexes running
-// Promotions by the pull requests they are waiting on via git-wait-for-pr
-// steps. Index keys have the form "{normalizedRepoURL}:{prNumber}".
-//
-// Rather than evaluating template expressions from step config, this reads the
-// already-resolved PR data from each git-wait-for-pr step's output in
-// promo.Status.State. The step writes its output (including pr.id) on every
-// reconciliation cycle, even when the PR is still open.
-func RunningPromotionsByPullRequest(obj client.Object) []string {
+// RunningPromotionsByPullRequestURL is a client.IndexerFunc that indexes
+// running Promotions by the URL of the pull request they are waiting on via
+// git-wait-for-pr steps. The PR URL is read from each step's output in
+// promo.Status.State, where the step writes it on every reconciliation cycle.
+func RunningPromotionsByPullRequestURL(obj client.Object) []string {
 	promo, ok := obj.(*kargoapi.Promotion)
 	if !ok {
 		return nil
@@ -322,66 +318,20 @@ func RunningPromotionsByPullRequest(obj client.Object) []string {
 		if int64(i) > promo.Status.CurrentStep {
 			break
 		}
-		if step.Uses != "git-wait-for-pr" || step.As == "" || step.Config == nil {
+		if step.Uses != "git-wait-for-pr" || step.As == "" {
 			continue
 		}
 		stepOutput, _ := state[step.As].(map[string]any)
 		prMap, _ := stepOutput["pr"].(map[string]any)
-		prID := toInt64(prMap["id"])
-		if prID <= 0 {
+		prURL, _ := prMap["url"].(string)
+		if prURL == "" {
 			continue
 		}
-		cfgMap := map[string]any{}
-		if err := json.Unmarshal(step.Config.Raw, &cfgMap); err != nil {
-			continue
-		}
-		repoURL, _ := cfgMap["repoURL"].(string)
-		if repoURL == "" {
-			continue
-		}
-		// repoURL may be an unevaluated template expression (e.g.
-		// ${{ vars.gitRepo }}). Evaluate it using the promotion's vars so the
-		// index key matches what the webhook handler produces from the clone URL.
-		// Mirror StepEvaluator.Vars(): global promotion vars first, then
-		// step-level vars (which carry task vars when using a promotionTask).
-		vars := make(map[string]any)
-		for _, v := range append(promo.Spec.Vars, step.Vars...) {
-			evaluated, err := expressions.EvaluateTemplate(
-				v.Value,
-				map[string]any{"vars": vars},
-			)
-			if err == nil {
-				vars[v.Name] = evaluated
-			}
-		}
-		if result, err := expressions.EvaluateTemplate(
-			repoURL,
-			map[string]any{"vars": vars},
-		); err == nil {
-			if resolved, ok := result.(string); ok && resolved != "" {
-				repoURL = resolved
-			}
-		}
-		key := fmt.Sprintf("%s:%d", urls.NormalizeGit(repoURL), prID)
-		res = append(res, key)
+		res = append(res, prURL)
 	}
 	return res
 }
 
-func toInt64(v any) int64 {
-	switch n := v.(type) {
-	case float64:
-		return int64(n)
-	case int:
-		return int64(n)
-	case int64:
-		return n
-	case int32:
-		return int64(n)
-	default:
-		return 0
-	}
-}
 
 // PromotionsByStageAndFreight is a client.IndexerFunc that indexes Promotions
 // by the Freight and Stage they reference.
