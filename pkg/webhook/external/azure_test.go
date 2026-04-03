@@ -325,6 +325,85 @@ func TestAzureHandler(t *testing.T) {
 			},
 		},
 		{
+			name: "PR updated event with non-abandoned status is a no-op",
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBufferString(`{
+						"eventType": "git.pullrequest.updated",
+						"resource": {
+							"status": "active",
+							"pullRequestId": 42,
+							"repository": {
+								"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+							}
+						}
+					}`),
+				)
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, "{}", rr.Body.String())
+			},
+		},
+		{
+			name: "abandoned PR refreshes matching Promotion",
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Promotion{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "promo-wait-for-pr",
+					},
+					Spec: kargoapi.PromotionSpec{
+						Stage: "test-stage",
+						Steps: []kargoapi.PromotionStep{{
+							Uses: "git-wait-for-pr",
+							As:   "wait-pr",
+							Config: &apiextensionsv1.JSON{
+								Raw: []byte(`{"repoURL":"https://dev.azure.com/testorg/testproject/_git/testrepo","prNumber":42}`),
+							},
+						}},
+					},
+					Status: kargoapi.PromotionStatus{
+						Phase:       kargoapi.PromotionPhaseRunning,
+						CurrentStep: 0,
+						State: &apiextensionsv1.JSON{
+							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+						},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Promotion{},
+				indexer.RunningPromotionsByPullRequestField,
+				indexer.RunningPromotionsByPullRequest,
+			).Build(),
+			req: func() *http.Request {
+				req := httptest.NewRequest(
+					http.MethodPost,
+					testURL,
+					bytes.NewBufferString(`{
+						"eventType": "git.pullrequest.updated",
+						"resource": {
+							"status": "abandoned",
+							"pullRequestId": 42,
+							"repository": {
+								"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+							}
+						}
+					}`),
+				)
+				req.Header.Set("User-Agent", azureDevOpsUserAgentPrefix)
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 promotion(s)"}`, rr.Body.String())
+			},
+		},
+		{
 			name: "PR merged event with no matching Promotions",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
