@@ -292,23 +292,20 @@ func TestAzureHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://dev.azure.com/testorg/testproject/_git/testrepo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				req := httptest.NewRequest(
@@ -362,23 +359,20 @@ func TestAzureHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://dev.azure.com/testorg/testproject/_git/testrepo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				req := httptest.NewRequest(
@@ -407,8 +401,8 @@ func TestAzureHandler(t *testing.T) {
 			name: "PR merged event with no matching Promotions",
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				req := httptest.NewRequest(
