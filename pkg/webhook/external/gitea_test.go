@@ -23,7 +23,8 @@ const giteaWebhookRequestBodyPullRequestClosedMerged = `
 	"action": "closed",
 	"number": 42,
 	"pull_request": {
-		"merged": true
+		"merged": true,
+		"html_url": "https://gitea.com/example/repo/pulls/42"
 	},
 	"repository": {
 		"clone_url": "https://gitea.com/example/repo.git"
@@ -35,7 +36,8 @@ const giteaWebhookRequestBodyPullRequestClosedNotMerged = `
 	"action": "closed",
 	"number": 42,
 	"pull_request": {
-		"merged": false
+		"merged": false,
+		"html_url": "https://gitea.com/example/repo/pulls/42"
 	},
 	"repository": {
 		"clone_url": "https://gitea.com/example/repo.git"
@@ -369,23 +371,20 @@ func TestGiteaHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://gitea.com/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitea.com/example/repo/pulls/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				b := []byte(giteaWebhookRequestBodyPullRequestClosedMerged)
@@ -417,23 +416,20 @@ func TestGiteaHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://gitea.com/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitea.com/example/repo/pulls/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				b := []byte(giteaWebhookRequestBodyPullRequestClosedNotMerged)
@@ -456,8 +452,8 @@ func TestGiteaHandler(t *testing.T) {
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				b := []byte(giteaWebhookRequestBodyPullRequestClosedMerged)
