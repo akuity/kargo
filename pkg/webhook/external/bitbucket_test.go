@@ -26,7 +26,12 @@ func TestBitbucketHandler(t *testing.T) {
 	const prFulfilledEventRequestBody = `
 	{
 		"pullrequest": {
-			"id": 42
+			"id": 42,
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo/pull-requests/42"
+				}
+			}
 		},
 		"repository": {
 			"links": {
@@ -41,6 +46,13 @@ func TestBitbucketHandler(t *testing.T) {
 	{
 		"pullRequest": {
 			"id": 42,
+			"links": {
+				"self": [
+					{
+						"href": "https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42"
+					}
+				]
+			},
 			"fromRef": {
 				"repository": {
 					"links": {
@@ -313,23 +325,20 @@ func TestBitbucketHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://bitbucket.org/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.org/example/repo/pull-requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
@@ -357,23 +366,20 @@ func TestBitbucketHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://bitbucket.org/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.org/example/repo/pull-requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
@@ -392,8 +398,8 @@ func TestBitbucketHandler(t *testing.T) {
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prFulfilledEventRequestBody))
@@ -421,23 +427,20 @@ func TestBitbucketHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://bitbucket.example.com/scm/example/repo.git","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
@@ -465,23 +468,20 @@ func TestBitbucketHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://bitbucket.example.com/scm/example/repo.git","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://bitbucket.example.com/projects/EXAMPLE/repos/repo/pull-requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
@@ -500,8 +500,8 @@ func TestBitbucketHandler(t *testing.T) {
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(prMergedEventRequestBody))
