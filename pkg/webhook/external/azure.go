@@ -187,19 +187,27 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
 	case azureDevOpsPRMergedEvent:
-		prNumber := event.Resource.PullRequestID
-		logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+		prURL := fmt.Sprintf(
+			"%s/pullrequest/%d",
+			event.Resource.Repository.RemoteURL,
+			event.Resource.PullRequestID,
+		)
+		logger = logger.WithValues("prURL", prURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshPromotionsByPR(ctx, w, a.client, a.project, repoURLs, prNumber)
+		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
 	case azureDevOpsPRUpdatedEvent:
 		if event.Resource.Status != "abandoned" {
 			xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 			return
 		}
-		prNumber := event.Resource.PullRequestID
-		logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+		prURL := fmt.Sprintf(
+			"%s/pullrequest/%d",
+			event.Resource.Repository.RemoteURL,
+			event.Resource.PullRequestID,
+		)
+		logger = logger.WithValues("prURL", prURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
-		refreshPromotionsByPR(ctx, w, a.client, a.project, repoURLs, prNumber)
+		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
 	default:
 		xhttp.WriteErrorJSON(
 			w,
