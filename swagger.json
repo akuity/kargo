@@ -4830,6 +4830,12 @@
     "OIDCConfig": {
       "type": "object",
       "properties": {
+        "additionalParameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
         "cliClientId": {
           "type": "string"
         },

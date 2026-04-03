@@ -370,11 +370,19 @@ func ssoLogin(
 	if err != nil {
 		return "", "", fmt.Errorf("error creating PCKE code verifier and code challenge: %w", err)
 	}
-	u := oauthCfg.AuthCodeURL(
-		state,
+	// Build authorization URL options. Additional parameters from the server
+	// config are applied first so that standard PKCE params always take
+	// precedence and cannot be overridden by the server config.
+	authURLOpts := make([]oauth2.AuthCodeOption, 0, len(svrCfg.OidcConfig.AdditionalParameters)+2)
+	for k, v := range svrCfg.OidcConfig.AdditionalParameters {
+		authURLOpts = append(authURLOpts, oauth2.SetAuthURLParam(k, v))
+	}
+	authURLOpts = append(
+		authURLOpts,
 		oauth2.SetAuthURLParam("code_challenge", codeChallenge),
 		oauth2.SetAuthURLParam("code_challenge_method", "S256"),
 	)
+	u := oauthCfg.AuthCodeURL(state, authURLOpts...)
 	if err = browser.OpenURL(u); err != nil {
 		return "", "", fmt.Errorf("error opening system default browser: %w", err)
 	}

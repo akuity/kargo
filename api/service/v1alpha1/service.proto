@@ -341,6 +341,9 @@ message OIDCConfig {
   repeated string scopes = 3;
   // cli_client_id is the OIDC client identifier for CLI applications.
   string cli_client_id = 4;
+  // additional_parameters are extra key/value parameters to include in the
+  // OIDC authorization request (e.g. audience, connector_id, domain_hint).
+  map<string, string> additional_parameters = 5;
 }
 
 // AdminLoginRequest contains credentials for admin authentication.

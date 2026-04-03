@@ -5,8 +5,10 @@
  * REST API for Kargo
  * OpenAPI spec version: v1alpha1
  */
+import type { OIDCConfigAdditionalParameters } from './oIDCConfigAdditionalParameters';
 
 export interface OIDCConfig {
+  additionalParameters?: OIDCConfigAdditionalParameters;
   cliClientId?: string;
   clientId?: string;
   issuerUrl?: string;

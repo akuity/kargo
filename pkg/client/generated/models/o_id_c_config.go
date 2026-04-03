@@ -14,6 +14,9 @@ import (
 // swagger:model OIDCConfig
 type OIDCConfig struct {
 
+	// additional parameters
+	AdditionalParameters map[string]string `json:"additionalParameters,omitempty"`
+
 	// cli client Id
 	CliClientID string `json:"cliClientId,omitempty"`
 

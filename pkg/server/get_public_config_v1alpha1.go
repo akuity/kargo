@@ -17,10 +17,11 @@ func (s *server) GetPublicConfig(
 	var oidcCfg *svcv1alpha1.OIDCConfig
 	if s.cfg.OIDCConfig != nil {
 		oidcCfg = &svcv1alpha1.OIDCConfig{
-			IssuerUrl:   s.cfg.OIDCConfig.IssuerURL,
-			ClientId:    s.cfg.OIDCConfig.ClientID,
-			CliClientId: s.cfg.OIDCConfig.CLIClientID,
-			Scopes:      append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			IssuerUrl:            s.cfg.OIDCConfig.IssuerURL,
+			ClientId:             s.cfg.OIDCConfig.ClientID,
+			CliClientId:          s.cfg.OIDCConfig.CLIClientID,
+			Scopes:               append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			AdditionalParameters: map[string]string(s.cfg.OIDCConfig.AdditionalParameters),
 		}
 	}
 	resp := &svcv1alpha1.GetPublicConfigResponse{
@@ -38,10 +39,11 @@ type publicConfig struct {
 } // @name PublicConfig
 
 type oidcConfig struct {
-	IssuerURL   string   `json:"issuerUrl"`
-	ClientID    string   `json:"clientId"`
-	CLIClientID string   `json:"cliClientId,omitempty"`
-	Scopes      []string `json:"scopes,omitempty"`
+	IssuerURL            string            `json:"issuerUrl"`
+	ClientID             string            `json:"clientId"`
+	CLIClientID          string            `json:"cliClientId,omitempty"`
+	Scopes               []string          `json:"scopes,omitempty"`
+	AdditionalParameters map[string]string `json:"additionalParameters,omitempty"`
 } // @name OIDCConfig
 
 // @id GetPublicConfig
@@ -57,10 +59,11 @@ func (s *server) getPublicConfig(c *gin.Context) {
 	var oidcCfg *oidcConfig
 	if s.cfg.OIDCConfig != nil {
 		oidcCfg = &oidcConfig{
-			IssuerURL:   s.cfg.OIDCConfig.IssuerURL,
-			ClientID:    s.cfg.OIDCConfig.ClientID,
-			CLIClientID: s.cfg.OIDCConfig.CLIClientID,
-			Scopes:      append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			IssuerURL:            s.cfg.OIDCConfig.IssuerURL,
+			ClientID:             s.cfg.OIDCConfig.ClientID,
+			CLIClientID:          s.cfg.OIDCConfig.CLIClientID,
+			Scopes:               append(s.cfg.OIDCConfig.DefaultScopes, s.cfg.OIDCConfig.AdditionalScopes...),
+			AdditionalParameters: map[string]string(s.cfg.OIDCConfig.AdditionalParameters),
 		}
 	}
 	resp := publicConfig{

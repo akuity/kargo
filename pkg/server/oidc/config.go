@@ -1,6 +1,9 @@
 package oidc
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -25,9 +28,42 @@ type Config struct {
 	// UsernameClaim is the claim to use as the username for the user.
 	UsernameClaim string `envconfig:"OIDC_USERNAME_CLAIM" default:"email"`
 
+	// AdditionalParameters are any extra key/value parameters to pass to the
+	// OIDC provider during the authorization code flow (e.g. audience,
+	// connector_id, domain_hint). Configured as a comma-separated list of
+	// key=value pairs: "audience=https://kubernetes.default.svc,domain_hint=example.com".
+	AdditionalParameters AdditionalParameters `envconfig:"OIDC_ADDITIONAL_PARAMETERS"`
+
 	// GlobalServiceAccountNamespaces is the list of namespaces to look up
 	// for shared service accounts.
 	GlobalServiceAccountNamespaces []string `envconfig:"GLOBAL_SERVICE_ACCOUNT_NAMESPACES"`
+}
+
+// AdditionalParameters is a map of extra authorization parameters to pass to
+// an OIDC provider. It implements envconfig.Decoder to support KEY=VALUE pairs
+// separated by commas, e.g. "audience=https://kubernetes.default.svc,domain_hint=corp.example.com".
+// Splitting on the first '=' allows values to contain colons and other special characters.
+type AdditionalParameters map[string]string
+
+// Decode implements envconfig.Decoder.
+func (p *AdditionalParameters) Decode(value string) error {
+	m := make(AdditionalParameters)
+	if value == "" {
+		*p = m
+		return nil
+	}
+	for pair := range strings.SplitSeq(value, ",") {
+		k, v, ok := strings.Cut(pair, "=")
+		if !ok {
+			return fmt.Errorf(
+				"invalid OIDC additional parameter %q: expected key=value format",
+				pair,
+			)
+		}
+		m[k] = v
+	}
+	*p = m
+	return nil
 }
 
 // ConfigFromEnv returns a Config populated from environment variables.

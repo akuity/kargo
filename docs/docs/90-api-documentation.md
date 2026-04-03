@@ -1217,6 +1217,16 @@ Stability is not guaranteed.
 | client_id | [string](#string) |  client_id is the OIDC client identifier for web applications. |
 | scopes | [string](#string) |  scopes are the OIDC scopes to request during authentication. |
 | cli_client_id | [string](#string) |  cli_client_id is the OIDC client identifier for CLI applications. |
+| additional_parameters | [OIDCConfig.AdditionalParametersEntry](#akuity-io-kargo-service-v1alpha1-OIDCConfig-AdditionalParametersEntry) |  additional_parameters are extra key/value parameters to include in the OIDC authorization request (e.g. audience, connector_id, domain_hint). |
+
+<a name="akuity-io-kargo-service-v1alpha1-OIDCConfig-AdditionalParametersEntry"></a>
+
+### OIDCConfig.AdditionalParametersEntry
+ 
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| key | [string](#string) |   |
+| value | [string](#string) |   |
 
 <a name="akuity-io-kargo-service-v1alpha1-PromoteDownstreamRequest"></a>
 

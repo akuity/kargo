@@ -109,6 +109,7 @@ export * from './listPromotionsParams';
 export * from './listSystemAPITokensParams';
 export * from './listSystemRoles200';
 export * from './oIDCConfig';
+export * from './oIDCConfigAdditionalParameters';
 export * from './patchConfigMapRequest';
 export * from './patchConfigMapRequestBody';
 export * from './patchConfigMapRequestData';

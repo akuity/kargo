@@ -191,6 +191,12 @@ api:
     additionalScopes:
       - groups
 
+    ## @param api.oidc.additionalParameters Extra key/value parameters to include in the OIDC authorization request. Useful for providers that support additional parameters such as `audience` (Auth0, Ory Hydra), `connector_id` (Dex), or `domain_hint` (Microsoft Entra ID).
+    additionalParameters: {}
+    # audience: https://kubernetes.default.svc
+    # connector_id: google
+    # domain_hint: corp.example.com
+
     ## @param api.oidc.usernameClaim The claim to use as the username for the user.
     usernameClaim: email
 

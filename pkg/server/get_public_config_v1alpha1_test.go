@@ -22,6 +22,10 @@ func Test_server_getPublicConfig(t *testing.T) {
 			CLIClientID:      "cli-client-id",
 			DefaultScopes:    []string{"openid", "profile"},
 			AdditionalScopes: []string{"email"},
+			AdditionalParameters: oidc.AdditionalParameters{
+				"audience":    "https://kubernetes.default.svc",
+				"domain_hint": "corp.example.com",
+			},
 		},
 	}
 	testRESTEndpoint(
@@ -42,6 +46,14 @@ func Test_server_getPublicConfig(t *testing.T) {
 					require.Equal(t, testConfig.OIDCConfig.ClientID, config.OIDCConfig.ClientID)
 					require.Equal(t, testConfig.OIDCConfig.CLIClientID, config.OIDCConfig.CLIClientID)
 					require.Equal(t, []string{"openid", "profile", "email"}, config.OIDCConfig.Scopes)
+					require.Equal(
+						t,
+						map[string]string{
+							"audience":    "https://kubernetes.default.svc",
+							"domain_hint": "corp.example.com",
+						},
+						config.OIDCConfig.AdditionalParameters,
+					)
 				},
 			},
 		},
