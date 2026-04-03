@@ -219,15 +219,12 @@ func (b *bitbucketWebhookReceiver) handlePRFulfilledEvent(
 ) {
 	payload := struct {
 		PullRequest struct {
-			ID int `json:"id"`
-		} `json:"pullrequest"`
-		Repository struct {
 			Links struct {
 				HTML struct {
 					Href string `json:"href"`
 				} `json:"html"`
 			} `json:"links"`
-		} `json:"repository"`
+		} `json:"pullrequest"`
 	}{}
 	if err := json.Unmarshal(requestBody, &payload); err != nil {
 		xhttp.WriteErrorJSON(
@@ -236,11 +233,10 @@ func (b *bitbucketWebhookReceiver) handlePRFulfilledEvent(
 		)
 		return
 	}
-	prNumber := payload.PullRequest.ID
-	repoURLs := []string{payload.Repository.Links.HTML.Href}
-	logger := logging.LoggerFromContext(ctx).WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+	prURL := payload.PullRequest.Links.HTML.Href
+	logger := logging.LoggerFromContext(ctx).WithValues("prURL", prURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshPromotionsByPR(ctx, w, b.client, b.project, repoURLs, prNumber)
+	refreshPromotionsByPrURL(ctx, w, b.client, b.project, prURL)
 }
 
 // handlePRMergedEvent handles Bitbucket Server (Data Center) pr:merged events,
@@ -253,16 +249,11 @@ func (b *bitbucketWebhookReceiver) handlePRMergedEvent(
 ) {
 	payload := struct {
 		PullRequest struct {
-			ID      int `json:"id"`
-			FromRef struct {
-				Repository struct {
-					Links struct {
-						Clone []struct {
-							Href string `json:"href"`
-						} `json:"clone"`
-					} `json:"links"`
-				} `json:"repository"`
-			} `json:"fromRef"`
+			Links struct {
+				Self []struct {
+					Href string `json:"href"`
+				} `json:"self"`
+			} `json:"links"`
 		} `json:"pullRequest"`
 	}{}
 	if err := json.Unmarshal(requestBody, &payload); err != nil {
@@ -272,14 +263,13 @@ func (b *bitbucketWebhookReceiver) handlePRMergedEvent(
 		)
 		return
 	}
-	prNumber := payload.PullRequest.ID
-	var repoURLs []string
-	for _, link := range payload.PullRequest.FromRef.Repository.Links.Clone {
-		repoURLs = append(repoURLs, urls.NormalizeGit(link.Href))
+	var prURL string
+	if len(payload.PullRequest.Links.Self) > 0 {
+		prURL = payload.PullRequest.Links.Self[0].Href
 	}
-	logger := logging.LoggerFromContext(ctx).WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+	logger := logging.LoggerFromContext(ctx).WithValues("prURL", prURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshPromotionsByPR(ctx, w, b.client, b.project, repoURLs, prNumber)
+	refreshPromotionsByPrURL(ctx, w, b.client, b.project, prURL)
 }
 
 // bitbucketPushEventBody represents the payload Bitbucket Cloud sends for
