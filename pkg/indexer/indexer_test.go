@@ -537,7 +537,7 @@ func TestRunningPromotionsByArgoCDApplications(t *testing.T) {
 	}
 }
 
-func TestRunningPromotionsByPullRequest(t *testing.T) {
+func TestRunningPromotionsByPullRequestURL(t *testing.T) {
 	t.Parallel()
 	testCases := []struct {
 		name     string
@@ -584,78 +584,25 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "Step output has pr.id and config has literal repoURL",
+			name: "Step output has pr.url",
 			obj: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: "git-wait-for-pr",
+						As:   "wait-pr",
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
 					CurrentStep: 0,
 					State: &apiextensionsv1.JSON{
 						Raw: []byte(
-							`{"wait-pr":{"pr":{"id":42,"url":"https://github.com/org/repo/pull/42","open":true,"merged":false}}}`,
+							`{"wait-pr":{"pr":{"url":"https://github.com/org/repo/pull/42","open":true,"merged":false}}}`,
 						),
 					},
 				},
 			},
-			expected: []string{"https://github.com/org/repo:42"},
-		},
-		{
-			name: "HTTPS URL with .git suffix is normalized",
-			obj: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo.git","prNumber":42}`),
-							},
-						},
-					},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhaseRunning,
-					CurrentStep: 0,
-					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
-					},
-				},
-			},
-			expected: []string{"https://github.com/org/repo:42"},
-		},
-		{
-			name: "SSH URL form is normalized",
-			obj: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"git@github.com:org/repo.git","prNumber":42}`),
-							},
-						},
-					},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhaseRunning,
-					CurrentStep: 0,
-					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
-					},
-				},
-			},
-			expected: []string{"ssh://git@github.com/org/repo:42"},
+			expected: []string{"https://github.com/org/repo/pull/42"},
 		},
 		{
 			name: "Step beyond CurrentStep is ignored",
@@ -666,9 +613,6 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 						{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
 						},
 					},
 				},
@@ -676,7 +620,7 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 					Phase:       kargoapi.PromotionPhaseRunning,
 					CurrentStep: 0,
 					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
+						Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/org/repo/pull/42"}}}`),
 					},
 				},
 			},
@@ -690,16 +634,10 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 						{
 							Uses: "git-wait-for-pr",
 							As:   "wait-a",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo-a","prNumber":10}`),
-							},
 						},
 						{
 							Uses: "git-wait-for-pr",
 							As:   "wait-b",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo-b","prNumber":20}`),
-							},
 						},
 					},
 				},
@@ -707,13 +645,16 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 					Phase:       kargoapi.PromotionPhaseRunning,
 					CurrentStep: 1,
 					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-a":{"pr":{"id":10}},"wait-b":{"pr":{"id":20}}}`),
+						Raw: []byte(
+							`{"wait-a":{"pr":{"url":"https://github.com/org/repo-a/pull/10"}},` +
+								`"wait-b":{"pr":{"url":"https://github.com/org/repo-b/pull/20"}}}`,
+						),
 					},
 				},
 			},
 			expected: []string{
-				"https://github.com/org/repo-a:10",
-				"https://github.com/org/repo-b:20",
+				"https://github.com/org/repo-a/pull/10",
+				"https://github.com/org/repo-b/pull/20",
 			},
 		},
 		{
@@ -725,40 +666,25 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 						{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
 						},
-						{
-							Uses: "argocd-update",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"apps":[{"name":"my-app"}]}`),
-							},
-						},
+						{Uses: "argocd-update"},
 					},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
 					CurrentStep: 2,
 					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
+						Raw: []byte(`{"wait-pr":{"pr":{"url":"https://github.com/org/repo/pull/42"}}}`),
 					},
 				},
 			},
-			expected: []string{"https://github.com/org/repo:42"},
+			expected: []string{"https://github.com/org/repo/pull/42"},
 		},
 		{
 			name: "Step has no alias",
 			obj: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{Uses: "git-wait-for-pr"}},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
@@ -771,15 +697,10 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 			name: "Step output missing from State (first reconciliation)",
 			obj: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: "git-wait-for-pr",
+						As:   "wait-pr",
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
@@ -792,15 +713,10 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 			name: "Step output has no pr key",
 			obj: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":42}`),
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: "git-wait-for-pr",
+						As:   "wait-pr",
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
@@ -813,72 +729,19 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 			expected: nil,
 		},
 		{
-			name: "pr.id is zero",
+			name: "pr.url is empty",
 			obj: &kargoapi.Promotion{
 				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://github.com/org/repo","prNumber":0}`),
-							},
-						},
-					},
+					Steps: []kargoapi.PromotionStep{{
+						Uses: "git-wait-for-pr",
+						As:   "wait-pr",
+					}},
 				},
 				Status: kargoapi.PromotionStatus{
 					Phase:       kargoapi.PromotionPhaseRunning,
 					CurrentStep: 0,
 					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":0}}}`),
-					},
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "Config has no repoURL",
-			obj: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"prNumber":42}`),
-							},
-						},
-					},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhaseRunning,
-					CurrentStep: 0,
-					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
-					},
-				},
-			},
-			expected: nil,
-		},
-		{
-			name: "Config JSON is malformed",
-			obj: &kargoapi.Promotion{
-				Spec: kargoapi.PromotionSpec{
-					Steps: []kargoapi.PromotionStep{
-						{
-							Uses: "git-wait-for-pr",
-							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{invalid json}`),
-							},
-						},
-					},
-				},
-				Status: kargoapi.PromotionStatus{
-					Phase:       kargoapi.PromotionPhaseRunning,
-					CurrentStep: 0,
-					State: &apiextensionsv1.JSON{
-						Raw: []byte(`{"wait-pr":{"pr":{"id":42}}}`),
+						Raw: []byte(`{"wait-pr":{"pr":{"url":""}}}`),
 					},
 				},
 			},
@@ -890,7 +753,7 @@ func TestRunningPromotionsByPullRequest(t *testing.T) {
 			require.Equal(
 				t,
 				testCase.expected,
-				RunningPromotionsByPullRequest(testCase.obj),
+				RunningPromotionsByPullRequestURL(testCase.obj),
 			)
 		})
 	}
