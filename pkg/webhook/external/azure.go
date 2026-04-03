@@ -26,6 +26,8 @@ const (
 
 	acrUserAgentPrefix         = "AzureContainerRegistry"
 	azureDevOpsUserAgentPrefix = "VSServices"
+
+	azureDevOpsPRMergedEvent = "git.pullrequest.merged"
 )
 
 func init() {
@@ -171,7 +173,24 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	if event.EventType != azureDevOpsPushEvent {
+	repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
+	logger := logging.LoggerFromContext(ctx)
+
+	switch event.EventType {
+	case azureDevOpsPushEvent:
+		refs := event.getRefs()
+		logger = logger.WithValues(
+			"repoURLs", repoURLs,
+			"refs", refs,
+		)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
+	case azureDevOpsPRMergedEvent:
+		prNumber := event.Resource.PullRequestID
+		logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshPromotionsByPR(ctx, w, a.client, a.project, repoURLs, prNumber)
+	default:
 		xhttp.WriteErrorJSON(
 			w,
 			xhttp.Error(
@@ -179,18 +198,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 				http.StatusBadRequest,
 			),
 		)
-		return
 	}
-
-	repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
-	logger := logging.LoggerFromContext(ctx)
-	refs := event.getRefs()
-	logger = logger.WithValues(
-		"repoURLs", repoURLs,
-		"refs", refs,
-	)
-	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
 }
 
 // acrEvent represents the payload for Azure Container Registry webhooks.
@@ -221,8 +229,9 @@ type acrEvent struct {
 // nolint:lll
 type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"`
-	Resource  struct {
-		RefUpdates []struct {
+	Resource struct {
+		PullRequestID int `json:"pullRequestId,omitempty"`
+		RefUpdates    []struct {
 			Name string `json:"name,omitempty"`
 		} `json:"refUpdates,omitempty"`
 		Repository struct {
