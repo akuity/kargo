@@ -27,7 +27,8 @@ const (
 	acrUserAgentPrefix         = "AzureContainerRegistry"
 	azureDevOpsUserAgentPrefix = "VSServices"
 
-	azureDevOpsPRMergedEvent = "git.pullrequest.merged"
+	azureDevOpsPRMergedEvent  = "git.pullrequest.merged"
+	azureDevOpsPRUpdatedEvent = "git.pullrequest.updated"
 )
 
 func init() {
@@ -190,6 +191,15 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshPromotionsByPR(ctx, w, a.client, a.project, repoURLs, prNumber)
+	case azureDevOpsPRUpdatedEvent:
+		if event.Resource.Status != "abandoned" {
+			xhttp.WriteResponseJSON(w, http.StatusOK, nil)
+			return
+		}
+		prNumber := event.Resource.PullRequestID
+		logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+		ctx = logging.ContextWithLogger(ctx, logger)
+		refreshPromotionsByPR(ctx, w, a.client, a.project, repoURLs, prNumber)
 	default:
 		xhttp.WriteErrorJSON(
 			w,
@@ -230,7 +240,8 @@ type acrEvent struct {
 type azureDevOpsEvent struct {
 	EventType string `json:"eventType,omitempty"`
 	Resource struct {
-		PullRequestID int `json:"pullRequestId,omitempty"`
+		PullRequestID int    `json:"pullRequestId,omitempty"`
+		Status        string `json:"status,omitempty"`
 		RefUpdates    []struct {
 			Name string `json:"name,omitempty"`
 		} `json:"refUpdates,omitempty"`
