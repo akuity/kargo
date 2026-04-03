@@ -241,14 +241,11 @@ func (g *githubWebhookReceiver) handlePullRequestEvent(
 		xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 		return
 	}
-	prNumber := e.GetNumber()
-	repoURLs := []string{
-		urls.NormalizeGit(e.GetRepo().GetCloneURL()),
-	}
+	prURL := e.GetPullRequest().GetHTMLURL()
 	logger := logging.LoggerFromContext(ctx)
-	logger = logger.WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+	logger = logger.WithValues("prURL", prURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, prNumber)
+	refreshPromotionsByPrURL(ctx, w, g.client, g.project, prURL)
 }
 
 func (g *githubWebhookReceiver) handlePushEvent(
