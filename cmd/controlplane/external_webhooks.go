@@ -128,8 +128,8 @@ func (o *externalWebhooksServerOptions) run(ctx context.Context) error {
 	err = cluster.GetFieldIndexer().IndexField(
 		ctx,
 		&kargoapi.Promotion{},
-		indexer.RunningPromotionsByPullRequestField,
-		indexer.RunningPromotionsByPullRequest,
+		indexer.RunningPromotionsByPullRequestURLField,
+		indexer.RunningPromotionsByPullRequestURL,
 	)
 	if err != nil {
 		return fmt.Errorf("error indexing running Promotions by pull request: %w", err)
