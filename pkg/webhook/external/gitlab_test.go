@@ -24,7 +24,8 @@ const gitlabMergeRequestEventMerged = `
 	"object_attributes": {
 		"iid": 42,
 		"action": "merge",
-		"state": "merged"
+		"state": "merged",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
 	},
 	"project": {
 		"git_http_url": "https://gitlab.com/example/repo.git",
@@ -37,7 +38,8 @@ const gitlabMergeRequestEventClosed = `
 	"object_attributes": {
 		"iid": 42,
 		"action": "close",
-		"state": "closed"
+		"state": "closed",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
 	},
 	"project": {
 		"git_http_url": "https://gitlab.com/example/repo.git",
@@ -50,7 +52,8 @@ const gitlabMergeRequestEventOpened = `
 	"object_attributes": {
 		"iid": 42,
 		"action": "open",
-		"state": "opened"
+		"state": "opened",
+		"url": "https://gitlab.com/example/repo/-/merge_requests/42"
 	},
 	"project": {
 		"git_http_url": "https://gitlab.com/example/repo.git",
@@ -195,23 +198,20 @@ func TestGitLabHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://gitlab.com/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitlab.com/example/repo/-/merge_requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventMerged))
@@ -239,23 +239,20 @@ func TestGitLabHandler(t *testing.T) {
 						Steps: []kargoapi.PromotionStep{{
 							Uses: "git-wait-for-pr",
 							As:   "wait-pr",
-							Config: &apiextensionsv1.JSON{
-								Raw: []byte(`{"repoURL":"https://gitlab.com/example/repo","prNumber":42}`),
-							},
 						}},
 					},
 					Status: kargoapi.PromotionStatus{
 						Phase:       kargoapi.PromotionPhaseRunning,
 						CurrentStep: 0,
 						State: &apiextensionsv1.JSON{
-							Raw: []byte(`{"wait-pr":{"pr":{"id":42,"open":true,"merged":false}}}`),
+							Raw: []byte(`{"wait-pr":{"pr":{"url":"https://gitlab.com/example/repo/-/merge_requests/42","open":true,"merged":false}}}`),
 						},
 					},
 				},
 			).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventClosed))
@@ -274,8 +271,8 @@ func TestGitLabHandler(t *testing.T) {
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithIndex(
 				&kargoapi.Promotion{},
-				indexer.RunningPromotionsByPullRequestField,
-				indexer.RunningPromotionsByPullRequest,
+				indexer.RunningPromotionsByPullRequestURLField,
+				indexer.RunningPromotionsByPullRequestURL,
 			).Build(),
 			req: func() *http.Request {
 				bodyBuf := bytes.NewBuffer([]byte(gitlabMergeRequestEventMerged))
