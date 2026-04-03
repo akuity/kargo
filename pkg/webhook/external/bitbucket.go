@@ -34,6 +34,14 @@ const (
 	// bitbucketRefsChangedEventBody struct.
 	// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html#Eventpayload-repo-push
 	bitbucketRefsChangedEvent = "repo:refs_changed"
+	// bitbucketPRFulfilledEvent is the event Bitbucket Cloud sends when a pull
+	// request is merged.
+	// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Merged
+	bitbucketPRFulfilledEvent = "pullrequest:fulfilled"
+	// bitbucketPRMergedEvent is the event Bitbucket Server (Data Center) sends
+	// when a pull request is merged.
+	// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html#Eventpayload-pr:merged
+	bitbucketPRMergedEvent = "pr:merged"
 )
 
 func init() {
@@ -98,19 +106,12 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
-		// Bitbucket Cloud and Data Center provide slightly different event
-		// payloads. This interface describes what we need from either.
-		var payload interface {
-			getRefs() []string
-			getRepoURLs() []string
-		}
-
 		eventType := r.Header.Get(bitbucketEventHeader)
 		switch eventType {
-		case bitbucketPushEvent:
-			payload = &bitbucketPushEventBody{}
-		case bitbucketRefsChangedEvent:
-			payload = &bitbucketRefsChangedEventBody{}
+		case bitbucketPushEvent,
+			bitbucketRefsChangedEvent,
+			bitbucketPRFulfilledEvent,
+			bitbucketPRMergedEvent:
 		default:
 			xhttp.WriteErrorJSON(
 				w,
@@ -142,6 +143,28 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 			return
 		}
 
+		switch eventType {
+		case bitbucketPRFulfilledEvent:
+			b.handlePRFulfilledEvent(ctx, w, requestBody)
+			return
+		case bitbucketPRMergedEvent:
+			b.handlePRMergedEvent(ctx, w, requestBody)
+			return
+		}
+
+		// Bitbucket Cloud and Data Center provide slightly different push event
+		// payloads. This interface describes what we need from either.
+		var payload interface {
+			getRefs() []string
+			getRepoURLs() []string
+		}
+		switch eventType {
+		case bitbucketPushEvent:
+			payload = &bitbucketPushEventBody{}
+		default:
+			payload = &bitbucketRefsChangedEventBody{}
+		}
+
 		if err := json.Unmarshal(requestBody, payload); err != nil {
 			xhttp.WriteErrorJSON(
 				w,
@@ -159,6 +182,79 @@ func (b *bitbucketWebhookReceiver) getHandler(requestBody []byte) http.HandlerFu
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, b.client, b.project, repoURLs, nil, refs...)
 	})
+}
+
+// handlePRFulfilledEvent handles Bitbucket Cloud pullrequest:fulfilled events,
+// which are sent when a pull request is merged.
+// See https://support.atlassian.com/bitbucket-cloud/docs/event-payloads/#Merged
+func (b *bitbucketWebhookReceiver) handlePRFulfilledEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	payload := struct {
+		PullRequest struct {
+			ID int `json:"id"`
+		} `json:"pullrequest"`
+		Repository struct {
+			Links struct {
+				HTML struct {
+					Href string `json:"href"`
+				} `json:"html"`
+			} `json:"links"`
+		} `json:"repository"`
+	}{}
+	if err := json.Unmarshal(requestBody, &payload); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+		)
+		return
+	}
+	prNumber := payload.PullRequest.ID
+	repoURLs := []string{payload.Repository.Links.HTML.Href}
+	logger := logging.LoggerFromContext(ctx).WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshPromotionsByPR(ctx, w, b.client, b.project, repoURLs, prNumber)
+}
+
+// handlePRMergedEvent handles Bitbucket Server (Data Center) pr:merged events,
+// which are sent when a pull request is merged.
+// See https://confluence.atlassian.com/bitbucketserver/event-payload-938025882.html#Eventpayload-pr:merged
+func (b *bitbucketWebhookReceiver) handlePRMergedEvent(
+	ctx context.Context,
+	w http.ResponseWriter,
+	requestBody []byte,
+) {
+	payload := struct {
+		PullRequest struct {
+			ID      int `json:"id"`
+			FromRef struct {
+				Repository struct {
+					Links struct {
+						Clone []struct {
+							Href string `json:"href"`
+						} `json:"clone"`
+					} `json:"links"`
+				} `json:"repository"`
+			} `json:"fromRef"`
+		} `json:"pullRequest"`
+	}{}
+	if err := json.Unmarshal(requestBody, &payload); err != nil {
+		xhttp.WriteErrorJSON(
+			w,
+			xhttp.Error(errors.New("invalid request body"), http.StatusBadRequest),
+		)
+		return
+	}
+	prNumber := payload.PullRequest.ID
+	var repoURLs []string
+	for _, link := range payload.PullRequest.FromRef.Repository.Links.Clone {
+		repoURLs = append(repoURLs, urls.NormalizeGit(link.Href))
+	}
+	logger := logging.LoggerFromContext(ctx).WithValues("prNumber", prNumber, "repoURLs", repoURLs)
+	ctx = logging.ContextWithLogger(ctx, logger)
+	refreshPromotionsByPR(ctx, w, b.client, b.project, repoURLs, prNumber)
 }
 
 // bitbucketPushEventBody represents the payload Bitbucket Cloud sends for
