@@ -144,11 +144,10 @@ func (g *giteaWebhookReceiver) handlePullRequestEvent(
 	logger := logging.LoggerFromContext(ctx)
 
 	payload := struct {
-		Action string `json:"action"`
-		Number int    `json:"number"`
-		Repo   struct {
-			CloneURL string `json:"clone_url"`
-		} `json:"repository"`
+		Action      string `json:"action"`
+		PullRequest struct {
+			HTMLURL string `json:"html_url"`
+		} `json:"pull_request"`
 	}{}
 	if err := json.Unmarshal(requestBody, &payload); err != nil {
 		xhttp.WriteErrorJSON(
@@ -162,10 +161,10 @@ func (g *giteaWebhookReceiver) handlePullRequestEvent(
 		xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 		return
 	}
-	repoURLs := []string{urls.NormalizeGit(payload.Repo.CloneURL)}
-	logger = logger.WithValues("prNumber", payload.Number, "repoURLs", repoURLs)
+	prURL := payload.PullRequest.HTMLURL
+	logger = logger.WithValues("prURL", prURL)
 	ctx = logging.ContextWithLogger(ctx, logger)
-	refreshPromotionsByPR(ctx, w, g.client, g.project, repoURLs, payload.Number)
+	refreshPromotionsByPrURL(ctx, w, g.client, g.project, prURL)
 }
 
 func (g *giteaWebhookReceiver) handlePushEvent(
