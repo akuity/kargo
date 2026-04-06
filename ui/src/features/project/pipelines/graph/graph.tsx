@@ -4,12 +4,11 @@ import {
   ControlButton,
   Controls,
   MiniMap,
-  NodeDimensionChange,
   ReactFlow,
   ReactFlowInstance,
   useNodesState
 } from '@xyflow/react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { queryCache } from '@ui/features/utils/cache';
@@ -61,7 +60,7 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
-  const [dimensions, setDimensions, onNodeSizeChange] = useNodeDimensionState();
+  const [dimensions, setDimensions] = useNodeDimensionState();
 
   const graph = useReactFlowPipelineGraph(
     props.stages,
@@ -75,7 +74,7 @@ export const Graph = (props: GraphProps) => {
     filterContext?.preferredFilter?.hideSubscriptions
   );
 
-  const [nodes, setNodes, onNodesChange] = useNodesState(graph.nodes);
+  const [nodes, setNodes] = useNodesState(graph.nodes);
 
   // useLayoutEffect fires synchronously after DOM mutations but before the browser
   // paints. This prevents the one-frame intermediate state where node content has
@@ -83,21 +82,6 @@ export const Graph = (props: GraphProps) => {
   useLayoutEffect(() => {
     setNodes(graph.nodes);
   }, [graph.nodes]);
-
-  const handleNodesChange = useCallback(
-    (changes: Parameters<typeof onNodesChange>[0]) => {
-      const sizeChanges = changes.filter(
-        (c): c is NodeDimensionChange => c.type === 'dimensions' && !!c.dimensions
-      );
-
-      if (sizeChanges.length > 0) {
-        onNodeSizeChange(sizeChanges);
-      }
-
-      onNodesChange(changes);
-    },
-    [onNodesChange, onNodeSizeChange]
-  );
 
   useEventsWatcher(props.project, {
     onStage(stage) {
@@ -188,7 +172,6 @@ export const Graph = (props: GraphProps) => {
         }}
         proOptions={{ hideAttribution: true }}
         minZoom={0}
-        onNodesChange={handleNodesChange}
         onlyRenderVisibleElements
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}

@@ -108,7 +108,11 @@ export const useReactFlowPipelineGraph = (
         data: {
           label: node,
           value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
-          subscriptionParent: dagreNode?.subscriptionParent
+          subscriptionParent: dagreNode?.subscriptionParent,
+          // Fixed pixel offset from the node's top to the dagre center point.
+          // Stored at layout time so handles stay anchored even when node content
+          // grows and the rendered height changes (node position is not updated).
+          handleOffsetY: actualHeight / 2
         }
       });
     }
