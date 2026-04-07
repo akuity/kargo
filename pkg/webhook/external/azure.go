@@ -174,11 +174,11 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		return
 	}
 
-	repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
 	logger := logging.LoggerFromContext(ctx)
 
 	switch event.EventType {
 	case azureDevOpsPushEvent:
+		repoURLs := []string{urls.NormalizeGit(event.Resource.Repository.RemoteURL)}
 		refs := event.getRefs()
 		logger = logger.WithValues(
 			"repoURLs", repoURLs,
@@ -187,11 +187,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshWarehouses(ctx, w, a.client, a.project, repoURLs, nil, refs...)
 	case azureDevOpsPRMergedEvent:
-		prURL := fmt.Sprintf(
-			"%s/pullrequest/%d",
-			event.Resource.Repository.RemoteURL,
-			event.Resource.PullRequestID,
-		)
+		prURL := event.Resource.Links.Web.Href
 		logger = logger.WithValues("prURL", prURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
@@ -200,11 +196,7 @@ func (a *azureWebhookReceiver) handleAzureDevOpsEvent(
 			xhttp.WriteResponseJSON(w, http.StatusOK, nil)
 			return
 		}
-		prURL := fmt.Sprintf(
-			"%s/pullrequest/%d",
-			event.Resource.Repository.RemoteURL,
-			event.Resource.PullRequestID,
-		)
+		prURL := event.Resource.Links.Web.Href
 		logger = logger.WithValues("prURL", prURL)
 		ctx = logging.ContextWithLogger(ctx, logger)
 		refreshPromotionsByPrURL(ctx, w, a.client, a.project, prURL)
@@ -242,7 +234,7 @@ type acrEvent struct {
 // For information on payload schemas for Azure DevOps, see:
 //
 //	Azure DevOps
-//		https://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops#resource-details-to-send
+//		https://learn.microsoft.com/en-us/azure/devops/service-hooks/events?view=azure-devops
 //
 // nolint:lll
 type azureDevOpsEvent struct {
@@ -250,7 +242,12 @@ type azureDevOpsEvent struct {
 	Resource  struct {
 		PullRequestID int    `json:"pullRequestId,omitempty"`
 		Status        string `json:"status,omitempty"`
-		RefUpdates    []struct {
+		Links         struct {
+			Web struct {
+				Href string `json:"href,omitempty"`
+			} `json:"web,omitempty"`
+		} `json:"_links,omitempty"`
+		RefUpdates []struct {
 			Name string `json:"name,omitempty"`
 		} `json:"refUpdates,omitempty"`
 		Repository struct {

@@ -340,8 +340,10 @@ func TestAzureHandler(t *testing.T) {
 						"resource": {
 							"status": "active",
 							"pullRequestId": 42,
-							"repository": {
-								"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+							"_links": {
+								"web": {
+									"href": "https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42"
+								}
 							}
 						}
 					}`),
@@ -399,8 +401,10 @@ func TestAzureHandler(t *testing.T) {
 						"resource": {
 							"status": "abandoned",
 							"pullRequestId": 42,
-							"repository": {
-								"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+							"_links": {
+								"web": {
+									"href": "https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42"
+								}
 							}
 						}
 					}`),
@@ -575,8 +579,10 @@ func newAzurePayload(event, mediaType string) *bytes.Buffer {
 			"eventType": "git.pullrequest.merged",
 			"resource": {
 				"pullRequestId": 42,
-				"repository": {
-					"remoteUrl": "https://dev.azure.com/testorg/testproject/_git/testrepo"
+				"_links": {
+					"web": {
+						"href": "https://dev.azure.com/testorg/testproject/_git/testrepo/pullrequest/42"
+					}
 				}
 			}
 		}`)
