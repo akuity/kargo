@@ -1078,8 +1078,9 @@ func Test_webhook_ValidateDelete(t *testing.T) {
 
 func Test_webhook_Authorize(t *testing.T) {
 	testCases := []struct {
-		name                          string
-		admissionRequestFromContextFn func(
+		name                           string
+		externalWebhooksServerUsername string
+		admissionRequestFromContextFn  func(
 			context.Context,
 		) (admission.Request, error)
 		createSubjectAccessReviewFn func(
@@ -1158,12 +1159,59 @@ func Test_webhook_Authorize(t *testing.T) {
 				require.NoError(t, err)
 			},
 		},
+		{
+			name:                           "bypass for external webhooks server",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						UserInfo: authnv1.UserInfo{
+							Username: "system:serviceaccount:kargo:kargo-external-webhooks-server",
+						},
+					},
+				}, nil
+			},
+			// createSubjectAccessReviewFn is intentionally nil to confirm the
+			// SAR check is never reached for the external webhooks server.
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			name:                           "no bypass when username does not match external webhooks server",
+			externalWebhooksServerUsername: "system:serviceaccount:kargo:kargo-external-webhooks-server",
+			admissionRequestFromContextFn: func(
+				context.Context,
+			) (admission.Request, error) {
+				return admission.Request{
+					AdmissionRequest: admissionv1.AdmissionRequest{
+						UserInfo: authnv1.UserInfo{
+							Username: "some-other-user",
+						},
+					},
+				}, nil
+			},
+			createSubjectAccessReviewFn: func(
+				_ context.Context,
+				obj client.Object,
+				_ ...client.CreateOption,
+			) error {
+				obj.(*authzv1.SubjectAccessReview).Status.Allowed = true // nolint: forcetypeassert
+				return nil
+			},
+			assertions: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
 	}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
 			w := &webhook{
-				admissionRequestFromContextFn: testCase.admissionRequestFromContextFn,
-				createSubjectAccessReviewFn:   testCase.createSubjectAccessReviewFn,
+				externalWebhooksServerUsername: testCase.externalWebhooksServerUsername,
+				admissionRequestFromContextFn:  testCase.admissionRequestFromContextFn,
+				createSubjectAccessReviewFn:    testCase.createSubjectAccessReviewFn,
 			}
 			testCase.assertions(
 				t,
