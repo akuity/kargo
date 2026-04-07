@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
@@ -69,11 +68,12 @@ type BareCloneOptions struct {
 	// should be ignored when cloning the repository. The setting will be
 	// remembered for subsequent interactions with the remote repository.
 	InsecureSkipTLSVerify bool
-	// Filter specifies a partial clone filter (e.g., "blob:none"). When combined
-	// with sparse checkout, this avoids downloading blobs for directories that
-	// won't be checked out, significantly reducing clone time and disk usage for
-	// large repositories.
-	Filter string
+	// Blobless enables blobless cloning (--filter=blob:none). When set, the
+	// initial clone downloads all commits and trees but defers blob downloads
+	// until checkout. Combine with sparse checkout to minimise disk usage on
+	// large repositories. The server must support partial clones; if it does
+	// not, the clone will fail.
+	Blobless bool
 }
 
 // CloneBare produces a local, bare clone of the remote Git repository at the
@@ -122,19 +122,13 @@ func (b *bareRepo) clone(opts *BareCloneOptions) error {
 		opts = &BareCloneOptions{}
 	}
 	args := []string{"clone", "--bare"}
-	if opts.Filter != "" {
-		args = append(args, "--filter", opts.Filter)
+	if opts.Blobless {
+		args = append(args, "--filter", "blob:none")
 	}
 	args = append(args, b.accessURL, b.dir)
 	cmd := b.buildGitCommand(args...)
 	cmd.Dir = b.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		if opts.Filter != "" && strings.Contains(err.Error(), "promisor remote") {
-			// Some Git servers do not support partial clones. Fall back to a
-			// full clone without the filter.
-			opts.Filter = ""
-			return b.clone(opts)
-		}
 		return fmt.Errorf("error cloning repo %q into %q: %w", b.originalURL, b.dir, err)
 	}
 	return nil
