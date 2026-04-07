@@ -3,7 +3,6 @@ package git
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
@@ -46,16 +45,12 @@ type CloneOptions struct {
 	// Depth is the number of commits to fetch from the remote repository. If
 	// zero, all commits will be fetched. This option is ignored if Bare is true.
 	Depth uint
-	// Filter allows for partially cloning the repository by specifying a
-	// filter. When a filter is specified, the server will only send a
-	// subset of reachable objects according to a given object filter.
-	//
-	// For more information, see:
-	// - https://git-scm.com/docs/git-clone#Documentation/git-clone.txt-code--filtercodeemltfilter-specgtem
-	// - https://git-scm.com/docs/git-rev-list#Documentation/git-rev-list.txt---filterltfilter-specgt
-	// - https://github.blog/2020-12-21-get-up-to-speed-with-partial-clone-and-shallow-clone/
-	// - https://docs.gitlab.com/ee/topics/git/partial_clone.html
-	Filter string
+	// Blobless enables blobless cloning (--filter=blob:none). When set, the
+	// initial clone downloads all commits and trees but defers blob downloads
+	// until checkout. Combine with sparse checkout to minimise disk usage on
+	// large repositories. The server must support partial clones; if it does
+	// not, the clone will fail.
+	Blobless bool
 	// SingleBranch indicates whether the clone should be a single-branch clone.
 	// This option is ignored if Bare is true.
 	SingleBranch bool
@@ -120,19 +115,13 @@ func (r *repo) clone(opts *CloneOptions) error {
 	if opts.Depth > 0 {
 		args = append(args, "--depth", fmt.Sprint(opts.Depth))
 	}
-	if opts.Filter != "" {
-		args = append(args, "--filter", opts.Filter)
+	if opts.Blobless {
+		args = append(args, "--filter", "blob:none")
 	}
 	args = append(args, r.accessURL, r.dir)
 	cmd := r.buildGitCommand(args...)
 	cmd.Dir = r.homeDir // Override the cmd.Dir that's set by r.buildGitCommand()
 	if _, err := libExec.Exec(cmd); err != nil {
-		if opts.Filter != "" && strings.Contains(err.Error(), "promisor remote") {
-			// Some Git servers do not support partial clones. Fall back to a
-			// full clone without the filter.
-			opts.Filter = ""
-			return r.clone(opts)
-		}
 		return fmt.Errorf("error cloning repo %q into %q: %w", r.originalURL, r.dir, err)
 	}
 	return nil
