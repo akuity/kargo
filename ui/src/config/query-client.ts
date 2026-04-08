@@ -7,10 +7,12 @@ const showErrorNotification = (error: unknown) => {
   let message: string;
   if (error instanceof ApiError) {
     const body = error.body;
-    message =
-      typeof body === 'object' && body !== null && 'message' in body
-        ? String((body as { message: unknown }).message)
-        : error.message;
+    if (typeof body === 'object' && body !== null) {
+      const b = body as Record<string, unknown>;
+      message = String(b.message ?? b.error ?? error.message);
+    } else {
+      message = error.message;
+    }
   } else if (error instanceof Error) {
     message = error.message;
   } else {
@@ -32,7 +34,10 @@ export const queryClient = new QueryClient({
   }),
   mutationCache: new MutationCache({
     onError: (error) => {
-      showErrorNotification(error);
+      // ConnectRPC errors are handled by the transport interceptor (transport.ts)
+      if (error instanceof ApiError) {
+        showErrorNotification(error);
+      }
     }
   }),
   defaultOptions: {
