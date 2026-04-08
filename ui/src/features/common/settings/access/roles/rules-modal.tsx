@@ -1,7 +1,7 @@
 import { Modal } from 'antd';
 
 import { ModalComponentProps } from '@ui/features/common/modal/modal-context';
-import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
+import { V1PolicyRule } from '@ui/gen/api/v2/models';
 
 import { RulesTable } from './rules-table';
 
@@ -10,7 +10,7 @@ export const RulesModal = ({
   rules,
   hide,
   ...props
-}: { rules: PolicyRule[]; name?: string; hide: () => void } & ModalComponentProps) => {
+}: { rules: V1PolicyRule[]; name?: string; hide: () => void } & ModalComponentProps) => {
   return (
     <Modal
       {...props}

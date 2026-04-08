@@ -1,19 +1,15 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPencil, faPlus, faTrash } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Card, Flex, Table } from 'antd';
 import { format } from 'date-fns';
 import { useParams } from 'react-router-dom';
+import { stringify } from 'yaml';
 
 import { useConfirmModal } from '@ui/features/common/confirm-modal/use-confirm-modal';
 import { useModal } from '@ui/features/common/modal/use-modal';
-import { promotionTaskManifestsGen } from '@ui/features/utils/manifest-generator';
-import {
-  deleteResource,
-  listPromotionTasks
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { PromotionTask } from '@ui/gen/api/v1alpha1/generated_pb';
-import { timestampDate } from '@ui/utils/connectrpc-utils';
+import { useListPromotionTasks } from '@ui/gen/api/v2/core/core';
+import { PromotionTask } from '@ui/gen/api/v2/models';
+import { useDeleteResource } from '@ui/gen/api/v2/resources/resources';
 
 import { CreatePromotionTaskModal } from './create-promotion-task';
 import { EditPromotionTaskModal } from './edit-promotion-task-modal';
@@ -22,9 +18,11 @@ export const PromotionTasks = () => {
   const { name } = useParams();
   const confirm = useConfirmModal();
 
-  const listPromotionTasksQuery = useQuery(listPromotionTasks, { project: name });
+  const listPromotionTasksQuery = useListPromotionTasks(name || '');
 
-  const deletePromotionTaskMutation = useMutation(deleteResource);
+  const deletePromotionTaskMutation = useDeleteResource({
+    mutation: { onSuccess: () => listPromotionTasksQuery.refetch() }
+  });
 
   const promotionTasksModal = useModal();
 
@@ -45,13 +43,7 @@ export const PromotionTasks = () => {
         </p>
       ),
       onOk: () => {
-        const manifest = new TextEncoder().encode(
-          promotionTaskManifestsGen.v1alpha1(promotionTask)
-        );
-        deletePromotionTaskMutation.mutate(
-          { manifest },
-          { onSuccess: () => listPromotionTasksQuery.refetch() }
-        );
+        deletePromotionTaskMutation.mutate({ data: stringify(promotionTask) });
       },
       hide: () => {}
     });
@@ -74,8 +66,9 @@ export const PromotionTasks = () => {
     >
       <Table<PromotionTask>
         className='my-2'
-        dataSource={listPromotionTasksQuery.data?.promotionTasks}
+        dataSource={listPromotionTasksQuery.data?.data?.items}
         loading={listPromotionTasksQuery.isFetching}
+        rowKey={(r) => r.metadata?.name || ''}
         locale={{
           emptyText: (
             <>
@@ -95,9 +88,10 @@ export const PromotionTasks = () => {
             title: 'Creation Date',
             width: 200,
             render: (_, template) => {
-              const date = timestampDate(template.metadata?.creationTimestamp);
-
-              return date ? format(date, 'MMM do yyyy HH:mm:ss') : '';
+              const ts = template.metadata?.creationTimestamp;
+              if (!ts) return '';
+              const date = new Date(ts);
+              return isNaN(date.getTime()) ? '' : format(date, 'MMM do yyyy HH:mm:ss');
             }
           },
           {

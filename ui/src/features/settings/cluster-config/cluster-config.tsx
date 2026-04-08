@@ -1,4 +1,3 @@
-import { useMutation, useQuery } from '@connectrpc/connect-query';
 import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,19 +14,13 @@ import { YamlEditor } from '@ui/features/common/code-editor/yaml-editor';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { useModal } from '@ui/features/common/modal/use-modal';
 import { Webhooks } from '@ui/features/project/settings/views/project-config/webhooks';
-import {
-  createOrUpdateResource,
-  getClusterConfig
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { RawFormat } from '@ui/gen/api/service/v1alpha1/service_pb';
-import { ClusterConfig as ClusterConfigT } from '@ui/gen/api/v1alpha1/generated_pb';
+import { useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+import { useGetClusterConfig } from '@ui/gen/api/v2/system/system';
 import clusterConfigSchema from '@ui/gen/schema/clusterconfigs.kargo.akuity.io_v1alpha1.json';
-import { decodeRawData } from '@ui/utils/decode-raw-data';
 import { zodValidators } from '@ui/utils/validators';
 
 import { clusterConfigYAMLExample } from './cluster-config-yaml-example';
 import { Refresh } from './refresh';
-import { clusterConfigTransport } from './transport';
 import { CreateWebhookModal } from './webhook/create-webhook-modal';
 
 const formSchema = z.object({
@@ -37,17 +30,32 @@ const formSchema = z.object({
 export const ClusterConfig = () => {
   const { name } = useParams();
 
-  const getClusterConfigQuery = useQuery(
-    getClusterConfig,
-    { format: RawFormat.YAML },
-    { transport: clusterConfigTransport }
-  );
+  const getClusterConfigQuery = useGetClusterConfig({
+    query: { meta: { silent404: true } }
+  });
 
-  const clusterConfigYAML = decodeRawData(getClusterConfigQuery.data);
+  const clusterConfigObject = getClusterConfigQuery.data?.data;
+  const clusterConfigYAML = useMemo(() => {
+    if (!clusterConfigObject) {
+      return '';
+    }
+    try {
+      return stringify(clusterConfigObject);
+    } catch (e) {
+      notification.error({
+        message: (e as Error)?.message || 'Failed to stringify ClusterConfig',
+        placement: 'bottomRight'
+      });
+      return '';
+    }
+  }, [clusterConfigObject]);
 
   const clusterConfig = useMemo(() => {
+    if (!clusterConfigYAML) {
+      return undefined;
+    }
     try {
-      return parse(clusterConfigYAML) as ClusterConfigT;
+      return parse(clusterConfigYAML);
     } catch (e) {
       notification.error({
         message: (e as Error)?.message || 'Failed to parse ClusterConfig YAML',
@@ -67,12 +75,14 @@ export const ClusterConfig = () => {
     resolver: zodResolver(formSchema)
   });
 
-  const createOrUpdateMutation = useMutation(createOrUpdateResource, {
-    onSuccess: () => {
-      message.success({
-        content: `ClusterConfig has been ${creation ? 'created' : 'updated'}`
-      });
-      getClusterConfigQuery.refetch();
+  const updateResourceMutation = useUpdateResource({
+    mutation: {
+      onSuccess: () => {
+        message.success({
+          content: `ClusterConfig has been ${creation ? 'created' : 'updated'}`
+        });
+        getClusterConfigQuery.refetch();
+      }
     }
   });
 
@@ -80,13 +90,9 @@ export const ClusterConfig = () => {
     <CreateWebhookModal clusterConfigYAML={clusterConfigYAML} project={name || ''} {...props} />
   ));
 
-  const onSubmitConfig = clusterConfigForm.handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
-
-    await createOrUpdateMutation.mutateAsync({
-      manifest: textEncoder.encode(data.value)
-    });
-  });
+  const onSubmitConfig = clusterConfigForm.handleSubmit((data) =>
+    updateResourceMutation.mutate({ data: data.value })
+  );
 
   return (
     <Flex gap={16} vertical>
@@ -115,7 +121,7 @@ export const ClusterConfig = () => {
             className='ml-auto'
             type='primary'
             onClick={onSubmitConfig}
-            loading={createOrUpdateMutation.isPending}
+            loading={updateResourceMutation.isPending}
           >
             {creation ? 'Create' : 'Update'}
           </Button>

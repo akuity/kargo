@@ -3,12 +3,12 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Table } from 'antd';
 import { ColumnType } from 'antd/es/table'; // Add missing import
 
-import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
+import { V1PolicyRule } from '@ui/gen/api/v2/models';
 
-const renderColumn = (title: string, key: keyof PolicyRule): ColumnType<PolicyRule> => ({
+const renderColumn = (title: string, key: keyof V1PolicyRule): ColumnType<V1PolicyRule> => ({
   title,
   key,
-  render: (v: PolicyRule) => <div key={key}>{((v[key] || []) as string[]).join(', ')}</div>,
+  render: (v: V1PolicyRule) => <div key={key}>{((v[key] || []) as string[]).join(', ')}</div>,
   onCell: () => ({
     style: {
       padding: '5px'
@@ -29,8 +29,8 @@ export const RulesTable = ({
   rules,
   setRules
 }: {
-  rules: PolicyRule[];
-  setRules?: (rules: PolicyRule[]) => void;
+  rules: V1PolicyRule[];
+  setRules?: (rules: V1PolicyRule[]) => void;
 }) => {
   return (
     <Table
