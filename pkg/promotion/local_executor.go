@@ -15,9 +15,10 @@ import (
 type LocalStepExecutor struct {
 	registry StepRunnerRegistry
 
-	kargoClient  client.Client
-	argoCDClient client.Client
-	credsDB      credentials.Database
+	kargoClient     client.Client
+	argoCDClient    client.Client
+	credsDB         credentials.Database
+	gitUserResolver GitUserResolver
 }
 
 // NewLocalStepExecutor creates a new LocalStepExecutor with the provided
@@ -27,12 +28,14 @@ func NewLocalStepExecutor(
 	registry StepRunnerRegistry,
 	kargoClient, argoCDClient client.Client,
 	credsDB credentials.Database,
+	gitUserResolver GitUserResolver,
 ) *LocalStepExecutor {
 	return &LocalStepExecutor{
-		registry:     registry,
-		kargoClient:  kargoClient,
-		argoCDClient: argoCDClient,
-		credsDB:      credsDB,
+		registry:        registry,
+		kargoClient:     kargoClient,
+		argoCDClient:    argoCDClient,
+		credsDB:         credsDB,
+		gitUserResolver: gitUserResolver,
 	}
 }
 
@@ -59,6 +62,8 @@ func (e *LocalStepExecutor) ExecuteStep(
 			capabilities.ArgoCDClient = e.argoCDClient
 		case StepCapabilityAccessCredentials:
 			capabilities.CredsDB = e.credsDB
+		case StepCapabilityAccessGitUser:
+			capabilities.GitUserResolver = e.gitUserResolver
 		}
 	}
 
