@@ -1,16 +1,22 @@
-import { useMutation } from '@connectrpc/connect-query';
-import { useMutation as useReactQueryMutation } from '@tanstack/react-query';
+import { useMutation as useReactQueryMutation, useQueryClient } from '@tanstack/react-query';
 import { notification } from 'antd';
 import { parse, stringify } from 'yaml';
 
-import { queryCache } from '@ui/features/utils/cache';
+import { getGetProjectConfigQueryKey } from '@ui/gen/api/v2/core/core';
 import {
-  createOrUpdateResource,
-  createGenericCredentials,
-  deleteGenericCredentials
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { ProjectConfig } from '@ui/gen/api/v1alpha1/generated_pb';
-import { PartialRecursive } from '@ui/utils/connectrpc-utils';
+  useCreateProjectGenericCredentials,
+  useDeleteProjectGenericCredentials
+} from '@ui/gen/api/v2/credentials/credentials';
+import { useCreateResource, useUpdateResource } from '@ui/gen/api/v2/resources/resources';
+
+type ProjectConfigPartial = {
+  apiVersion?: string;
+  kind?: string;
+  metadata?: { name?: string; namespace?: string };
+  spec?: {
+    webhookReceivers?: Array<Record<string, unknown>>;
+  };
+};
 
 type createWebhookPayload = {
   projectConfigYAML: string;
@@ -24,23 +30,26 @@ type createWebhookPayload = {
 };
 
 export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
-  const createOrUpdateMutation = useMutation(createOrUpdateResource);
-  const createProjectSecretMutation = useMutation(createGenericCredentials);
-  const deleteProjectSecretMutation = useMutation(deleteGenericCredentials);
+  const queryClient = useQueryClient();
+  const createResourceMutation = useCreateResource();
+  const updateResourceMutation = useUpdateResource();
+  const createProjectSecretMutation = useCreateProjectGenericCredentials();
+  const deleteProjectSecretMutation = useDeleteProjectGenericCredentials();
 
   return useReactQueryMutation({
     mutationFn: async (payload: createWebhookPayload) => {
       await createProjectSecretMutation.mutateAsync({
         project: payload.secret.namespace,
-        name: payload.secret.name,
-        data: payload.secret.data
+        data: {
+          name: payload.secret.name,
+          data: payload.secret.data
+        }
       });
 
-      let projectConfig = parse(payload.projectConfigYAML) as PartialRecursive<ProjectConfig>;
+      let projectConfig: ProjectConfigPartial = parse(payload.projectConfigYAML);
 
       if (payload.projectConfigYAML === '') {
         projectConfig = {
-          // @ts-expect-error apiVersion required when creating resource
           apiVersion: 'kargo.akuity.io/v1alpha1',
           kind: 'ProjectConfig',
           metadata: {
@@ -72,16 +81,15 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
         }
       });
 
-      const textEncoder = new TextEncoder();
+      const resourceMutation =
+        payload.projectConfigYAML === '' ? createResourceMutation : updateResourceMutation;
 
       try {
-        await createOrUpdateMutation.mutateAsync({
-          manifest: textEncoder.encode(stringify(projectConfig))
-        });
+        await resourceMutation.mutateAsync({ data: stringify(projectConfig) });
       } catch {
         await deleteProjectSecretMutation.mutateAsync({
-          name: payload.secret.name,
-          project: payload.secret.namespace
+          project: payload.secret.namespace,
+          genericCredentials: payload.secret.name
         });
       }
     },
@@ -90,7 +98,9 @@ export const useCreateWebhookMutation = (opts?: { onSuccess?: () => void }) => {
         message: `Successfully added webhook for ${vars.webhookReceiver}`,
         placement: 'bottomRight'
       });
-      queryCache.projectConfig.refetch();
+      queryClient.invalidateQueries({
+        queryKey: getGetProjectConfigQueryKey(vars.secret.namespace)
+      });
       opts?.onSuccess?.();
     }
   });

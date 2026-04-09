@@ -1,5 +1,3 @@
-import { create } from '@bufbuild/protobuf';
-import { useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Button, Drawer, Input } from 'antd';
 import { useState } from 'react';
@@ -9,12 +7,8 @@ import { z } from 'zod';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { MultiStringEditor } from '@ui/features/common/form/multi-string-editor';
 import { DESCRIPTION_ANNOTATION_KEY, dnsRegex } from '@ui/features/common/utils';
-import { Claim, ClaimSchema, Role } from '@ui/gen/api/rbac/v1alpha1/generated_pb';
-import {
-  createRole,
-  updateRole
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-import { PolicyRule } from '@ui/gen/k8s.io/api/rbac/v1/generated_pb';
+import { Claim, RbacRole, V1PolicyRule } from '@ui/gen/api/v2/models';
+import { useCreateProjectRole, useUpdateRole } from '@ui/gen/api/v2/rbac/rbac';
 import { zodValidators } from '@ui/utils/validators';
 
 import { RuleEditor } from './rule-editor';
@@ -23,7 +17,7 @@ import { RulesTable } from './rules-table';
 type Props = {
   project: string;
   onSuccess: () => void;
-  editing?: Role;
+  editing?: RbacRole;
   hide: () => void;
 };
 
@@ -55,44 +49,28 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     resolver: zodResolver(formSchema),
     values: {
       name: editing?.metadata?.name || '',
-      description: editing?.metadata?.annotations[DESCRIPTION_ANNOTATION_KEY] || '',
-      email:
-        editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'email') {
-            return claim;
-          } else {
-            return undefined;
-          }
-        })?.values || [],
-      sub:
-        editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'sub') {
-            return claim;
-          } else {
-            return undefined;
-          }
-        })?.values || [],
-      groups:
-        editing?.claims.find((claim: Claim) => {
-          if (claim.name === 'groups') {
-            return claim;
-          } else {
-            return undefined;
-          }
-        })?.values || []
-    }
-  });
-  const { mutate } = useMutation(createRole, {
-    onSuccess: () => {
-      hide();
-      onSuccess();
+      description: editing?.metadata?.annotations?.[DESCRIPTION_ANNOTATION_KEY] || '',
+      email: editing?.claims?.find((claim: Claim) => claim.name === 'email')?.values || [],
+      sub: editing?.claims?.find((claim: Claim) => claim.name === 'sub')?.values || [],
+      groups: editing?.claims?.find((claim: Claim) => claim.name === 'groups')?.values || []
     }
   });
 
-  const { mutate: update } = useMutation(updateRole, {
-    onSuccess: () => {
-      hide();
-      onSuccess();
+  const { mutate } = useCreateProjectRole({
+    mutation: {
+      onSuccess: () => {
+        hide();
+        onSuccess();
+      }
+    }
+  });
+
+  const { mutate: update } = useUpdateRole({
+    mutation: {
+      onSuccess: () => {
+        hide();
+        onSuccess();
+      }
     }
   });
 
@@ -101,9 +79,7 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     const getClaims = (): Claim[] => {
       const claimsArray: Claim[] = [];
       multiFields.map((field) => {
-        const newClaim = create(ClaimSchema, {
-          name: String(field.name)
-        });
+        const newClaim: Claim = { name: String(field.name) };
         if (newClaim.name === 'email') {
           if (values.email.length === 0) {
             return;
@@ -131,26 +107,29 @@ export const CreateRole = ({ editing, onSuccess, project, hide }: Props) => {
     };
     if (editing) {
       return update({
-        role: {
+        project,
+        role: editing?.metadata?.name || '',
+        data: {
           ...values,
           rules,
           metadata: { namespace: project, name: editing?.metadata?.name, annotations },
           claims: getClaims()
-        }
+        } as unknown as { [key: string]: unknown }
       });
     } else {
       mutate({
-        role: {
+        project,
+        data: {
           ...values,
           rules,
           metadata: { name: values.name, namespace: project, annotations },
           claims: getClaims()
-        }
+        } as unknown as { [key: string]: unknown }
       });
     }
   });
 
-  const [rules, setRules] = useState<PolicyRule[]>(editing?.rules || []);
+  const [rules, setRules] = useState<V1PolicyRule[]>(editing?.rules || []);
 
   return (
     <Drawer open={true} onClose={hide} width='80%' title={`${editing ? 'Edit' : 'Create'} Role`}>

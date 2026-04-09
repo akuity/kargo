@@ -1,13 +1,15 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
 import { Input, Modal } from 'antd';
 import { useForm } from 'react-hook-form';
 
 import { queryClient } from '@ui/config/query-client';
 import {
-  createConfigMap,
-  listConfigMaps
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
+  createProjectConfigMap,
+  createSharedConfigMap,
+  getListProjectConfigMapsQueryKey,
+  getListSharedConfigMapsQueryKey
+} from '@ui/gen/api/v2/core/core';
 
 import { FieldContainer } from '../../form/field-container';
 import { ModalProps } from '../../modal/use-modal';
@@ -16,32 +18,35 @@ import { ObjectEditor } from '../../object-editor';
 import { confgMapSchema } from './schema';
 
 type Props = ModalProps & {
-  systemLevel: boolean;
   project: string;
 };
 
-export const CreateConfigMapModal = ({ project, systemLevel, hide, visible }: Props) => {
+export const CreateConfigMapModal = ({ project, hide, visible }: Props) => {
   const { control, handleSubmit } = useForm({
     defaultValues: {
       name: '',
-      data: {}
+      data: {} as Record<string, string>
     },
     resolver: zodResolver(confgMapSchema)
   });
 
-  const { mutate, isPending } = useMutation(createConfigMap, {
+  const mutationFn = project
+    ? (values: { name: string; data: Record<string, string> }) =>
+        createProjectConfigMap(project, values)
+    : (values: { name: string; data: Record<string, string> }) => createSharedConfigMap(values);
+  const queryKey = project
+    ? getListProjectConfigMapsQueryKey(project)
+    : getListSharedConfigMapsQueryKey();
+
+  const { mutate, isPending } = useMutation({
+    mutationFn,
     onSuccess: () => {
-      queryClient.refetchQueries({
-        queryKey: createConnectQueryKey({
-          schema: listConfigMaps,
-          cardinality: 'finite'
-        })
-      });
+      queryClient.refetchQueries({ queryKey });
       hide();
     }
   });
 
-  const onSubmit = handleSubmit((data) => mutate({ ...data, project, systemLevel }));
+  const onSubmit = handleSubmit((data) => mutate(data));
 
   return (
     <Modal

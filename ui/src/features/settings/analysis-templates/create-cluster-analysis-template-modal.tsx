@@ -1,24 +1,26 @@
-import { createConnectQueryKey, useMutation } from '@connectrpc/connect-query';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal } from 'antd';
 import { useForm } from 'react-hook-form';
 
-import { transportWithAuth } from '@ui/config/transport';
 import YamlEditor from '@ui/features/common/code-editor/yaml-editor-lazy';
 import { FieldContainer } from '@ui/features/common/form/field-container';
 import { ModalProps } from '@ui/features/common/modal/use-modal';
-import {
-  createResource,
-  listClusterAnalysisTemplates
-} from '@ui/gen/api/service/v1alpha1/service-KargoService_connectquery';
-
-import { getClusterAnalysisTemplateYAMLExample } from '../../utils/cluster-analysis-template-example';
+import { getClusterAnalysisTemplateYAMLExample } from '@ui/features/utils/cluster-analysis-template-example';
+import { useCreateResource } from '@ui/gen/api/v2/resources/resources';
+import { getListClusterAnalysisTemplatesQueryKey } from '@ui/gen/api/v2/verifications/verifications';
 
 export const CreateClusterAnalysisTemplateModal = ({ visible, hide }: ModalProps) => {
   const queryClient = useQueryClient();
 
-  const { mutateAsync, isPending } = useMutation(createResource, {
-    onSuccess: () => hide()
+  const { mutate, isPending } = useCreateResource({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: getListClusterAnalysisTemplatesQueryKey()
+        });
+        hide();
+      }
+    }
   });
 
   const { control, handleSubmit } = useForm({
@@ -27,24 +29,7 @@ export const CreateClusterAnalysisTemplateModal = ({ visible, hide }: ModalProps
     }
   });
 
-  const onSubmit = handleSubmit(async (data) => {
-    const textEncoder = new TextEncoder();
-    await mutateAsync(
-      {
-        manifest: textEncoder.encode(data.value)
-      },
-      {
-        onSuccess: () =>
-          queryClient.invalidateQueries({
-            queryKey: createConnectQueryKey({
-              schema: listClusterAnalysisTemplates,
-              cardinality: 'finite',
-              transport: transportWithAuth
-            })
-          })
-      }
-    );
-  });
+  const onSubmit = handleSubmit((data) => mutate({ data: data.value }));
 
   return (
     <Modal
