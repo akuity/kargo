@@ -49,6 +49,7 @@ export const layoutGraph = (
   }
 
   const maxStageHeight = 200;
+  const maxSubscriptionHeight = 100;
 
   for (const w of warehouse.warehouses) {
     if (warehouse.ignore?.(w)) {
@@ -72,7 +73,7 @@ export const layoutGraph = (
       graph.setNode(subscriptionNodeIndex, {
         ...repoSubscriptionLabelling.label(w, s),
         ...pickMaxSize(repoSubscriptionSizer.size(), dimensionState[subscriptionNodeIndex] || {}),
-        height: maxStageHeight
+        height: maxSubscriptionHeight
       });
 
       graph.setEdge(subscriptionNodeIndex, warehouseNodeIndex);
