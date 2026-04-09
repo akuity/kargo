@@ -278,7 +278,10 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
           control={control}
           render={({ field }) => (
             <label className='flex items-start gap-2 cursor-pointer mb-4'>
-              <Checkbox checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+              <Checkbox
+                checked={!!field.value}
+                onChange={(e) => field.onChange(e.target.checked)}
+              />
               <div>
                 <div>Replicate</div>
                 <Typography.Text type='secondary'>
