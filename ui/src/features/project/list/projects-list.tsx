@@ -25,7 +25,7 @@ export const ProjectsList = () => {
     'starred-projects-view',
     false
   );
-  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', true);
+  const [myProjectsView, setMyProjectsView] = useLocalStorage('my-projects-view', false);
 
   const [starred, toggleStar] = useStarProjects();
 
