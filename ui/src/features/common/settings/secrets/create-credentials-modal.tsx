@@ -2,7 +2,7 @@ import { faAsterisk, faCode, faExternalLink } from '@fortawesome/free-solid-svg-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Input, Modal, Segmented } from 'antd';
+import { Checkbox, Input, Modal, Segmented, Typography } from 'antd';
 import { Controller, useForm } from 'react-hook-form';
 
 import { FieldContainer } from '@ui/features/common/form/field-container';
@@ -109,7 +109,12 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
   });
 
   const createGenericMutation = useMutation({
-    mutationFn: (payload: { name: string; data: Record<string, string>; description?: string }) =>
+    mutationFn: (payload: {
+      name: string;
+      data: Record<string, string>;
+      description?: string;
+      replicate?: boolean;
+    }) =>
       project
         ? createProjectGenericCredentials(project, payload)
         : createSharedGenericCredentials(payload),
@@ -117,7 +122,11 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
   });
 
   const updateGenericMutation = useMutation({
-    mutationFn: (payload: { data: Record<string, string>; description?: string }) => {
+    mutationFn: (payload: {
+      data: Record<string, string>;
+      description?: string;
+      replicate?: boolean;
+    }) => {
       const name = init?.metadata?.name || '';
       return project
         ? updateProjectGenericCredentials(project, name, payload)
@@ -142,14 +151,18 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
         }
       }
 
+      // @ts-expect-error zod infer problem
+      const replicate = values.replicate as boolean | undefined;
+
       if (editing) {
-        return updateGenericMutation.mutate({ data, description: values.description });
+        return updateGenericMutation.mutate({ data, description: values.description, replicate });
       }
 
       return createGenericMutation.mutate({
         name: values.name,
         data,
-        description: values.description
+        description: values.description,
+        replicate
       });
     }
 
@@ -257,6 +270,24 @@ export const CreateCredentialsModal = ({ project, onSuccess, editing, init, ...p
             </FieldContainer>
           </div>
         )
+      )}
+      {credentialType === 'generic' && !project && (
+        <Controller
+          // @ts-expect-error zod infer problem
+          name='replicate'
+          control={control}
+          render={({ field }) => (
+            <label className='flex items-start gap-2 cursor-pointer mb-4'>
+              <Checkbox checked={!!field.value} onChange={(e) => field.onChange(e.target.checked)} />
+              <div>
+                <div>Replicate</div>
+                <Typography.Text type='secondary'>
+                  Replicate the resource to all projects to be used by AnalysisTemplates
+                </Typography.Text>
+              </div>
+            </label>
+          )}
+        />
       )}
       {credentialType === 'generic' && (
         // @ts-expect-error expected type is there
