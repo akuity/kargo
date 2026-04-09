@@ -314,7 +314,7 @@ type GitPushConfig struct {
 	// have failed due to the remote branch having commits that that are not present locally.
 	// Each attempt, including the first, rebases prior to pushing. This field configures the
 	// maximum number of attempts to push to the remote repository. If not specified, the
-	// default is 50.
+	// default is 10.
 	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
 	// The path to a working directory of a local repository.
 	Path string `json:"path"`
@@ -355,6 +355,26 @@ type GitWaitForPRConfig struct {
 	// SCP-style git@host:path) is deprecated as of v1.10.0 and will be removed in v1.13.0. Use
 	// HTTPS URLs instead.
 	RepoURL string `json:"repoURL"`
+}
+
+type GitHubPushConfig struct {
+	// Whether to force push to the target branch, overwriting any existing history.
+	Force bool `json:"force,omitempty"`
+	// Indicates whether to push to a new remote branch. A value of 'true' is mutually exclusive
+	// with 'targetBranch'. If neither is provided, the target branch will be the currently
+	// checked out branch.
+	GenerateTargetBranch bool `json:"generateTargetBranch,omitempty"`
+	// Whether to skip TLS verification when communicating with the GitHub API. Intended for
+	// GitHub Enterprise instances with self-signed certificates.
+	InsecureSkipTLSVerify bool `json:"insecureSkipTLSVerify,omitempty"`
+	// The maximum number of attempts to push. Each attempt integrates remote changes (if
+	// applicable) and retries the API-based push. If not specified, the default is 10.
+	MaxAttempts *int64 `json:"maxAttempts,omitempty"`
+	// The path to a working directory of a local repository.
+	Path string `json:"path"`
+	// The target branch to push to. Mutually exclusive with 'generateTargetBranch=true'. If
+	// neither is provided, the target branch will be the currently checked out branch.
+	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
 type HelmTemplateConfig struct {

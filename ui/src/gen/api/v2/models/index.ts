@@ -81,6 +81,7 @@ export * from './getConfigResponse';
 export * from './getConfigResponseArgocdShards';
 export * from './getProjectRole200';
 export * from './getSystemRole200';
+export * from './gitClientConfig';
 export * from './gitCommit';
 export * from './gitDiscoveryResult';
 export * from './gitHubWebhookReceiverConfig';

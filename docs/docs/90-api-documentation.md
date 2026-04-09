@@ -1895,6 +1895,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
+| gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus"></a>
 
@@ -2185,6 +2186,16 @@ RawFormat specifies the format for raw resource representation.
 | name | [string](#string) |  Name is the name of the target resource. If LabelSelector and/or IndexSelectors are also specified, the results are the combined (logical AND) of the criteria.  +optional |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
 | indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GitClientConfig"></a>
+
+### GitClientConfig
+ GitClientConfig describes cluster-level configuration for Kargo's Git client.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  Name is the name used for Git commits made by Kargo.   |
+| email | [string](#string) |  Email is the email address used for Git commits made by Kargo.    |
+| signingKeySecret | k8s.io.api.core.v1.LocalObjectReference |  SigningKeySecret references a Secret in the system namespace containing a GPG signing key for commit signing. The Secret must contain a data key named "signingKey" with the GPG private key material. +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 
