@@ -8,7 +8,7 @@ import {
   faTruckArrowRight
 } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { Button, Card, Dropdown, Flex, message, Space, Typography } from 'antd';
+import { Button, Card, Dropdown, Flex, message, Space, Tooltip, Typography } from 'antd';
 import classNames from 'classnames';
 import { formatDistance } from 'date-fns';
 import { ReactNode, useMemo } from 'react';
@@ -143,7 +143,14 @@ export const StageNode = (props: { stage: Stage }) => {
             {autoPromotionMode && (
               <FontAwesomeIcon title='Auto Promotion' icon={faBolt} className='text-[10px] mr-1' />
             )}
-            <span className='text-xs text-wrap mr-auto'>{props.stage.metadata?.name}</span>
+            {(() => {
+              const name = props.stage.metadata?.name || '';
+              const isLong = name.length > 17;
+              const label = (
+                <span className='text-xs mr-auto'>{isLong ? `${name.slice(0, 17)}...` : name}</span>
+              );
+              return isLong ? <Tooltip title={name}>{label}</Tooltip> : label;
+            })()}
           </>
         }
         extra={

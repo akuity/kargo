@@ -34,7 +34,7 @@ export const layoutGraph = (
 ) => {
   const graph = new graphlib.Graph<GraphMeta>({ multigraph: true });
 
-  graph.setGraph({ rankdir: 'LR', ranksep: 80 });
+  graph.setGraph({ rankdir: 'LR', ranksep: 100 });
   graph.setDefaultEdgeLabel(() => ({}));
 
   const warehouseByName: Record<string, WarehouseExpanded> = {};

@@ -1,5 +1,5 @@
 export const warehouseSizer = {
-  size: () => ({ width: 250, height: 100 })
+  size: () => ({ width: 270, height: 100 })
 };
 
 export const repoSubscriptionSizer = {
@@ -7,7 +7,7 @@ export const repoSubscriptionSizer = {
 };
 
 export const stageSizer = {
-  size: () => ({ width: 250, height: 170 })
+  size: () => ({ width: 270, height: 170 })
 };
 
 export const stackSizer = {
