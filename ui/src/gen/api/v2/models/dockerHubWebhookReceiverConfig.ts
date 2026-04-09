@@ -20,5 +20,5 @@ Docker Hub webhooks, please refer to the Docker documentation:
   https://docs.docker.com/docker-hub/webhooks/
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

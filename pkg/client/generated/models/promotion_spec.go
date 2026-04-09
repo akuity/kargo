@@ -10,6 +10,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // PromotionSpec promotion spec
@@ -25,7 +26,8 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Freight string `json:"freight,omitempty"`
+	// Required: true
+	Freight *string `json:"freight"`
 
 	// Stage specifies the name of the Stage to which this Promotion
 	// applies. The Stage referenced by this field MUST be in the same
@@ -36,7 +38,8 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Stage string `json:"stage,omitempty"`
+	// Required: true
+	Stage *string `json:"stage"`
 
 	// Steps specifies the directives to be executed as part of this Promotion.
 	// The order in which the directives are executed is the order in which they
@@ -45,6 +48,7 @@ type PromotionSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)"
+	// Required: true
 	Steps []*PromotionStep `json:"steps"`
 
 	// Vars is a list of variables that can be referenced by expressions in
@@ -55,6 +59,14 @@ type PromotionSpec struct {
 // Validate validates this promotion spec
 func (m *PromotionSpec) Validate(formats strfmt.Registry) error {
 	var res []error
+
+	if err := m.validateFreight(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateStage(formats); err != nil {
+		res = append(res, err)
+	}
 
 	if err := m.validateSteps(formats); err != nil {
 		res = append(res, err)
@@ -70,9 +82,28 @@ func (m *PromotionSpec) Validate(formats strfmt.Registry) error {
 	return nil
 }
 
+func (m *PromotionSpec) validateFreight(formats strfmt.Registry) error {
+
+	if err := validate.Required("freight", "body", m.Freight); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *PromotionSpec) validateStage(formats strfmt.Registry) error {
+
+	if err := validate.Required("stage", "body", m.Stage); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (m *PromotionSpec) validateSteps(formats strfmt.Registry) error {
-	if swag.IsZero(m.Steps) { // not required
-		return nil
+
+	if err := validate.Required("steps", "body", m.Steps); err != nil {
+		return err
 	}
 
 	for i := 0; i < len(m.Steps); i++ {

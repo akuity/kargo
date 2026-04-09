@@ -62,9 +62,10 @@ type Freight struct {
 	// Origin describes a kind of Freight in terms of its origin.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Origin struct {
 		FreightOrigin
-	} `json:"origin,omitempty"`
+	} `json:"origin"`
 
 	// Status describes the current status of this Freight.
 	Status struct {
@@ -254,9 +255,6 @@ func (m *Freight) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *Freight) validateOrigin(formats strfmt.Registry) error {
-	if swag.IsZero(m.Origin) { // not required
-		return nil
-	}
 
 	return nil
 }

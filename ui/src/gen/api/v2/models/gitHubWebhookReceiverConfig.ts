@@ -21,5 +21,5 @@ For more information please refer to GitHub documentation:
   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

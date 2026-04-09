@@ -27,5 +27,5 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
 Freight.
 
 +kubebuilder:validation:Required */
-  spec?: PromotionTaskSpec;
+  spec: PromotionTaskSpec;
 }

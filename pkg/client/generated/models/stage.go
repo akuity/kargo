@@ -38,9 +38,10 @@ type Stage struct {
 	// Freight into the Stage.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Spec struct {
 		StageSpec
-	} `json:"spec,omitempty"`
+	} `json:"spec"`
 
 	// Status describes the Stage's current and recent Freight, health, and more.
 	Status struct {
@@ -94,9 +95,6 @@ func (m *Stage) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *Stage) validateSpec(formats strfmt.Registry) error {
-	if swag.IsZero(m.Spec) { // not required
-		return nil
-	}
 
 	return nil
 }

@@ -21,5 +21,5 @@ information about this token, please refer to the GitLab documentation:
   https://docs.gitlab.com/user/project/integrations/webhooks/
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

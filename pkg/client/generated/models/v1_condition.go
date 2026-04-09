@@ -5,8 +5,10 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // V1Condition v1 condition
@@ -20,14 +22,16 @@ type V1Condition struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Type=string
 	// +kubebuilder:validation:Format=date-time
-	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
+	// Required: true
+	LastTransitionTime *string `json:"lastTransitionTime"`
 
 	// message is a human readable message indicating details about the transition.
 	// This may be an empty string.
 	// +required
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MaxLength=32768
-	Message string `json:"message,omitempty"`
+	// Required: true
+	Message *string `json:"message"`
 
 	// observedGeneration represents the .metadata.generation that the condition was set based upon.
 	// For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
@@ -46,13 +50,15 @@ type V1Condition struct {
 	// +kubebuilder:validation:MaxLength=1024
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$`
-	Reason string `json:"reason,omitempty"`
+	// Required: true
+	Reason *string `json:"reason"`
 
 	// status of the condition, one of True, False, Unknown.
 	// +required
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Enum=True;False;Unknown
-	Status string `json:"status,omitempty"`
+	// Required: true
+	Status *string `json:"status"`
 
 	// type of condition in CamelCase or in foo.example.com/CamelCase.
 	// ---
@@ -63,11 +69,82 @@ type V1Condition struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
 	// +kubebuilder:validation:MaxLength=316
-	Type string `json:"type,omitempty"`
+	// Required: true
+	Type *string `json:"type"`
 }
 
 // Validate validates this v1 condition
 func (m *V1Condition) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateLastTransitionTime(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateMessage(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateReason(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateStatus(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateType(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *V1Condition) validateLastTransitionTime(formats strfmt.Registry) error {
+
+	if err := validate.Required("lastTransitionTime", "body", m.LastTransitionTime); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *V1Condition) validateMessage(formats strfmt.Registry) error {
+
+	if err := validate.Required("message", "body", m.Message); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *V1Condition) validateReason(formats strfmt.Registry) error {
+
+	if err := validate.Required("reason", "body", m.Reason); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *V1Condition) validateStatus(formats strfmt.Registry) error {
+
+	if err := validate.Required("status", "body", m.Status); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *V1Condition) validateType(formats strfmt.Registry) error {
+
+	if err := validate.Required("type", "body", m.Type); err != nil {
+		return err
+	}
+
 	return nil
 }
 

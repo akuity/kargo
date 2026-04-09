@@ -22,7 +22,7 @@ Artifactory documentation:
   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
   /** VirtualRepoName is the name of an Artifactory virtual repository.
 
 When unspecified, the Artifactory webhook receiver depends on the value of

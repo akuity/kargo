@@ -35,9 +35,10 @@ type GenericWebhookReceiverConfig struct {
 	// shared secret.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this generic webhook receiver config
@@ -89,9 +90,6 @@ func (m *GenericWebhookReceiverConfig) validateActions(formats strfmt.Registry) 
 }
 
 func (m *GenericWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

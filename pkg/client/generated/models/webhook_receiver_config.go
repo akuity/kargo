@@ -8,6 +8,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // WebhookReceiverConfig webhook receiver config
@@ -75,7 +76,8 @@ type WebhookReceiverConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 	// +akuity:test-kubebuilder-pattern=KubernetesName
-	Name string `json:"name,omitempty"`
+	// Required: true
+	Name *string `json:"name"`
 
 	// Quay contains the configuration for a webhook receiver that is compatible
 	// with Quay payloads.
@@ -121,6 +123,10 @@ func (m *WebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateHarbor(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateName(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -201,6 +207,15 @@ func (m *WebhookReceiverConfig) validateGitlab(formats strfmt.Registry) error {
 func (m *WebhookReceiverConfig) validateHarbor(formats strfmt.Registry) error {
 	if swag.IsZero(m.Harbor) { // not required
 		return nil
+	}
+
+	return nil
+}
+
+func (m *WebhookReceiverConfig) validateName(formats strfmt.Registry) error {
+
+	if err := validate.Required("name", "body", m.Name); err != nil {
+		return err
 	}
 
 	return nil

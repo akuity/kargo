@@ -5936,7 +5936,11 @@
           "description": "Value is the value of the argument.\n\n+kubebuilder:validation:Required",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "name",
+        "value"
+      ]
     },
     "AnalysisRunMetadata": {
       "type": "object",
@@ -5985,7 +5989,10 @@
           "description": "Name is the name of the AnalysisTemplate in the same project/namespace as\nthe Stage.\n\n+kubebuilder:validation:Required",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "name"
+      ]
     },
     "ApprovedStage": {
       "type": "object",
@@ -6032,7 +6039,10 @@
           "description": "VirtualRepoName is the name of an Artifactory virtual repository.\n\nWhen unspecified, the Artifactory webhook receiver depends on the value of\nthe webhook payload's `data.repo_key` field when inferring the URL of the\nrepository from which the webhook originated, which will always be an\nArtifactory \"local repository.\" In cases where a Warehouse subscribes to\nsuch a repository indirectly via a \"virtual repository,\" there will be a\ndiscrepancy between the inferred (local) repository URL and the URL\nactually used by the subscription, which can prevent the receiver from\nidentifying such a Warehouse as one in need of refreshing. When specified,\nthe value of the VirtualRepoName field supersedes the value of the webhook\npayload's `data.repo_key` field to compensate for that discrepancy.\n\nIn practice, when using virtual repositories, a separate Artifactory\nwebhook receiver should be configured for each, but one such receiver can\nhandle inbound webhooks from any number of local repositories that are\naggregated by that virtual repository. For example, if a virtual repository\n`proj-virtual` aggregates container images from all of the `proj`\nArtifactory project's local image repositories, with a single webhook\nconfigured to post to a single receiver configured for the `proj-virtual`\nvirtual repository, an image pushed to\n`example.frog.io/proj-<local-repo-name>/<path>/image`, will cause that\nreceiver to refresh all Warehouses subscribed to\n`example.frog.io/proj-virtual/<path>/image`.\n\n+optional",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "AutoPromotionOptions": {
       "type": "object",
@@ -6054,7 +6064,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "BitbucketWebhookReceiverConfig": {
       "type": "object",
@@ -6067,7 +6080,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "Chart": {
       "type": "object",
@@ -6203,7 +6219,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "spec"
+      ]
     },
     "ClusterPromotionTaskList": {
       "type": "object",
@@ -6357,7 +6376,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "ExpressionVariable": {
       "type": "object",
@@ -6434,7 +6456,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "origin"
+      ]
     },
     "FreightCollection": {
       "type": "object",
@@ -6479,7 +6504,11 @@
           "description": "Name is the name of the resource of the kind indicated by the Kind field\nfrom which Freight may originate.\n\n+kubebuilder:validation:Required",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "kind",
+        "name"
+      ]
     },
     "FreightReference": {
       "type": "object",
@@ -6545,7 +6574,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "origin"
+      ]
     },
     "FreightSources": {
       "type": "object",
@@ -6657,7 +6689,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "GenericWebhookTargetSelectionCriteria": {
       "type": "object",
@@ -6748,7 +6783,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "GitLabWebhookReceiverConfig": {
       "type": "object",
@@ -6761,7 +6799,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "GiteaWebhookReceiverConfig": {
       "type": "object",
@@ -6774,7 +6815,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "HarborWebhookReceiverConfig": {
       "type": "object",
@@ -6787,7 +6831,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "Health": {
       "type": "object",
@@ -7103,7 +7150,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "spec"
+      ]
     },
     "PromotionList": {
       "type": "object",
@@ -7225,7 +7275,12 @@
             "$ref": "#/definitions/ExpressionVariable"
           }
         }
-      }
+      },
+      "required": [
+        "freight",
+        "stage",
+        "steps"
+      ]
     },
     "PromotionStatus": {
       "type": "object",
@@ -7373,7 +7428,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "spec"
+      ]
     },
     "PromotionTaskList": {
       "type": "object",
@@ -7408,7 +7466,10 @@
           "description": "Name is the name of the (Cluster)PromotionTask.\n\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:MaxLength=253\n+kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`\n+akuity:test-kubebuilder-pattern=KubernetesName",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "name"
+      ]
     },
     "PromotionTaskSpec": {
       "type": "object",
@@ -7427,7 +7488,10 @@
             "$ref": "#/definitions/ExpressionVariable"
           }
         }
-      }
+      },
+      "required": [
+        "steps"
+      ]
     },
     "PromotionTemplate": {
       "type": "object",
@@ -7467,7 +7531,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "secretRef"
+      ]
     },
     "Stage": {
       "type": "object",
@@ -7499,7 +7566,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "spec"
+      ]
     },
     "StageList": {
       "type": "object",
@@ -7785,7 +7855,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "spec"
+      ]
     },
     "WarehouseList": {
       "type": "object",
@@ -7977,7 +8050,10 @@
             }
           ]
         }
-      }
+      },
+      "required": [
+        "name"
+      ]
     },
     "WebhookReceiverDetails": {
       "type": "object",
@@ -8481,7 +8557,14 @@
           "description": "type of condition in CamelCase or in foo.example.com/CamelCase.\n---\nMany .condition.type values are consistent across resources like Available, but because arbitrary conditions can be\nuseful (see .node.status.conditions), the ability to deconflict is important.\nThe regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)\n+required\n+kubebuilder:validation:Required\n+kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`\n+kubebuilder:validation:MaxLength=316",
           "type": "string"
         }
-      }
+      },
+      "required": [
+        "lastTransitionTime",
+        "message",
+        "reason",
+        "status",
+        "type"
+      ]
     },
     "V1ConfigMap": {
       "type": "object",

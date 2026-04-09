@@ -32,8 +32,6 @@ import type {
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
 /**
  * Retrieve an AnalysisRun resource from a project's namespace.
  * @summary Retrieve an AnalysisRun
@@ -75,15 +73,14 @@ export const getGetAnalysisRunQueryOptions = <
   analysisRun: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRun>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetAnalysisRunQueryKey(project, analysisRun);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysisRun>>> = () =>
-    getAnalysisRun(project, analysisRun, requestOptions);
+    getAnalysisRun(project, analysisRun);
 
   return {
     queryKey,
@@ -114,7 +111,6 @@ export function useGetAnalysisRun<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -134,7 +130,6 @@ export function useGetAnalysisRun<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -146,7 +141,6 @@ export function useGetAnalysisRun<
   analysisRun: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRun>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -162,7 +156,6 @@ export function useGetAnalysisRun<
   analysisRun: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRun>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -246,16 +239,15 @@ export const getGetAnalysisRunLogsQueryOptions = <
   params?: GetAnalysisRunLogsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRunLogs>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetAnalysisRunLogsQueryKey(project, analysisRun, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysisRunLogs>>> = () =>
-    getAnalysisRunLogs(project, analysisRun, params, requestOptions);
+    getAnalysisRunLogs(project, analysisRun, params);
 
   return {
     queryKey,
@@ -289,7 +281,6 @@ export function useGetAnalysisRunLogs<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -312,7 +303,6 @@ export function useGetAnalysisRunLogs<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -325,7 +315,6 @@ export function useGetAnalysisRunLogs<
   params?: GetAnalysisRunLogsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRunLogs>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -342,7 +331,6 @@ export function useGetAnalysisRunLogs<
   params?: GetAnalysisRunLogsParams,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getAnalysisRunLogs>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -398,15 +386,14 @@ export const getListAnalysisTemplatesQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listAnalysisTemplates>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListAnalysisTemplatesQueryKey(project);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listAnalysisTemplates>>> = () =>
-    listAnalysisTemplates(project, requestOptions);
+    listAnalysisTemplates(project);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listAnalysisTemplates>>,
@@ -437,7 +424,6 @@ export function useListAnalysisTemplates<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -458,7 +444,6 @@ export function useListAnalysisTemplates<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -471,7 +456,6 @@ export function useListAnalysisTemplates<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listAnalysisTemplates>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -488,7 +472,6 @@ export function useListAnalysisTemplates<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listAnalysisTemplates>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -550,16 +533,15 @@ export const getGetAnalysisTemplateQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetAnalysisTemplateQueryKey(project, analysisTemplate);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getAnalysisTemplate>>> = () =>
-    getAnalysisTemplate(project, analysisTemplate, requestOptions);
+    getAnalysisTemplate(project, analysisTemplate);
 
   return {
     queryKey,
@@ -594,7 +576,6 @@ export function useGetAnalysisTemplate<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -616,7 +597,6 @@ export function useGetAnalysisTemplate<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -630,7 +610,6 @@ export function useGetAnalysisTemplate<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -648,7 +627,6 @@ export function useGetAnalysisTemplate<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -705,7 +683,6 @@ export const getDeleteAnalysisTemplateMutationOptions = <
     { project: string; analysisTemplate: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
   TError,
@@ -713,11 +690,11 @@ export const getDeleteAnalysisTemplateMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteAnalysisTemplate'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteAnalysisTemplate>>,
@@ -725,7 +702,7 @@ export const getDeleteAnalysisTemplateMutationOptions = <
   > = (props) => {
     const { project, analysisTemplate } = props ?? {};
 
-    return deleteAnalysisTemplate(project, analysisTemplate, requestOptions);
+    return deleteAnalysisTemplate(project, analysisTemplate);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -748,7 +725,6 @@ export const useDeleteAnalysisTemplate = <TError = unknown, TContext = unknown>(
       { project: string; analysisTemplate: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -798,7 +774,6 @@ export const getReverifyMutationOptions = <TError = unknown, TContext = unknown>
     { project: string; stage: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof reverify>>,
   TError,
@@ -806,11 +781,11 @@ export const getReverifyMutationOptions = <TError = unknown, TContext = unknown>
   TContext
 > => {
   const mutationKey = ['reverify'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof reverify>>,
@@ -818,7 +793,7 @@ export const getReverifyMutationOptions = <TError = unknown, TContext = unknown>
   > = (props) => {
     const { project, stage } = props ?? {};
 
-    return reverify(project, stage, requestOptions);
+    return reverify(project, stage);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -839,7 +814,6 @@ export const useReverify = <TError = unknown, TContext = unknown>(
       { project: string; stage: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -891,7 +865,6 @@ export const getAbortVerificationMutationOptions = <
     { project: string; stage: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof abortVerification>>,
   TError,
@@ -899,11 +872,11 @@ export const getAbortVerificationMutationOptions = <
   TContext
 > => {
   const mutationKey = ['abortVerification'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof abortVerification>>,
@@ -911,7 +884,7 @@ export const getAbortVerificationMutationOptions = <
   > = (props) => {
     const { project, stage } = props ?? {};
 
-    return abortVerification(project, stage, requestOptions);
+    return abortVerification(project, stage);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -934,7 +907,6 @@ export const useAbortVerification = <TError = unknown, TContext = unknown>(
       { project: string; stage: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -987,14 +959,13 @@ export const getListClusterAnalysisTemplatesQueryOptions = <
   query?: Partial<
     UseQueryOptions<Awaited<ReturnType<typeof listClusterAnalysisTemplates>>, TError, TData>
   >;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListClusterAnalysisTemplatesQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listClusterAnalysisTemplates>>> = () =>
-    listClusterAnalysisTemplates(requestOptions);
+    listClusterAnalysisTemplates();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listClusterAnalysisTemplates>>,
@@ -1024,7 +995,6 @@ export function useListClusterAnalysisTemplates<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1044,7 +1014,6 @@ export function useListClusterAnalysisTemplates<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1056,7 +1025,6 @@ export function useListClusterAnalysisTemplates<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listClusterAnalysisTemplates>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1072,7 +1040,6 @@ export function useListClusterAnalysisTemplates<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listClusterAnalysisTemplates>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1131,16 +1098,15 @@ export const getGetClusterAnalysisTemplateQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getClusterAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey =
     queryOptions?.queryKey ?? getGetClusterAnalysisTemplateQueryKey(clusterAnalysisTemplate);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getClusterAnalysisTemplate>>> = () =>
-    getClusterAnalysisTemplate(clusterAnalysisTemplate, requestOptions);
+    getClusterAnalysisTemplate(clusterAnalysisTemplate);
 
   return {
     queryKey,
@@ -1174,7 +1140,6 @@ export function useGetClusterAnalysisTemplate<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1195,7 +1160,6 @@ export function useGetClusterAnalysisTemplate<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1208,7 +1172,6 @@ export function useGetClusterAnalysisTemplate<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getClusterAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1225,7 +1188,6 @@ export function useGetClusterAnalysisTemplate<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof getClusterAnalysisTemplate>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1282,7 +1244,6 @@ export const getDeleteClusterAnalysisTemplateMutationOptions = <
     { clusterAnalysisTemplate: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
   TError,
@@ -1290,11 +1251,11 @@ export const getDeleteClusterAnalysisTemplateMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteClusterAnalysisTemplate'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteClusterAnalysisTemplate>>,
@@ -1302,7 +1263,7 @@ export const getDeleteClusterAnalysisTemplateMutationOptions = <
   > = (props) => {
     const { clusterAnalysisTemplate } = props ?? {};
 
-    return deleteClusterAnalysisTemplate(clusterAnalysisTemplate, requestOptions);
+    return deleteClusterAnalysisTemplate(clusterAnalysisTemplate);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1325,7 +1286,6 @@ export const useDeleteClusterAnalysisTemplate = <TError = unknown, TContext = un
       { clusterAnalysisTemplate: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<

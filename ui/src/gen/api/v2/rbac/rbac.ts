@@ -39,8 +39,6 @@ import type {
 
 import { customFetch } from '../../../../lib/api/custom-fetch';
 
-type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
-
 /**
  * List project-level API tokens. Returns a Kubernetes SecretList
 resource containing heavily redacted Secrets.
@@ -103,15 +101,14 @@ export const getListProjectAPITokensQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectAPITokensQueryKey(project, params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectAPITokens>>> = () =>
-    listProjectAPITokens(project, params, requestOptions);
+    listProjectAPITokens(project, params);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectAPITokens>>,
@@ -143,7 +140,6 @@ export function useListProjectAPITokens<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -165,7 +161,6 @@ export function useListProjectAPITokens<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -179,7 +174,6 @@ export function useListProjectAPITokens<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -197,7 +191,6 @@ export function useListProjectAPITokens<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listProjectAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -254,15 +247,14 @@ export const getGetProjectAPITokenQueryOptions = <
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetProjectAPITokenQueryKey(project, apitoken);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectAPIToken>>> = () =>
-    getProjectAPIToken(project, apitoken, requestOptions);
+    getProjectAPIToken(project, apitoken);
 
   return {
     queryKey,
@@ -295,7 +287,6 @@ export function useGetProjectAPIToken<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -317,7 +308,6 @@ export function useGetProjectAPIToken<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -329,7 +319,6 @@ export function useGetProjectAPIToken<
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -345,7 +334,6 @@ export function useGetProjectAPIToken<
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -402,7 +390,6 @@ export const getDeleteProjectAPITokenMutationOptions = <
     { project: string; apitoken: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectAPIToken>>,
   TError,
@@ -410,11 +397,11 @@ export const getDeleteProjectAPITokenMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteProjectAPIToken'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectAPIToken>>,
@@ -422,7 +409,7 @@ export const getDeleteProjectAPITokenMutationOptions = <
   > = (props) => {
     const { project, apitoken } = props ?? {};
 
-    return deleteProjectAPIToken(project, apitoken, requestOptions);
+    return deleteProjectAPIToken(project, apitoken);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -445,7 +432,6 @@ export const useDeleteProjectAPIToken = <TError = unknown, TContext = unknown>(
       { project: string; apitoken: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -498,15 +484,14 @@ export const getListProjectRolesQueryOptions = <
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListProjectRolesQueryKey(project);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listProjectRoles>>> = () =>
-    listProjectRoles(project, requestOptions);
+    listProjectRoles(project);
 
   return { queryKey, queryFn, enabled: !!project, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listProjectRoles>>,
@@ -533,7 +518,6 @@ export function useListProjectRoles<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -552,7 +536,6 @@ export function useListProjectRoles<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -563,7 +546,6 @@ export function useListProjectRoles<
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -578,7 +560,6 @@ export function useListProjectRoles<
   project: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listProjectRoles>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -636,7 +617,6 @@ export const getCreateProjectRoleMutationOptions = <
     { project: string; data: CreateProjectRoleBodyBody },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectRole>>,
   TError,
@@ -644,11 +624,11 @@ export const getCreateProjectRoleMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createProjectRole'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectRole>>,
@@ -656,7 +636,7 @@ export const getCreateProjectRoleMutationOptions = <
   > = (props) => {
     const { project, data } = props ?? {};
 
-    return createProjectRole(project, data, requestOptions);
+    return createProjectRole(project, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -679,7 +659,6 @@ export const useCreateProjectRole = <TError = unknown, TContext = unknown>(
       { project: string; data: CreateProjectRoleBodyBody },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -731,7 +710,6 @@ export const getGrantMutationOptions = <TError = unknown, TContext = unknown>(op
     { project: string; data: GrantRequest },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof grant>>,
   TError,
@@ -739,11 +717,11 @@ export const getGrantMutationOptions = <TError = unknown, TContext = unknown>(op
   TContext
 > => {
   const mutationKey = ['grant'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof grant>>,
@@ -751,7 +729,7 @@ export const getGrantMutationOptions = <TError = unknown, TContext = unknown>(op
   > = (props) => {
     const { project, data } = props ?? {};
 
-    return grant(project, data, requestOptions);
+    return grant(project, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -772,7 +750,6 @@ export const useGrant = <TError = unknown, TContext = unknown>(
       { project: string; data: GrantRequest },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -824,7 +801,6 @@ export const getRevokeMutationOptions = <TError = unknown, TContext = unknown>(o
     { project: string; data: RevokeRequest },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof revoke>>,
   TError,
@@ -832,11 +808,11 @@ export const getRevokeMutationOptions = <TError = unknown, TContext = unknown>(o
   TContext
 > => {
   const mutationKey = ['revoke'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof revoke>>,
@@ -844,7 +820,7 @@ export const getRevokeMutationOptions = <TError = unknown, TContext = unknown>(o
   > = (props) => {
     const { project, data } = props ?? {};
 
-    return revoke(project, data, requestOptions);
+    return revoke(project, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -865,7 +841,6 @@ export const useRevoke = <TError = unknown, TContext = unknown>(
       { project: string; data: RevokeRequest },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -921,15 +896,14 @@ export const getGetProjectRoleQueryOptions = <
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetProjectRoleQueryKey(project, role);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getProjectRole>>> = () =>
-    getProjectRole(project, role, requestOptions);
+    getProjectRole(project, role);
 
   return { queryKey, queryFn, enabled: !!(project && role), ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getProjectRole>>,
@@ -957,7 +931,6 @@ export function useGetProjectRole<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -977,7 +950,6 @@ export function useGetProjectRole<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -989,7 +961,6 @@ export function useGetProjectRole<
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1005,7 +976,6 @@ export function useGetProjectRole<
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getProjectRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1061,7 +1031,6 @@ export const getUpdateRoleMutationOptions = <TError = unknown, TContext = unknow
     { project: string; role: string; data: CreateProjectRoleBodyBody },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof updateRole>>,
   TError,
@@ -1069,11 +1038,11 @@ export const getUpdateRoleMutationOptions = <TError = unknown, TContext = unknow
   TContext
 > => {
   const mutationKey = ['updateRole'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof updateRole>>,
@@ -1081,7 +1050,7 @@ export const getUpdateRoleMutationOptions = <TError = unknown, TContext = unknow
   > = (props) => {
     const { project, role, data } = props ?? {};
 
-    return updateRole(project, role, data, requestOptions);
+    return updateRole(project, role, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1102,7 +1071,6 @@ export const useUpdateRole = <TError = unknown, TContext = unknown>(
       { project: string; role: string; data: CreateProjectRoleBodyBody },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1156,7 +1124,6 @@ export const getDeleteProjectRoleMutationOptions = <
     { project: string; role: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteProjectRole>>,
   TError,
@@ -1164,11 +1131,11 @@ export const getDeleteProjectRoleMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteProjectRole'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteProjectRole>>,
@@ -1176,7 +1143,7 @@ export const getDeleteProjectRoleMutationOptions = <
   > = (props) => {
     const { project, role } = props ?? {};
 
-    return deleteProjectRole(project, role, requestOptions);
+    return deleteProjectRole(project, role);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1199,7 +1166,6 @@ export const useDeleteProjectRole = <TError = unknown, TContext = unknown>(
       { project: string; role: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1258,7 +1224,6 @@ export const getCreateProjectAPITokenMutationOptions = <
     { project: string; role: string; data: CreateAPITokenRequestBody },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createProjectAPIToken>>,
   TError,
@@ -1266,11 +1231,11 @@ export const getCreateProjectAPITokenMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createProjectAPIToken'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createProjectAPIToken>>,
@@ -1278,7 +1243,7 @@ export const getCreateProjectAPITokenMutationOptions = <
   > = (props) => {
     const { project, role, data } = props ?? {};
 
-    return createProjectAPIToken(project, role, data, requestOptions);
+    return createProjectAPIToken(project, role, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1301,7 +1266,6 @@ export const useCreateProjectAPIToken = <TError = unknown, TContext = unknown>(
       { project: string; role: string; data: CreateAPITokenRequestBody },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1368,15 +1332,14 @@ export const getListSystemAPITokensQueryOptions = <
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSystemAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListSystemAPITokensQueryKey(params);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemAPITokens>>> = () =>
-    listSystemAPITokens(params, requestOptions);
+    listSystemAPITokens(params);
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listSystemAPITokens>>,
@@ -1407,7 +1370,6 @@ export function useListSystemAPITokens<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1428,7 +1390,6 @@ export function useListSystemAPITokens<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1441,7 +1402,6 @@ export function useListSystemAPITokens<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSystemAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1458,7 +1418,6 @@ export function useListSystemAPITokens<
     query?: Partial<
       UseQueryOptions<Awaited<ReturnType<typeof listSystemAPITokens>>, TError, TData>
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1513,15 +1472,14 @@ export const getGetSystemAPITokenQueryOptions = <
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetSystemAPITokenQueryKey(apitoken);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemAPIToken>>> = () =>
-    getSystemAPIToken(apitoken, requestOptions);
+    getSystemAPIToken(apitoken);
 
   return { queryKey, queryFn, enabled: !!apitoken, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSystemAPIToken>>,
@@ -1550,7 +1508,6 @@ export function useGetSystemAPIToken<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1569,7 +1526,6 @@ export function useGetSystemAPIToken<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1580,7 +1536,6 @@ export function useGetSystemAPIToken<
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1595,7 +1550,6 @@ export function useGetSystemAPIToken<
   apitoken: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemAPIToken>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1648,7 +1602,6 @@ export const getDeleteSystemAPITokenMutationOptions = <
     { apitoken: string },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof deleteSystemAPIToken>>,
   TError,
@@ -1656,11 +1609,11 @@ export const getDeleteSystemAPITokenMutationOptions = <
   TContext
 > => {
   const mutationKey = ['deleteSystemAPIToken'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof deleteSystemAPIToken>>,
@@ -1668,7 +1621,7 @@ export const getDeleteSystemAPITokenMutationOptions = <
   > = (props) => {
     const { apitoken } = props ?? {};
 
-    return deleteSystemAPIToken(apitoken, requestOptions);
+    return deleteSystemAPIToken(apitoken);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -1691,7 +1644,6 @@ export const useDeleteSystemAPIToken = <TError = unknown, TContext = unknown>(
       { apitoken: string },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<
@@ -1739,14 +1691,13 @@ export const getListSystemRolesQueryOptions = <
   TError = unknown
 >(options?: {
   query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
-  request?: SecondParameter<typeof customFetch>;
 }) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getListSystemRolesQueryKey();
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof listSystemRoles>>> = () =>
-    listSystemRoles(requestOptions);
+    listSystemRoles();
 
   return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof listSystemRoles>>,
@@ -1772,7 +1723,6 @@ export function useListSystemRoles<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1790,7 +1740,6 @@ export function useListSystemRoles<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1800,7 +1749,6 @@ export function useListSystemRoles<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1814,7 +1762,6 @@ export function useListSystemRoles<
 >(
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof listSystemRoles>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -1870,15 +1817,14 @@ export const getGetSystemRoleQueryOptions = <
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   }
 ) => {
-  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const { query: queryOptions } = options ?? {};
 
   const queryKey = queryOptions?.queryKey ?? getGetSystemRoleQueryKey(role);
 
   const queryFn: QueryFunction<Awaited<ReturnType<typeof getSystemRole>>> = () =>
-    getSystemRole(role, requestOptions);
+    getSystemRole(role);
 
   return { queryKey, queryFn, enabled: !!role, ...queryOptions } as UseQueryOptions<
     Awaited<ReturnType<typeof getSystemRole>>,
@@ -1905,7 +1851,6 @@ export function useGetSystemRole<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1924,7 +1869,6 @@ export function useGetSystemRole<
         >,
         'initialData'
       >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1935,7 +1879,6 @@ export function useGetSystemRole<
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
@@ -1950,7 +1893,6 @@ export function useGetSystemRole<
   role: string,
   options?: {
     query?: Partial<UseQueryOptions<Awaited<ReturnType<typeof getSystemRole>>, TError, TData>>;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
@@ -2010,7 +1952,6 @@ export const getCreateSystemAPITokenMutationOptions = <
     { role: string; data: CreateAPITokenRequestBody },
     TContext
   >;
-  request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
   Awaited<ReturnType<typeof createSystemAPIToken>>,
   TError,
@@ -2018,11 +1959,11 @@ export const getCreateSystemAPITokenMutationOptions = <
   TContext
 > => {
   const mutationKey = ['createSystemAPIToken'];
-  const { mutation: mutationOptions, request: requestOptions } = options
+  const { mutation: mutationOptions } = options
     ? options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey
       ? options
       : { ...options, mutation: { ...options.mutation, mutationKey } }
-    : { mutation: { mutationKey }, request: undefined };
+    : { mutation: { mutationKey } };
 
   const mutationFn: MutationFunction<
     Awaited<ReturnType<typeof createSystemAPIToken>>,
@@ -2030,7 +1971,7 @@ export const getCreateSystemAPITokenMutationOptions = <
   > = (props) => {
     const { role, data } = props ?? {};
 
-    return createSystemAPIToken(role, data, requestOptions);
+    return createSystemAPIToken(role, data);
   };
 
   return { mutationFn, ...mutationOptions };
@@ -2053,7 +1994,6 @@ export const useCreateSystemAPIToken = <TError = unknown, TContext = unknown>(
       { role: string; data: CreateAPITokenRequestBody },
       TContext
     >;
-    request?: SecondParameter<typeof customFetch>;
   },
   queryClient?: QueryClient
 ): UseMutationResult<

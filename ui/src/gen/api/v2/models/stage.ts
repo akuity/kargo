@@ -28,7 +28,7 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
 Freight into the Stage.
 
 +kubebuilder:validation:Required */
-  spec?: StageSpec;
+  spec: StageSpec;
   /** Status describes the Stage's current and recent Freight, health, and more. */
   status?: StageStatus;
 }

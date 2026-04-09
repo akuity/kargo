@@ -38,9 +38,10 @@ type PromotionTask struct {
 	// variables available to the task and the steps.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Spec struct {
 		PromotionTaskSpec
-	} `json:"spec,omitempty"`
+	} `json:"spec"`
 }
 
 // Validate validates this promotion task
@@ -85,9 +86,6 @@ func (m *PromotionTask) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *PromotionTask) validateSpec(formats strfmt.Registry) error {
-	if swag.IsZero(m.Spec) { // not required
-		return nil
-	}
 
 	return nil
 }

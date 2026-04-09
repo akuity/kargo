@@ -28,7 +28,7 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
 Freight.
 
 +kubebuilder:validation:Required */
-  spec?: PromotionSpec;
+  spec: PromotionSpec;
   /** Status describes the current state of the transition represented by this
 Promotion. */
   status?: PromotionStatus;

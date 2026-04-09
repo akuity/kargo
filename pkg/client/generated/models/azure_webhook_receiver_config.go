@@ -35,9 +35,10 @@ type AzureWebhookReceiverConfig struct {
 	// 	http://learn.microsoft.com/en-us/azure/devops/service-hooks/services/webhooks?view=azure-devops
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this azure webhook receiver config
@@ -55,9 +56,6 @@ func (m *AzureWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *AzureWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

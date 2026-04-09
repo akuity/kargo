@@ -13,13 +13,13 @@ This should be when the underlying condition changed.  If that is not known, the
 +kubebuilder:validation:Required
 +kubebuilder:validation:Type=string
 +kubebuilder:validation:Format=date-time */
-  lastTransitionTime?: string;
+  lastTransitionTime: string;
   /** message is a human readable message indicating details about the transition.
 This may be an empty string.
 +required
 +kubebuilder:validation:Required
 +kubebuilder:validation:MaxLength=32768 */
-  message?: string;
+  message: string;
   /** observedGeneration represents the .metadata.generation that the condition was set based upon.
 For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
 with respect to the current state of the instance.
@@ -36,12 +36,12 @@ This field may not be empty.
 +kubebuilder:validation:MaxLength=1024
 +kubebuilder:validation:MinLength=1
 +kubebuilder:validation:Pattern=`^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$` */
-  reason?: string;
+  reason: string;
   /** status of the condition, one of True, False, Unknown.
 +required
 +kubebuilder:validation:Required
 +kubebuilder:validation:Enum=True;False;Unknown */
-  status?: string;
+  status: string;
   /** type of condition in CamelCase or in foo.example.com/CamelCase.
 ---
 Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
@@ -51,5 +51,5 @@ The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
 +kubebuilder:validation:Required
 +kubebuilder:validation:Pattern=`^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*\/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$`
 +kubebuilder:validation:MaxLength=316 */
-  type?: string;
+  type: string;
 }

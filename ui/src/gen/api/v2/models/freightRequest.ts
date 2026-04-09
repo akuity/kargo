@@ -13,7 +13,7 @@ export interface FreightRequest {
 This is a required field.
 
 +kubebuilder:validation:Required */
-  origin?: FreightOrigin;
+  origin: FreightOrigin;
   /** Sources describes where the requested Freight may be obtained from. This is
 a required field. */
   sources?: FreightSources;

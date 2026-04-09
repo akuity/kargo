@@ -30,9 +30,10 @@ type QuayWebhookReceiverConfig struct {
 	//   https://docs.quay.io/guides/notifications.html
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this quay webhook receiver config
@@ -50,9 +51,6 @@ func (m *QuayWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *QuayWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

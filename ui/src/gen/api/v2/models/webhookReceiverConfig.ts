@@ -50,7 +50,7 @@ with Harbor payloads. */
 +kubebuilder:validation:MaxLength=253
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
-  name?: string;
+  name: string;
   /** Quay contains the configuration for a webhook receiver that is compatible
 with Quay payloads. */
   quay?: QuayWebhookReceiverConfig;

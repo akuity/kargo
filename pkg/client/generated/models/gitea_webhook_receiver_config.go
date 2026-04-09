@@ -28,9 +28,10 @@ type GiteaWebhookReceiverConfig struct {
 	//   https://docs.gitea.io/en-us/webhooks/
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this gitea webhook receiver config
@@ -48,9 +49,6 @@ func (m *GiteaWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *GiteaWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

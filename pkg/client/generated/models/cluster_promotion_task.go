@@ -38,9 +38,10 @@ type ClusterPromotionTask struct {
 	// Freight.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Spec struct {
 		PromotionTaskSpec
-	} `json:"spec,omitempty"`
+	} `json:"spec"`
 }
 
 // Validate validates this cluster promotion task
@@ -85,9 +86,6 @@ func (m *ClusterPromotionTask) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *ClusterPromotionTask) validateSpec(formats strfmt.Registry) error {
-	if swag.IsZero(m.Spec) { // not required
-		return nil
-	}
 
 	return nil
 }
