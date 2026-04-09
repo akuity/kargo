@@ -22,6 +22,7 @@ const getBaseUrl = (): string => {
 
 const logout = () => {
   localStorage.removeItem(authTokenKey);
+  localStorage.removeItem(refreshTokenKey);
   window.location.replace(`${paths.login}?${redirectToQueryParam}=${window.location.pathname}`);
 };
 
