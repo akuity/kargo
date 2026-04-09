@@ -94,7 +94,7 @@ metadata:
 spec:
   webhookReceivers: 
   - name: gitea-wh-receiver
-    gitlab:
+    gitea:
       secretRef:
         name: gitea-wh-secret
 ```

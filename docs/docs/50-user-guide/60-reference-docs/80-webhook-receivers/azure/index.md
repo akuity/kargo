@@ -5,8 +5,9 @@ sidebar_label: Azure
 # Azure Webhook Receiver
 
 The Azure webhook receiver responds to `push` and `ping` events originating
-from Azure Container Registry repositories and `git.push` and
-`git.pullrequest.merged` events originating from Azure DevOps repositories.
+from Azure Container Registry repositories and `git.push`,
+`git.pullrequest.merged`, and `git.pullrequest.updated` events originating from
+Azure DevOps repositories.
 
 The receiver unconditionally responds to `ping` events with an HTTP `200` status
 code.
@@ -15,11 +16,13 @@ The receiver responds to `push` and `git.push` events by _refreshing_ all
 `Warehouse` resources subscribed to the repositories that correspond to the
 event.
 
-The receiver responds to `git.pullrequest.merged` events by _refreshing_ all
-running `Promotion` resources that are waiting on the merged pull request via a
+The receiver responds to `git.pullrequest.merged` events, and to
+`git.pullrequest.updated` events where the pull request status has changed to
+`abandoned`, by _refreshing_ all running `Promotion` resources that are waiting
+on the affected pull request via a
 [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step. This
-enables near-instant detection of PR merges instead of relying on the default
-polling interval.
+enables near-instant detection of PR merges and closures instead of relying on
+the default polling interval.
 
 :::info
 
@@ -170,8 +173,10 @@ the [ACR Docs](https://learn.microsoft.com/en-us/azure/container-registry/contai
 ### Azure DevOps
 
 Each Azure DevOps event type requires its own service hook subscription. Create
-one subscription for `Code Pushed` events to refresh Warehouses, and a second
-for `Pull request merged` events if you use PR-based promotion workflows.
+one subscription for `Code Pushed` events to refresh Warehouses, and if you use
+PR-based promotion workflows, two additional subscriptions: one for
+`Pull request merged` events and one for `Pull request updated` events filtered
+to `abandoned` status.
 
 1. Navigate to `https://dev.azure.com/<org>/<project>/_settings/serviceHooks`,
    where`<org>` has been replaced with an organization name
@@ -223,10 +228,24 @@ for `Pull request merged` events if you use PR-based promotion workflows.
 
 If you use PR-based promotion workflows (i.e. promotions that include a
 [`git-wait-for-pr`](../../30-promotion-steps/git-wait-for-pr.md) step), repeat
-the steps above to create a second service hook subscription, this time
-selecting <Hlt>Pull request merged</Hlt> as the trigger event type. This
-enables Kargo to detect PR merges near-instantly instead of relying on the
-default polling interval.
+the steps above twice to create two additional service hook subscriptions:
+
+- One selecting <Hlt>Pull request merged</Hlt> as the trigger event type. This
+  enables Kargo to detect PR merges near-instantly instead of relying on the
+  default polling interval.
+
+- One selecting <Hlt>Pull request updated</Hlt> as the trigger event type.
+  In the <Hlt>Trigger</Hlt> form, set <Hlt>Changed field</Hlt> to
+  <Hlt>Status</Hlt> to reduce noise. This enables Kargo to detect when a pull
+  request is closed without being merged (abandoned) near-instantly.
+
+  :::note
+
+  Kargo only acts on `Pull request updated` events where the pull request
+  status is `abandoned`. Events for other status changes, the webhook receiver 
+  will return a 200 and result in a no-op.
+
+  :::
 
 :::info
 
