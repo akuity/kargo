@@ -3,6 +3,7 @@
         "jira",
         "jfrog-evidence",
         "git-merge-pr",
+        "github-push",
         "gha-dispatch-workflow",
         "gha-wait-for-workflow",
         "hcl-update",

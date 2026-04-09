@@ -41,8 +41,8 @@ Starting with v1.12.0, the default will change to `RebaseOrMerge`.
 :::
 
 When the policy evaluates rebase safety (`RebaseOrMerge` and `RebaseOrFail`),
-the decision is based on the GPG signature status of the local commits that
-would be replayed:
+the decision to use rebase or not is based on the GPG signature status of the
+local commits that would be replayed:
 
 - If all local commits are __signed by a trusted key__ and signing was enabled
   at the time the repository was cloned, a __rebase__ is performed. The
@@ -84,10 +84,17 @@ For a tag push, there is no pull/rebase retry loop.
 
 :::
 
+:::info
+
+If you authenticate to GitHub using a GitHub App, you may want to consider using
+[`github-push`](github-push.md) instead.
+
+:::
+
 ## Credentials
 
-Git steps are utilizing the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
-system to access the git repos.
+This step utilizes the [repository credentials](../../50-security/30-managing-secrets.md#repository-credentials)
+system to access Git repositories.
 
 ## Configuration
 
@@ -95,7 +102,7 @@ system to access the git repos.
 | ---- | ---- | -------- | ----------- |
 | `path` | `string` | Y | Path to a Git working tree containing committed changes. |
 | `targetBranch` | `string` | N | The branch to push to in the remote repository. Mutually exclusive with `generateTargetBranch=true` and `tag`. If none of these are provided, the target branch will be the same as the branch currently checked out in the working tree. |
-| `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 50. |
+| `maxAttempts` | `int32` | N | The maximum number of attempts to make when pushing to the remote repository. Default is 10. |
 | `generateTargetBranch` | `boolean` | N | Whether to push to a remote branch named like `kargo/promotion/<promotionName>`. If such a branch does not already exist, it will be created. A value of `true` is mutually exclusive with `targetBranch` and `tag`. If none of these are provided, the target branch will be the currently checked out branch. This option is useful when a subsequent promotion step will open a pull request against a Stage-specific branch. In such a case, the generated target branch pushed to by the `git-push` step can later be utilized as the source branch of the pull request. |
 | `tag` | `string` | N | An tag to push to the remote repository. Mutually exclusive with `generateTargetBranch` and `targetBranch`. |
 | `force` | `boolean` | N | Whether to force push to the target branch, overwriting any existing history. This is useful for scenarios where you want to completely replace the branch content (e.g., pushing rendered manifests that don't depend on previous state). **Use with caution** as this will overwrite any commits that exist on the remote branch but not in your local branch. Default is `false`. A value of `true` is mutually exclusive with `tag`. |
