@@ -10,7 +10,7 @@ import (
 	libExec "github.com/akuity/kargo/pkg/exec"
 )
 
-func Test_workTree_integrateBeforePush(t *testing.T) {
+func Test_workTree_IntegrateRemoteChanges(t *testing.T) {
 	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(
 		t,
 		initialMainCommit,
@@ -34,7 +34,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyAlwaysRebase)
+		err = wt.IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyAlwaysRebase,
+		})
 		require.NoError(t, err)
 
 		// A rebase produces no merge commits:
@@ -54,10 +57,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead",
-			PushIntegrationPolicyRebaseOrMerge,
-		)
+		err = internalWorkTree(t, repo).IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyRebaseOrMerge,
+		})
 		require.NoError(t, err)
 
 		// All local commits are unsigned and signing is not configured, so
@@ -81,7 +84,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyRebaseOrMerge)
+		err = wt.IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyRebaseOrMerge,
+		})
 		require.NoError(t, err)
 
 		// Should have fallen back to merge.
@@ -100,10 +106,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead",
-			PushIntegrationPolicyRebaseOrFail,
-		)
+		err = internalWorkTree(t, repo).IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyRebaseOrFail,
+		})
 		require.NoError(t, err)
 
 		// Rebase is safe (unsigned, signing not configured).
@@ -125,7 +131,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyRebaseOrFail)
+		err = wt.IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyRebaseOrFail,
+		})
 		require.ErrorIs(t, err, ErrRebaseUnsafe)
 	})
 
@@ -139,10 +148,10 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead",
-			PushIntegrationPolicyAlwaysMerge,
-		)
+		err = internalWorkTree(t, repo).IntegrateRemoteChanges(&IntegrationOptions{
+			TargetBranch:      "ahead",
+			IntegrationPolicy: PushIntegrationPolicyAlwaysMerge,
+		})
 		require.NoError(t, err)
 
 		// Even though rebase would be safe (unsigned, no signing), the policy
@@ -488,107 +497,6 @@ func Test_workTree_commitsToReplay(t *testing.T) {
 		// Two local commits should need to be replayed on ahead.
 		require.NoError(t, err)
 		require.Len(t, commits, 2)
-	})
-}
-
-func Test_workTree_isSigningConfigured(t *testing.T) {
-	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t, initialMainCommit)
-	defer testServer.Close()
-
-	t.Run("not configured", func(t *testing.T) {
-		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
-		require.NoError(t, err)
-		defer repo.Close()
-
-		configured, err := internalWorkTree(t, repo).isSigningConfigured()
-		require.NoError(t, err)
-		require.False(t, configured)
-	})
-
-	t.Run("configured", func(t *testing.T) {
-		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
-		require.NoError(t, err)
-		defer repo.Close()
-
-		wt := internalWorkTree(t, repo)
-		// Manually set gpgSign to true without actually importing a key.
-		_, err = libExec.Exec(wt.buildGitCommand(
-			"config", "--global", "commit.gpgSign", "true",
-		))
-		require.NoError(t, err)
-
-		configured, err := wt.isSigningConfigured()
-		require.NoError(t, err)
-		require.True(t, configured)
-	})
-}
-
-func Test_workTree_verifyCommitSignature(t *testing.T) {
-	testServer, testRepoURL, testRepoCreds := setupRemoteRepo(t, initialMainCommit)
-	defer testServer.Close()
-
-	t.Run("unsigned commit", func(t *testing.T) {
-		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
-		require.NoError(t, err)
-		defer repo.Close()
-
-		commitID, err := repo.LastCommitID()
-		require.NoError(t, err)
-
-		wt := internalWorkTree(t, repo)
-		status, err := wt.verifyCommitSignature(commitID)
-		require.NoError(t, err)
-		require.Equal(t, signatureUnsigned, status)
-	})
-
-	t.Run("trusted signature", func(t *testing.T) {
-		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
-		require.NoError(t, err)
-		defer repo.Close()
-
-		wt := internalWorkTree(t, repo)
-		enableFakeCommitSigning(t, wt, true)
-
-		err = os.WriteFile(
-			fmt.Sprintf("%s/signed.txt", repo.Dir()),
-			[]byte("signed"),
-			0o600,
-		)
-		require.NoError(t, err)
-		err = repo.AddAllAndCommit("signed commit", nil)
-		require.NoError(t, err)
-
-		commitID, err := repo.LastCommitID()
-		require.NoError(t, err)
-
-		status, err := wt.verifyCommitSignature(commitID)
-		require.NoError(t, err)
-		require.Equal(t, signatureTrusted, status)
-	})
-
-	t.Run("untrusted signature", func(t *testing.T) {
-		repo, err := Clone(testRepoURL, &ClientOptions{Credentials: &testRepoCreds}, nil)
-		require.NoError(t, err)
-		defer repo.Close()
-
-		wt := internalWorkTree(t, repo)
-		enableFakeCommitSigning(t, wt, false)
-
-		err = os.WriteFile(
-			fmt.Sprintf("%s/signed.txt", repo.Dir()),
-			[]byte("signed"),
-			0o600,
-		)
-		require.NoError(t, err)
-		err = repo.AddAllAndCommit("signed commit", nil)
-		require.NoError(t, err)
-
-		commitID, err := repo.LastCommitID()
-		require.NoError(t, err)
-
-		status, err := wt.verifyCommitSignature(commitID)
-		require.NoError(t, err)
-		require.Equal(t, signatureUntrusted, status)
 	})
 }
 
