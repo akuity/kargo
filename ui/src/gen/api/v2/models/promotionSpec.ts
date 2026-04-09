@@ -17,7 +17,7 @@ referenced by the Stage field.
 +kubebuilder:validation:MaxLength=253
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
-  freight?: string;
+  freight: string;
   /** Stage specifies the name of the Stage to which this Promotion
 applies. The Stage referenced by this field MUST be in the same
 namespace as the Promotion.
@@ -27,7 +27,7 @@ namespace as the Promotion.
 +kubebuilder:validation:MaxLength=253
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
-  stage?: string;
+  stage: string;
   /** Steps specifies the directives to be executed as part of this Promotion.
 The order in which the directives are executed is the order in which they
 are listed in this field.
@@ -35,7 +35,7 @@ are listed in this field.
 +kubebuilder:validation:Required
 +kubebuilder:validation:MinItems=1
 +kubebuilder:validation:items:XValidation:message="Promotion step must have uses set and must not reference a task",rule="has(self.uses) && !has(self.task)" */
-  steps?: PromotionStep[];
+  steps: PromotionStep[];
   /** Vars is a list of variables that can be referenced by expressions in
 promotion steps. */
   vars?: ExpressionVariable[];

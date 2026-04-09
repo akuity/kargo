@@ -10,6 +10,7 @@ import (
 	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // PromotionTaskSpec promotion task spec
@@ -24,6 +25,7 @@ type PromotionTaskSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)"
+	// Required: true
 	Steps []*PromotionStep `json:"steps"`
 
 	// Vars specifies the variables available to the PromotionTask. The
@@ -51,8 +53,9 @@ func (m *PromotionTaskSpec) Validate(formats strfmt.Registry) error {
 }
 
 func (m *PromotionTaskSpec) validateSteps(formats strfmt.Registry) error {
-	if swag.IsZero(m.Steps) { // not required
-		return nil
+
+	if err := validate.Required("steps", "body", m.Steps); err != nil {
+		return err
 	}
 
 	for i := 0; i < len(m.Steps); i++ {

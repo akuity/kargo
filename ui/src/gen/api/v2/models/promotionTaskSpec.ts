@@ -16,7 +16,7 @@ Promotion when it is built from a PromotionTemplate.
 +kubebuilder:validation:Required
 +kubebuilder:validation:MinItems=1
 +kubebuilder:validation:items:XValidation:message="PromotionTask step must have uses set and must not reference another task",rule="has(self.uses) && !has(self.task)" */
-  steps?: PromotionStep[];
+  steps: PromotionStep[];
   /** Vars specifies the variables available to the PromotionTask. The
 values of these variables are the default values that can be
 overridden by the step referencing the task. */

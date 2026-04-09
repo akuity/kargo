@@ -29,9 +29,10 @@ type ArtifactoryWebhookReceiverConfig struct {
 	//   https://jfrog.com/help/r/jfrog-platform-administration-documentation/webhooks
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 
 	// VirtualRepoName is the name of an Artifactory virtual repository.
 	//
@@ -77,9 +78,6 @@ func (m *ArtifactoryWebhookReceiverConfig) Validate(formats strfmt.Registry) err
 }
 
 func (m *ArtifactoryWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

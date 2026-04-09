@@ -38,9 +38,10 @@ type Promotion struct {
 	// Freight.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Spec struct {
 		PromotionSpec
-	} `json:"spec,omitempty"`
+	} `json:"spec"`
 
 	// Status describes the current state of the transition represented by this
 	// Promotion.
@@ -95,9 +96,6 @@ func (m *Promotion) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *Promotion) validateSpec(formats strfmt.Registry) error {
-	if swag.IsZero(m.Spec) { // not required
-		return nil
-	}
 
 	return nil
 }

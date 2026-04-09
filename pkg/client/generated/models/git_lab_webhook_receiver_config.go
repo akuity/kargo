@@ -28,9 +28,10 @@ type GitLabWebhookReceiverConfig struct {
 	//   https://docs.gitlab.com/user/project/integrations/webhooks/
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this git lab webhook receiver config
@@ -48,9 +49,6 @@ func (m *GitLabWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *GitLabWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

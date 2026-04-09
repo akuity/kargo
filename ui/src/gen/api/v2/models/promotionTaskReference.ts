@@ -20,5 +20,5 @@ ClusterPromotionTask, default is PromotionTask.
 +kubebuilder:validation:MaxLength=253
 +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`
 +akuity:test-kubebuilder-pattern=KubernetesName */
-  name?: string;
+  name: string;
 }

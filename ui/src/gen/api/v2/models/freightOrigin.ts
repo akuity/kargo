@@ -11,10 +11,10 @@ export interface FreightOrigin {
 present, this can only be "Warehouse".
 
 +kubebuilder:validation:Required */
-  kind?: string;
+  kind: string;
   /** Name is the name of the resource of the kind indicated by the Kind field
 from which Freight may originate.
 
 +kubebuilder:validation:Required */
-  name?: string;
+  name: string;
 }

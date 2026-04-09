@@ -28,9 +28,10 @@ type HarborWebhookReceiverConfig struct {
 	//   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this harbor webhook receiver config
@@ -48,9 +49,6 @@ func (m *HarborWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *HarborWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

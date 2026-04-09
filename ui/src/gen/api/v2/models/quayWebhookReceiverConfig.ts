@@ -23,5 +23,5 @@ Quay webhooks, please refer to the Quay documentation:
   https://docs.quay.io/guides/notifications.html
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

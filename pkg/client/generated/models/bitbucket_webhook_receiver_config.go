@@ -29,9 +29,10 @@ type BitbucketWebhookReceiverConfig struct {
 	//   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this bitbucket webhook receiver config
@@ -49,9 +50,6 @@ func (m *BitbucketWebhookReceiverConfig) Validate(formats strfmt.Registry) error
 }
 
 func (m *BitbucketWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

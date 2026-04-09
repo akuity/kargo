@@ -22,5 +22,5 @@ documentation:
   https://support.atlassian.com/bitbucket-cloud/docs/manage-webhooks/
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

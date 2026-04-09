@@ -28,9 +28,10 @@ type GitHubWebhookReceiverConfig struct {
 	//   https://docs.github.com/en/webhooks/using-webhooks/validating-webhook-deliveries
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	SecretRef struct {
 		V1LocalObjectReference
-	} `json:"secretRef,omitempty"`
+	} `json:"secretRef"`
 }
 
 // Validate validates this git hub webhook receiver config
@@ -48,9 +49,6 @@ func (m *GitHubWebhookReceiverConfig) Validate(formats strfmt.Registry) error {
 }
 
 func (m *GitHubWebhookReceiverConfig) validateSecretRef(formats strfmt.Registry) error {
-	if swag.IsZero(m.SecretRef) { // not required
-		return nil
-	}
 
 	return nil
 }

@@ -19,9 +19,10 @@ type FreightRequest struct {
 	// This is a required field.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Origin struct {
 		FreightOrigin
-	} `json:"origin,omitempty"`
+	} `json:"origin"`
 
 	// Sources describes where the requested Freight may be obtained from. This is
 	// a required field.
@@ -49,9 +50,6 @@ func (m *FreightRequest) Validate(formats strfmt.Registry) error {
 }
 
 func (m *FreightRequest) validateOrigin(formats strfmt.Registry) error {
-	if swag.IsZero(m.Origin) { // not required
-		return nil
-	}
 
 	return nil
 }

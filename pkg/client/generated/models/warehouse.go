@@ -37,9 +37,10 @@ type Warehouse struct {
 	// Spec describes sources of artifacts.
 	//
 	// +kubebuilder:validation:Required
+	// Required: true
 	Spec struct {
 		WarehouseSpec
-	} `json:"spec,omitempty"`
+	} `json:"spec"`
 
 	// Status describes the Warehouse's most recently observed state.
 	Status struct {
@@ -93,9 +94,6 @@ func (m *Warehouse) validateMetadata(formats strfmt.Registry) error {
 }
 
 func (m *Warehouse) validateSpec(formats strfmt.Registry) error {
-	if swag.IsZero(m.Spec) { // not required
-		return nil
-	}
 
 	return nil
 }

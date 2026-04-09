@@ -21,5 +21,5 @@ information, please refer to the Harbor documentation:
   https://goharbor.io/docs/main/working-with-projects/project-configuration/configure-webhooks/
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

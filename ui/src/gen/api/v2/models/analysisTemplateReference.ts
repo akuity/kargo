@@ -17,5 +17,5 @@ ClusterAnalysisTemplate, default is AnalysisTemplate.
 the Stage.
 
 +kubebuilder:validation:Required */
-  name?: string;
+  name: string;
 }

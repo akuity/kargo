@@ -5,8 +5,10 @@ package models
 import (
 	"context"
 
+	"github.com/go-openapi/errors"
 	"github.com/go-openapi/strfmt"
 	"github.com/go-openapi/swag"
+	"github.com/go-openapi/validate"
 )
 
 // FreightOrigin freight origin
@@ -18,17 +20,50 @@ type FreightOrigin struct {
 	// present, this can only be "Warehouse".
 	//
 	// +kubebuilder:validation:Required
-	Kind string `json:"kind,omitempty"`
+	// Required: true
+	Kind *string `json:"kind"`
 
 	// Name is the name of the resource of the kind indicated by the Kind field
 	// from which Freight may originate.
 	//
 	// +kubebuilder:validation:Required
-	Name string `json:"name,omitempty"`
+	// Required: true
+	Name *string `json:"name"`
 }
 
 // Validate validates this freight origin
 func (m *FreightOrigin) Validate(formats strfmt.Registry) error {
+	var res []error
+
+	if err := m.validateKind(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateName(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if len(res) > 0 {
+		return errors.CompositeValidationError(res...)
+	}
+	return nil
+}
+
+func (m *FreightOrigin) validateKind(formats strfmt.Registry) error {
+
+	if err := validate.Required("kind", "body", m.Kind); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *FreightOrigin) validateName(formats strfmt.Registry) error {
+
+	if err := validate.Required("name", "body", m.Name); err != nil {
+		return err
+	}
+
 	return nil
 }
 

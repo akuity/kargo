@@ -21,5 +21,5 @@ For more information please refer to the Gitea documentation:
   https://docs.gitea.io/en-us/webhooks/
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

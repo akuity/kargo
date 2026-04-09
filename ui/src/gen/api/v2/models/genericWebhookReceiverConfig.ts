@@ -26,5 +26,5 @@ Kargo to create a complex, hard-to-guess URL, which implicitly serves as a
 shared secret.
 
 +kubebuilder:validation:Required */
-  secretRef?: V1LocalObjectReference;
+  secretRef: V1LocalObjectReference;
 }

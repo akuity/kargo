@@ -16,6 +16,11 @@ set -euo pipefail
 #    {"type":"integer","format":"int32"}} because byte is an alias for uint8.
 #    This script rewrites those fields to {"type":"string","format":"byte"}
 #    so that go-swagger generates the correct Go types.
+#
+# 3. Add `required` arrays derived from +kubebuilder:validation:Required
+#    markers. swag copies these markers into description strings but does not
+#    translate them into the OpenAPI `required` array, causing generated
+#    TypeScript clients to treat all fields as optional.
 
 SWAGGER_FILE="${1:?Usage: fix-swagger-spec.sh <swagger.json>}"
 
@@ -100,7 +105,33 @@ echo "Renamed swagger definitions to short names."
   else . end)
 ' "$SWAGGER_FILE" > "${SWAGGER_FILE}.tmp" && mv "${SWAGGER_FILE}.tmp" "$SWAGGER_FILE"
 
-# --- Pass 3: Validate no broken $ref pointers remain -------------------------
+# --- Pass 3: Add `required` arrays from kubebuilder validation markers -------
+#
+# swag copies +kubebuilder:validation:Required into description strings but
+# does not translate them into the OpenAPI `required` array. Derive the
+# required array from descriptions automatically.
+
+"$JQ" '
+  .definitions |= map_values(
+    . as $def |
+    (
+      $def.properties // {} |
+      to_entries |
+      map(select(
+        .value.description != null and
+        (.value.description | contains("+kubebuilder:validation:Required"))
+      )) |
+      map(.key)
+    ) as $required |
+    if ($required | length) > 0
+    then .required = $required
+    else . end
+  )
+' "$SWAGGER_FILE" > "${SWAGGER_FILE}.tmp" && mv "${SWAGGER_FILE}.tmp" "$SWAGGER_FILE"
+
+echo "Added required arrays from kubebuilder validation markers."
+
+# --- Pass 4: Validate no broken $ref pointers remain -------------------------
 
 "$JQ" -e '
   [.. | objects | select(has("$ref")) | .["$ref"] |

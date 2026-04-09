@@ -10,9 +10,9 @@ export interface AnalysisRunArgument {
   /** Name is the name of the argument.
 
 +kubebuilder:validation:Required */
-  name?: string;
+  name: string;
   /** Value is the value of the argument.
 
 +kubebuilder:validation:Required */
-  value?: string;
+  value: string;
 }

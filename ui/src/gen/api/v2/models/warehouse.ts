@@ -27,7 +27,7 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
   /** Spec describes sources of artifacts.
 
 +kubebuilder:validation:Required */
-  spec?: WarehouseSpec;
+  spec: WarehouseSpec;
   /** Status describes the Warehouse's most recently observed state. */
   status?: WarehouseStatus;
 }

@@ -50,7 +50,7 @@ More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-
   /** Origin describes a kind of Freight in terms of its origin.
 
 +kubebuilder:validation:Required */
-  origin?: FreightOrigin;
+  origin: FreightOrigin;
   /** Status describes the current status of this Freight. */
   status?: FreightStatus;
 }
