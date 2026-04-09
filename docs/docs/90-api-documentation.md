@@ -209,6 +209,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to create. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [CreateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
 
@@ -238,6 +239,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to create. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
@@ -1365,6 +1367,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to be updated. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [UpdateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
 
@@ -1409,6 +1412,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to update. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 

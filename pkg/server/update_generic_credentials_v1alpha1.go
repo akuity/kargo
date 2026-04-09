@@ -84,6 +84,7 @@ func (s *server) UpdateGenericCredentials(
 
 	applyGenericCredentialsUpdateToK8sSecret(&secret, updateGenericCredentialsRequest{
 		Description: genericCredsUpdate.description,
+		Replicate:   req.Msg.Replicate,
 		Data:        genericCredsUpdate.data,
 	})
 
@@ -100,6 +101,7 @@ func (s *server) UpdateGenericCredentials(
 
 type updateGenericCredentialsRequest struct {
 	Description string            `json:"description,omitempty"`
+	Replicate   bool              `json:"replicate,omitempty"`
 	Data        map[string]string `json:"data"`
 } // @name UpdateGenericCredentialsRequest
 
@@ -284,14 +286,22 @@ func (s *server) updateSharedGenericCredentials(c *gin.Context) {
 }
 
 func applyGenericCredentialsUpdateToK8sSecret(secret *corev1.Secret, req updateGenericCredentialsRequest) {
-	// Set the description annotation if provided
+	if secret.Annotations == nil {
+		secret.Annotations = make(map[string]string)
+	}
+
+	// Set or clear the description annotation
 	if req.Description != "" {
-		if secret.Annotations == nil {
-			secret.Annotations = make(map[string]string, 1)
-		}
 		secret.Annotations[kargoapi.AnnotationKeyDescription] = req.Description
 	} else {
 		delete(secret.Annotations, kargoapi.AnnotationKeyDescription)
+	}
+
+	// Set or clear the replicate-to annotation
+	if req.Replicate {
+		secret.Annotations[kargoapi.AnnotationKeyReplicateTo] = kargoapi.AnnotationValueReplicateToAll
+	} else {
+		delete(secret.Annotations, kargoapi.AnnotationKeyReplicateTo)
 	}
 
 	// Delete any keys in the secret that are not in the update
