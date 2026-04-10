@@ -170,6 +170,8 @@ type GitCloneConfig struct {
 	// provided, this overrides any system-level defaults. Note: Configuration of the
 	// `git-commit` and `git-tag` steps can override this information.
 	Author *GitCloneConfigAuthor `json:"author,omitempty"`
+	// Indicates whether to perform a blobless (--filter=blob:none) clone. Default is false.
+	Blobless bool `json:"blobless,omitempty"`
 	// The commits, branches, or tags to check out from the repository and the paths where they
 	// should be checked out. At least one must be specified.
 	Checkout []Checkout `json:"checkout"`

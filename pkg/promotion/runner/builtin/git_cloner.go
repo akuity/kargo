@@ -41,18 +41,6 @@ type gitCloner struct {
 	schemaLoader gojsonschema.JSONLoader
 }
 
-// filterForCheckouts returns the clone filter to use based on checkout
-// configurations. Returns true if all checkouts specify sparse patterns (enabling
-// blobless cloning), false otherwise.
-func filterForCheckouts(checkouts []builtin.Checkout) bool {
-	for _, checkout := range checkouts {
-		if len(checkout.Sparse) == 0 {
-			return false
-		}
-	}
-	return true
-}
-
 // gitUserFromEnv populates a git.User struct from environment variables.
 func gitUserFromEnv() git.User {
 	cfg := struct {
@@ -160,7 +148,7 @@ func (g *gitCloner) run(
 		},
 		&git.BareCloneOptions{
 			BaseDir: stepCtx.WorkDir,
-			Blobless: filterForCheckouts(cfg.Checkout),
+			Blobless: cfg.Blobless,
 		},
 	)
 	if err != nil {
