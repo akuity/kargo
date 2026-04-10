@@ -295,11 +295,6 @@ type GitOpenPRConfig struct {
 }
 
 type GitPushConfig struct {
-	// Optional committer information for merge commits or replacement commits created when
-	// integrating remote changes before pushing. If provided, this takes precedence over both
-	// system-level defaults and any optional, default authorship information configured in the
-	// `git-clone` step.
-	Committer *Committer `json:"committer,omitempty"`
 	// Whether to force push to the target branch, overwriting any existing history. This is
 	// useful for scenarios where you want to completely replace the branch content (e.g.,
 	// pushing rendered manifests that don't depend on previous state). Use with caution as this
@@ -333,20 +328,6 @@ type GitPushConfig struct {
 	TargetBranch string `json:"targetBranch,omitempty"`
 }
 
-// Optional committer information for merge commits or replacement commits created when
-// integrating remote changes before pushing. If provided, this takes precedence over both
-// system-level defaults and any optional, default authorship information configured in the
-// `git-clone` step.
-type Committer struct {
-	// The email of the committer.
-	Email string `json:"email"`
-	// The name of the committer.
-	Name string `json:"name"`
-	// A GPG signing key for the committer. If provided, 'email' and 'name' must match the key's
-	// UID.
-	SigningKey string `json:"signingKey,omitempty"`
-}
-
 type GitTagConfig struct {
 	// The annotation message for the tag.
 	Message string `json:"message"`
@@ -354,23 +335,6 @@ type GitTagConfig struct {
 	Path string `json:"path"`
 	// The tag to create in the repository.
 	Tag string `json:"tag"`
-	// Optional tagger information for the tag. If provided, this takes precedence over both
-	// system-level defaults and any optional, default authorship information configured in the
-	// `git-clone` step.
-	Tagger *Tagger `json:"tagger,omitempty"`
-}
-
-// Optional tagger information for the tag. If provided, this takes precedence over both
-// system-level defaults and any optional, default authorship information configured in the
-// `git-clone` step.
-type Tagger struct {
-	// The email of the tagger.
-	Email string `json:"email"`
-	// The name of the tagger.
-	Name string `json:"name"`
-	// The GPG signing key for the tagger. If provided, 'email' and 'name' must match the key's
-	// UID.
-	SigningKey string `json:"signingKey,omitempty"`
 }
 
 type GitWaitForPRConfig struct {
