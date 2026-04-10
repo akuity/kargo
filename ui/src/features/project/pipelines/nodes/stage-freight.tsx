@@ -148,7 +148,7 @@ export const StageFreight = (props: { stage: Stage }) => {
           />
         )}
 
-        <div className='scale-90 flex flex-col items-center'>
+        <div className='scale-90 flex flex-col items-center min-w-0 overflow-hidden'>
           {freightTimelineControllerContext?.preferredFilter?.showAlias && (
             <div className='text-[10px] mr-1 text-center mb-1'>{selectedFreightAlias}</div>
           )}
@@ -208,7 +208,7 @@ const Artifact = (props: {
 
     let TagComponent = (
       <Tag title={props.artifact.repoURL} bordered={false} color='geekblue'>
-        <Flex justify='center' align='center'>
+        <Flex justify='center' align='center' wrap>
           <div>{props.artifact.id.slice(0, 7)}</div>
 
           {source}
@@ -247,9 +247,11 @@ const Artifact = (props: {
         bordered={false}
         color='geekblue'
       >
-        {shortVersion(props.artifact.version)}
+        <Flex wrap justify='center'>
+          <div>{shortVersion(props.artifact.version)}</div>
 
-        {source}
+          {source}
+        </Flex>
       </Tag>
     );
   }
@@ -268,7 +270,7 @@ const Artifact = (props: {
       bordered={false}
       color='geekblue'
     >
-      <Flex justify='center'>
+      <Flex justify='center' wrap>
         <div className='text-center'>{shortVersion(props.artifact?.tag)}</div>
         {source}
       </Flex>
