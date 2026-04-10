@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 
 import { WarehouseExpanded } from '@ui/extend/types';
 import { StackedNodeBody } from '@ui/features/project/pipelines/nodes/stacked-nodes';
@@ -14,37 +14,65 @@ import { DimensionState } from './use-node-dimension-state';
 export const DummyNodeRenderrer = (props: {
   stages: Stage[];
   warehouses: WarehouseExpanded[];
+  knownDimensions: DimensionState;
   onDimensionChange: (d: DimensionState) => void;
 }) => {
-  const customNodes: Array<{
-    label: string;
-    value: WarehouseExpanded | RepoSubscription | Stage;
-  }> = [];
+  const allCustomNodes = useMemo(() => {
+    const nodes: Array<{
+      label: string;
+      value: WarehouseExpanded | RepoSubscription | Stage;
+    }> = [];
 
-  for (const warehouse of props.warehouses) {
-    customNodes.push({
-      label: warehouseIndexer.index(warehouse),
-      value: warehouse
-    });
+    for (const warehouse of props.warehouses) {
+      nodes.push({
+        label: warehouseIndexer.index(warehouse),
+        value: warehouse
+      });
 
-    for (const subscription of warehouse?.spec?.subscriptions || []) {
-      customNodes.push({
-        label: repoSubscriptionIndexer.index(warehouse, subscription),
-        value: subscription
+      for (const subscription of warehouse?.spec?.subscriptions || []) {
+        nodes.push({
+          label: repoSubscriptionIndexer.index(warehouse, subscription),
+          value: subscription
+        });
+      }
+    }
+
+    for (const stage of props.stages) {
+      nodes.push({
+        label: stageIndexer.index(stage),
+        value: stage
       });
     }
-  }
 
-  for (const stage of props.stages) {
-    customNodes.push({
-      label: stageIndexer.index(stage),
-      value: stage
-    });
-  }
+    return nodes;
+  }, [props.warehouses, props.stages]);
+
+  const unmeasuredNodes = useMemo(
+    () => allCustomNodes.filter((n) => !props.knownDimensions[n.label]),
+    [allCustomNodes, props.knownDimensions]
+  );
+
+  const needsStackedNode = !props.knownDimensions[STACKED_NODE_DUMMY_KEY];
+
+  // Stable string key so the effect only re-runs when the set of unmeasured
+  // nodes actually changes, not on every render.
+  const unmeasuredKey = useMemo(
+    () =>
+      unmeasuredNodes
+        .map((n) => n.label)
+        .sort()
+        .join(','),
+    [unmeasuredNodes]
+  );
 
   useEffect(() => {
+    if (!unmeasuredNodes.length && !needsStackedNode) {
+      return;
+    }
+
     const dimensionState: DimensionState = {};
-    for (const node of customNodes) {
+
+    for (const node of unmeasuredNodes) {
       const element = document.getElementById(`dummy-${node.label}`);
 
       if (element) {
@@ -53,21 +81,29 @@ export const DummyNodeRenderrer = (props: {
       }
     }
 
-    const stackedElement = document.getElementById(`dummy-${STACKED_NODE_DUMMY_KEY}`);
-    if (stackedElement) {
-      const { width, height } = stackedElement.getBoundingClientRect();
-      dimensionState[STACKED_NODE_DUMMY_KEY] = { width, height };
+    if (needsStackedNode) {
+      const stackedElement = document.getElementById(`dummy-${STACKED_NODE_DUMMY_KEY}`);
+      if (stackedElement) {
+        const { width, height } = stackedElement.getBoundingClientRect();
+        dimensionState[STACKED_NODE_DUMMY_KEY] = { width, height };
+      }
     }
 
-    props.onDimensionChange(dimensionState);
-  }, [props.onDimensionChange]);
+    if (Object.keys(dimensionState).length > 0) {
+      props.onDimensionChange(dimensionState);
+    }
+  }, [unmeasuredKey, needsStackedNode]);
+
+  if (!unmeasuredNodes.length && !needsStackedNode) {
+    return null;
+  }
 
   return (
     <>
-      {customNodes.map((node) => (
+      {unmeasuredNodes.map((node) => (
         <CustomNode id={`dummy-${node.label}`} key={node.label} data={node} />
       ))}
-      <StackedNodeBody id={`dummy-${STACKED_NODE_DUMMY_KEY}`} />
+      {needsStackedNode && <StackedNodeBody id={`dummy-${STACKED_NODE_DUMMY_KEY}`} />}
     </>
   );
 };

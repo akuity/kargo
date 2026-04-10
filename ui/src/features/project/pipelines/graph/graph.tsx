@@ -103,7 +103,7 @@ export const Graph = (props: GraphProps) => {
       );
 
       if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        setRedraw((prev) => !prev);
       }
 
       queryCache.imageStageMatrix.update(stage);
@@ -127,7 +127,7 @@ export const Graph = (props: GraphProps) => {
       );
 
       if (!nodes.find((n) => n.id === index)) {
-        setRedraw(!redraw);
+        setRedraw((prev) => !prev);
       }
 
       queryCache.freight.refetch();
@@ -176,15 +176,14 @@ export const Graph = (props: GraphProps) => {
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        {!Object.keys(dimensions).length && (
-          <div className='opacity-0 overflow-hidden h-0'>
-            <DummyNodeRenderrer
-              stages={props.stages}
-              warehouses={props.warehouses}
-              onDimensionChange={setDimensions}
-            />
-          </div>
-        )}
+        <div className='opacity-0 overflow-hidden h-0'>
+          <DummyNodeRenderrer
+            stages={props.stages}
+            warehouses={props.warehouses}
+            knownDimensions={dimensions}
+            onDimensionChange={(newDims) => setDimensions((prev) => ({ ...prev, ...newDims }))}
+          />
+        </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
