@@ -13,7 +13,7 @@ type MockRepo struct {
 	CommitFn                  func(message string, opts *CommitOptions) error
 	CreateChildBranchFn       func(branch string) error
 	CreateOrphanedBranchFn    func(branch string) error
-	CreateTagFn               func(tag, msg string, opts *TagOptions) error
+	CreateTagFn               func(tag, msg string) error
 	CurrentBranchFn           func() (string, error)
 	DeleteBranchFn            func(branch string) error
 	DirFn                     func() string
@@ -77,8 +77,8 @@ func (m *MockRepo) CreateOrphanedBranch(branch string) error {
 	return m.CreateOrphanedBranchFn(branch)
 }
 
-func (m *MockRepo) CreateTag(tag, msg string, opts *TagOptions) error {
-	return m.CreateTagFn(tag, msg, opts)
+func (m *MockRepo) CreateTag(tag, msg string) error {
+	return m.CreateTagFn(tag, msg)
 }
 
 func (m *MockRepo) CurrentBranch() (string, error) {

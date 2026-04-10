@@ -43,7 +43,7 @@ type WorkTree interface {
 	// with any other branch.
 	CreateOrphanedBranch(branch string) error
 	// CreateTag creates a new tag with the specified name.
-	CreateTag(name, msg string, opts *TagOptions) error
+	CreateTag(name, msg string) error
 	// CurrentBranch returns the current branch
 	CurrentBranch() (string, error)
 	// DeleteBranch deletes the specified branch
@@ -318,51 +318,10 @@ func (w *workTree) CreateOrphanedBranch(branch string) error {
 	return w.Clean()
 }
 
-// TagOptions represents options for creating a new git tag.
-type TagOptions struct {
-	// Tagger is the tagger of the tag. If nil, the default tagger already
-	// configured in the git repository will be used.
-	Tagger *User
-}
-
-func (w *workTree) CreateTag(tag, msg string, opts *TagOptions) error {
-	if opts == nil {
-		opts = &TagOptions{}
-	}
-
-	var homeDir string
-	// This tagger is specific to this tag, so we will override repository-level
-	// user information by creating a temporary home directory, configuring the
-	// user information "globally" within it, and then ensuring the git tag
-	// command uses that home directory.
-	if opts.Tagger != nil {
-		var err error
-		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
-			return fmt.Errorf(
-				"error creating virtual home directory %q for tag command: %w",
-				homeDir, err,
-			)
-		}
-		defer func() {
-			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-				logging.LoggerFromContext(context.TODO()).
-					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
-			}
-		}()
-		if err = w.setupUser(homeDir, opts.Tagger); err != nil {
-			return fmt.Errorf(
-				"error setting up author information for tag command: %w", err,
-			)
-		}
-	}
-
+func (w *workTree) CreateTag(tag, msg string) error {
 	cmd := w.buildGitCommand("tag", "-a", tag, "-m", msg)
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
 	if _, err := libExec.Exec(cmd); err != nil {
-		return fmt.Errorf("error creating signed tag %q", err)
+		return fmt.Errorf("error creating annotated tag %q: %w", tag, err)
 	}
 	return nil
 }
@@ -702,11 +661,6 @@ type PushOptions struct {
 	// pushing. If empty or set to PushIntegrationPolicyNone, no integration
 	// is performed.
 	IntegrationPolicy PushIntegrationPolicy
-	// Committer is the identity used as the committer for merge commits or
-	// replacement commits created when integrating remote changes before
-	// pushing. If nil, the default author already configured in the git
-	// repository will be used.
-	Committer *User
 	// Tag specifies a tag to push to the remote repository. If this field and
 	// TargetBranch are both non-empty, this field takes precedence and the tag
 	// will be pushed -- the branch will not.
@@ -753,7 +707,7 @@ func (w *workTree) Push(opts *PushOptions) error {
 		if exists {
 			if err = w.integrateBeforePush(
 				targetBranch,
-				opts.Committer, opts.IntegrationPolicy,
+				opts.IntegrationPolicy,
 			); err != nil {
 				return err
 			}

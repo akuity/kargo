@@ -34,9 +34,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyAlwaysRebase,
-		)
+		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyAlwaysRebase)
 		require.NoError(t, err)
 
 		// A rebase produces no merge commits:
@@ -57,7 +55,8 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		require.NoError(t, err)
 
 		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyRebaseOrMerge,
+			"ahead",
+			PushIntegrationPolicyRebaseOrMerge,
 		)
 		require.NoError(t, err)
 
@@ -82,9 +81,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyRebaseOrMerge,
-		)
+		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyRebaseOrMerge)
 		require.NoError(t, err)
 
 		// Should have fallen back to merge.
@@ -104,7 +101,8 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		require.NoError(t, err)
 
 		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyRebaseOrFail,
+			"ahead",
+			PushIntegrationPolicyRebaseOrFail,
 		)
 		require.NoError(t, err)
 
@@ -127,9 +125,7 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		wt := internalWorkTree(t, repo)
 		enableFakeCommitSigning(t, wt, true)
 
-		err = wt.integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyRebaseOrFail,
-		)
+		err = wt.integrateBeforePush("ahead", PushIntegrationPolicyRebaseOrFail)
 		require.ErrorIs(t, err, ErrRebaseUnsafe)
 	})
 
@@ -144,7 +140,8 @@ func Test_workTree_integrateBeforePush(t *testing.T) {
 		require.NoError(t, err)
 
 		err = internalWorkTree(t, repo).integrateBeforePush(
-			"ahead", nil, PushIntegrationPolicyAlwaysMerge,
+			"ahead",
+			PushIntegrationPolicyAlwaysMerge,
 		)
 		require.NoError(t, err)
 
@@ -181,7 +178,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 		require.NoError(t, err)
 
 		// With a conflict, the rebase should have failed.
-		err = internalWorkTree(t, repo).pullRebase("ahead", "")
+		err = internalWorkTree(t, repo).pullRebase("ahead")
 		require.ErrorIs(t, err, ErrMergeConflict)
 	})
 
@@ -201,7 +198,7 @@ func Test_workTree_pullRebase(t *testing.T) {
 		require.NoError(t, err)
 
 		// With no conflicts, the rebase should have succeeded.
-		err = internalWorkTree(t, repo).pullRebase("ahead", "")
+		err = internalWorkTree(t, repo).pullRebase("ahead")
 		require.NoError(t, err)
 
 		// The rebase should not have created any merge commits, so the commit count
@@ -237,7 +234,7 @@ func Test_workTree_pullMerge(t *testing.T) {
 		require.NoError(t, err)
 
 		// With a conflict, the merge should have failed.
-		err = internalWorkTree(t, repo).pullMerge("ahead", "")
+		err = internalWorkTree(t, repo).pullMerge("ahead")
 		require.ErrorIs(t, err, ErrMergeConflict)
 	})
 
@@ -257,7 +254,7 @@ func Test_workTree_pullMerge(t *testing.T) {
 		require.NoError(t, err)
 
 		// With no conflicts, the merge should have succeeded.
-		require.NoError(t, internalWorkTree(t, repo).pullMerge("ahead", ""))
+		require.NoError(t, internalWorkTree(t, repo).pullMerge("ahead"))
 
 		// After a merge, the head of the local branch should be a merge commit.
 		msg, err := repo.CommitMessage("HEAD")
@@ -275,7 +272,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		require.NoError(t, err)
 		defer repo.Close()
 
-		safe, err := internalWorkTree(t, repo).canSafelyRebase("main", "")
+		safe, err := internalWorkTree(t, repo).canSafelyRebase("main")
 		require.NoError(t, err)
 		require.True(t, safe)
 	})
@@ -295,7 +292,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		err = repo.AddAllAndCommit("local commit", nil)
 		require.NoError(t, err)
 
-		safe, err := internalWorkTree(t, repo).canSafelyRebase("main", "")
+		safe, err := internalWorkTree(t, repo).canSafelyRebase("main")
 		require.NoError(t, err)
 		// This should be safe because rebasing won't lend Kargo's signature to
 		// commits that were previously unsigned.
@@ -322,7 +319,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		))
 		require.NoError(t, err)
 
-		safe, err := wt.canSafelyRebase("main", "")
+		safe, err := wt.canSafelyRebase("main")
 		require.NoError(t, err)
 		// This should be unsafe because rebasing would lend Kargo's signature to
 		// commits that were previously unsigned.
@@ -346,7 +343,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		err = repo.AddAllAndCommit("signed commit", nil)
 		require.NoError(t, err)
 
-		safe, err := wt.canSafelyRebase("main", "")
+		safe, err := wt.canSafelyRebase("main")
 		require.NoError(t, err)
 		// This should be safe because Kargo trusted the signature on commits it
 		// will re-sign during the rebase.
@@ -372,7 +369,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 
 		disableFakeCommitSigning(t, wt)
 
-		safe, err := wt.canSafelyRebase("main", "")
+		safe, err := wt.canSafelyRebase("main")
 		require.NoError(t, err)
 		// This should be unsafe because rebasing would strip trusted signatures
 		// from existing commits.
@@ -397,7 +394,7 @@ func Test_workTree_canSafelyRebase(t *testing.T) {
 		require.NoError(t, err)
 
 		// Unsafe regardless — Kargo can't vouch for this commit.
-		safe, err := wt.canSafelyRebase("main", "")
+		safe, err := wt.canSafelyRebase("main")
 		require.NoError(t, err)
 		// This should be unsafe, no matter what. If signing were not configured,
 		// rebasing would strip signatures from existing commits. Something
@@ -503,7 +500,7 @@ func Test_workTree_isSigningConfigured(t *testing.T) {
 		require.NoError(t, err)
 		defer repo.Close()
 
-		configured, err := internalWorkTree(t, repo).isSigningConfigured("")
+		configured, err := internalWorkTree(t, repo).isSigningConfigured()
 		require.NoError(t, err)
 		require.False(t, configured)
 	})
@@ -520,7 +517,7 @@ func Test_workTree_isSigningConfigured(t *testing.T) {
 		))
 		require.NoError(t, err)
 
-		configured, err := wt.isSigningConfigured("")
+		configured, err := wt.isSigningConfigured()
 		require.NoError(t, err)
 		require.True(t, configured)
 	})
@@ -539,7 +536,7 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 		require.NoError(t, err)
 
 		wt := internalWorkTree(t, repo)
-		status, err := wt.verifyCommitSignature(commitID, "")
+		status, err := wt.verifyCommitSignature(commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureUnsigned, status)
 	})
@@ -564,7 +561,7 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 		commitID, err := repo.LastCommitID()
 		require.NoError(t, err)
 
-		status, err := wt.verifyCommitSignature(commitID, "")
+		status, err := wt.verifyCommitSignature(commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureTrusted, status)
 	})
@@ -589,7 +586,7 @@ func Test_workTree_verifyCommitSignature(t *testing.T) {
 		commitID, err := repo.LastCommitID()
 		require.NoError(t, err)
 
-		status, err := wt.verifyCommitSignature(commitID, "")
+		status, err := wt.verifyCommitSignature(commitID)
 		require.NoError(t, err)
 		require.Equal(t, signatureUntrusted, status)
 	})

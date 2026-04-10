@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	libExec "github.com/akuity/kargo/pkg/exec"
@@ -27,7 +26,6 @@ const (
 // integrateBeforePush integrates remote changes before pushing.
 func (w *workTree) integrateBeforePush(
 	targetBranch string,
-	committer *User,
 	integrationPolicy PushIntegrationPolicy,
 ) error {
 	if integrationPolicy == "" {
@@ -35,33 +33,6 @@ func (w *workTree) integrateBeforePush(
 	}
 	if integrationPolicy == PushIntegrationPolicyNone {
 		return nil
-	}
-
-	var homeDir string
-	if committer != nil {
-		// This committer is specific to any commits made during rebasing or
-		// merging, so we will override repository-level user information by
-		// creating a temporary home directory, configuring the user information
-		// "globally" within it, and then ensuring git commits use that home
-		// directory.
-		var err error
-		if homeDir, err = os.MkdirTemp(w.homeDir, ""); err != nil {
-			return fmt.Errorf(
-				"error creating virtual home directory %q for rebase/merge commands: %w",
-				homeDir, err,
-			)
-		}
-		defer func() {
-			if cleanErr := os.RemoveAll(homeDir); cleanErr != nil {
-				logging.LoggerFromContext(context.TODO()).
-					Error(cleanErr, "error removing virtual home directory", "path", homeDir)
-			}
-		}()
-		if err = w.setupUser(homeDir, committer); err != nil {
-			return fmt.Errorf(
-				"error setting up committer information for rebase/merge commands: %w", err,
-			)
-		}
 	}
 
 	logger := logging.LoggerFromContext(context.TODO()).WithValues(
@@ -72,18 +43,18 @@ func (w *workTree) integrateBeforePush(
 	switch integrationPolicy {
 	case PushIntegrationPolicyAlwaysRebase:
 		logger.Trace("integrating remote changes via rebase (always)")
-		return w.pullRebase(targetBranch, homeDir)
+		return w.pullRebase(targetBranch)
 	case PushIntegrationPolicyAlwaysMerge:
 		logger.Trace("integrating remote changes via merge (always)")
-		return w.pullMerge(targetBranch, homeDir)
+		return w.pullMerge(targetBranch)
 	case PushIntegrationPolicyRebaseOrMerge, PushIntegrationPolicyRebaseOrFail:
-		safe, err := w.canSafelyRebase(targetBranch, homeDir)
+		safe, err := w.canSafelyRebase(targetBranch)
 		if err != nil {
 			return fmt.Errorf("error checking rebase safety: %w", err)
 		}
 		if safe {
 			logger.Trace("integrating remote changes via rebase")
-			return w.pullRebase(targetBranch, homeDir)
+			return w.pullRebase(targetBranch)
 		}
 		if integrationPolicy == PushIntegrationPolicyRebaseOrFail {
 			logger.Trace(
@@ -92,27 +63,15 @@ func (w *workTree) integrateBeforePush(
 			return ErrRebaseUnsafe
 		}
 		logger.Trace("integrating remote changes via merge (rebase unsafe)")
-		return w.pullMerge(targetBranch, homeDir)
+		return w.pullMerge(targetBranch)
 	default:
 		return fmt.Errorf("unknown push integration policy: %q", integrationPolicy)
 	}
 }
 
 // pullRebase performs a git pull --rebase against the specified remote branch.
-// If homeDir is non-empty, it overrides the home directory used by the git
-// command, allowing a custom committer's identity and signing key to be used
-// for the replacement commits created by the rebase.
-func (w *workTree) pullRebase(
-	targetBranch string,
-	homeDir string,
-) error {
-	cmd := w.buildGitCommand(
-		"pull", "--rebase", "origin", targetBranch,
-	)
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
+func (w *workTree) pullRebase(targetBranch string) error {
+	cmd := w.buildGitCommand("pull", "--rebase", "origin", targetBranch)
 	if _, err := libExec.Exec(cmd); err != nil {
 		if isRebasing, rbErr := w.IsRebasing(); rbErr == nil && isRebasing {
 			return ErrMergeConflict
@@ -123,20 +82,8 @@ func (w *workTree) pullRebase(
 }
 
 // pullMerge performs a git pull (merge) against the specified remote branch.
-// If homeDir is non-empty, it overrides the home directory used by the git
-// command, allowing a custom committer's identity and signing key to be used
-// for the merge commit.
-func (w *workTree) pullMerge(
-	targetBranch string,
-	homeDir string,
-) error {
-	cmd := w.buildGitCommand(
-		"pull", "--no-rebase", "origin", targetBranch,
-	)
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
+func (w *workTree) pullMerge(targetBranch string) error {
+	cmd := w.buildGitCommand("pull", "--no-rebase", "origin", targetBranch)
 	if _, err := libExec.Exec(cmd); err != nil {
 		// Check for merge conflicts — MERGE_HEAD exists when a merge is
 		// in progress and waiting for conflict resolution.
@@ -152,9 +99,7 @@ func (w *workTree) pullMerge(
 
 // canSafelyRebase determines whether it is safe to rebase the local commits
 // on top of the specified remote branch without misrepresenting commit
-// signature trust. If homeDir is non-empty, it overrides the home directory
-// used by git commands so that a custom committer's GPG trust database and
-// signing configuration are consulted. The decision matrix:
+// signature trust. The decision matrix:
 //
 //   - Signed with trusted key + signing configured: safe (Kargo can re-sign)
 //   - Signed with trusted key + signing not configured: unsafe (would strip
@@ -162,10 +107,7 @@ func (w *workTree) pullMerge(
 //   - Signed with untrusted key: always unsafe (Kargo can't vouch for it)
 //   - Unsigned + signing configured: unsafe (would fabricate a signature)
 //   - Unsigned + signing not configured: safe (stays unsigned)
-func (w *workTree) canSafelyRebase(
-	targetBranch string,
-	homeDir string,
-) (bool, error) {
+func (w *workTree) canSafelyRebase(targetBranch string) (bool, error) {
 	commits, err := w.commitsToReplay(targetBranch)
 	if err != nil {
 		return false, fmt.Errorf(
@@ -175,14 +117,14 @@ func (w *workTree) canSafelyRebase(
 	if len(commits) == 0 {
 		return true, nil
 	}
-	signing, err := w.isSigningConfigured(homeDir)
+	signing, err := w.isSigningConfigured()
 	if err != nil {
 		return false, fmt.Errorf(
 			"error checking signing configuration: %w", err,
 		)
 	}
 	for _, commitID := range commits {
-		status, err := w.verifyCommitSignature(commitID, homeDir)
+		status, err := w.verifyCommitSignature(commitID)
 		if err != nil {
 			return false, fmt.Errorf(
 				"error verifying signature of commit %s: %w",
@@ -227,15 +169,9 @@ func (w *workTree) commitsToReplay(
 }
 
 // isSigningConfigured returns true if GPG commit signing is enabled in the
-// git configuration for this repository. If homeDir is non-empty, it overrides
-// the home directory used by the git command so that a custom committer's
-// configuration is consulted.
-func (w *workTree) isSigningConfigured(homeDir string) (bool, error) {
+// git configuration for this repository.
+func (w *workTree) isSigningConfigured() (bool, error) {
 	cmd := w.buildGitCommand("config", "--get", "commit.gpgSign")
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
 	res, err := libExec.Exec(cmd)
 	if err != nil {
 		var exitErr *libExec.ExitError
@@ -262,20 +198,10 @@ func (w *workTree) isSigningConfigured(homeDir string) (bool, error) {
 //   - R: good signature made by a revoked key
 //   - E: signature cannot be checked (missing key)
 //   - N: no signature
-//
-// If homeDir is non-empty, it overrides the home directory used by the git
-// command so that a custom committer's GPG trust database is consulted.
 func (w *workTree) verifyCommitSignature(
 	commitID string,
-	homeDir string,
 ) (signatureStatus, error) {
-	cmd := w.buildGitCommand(
-		"log", "-1", "--format=%G?", commitID, "--",
-	)
-	if homeDir != "" {
-		// Override the home directory set by w.buildGitCommand().
-		w.setCmdHome(cmd, homeDir)
-	}
+	cmd := w.buildGitCommand("log", "-1", "--format=%G?", commitID, "--")
 	res, err := libExec.Exec(cmd)
 	if err != nil {
 		return signatureUnsigned, fmt.Errorf(

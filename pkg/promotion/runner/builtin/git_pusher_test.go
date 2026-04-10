@@ -224,7 +224,7 @@ func Test_gitPusher_run(t *testing.T) {
 	require.NoError(t, err)
 
 	// Tag the commit so we can also test pushing tags later.
-	require.NoError(t, workTree.CreateTag("v1.0.0", "hello", nil))
+	require.NoError(t, workTree.CreateTag("v1.0.0", "hello"))
 
 	// Set up a fake git provider
 	// Cannot register multiple providers with the same name, so this takes
