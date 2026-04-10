@@ -10,12 +10,13 @@ user-defined set of resources when it does.
 
 :::note
 
-Currently, these actions are limited to "refreshing" `Warehouse` resources,
-which triggers their artifact discovery processes, so a typical use of this
-component is responding to "push" events from artifact repositories that
-lack dedicated webhook receiver implementations. Since this component
-effectively enables imperatively refreshing a `Warehouse` from any external
-process, other uses are possible and practical.
+Currently, these actions are limited to "refreshing" `Warehouse` and
+`Promotion` resources. Refreshing a `Warehouse` triggers its artifact
+discovery process, making this useful for responding to "push" events from
+artifact repositories that lack dedicated webhook receiver implementations.
+Refreshing a `Promotion` wakes up a running `Promotion` that is waiting on a
+pull request, which is useful for integrating with external version control
+systems that lack a dedicated webhook receiver.
 
 :::
 
@@ -102,7 +103,9 @@ spec:
 
 :::note
 
-The only currently supported `action` is `Refresh`.
+The only currently supported `action` is `Refresh`. It is supported for
+both `Warehouse` and `Promotion` resource kinds.
+
 :::
 
 
@@ -265,9 +268,9 @@ spec:
 
 Use `indexSelector` to retrieve resources by a cached index.
 
-The following example depicts `targetSelectionCriteria` that dynamically selects
-`Warehouse` resources that contain subscriptions to the normalized git
-URL from the request body.
+The following example depicts `targetSelectionCriteria` that dynamically
+selects `Warehouse` resources subscribed to the normalized Git URL from the
+request body:
 
 ```yaml
 actions:
@@ -282,10 +285,31 @@ actions:
               value: "${{ normalizeGit(request.body.repository.url) }}"
 ```
 
+The following example depicts `targetSelectionCriteria` that dynamically
+selects running `Promotion` resources waiting on the pull request URL from the
+request body:
+
+```yaml
+actions:
+  - action: Refresh
+    whenExpression: "request.header('X-Event-Type') == 'pull_request'"
+    targetSelectionCriteria:
+      - kind: Promotion
+        indexSelector:
+          matchIndices:
+            - key: pullRequestURL
+              operator: Equals
+              value: "${{ request.body.pull_request.html_url }}"
+```
+
 :::note
 
-`subscribedURLs` is the only available index. It refers to `Warehouse`
-resources that contain subscriptions for a provided repository URL.
+Two indices are available:
+
+- `subscribedURLs`: Selects `Warehouse` resources that contain subscriptions
+  for a provided repository URL.
+- `pullRequestURL`: Selects running `Promotion` resources that are waiting on
+  a pull request with the given URL.
 
 :::
 
