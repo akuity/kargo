@@ -16,6 +16,7 @@ or scheduled for removal.
 
 | Feature | Deprecated In | Removed In | Replacement/Notes |
 |---------|---------------|------------|-------------------|
+| `git-commit` step `author` field | [v1.10.0](./89-v1.10.0.md) | Scheduled for v1.12.0 | Configure authorship and signing in the `git-clone` step or via `ClusterConfig`. See [git-commit docs](https://docs.kargo.io/user-guide/reference-docs/promotion-steps/git-commit). |
 | `git-push` default integration policy (`AlwaysRebase`) | [v1.10.0](./89-v1.10.0.md) | Default changes in v1.12.0 | The default `git-push` push integration policy will change from `AlwaysRebase` to `RebaseOrMerge` in v1.12.0. Set [`controller.gitClient.pushIntegrationPolicy`](https://docs.kargo.io/operator-guide/advanced-installation/common-configurations#push-integration-policy) explicitly if you rely on unconditional rebase. |
 | SSH URLs and SSH private keys for Git repositories | v1.10.0 | Scheduled for v1.13.0 | Use HTTPS URLs with a personal access token or equivalent. SSH keys cannot authenticate to git provider APIs, forcing users to maintain two sets of credentials. See [#5858](https://github.com/akuity/kargo/issues/5858) for details. |
 | The `createTargetBranch` option in the `git-open-pr` promotion step | [v1.10.0](./89-v1.10.0.md) | Scheduled for v1.12.0 | The `createTargetBranch` option has been deprecated as the feature never worked. See [#5847](https://github.com/akuity/kargo/issues/5847) for details. |
