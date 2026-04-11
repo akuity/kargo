@@ -14,8 +14,8 @@ jobs:
     name: Validate linked issue
     runs-on: ubuntu-latest
     if: >-
-      github.event.pull_request.author_association != 'MEMBER' &&
-      github.event.pull_request.author_association != 'OWNER' &&
+      # github.event.pull_request.author_association != 'MEMBER' &&
+      # github.event.pull_request.author_association != 'OWNER' &&
       !endsWith(github.event.pull_request.user.login, '[bot]')
     steps:
     - name: Harden the runner (Audit all outbound calls)
