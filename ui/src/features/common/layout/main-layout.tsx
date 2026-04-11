@@ -20,6 +20,7 @@ import { KargoLogo } from '@ui/features/common/logo/logo';
 
 import * as styles from './main-layout.module.less';
 import { NavItem } from './nav-item/nav-item';
+import { ThemeToggle } from './theme-toggle';
 
 export const MainLayout = () => {
   const { logout, JWTInfo } = useAuthContext();
@@ -69,6 +70,7 @@ export const MainLayout = () => {
               </NavItem>
             </nav>
 
+            <ThemeToggle />
             <Button
               className={styles.logout}
               onClick={logout}

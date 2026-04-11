@@ -1,11 +1,16 @@
 import { faCircleNotch } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { Button, Typography } from 'antd';
+import { CSSProperties } from 'react';
 
 import { IAction, useActionContext } from '@ui/features/project/pipelines/context/action-context';
 import { useDictionaryContext } from '@ui/features/project/pipelines/context/dictionary-context';
 
-export const PromotionModeHeader = (props: { className?: string; loading?: boolean }) => {
+export const PromotionModeHeader = (props: {
+  className?: string;
+  loading?: boolean;
+  style?: CSSProperties;
+}) => {
   const actionContext = useActionContext();
   const dictionaryContext = useDictionaryContext();
 
@@ -15,7 +20,7 @@ export const PromotionModeHeader = (props: { className?: string; loading?: boole
 
   if (actionContext?.action?.type === IAction.MANUALLY_APPROVE) {
     return (
-      <div className={props.className}>
+      <div className={props.className} style={props.style}>
         <Typography.Text type='secondary'>
           Manually approve freight <b>{actionContext?.action?.freight?.alias}</b>
         </Typography.Text>
@@ -33,7 +38,7 @@ export const PromotionModeHeader = (props: { className?: string; loading?: boole
   }
 
   return (
-    <div className={props.className}>
+    <div className={props.className} style={props.style}>
       <Typography.Text type='secondary'>
         {props.loading && <FontAwesomeIcon icon={faCircleNotch} spin className='mr-2' />}
         Promote to <b>{promotingTo}</b>
