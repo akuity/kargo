@@ -17,14 +17,14 @@ step](git-push.md).
 |------|------|----------|-------------|
 | `path` | `string` | Y | Path to a Git working tree containing changes to be committed. This path is relative to the temporary workspace that Kargo provisions for use by the promotion process. |
 | `message` | `string` | Y | The commit message. |
-| `author` | `object` | N | **Deprecated (v1.10.0, removal in v1.13.0).** Optional authorship information for the commit. Configure authorship in the [`git-clone`](./git-clone.md) step instead. |
+| `author` | `object` | N | **Deprecated (v1.10.0, removal in v1.12.0).** Optional authorship information for the commit. Configure authorship in the [`git-clone`](./git-clone.md) step instead. |
 | `author.name` | `string` | Y | **Deprecated.** The committer's name. |
 | `author.email` | `string` | Y | **Deprecated.** The committer's email address. |
 | `author.signingKey` | `string` | N | **Deprecated.** The GPG signing key for the author. Configure signing keys in the [`git-clone`](./git-clone.md) step or via `ClusterConfig` instead. |
 
 :::warning
 
-The `author` field is deprecated as of v1.10.0 and will be removed in v1.13.0.
+The `author` field is deprecated as of v1.10.0 and will be removed in v1.12.0.
 If authorship differing from any system-level default is required, configure it in the [`git-clone`](./git-clone.md) step instead.
 
 :::

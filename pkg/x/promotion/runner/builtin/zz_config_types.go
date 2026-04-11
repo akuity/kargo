@@ -224,7 +224,7 @@ type GitCommitConfig struct {
 	// Optional authorship information for the commit. If provided, this takes precedence over
 	// both system-level defaults and any optional, default authorship information configured in
 	// the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.13.0. Configure authorship in the `git-clone` step instead.
+	// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
 	Author *GitCommitConfigAuthor `json:"author,omitempty"`
 	// The commit message.
 	Message string `json:"message"`
@@ -235,16 +235,16 @@ type GitCommitConfig struct {
 // Optional authorship information for the commit. If provided, this takes precedence over
 // both system-level defaults and any optional, default authorship information configured in
 // the `git-clone` step. Deprecated: This field is deprecated as of v1.10.0 and will be
-// removed in v1.13.0. Configure authorship in the `git-clone` step instead.
+// removed in v1.12.0. Configure authorship in the `git-clone` step instead.
 type GitCommitConfigAuthor struct {
 	// The email of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.13.0.
+	// removed in v1.12.0.
 	Email string `json:"email"`
 	// The name of the author. Deprecated: This field is deprecated as of v1.10.0 and will be
-	// removed in v1.13.0.
+	// removed in v1.12.0.
 	Name string `json:"name"`
 	// The GPG signing key for the author. Deprecated: This field is deprecated as of v1.10.0
-	// and will be removed in v1.13.0. Configure signing keys in the `git-clone` step or via
+	// and will be removed in v1.12.0. Configure signing keys in the `git-clone` step or via
 	// ClusterConfig instead.
 	SigningKey string `json:"signingKey,omitempty"`
 }
