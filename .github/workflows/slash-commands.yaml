@@ -1,0 +1,326 @@
+name: Slash Commands
+
+on:
+  issue_comment:
+    types:
+    - created
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  issue-command:
+    name: Handle issue slash command
+    runs-on: ubuntu-latest
+    if: >-
+      !github.event.issue.pull_request &&
+      (
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'OWNER'
+      ) &&
+      startsWith(github.event.comment.body, '/')
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+      with:
+        egress-policy: audit
+
+    - name: Process command
+      env:
+        GH_TOKEN: ${{ secrets.AKUITYBOT_PAT }}
+        GH_REPO: ${{ github.repository }}
+        NUMBER: ${{ github.event.issue.number }}
+        COMMENT_BODY: ${{ github.event.comment.body }}
+      run: |
+        COMMAND=$(echo "$COMMENT_BODY" | head -1 | awk '{print $1}')
+        ARG=$(echo "$COMMENT_BODY" | head -1 | awk '{print $2}' | tr -d '#')
+
+        case "$COMMAND" in
+
+          /discuss)
+            gh issue edit "$NUMBER" --add-label "needs discussion"
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Discussion Needed
+
+        A maintainer has indicated that this issue requires further discussion before any implementation work should begin.
+
+        Please do not open a pull request for this issue until the discussion has concluded and all blocking labels have been removed.
+        MSG
+            )"
+            ;;
+
+          /duplicate)
+            if [ -z "$ARG" ]; then
+              echo "::error::Usage: /duplicate #<number>"
+              exit 1
+            fi
+            gh issue comment "$NUMBER" --body "$(cat <<MSG
+        ## Duplicate
+
+        This has been closed as a duplicate of #$ARG.
+
+        Please follow the linked issue for updates.
+        MSG
+            )"
+            gh issue edit "$NUMBER" --add-label "duplicate"
+            gh issue close "$NUMBER" --reason "not planned"
+            ;;
+
+          /enterprise)
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Already Planned for Kargo Enterprise
+
+        Thank you for your suggestion. This is something already planned for (or already available in) [Kargo Enterprise](https://akuity.io). As such, it will not be implemented in the open source project.
+
+        For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
+        MSG
+            )"
+            gh issue close "$NUMBER" --reason "not planned"
+            ;;
+
+          /maintainer)
+            gh issue edit "$NUMBER" --add-label "maintainer only"
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Maintainer Only
+
+        A maintainer has indicated that this issue will only be worked on by the maintainer team due to its size, complexity, or sensitivity.
+
+        External pull requests for this issue will be closed.
+        MSG
+            )"
+            ;;
+
+          /research)
+            gh issue edit "$NUMBER" --add-label "needs research"
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Research Needed
+
+        A maintainer has indicated that this issue needs further investigation or research before any implementation work should begin.
+
+        Please do not open a pull request for this issue until the research has concluded and all blocking labels have been removed.
+        MSG
+            )"
+            ;;
+
+          /unblock)
+            for label in "kind/proposal" "needs discussion" "needs research"; do
+              gh issue edit "$NUMBER" --remove-label "$label" 2>/dev/null || true
+            done
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Unblocked for Contribution
+
+        A maintainer has unblocked this issue for external contribution. Process-blocking labels have been removed.
+
+        If you would like to work on this, please comment to indicate your intent.
+
+        Wait for a maintainer to acknowledge your comment and formally assign the issue to you before starting work. This ensures multiple contributors do not duplicate effort on the same issue.
+
+        When you open a pull request, reference this issue using `Closes #<number>`.
+
+        Before starting, confirm the issue has no remaining blocking labels. See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+        MSG
+            )"
+            ;;
+
+          /help)
+            gh issue comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Available Slash Commands
+
+        | Command | Description |
+        |---------|-------------|
+        | `/discuss` | Add `needs discussion` label; blocks work |
+        | `/duplicate #N` | Close as duplicate of #N |
+        | `/enterprise` | Close as already planned for Kargo Enterprise |
+        | `/maintainer` | Add `maintainer only` label; blocks external contribution |
+        | `/research` | Add `needs research` label; blocks work |
+        | `/unblock` | Remove process-blocking labels; unblocks work |
+        | `/help` | Show this list |
+        MSG
+            )"
+            ;;
+
+          *)
+            echo "Unknown command: $COMMAND"
+            exit 0
+            ;;
+        esac
+
+  pr-command:
+    name: Handle PR slash command
+    runs-on: ubuntu-latest
+    if: >-
+      github.event.issue.pull_request &&
+      (
+        github.event.comment.author_association == 'MEMBER' ||
+        github.event.comment.author_association == 'OWNER'
+      ) &&
+      startsWith(github.event.comment.body, '/')
+    steps:
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@fe104658747b27e96e4f7e80cd0a94068e53901d # v2.16.1
+      with:
+        egress-policy: audit
+
+    - name: Process command
+      env:
+        GH_TOKEN: ${{ secrets.AKUITYBOT_PAT }}
+        GH_REPO: ${{ github.repository }}
+        NUMBER: ${{ github.event.issue.number }}
+        COMMENT_BODY: ${{ github.event.comment.body }}
+      run: |
+        COMMAND=$(echo "$COMMENT_BODY" | head -1 | awk '{print $1}')
+        ARG=$(echo "$COMMENT_BODY" | head -1 | awk '{print $2}' | tr -d '#')
+
+        case "$COMMAND" in
+
+          /discuss)
+            gh pr edit "$NUMBER" --add-label "needs discussion"
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Discussion Needed
+
+        A maintainer has indicated that further discussion is needed before this pull request can be merged.
+
+        Please do not merge this PR until the discussion has concluded and all blocking labels have been removed.
+        MSG
+            )"
+            ;;
+
+          /duplicate)
+            if [ -z "$ARG" ]; then
+              echo "::error::Usage: /duplicate #<number>"
+              exit 1
+            fi
+            gh pr comment "$NUMBER" --body "$(cat <<MSG
+        ## Duplicate
+
+        This has been closed as a duplicate of #$ARG.
+
+        Please follow the linked issue for updates.
+        MSG
+            )"
+            gh pr edit "$NUMBER" --add-label "duplicate"
+            gh pr close "$NUMBER"
+            ;;
+
+          /enterprise)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Already Planned for Kargo Enterprise
+
+        Thank you for your suggestion. This is something already planned for (or already available in) [Kargo Enterprise](https://akuity.io). As such, it will not be implemented in the open source project.
+
+        For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
+        MSG
+            )"
+            gh pr close "$NUMBER"
+            ;;
+
+          /maintainer)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Contribution Policy Notice
+
+        This pull request has been closed because the linked issue is designated as maintainer-only. This typically indicates the work requires deep familiarity with Kargo internals or touches particularly sensitive areas of the codebase.
+
+        See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+        MSG
+            )"
+            gh pr close "$NUMBER"
+            ;;
+
+          /premature)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Contribution Policy Notice
+
+        This pull request has been closed because the linked issue has not been unblocked for external contribution. The issue still carries one or more blocking labels, indicating it is not ready for work.
+
+        Please wait for a maintainer to unblock the issue before opening a pull request. An issue is ready for contribution when all blocking labels have been removed.
+
+        See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+        MSG
+            )"
+            gh pr close "$NUMBER"
+            ;;
+
+          /quality)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Quality Standards Notice
+
+        This pull request has been closed because it does not meet the project's quality standards for review.
+
+        All pull requests must be authored and reviewed by a human. AI-assisted coding is acceptable, but every line must be understood and verified by the submitter. Submissions that appear to be generated without meaningful human review will be closed.
+
+        If you believe this was in error, please review the [Contributor Guide](https://docs.kargo.io/contributor-guide), ensure your changes meet project standards, and open a new pull request.
+        MSG
+            )"
+            gh pr close "$NUMBER"
+            ;;
+
+          /research)
+            gh pr edit "$NUMBER" --add-label "needs research"
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Research Needed
+
+        A maintainer has indicated that further investigation or research is needed before this pull request can be merged.
+
+        Please do not merge this PR until the research has concluded and all blocking labels have been removed.
+        MSG
+            )"
+            ;;
+
+          /unblock)
+            for label in "needs discussion" "needs research"; do
+              gh pr edit "$NUMBER" --remove-label "$label" 2>/dev/null || true
+            done
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Unblocked for Merge
+
+        A maintainer has removed blocking labels from this pull request. Review may now proceed.
+        MSG
+            )"
+            ;;
+
+          /unsolicited)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Contribution Policy Notice
+
+        This pull request has been closed because it does not reference an unblocked issue.
+
+        All contributions require a linked, unblocked issue to ensure that proposed changes have been reviewed by maintainers before effort is invested.
+
+        **To contribute:**
+
+        1. Open a [Bug Report](https://github.com/${{ github.repository }}/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/${{ github.repository }}/issues/new?template=feature_request.yml)
+        2. Wait for a maintainer to review the issue and remove any blocking labels
+        3. Reference the issue in your PR using `Closes #<number>`
+
+        See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
+        MSG
+            )"
+            gh pr close "$NUMBER"
+            ;;
+
+          /help)
+            gh pr comment "$NUMBER" --body "$(cat <<'MSG'
+        ## Available Slash Commands
+
+        | Command | Description |
+        |---------|-------------|
+        | `/discuss` | Add `needs discussion` label; blocks merge |
+        | `/duplicate #N` | Close as duplicate of #N |
+        | `/enterprise` | Close as already planned for Kargo Enterprise |
+        | `/maintainer` | Close; linked issue is maintainer-only |
+        | `/premature` | Close; linked issue is not unblocked |
+        | `/quality` | Close; does not meet quality standards |
+        | `/research` | Add `needs research` label; blocks merge |
+        | `/unblock` | Remove blocking labels; unblocks merge |
+        | `/unsolicited` | Close; no linked issue |
+        | `/help` | Show this list |
+        MSG
+            )"
+            ;;
+
+          *)
+            echo "Unknown command: $COMMAND"
+            exit 0
+            ;;
+        esac
