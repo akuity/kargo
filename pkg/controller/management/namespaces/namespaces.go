@@ -131,6 +131,10 @@ func (r *reconciler) Reconcile(
 	// and that we don't end up with namespaces that can't be deleted
 	// because they have a non-existent project owner reference.
 	// For more information see: https://github.com/akuity/kargo/issues/4627#issuecomment-3821967156
+	//
+	// The Project reconciler no longer sets this owner reference, so for newly
+	// reconciled namespaces this is a no-op. It is retained to clean up
+	// namespaces that were created by older Kargo versions.
 	project := &kargoapi.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: ns.Name},
 		TypeMeta: metav1.TypeMeta{
