@@ -4655,6 +4655,9 @@
         },
         "name": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -4672,6 +4675,9 @@
         },
         "name": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -5000,6 +5006,9 @@
         },
         "description": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -5014,6 +5023,9 @@
         },
         "description": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
