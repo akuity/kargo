@@ -16,6 +16,39 @@
     "spec": {
       "description": "Spec describes the configuration of a cluster.",
       "properties": {
+        "gitClient": {
+          "description": "GitClient describes cluster-level configuration for Kargo's Git client,\nincluding committer identity and an optional signing key. If set, these\nvalues take precedence over any configuration provided at install time\nvia the Helm chart.",
+          "properties": {
+            "email": {
+              "description": "Email is the email address used for Git commits made by Kargo.",
+              "format": "email",
+              "minLength": 1,
+              "type": "string"
+            },
+            "name": {
+              "description": "Name is the name used for Git commits made by Kargo.",
+              "minLength": 1,
+              "type": "string"
+            },
+            "signingKeySecret": {
+              "description": "SigningKeySecret references a Secret in the system namespace containing\na GPG signing key for commit signing. The Secret must contain a data\nkey named \"signingKey\" with the GPG private key material.",
+              "properties": {
+                "name": {
+                  "default": "",
+                  "description": "Name of the referent.\nThis field is effectively required, but due to backwards compatibility is\nallowed to be empty. Instances of this type with an empty value here are\nalmost certainly wrong.\nMore info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names",
+                  "type": "string"
+                }
+              },
+              "type": "object",
+              "x-kubernetes-map-type": "atomic"
+            }
+          },
+          "required": [
+            "email",
+            "name"
+          ],
+          "type": "object"
+        },
         "webhookReceivers": {
           "description": "WebhookReceivers describes cluster-scoped webhook receivers used for\nprocessing events from various external platforms",
           "items": {

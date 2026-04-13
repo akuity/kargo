@@ -27,6 +27,9 @@ type MockRepo struct {
 	ListTagsFn                func() ([]TagMetadata, error)
 	ListCommitsFn             func(opts *ListCommitsOptions) ([]CommitMetadata, error)
 	CommitMessageFn           func(id string) (string, error)
+	GetCommitSignatureInfoFn  func(string) (*CommitSignatureInfo, error)
+	IntegrateRemoteChangesFn  func(*IntegrationOptions) error
+	PullFn                    func(*PullOptions) error
 	PushFn                    func(*PushOptions) error
 	RefsHaveDiffsFn           func(commit1 string, commit2 string) (bool, error)
 	RemoteBranchExistsFn      func(branch string) (bool, error)
@@ -133,6 +136,22 @@ func (m *MockRepo) ListCommits(opts *ListCommitsOptions) ([]CommitMetadata, erro
 
 func (m *MockRepo) CommitMessage(id string) (string, error) {
 	return m.CommitMessageFn(id)
+}
+
+func (m *MockRepo) GetCommitSignatureInfo(
+	commitID string,
+) (*CommitSignatureInfo, error) {
+	return m.GetCommitSignatureInfoFn(commitID)
+}
+
+func (m *MockRepo) IntegrateRemoteChanges(
+	opts *IntegrationOptions,
+) error {
+	return m.IntegrateRemoteChangesFn(opts)
+}
+
+func (m *MockRepo) Pull(opts *PullOptions) error {
+	return m.PullFn(opts)
 }
 
 func (m *MockRepo) Push(opts *PushOptions) error {

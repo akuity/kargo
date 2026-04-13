@@ -115,4 +115,8 @@ const (
 	// when executed as part of a task, to propagate its output directly to the
 	// Promotion's shared state, in addition to the task's own state.
 	StepCapabilityTaskOutputPropagation StepRunnerCapability = "task-output-propagation"
+	// StepCapabilityAccessGitUser represents the capability to dynamically
+	// resolve the system-level git user configuration, including any signing
+	// key configured via ClusterConfig.
+	StepCapabilityAccessGitUser StepRunnerCapability = "access-git-user"
 )

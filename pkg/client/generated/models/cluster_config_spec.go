@@ -17,6 +17,15 @@ import (
 // swagger:model ClusterConfigSpec
 type ClusterConfigSpec struct {
 
+	// GitClient describes cluster-level configuration for Kargo's Git client,
+	// including committer identity and an optional signing key. If set, these
+	// values take precedence over any configuration provided at install time
+	// via the Helm chart.
+	// +optional
+	GitClient struct {
+		GitClientConfig
+	} `json:"gitClient,omitempty"`
+
 	// WebhookReceivers describes cluster-scoped webhook receivers used for
 	// processing events from various external platforms
 	WebhookReceivers []*WebhookReceiverConfig `json:"webhookReceivers"`
@@ -26,6 +35,10 @@ type ClusterConfigSpec struct {
 func (m *ClusterConfigSpec) Validate(formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.validateGitClient(formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.validateWebhookReceivers(formats); err != nil {
 		res = append(res, err)
 	}
@@ -33,6 +46,14 @@ func (m *ClusterConfigSpec) Validate(formats strfmt.Registry) error {
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ClusterConfigSpec) validateGitClient(formats strfmt.Registry) error {
+	if swag.IsZero(m.GitClient) { // not required
+		return nil
+	}
+
 	return nil
 }
 
@@ -70,6 +91,10 @@ func (m *ClusterConfigSpec) validateWebhookReceivers(formats strfmt.Registry) er
 func (m *ClusterConfigSpec) ContextValidate(ctx context.Context, formats strfmt.Registry) error {
 	var res []error
 
+	if err := m.contextValidateGitClient(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateWebhookReceivers(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -77,6 +102,11 @@ func (m *ClusterConfigSpec) ContextValidate(ctx context.Context, formats strfmt.
 	if len(res) > 0 {
 		return errors.CompositeValidationError(res...)
 	}
+	return nil
+}
+
+func (m *ClusterConfigSpec) contextValidateGitClient(ctx context.Context, formats strfmt.Registry) error {
+
 	return nil
 }
 

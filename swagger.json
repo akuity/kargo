@@ -4655,6 +4655,9 @@
         },
         "name": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -4672,6 +4675,9 @@
         },
         "name": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -5000,6 +5006,9 @@
         },
         "description": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -5014,6 +5023,9 @@
         },
         "description": {
           "type": "string"
+        },
+        "replicate": {
+          "type": "boolean"
         }
       }
     },
@@ -6161,6 +6173,14 @@
     "ClusterConfigSpec": {
       "type": "object",
       "properties": {
+        "gitClient": {
+          "description": "GitClient describes cluster-level configuration for Kargo's Git client,\nincluding committer identity and an optional signing key. If set, these\nvalues take precedence over any configuration provided at install time\nvia the Helm chart.\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/GitClientConfig"
+            }
+          ]
+        },
         "webhookReceivers": {
           "description": "WebhookReceivers describes cluster-scoped webhook receivers used for\nprocessing events from various external platforms",
           "type": "array",
@@ -6722,6 +6742,31 @@
           "type": "string"
         }
       }
+    },
+    "GitClientConfig": {
+      "type": "object",
+      "properties": {
+        "email": {
+          "description": "Email is the email address used for Git commits made by Kargo.\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1\n+kubebuilder:validation:Format=\"email\"",
+          "type": "string"
+        },
+        "name": {
+          "description": "Name is the name used for Git commits made by Kargo.\n+kubebuilder:validation:Required\n+kubebuilder:validation:MinLength=1",
+          "type": "string"
+        },
+        "signingKeySecret": {
+          "description": "SigningKeySecret references a Secret in the system namespace containing\na GPG signing key for commit signing. The Secret must contain a data\nkey named \"signingKey\" with the GPG private key material.\n+optional",
+          "allOf": [
+            {
+              "$ref": "#/definitions/V1LocalObjectReference"
+            }
+          ]
+        }
+      },
+      "required": [
+        "email",
+        "name"
+      ]
     },
     "GitCommit": {
       "type": "object",

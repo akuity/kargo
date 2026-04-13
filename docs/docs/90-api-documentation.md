@@ -209,6 +209,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to create. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [CreateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateConfigMapRequest-DataEntry"></a>
 
@@ -238,6 +239,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to create. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [CreateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-CreateGenericCredentialsRequest-DataEntry"></a>
 
@@ -1365,6 +1367,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the ConfigMap to be updated. |
 | description | [string](#string) |  description is a human-readable description of the ConfigMap. |
 | data | [UpdateConfigMapRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry) |  data contains the key-value pairs that make up the ConfigMap. |
+| replicate | [bool](#bool) |  replicate, when true, replicates this ConfigMap to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateConfigMapRequest-DataEntry"></a>
 
@@ -1409,6 +1412,7 @@ Stability is not guaranteed.
 | name | [string](#string) |  name is the name of the generic credentials to update. |
 | description | [string](#string) |  description is a human-readable description of the generic credentials. |
 | data | [UpdateGenericCredentialsRequest.DataEntry](#akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry) |  data contains the key-value pairs that make up the generic credentials data. |
+| replicate | [bool](#bool) |  replicate, when true, replicates these credentials to all Project namespaces by setting the kargo.akuity.io/replicate-to: "*" annotation. |
 
 <a name="akuity-io-kargo-service-v1alpha1-UpdateGenericCredentialsRequest-DataEntry"></a>
 
@@ -1895,6 +1899,7 @@ RawFormat specifies the format for raw resource representation.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | webhookReceivers | [WebhookReceiverConfig](#github-com-akuity-kargo-api-v1alpha1-WebhookReceiverConfig) |  WebhookReceivers describes cluster-scoped webhook receivers used for processing events from various external platforms |
+| gitClient | [GitClientConfig](#github-com-akuity-kargo-api-v1alpha1-GitClientConfig) |  GitClient describes cluster-level configuration for Kargo's Git client, including committer identity and an optional signing key. If set, these values take precedence over any configuration provided at install time via the Helm chart. +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-ClusterConfigStatus"></a>
 
@@ -2185,6 +2190,16 @@ RawFormat specifies the format for raw resource representation.
 | name | [string](#string) |  Name is the name of the target resource. If LabelSelector and/or IndexSelectors are also specified, the results are the combined (logical AND) of the criteria.  +optional |
 | labelSelector | k8s.io.apimachinery.pkg.apis.meta.v1.LabelSelector |  LabelSelector is a label selector to identify the target resources. If used with IndexSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
 | indexSelector | [IndexSelector](#github-com-akuity-kargo-api-v1alpha1-IndexSelector) |  IndexSelector is a selector used to identify cached target resources by cache key. If used with LabelSelector and/or Name, the results are the combined (logical AND) of all the criteria.  +optional |
+
+<a name="github-com-akuity-kargo-api-v1alpha1-GitClientConfig"></a>
+
+### GitClientConfig
+ GitClientConfig describes cluster-level configuration for Kargo's Git client.
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| name | [string](#string) |  Name is the name used for Git commits made by Kargo.   |
+| email | [string](#string) |  Email is the email address used for Git commits made by Kargo.    |
+| signingKeySecret | k8s.io.api.core.v1.LocalObjectReference |  SigningKeySecret references a Secret in the system namespace containing a GPG signing key for commit signing. The Secret must contain a data key named "signingKey" with the GPG private key material. +optional |
 
 <a name="github-com-akuity-kargo-api-v1alpha1-GitCommit"></a>
 

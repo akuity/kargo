@@ -10,7 +10,8 @@ import (
 // injected into StepRunner implementations to grant them specific capabilities
 // they may otherwise lack.
 type StepRunnerCapabilities struct {
-	KargoClient  client.Client
-	ArgoCDClient client.Client
-	CredsDB      credentials.Database
+	KargoClient     client.Client
+	ArgoCDClient    client.Client
+	CredsDB         credentials.Database
+	GitUserResolver GitUserResolver
 }

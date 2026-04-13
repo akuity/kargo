@@ -6,7 +6,6 @@ import (
 	"os"
 
 	securejoin "github.com/cyphar/filepath-securejoin"
-	"github.com/kelseyhightower/envconfig"
 	"github.com/xeipuuv/gojsonschema"
 
 	kargoapi "github.com/akuity/kargo/api/v1alpha1"
@@ -25,6 +24,7 @@ func init() {
 			Metadata: promotion.StepRunnerMetadata{
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
+					promotion.StepCapabilityAccessGitUser,
 				},
 			},
 			Value: newGitCloner,
@@ -36,9 +36,9 @@ func init() {
 // clones one or more refs from a remote Git repository to one or more working
 // directories.
 type gitCloner struct {
-	gitUser      git.User
-	credsDB      credentials.Database
-	schemaLoader gojsonschema.JSONLoader
+	gitUserResolver promotion.GitUserResolver
+	credsDB         credentials.Database
+	schemaLoader    gojsonschema.JSONLoader
 }
 
 // gitUserFromEnv populates a git.User struct from environment variables.
@@ -56,6 +56,17 @@ func gitUserFromEnv() git.User {
 		SigningKeyType: git.SigningKeyType(cfg.SigningKeyType),
 		SigningKeyPath: cfg.SigningKeyPath,
 	}
+// filterForCheckouts returns the clone filter to use based on checkout
+// configurations. Returns git.FilterBlobless if all checkouts specify sparse
+// patterns, returns empty string otherwise to avoid on-demand blob fetches for
+// full checkouts.
+func filterForCheckouts(checkouts []builtin.Checkout) string {
+	for _, checkout := range checkouts {
+		if len(checkout.Sparse) == 0 {
+			return ""
+		}
+	}
+	return git.FilterBlobless
 }
 
 // newGitCloner returns an implementation of the promotion.StepRunner interface
@@ -63,9 +74,9 @@ func gitUserFromEnv() git.User {
 // working directories.
 func newGitCloner(caps promotion.StepRunnerCapabilities) promotion.StepRunner {
 	return &gitCloner{
-		credsDB:      caps.CredsDB,
-		gitUser:      gitUserFromEnv(),
-		schemaLoader: getConfigSchemaLoader(stepKindGitClone),
+		credsDB:         caps.CredsDB,
+		gitUserResolver: caps.GitUserResolver,
+		schemaLoader:    getConfigSchemaLoader(stepKindGitClone),
 	}
 }
 
@@ -136,7 +147,11 @@ func (g *gitCloner) run(
 			SigningKey: cfg.Author.SigningKey, // Optional, may be empty
 		}
 	} else {
-		repoUser = g.gitUser // Default to the system-level gitUser
+		repoUser, err = g.gitUserResolver.Resolve(ctx)
+		if err != nil {
+			return promotion.StepResult{Status: kargoapi.PromotionStepStatusErrored},
+				fmt.Errorf("error resolving system git user: %w", err)
+		}
 	}
 
 	repo, err := git.CloneBare(
