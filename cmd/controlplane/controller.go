@@ -432,6 +432,11 @@ func (o *controllerOptions) setupReconcilers(
 				kargoMgr.GetClient(),
 				argoCDClient,
 				credentialsDB,
+				promotion.NewGitUserResolver(
+					kargoMgr.GetClient(),
+					os.GetEnv("SYSTEM_RESOURCES_NAMESPACE", ""),
+					promotion.GitUserFromEnv(),
+				),
 				promotion.DefaultExprDataCacheFn,
 			),
 			promotionsReconcilerCfg,

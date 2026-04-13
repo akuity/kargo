@@ -2,7 +2,6 @@ package git
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -10,28 +9,41 @@ import (
 	"github.com/akuity/kargo/pkg/logging"
 )
 
-// signatureStatus represents the trust level of a commit's GPG signature.
-type signatureStatus int
+// IntegrationOptions represents options for integrating remote changes into
+// the local branch before pushing.
+type IntegrationOptions struct {
+	// TargetBranch is the remote branch to integrate changes from. If empty, the
+	// current branch is used.
+	TargetBranch string
+	// IntegrationPolicy controls how remote changes are integrated. If empty or
+	// set to PushIntegrationPolicyNone, no integration is performed.
+	IntegrationPolicy PushIntegrationPolicy
+}
 
-const (
-	// signatureUnsigned indicates the commit has no GPG signature.
-	signatureUnsigned signatureStatus = iota
-	// signatureTrusted indicates the commit is signed by a trusted key.
-	signatureTrusted
-	// signatureUntrusted indicates the commit is signed but the key is
-	// not trusted (or the signature is invalid).
-	signatureUntrusted
-)
-
-// integrateBeforePush integrates remote changes before pushing.
-func (w *workTree) integrateBeforePush(
-	targetBranch string,
-	integrationPolicy PushIntegrationPolicy,
-) error {
+func (w *workTree) IntegrateRemoteChanges(opts *IntegrationOptions) error {
+	if opts == nil {
+		opts = &IntegrationOptions{}
+	}
+	integrationPolicy := opts.IntegrationPolicy
 	if integrationPolicy == "" {
 		integrationPolicy = PushIntegrationPolicyNone
 	}
 	if integrationPolicy == PushIntegrationPolicyNone {
+		return nil
+	}
+
+	targetBranch := opts.TargetBranch
+	if targetBranch == "" {
+		var err error
+		if targetBranch, err = w.CurrentBranch(); err != nil {
+			return err
+		}
+	}
+	exists, err := w.RemoteBranchExists(targetBranch)
+	if err != nil {
+		return err
+	}
+	if !exists {
 		return nil
 	}
 
@@ -166,58 +178,6 @@ func (w *workTree) commitsToReplay(
 		return nil, nil
 	}
 	return strings.Split(output, "\n"), nil
-}
-
-// isSigningConfigured returns true if GPG commit signing is enabled in the
-// git configuration for this repository.
-func (w *workTree) isSigningConfigured() (bool, error) {
-	cmd := w.buildGitCommand("config", "--get", "commit.gpgSign")
-	res, err := libExec.Exec(cmd)
-	if err != nil {
-		var exitErr *libExec.ExitError
-		if errors.As(err, &exitErr) && exitErr.ExitCode == 1 {
-			// Exit code 1 means the key was not found — signing is
-			// not configured.
-			return false, nil
-		}
-		return false, fmt.Errorf(
-			"error reading commit.gpgSign config: %w", err,
-		)
-	}
-	return strings.TrimSpace(string(res)) == "true", nil
-}
-
-// verifyCommitSignature checks the GPG signature status of the specified
-// commit. It uses git's %G? format which returns:
-//
-//   - G: good (valid) signature from a trusted key
-//   - U: good signature from an untrusted key
-//   - B: bad signature
-//   - X: good signature that has expired
-//   - Y: good signature made by an expired key
-//   - R: good signature made by a revoked key
-//   - E: signature cannot be checked (missing key)
-//   - N: no signature
-func (w *workTree) verifyCommitSignature(
-	commitID string,
-) (signatureStatus, error) {
-	cmd := w.buildGitCommand("log", "-1", "--format=%G?", commitID, "--")
-	res, err := libExec.Exec(cmd)
-	if err != nil {
-		return signatureUnsigned, fmt.Errorf(
-			"error checking signature of commit %s: %w",
-			commitID, err,
-		)
-	}
-	switch strings.TrimSpace(string(res)) {
-	case "G":
-		return signatureTrusted, nil
-	case "N", "":
-		return signatureUnsigned, nil
-	default:
-		// U, B, X, Y, R, E — all treated as untrusted.
-		return signatureUntrusted, nil
-	}
 }
 
 // isRebaseSafeForCommit is a pure function implementing the rebase safety

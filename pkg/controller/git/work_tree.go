@@ -80,6 +80,20 @@ type WorkTree interface {
 	// CommitMessage returns the text of the most recent commit message associated
 	// with the specified commit ID.
 	CommitMessage(id string) (string, error)
+	// GetCommitSignatureInfo returns signature information for the specified
+	// commit, including whether it is signed by a trusted key and the
+	// identity of the signer. If opts provides a SigningKey, a temporary
+	// keyring is created with that key imported at ultimate trust and used
+	// for verification.
+	GetCommitSignatureInfo(commitID string) (*CommitSignatureInfo, error)
+	// IntegrateRemoteChanges integrates remote changes into the local branch
+	// before pushing. This fetches the target branch and applies the operator-
+	// configured integration policy (rebase, merge, or fail). It is a no-op
+	// if the remote branch does not exist or the policy is None.
+	IntegrateRemoteChanges(*IntegrationOptions) error
+	// Pull fetches and integrates changes from a remote branch
+	// into the current local branch.
+	Pull(*PullOptions) error
 	// Push pushes from the local repository to the remote repository.
 	Push(*PushOptions) error
 	// RefsHaveDiffs returns whether there is a diff between two commits/branches
@@ -646,6 +660,50 @@ func (w *workTree) ListTags() ([]TagMetadata, error) {
 	return tags, nil
 }
 
+// PullOptions represents options for pulling changes from a remote branch.
+type PullOptions struct {
+	// Branch is the remote branch to pull from. If not specified, the current
+	// branch will be pulled.
+	Branch string
+	// Force indicates whether the local branch should be reset to match
+	// the remote exactly, discarding any local state.
+	Force bool
+}
+
+func (w *workTree) Pull(opts *PullOptions) error {
+	if opts == nil {
+		opts = &PullOptions{}
+	}
+	branch := opts.Branch
+	if branch == "" {
+		var err error
+		if branch, err = w.CurrentBranch(); err != nil {
+			return err
+		}
+	}
+	if err := w.Fetch(&FetchOptions{Branch: branch}); err != nil {
+		return fmt.Errorf("error fetching branch %q: %w", branch, err)
+	}
+	if opts.Force {
+		cmd := w.buildGitCommand(
+			"reset", "--hard", fmt.Sprintf("origin/%s", branch),
+		)
+		if _, err := libExec.Exec(cmd); err != nil {
+			return fmt.Errorf(
+				"error resetting to origin/%s: %w", branch, err,
+			)
+		}
+		return nil
+	}
+	cmd := w.buildGitCommand("merge", fmt.Sprintf("origin/%s", branch))
+	if _, err := libExec.Exec(cmd); err != nil {
+		return fmt.Errorf(
+			"error merging origin/%s: %w", branch, err,
+		)
+	}
+	return nil
+}
+
 // PushOptions represents options for pushing changes to a remote git
 // repository.
 type PushOptions struct {
@@ -698,20 +756,11 @@ func (w *workTree) Push(opts *PushOptions) error {
 	}
 
 	args = append(args, fmt.Sprintf("HEAD:%s", targetBranch))
-	if opts.IntegrationPolicy != PushIntegrationPolicyNone {
-		exists, err := w.RemoteBranchExists(targetBranch)
-		if err != nil {
-			return err
-		}
-		// We only want to pull and rebase/merge if the remote branch exists.
-		if exists {
-			if err = w.integrateBeforePush(
-				targetBranch,
-				opts.IntegrationPolicy,
-			); err != nil {
-				return err
-			}
-		}
+	if err := w.IntegrateRemoteChanges(&IntegrationOptions{
+		TargetBranch:      targetBranch,
+		IntegrationPolicy: opts.IntegrationPolicy,
+	}); err != nil {
+		return err
 	}
 
 	if opts.Force {
