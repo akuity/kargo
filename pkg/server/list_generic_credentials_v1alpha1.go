@@ -207,7 +207,7 @@ func sanitizeGenericCredentials(secret corev1.Secret) *corev1.Secret {
 	s.StringData = make(map[string]string, len(s.Data))
 	for k, v := range s.Annotations {
 		switch k {
-		case kargoapi.AnnotationKeyDescription:
+		case kargoapi.AnnotationKeyDescription, kargoapi.AnnotationKeyReplicateTo:
 			s.Annotations[k] = v
 		default:
 			s.Annotations[k] = redacted

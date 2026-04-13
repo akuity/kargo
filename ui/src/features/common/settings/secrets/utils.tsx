@@ -2,7 +2,11 @@ import { faDocker, faGit } from '@fortawesome/free-brands-svg-icons';
 import { faAnchor, faDharmachakra, faQuestionCircle } from '@fortawesome/free-solid-svg-icons';
 
 import { SegmentLabel } from '@ui/features/common/segment-label';
-import { DESCRIPTION_ANNOTATION_KEY } from '@ui/features/common/utils';
+import {
+  DESCRIPTION_ANNOTATION_KEY,
+  REPLICATE_TO_ALL_VALUE,
+  REPLICATE_TO_ANNOTATION_KEY
+} from '@ui/features/common/utils';
 import { V1Secret } from '@ui/gen/api/v2/models';
 
 import { CredentialTypeLabelKey, CredentialsDataKey, CredentialsType } from './types';
@@ -44,7 +48,8 @@ export const constructDefaults = (init?: V1Secret, type?: string) => {
       repoUrlIsRegex: false,
       username: '',
       password: '',
-      data: []
+      data: [],
+      replicate: false
     };
   }
 
@@ -60,7 +65,8 @@ export const constructDefaults = (init?: V1Secret, type?: string) => {
     repoUrlIsRegex: stringData[CredentialsDataKey.RepoUrlIsRegex] === 'true',
     username: stringData[CredentialsDataKey.Username],
     password: '',
-    data: redactSecretStringData(init)
+    data: redactSecretStringData(init),
+    replicate: annotations[REPLICATE_TO_ANNOTATION_KEY] === REPLICATE_TO_ALL_VALUE
   };
 };
 
