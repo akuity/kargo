@@ -19,11 +19,10 @@ metadata:
     {{- end }}
   {{- end }}
 spec:
-  {{- with .Values.externalWebhooksServer.podDisruptionBudget.minAvailable }}
-  minAvailable: {{ . }}
-  {{- end }}
-  {{- with .Values.externalWebhooksServer.podDisruptionBudget.maxUnavailable }}
-  maxUnavailable: {{ . }}
+  {{- if .Values.externalWebhooksServer.podDisruptionBudget.maxUnavailable }}
+  maxUnavailable: {{ .Values.externalWebhooksServer.podDisruptionBudget.maxUnavailable }}
+  {{- else }}
+  minAvailable: {{ .Values.externalWebhooksServer.podDisruptionBudget.minAvailable }}
   {{- end }}
   selector:
     matchLabels:
