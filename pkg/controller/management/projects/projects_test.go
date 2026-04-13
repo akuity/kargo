@@ -37,7 +37,6 @@ func TestNewReconciler(t *testing.T) {
 	require.NotNil(t, r.getNamespaceFn)
 	require.NotNil(t, r.createNamespaceFn)
 	require.NotNil(t, r.deleteNamespaceFn)
-	require.NotNil(t, r.patchOwnerReferencesFn)
 	require.NotNil(t, r.ensureFinalizerFn)
 	require.NotNil(t, r.removeFinalizerFn)
 	require.NotNil(t, r.ensureSystemPermissionsFn)
@@ -719,17 +718,6 @@ func TestReconciler_cleanupProject(t *testing.T) {
 					ns, ok := obj.(*corev1.Namespace)
 					require.True(t, ok)
 					ns.Name = "test-project"
-					ns.OwnerReferences = []metav1.OwnerReference{
-						{UID: "project-uid"},
-						{UID: "other-uid"},
-					}
-					return nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
 					return nil
 				},
 				removeFinalizerFn: func(
@@ -1225,45 +1213,8 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"already owned by the project",
-			project: &kargoapi.Project{
-				ObjectMeta: metav1.ObjectMeta{
-					UID: types.UID("fake-uid"),
-				},
-			},
-			reconciler: &reconciler{
-				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) (bool, error) {
-					return false, nil
-				},
-				getNamespaceFn: func(
-					_ context.Context,
-					_ types.NamespacedName,
-					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
-					}
-					ns.OwnerReferences = []metav1.OwnerReference{{
-						UID: "fake-uid",
-					}}
-					return nil
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.NoError(t, err)
-			},
-		},
-		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; error ensuring finalizer",
+			name: "namespace exists, is labeled as a project namespace; " +
+				"error ensuring finalizer",
 			project: &kargoapi.Project{},
 			reconciler: &reconciler{
 				getNamespaceFn: func(
@@ -1293,8 +1244,7 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 			},
 		},
 		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; error patching it",
+			name:    "namespace exists, is labeled as a project namespace; success",
 			project: &kargoapi.Project{},
 			reconciler: &reconciler{
 				getNamespaceFn: func(
@@ -1311,56 +1261,13 @@ func TestReconciler_ensureNamespace(t *testing.T) {
 					return nil
 				},
 				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) (bool, error) {
-					return false, nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return errors.New("something went wrong")
-				},
-			},
-			assertions: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error patching namespace")
-				require.ErrorContains(t, err, "something went wrong")
-			},
-		},
-		{
-			name: "namespace exists, is labeled as a project namespace, and is " +
-				"NOT already owned by the project; success",
-			project: &kargoapi.Project{},
-			reconciler: &reconciler{
-				getNamespaceFn: func(
 					_ context.Context,
-					_ types.NamespacedName,
+					_ client.Client,
 					obj client.Object,
-					_ ...client.GetOption,
-				) error {
-					ns, ok := obj.(*corev1.Namespace)
-					require.True(t, ok)
-					ns.Labels = map[string]string{
-						kargoapi.LabelKeyProject: kargoapi.LabelValueTrue,
-					}
-					return nil
-				},
-				ensureFinalizerFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
 				) (bool, error) {
+					// Smoke/sanity test to ensure we are not adding an owner reference anymore
+					require.Len(t, obj.GetOwnerReferences(), 0)
 					return false, nil
-				},
-				patchOwnerReferencesFn: func(
-					context.Context,
-					client.Client,
-					client.Object,
-				) error {
-					return nil
 				},
 			},
 			assertions: func(t *testing.T, err error) {
