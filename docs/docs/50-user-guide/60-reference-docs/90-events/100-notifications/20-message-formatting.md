@@ -113,3 +113,34 @@ SMTP messages can be formatted using JSON with the following structure:
   "html": true 
 }
 ```
+
+### HTTP
+
+HTTP messages support an optional structured body. When the `EventRouter` output is plain text, it
+is sent verbatim as the request body. When the output is structured data (JSON or YAML), it is
+decoded into the following fields:
+
+| Key                 | Type              | Description                                                                                                                                                |
+| ------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `body`              | any               | The request body to send. Strings are sent as-is; other values are serialized as JSON. This can be nested JSON objects or arrays.                          |
+| `headers`           | map[string]string | Additional HTTP headers to include in the request. These are merged with any headers configured on the channel, with per-message headers taking precedence |
+| `method`            | string            | Overrides the HTTP method configured on the channel                                                                                                        |
+| `url`               | string            | Overrides the URL configured on the channel                                                                                                                |
+| `queryParams`       | map[string]string | Additional query parameters to include in the request URL. These are merged with any query parameters configured on the channel                            |
+| `successExpression` | string            | Overrides the channel-level success expression. An expr-lang expression with access to `response.status`, `response.body`, and `response.headers`          |
+| `failureExpression` | string            | Overrides the channel-level failure expression. An expr-lang expression with access to `response.status`, `response.body`, and `response.headers`          |
+
+#### Example HTTP Message Body
+
+```json
+{
+  "body": {
+    "text": "🚀 A new promotion has been created for stage ${{ event.stageName }}!"
+  },
+  "headers": {
+    "X-Custom-Header": "kargo",
+    "Accept": "application/json"
+  },
+  "successExpression": "response.status >= 200 && ${{ event.freight.name }} == response.body.freightName"
+}
+```
