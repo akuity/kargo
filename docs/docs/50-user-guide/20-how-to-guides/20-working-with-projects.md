@@ -230,13 +230,15 @@ In the example above, the promotion policy applies to all `Stage`s with the
 <span class="tag beta"></span>
 
 Projects can define message channels to facilitate notifications and message sending as part of
-their workflows. Message channels can be configured for various platforms, such as Slack or SMTP.
+their workflows. Message channels can be configured for various platforms, such as Slack, SMTP, or
+HTTP webhooks.
 Channels are defined using the `MessageChannel` custom resource. This can be done either by applying
 YAML manifests or in the Kargo UI (also via YAML, though this will be made more user-friendly in
 future releases).
 
-Any message channel specification must include only a single channel type (e.g., Slack or SMTP, not
-both) and an optional `secretRef` to a Kubernetes `Secret` containing any necessary credentials.
+Any message channel specification must include only a single channel type (e.g., Slack, SMTP, or
+HTTP, not multiple) and an optional `secretRef` to a Kubernetes `Secret` containing any necessary
+credentials.
 
 #### Examples
 
@@ -302,6 +304,77 @@ spec:
     # In most cases this should only be set to true for testing with self-signed certificates.
     insecureSkipVerify: false
 ```
+
+##### HTTP
+
+:::note
+
+HTTP channels are only supported by
+[`EventRouter`s](../60-reference-docs/90-events/100-notifications/10-configuring-routers.md). They
+cannot be used with the [`send-message`](../60-reference-docs/30-promotion-steps/send-message.md)
+promotion step. To make HTTP requests as part of a promotion workflow, use the
+[`http`](../60-reference-docs/30-promotion-steps/http.md) promotion step instead.
+
+:::
+
+This is an example `MessageChannel` configuration for HTTP showing all options with annotations:
+
+```yaml
+apiVersion: ee.kargo.akuity.io/v1alpha1
+kind: MessageChannel
+metadata:
+  name: webhook-endpoint
+  # Must match the namespace of the Project
+  namespace: kargo-demo
+spec:
+  # A reference to a Secret containing authentication credentials. This is optional for HTTP.
+  # The Secret may contain one of the following keys:
+  # - `bearerToken`: A plain token that will be sent as a Bearer authorization header
+  # - `authorization`: A custom value that will be sent verbatim as the Authorization header
+  secretRef:
+    # The `namespace` field is ignored for `MessageChannel` as it is only allowed to reference
+    # Secrets in the same namespace
+    name: webhook-secret
+  # Configuration specific to HTTP
+  http:
+    # The endpoint to send the HTTP request to. This field is required
+    url: https://hooks.example.com/notify
+    # The HTTP method to use. Defaults to POST. Allowed values: GET, POST, PUT, PATCH, DELETE
+    method: POST
+    # Additional HTTP headers to include in the request. This field is optional
+    headers:
+    - name: Content-Type
+      value: application/json
+    # Additional query parameters to include in the request URL. This field is optional
+    queryParams:
+    - name: source
+      value: kargo
+    # Maximum time to wait for the request to complete. Must be a valid Go duration string.
+    # Defaults to "10s"
+    timeout: 30s
+    # Whether to skip TLS certificate verification. Should only be used for development or testing
+    insecureSkipTLSVerify: false
+    # An expr-lang expression to evaluate whether the request succeeded. Has access to
+    # response.status, response.body, and response.headers. If omitted, any 2XX status code is
+    # treated as success. Can be overridden per-message in the EventRouter output
+    successExpression: "response.status >= 200 && response.status < 300"
+    # An expr-lang expression to evaluate whether the request failed. Has access to
+    # response.status, response.body, and response.headers. If omitted, any non-2XX status code is
+    # treated as failure. Can be overridden per-message in the EventRouter output
+    failureExpression: "response.status >= 400"
+```
+
+The `response.body` field will attempt to parse the response body as JSON or YAML if the
+`Content-Type` response header indicates a JSON or YAML response. If parsing fails or the content
+type is not JSON/YAML, `response.body` will be treated as a string containing the raw response body.
+
+:::info
+
+When using success or failure expressions, please note that the 429 response status code (Too Many
+Requests) is reserved. Any response with this status code will never evaluate either expression as
+it is used to automatically backoff and retry requests that exceed rate limits.
+
+:::
 
 ## Namespace Adoption
 
