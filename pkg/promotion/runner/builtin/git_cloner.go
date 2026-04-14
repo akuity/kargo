@@ -25,6 +25,19 @@ func init() {
 				RequiredCapabilities: []promotion.StepRunnerCapability{
 					promotion.StepCapabilityAccessCredentials,
 					promotion.StepCapabilityAccessGitUser,
+					// This step runner doesn't directly use the k8s client for the Kargo
+					// control plane's underlying cluster directly, but the default
+					// GitUserResolver implementation, which is injected when
+					// StepCapabilityAccessGitUser is requested, DOES use it.
+					//
+					// At present, this fact requires this runner to request
+					// StepCapabilityAccessControlPlane as well, as this is the only
+					// capability that will cause EE's much more complex promotion
+					// orchestrator to perform necessary k8s client setup for this step.
+					//
+					// TODO(krancour): This is something to revisit in the future as OSS
+					// and EE both continue to evolve.
+					promotion.StepCapabilityAccessControlPlane,
 				},
 			},
 			Value: newGitCloner,
