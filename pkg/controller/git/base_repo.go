@@ -307,7 +307,10 @@ func (b *baseRepo) saveOriginalURL() error {
 
 // loadHomeDir restores the repository's home directory from the repository's
 // configuration. This is useful for reliably determining this information when
-// an existing repository or working tree is loaded from the file system.
+// an existing repository or working tree is loaded from the file system. It
+// also reconciles any residual GnuPG state in that home directory that may
+// have been left behind by a process in a different container sharing the
+// same underlying filesystem.
 func (b *baseRepo) loadHomeDir() error {
 	res, err := libExec.Exec(b.buildGitCommand(
 		"config",
@@ -317,7 +320,59 @@ func (b *baseRepo) loadHomeDir() error {
 		return fmt.Errorf("error reading repo home dir from config: %w", err)
 	}
 	b.homeDir = strings.TrimSpace(string(res))
+	b.reconcileGPGState()
 	return nil
+}
+
+// reconcileGPGState removes any residual GnuPG lockfiles and stops any stale
+// gpg-agent associated with this repository's GNUPGHOME. Required because in
+// a container-per-step promotion model each step runs in its own container —
+// separate PID namespaces, shared UTS namespace, shared workspace volume.
+// GnuPG's stale-lock heuristic compares (hostname, PID) against /proc; across
+// sibling containers sharing a hostname but not a PID namespace, a lockfile's
+// recorded PID can collide with an unrelated live process in the new
+// container, causing new gpg invocations to wait indefinitely for a
+// non-existent holder and eventually fail with a "Connection timed out"
+// error.
+//
+// Safe to call when no GnuPG state exists (no-op) and in traditional
+// single-process deployments where no cross-container state sharing occurs
+// (effectively a no-op: there are no stale locks to clean).
+func (b *baseRepo) reconcileGPGState() {
+	if b.homeDir == "" {
+		return
+	}
+	gnupgDir := filepath.Join(b.homeDir, ".gnupg")
+	if _, err := os.Stat(gnupgDir); err != nil {
+		return
+	}
+	// Best-effort: stop any gpg-agent bound to this GNUPGHOME. If no agent
+	// is running, gpgconf exits non-zero; ignore it.
+	_, _ = libExec.Exec(b.buildCommand("gpgconf", "--kill", "gpg-agent"))
+	// Remove any stale dotlock files. Dotlock records a (hostname, PID)
+	// pair which becomes ambiguous across containers sharing the workspace
+	// volume (see comment above).
+	patterns := []string{
+		filepath.Join(gnupgDir, "*.lock"),
+		filepath.Join(gnupgDir, "public-keys.d", "*.lock"),
+		filepath.Join(gnupgDir, "private-keys-v1.d", "*.lock"),
+	}
+	logger := logging.LoggerFromContext(context.TODO())
+	for _, pattern := range patterns {
+		matches, err := filepath.Glob(pattern)
+		if err != nil {
+			continue
+		}
+		for _, match := range matches {
+			if err := os.Remove(match); err != nil && !os.IsNotExist(err) {
+				logger.Error(
+					err,
+					"error removing stale GnuPG lockfile",
+					"file", match,
+				)
+			}
+		}
+	}
 }
 
 // loadURLs restores the repository's original and access URLs from the
