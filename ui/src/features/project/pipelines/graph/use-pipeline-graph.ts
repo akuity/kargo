@@ -37,6 +37,7 @@ export const useReactFlowPipelineGraph = (
     edges: []
   });
   const lastRunRef = useRef(0);
+  const functionCalled = useRef(false);
 
   useEffect(() => {
     const compute = () => {
@@ -149,6 +150,12 @@ export const useReactFlowPipelineGraph = (
 
       setResult({ nodes: reactFlowNodes, edges: reactFlowEdges });
     };
+
+    if (!functionCalled.current) {
+      functionCalled.current = true;
+      compute();
+      return;
+    }
 
     const elapsed = Date.now() - lastRunRef.current;
     const delay = Math.max(0, 3000 - elapsed);
