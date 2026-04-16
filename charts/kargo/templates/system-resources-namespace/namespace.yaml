@@ -2,7 +2,14 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  {{- if .Values.global.systemResources.extraNamespaceAnnotations }}
+  annotations:
+    {{- toYaml .Values.global.systemResources.extraNamespaceAnnotations | nindent 4 }}
+  {{- end }}
   name: {{ quote .Values.global.systemResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- with .Values.global.systemResources.extraNamespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}

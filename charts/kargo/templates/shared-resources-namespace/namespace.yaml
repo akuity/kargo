@@ -2,7 +2,14 @@
 apiVersion: v1
 kind: Namespace
 metadata:
+  {{- if .Values.global.sharedResources.extraNamespaceAnnotations }}
+  annotations:
+    {{- toYaml .Values.global.sharedResources.extraNamespaceAnnotations | nindent 4 }}
+  {{- end }}
   name: {{ .Values.global.sharedResources.namespace }}
   labels:
     {{- include "kargo.labels" . | nindent 4 }}
+  {{- with .Values.global.sharedResources.extraNamespaceLabels }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 {{- end }}
