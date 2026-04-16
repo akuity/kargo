@@ -17,7 +17,8 @@
         "snow-query-for-records",
         "snow-wait-for-condition",
         "toml-parse",
-        "toml-update"
+        "toml-update",
+        "kcl-run"
     ],
     "pro": [
         "jira",

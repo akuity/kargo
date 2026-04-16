@@ -559,6 +559,27 @@ type JSONUpdate struct {
 	Value interface{} `json:"value"`
 }
 
+type KCLRunConfig struct {
+	// Top-level KCL arguments, equivalent to the `kcl run -D name=value` flag.
+	Arguments []Argument `json:"arguments,omitempty"`
+	// Path to the file or directory where rendered manifests are written.
+	OutPath string `json:"outPath"`
+	// Specifies the naming convention for output files when writing to a directory. 'kargo'
+	// (default) uses '[namespace-]kind-name.yaml' format (e.g., 'deployment-myapp.yaml').
+	// 'kustomize' matches the naming convention of 'kustomize build -o dir/', using
+	// '[namespace_]group_version_kind_name.yaml' format (e.g., 'apps_v1_deployment_myapp.yaml').
+	OutputFormat *OutputFormat `json:"outputFormat,omitempty"`
+	// Path to a KCL file or package directory.
+	Path string `json:"path"`
+}
+
+type Argument struct {
+	// The name of the top-level KCL argument.
+	Name string `json:"name"`
+	// The value of the top-level KCL argument.
+	Value string `json:"value"`
+}
+
 type KustomizeBuildConfig struct {
 	// OutPath is the file path to write the built manifests to.
 	OutPath string `json:"outPath"`

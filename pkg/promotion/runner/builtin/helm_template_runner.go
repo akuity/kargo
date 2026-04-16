@@ -67,7 +67,7 @@ func outLayoutIsHelm(cfg builtin.HelmTemplateConfig) bool {
 // rendered manifests will be written according to the specified outLayout.
 func outPathIsFile(cfg builtin.HelmTemplateConfig) bool {
 	ext := filepath.Ext(cfg.OutPath)
-	return ext == ".yaml" || ext == ".yml"
+	return ext == ".yaml" || ext == ".yml" //nolint:goconst
 }
 
 // helmTemplateRunner is an implementation of the promotion.StepRunner interface
