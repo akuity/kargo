@@ -19,10 +19,8 @@ import { GraphContext } from '../context/graph-context';
 import { StackedNodes } from '../nodes/stacked-nodes';
 
 import { CustomNode } from './custom-node';
-import { DummyNodeRenderrer } from './dummy-node-renderrer';
 import { repoSubscriptionIndexer, stageIndexer, warehouseIndexer } from './node-indexer';
 import { useEventsWatcher } from './use-events-watcher';
-import { useNodeDimensionState } from './use-node-dimension-state';
 import { reactFlowNodeConstants, useReactFlowPipelineGraph } from './use-pipeline-graph';
 
 type GraphProps = {
@@ -60,14 +58,11 @@ export const Graph = (props: GraphProps) => {
 
   const [redraw, setRedraw] = useState(false);
 
-  const [dimensions, setDimensions] = useNodeDimensionState();
-
   const graph = useReactFlowPipelineGraph(
     props.stages,
     props.warehouses,
     filterContext?.preferredFilter.warehouses || [],
     redraw,
-    dimensions,
     {
       afterNodes: stackedNodesParents
     },
@@ -176,14 +171,6 @@ export const Graph = (props: GraphProps) => {
         panOnDrag
         onInit={(inst) => (reactFlowInstance.current = inst)}
       >
-        <div className='opacity-0 overflow-hidden h-0'>
-          <DummyNodeRenderrer
-            stages={props.stages}
-            warehouses={props.warehouses}
-            knownDimensions={dimensions}
-            onDimensionChange={(newDims) => setDimensions((prev) => ({ ...prev, ...newDims }))}
-          />
-        </div>
         {filterContext?.preferredFilter?.showMinimap && (
           <MiniMap
             style={{ background: 'white', border: '1px solid lightblue', borderRadius: '5px' }}
