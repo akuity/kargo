@@ -85,6 +85,7 @@ type mockGiteaClient struct {
 	owner              string
 	repo               string
 	issueLabelsOptions gitea.IssueLabelsOption
+	repoLabelsOpts     gitea.ListLabelsOptions
 	listOpts           gitea.ListPullRequestsOptions
 }
 
@@ -125,6 +126,26 @@ func (m *mockGiteaClient) GetPullRequest(
 		return pr, nil, args.Error(2)
 	}
 	return pr, resp, args.Error(2)
+}
+
+func (m *mockGiteaClient) ListRepoLabels(
+	owner string,
+	repo string,
+	opts gitea.ListLabelsOptions,
+) ([]*gitea.Label, *gitea.Response, error) {
+	args := m.Called(owner, repo, opts)
+	m.owner = owner
+	m.repo = repo
+	m.repoLabelsOpts = opts
+	labels, ok := args.Get(0).([]*gitea.Label)
+	if !ok {
+		return nil, nil, args.Error(2)
+	}
+	resp, ok := args.Get(1).(*gitea.Response)
+	if !ok {
+		return labels, nil, args.Error(2)
+	}
+	return labels, resp, args.Error(2)
 }
 
 func (m *mockGiteaClient) AddIssueLabels(
@@ -250,6 +271,128 @@ func TestCreatePullRequest(t *testing.T) {
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, pr.URL)
 	require.True(t, pr.Open)
+}
+
+func TestCreatePullRequestWithLabels(t *testing.T) {
+	opts := gitprovider.CreatePullRequestOpts{
+		Head:        "feature-branch",
+		Base:        "main",
+		Title:       "title",
+		Description: "desc",
+		Labels:      []string{"label1", "label2"},
+	}
+
+	mockClient := &mockGiteaClient{
+		pr: &gitea.PullRequest{
+			Index: int64(42),
+			State: gitea.StateOpen,
+			Head: &gitea.PRBranchInfo{
+				Sha: "HeadSha",
+			},
+			Base: &gitea.PRBranchInfo{
+				Sha: "BaseSha",
+			},
+			URL:            "http://localhost:8080",
+			MergedCommitID: ptr.To("2994fd93"),
+			HasMerged:      false,
+		},
+	}
+	mockClient.
+		On("ListRepoLabels", testRepoOwner, testRepoName, gitea.ListLabelsOptions{}).
+		Return(
+			[]*gitea.Label{
+				{ID: 101, Name: "label1"},
+				{ID: 202, Name: "label2"},
+			},
+			&gitea.Response{},
+			nil,
+		)
+	mockClient.
+		On("CreatePullRequest", testRepoOwner, testRepoName, mock.Anything).
+		Return(
+			&gitea.PullRequest{
+				Index: int64(42),
+				State: gitea.StateOpen,
+				Head: &gitea.PRBranchInfo{
+					Sha: "HeadSha",
+				},
+				Base: &gitea.PRBranchInfo{
+					Sha: "BaseSha",
+				},
+				URL:            "http://localhost:8080",
+				MergedCommitID: ptr.To("BaseSha"),
+				HasMerged:      false,
+				Created:        &time.Time{},
+			},
+			&gitea.Response{},
+			nil,
+		)
+	mockClient.
+		On(
+			"AddIssueLabels",
+			testRepoOwner,
+			testRepoName,
+			int64(42),
+			gitea.IssueLabelsOption{Labels: []int64{101, 202}},
+		).
+		Return([]*gitea.Label{}, &gitea.Response{}, nil)
+
+	g := provider{
+		owner:  testRepoOwner,
+		repo:   testRepoName,
+		client: mockClient,
+	}
+	pr, err := g.CreatePullRequest(t.Context(), &opts)
+
+	mockClient.AssertExpectations(t)
+
+	require.NoError(t, err)
+	require.Equal(t, testRepoOwner, mockClient.owner)
+	require.Equal(t, testRepoName, mockClient.repo)
+	require.Equal(t, opts.Head, mockClient.newPr.Head)
+	require.Equal(t, opts.Base, mockClient.newPr.Base)
+	require.Equal(t, opts.Title, mockClient.newPr.Title)
+	require.Equal(t, opts.Description, mockClient.newPr.Body)
+	require.Equal(t, []int64{101, 202}, mockClient.issueLabelsOptions.Labels)
+	require.Equal(t, mockClient.pr.Index, pr.Number)
+	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
+	require.Equal(t, mockClient.pr.URL, pr.URL)
+	require.True(t, pr.Open)
+}
+
+func TestCreatePullRequestWithMissingLabels(t *testing.T) {
+	opts := gitprovider.CreatePullRequestOpts{
+		Head:        "feature-branch",
+		Base:        "main",
+		Title:       "title",
+		Description: "desc",
+		Labels:      []string{"label1", "missing"},
+	}
+
+	mockClient := &mockGiteaClient{}
+	mockClient.
+		On("ListRepoLabels", testRepoOwner, testRepoName, gitea.ListLabelsOptions{}).
+		Return(
+			[]*gitea.Label{
+				{ID: 101, Name: "label1"},
+			},
+			&gitea.Response{},
+			nil,
+		)
+
+	g := provider{
+		owner:  testRepoOwner,
+		repo:   testRepoName,
+		client: mockClient,
+	}
+	pr, err := g.CreatePullRequest(t.Context(), &opts)
+
+	mockClient.AssertExpectations(t)
+
+	require.Nil(t, pr)
+	require.ErrorContains(t, err, "labels not found")
+	mockClient.AssertNotCalled(t, "CreatePullRequest", mock.Anything, mock.Anything, mock.Anything)
+	mockClient.AssertNotCalled(t, "AddIssueLabels", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
 }
 
 func TestGetPullRequest(t *testing.T) {
