@@ -9,7 +9,7 @@ import styles from './node-size-source-of-truth.module.less';
 export const StackedNodeBody = (props: { id?: string; count?: number; onClick?: () => void }) => (
   <div
     id={props.id}
-    className={classNames(styles['stacked-node-size'], 'relative nodrag cursor-default mt-3')}
+    className={classNames(styles['stacked-node-size'], 'relative nodrag cursor-default')}
   >
     <div className='absolute w-full h-full -top-1 -right-1 bg-white shadow-md rounded-md z-10' />
     <div className='absolute w-full h-full -top-2 -right-2 bg-white shadow-md rounded-md' />
@@ -29,16 +29,13 @@ export const StackedNodes = (props: {
     value: number;
     id: string;
     parentNodeId: string;
-    handleOffsetY?: number;
   };
 }) => {
   const graphContext = useGraphContext();
-  const handleTop =
-    props.data.handleOffsetY !== undefined ? `${props.data.handleOffsetY}px` : '50%';
 
   return (
     <>
-      <Handle position={Position.Left} type='target' style={{ top: handleTop }} />
+      <Handle position={Position.Left} type='target' style={{ top: '50%' }} />
       <StackedNodeBody
         count={props.data?.value}
         onClick={() => graphContext?.onUnstack(props.data.parentNodeId)}

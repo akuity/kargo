@@ -6,13 +6,12 @@ import { ColorContext } from '@ui/context/colors';
 import { WarehouseExpanded } from '@ui/extend/types';
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 
-import { isStageControlFlow } from '../nodes/stage-meta-utils';
-
 import { edgeIndexer } from './edge-indexer';
 import { layoutGraph } from './layout-graph';
 import { stackedIndexer, warehouseIndexer } from './node-indexer';
-import { stackSizer, warehouseSizer } from './node-sizer';
+import { STACKED_NODE_DUMMY_KEY, stackSizer } from './node-sizer';
 import { stackNodes } from './stack-nodes';
+import { DimensionState } from './use-node-dimension-state';
 
 export const reactFlowNodeConstants = {
   CUSTOM_NODE: 'custom-node',
@@ -25,6 +24,7 @@ export const useReactFlowPipelineGraph = (
   // basically list of warehouses
   pipeline: string[],
   redraw: boolean,
+  dimensionState: DimensionState,
   stack?: {
     afterNodes?: string[];
   },
@@ -40,6 +40,11 @@ export const useReactFlowPipelineGraph = (
   const functionCalled = useRef(false);
 
   useEffect(() => {
+    if (Object.keys(dimensionState).length === 0) {
+      setResult({ nodes: [], edges: [] });
+      return;
+    }
+
     const compute = () => {
       lastRunRef.current = Date.now();
 
@@ -60,6 +65,7 @@ export const useReactFlowPipelineGraph = (
             return !!pipeline.length && !pipeline.includes(w?.metadata?.name || '');
           }
         },
+        dimensionState,
         warehouseColorMap,
         hideSubscriptions
       );
@@ -75,7 +81,8 @@ export const useReactFlowPipelineGraph = (
         const dagreNode = graph.node(node);
 
         if (stackedIndexer.is(node)) {
-          const stackedActualHeight = stackSizer.size().height;
+          const stackedActualHeight =
+            dimensionState[STACKED_NODE_DUMMY_KEY]?.height || stackSizer.size().height;
           reactFlowNodes.push({
             id: node,
             type: reactFlowNodeConstants.STACKED_NODE,
@@ -86,22 +93,16 @@ export const useReactFlowPipelineGraph = (
             data: {
               value: dagreNode?.value,
               id: dagreNode?.id,
-              parentNodeId: dagreNode?.parentNodeId,
-              handleOffsetY: stackedActualHeight / 2
+              parentNodeId: dagreNode?.parentNodeId
             }
           });
           continue;
         }
 
-        // Dagre assigns a uniform virtual height (maxStageHeight) to all
-        // nodes so edges align. Use the sizer height to visually center
-        // shorter nodes (warehouses, control-flow stages) within their slot.
-        let actualHeight = dagreNode?.height;
-        if (node.startsWith('warehouse/')) {
-          actualHeight = warehouseSizer.size().height;
-        } else if (dagreNode?.stage && isStageControlFlow(dagreNode.stage)) {
-          actualHeight = warehouseSizer.size().height;
-        }
+        // All nodes share a uniform virtual height in dagre (= max stage height)
+        // so edges connect at the same center. Use the actual measured height to
+        // visually center each node within its virtual slot.
+        const actualHeight = dimensionState[node]?.height || dagreNode?.height;
 
         reactFlowNodes.push({
           id: node,
@@ -114,6 +115,9 @@ export const useReactFlowPipelineGraph = (
             label: node,
             value: dagreNode?.warehouse || dagreNode?.subscription || dagreNode?.stage,
             subscriptionParent: dagreNode?.subscriptionParent,
+            // Fixed pixel offset from the node's top to the dagre center point.
+            // Stored at layout time so handles stay anchored even when node content
+            // grows and the rendered height changes (node position is not updated).
             handleOffsetY: actualHeight / 2
           }
         });
@@ -161,7 +165,7 @@ export const useReactFlowPipelineGraph = (
     const delay = Math.max(0, 3000 - elapsed);
     const id = setTimeout(compute, delay);
     return () => clearTimeout(id);
-  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions]);
+  }, [stack?.afterNodes, pipeline, redraw, warehouseColorMap, hideSubscriptions, dimensionState]);
 
   return result;
 };
