@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
 	"os"
 	"os/exec"
@@ -324,20 +325,42 @@ func (b *baseRepo) loadHomeDir() error {
 	return nil
 }
 
-// reconcileGPGState removes any residual GnuPG lockfiles and stops any stale
-// gpg-agent associated with this repository's GNUPGHOME. Required because in
-// a container-per-step promotion model each step runs in its own container —
-// separate PID namespaces, shared UTS namespace, shared workspace volume.
-// GnuPG's stale-lock heuristic compares (hostname, PID) against /proc; across
-// sibling containers sharing a hostname but not a PID namespace, a lockfile's
-// recorded PID can collide with an unrelated live process in the new
-// container, causing new gpg invocations to wait indefinitely for a
-// non-existent holder and eventually fail with a "Connection timed out"
-// error.
+// reconcileGPGState removes any residual GnuPG state associated with this
+// repository's GNUPGHOME that may have been orphaned by a process in a
+// different container sharing the same underlying filesystem.
+//
+// Required because in a container-per-step promotion model each step runs
+// in its own container — separate PID namespaces, shared UTS namespace,
+// shared workspace volume. Several pieces of GnuPG's on-disk state are
+// process-bound and become hazardous when inherited by a new container:
+//
+//   - *.lock    — committed dotlock files. GnuPG's stale-lock heuristic
+//     compares (hostname, PID) against /proc; across sibling
+//     containers with a shared hostname but independent PID
+//     namespaces, the recorded PID can match an unrelated
+//     live process, causing indefinite waits that end in a
+//     "Connection timed out" signing failure.
+//   - .#lk*     — dotlock temp files created via O_CREAT|O_EXCL before
+//     being hard-linked to the committed .lock file. Their
+//     names embed an in-process memory address + hostname + PID;
+//     under weak ASLR and colliding container PIDs
+//     these names collide too, causing a "File exists"
+//     failure before gpg ever reaches the .lock file.
+//   - UNIX-domain sockets (gpg-agent, dirmngr, scdaemon, etc.). A stale
+//     socket left by a dead daemon in a prior container can
+//     race with a new daemon binding on the same path. After
+//     gpgconf --kill, any socket still present in GNUPGHOME
+//     is by definition stale, so we identify these by file
+//     mode rather than by name — new GnuPG daemons added
+//     upstream are covered automatically.
+//
+// The cleanup walks all of GNUPGHOME rather than enumerating specific
+// subdirectories so that GnuPG layout changes (e.g., the ongoing move
+// toward public-keys.d/pubring.db) are covered automatically.
 //
 // Safe to call when no GnuPG state exists (no-op) and in traditional
 // single-process deployments where no cross-container state sharing occurs
-// (effectively a no-op: there are no stale locks to clean).
+// (also effectively a no-op).
 func (b *baseRepo) reconcileGPGState() {
 	if b.homeDir == "" {
 		return
@@ -346,33 +369,38 @@ func (b *baseRepo) reconcileGPGState() {
 	if _, err := os.Stat(gnupgDir); err != nil {
 		return
 	}
-	// Best-effort: stop any gpg-agent bound to this GNUPGHOME. If no agent
-	// is running, gpgconf exits non-zero; ignore it.
+	// Must run before removing sockets: gpgconf finds the agent via its
+	// sockets and tells it to shut down cleanly.
 	_, _ = libExec.Exec(b.buildCommand("gpgconf", "--kill", "gpg-agent"))
-	// Remove any stale dotlock files. Dotlock records a (hostname, PID)
-	// pair which becomes ambiguous across containers sharing the workspace
-	// volume (see comment above).
-	patterns := []string{
-		filepath.Join(gnupgDir, "*.lock"),
-		filepath.Join(gnupgDir, "public-keys.d", "*.lock"),
-		filepath.Join(gnupgDir, "private-keys-v1.d", "*.lock"),
-	}
+
 	logger := logging.LoggerFromContext(context.TODO())
-	for _, pattern := range patterns {
-		matches, err := filepath.Glob(pattern)
-		if err != nil {
-			continue
+	remove := func(path string) {
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			logger.Error(
+				err,
+				"error removing stale GnuPG state file",
+				"file", path,
+			)
 		}
-		for _, match := range matches {
-			if err := os.Remove(match); err != nil && !os.IsNotExist(err) {
-				logger.Error(
-					err,
-					"error removing stale GnuPG lockfile",
-					"file", match,
-				)
+	}
+	_ = filepath.WalkDir(gnupgDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		switch {
+		case strings.HasSuffix(name, ".lock"),
+			strings.HasPrefix(name, ".#lk"):
+			remove(path)
+		default:
+			// Any remaining UNIX-domain socket in GNUPGHOME belongs to a
+			// dead daemon (we killed the live agent above).
+			if info, statErr := d.Info(); statErr == nil && info.Mode()&os.ModeSocket != 0 {
+				remove(path)
 			}
 		}
-	}
+		return nil
+	})
 }
 
 // loadURLs restores the repository's original and access URLs from the
