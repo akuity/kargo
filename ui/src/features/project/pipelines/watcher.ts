@@ -24,28 +24,67 @@ import {
 import { Stage } from '@ui/gen/api/v1alpha1/generated_pb';
 import { ObjectMeta } from '@ui/gen/k8s.io/apimachinery/pkg/apis/meta/v1/generated_pb';
 
+// Batch streaming events: accumulate changes and flush the list-level query
+// cache update once per animation frame. Per-item callbacks (detail cache,
+// graph node updates) still fire immediately so individual views stay fresh.
+// Without batching, 400 stage events on page load trigger 400 separate
+// Pipelines re-renders, each recomputing O(n) derived hooks.
 async function ProcessEvents<T extends { type: string }, S extends { metadata?: ObjectMeta }>(
   stream: AsyncIterable<T>,
   getData: () => S[],
   getter: (e: T) => S,
-  callback: (item: S, data: S[]) => void
+  onFlush: (data: S[]) => void,
+  onItem?: (item: S) => void
 ) {
+  let data = getData();
+  let dirty = false;
+  let rafId = 0;
+
+  const flush = () => {
+    rafId = 0;
+    if (!dirty) return;
+    dirty = false;
+    onFlush(data);
+  };
+
+  const scheduleFlush = () => {
+    if (!rafId) {
+      rafId = requestAnimationFrame(flush);
+    }
+  };
+
   for await (const e of stream) {
-    let data = getData();
-    const index = data.findIndex((item) => item.metadata?.name === getter(e).metadata?.name);
+    // Read latest cache on first event of a batch
+    if (!dirty) {
+      data = getData();
+    }
+
+    const item = getter(e);
+    const index = data.findIndex((d) => d.metadata?.name === item.metadata?.name);
+
     if (e.type === 'DELETED') {
       if (index !== -1) {
         data = [...data.slice(0, index), ...data.slice(index + 1)];
       }
     } else {
       if (index === -1) {
-        data = [...data, getter(e)];
+        data = [...data, item];
       } else {
-        data = [...data.slice(0, index), getter(e), ...data.slice(index + 1)];
+        data = [...data.slice(0, index), item, ...data.slice(index + 1)];
       }
     }
 
-    callback(getter(e), data);
+    dirty = true;
+    onItem?.(item);
+    scheduleFlush();
+  }
+
+  // Flush remaining if stream ends
+  if (rafId) {
+    cancelAnimationFrame(rafId);
+  }
+  if (dirty) {
+    onFlush(data);
   }
 }
 
@@ -91,8 +130,8 @@ export class Watcher {
         return (data as ListStagesResponse)?.stages || [];
       },
       (e) => e.stage as Stage,
-      (stage, data) => {
-        // update Stages list
+      (data) => {
+        // Batched: update stages list once per animation frame
         const listStagesQueryKey = createConnectQueryKey({
           schema: listStages,
           input: create(ListStagesRequestSchema, { project: this.project }),
@@ -103,8 +142,9 @@ export class Watcher {
           stages: data,
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListStagesResponse'
         });
-
-        // update Stage details
+      },
+      (stage) => {
+        // Per-item: update individual stage detail cache + notify graph
         const getStageQueryKey = createConnectQueryKey({
           schema: getStage,
           input: create(GetStageRequestSchema, {
@@ -152,19 +192,8 @@ export class Watcher {
         return (data as ListWarehousesResponse)?.warehouses?.map((w) => warehouseExpand(w)) || [];
       },
       (e) => e.warehouse as WarehouseExpanded,
-      (warehouse, data) => {
-        // refetch freight if necessary
-        const refreshRequest = warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
-        const refreshStatus = warehouse?.status?.lastHandledRefresh;
-        const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
-        if (refreshing) {
-          refresh[warehouse?.metadata?.name || ''] = true;
-        } else if (refresh[warehouse?.metadata?.name || '']) {
-          delete refresh[warehouse?.metadata?.name || ''];
-          opts?.refreshHook?.();
-        }
-
-        // update Warehouse list
+      (data) => {
+        // Batched: update warehouses list once per animation frame
         const listWarehousesQueryKey = createConnectQueryKey({
           schema: listWarehouses,
           input: create(ListWarehousesRequestSchema, {
@@ -178,8 +207,19 @@ export class Watcher {
           warehouses: data,
           $typeName: 'akuity.io.kargo.service.v1alpha1.ListWarehousesResponse'
         });
+      },
+      (warehouse) => {
+        // Per-item: refresh logic + detail cache + notify graph
+        const refreshRequest = warehouse?.metadata?.annotations['kargo.akuity.io/refresh'];
+        const refreshStatus = warehouse?.status?.lastHandledRefresh;
+        const refreshing = refreshRequest !== undefined && refreshRequest !== refreshStatus;
+        if (refreshing) {
+          refresh[warehouse?.metadata?.name || ''] = true;
+        } else if (refresh[warehouse?.metadata?.name || '']) {
+          delete refresh[warehouse?.metadata?.name || ''];
+          opts?.refreshHook?.();
+        }
 
-        // update Warehouse details
         const getWarehouseQueryKey = createConnectQueryKey({
           schema: getWarehouse,
           input: create(GetWarehouseRequestSchema, {
