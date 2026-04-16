@@ -84,7 +84,13 @@ spec:
 
 The `command` field does not specify the `command` of the step container in promotion pod definition.
 Kargo is running an executor binary which coordinates step execution (start, retry, abort) and will run the `command`.
+
+:::
+
+:::warning
+
 If retry policy is set for the step, the `command` could be executed multiple times on failure.
+It's recommended to design commands to have some idempotency.
 
 :::
 
@@ -141,7 +147,7 @@ The step will error in runtime if any expressions require a missing config value
 
 Templates are using [expression language](../40-expressions.md), but only with `config` and `ctx` variables. The `ctx` variable is using [the ctx format](../40-expressions.md#context-ctx-object-structure).
 
-In order to pass values from secrets, configmaps or othe promotion context to the custom step, they should be used in the promotion template and passed as `config` variables.
+In order to pass values from secrets, configmaps or other promotion context to the custom step, they should be used in the promotion template and passed as `config` variables.
 
 #### Passing secrets to custom steps
 
@@ -217,7 +223,11 @@ transform:
   hasCritical: output.summary.critical > 0
   total: output.summary.total
   failed: output contains "FAIL"
+  message: output.message
 ```
+
+If `transform` map is used, it will completely replace the output produced by the `source`.
+To pass some values through they should map to their respective output key (like `message` in the example above)
 
 #### Output size limits
 
