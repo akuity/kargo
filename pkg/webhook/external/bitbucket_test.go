@@ -22,6 +22,8 @@ func TestBitbucketHandler(t *testing.T) {
 
 	const testProjectName = "fake-project"
 
+	// pushEventRequestBody uses the real Bitbucket Cloud format: bare branch
+	// names without a refs/heads/ prefix.
 	const pushEventRequestBody = `
 	{
 		"actor": {
@@ -29,7 +31,25 @@ func TestBitbucketHandler(t *testing.T) {
 			"emailAddress": "admin@example.com"
 		},
 		"push": {
-			"changes": [{"new": {"name": "refs/heads/main"}}]
+			"changes": [{"new": {"type": "branch", "name": "main"}}]
+		},
+		"repository": {
+			"links": {
+				"html": {
+					"href": "https://bitbucket.org/example/repo"
+				}
+			}
+		}
+	}`
+
+	const tagPushEventRequestBody = `
+	{
+		"actor": {
+			"name": "admin",
+			"emailAddress": "admin@example.com"
+		},
+		"push": {
+			"changes": [{"new": {"type": "tag", "name": "v1.0.0"}}]
 		},
 		"repository": {
 			"links": {
@@ -144,10 +164,7 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name: "no ref match",
-			// This event would prompt the Warehouse to refresh if not for the ref in
-			// the event being for the main branch whilst the subscription is
-			// interested in commits from a different branch.
+			name:       "branch qualifier does not match ref",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -186,7 +203,7 @@ func TestBitbucketHandler(t *testing.T) {
 			},
 		},
 		{
-			name:       "warehouse refreshed",
+			name:       "branch qualifier matches ref",
 			secretData: testSecretData,
 			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
 				&kargoapi.Warehouse{
@@ -221,6 +238,75 @@ func TestBitbucketHandler(t *testing.T) {
 					`{"msg":"refreshed 1 warehouse(s)"}`,
 					rr.Body.String(),
 				)
+			},
+		},
+		{
+			name:       "tag qualifier matches ref",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL:                  "https://bitbucket.org/example/repo",
+								CommitSelectionStrategy:  kargoapi.CommitSelectionStrategyNewestTag,
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(tagPushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPushEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 1 warehouse(s)"}`, rr.Body.String())
+			},
+		},
+		{
+			name:       "tag qualifier does not match ref",
+			secretData: testSecretData,
+			client: fake.NewClientBuilder().WithScheme(testScheme).WithObjects(
+				&kargoapi.Warehouse{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: testProjectName,
+						Name:      "fake-warehouse",
+					},
+					Spec: kargoapi.WarehouseSpec{
+						InternalSubscriptions: []kargoapi.RepoSubscription{{
+							Git: &kargoapi.GitSubscription{
+								RepoURL: "https://bitbucket.org/example/repo",
+							},
+						}},
+					},
+				},
+			).WithIndex(
+				&kargoapi.Warehouse{},
+				indexer.WarehousesBySubscribedURLsField,
+				indexer.WarehousesBySubscribedURLs,
+			).Build(),
+			req: func() *http.Request {
+				bodyBuf := bytes.NewBuffer([]byte(tagPushEventRequestBody))
+				req := httptest.NewRequest(http.MethodPost, testURL, bodyBuf)
+				req.Header.Set(bitbucketEventHeader, bitbucketPushEvent)
+				req.Header.Set(bitbucketSignatureHeader, sign(bodyBuf.Bytes()))
+				return req
+			},
+			assertions: func(t *testing.T, rr *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, rr.Code)
+				require.JSONEq(t, `{"msg":"refreshed 0 warehouse(s)"}`, rr.Body.String())
 			},
 		},
 		{
