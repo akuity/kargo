@@ -29,7 +29,7 @@ the Kargo Helm chart.
 :::info
 
 Detailed information about available options can be found in the
-[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
+[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/release-1.9/charts/kargo).
 
 For important security-related configuration, refer to the
 [Secure Configuration Guide](../40-security/10-secure-configuration.md).

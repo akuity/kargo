@@ -101,6 +101,7 @@ These instructions were tested with:
     ```shell
     helm install kargo \
       oci://ghcr.io/akuity/kargo-charts/kargo \
+      --version 1.9.6 \
       --namespace kargo \
       --create-namespace \
       --set api.adminAccount.passwordHash=$hashed_pass \
