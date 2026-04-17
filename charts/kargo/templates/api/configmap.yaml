@@ -28,7 +28,7 @@ data:
   {{- if .Values.api.adminAccount.enabled }}
   ADMIN_ACCOUNT_ENABLED: "true"
   ADMIN_ACCOUNT_TOKEN_ISSUER: {{ include "kargo.api.baseURL" . }}
-  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ quote .Values.api.host }}
+  ADMIN_ACCOUNT_TOKEN_AUDIENCE: {{ include "kargo.api.baseHost" . | quote }}
   ADMIN_ACCOUNT_TOKEN_TTL: {{ quote .Values.api.adminAccount.tokenTTL }}
   {{- end }}
   {{- if .Values.api.oidc.enabled }}
@@ -41,8 +41,8 @@ data:
   {{- end }}
   {{- if .Values.api.oidc.dex.enabled }}
   OIDC_ISSUER_URL: {{ include "kargo.api.baseURL" . }}/dex
-  OIDC_CLIENT_ID: {{ quote .Values.api.host }}
-  OIDC_CLI_CLIENT_ID: {{ .Values.api.host }}-cli
+  OIDC_CLIENT_ID: {{ include "kargo.api.baseHost" . | quote }}
+  OIDC_CLI_CLIENT_ID: {{ include "kargo.api.baseHost" . }}-cli
   DEX_ENABLED: "true"
   DEX_SERVER_ADDRESS: https://kargo-dex-server.{{ .Release.Namespace }}.svc
   DEX_CA_CERT_PATH: /etc/kargo/idp-ca.crt
@@ -57,7 +57,7 @@ data:
   {{- end }}
   {{- if .Values.api.argocd.urls }}
   ARGOCD_NAMESPACE: {{ .Values.controller.argocd.namespace | default "argocd" }}
-  ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ $val }},{{- end }}
+  ARGOCD_URLS: {{ range $key, $val := .Values.api.argocd.urls }}{{ $key }}={{ tpl $val $ }},{{- end }}
   {{- end }}
   ROLLOUTS_INTEGRATION_ENABLED: {{ quote .Values.api.rollouts.integrationEnabled }}
   {{- if and .Values.api.rollouts.integrationEnabled .Values.api.rollouts.logs.enabled }}
