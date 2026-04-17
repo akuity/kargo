@@ -10,7 +10,7 @@ configurations for Kargo.
 :::info
 
 For complete parameter documentation, refer to the
-[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+[chart documentation](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md).
 
 :::
 
@@ -47,7 +47,7 @@ controller:
 :::note
 
 For a full list of supported configurations, refer to the
-[Global Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#global-parameters)
+[Global Parameters](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md#global-parameters)
 or the component-specific parameter sections in the chart documentation.
 
 :::
@@ -62,7 +62,7 @@ Kargo's API server and its web-based user interface.
 
 The sections below outline common configurations for the API server. For a full
 list of supported configurations, refer to the
-[API Parameters](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md#api).
+[API Parameters](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md#api).
 section in the chart documentation.
 
 :::
@@ -441,7 +441,7 @@ however, will have this seamlessly handled for them.
 :::note
 
 For more information, refer to the
-[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+[chart documentation](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md).
 
 :::
 
@@ -503,7 +503,7 @@ controller:
 :::note
 
 For a list of resource kinds that can be configured, refer to the
-[chart documentation](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md).
+[chart documentation](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md).
 
 :::
 

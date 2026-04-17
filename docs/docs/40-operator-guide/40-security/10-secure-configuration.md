@@ -23,7 +23,7 @@ Whether you're installing Kargo
 document assumes familiarity with procedures for configuring that installation.
 
 Refer to the
-[Kargo Chart's README](https://github.com/akuity/kargo/tree/main/charts/kargo)
+[Kargo Chart's README](https://github.com/akuity/kargo/tree/release-1.9/charts/kargo)
 for detailed documentation of all configuration options.
 
 :::

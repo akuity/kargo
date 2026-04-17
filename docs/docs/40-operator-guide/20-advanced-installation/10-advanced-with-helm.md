@@ -13,7 +13,9 @@ location. In the example below, we save it to `kargo-values.yaml`
 
     ```shell
     helm inspect values \
-      oci://ghcr.io/akuity/kargo-charts/kargo > kargo-values.yaml
+      oci://ghcr.io/akuity/kargo-charts/kargo \
+      --version 1.9.6 \
+      > kargo-values.yaml
     ```
 
 1. Edit and save the values.
@@ -24,7 +26,7 @@ location. In the example below, we save it to `kargo-values.yaml`
     option, so specific options are not covered in detail here.
 
     Detailed information about available options can also be found in the
-    [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
+    [Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/release-1.9/charts/kargo).
 
     Additionally, for important security-related configuration, check the [Secure Configuration Guide](../40-security/10-secure-configuration.md).
     :::
@@ -34,6 +36,7 @@ location. In the example below, we save it to `kargo-values.yaml`
     ```shell
     helm install kargo \
       oci://ghcr.io/akuity/kargo-charts/kargo \
+      --version 1.9.6 \
       --namespace kargo \
       --create-namespace \
       --values kargo-values.yaml \

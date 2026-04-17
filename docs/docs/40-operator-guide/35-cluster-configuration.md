@@ -14,7 +14,7 @@ Most system level configuration options are exercised by operators at the time
 of installation or upgrade. For details, refer to
 [Common Configurations](./20-advanced-installation/30-common-configurations.md)
 and the
-[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
+[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/release-1.9/charts/kargo).
 
 :::
 
@@ -82,7 +82,7 @@ has no such thing as a "`ClusterSecret`" resource type (i.e. a cluster-scoped
 analog to `Secret`), Kargo will look for the referenced `Secret` in a designated
 namespace. By default, that namespace is `kargo-system-resources`, but can be
 changed by the operator at the time of installation. (Refer to the
-[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/main/charts/kargo).
+[Kargo Helm Chart's README.md](https://github.com/akuity/kargo/tree/release-1.9/charts/kargo).
 )
 
 :::

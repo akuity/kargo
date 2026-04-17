@@ -302,7 +302,7 @@ clusters throughout your enterprise.
 
 :::info
 
-[Documentation for Kargo's Helm chart](https://github.com/akuity/kargo/blob/main/charts/kargo/README.md)
+[Documentation for Kargo's Helm chart](https://github.com/akuity/kargo/blob/release-1.9/charts/kargo/README.md)
 explains most aspects of this in great detail, *but why not let the Kargo
 experts handle it for you?*
 
