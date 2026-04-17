@@ -74,13 +74,6 @@ type giteaClient interface {
 		number int64,
 	) (*gitea.PullRequest, *gitea.Response, error)
 
-	AddIssueLabels(
-		owner string,
-		repo string,
-		number int64,
-		opts gitea.IssueLabelsOption,
-	) ([]*gitea.Label, *gitea.Response, error)
-
 	MergePullRequest(
 		owner string,
 		repo string,
@@ -154,10 +147,11 @@ func (p *provider) CreatePullRequest(
 		p.owner,
 		p.repo,
 		gitea.CreatePullRequestOption{
-			Title: opts.Title,
-			Head:  opts.Head,
-			Base:  opts.Base,
-			Body:  opts.Description,
+			Title:  opts.Title,
+			Head:   opts.Head,
+			Base:   opts.Base,
+			Body:   opts.Description,
+			Labels: labelIDs,
 		},
 	)
 	if err != nil {
@@ -165,20 +159,6 @@ func (p *provider) CreatePullRequest(
 	}
 	if giteaPR == nil {
 		return nil, fmt.Errorf("unexpected nil pull request")
-	}
-	if len(labelIDs) > 0 {
-		if _, _, err := p.client.AddIssueLabels(
-			p.owner,
-			p.repo,
-			giteaPR.Index,
-			gitea.IssueLabelsOption{Labels: labelIDs},
-		); err != nil {
-			return nil, fmt.Errorf(
-				"error adding labels to pull request %d: %w",
-				giteaPR.Index,
-				err,
-			)
-		}
 	}
 	pr := convertGiteaPR(*giteaPR)
 	return &pr, nil
@@ -189,13 +169,23 @@ func (p *provider) resolveLabelIDs(labelNames []string) ([]int64, error) {
 		return nil, nil
 	}
 
-	repoLabels, _, err := p.client.ListRepoLabels(
-		p.owner,
-		p.repo,
-		gitea.ListLabelsOptions{},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("error listing repository labels: %w", err)
+	repoLabels := make([]*gitea.Label, 0, len(labelNames))
+	for page := 1; ; {
+		pageLabels, resp, err := p.client.ListRepoLabels(
+			p.owner,
+			p.repo,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: page},
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("error listing repository labels: %w", err)
+		}
+		repoLabels = append(repoLabels, pageLabels...)
+		if resp == nil || resp.NextPage == 0 {
+			break
+		}
+		page = resp.NextPage
 	}
 
 	labelIDsByName := make(map[string]int64, len(repoLabels))

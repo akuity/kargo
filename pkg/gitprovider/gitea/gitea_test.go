@@ -298,7 +298,14 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 		},
 	}
 	mockClient.
-		On("ListRepoLabels", testRepoOwner, testRepoName, gitea.ListLabelsOptions{}).
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 1},
+			},
+		).
 		Return(
 			[]*gitea.Label{
 				{ID: 101, Name: "label1"},
@@ -327,16 +334,6 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 			&gitea.Response{},
 			nil,
 		)
-	mockClient.
-		On(
-			"AddIssueLabels",
-			testRepoOwner,
-			testRepoName,
-			int64(42),
-			gitea.IssueLabelsOption{Labels: []int64{101, 202}},
-		).
-		Return([]*gitea.Label{}, &gitea.Response{}, nil)
-
 	g := provider{
 		owner:  testRepoOwner,
 		repo:   testRepoName,
@@ -353,11 +350,19 @@ func TestCreatePullRequestWithLabels(t *testing.T) {
 	require.Equal(t, opts.Base, mockClient.newPr.Base)
 	require.Equal(t, opts.Title, mockClient.newPr.Title)
 	require.Equal(t, opts.Description, mockClient.newPr.Body)
-	require.Equal(t, []int64{101, 202}, mockClient.issueLabelsOptions.Labels)
+	require.Equal(t, []int64{101, 202}, mockClient.newPr.Labels)
 	require.Equal(t, mockClient.pr.Index, pr.Number)
 	require.Equal(t, mockClient.pr.Base.Sha, pr.MergeCommitSHA)
 	require.Equal(t, mockClient.pr.URL, pr.URL)
 	require.True(t, pr.Open)
+	mockClient.AssertNotCalled(
+		t,
+		"AddIssueLabels",
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+		mock.Anything,
+	)
 }
 
 func TestCreatePullRequestWithMissingLabels(t *testing.T) {
@@ -371,7 +376,14 @@ func TestCreatePullRequestWithMissingLabels(t *testing.T) {
 
 	mockClient := &mockGiteaClient{}
 	mockClient.
-		On("ListRepoLabels", testRepoOwner, testRepoName, gitea.ListLabelsOptions{}).
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 1},
+			},
+		).
 		Return(
 			[]*gitea.Label{
 				{ID: 101, Name: "label1"},
@@ -393,6 +405,57 @@ func TestCreatePullRequestWithMissingLabels(t *testing.T) {
 	require.ErrorContains(t, err, "labels not found")
 	mockClient.AssertNotCalled(t, "CreatePullRequest", mock.Anything, mock.Anything, mock.Anything)
 	mockClient.AssertNotCalled(t, "AddIssueLabels", mock.Anything, mock.Anything, mock.Anything, mock.Anything)
+}
+
+func TestResolveLabelIDsPagesThroughAllRepositoryLabels(t *testing.T) {
+	mockClient := &mockGiteaClient{}
+	mockClient.
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 1},
+			},
+		).
+		Return(
+			[]*gitea.Label{
+				{ID: 101, Name: "label1"},
+			},
+			&gitea.Response{NextPage: 2},
+			nil,
+		).
+		Once()
+	mockClient.
+		On(
+			"ListRepoLabels",
+			testRepoOwner,
+			testRepoName,
+			gitea.ListLabelsOptions{
+				ListOptions: gitea.ListOptions{Page: 2},
+			},
+		).
+		Return(
+			[]*gitea.Label{
+				{ID: 202, Name: "label2"},
+			},
+			&gitea.Response{},
+			nil,
+		).
+		Once()
+
+	g := provider{
+		owner:  testRepoOwner,
+		repo:   testRepoName,
+		client: mockClient,
+	}
+
+	labelIDs, err := g.resolveLabelIDs([]string{"label1", "label2"})
+
+	mockClient.AssertExpectations(t)
+
+	require.NoError(t, err)
+	require.Equal(t, []int64{101, 202}, labelIDs)
 }
 
 func TestGetPullRequest(t *testing.T) {
