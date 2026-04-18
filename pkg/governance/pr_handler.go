@@ -23,6 +23,10 @@ type prHandler struct {
 	prsClient    PullRequestsClient
 }
 
+type handlePROpenedOpts struct {
+	applyPolicyOnly bool
+}
+
 // handleOpened is the handler for pull_request.opened events. It performs
 // the following, in order:
 //
@@ -43,7 +47,12 @@ type prHandler struct {
 func (h *prHandler) handleOpened(
 	ctx context.Context,
 	event *github.PullRequestEvent,
+	opts *handlePROpenedOpts,
 ) error {
+	if opts == nil {
+		opts = &handlePROpenedOpts{}
+	}
+
 	if event == nil {
 		return nil
 	}
@@ -59,57 +68,61 @@ func (h *prHandler) handleOpened(
 
 	login := event.GetSender().GetLogin()
 
+	issueNumber := parseLinkedIssue(pr.GetBody())
+
 	// Steps run independently: each one's failure is logged and collected,
 	// but does not prevent subsequent steps from running. The aggregated
 	// error is returned at the end so the webhook delivery shows red in
 	// GitHub's UI (GitHub does not auto-retry).
 	var errs []error
 
-	// 1. Auto-assign the PR to its author.
-	if _, _, err := h.issuesClient.AddAssignees(
-		ctx,
-		h.owner,
-		h.repo,
-		number,
-		[]string{login},
-	); err != nil {
-		logger.Error(err, "error assigning PR to author")
-		errs = append(errs, fmt.Errorf("assign PR to author: %w", err))
-	}
+	if !opts.applyPolicyOnly {
 
-	issueNumber := parseLinkedIssue(pr.GetBody())
-
-	// 2. Inherit labels from the linked issue. If this fails, inheritedLabels
-	// is nil and the subsequent required-label check operates on only the
-	// labels the PR already has.
-	inheritedLabels, err := h.inheritLabels(ctx, number, issueNumber)
-	if err != nil {
-		logger.Error(err, "error inheriting labels")
-		errs = append(errs, fmt.Errorf("inherit labels: %w", err))
-	}
-
-	// 3. Enforce required-label prefixes, accounting for labels the PR
-	// already has plus any we just inherited.
-	if h.cfg.PullRequests != nil {
-		existingLabels := make(map[string]struct{})
-		for _, l := range pr.Labels {
-			existingLabels[l.GetName()] = struct{}{}
-		}
-		for _, l := range inheritedLabels {
-			existingLabels[l] = struct{}{}
-		}
-		if err := enforceRequiredLabels(
+		// 1. Auto-assign the PR to its author.
+		if _, _, err := h.issuesClient.AddAssignees(
 			ctx,
-			h.issuesClient,
 			h.owner,
 			h.repo,
 			number,
-			existingLabels,
-			h.cfg.PullRequests.RequiredLabelPrefixes,
+			[]string{login},
 		); err != nil {
-			logger.Error(err, "error enforcing required labels")
-			errs = append(errs, fmt.Errorf("enforce required labels: %w", err))
+			logger.Error(err, "error assigning PR to author")
+			errs = append(errs, fmt.Errorf("assign PR to author: %w", err))
 		}
+
+		// 2. Inherit labels from the linked issue. If this fails, inheritedLabels
+		// is nil and the subsequent required-label check operates on only the
+		// labels the PR already has.
+		inheritedLabels, err := h.inheritLabels(ctx, number, issueNumber)
+		if err != nil {
+			logger.Error(err, "error inheriting labels")
+			errs = append(errs, fmt.Errorf("inherit labels: %w", err))
+		}
+
+		// 3. Enforce required-label prefixes, accounting for labels the PR
+		// already has plus any we just inherited.
+		if h.cfg.PullRequests != nil {
+			existingLabels := make(map[string]struct{})
+			for _, l := range pr.Labels {
+				existingLabels[l.GetName()] = struct{}{}
+			}
+			for _, l := range inheritedLabels {
+				existingLabels[l] = struct{}{}
+			}
+			if err := enforceRequiredLabels(
+				ctx,
+				h.issuesClient,
+				h.owner,
+				h.repo,
+				number,
+				existingLabels,
+				h.cfg.PullRequests.RequiredLabelPrefixes,
+			); err != nil {
+				logger.Error(err, "error enforcing required labels")
+				errs = append(errs, fmt.Errorf("enforce required labels: %w", err))
+			}
+		}
+
 	}
 
 	// 4. Apply PR policy. Maintainers and bots are exempt.

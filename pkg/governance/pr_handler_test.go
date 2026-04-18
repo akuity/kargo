@@ -206,7 +206,7 @@ func Test_prHandler_handleOpened(t *testing.T) {
 				issuesClient: issuesClient,
 				prsClient:    prsClient,
 			}
-			err := h.handleOpened(t.Context(), event)
+			err := h.handleOpened(t.Context(), event, nil)
 			require.NoError(t, err)
 
 			if testCase.expectedLabelsAdded == nil {

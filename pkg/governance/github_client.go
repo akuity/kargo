@@ -14,6 +14,8 @@ import (
 	"github.com/hashicorp/go-cleanhttp"
 	"github.com/jferrl/go-githubauth"
 	"golang.org/x/oauth2"
+
+	"github.com/akuity/kargo/pkg/logging"
 )
 
 const (
@@ -215,15 +217,28 @@ type pullRequestsClient struct {
 
 // ConvertToDraft implements PullRequestsClient. It resolves the PR's node ID
 // via REST, then issues the convertPullRequestToDraft GraphQL mutation.
+//
+// Closed and already-draft PRs are treated as no-ops: there's nothing to
+// convert, and GitHub's mutation behavior on those states is undocumented.
 func (p *pullRequestsClient) ConvertToDraft(
 	ctx context.Context,
 	owner string,
 	repo string,
 	number int,
 ) error {
+	logger := logging.LoggerFromContext(ctx)
+
 	pr, _, err := p.Get(ctx, owner, repo, number)
 	if err != nil {
 		return fmt.Errorf("error fetching PR: %w", err)
+	}
+	if pr.GetState() == "closed" {
+		logger.Debug("PR is closed, skipping ConvertToDraft")
+		return nil
+	}
+	if pr.GetDraft() {
+		logger.Debug("PR is already a draft, skipping ConvertToDraft")
+		return nil
 	}
 	nodeID := pr.GetNodeID()
 	if nodeID == "" {

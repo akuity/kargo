@@ -91,8 +91,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		owner, repo, installationID = h.repoInfo(e)
 	case *github.PullRequestEvent:
-		if e.GetAction() != "opened" {
-			logger.Debug("ignoring non-opened pull request event", "action", e.GetAction())
+		action := e.GetAction()
+		if action != "opened" &&
+			action != "reopened" &&
+			action != "ready_for_review" {
+			logger.Debug("ignoring pull request event", "action", action)
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -172,7 +175,11 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			issuesClient: issuesClient,
 			prsClient:    prsClient,
 		}
-		err = prHandler.handleOpened(ctx, e)
+		opts := &handlePROpenedOpts{}
+		if e.GetAction() == "reopened" || e.GetAction() == "ready_for_review" {
+			opts.applyPolicyOnly = true
+		}
+		err = prHandler.handleOpened(ctx, e, opts)
 	}
 	if err != nil {
 		logger.Error(err, "error handling event")

@@ -111,6 +111,94 @@ func Test_pullRequestsClient_ConvertToDraft(t *testing.T) {
 		assert  func(*testing.T, error)
 	}{
 		{
+			// Earliest error path: fetching the PR via REST fails.
+			name: "REST Get fails",
+			handler: func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusInternalServerError)
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "error fetching PR")
+			},
+		},
+		{
+			// State guard: closed PRs are a no-op. GraphQL must not be called.
+			name: "closed PR is a no-op",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/graphql" {
+					t.Fatalf("GraphQL should not be called for a closed PR")
+				}
+				_, _ = w.Write([]byte(
+					`{"node_id": "` + nodeID + `", "state": "closed"}`,
+				))
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			// Draft guard: already-draft PRs are a no-op. GraphQL must not be called.
+			name: "already-draft PR is a no-op",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/graphql" {
+					t.Fatalf("GraphQL should not be called for an already-draft PR")
+				}
+				_, _ = w.Write([]byte(
+					`{"node_id": "` + nodeID + `", "state": "open", "draft": true}`,
+				))
+			},
+			assert: func(t *testing.T, err error) {
+				require.NoError(t, err)
+			},
+		},
+		{
+			// Defensive: PR response missing node_id.
+			name: "PR has no node ID",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				require.Equal(t,
+					"/repos/"+owner+"/"+repo+"/pulls/42", r.URL.Path,
+				)
+				_, _ = w.Write([]byte(`{}`))
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "no node ID")
+			},
+		},
+		{
+			// GraphQL transport error — HTTP status check branch.
+			name: "GraphQL returns non-200",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/repos/" + owner + "/" + repo + "/pulls/42":
+					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
+				case "/graphql":
+					w.WriteHeader(http.StatusUnauthorized)
+					_, _ = w.Write([]byte(`unauthorized`))
+				}
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "status 401")
+			},
+		},
+		{
+			// GraphQL response carries errors array — errors-field branch.
+			name: "GraphQL returns error payload",
+			handler: func(w http.ResponseWriter, r *http.Request) {
+				switch r.URL.Path {
+				case "/repos/" + owner + "/" + repo + "/pulls/42":
+					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
+				case "/graphql":
+					_, _ = w.Write([]byte(
+						`{"errors":[{"message":"not authorized"}]}`,
+					))
+				}
+			},
+			assert: func(t *testing.T, err error) {
+				require.ErrorContains(t, err, "GraphQL errors")
+				require.ErrorContains(t, err, "not authorized")
+			},
+		},
+		{
+			// Success path.
 			name: "happy path",
 			handler: func(w http.ResponseWriter, r *http.Request) {
 				require.Equal(t, "Bearer "+apiToken, r.Header.Get("Authorization"))
@@ -136,59 +224,6 @@ func Test_pullRequestsClient_ConvertToDraft(t *testing.T) {
 			},
 			assert: func(t *testing.T, err error) {
 				require.NoError(t, err)
-			},
-		},
-		{
-			name: "REST Get fails",
-			handler: func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusInternalServerError)
-			},
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "error fetching PR")
-			},
-		},
-		{
-			name: "GraphQL returns error payload",
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				switch r.URL.Path {
-				case "/repos/" + owner + "/" + repo + "/pulls/42":
-					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
-				case "/graphql":
-					_, _ = w.Write([]byte(
-						`{"errors":[{"message":"not authorized"}]}`,
-					))
-				}
-			},
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "GraphQL errors")
-				require.ErrorContains(t, err, "not authorized")
-			},
-		},
-		{
-			name: "GraphQL returns non-200",
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				switch r.URL.Path {
-				case "/repos/" + owner + "/" + repo + "/pulls/42":
-					_, _ = w.Write([]byte(`{"node_id": "` + nodeID + `"}`))
-				case "/graphql":
-					w.WriteHeader(http.StatusUnauthorized)
-					_, _ = w.Write([]byte(`unauthorized`))
-				}
-			},
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "status 401")
-			},
-		},
-		{
-			name: "PR has no node ID",
-			handler: func(w http.ResponseWriter, r *http.Request) {
-				require.Equal(t,
-					"/repos/"+owner+"/"+repo+"/pulls/42", r.URL.Path,
-				)
-				_, _ = w.Write([]byte(`{}`))
-			},
-			assert: func(t *testing.T, err error) {
-				require.ErrorContains(t, err, "no node ID")
 			},
 		},
 	}
