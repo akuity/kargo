@@ -104,18 +104,20 @@ pullRequests:
     - comment: |
         ## Automated Policy Notice
 
-        This pull request has been closed because it does not reference an unblocked issue.
+        This pull request has been converted to a draft because it does not reference an unblocked issue. Maintainers do not routinely review drafts.
 
         All contributions to Kargo require a linked, unblocked issue. This ensures that proposed changes have been reviewed by maintainers before effort is invested.
 
-        **To contribute:**
+        **To move forward:**
 
         1. Open a [Bug Report](https://github.com/akuity/kargo/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/akuity/kargo/issues/new?template=feature_request.yml)
         2. Wait for a maintainer to review the issue and remove any blocking labels
-        3. Reference the issue in your PR using `Closes #<number>`
+        3. Update this PR's description, linking to the issue using `Closes #<number>`
+        4. Ensure the implementation in this PR is consistent with discussion points in the linked issue
+        5. Mark the PR ready for review
 
         See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details.
-    - close: true
+    - convertToDraft: true
 
   # Defines how to handle PRs that are linked to issues bearing labels that
   # indicate the PR is either premature or should be worked on only by a
@@ -137,14 +139,18 @@ pullRequests:
     - comment: |
         ## Automated Policy Notice
 
-        This pull request has been closed because the linked issue (#{{.IssueNumber}}) has not been unblocked for external contribution.
+        This pull request has been converted to a draft because the linked issue (#{{.IssueNumber}}) has not been unblocked for external contribution. Maintainers do not routinely review drafts.
 
         The issue currently has the following blocking label(s): {{.BlockingLabels}}
 
-        Please wait for a maintainer to review and unblock the issue before opening a pull request. An issue is ready for external contribution when all blocking labels have been removed.
+        **To move forward:**
+
+        1. Wait for a maintainer to review the issue and remove any blocking labels
+        2. Ensure the implementation in this PR is consistent with discussion points in the linked issue
+        3. Mark the PR ready for review
 
         See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for full details.
-    - close: true
+    - convertToDraft: true
 
   # When a PR is opened, it will inherit labels with these prefixes from the
   # linked issue.
@@ -197,35 +203,11 @@ pullRequests:
           For more information about enterprise features and support, please contact [Akuity](https://akuity.io) directly.
       - close: true
 
-    maintainer:
-      description: "Close; linked issue is maintainer-only"
-      actions:
-      - comment: |
-          ## Contribution Policy Notice
-
-          This pull request has been closed because the linked issue is designated as maintainer-only. This typically indicates the work requires deep familiarity with Kargo internals or touches particularly sensitive areas of the codebase.
-
-          See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
-      - close: true
-
-    premature:
-      description: "Close; linked issue is not unblocked"
-      actions:
-      - comment: |
-          ## Contribution Policy Notice
-
-          This pull request has been closed because the linked issue has not been unblocked for external contribution. The issue still carries one or more blocking labels, indicating it is not ready for work.
-
-          Please wait for a maintainer to unblock the issue before opening a pull request. An issue is ready for contribution when all blocking labels have been removed.
-
-          See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
-      - close: true
-
     quality:
       description: "Close; does not meet quality standards"
       actions:
       - comment: |
-          ## Quality Standards Notice
+          ## 💩 Quality Standards Notice
 
           This pull request has been closed because it does not meet the project's quality standards for review.
 
@@ -253,22 +235,3 @@ pullRequests:
           ## Unblocked for Merge
 
           A maintainer has removed blocking labels from this pull request. Review may now proceed.
-
-    unsolicited:
-      description: "Close; no linked issue"
-      actions:
-      - comment: |
-          ## Contribution Policy Notice
-
-          This pull request has been closed because it does not reference an unblocked issue.
-
-          All contributions require a linked, unblocked issue to ensure that proposed changes have been reviewed by maintainers before effort is invested.
-
-          **To contribute:**
-
-          1. Open a [Bug Report](https://github.com/akuity/kargo/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/akuity/kargo/issues/new?template=feature_request.yml)
-          2. Wait for a maintainer to review the issue and remove any blocking labels
-          3. Reference the issue in your PR using `Closes #<number>`
-
-          See the [Contributor Guide](https://docs.kargo.io/contributor-guide) for details.
-      - close: true
