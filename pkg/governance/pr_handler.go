@@ -69,7 +69,7 @@ func (h *prHandler) handleOpened(
 		return fmt.Errorf("error assigning PR to author: %w", err)
 	}
 
-	issueNumber := h.parseLinkedIssue(pr.GetBody())
+	issueNumber := parseLinkedIssue(pr.GetBody())
 
 	// 2. Inherit labels from the linked issue.
 	inheritedLabels, err := h.inheritLabels(ctx, number, issueNumber)
@@ -109,7 +109,16 @@ func (h *prHandler) handleOpened(
 	if h.cfg.PullRequests == nil {
 		return nil
 	}
-	if err := h.applyPRPolicy(ctx, number, issueNumber); err != nil {
+	if err := applyPRPolicy(
+		ctx,
+		h.cfg,
+		h.issuesClient,
+		h.prsClient,
+		h.owner,
+		h.repo,
+		number,
+		issueNumber,
+	); err != nil {
 		return fmt.Errorf("error applying PR policy: %w", err)
 	}
 	return nil
@@ -122,39 +131,45 @@ func (h *prHandler) handleOpened(
 //
 // Otherwise it's a no-op. Callers should have already verified the PR's
 // author is not exempt from policy.
-func (h *prHandler) applyPRPolicy(
+func applyPRPolicy(
 	ctx context.Context,
+	cfg config,
+	issuesClient IssuesClient,
+	prsClient PullRequestsClient,
+	owner string,
+	repo string,
 	number int,
 	issueNumber int,
 ) error {
 	logger := logging.LoggerFromContext(ctx)
 
 	if issueNumber == 0 {
-		if h.cfg.PullRequests.NoLinkedIssue == nil {
+		if cfg.PullRequests.NoLinkedIssue == nil {
 			return nil
 		}
 		logger.Info("PR has no linked issue, applying policy")
 		return executeActions(
 			ctx,
-			h.issuesClient,
-			h.prsClient,
-			h.owner,
-			h.repo,
+			cfg,
+			issuesClient,
+			prsClient,
+			owner,
+			repo,
 			number,
 			true,
-			h.cfg.PullRequests.NoLinkedIssue.Actions,
+			cfg.PullRequests.NoLinkedIssue.Actions,
 			nil,
 		)
 	}
 
-	if h.cfg.PullRequests.BlockedIssue == nil {
+	if cfg.PullRequests.BlockedIssue == nil {
 		return nil
 	}
 
 	logger = logger.WithValues("linkedIssue", issueNumber)
 	ctx = logging.ContextWithLogger(ctx, logger)
 
-	issue, _, err := h.issuesClient.Get(ctx, h.owner, h.repo, issueNumber)
+	issue, _, err := issuesClient.Get(ctx, owner, repo, issueNumber)
 	if err != nil {
 		return fmt.Errorf("error fetching linked issue: %w", err)
 	}
@@ -165,7 +180,7 @@ func (h *prHandler) applyPRPolicy(
 	}
 
 	var blockers []string
-	for _, blocking := range h.cfg.PullRequests.BlockedIssue.BlockingLabels {
+	for _, blocking := range cfg.PullRequests.BlockedIssue.BlockingLabels {
 		if issueLabels[blocking] {
 			blockers = append(blockers, blocking)
 		}
@@ -180,16 +195,17 @@ func (h *prHandler) applyPRPolicy(
 	)
 	return executeActions(
 		ctx,
-		h.issuesClient,
-		h.prsClient,
-		h.owner,
-		h.repo,
+		cfg,
+		issuesClient,
+		prsClient,
+		owner,
+		repo,
 		number,
 		true,
-		h.cfg.PullRequests.BlockedIssue.Actions,
+		cfg.PullRequests.BlockedIssue.Actions,
 		map[string]string{
 			"IssueNumber":    fmt.Sprintf("%d", issueNumber),
-			"BlockingLabels": h.formatBlockers(blockers),
+			"BlockingLabels": formatBlockers(blockers),
 		},
 	)
 }
@@ -261,7 +277,7 @@ func (h *prHandler) isExemptFromPRPolicy(
 	return false
 }
 
-func (h *prHandler) formatBlockers(blockers []string) string {
+func formatBlockers(blockers []string) string {
 	formatted := make([]string, len(blockers))
 	for i, b := range blockers {
 		formatted[i] = "`" + b + "`"
@@ -283,7 +299,7 @@ var issueRefPattern = regexp.MustCompile(
 
 // parseLinkedIssue extracts the first linked issue number from a PR
 // body. Returns 0 if no linked issue is found.
-func (h *prHandler) parseLinkedIssue(body string) int {
+func parseLinkedIssue(body string) int {
 	match := issueRefPattern.FindStringSubmatch(body)
 	if len(match) < 2 {
 		return 0

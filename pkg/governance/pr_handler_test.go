@@ -299,21 +299,20 @@ func Test_prHandler_isExemptFromPRPolicy(t *testing.T) {
 	}
 }
 
-func Test_prHandler_formatBlockers(t *testing.T) {
-	h := &prHandler{}
+func Test_formatBlockers(t *testing.T) {
 	require.Equal(
 		t,
 		"`kind/proposal`",
-		h.formatBlockers([]string{"kind/proposal"}),
+		formatBlockers([]string{"kind/proposal"}),
 	)
 	require.Equal(
 		t,
 		"`kind/proposal`, `needs discussion`",
-		h.formatBlockers([]string{"kind/proposal", "needs discussion"}),
+		formatBlockers([]string{"kind/proposal", "needs discussion"}),
 	)
 }
 
-func Test_prHandler_parseLinkedIssue(t *testing.T) {
+func Test_parseLinkedIssue(t *testing.T) {
 	testCases := []struct {
 		name     string
 		body     string
@@ -410,10 +409,9 @@ func Test_prHandler_parseLinkedIssue(t *testing.T) {
 			expected: 55,
 		},
 	}
-	h := &prHandler{}
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := h.parseLinkedIssue(testCase.body)
+			result := parseLinkedIssue(testCase.body)
 			require.Equal(t, testCase.expected, result)
 		})
 	}

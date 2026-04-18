@@ -12,11 +12,14 @@ import (
 )
 
 // executeActions performs a sequence of actions: add labels, remove labels,
-// post a comment (with template rendering), and/or close the issue/PR. Actions
-// are applied in order. isPR determines whether a close action routes to the
-// Pull Requests API or the Issues API.
+// post a comment (with template rendering), convert the PR to a draft, apply
+// PR policy, and/or close the issue/PR. Actions are applied in order. isPR
+// determines whether a close action routes to the Pull Requests API or the
+// Issues API. cfg is needed for actions that reference other parts of the
+// configuration (e.g. ApplyPRPolicy).
 func executeActions(
 	ctx context.Context,
+	cfg config,
 	issuesClient IssuesClient,
 	prsClient PullRequestsClient,
 	owner string,
@@ -79,6 +82,25 @@ func executeActions(
 		if a.ConvertToDraft && isPR {
 			if err := prsClient.ConvertToDraft(ctx, owner, repo, number); err != nil {
 				return fmt.Errorf("error converting PR to draft: %w", err)
+			}
+		}
+
+		if a.ApplyPRPolicy && isPR {
+			pr, _, err := prsClient.Get(ctx, owner, repo, number)
+			if err != nil {
+				return fmt.Errorf("error fetching PR for policy check: %w", err)
+			}
+			if err := applyPRPolicy(
+				ctx,
+				cfg,
+				issuesClient,
+				prsClient,
+				owner,
+				repo,
+				number,
+				parseLinkedIssue(pr.GetBody()),
+			); err != nil {
+				return fmt.Errorf("error applying PR policy: %w", err)
 			}
 		}
 

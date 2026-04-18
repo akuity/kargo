@@ -97,6 +97,7 @@ func (h *commentHandler) handleCreated(
 		cmdLogger.Info("executing slash command")
 		if err := executeActions(
 			cmdCtx,
+			h.cfg,
 			h.issuesClient,
 			h.prsClient,
 			h.owner,

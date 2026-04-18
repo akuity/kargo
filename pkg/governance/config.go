@@ -84,6 +84,10 @@ type action struct {
 	// ConvertToDraft indicates whether to convert the pull request to a draft
 	// when the action is executed. Ignored for issues.
 	ConvertToDraft bool `json:"convertToDraft,omitempty"`
+	// ApplyPRPolicy indicates whether to evaluate and apply configured PR
+	// policy (NoLinkedIssue, BlockedIssue) against the pull request when the
+	// action is executed. Ignored for issues.
+	ApplyPRPolicy bool `json:"applyPRPolicy,omitempty"`
 }
 
 // commandDef defines a single slash command, including its description, whether
